@@ -19,13 +19,13 @@ async fn main() -> Result<(), Error> {
         .context("configuring DHCP server on Debian guest")?;
 
     // Configured in dhcpd.conf.
-    let want_v4_address = fidl_ip!(192.168.1.10);
+    let want_v4_address = fidl_ip!("192.168.1.10");
 
     // Configured in dhcpd6.conf.
     let want_v6_dns_servers = vec![
         fnetname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!(1234::5:6),
+                address: fidl_ip_v6!("1234::5:6"),
                 zone_index: 0,
                 port: DEFAULT_DNS_PORT,
             })),
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Error> {
         },
         fnetname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!(7890::12:34),
+                address: fidl_ip_v6!("7890::12:34"),
                 zone_index: 0,
                 port: DEFAULT_DNS_PORT,
             })),
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
         },
         fnetname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!(fe80::1:2:3:4),
+                address: fidl_ip_v6!("fe80::1:2:3:4"),
                 zone_index: 2,
                 port: DEFAULT_DNS_PORT,
             })),

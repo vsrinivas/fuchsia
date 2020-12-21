@@ -792,6 +792,7 @@ mod tests {
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
+    use net_types::ip::Ip as _;
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -803,14 +804,14 @@ mod tests {
 
     use super::*;
 
-    const IPV4_LOOPBACK: fnet::Ipv4Address = fidl_ip_v4!(127.0.0.1);
-    const IPV6_LOOPBACK: fnet::Ipv6Address = fidl_ip_v6!(::1);
+    const IPV4_LOOPBACK: fnet::Ipv4Address = fidl_ip_v4!("127.0.0.1");
+    const IPV6_LOOPBACK: fnet::Ipv6Address = fidl_ip_v6!("::1");
     const LOCAL_HOST: &str = "localhost.";
 
     // IPv4 address returned by mock lookup.
-    const IPV4_HOST: Ipv4Addr = std_ip_v4!(240.0.0.2);
+    const IPV4_HOST: Ipv4Addr = std_ip_v4!("240.0.0.2");
     // IPv6 address returned by mock lookup.
-    const IPV6_HOST: Ipv6Addr = std_ip_v6!(abcd::2);
+    const IPV6_HOST: Ipv6Addr = std_ip_v6!("abcd::2");
 
     // host which has IPv4 address only.
     const REMOTE_IPV4_HOST: &str = "www.foo.com";
@@ -1426,53 +1427,53 @@ mod tests {
 
     add_das_test!(
         prefer_reachable,
-        preferred: fidl_ip!(198.51.100.121) => Some(fidl_ip!(198.51.100.117)),
-        other: fidl_ip!(2001:db8:1::1) => Option::<fnet::IpAddress>::None
+        preferred: fidl_ip!("198.51.100.121") => Some(fidl_ip!("198.51.100.117")),
+        other: fidl_ip!("2001:db8:1::1") => Option::<fnet::IpAddress>::None
     );
 
     // These test cases are taken from RFC 6724, section 10.2.
 
     add_das_test!(
         prefer_matching_scope,
-        preferred: fidl_ip!(198.51.100.121) => Some(fidl_ip!(198.51.100.117)),
-        other: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(fe80::1))
+        preferred: fidl_ip!("198.51.100.121") => Some(fidl_ip!("198.51.100.117")),
+        other: fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("fe80::1"))
     );
 
     add_das_test!(
         prefer_matching_label,
-        preferred: fidl_ip!(2002:c633:6401::1) => Some(fidl_ip!(2002:c633:6401::2)),
-        other:  fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2002:c633:6401::2))
+        preferred: fidl_ip!("2002:c633:6401::1") => Some(fidl_ip!("2002:c633:6401::2")),
+        other:  fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("2002:c633:6401::2"))
     );
 
     add_das_test!(
         prefer_higher_precedence_1,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(10.1.2.3) => Some(fidl_ip!(10.1.2.4))
+        preferred: fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("2001:db8:1::2")),
+        other: fidl_ip!("10.1.2.3") => Some(fidl_ip!("10.1.2.4"))
     );
 
     add_das_test!(
         prefer_higher_precedence_2,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(2002:c633:6401::1) => Some(fidl_ip!(2002:c633:6401::2))
+        preferred: fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("2001:db8:1::2")),
+        other: fidl_ip!("2002:c633:6401::1") => Some(fidl_ip!("2002:c633:6401::2"))
     );
 
     add_das_test!(
         prefer_smaller_scope,
-        preferred: fidl_ip!(fe80::1) => Some(fidl_ip!(fe80::2)),
-        other: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2))
+        preferred: fidl_ip!("fe80::1") => Some(fidl_ip!("fe80::2")),
+        other: fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("2001:db8:1::2"))
     );
 
     add_das_test!(
         prefer_longest_matching_prefix,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(2001:db8:3ffe::1) => Some(fidl_ip!(2001:db8:3f44::2))
+        preferred: fidl_ip!("2001:db8:1::1") => Some(fidl_ip!("2001:db8:1::2")),
+        other: fidl_ip!("2001:db8:3ffe::1") => Some(fidl_ip!("2001:db8:3f44::2"))
     );
 
     #[test]
     fn test_das_equals() {
         for (dst, src) in [
-            (fidl_ip!(192.168.0.1), fidl_ip!(192.168.0.2)),
-            (fidl_ip!(2001:db8::1), fidl_ip!(2001:db8::2)),
+            (fidl_ip!("192.168.0.1"), fidl_ip!("192.168.0.2")),
+            (fidl_ip!("2001:db8::1"), fidl_ip!("2001:db8::2")),
         ]
         .iter()
         {
@@ -1486,7 +1487,8 @@ mod tests {
         // Last element in policy table MUST be ::/0.
         assert_eq!(
             POLICY_TABLE.iter().last().expect("empty policy table").prefix,
-            net_types::ip::Subnet::new(fidl_ip_v6!(::).addr.into(), 0).expect("invalid subnet")
+            net_types::ip::Subnet::new(net_types::ip::Ipv6::UNSPECIFIED_ADDRESS, 0)
+                .expect("invalid subnet")
         );
         // Policy table must be sorted by prefix length.
         let () = POLICY_TABLE.windows(2).for_each(|w| {
@@ -1509,20 +1511,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_sort_preferred_addresses() {
         const TEST_IPS: [(fnet::IpAddress, Option<fnet::IpAddress>); 5] = [
-            (fidl_ip!(127.0.0.1), Some(fidl_ip!(127.0.0.1))),
-            (fidl_ip!(::1), Some(fidl_ip!(::1))),
-            (fidl_ip!(192.168.50.22), None),
-            (fidl_ip!(2001::2), None),
-            (fidl_ip!(2001:db8:1::1), Some(fidl_ip!(2001:db8:1::2))),
+            (fidl_ip!("127.0.0.1"), Some(fidl_ip!("127.0.0.1"))),
+            (fidl_ip!("::1"), Some(fidl_ip!("::1"))),
+            (fidl_ip!("192.168.50.22"), None),
+            (fidl_ip!("2001::2"), None),
+            (fidl_ip!("2001:db8:1::1"), Some(fidl_ip!("2001:db8:1::2"))),
         ];
         // Declared using std types so we get cleaner output when we assert
         // expectations.
         const SORTED: [IpAddr; 5] = [
-            std_ip!(::1),
-            std_ip!(2001:db8:1::1),
-            std_ip!(127.0.0.1),
-            std_ip!(192.168.50.22),
-            std_ip!(2001::2),
+            std_ip!("::1"),
+            std_ip!("2001:db8:1::1"),
+            std_ip!("127.0.0.1"),
+            std_ip!("192.168.50.22"),
+            std_ip!("2001::2"),
         ];
         let (routes_proxy, routes_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()

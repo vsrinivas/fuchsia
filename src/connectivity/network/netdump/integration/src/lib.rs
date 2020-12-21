@@ -34,9 +34,9 @@ const NETDUMP_DUMPFILE_NAME: &str = "dump";
 const NETDUMP_URL: &str = "fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netdump.cmx";
 
 /// Default source IPv4 address used in tests.
-const SRC_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!(192.168.0.1);
+const SRC_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!("192.168.0.1");
 /// Default destination IPv4 address used in tests.
-const DST_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!(192.168.0.2);
+const DST_IP_V4: std::net::Ipv4Addr = net_declare::std_ip_v4!("192.168.0.2");
 /// Default UDP source port used in tests.
 const SRC_PORT: std::num::NonZeroU16 = unsafe { std::num::NonZeroU16::new_unchecked(1010) };
 /// Default UDP destination port used in tests.

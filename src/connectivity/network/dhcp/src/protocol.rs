@@ -2013,7 +2013,7 @@ mod tests {
     use std::net::Ipv4Addr;
     use std::str::FromStr;
 
-    const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!(255.255.255.0);
+    const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!("255.255.255.0");
 
     fn new_test_msg() -> Message {
         Message {
@@ -2022,7 +2022,7 @@ mod tests {
             secs: 1024,
             bdcast_flag: false,
             ciaddr: Ipv4Addr::UNSPECIFIED,
-            yiaddr: ip_v4!(192.168.1.1),
+            yiaddr: ip_v4!("192.168.1.1"),
             siaddr: Ipv4Addr::UNSPECIFIED,
             giaddr: Ipv4Addr::UNSPECIFIED,
             chaddr: MacAddr { octets: [0; 6] },
@@ -2087,10 +2087,13 @@ mod tests {
         unused_bytes = FILE_LEN - b"boot.img".len();
         buf.resize(old_len + unused_bytes, 0u8);
         buf.extend_from_slice(&MAGIC_COOKIE);
-        buf.extend_from_slice(b"\x01\x04\xFF\xFF\xFF\x00");
+        buf.extend_from_slice(b"\x01\x04");
+        buf.extend_from_slice(&DEFAULT_SUBNET_MASK.octets()[..]);
         buf.extend_from_slice(b"\x00");
         buf.extend_from_slice(b"\x00");
-        buf.extend_from_slice(b"\x36\x04\xAA\xBB\xCC\xDD");
+        buf.extend_from_slice(b"\x36\x04");
+        let server_id = ip_v4!("1.2.3.4");
+        buf.extend_from_slice(&server_id.octets()[..]);
         buf.extend_from_slice(b"\xFF");
 
         assert_eq!(
@@ -2101,15 +2104,15 @@ mod tests {
                 secs: 1024,
                 bdcast_flag: false,
                 ciaddr: Ipv4Addr::UNSPECIFIED,
-                yiaddr: ip_v4!(192.168.1.1),
+                yiaddr: ip_v4!("192.168.1.1"),
                 siaddr: Ipv4Addr::UNSPECIFIED,
                 giaddr: Ipv4Addr::UNSPECIFIED,
-                chaddr: MacAddr { octets: [0, 0, 0, 0, 0, 0] },
+                chaddr: MacAddr { octets: [0; 6] },
                 sname: "relay.example.com".to_string(),
                 file: "boot.img".to_string(),
                 options: vec![
                     DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
-                    DhcpOption::ServerIdentifier(Ipv4Addr::from([0xAA, 0xBB, 0xCC, 0xDD])),
+                    DhcpOption::ServerIdentifier(server_id),
                 ],
             })
         );
@@ -2138,7 +2141,7 @@ mod tests {
         let msg = || {
             let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
-            msg.options.push(DhcpOption::NameServer(vec![ip_v4!(1.2.3.4)]));
+            msg.options.push(DhcpOption::NameServer(vec![ip_v4!("1.2.3.4")]));
             msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
             msg
         };
@@ -2240,7 +2243,7 @@ mod tests {
         let msg = || {
             let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
-            msg.options.push(DhcpOption::Router(vec![ip_v4!(192.168.1.1)]));
+            msg.options.push(DhcpOption::Router(vec![ip_v4!("192.168.1.1")]));
             msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
             msg
         };

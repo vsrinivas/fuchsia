@@ -183,7 +183,7 @@ where
         .context("failed to create environment")?;
     let fake_ep = network.create_fake_endpoint().context("failed to create fake endpoint")?;
 
-    const SUBNET: fnet::Subnet = fidl_subnet!(192.168.0.2/24);
+    const SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
     let iface = env
         .join_network::<E, _>(
             &network,
@@ -235,7 +235,7 @@ where
         .context("failed to connect to Netstack")?;
     let () = stack
         .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
-            subnet: fidl_subnet!(0.0.0.0/0),
+            subnet: fidl_subnet!("0.0.0.0/0"),
             destination: fnet_stack::ForwardingDestination::NextHop(fnet::IpAddress::Ipv4(
                 fnet::Ipv4Address { addr: GATEWAY_ADDR.ipv4_bytes() },
             )),

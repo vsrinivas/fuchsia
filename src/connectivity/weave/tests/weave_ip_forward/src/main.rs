@@ -156,16 +156,16 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     // routing rules for weave tun
     let () = add_route_table_entry(
-        fidl_ip!(fdce:da10:7616:6:6616:6600:4734:b051),
-        fidl_ip!(ffff: ffff: ffff: ffff: ffff: ffff: ffff: ffff),
+        fidl_ip!("fdce:da10:7616:6:6616:6600:4734:b051"),
+        fidl_ip!("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
         weave_if_id,
         &route_proxy,
     )
     .await
     .context("adding routing table entry for weave tun")?;
     let () = add_route_table_entry(
-        fidl_ip!(fdce:da10:7616::),
-        fidl_ip!(ffff:ffff:ffff::),
+        fidl_ip!("fdce:da10:7616::"),
+        fidl_ip!("ffff:ffff:ffff::"),
         weave_if_id,
         &route_proxy,
     )
@@ -174,16 +174,16 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     // routing rules for wpan
     let () = add_route_table_entry(
-        fidl_ip!(fdce:da10:7616:6::),
-        fidl_ip!(ffff:ffff:ffff:ffff::),
+        fidl_ip!("fdce:da10:7616:6::"),
+        fidl_ip!("ffff:ffff:ffff:ffff::"),
         wpan_if_id,
         &route_proxy,
     )
     .await
     .context("adding routing table entry for wpan")?;
     let () = add_route_table_entry(
-        fidl_ip!(fdd3:b786:54dc::),
-        fidl_ip!(ffff:ffff:ffff:ffff::),
+        fidl_ip!("fdd3:b786:54dc::"),
+        fidl_ip!("ffff:ffff:ffff:ffff::"),
         wpan_if_id,
         &route_proxy,
     )
@@ -192,8 +192,8 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     // routing rules for wlan
     let () = add_route_table_entry(
-        fidl_ip!(fdce:da10:7616:1::),
-        fidl_ip!(ffff:ffff:ffff:ffff::),
+        fidl_ip!("fdce:da10:7616:1::"),
+        fidl_ip!("ffff:ffff:ffff:ffff::"),
         wlan_if_id,
         &route_proxy,
     )

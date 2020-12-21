@@ -455,7 +455,10 @@ mod tests {
             let test_dhcp_refresh_time = 42u32;
             let options = [
                 v6::DhcpOption::InformationRefreshTime(test_dhcp_refresh_time),
-                v6::DhcpOption::DnsServers(vec![std_ip_v6!(ff01::0102), std_ip_v6!(ff01::0304)]),
+                v6::DhcpOption::DnsServers(vec![
+                    std_ip_v6!("ff01::0102"),
+                    std_ip_v6!("ff01::0304"),
+                ]),
             ];
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &options);
@@ -476,7 +479,10 @@ mod tests {
                         ClientTimerType::Refresh,
                         Duration::from_secs(u64::from(test_dhcp_refresh_time)),
                     ),
-                    Action::UpdateDnsServers(vec![std_ip_v6!(ff01::0102), std_ip_v6!(ff01::0304)]),
+                    Action::UpdateDnsServers(vec![
+                        std_ip_v6!("ff01::0102"),
+                        std_ip_v6!("ff01::0304")
+                    ]),
                 ]
             );
         }

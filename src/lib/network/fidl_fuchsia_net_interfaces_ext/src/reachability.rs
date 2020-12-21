@@ -130,10 +130,10 @@ mod tests {
     use net_declare::fidl_subnet;
     use std::convert::TryInto as _;
 
-    const IPV4_LINK_LOCAL: fnet::Subnet = fidl_subnet!(169.254.0.1/16);
-    const IPV6_LINK_LOCAL: fnet::Subnet = fidl_subnet!(fe80::1/64);
-    const IPV4_GLOBAL: fnet::Subnet = fidl_subnet!(192.168.0.1/16);
-    const IPV6_GLOBAL: fnet::Subnet = fidl_subnet!(100::1/64);
+    const IPV4_LINK_LOCAL: fnet::Subnet = fidl_subnet!("169.254.0.1/16");
+    const IPV6_LINK_LOCAL: fnet::Subnet = fidl_subnet!("fe80::1/64");
+    const IPV4_GLOBAL: fnet::Subnet = fidl_subnet!("192.168.0.1/16");
+    const IPV6_GLOBAL: fnet::Subnet = fidl_subnet!("100::1/64");
 
     fn valid_interface(id: u64) -> fnet_interfaces::Properties {
         fnet_interfaces::Properties {

@@ -13,34 +13,34 @@ use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandbo
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
 
-const DEFAULT_SERVER_IPV4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.0.1);
+const DEFAULT_SERVER_IPV4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.1");
 const DEFAULT_SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_fuchsia_net::Subnet {
     addr: fidl_fuchsia_net::IpAddress::Ipv4(DEFAULT_SERVER_IPV4),
     prefix_len: 24,
 };
-const ALT_SERVER_IPV4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.1.1);
+const ALT_SERVER_IPV4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.1.1");
 const ALT_SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_fuchsia_net::Subnet {
     addr: fidl_fuchsia_net::IpAddress::Ipv4(ALT_SERVER_IPV4),
     prefix_len: 24,
 };
-const DEFAULT_CLIENT_WANT_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/25);
-const ALT_CLIENT_WANT_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.1.2/24);
+const DEFAULT_CLIENT_WANT_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/25");
+const ALT_CLIENT_WANT_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.1.2/24");
 const DEFAULT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
     fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-        network_id: Some(fidl_ip_v4!(192.168.0.0)),
-        broadcast: Some(fidl_ip_v4!(192.168.0.127)),
-        mask: Some(fidl_ip_v4!(255.255.255.128)),
-        pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
-        pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+        network_id: Some(fidl_ip_v4!("192.168.0.0")),
+        broadcast: Some(fidl_ip_v4!("192.168.0.127")),
+        mask: Some(fidl_ip_v4!("255.255.255.128")),
+        pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
+        pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
         ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
     });
 const ALT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
     fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-        network_id: Some(fidl_ip_v4!(192.168.1.0)),
-        broadcast: Some(fidl_ip_v4!(192.168.1.255)),
-        mask: Some(fidl_ip_v4!(255.255.255.0)),
-        pool_range_start: Some(fidl_ip_v4!(192.168.1.2)),
-        pool_range_stop: Some(fidl_ip_v4!(192.168.1.5)),
+        network_id: Some(fidl_ip_v4!("192.168.1.0")),
+        broadcast: Some(fidl_ip_v4!("192.168.1.255")),
+        mask: Some(fidl_ip_v4!("255.255.255.0")),
+        pool_range_start: Some(fidl_ip_v4!("192.168.1.2")),
+        pool_range_stop: Some(fidl_ip_v4!("192.168.1.5")),
         ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
     });
 const DEFAULT_SERVER_ENDPOINT: DhcpTestEndpoint<'_> = DhcpTestEndpoint {

@@ -48,10 +48,10 @@ async fn test_resolve_loopback_route() -> Result {
         Result::Ok(())
     };
 
-    let () = test(fidl_ip!(127.0.0.1), fidl_ip!(127.0.0.1))
+    let () = test(fidl_ip!("127.0.0.1"), fidl_ip!("127.0.0.1"))
         .await
         .context("error testing resolution for IPv4 loopback")?;
-    let () = test(fidl_ip!(::1), fidl_ip!(::1))
+    let () = test(fidl_ip!("::1"), fidl_ip!("::1"))
         .await
         .context("error testing resolution for IPv6 loopback")?;
 
@@ -60,10 +60,10 @@ async fn test_resolve_loopback_route() -> Result {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_resolve_route() -> Result {
-    const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
-    const GATEWAY_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
-    const GATEWAY_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(3080::1/64);
-    const HOST_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(3080::2/64);
+    const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+    const GATEWAY_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
+    const GATEWAY_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("3080::1/64");
+    const HOST_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("3080::2/64");
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
@@ -241,9 +241,9 @@ async fn test_resolve_route() -> Result {
 
     let () = do_test(
         GATEWAY_IP_V4.addr,
-        fidl_ip!(192.168.0.3),
-        fidl_ip!(0.0.0.0),
-        fidl_ip!(8.8.8.8),
+        fidl_ip!("192.168.0.3"),
+        fidl_ip!("0.0.0.0"),
+        fidl_ip!("8.8.8.8"),
         HOST_IP_V4.addr,
     )
     .await
@@ -251,9 +251,9 @@ async fn test_resolve_route() -> Result {
 
     let () = do_test(
         GATEWAY_IP_V6.addr,
-        fidl_ip!(3080::3),
-        fidl_ip!(::),
-        fidl_ip!(2001:4860:4860::8888),
+        fidl_ip!("3080::3"),
+        fidl_ip!("::"),
+        fidl_ip!("2001:4860:4860::8888"),
         HOST_IP_V6.addr,
     )
     .await
@@ -286,17 +286,17 @@ async fn test_resolve_default_route_while_dhcp_is_running() -> Result {
         .context("failed to connect to routes/State")?;
 
     let resolved = routes
-        .resolve(&mut fidl_ip!(0.0.0.0))
+        .resolve(&mut fidl_ip!("0.0.0.0"))
         .await
         .context("routes/State.Resolve FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw);
 
     assert_eq!(resolved, Err(fuchsia_zircon::Status::ADDRESS_UNREACHABLE));
 
-    const EP_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.3/24);
-    const GATEWAY_ADDR: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const EP_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.3/24");
+    const GATEWAY_ADDR: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
     const GATEWAY_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
-    const UNSPECIFIED_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(0.0.0.0);
+    const UNSPECIFIED_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("0.0.0.0");
 
     // Configure stack statically with an address and a default route while DHCP is still running.
     let () = ep.add_ip_addr(EP_ADDR).await.context("failed to add address")?;

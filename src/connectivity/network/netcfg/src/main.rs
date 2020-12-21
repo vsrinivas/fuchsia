@@ -85,7 +85,7 @@ const WLAN_AP_TOPO_PATH_CONTAINS: &str = "wlanif-ap";
 const WLAN_AP_PREFIX_LEN: u8 = 29;
 
 /// The address for the network the WLAN AP interface is a part of.
-const WLAN_AP_NETWORK_ADDR: fnet::Ipv4Address = fidl_ip_v4!(192.168.255.248);
+const WLAN_AP_NETWORK_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.255.248");
 
 /// The lease time for a DHCP lease.
 ///
@@ -1533,25 +1533,26 @@ mod tests {
         const DHCPV6_DNS_SOURCE: DnsServersUpdateSource =
             DnsServersUpdateSource::Dhcpv6 { interface_id: INTERFACE_ID as u64 };
         const LINK_LOCAL_SOCKADDR1: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!(fe80::1),
+            address: fidl_ip_v6!("fe80::1"),
             port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
             zone_index: INTERFACE_ID as u64,
         };
         const LINK_LOCAL_SOCKADDR2: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!(fe80::2),
+            address: fidl_ip_v6!("fe80::2"),
             port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
             zone_index: INTERFACE_ID as u64,
         };
-        const GLOBAL_ADDR: fnet::Subnet = fnet::Subnet { addr: fidl_ip!(2000::1), prefix_len: 64 };
+        const GLOBAL_ADDR: fnet::Subnet =
+            fnet::Subnet { addr: fidl_ip!("2000::1"), prefix_len: 64 };
         const DNS_SERVER1: fnet::SocketAddress =
             fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!(2001::1),
+                address: fidl_ip_v6!("2001::1"),
                 port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
                 zone_index: 0,
             });
         const DNS_SERVER2: fnet::SocketAddress =
             fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!(2001::2),
+                address: fidl_ip_v6!("2001::2"),
                 port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
                 zone_index: 0,
             });
@@ -1581,9 +1582,9 @@ mod tests {
                     features: feth::Features::empty(),
                     configuration: 0,
                     name: "test".to_string(),
-                    addr: fidl_ip!(0.0.0.0),
-                    netmask: fidl_ip!(0.0.0.0),
-                    broadaddr: fidl_ip!(0.0.0.0),
+                    addr: fidl_ip!("0.0.0.0"),
+                    netmask: fidl_ip!("0.0.0.0"),
+                    broadaddr: fidl_ip!("0.0.0.0"),
                     ipv6addrs,
                     hwaddr: vec![2, 3, 4, 5, 6, 7],
                 }],

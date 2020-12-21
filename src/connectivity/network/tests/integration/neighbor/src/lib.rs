@@ -21,9 +21,9 @@ use netstack_testing_common::environments::*;
 use netstack_testing_common::Result;
 
 const ALICE_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:01:02:03:04");
-const ALICE_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.100);
+const ALICE_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.100");
 const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
-const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
 const SUBNET_PREFIX: u8 = 24;
 
 /// Helper type holding values pertinent to neighbor tests.

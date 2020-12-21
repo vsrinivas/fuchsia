@@ -385,13 +385,13 @@ async fn test_start_fails() {
 async fn test_start_succeeds() {
     test_cli_with_config(
         &mut [
-            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!(192.168.0.1)]),
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_ip_v4!(192.168.0.0)),
-                broadcast: Some(fidl_ip_v4!(192.168.0.127)),
-                mask: Some(fidl_ip_v4!(255.255.255.128)),
-                pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
-                pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                network_id: Some(fidl_ip_v4!("192.168.0.0")),
+                broadcast: Some(fidl_ip_v4!("192.168.0.127")),
+                mask: Some(fidl_ip_v4!("255.255.255.128")),
+                pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
         ],

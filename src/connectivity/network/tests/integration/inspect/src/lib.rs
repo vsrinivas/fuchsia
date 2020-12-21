@@ -94,7 +94,7 @@ async fn inspect_nic() -> Result {
             &network,
             "eth-ep",
             netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(ETH_MAC)),
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.1/24)),
+            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.1/24")),
         )
         .await
         .context("failed to join network with ethernet endpoint")?;
@@ -103,7 +103,7 @@ async fn inspect_nic() -> Result {
             &network,
             "netdev-ep",
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(NETDEV_MAC)),
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!(192.168.0.2/24)),
+            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.2/24")),
         )
         .await
         .context("failed to join network with netdevice endpoint")?;
@@ -161,7 +161,7 @@ async fn inspect_nic() -> Result {
     let eth_addrs = AddressMatcher::new(&eth_props);
 
     // Populate the neighbor table so we can verify inspection of its entries.
-    const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
     const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
     let () = env
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()

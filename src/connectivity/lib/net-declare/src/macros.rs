@@ -104,8 +104,12 @@ where
     /// Emits the resulting [`TokenStream`] (or an error one) after attempting
     /// to parse `input` into all of the `Emitter`'s types sequentially.
     fn emit(input: proc_macro::TokenStream) -> TokenStream {
-        // Ignore all whitespaces and quotations.
-        let s = format!("{}", input).replace(" ", "").replace("\"", "");
+        // Always require a string literal.
+        let input = proc_macro2::TokenStream::from(input);
+        let s = match syn::parse2::<syn::LitStr>(input.clone()) {
+            Ok(s) => s.value(),
+            Err(e) => return e.to_compile_error().into(),
+        };
         match try_emit::<G, T1>(&s)
             .or_else(|e1| try_emit::<G, T2>(&s).map_err(|e2| (e1, e2)))
             .or_else(|(e1, e2)| try_emit::<G, T3>(&s).map_err(|e3| (e1, e2, e3)))
@@ -113,7 +117,7 @@ where
         {
             Ok(ts) => ts,
             Err((e1, e2, e3, e4)) => syn::Error::new_spanned(
-                proc_macro2::TokenStream::from(input),
+                input,
                 format!("failed to parse as {}", Self::error_str(&e1, &e2, &e3, &e4)),
             )
             .to_compile_error()

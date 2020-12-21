@@ -330,8 +330,8 @@ mod tests {
         let accessor_client = stash.proxy.clone();
 
         let opts = vec![
-            DhcpOption::SubnetMask(ip_v4!(255.255.255.0)),
-            DhcpOption::DomainNameServer(vec![ip_v4!(1.2.3.4), ip_v4!(4.3.2.1)]),
+            DhcpOption::SubnetMask(ip_v4!("255.255.255.0")),
+            DhcpOption::DomainNameServer(vec![ip_v4!("1.2.3.4"), ip_v4!("4.3.2.1")]),
         ];
         let () = stash.store_options(&opts).context("failed to store options in stash")?;
         let value = accessor_client
@@ -355,14 +355,14 @@ mod tests {
         let accessor_client = stash.proxy.clone();
 
         let params = ServerParameters {
-            server_ips: vec![ip_v4!(192.168.0.1)],
+            server_ips: vec![ip_v4!("192.168.0.1")],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: ip_v4!(192.168.0.0),
-                broadcast: ip_v4!(192.168.0.255),
+                network_id: ip_v4!("192.168.0.0"),
+                broadcast: ip_v4!("192.168.0.255"),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
-                pool_range_start: ip_v4!(192.168.0.10),
-                pool_range_stop: ip_v4!(192.168.0.254),
+                pool_range_start: ip_v4!("192.168.0.10"),
+                pool_range_stop: ip_v4!("192.168.0.254"),
             },
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
@@ -421,8 +421,8 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let opts = vec![
-            DhcpOption::SubnetMask(ip_v4!(255.255.255.0)),
-            DhcpOption::DomainNameServer(vec![ip_v4!(1.2.3.4), ip_v4!(4.3.2.1)]),
+            DhcpOption::SubnetMask(ip_v4!("255.255.255.0")),
+            DhcpOption::DomainNameServer(vec![ip_v4!("1.2.3.4"), ip_v4!("4.3.2.1")]),
         ];
         let serialized_opts = serde_json::to_string(&opts).context("serialization failed")?;
         let opts = opts.into_iter().map(|o| (o.code(), o)).collect();
@@ -456,14 +456,14 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let params = ServerParameters {
-            server_ips: vec![ip_v4!(192.168.0.1)],
+            server_ips: vec![ip_v4!("192.168.0.1")],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: ip_v4!(192.168.0.0),
-                broadcast: ip_v4!(192.168.0.255),
+                network_id: ip_v4!("192.168.0.0"),
+                broadcast: ip_v4!("192.168.0.255"),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
-                pool_range_start: ip_v4!(192.168.0.10),
-                pool_range_stop: ip_v4!(192.168.0.254),
+                pool_range_start: ip_v4!("192.168.0.10"),
+                pool_range_stop: ip_v4!("192.168.0.254"),
             },
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),

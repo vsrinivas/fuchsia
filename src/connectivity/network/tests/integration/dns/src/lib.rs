@@ -80,11 +80,11 @@ async fn poll_lookup_admin<
 /// configures the Lookup service.
 #[variants_test]
 async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
-    const SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+    const SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
     /// DNS server served by DHCP.
-    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
+    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("123.12.34.56");
     /// DNS server served by NDP.
-    const NDP_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(20a::1234:5678);
+    const NDP_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.
@@ -131,13 +131,13 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     // TODO(fxbug.dev/62554): derive these from SERVER_ADDR.
     let () = stream::iter(
         [
-            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!(192.168.0.1)]),
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_ip_v4!(192.168.0.0)),
-                broadcast: Some(fidl_ip_v4!(192.168.0.127)),
-                mask: Some(fidl_ip_v4!(255.255.255.128)),
-                pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
-                pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                network_id: Some(fidl_ip_v4!("192.168.0.0")),
+                broadcast: Some(fidl_ip_v4!("192.168.0.127")),
+                mask: Some(fidl_ip_v4!("255.255.255.128")),
+                pool_range_start: Some(fidl_ip_v4!("192.168.0.2")),
+                pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
         ]
@@ -238,9 +238,9 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
 async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result {
     /// DHCPv6 server IP.
     const DHCPV6_SERVER: net_types_ip::Ipv6Addr =
-        net_types_ip::Ipv6Addr::new(std_ip_v6!(fe80::1).octets());
+        net_types_ip::Ipv6Addr::new(std_ip_v6!("fe80::1").octets());
     /// DNS server served by DHCPv6.
-    const DHCPV6_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(20a::1234:5678);
+    const DHCPV6_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.

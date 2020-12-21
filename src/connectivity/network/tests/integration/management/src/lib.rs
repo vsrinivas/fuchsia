@@ -248,13 +248,13 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
         // These constants are all hard coded in NetCfg for the WLAN AP interface and
         // the DHCP server.
         const DHCP_LEASE_TIME: u32 = 24 * 60 * 60; // 1 day in seconds.
-        const NETWORK_ADDR: net::Ipv4Address = fidl_ip_v4!(192.168.255.248);
+        const NETWORK_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.248");
         const NETWORK_PREFIX_LEN: u8 = 29;
-        const INTERFACE_ADDR: net::Ipv4Address = fidl_ip_v4!(192.168.255.249);
-        const DHCP_POOL_START_ADDR: net::Ipv4Address = fidl_ip_v4!(192.168.255.250);
-        const DHCP_POOL_END_ADDR: net::Ipv4Address = fidl_ip_v4!(192.168.255.254);
-        const BROADCAST_ADDR: net::Ipv4Address = fidl_ip_v4!(192.168.255.255);
-        const NETWORK_MASK: net::Ipv4Address = fidl_ip_v4!(255.255.255.248);
+        const INTERFACE_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.249");
+        const DHCP_POOL_START_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.250");
+        const DHCP_POOL_END_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.254");
+        const BROADCAST_ADDR: net::Ipv4Address = fidl_ip_v4!("192.168.255.255");
+        const NETWORK_MASK: net::Ipv4Address = fidl_ip_v4!("255.255.255.248");
         const NETWORK_ADDR_SUBNET: net_types_ip::Subnet<net_types_ip::Ipv4Addr> = unsafe {
             net_types_ip::Subnet::new_unchecked(
                 net_types_ip::Ipv4Addr::new(NETWORK_ADDR.addr),

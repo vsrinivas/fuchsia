@@ -391,7 +391,7 @@ mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use matches::assert_matches;
-    use net_declare::fidl_ip;
+    use net_declare::fidl_subnet;
     use std::convert::TryInto as _;
 
     type Result<T = ()> = std::result::Result<T, anyhow::Error>;
@@ -513,7 +513,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_wait_one_interface() -> Result {
         let mut state = InterfaceState::Unknown(ID);
-        let addr = fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 };
+        let addr = fidl_subnet!("192.168.0.1/16");
         for (event, want) in vec![
             (fnet_interfaces::Event::Existing(fidl_properties(ID)), properties(ID)),
             (

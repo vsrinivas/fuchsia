@@ -100,24 +100,24 @@ mod tests {
     fn test_std_ip() {
         assert_eq!(
             std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 0, 1)),
-            std_ip!(192.168.0.1)
+            std_ip!("192.168.0.1")
         );
         assert_eq!(
             std::net::IpAddr::V6(std::net::Ipv6Addr::new(0xFF01, 0, 0, 0, 0, 0, 0, 0x0102)),
-            std_ip!(ff01::0102)
+            std_ip!("ff01::0102")
         );
     }
 
     #[test]
     fn test_std_ip_v4() {
-        assert_eq!(std::net::Ipv4Addr::new(192, 168, 0, 1), std_ip_v4!(192.168.0.1));
+        assert_eq!(std::net::Ipv4Addr::new(192, 168, 0, 1), std_ip_v4!("192.168.0.1"));
     }
 
     #[test]
     fn test_std_ip_v6() {
         assert_eq!(
             std::net::Ipv6Addr::new(0xFF01, 0, 0, 0, 0, 0, 0, 0x0102),
-            std_ip_v6!(ff01::0102)
+            std_ip_v6!("ff01::0102")
         );
     }
 
@@ -128,7 +128,7 @@ mod tests {
                 std::net::Ipv4Addr::new(192, 168, 0, 1),
                 8080
             )),
-            std_socket_addr!(192.168.0.1:8080)
+            std_socket_addr!("192.168.0.1:8080")
         );
         assert_eq!(
             std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
@@ -137,7 +137,7 @@ mod tests {
                 0,
                 0
             )),
-            std_socket_addr!([ff01::0102]:8080)
+            std_socket_addr!("[ff01::0102]:8080")
         );
     }
 
@@ -145,7 +145,7 @@ mod tests {
     fn test_std_socket_addr_v4() {
         assert_eq!(
             std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(192, 168, 0, 1), 8080),
-            std_socket_addr_v4!(192.168.0.1:8080)
+            std_socket_addr_v4!("192.168.0.1:8080")
         );
     }
 
@@ -158,7 +158,7 @@ mod tests {
                 0,
                 0
             ),
-            std_socket_addr_v6!([ff01::0102]:8080)
+            std_socket_addr_v6!("[ff01::0102]:8080")
         );
     }
 
@@ -166,20 +166,20 @@ mod tests {
     fn test_fidl_ip() {
         assert_eq!(
             fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: [192, 168, 0, 1] }),
-            fidl_ip!(192.168.0.1)
+            fidl_ip!("192.168.0.1")
         );
 
         assert_eq!(
             fidl::IpAddress::Ipv6(fidl::Ipv6Address {
                 addr: [0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
             }),
-            fidl_ip!(ff01::0102)
+            fidl_ip!("ff01::0102")
         );
     }
 
     #[test]
     fn test_fidl_ip_v4() {
-        assert_eq!(fidl::Ipv4Address { addr: [192, 168, 0, 1] }, fidl_ip_v4!(192.168.0.1));
+        assert_eq!(fidl::Ipv4Address { addr: [192, 168, 0, 1] }, fidl_ip_v4!("192.168.0.1"));
     }
 
     #[test]
@@ -188,7 +188,7 @@ mod tests {
             fidl::Ipv6Address {
                 addr: [0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
             },
-            fidl_ip_v6!(ff01::0102)
+            fidl_ip_v6!("ff01::0102")
         );
     }
 
@@ -199,7 +199,7 @@ mod tests {
                 address: fidl::Ipv4Address { addr: [192, 168, 0, 1] },
                 port: 8080
             }),
-            fidl_socket_addr!(192.168.0.1:8080)
+            fidl_socket_addr!("192.168.0.1:8080")
         );
 
         assert_eq!(
@@ -210,7 +210,7 @@ mod tests {
                 port: 8080,
                 zone_index: 0,
             }),
-            fidl_socket_addr!([ff01::0102]:8080)
+            fidl_socket_addr!("[ff01::0102]:8080")
         );
     }
 
@@ -221,7 +221,7 @@ mod tests {
                 address: fidl::Ipv4Address { addr: [192, 168, 0, 1] },
                 port: 8080
             },
-            fidl_socket_addr_v4!(192.168.0.1:8080)
+            fidl_socket_addr_v4!("192.168.0.1:8080")
         );
     }
 
@@ -235,13 +235,13 @@ mod tests {
                 port: 8080,
                 zone_index: 0,
             },
-            fidl_socket_addr_v6!([ff01::0102]:8080)
+            fidl_socket_addr_v6!("[ff01::0102]:8080")
         );
     }
 
     #[test]
     fn test_fidl_mac() {
-        assert_eq!(fidl::MacAddress { octets: [0, 1, 2, 3, 4, 5] }, fidl_mac!(00:01:02:03:04:05));
+        assert_eq!(fidl::MacAddress { octets: [0, 1, 2, 3, 4, 5] }, fidl_mac!("00:01:02:03:04:05"));
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod tests {
                 addr: fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: [192, 168, 0, 1] }),
                 prefix_len: 24
             },
-            fidl_subnet!(192.168.0.1/24)
+            fidl_subnet!("192.168.0.1/24")
         );
     }
 
@@ -274,7 +274,7 @@ mod tests {
                 }),
                 prefix_len: 64
             },
-            fidl_subnet!(ff01::0102/64)
+            fidl_subnet!("ff01::0102/64")
         );
     }
 }

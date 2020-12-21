@@ -217,16 +217,8 @@ fn test_display_interfaceinfo() {
                     administrative_status: AdministrativeStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
                     addresses: vec![
-                        fidl_fuchsia_net::Subnet {
-                            addr: net_declare::fidl_ip!(255.255.255.0),
-                            prefix_len: 4,
-                        }
-                        .into(),
-                        fidl_fuchsia_net::Subnet {
-                            addr: net_declare::fidl_ip!(255.255.255.1),
-                            prefix_len: 4,
-                        }
-                        .into()
+                        net_declare::fidl_subnet!("255.255.255.0/4").into(),
+                        net_declare::fidl_subnet!("255.255.255.1/4").into(),
                     ],
                 }
             }

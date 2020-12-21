@@ -73,8 +73,8 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
         .context("failed to create client environment")?;
 
-    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
-    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 
     let _client_ep = client
         .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
@@ -155,8 +155,8 @@ async fn run_tcp_socket_test(
 
 #[variants_test]
 async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
-    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
-    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
+    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
@@ -310,10 +310,10 @@ async fn test_ip_endpoints_socket() -> Result {
         .context("connect protocols failed")?;
 
     // Addresses must be in the same subnet.
-    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.1/24);
-    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(2001::1/120);
-    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!(192.168.0.2/24);
-    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!(2001::2/120);
+    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
+    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("2001::1/120");
+    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("2001::2/120");
 
     // We install both devices in parallel because a DevicePair will only have
     // its link signal set to up once both sides have sessions attached. This
@@ -378,10 +378,10 @@ async fn test_ip_endpoint_packets() -> Result {
     // end of the tun device that we'll use to inject frames.
     const PREFIX_V4: u8 = 24;
     const PREFIX_V6: u8 = 120;
-    const ALICE_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.0.1);
-    const ALICE_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(2001::1);
-    const BOB_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.0.2);
-    const BOB_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(2001::2);
+    const ALICE_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.1");
+    const ALICE_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("2001::1");
+    const BOB_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.2");
+    const BOB_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("2001::2");
 
     let _device_id = install_ip_device(
         &env,

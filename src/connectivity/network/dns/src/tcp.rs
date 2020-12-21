@@ -64,27 +64,27 @@ mod test {
     fn test_tcp_stream_ipv4() {
         use trust_dns_proto::tests::tcp_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        tcp_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!(127.0.0.1), exec)
+        tcp_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!("127.0.0.1"), exec)
     }
 
     #[test]
     fn test_tcp_stream_ipv6() {
         use trust_dns_proto::tests::tcp_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        tcp_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!(::1), exec)
+        tcp_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!("::1"), exec)
     }
 
     #[test]
     fn test_tcp_client_stream_ipv4() {
         use trust_dns_proto::tests::tcp_client_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        tcp_client_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!(127.0.0.1), exec)
+        tcp_client_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!("127.0.0.1"), exec)
     }
 
     #[test]
     fn test_tcp_client_stream_ipv6() {
         use trust_dns_proto::tests::tcp_client_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        tcp_client_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!(::1), exec)
+        tcp_client_stream_test::<DnsTcpStream, FuchsiaExec, FuchsiaTime>(ip!("::1"), exec)
     }
 }

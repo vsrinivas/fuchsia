@@ -500,7 +500,7 @@ mod tests {
 
     /// Creates a test socket bound to an ephemeral port on localhost.
     fn create_test_socket() -> (fasync::net::UdpSocket, SocketAddr) {
-        let addr: SocketAddr = std_socket_addr!([::1]:0);
+        let addr: SocketAddr = std_socket_addr!("[::1]:0");
         let socket = std::net::UdpSocket::bind(addr).expect("failed to create test socket");
         let addr = socket.local_addr().expect("failed to get address of test socket");
         (fasync::net::UdpSocket::from_socket(socket).expect("failed to create test socket"), addr)
@@ -541,7 +541,7 @@ mod tests {
             serve_client(
                 NewClientParams {
                     interface_id: Some(1),
-                    address: Some(fidl_socket_addr_v6!([::1]:546)),
+                    address: Some(fidl_socket_addr_v6!("[::1]:546")),
                     models: Some(OperationalModels {
                         stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
                         ..OperationalModels::EMPTY
@@ -566,7 +566,7 @@ mod tests {
             serve_client(
                 NewClientParams {
                     interface_id: Some(1),
-                    address: Some(fidl_socket_addr_v6!([::1]:546)),
+                    address: Some(fidl_socket_addr_v6!("[::1]:546")),
                     models: Some(OperationalModels {
                         stateless: Some(Stateless { options_to_request: None, ..Stateless::EMPTY }),
                         ..OperationalModels::EMPTY
@@ -605,7 +605,7 @@ mod tests {
                 serve_client(
                     NewClientParams {
                         interface_id: Some(1),
-                        address: Some(fidl_socket_addr_v6!([::1]:546)),
+                        address: Some(fidl_socket_addr_v6!("[::1]:546")),
                         models: Some(OperationalModels {
                             stateless: Some(Stateless {
                                 options_to_request: None,
@@ -640,7 +640,7 @@ mod tests {
             NewClientParams {
                 interface_id: Some(2),
                 address: Some(fnet::Ipv6SocketAddress {
-                    address: fidl_ip_v6!(fe80::1),
+                    address: fidl_ip_v6!("fe80::1"),
                     port: DEFAULT_CLIENT_PORT,
                     zone_index: 1,
                 }),
@@ -654,7 +654,7 @@ mod tests {
             NewClientParams {
                 interface_id: Some(1),
                 address: Some(fnet::Ipv6SocketAddress {
-                    address: fidl_ip_v6!(ff01::1),
+                    address: fidl_ip_v6!("ff01::1"),
                     port: DEFAULT_CLIENT_PORT,
                     zone_index: 1,
                 }),
@@ -680,11 +680,11 @@ mod tests {
 
     #[test]
     fn test_is_unicast_link_local_strict() {
-        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe80::)), true);
-        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe80::1)), true);
-        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe80::ffff:1:2:3)), true);
-        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe80::1:0:0:0:0)), false);
-        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!(fe81::)), false);
+        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!("fe80::")), true);
+        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!("fe80::1")), true);
+        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!("fe80::ffff:1:2:3")), true);
+        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!("fe80::1:0:0:0:0")), false);
+        assert_eq!(is_unicast_link_local_strict(&fidl_ip_v6!("fe81::")), false);
     }
 
     fn create_test_dns_server(
@@ -812,11 +812,11 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!(fe80::1:2)])],
+                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2")])],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![create_test_dns_server(
-                fidl_ip_v6!(fe80::1:2),
+                fidl_ip_v6!("fe80::1:2"),
                 1, /* source interface */
                 1, /* zone index */
             )];
@@ -840,7 +840,7 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!(fe80::1:2)])],
+                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2")])],
                 ))
                 .expect("failed to send test reply");
             assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -855,20 +855,20 @@ mod tests {
                     client_addr,
                     transaction_id,
                     &[v6::DhcpOption::DnsServers(vec![
-                        std_ip_v6!(fe80::1:2),
-                        std_ip_v6!(1234::5:6),
+                        std_ip_v6!("fe80::1:2"),
+                        std_ip_v6!("1234::5:6"),
                     ])],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![
                 create_test_dns_server(
-                    fidl_ip_v6!(fe80::1:2),
+                    fidl_ip_v6!("fe80::1:2"),
                     1, /* source interface */
                     1, /* zone index */
                 ),
                 // Only set zone index for link local addresses.
                 create_test_dns_server(
-                    fidl_ip_v6!(1234::5:6),
+                    fidl_ip_v6!("1234::5:6"),
                     1, /* source interface */
                     0, /* zone index */
                 ),
@@ -931,7 +931,7 @@ mod tests {
             &server_socket,
             client_addr,
             transaction_id,
-            &[v6::DhcpOption::DnsServers(vec![std_ip_v6!(fe80::1:2), std_ip_v6!(1234::5:6)])],
+            &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")])],
         )
         .await
         .expect("failed to send test message");
@@ -944,12 +944,12 @@ mod tests {
 
         let want_servers = vec![
             create_test_dns_server(
-                fidl_ip_v6!(fe80::1:2),
+                fidl_ip_v6!("fe80::1:2"),
                 1, /* source interface */
                 1, /* zone index */
             ),
             create_test_dns_server(
-                fidl_ip_v6!(1234::5:6),
+                fidl_ip_v6!("1234::5:6"),
                 1, /* source interface */
                 0, /* zone index */
             ),
@@ -1157,7 +1157,7 @@ mod tests {
                 .take()
                 .expect("test client did not get a channel responder")
                 .send(&mut std::iter::once(fnetname::DnsServer_ {
-                    address: Some(fidl_socket_addr!([fe01::2:3]:42)),
+                    address: Some(fidl_socket_addr!("[fe01::2:3]:42")),
                     source: Some(fnetname::DnsServerSource::Dhcpv6(
                         fnetname::Dhcpv6DnsServerSource {
                             source_interface: Some(42),
@@ -1173,7 +1173,7 @@ mod tests {
         assert_eq!(
             servers,
             vec![fnetname::DnsServer_ {
-                address: Some(fidl_socket_addr!([fe01::2:3]:42)),
+                address: Some(fidl_socket_addr!("[fe01::2:3]:42")),
                 source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                     source_interface: Some(42),
                     ..fnetname::Dhcpv6DnsServerSource::EMPTY
@@ -1297,7 +1297,7 @@ mod tests {
             },
             1, /* interface ID */
             StubSocket {},
-            std_socket_addr!([::1]:0),
+            std_socket_addr!("[::1]:0"),
             client_stream,
         )
         .await

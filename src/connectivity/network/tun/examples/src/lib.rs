@@ -24,8 +24,8 @@ const CONFIG_FOR_TAP_LIKE: EthernetLayerConfig = EthernetLayerConfig {
     alice_mac: fidl_mac!("02:03:04:05:06:07"),
     bob_mac: fidl_mac!("02:AA:BB:CC:DD:EE"),
     ip_layer: IpLayerConfig {
-        alice_subnet: fidl_subnet!(192.168.0.1/24),
-        bob_ip: fidl_ip!(192.168.0.2),
+        alice_subnet: fidl_subnet!("192.168.0.1/24"),
+        bob_ip: fidl_ip!("192.168.0.2"),
     },
 };
 
@@ -33,8 +33,10 @@ const CONFIG_FOR_TAP_LIKE: EthernetLayerConfig = EthernetLayerConfig {
 ///
 /// Note that the tests in this crate run in parallel against the same Netstack,
 /// so the IP addresses between tests must be different to avoid interference.
-const CONFIG_FOR_TUN_LIKE: IpLayerConfig =
-    IpLayerConfig { alice_subnet: fidl_subnet!(192.168.86.1/24), bob_ip: fidl_ip!(192.168.86.2) };
+const CONFIG_FOR_TUN_LIKE: IpLayerConfig = IpLayerConfig {
+    alice_subnet: fidl_subnet!("192.168.86.1/24"),
+    bob_ip: fidl_ip!("192.168.86.2"),
+};
 
 /// Creates a new [`fidl_fuchsia_net_tun::DeviceConfig`] using for examples
 /// using the provided `frame_type` and `mac`.

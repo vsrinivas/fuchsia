@@ -1214,23 +1214,23 @@ mod tests {
             topo_path: "ethernet/eth0".to_string(),
             name: "eth1".to_string(),
             ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                address: std_ip!(1.2.3.4),
+                address: std_ip!("1.2.3.4"),
                 prefix: 24,
             })),
-            ipv6_addr: vec![LifIpAddr { address: std_ip!(123::4), prefix: 64 }],
+            ipv6_addr: vec![LifIpAddr { address: std_ip!("123::4"), prefix: 64 }],
             state: hal::InterfaceState::Up,
             enabled: true,
             dhcp_client_enabled: false,
         };
         let route_table = vec![
             hal::Route {
-                gateway: Some(std_ip!(1.2.3.1)),
+                gateway: Some(std_ip!("1.2.3.1")),
                 metric: None,
                 port_id: Some(id),
                 target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
             },
             hal::Route {
-                gateway: Some(std_ip!(123::1)),
+                gateway: Some(std_ip!("123::1")),
                 metric: None,
                 port_id: Some(id),
                 target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
@@ -1238,13 +1238,13 @@ mod tests {
         ];
         let route_table2 = vec![
             hal::Route {
-                gateway: Some(std_ip!(2.2.3.1)),
+                gateway: Some(std_ip!("2.2.3.1")),
                 metric: None,
                 port_id: Some(id),
                 target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
             },
             hal::Route {
-                gateway: Some(std_ip!(223::1)),
+                gateway: Some(std_ip!("223::1")),
                 metric: None,
                 port_id: Some(id),
                 target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },

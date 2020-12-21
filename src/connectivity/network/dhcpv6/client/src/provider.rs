@@ -85,7 +85,7 @@ mod tests {
                     .new_client(
                         NewClientParams {
                             interface_id: Some(interface_id),
-                            address: Some(fidl_socket_addr_v6!([fe01::1:2]:546)),
+                            address: Some(fidl_socket_addr_v6!("[fe01::1:2]:546")),
                             models: Some(OperationalModels {
                                 stateless: None,
                                 ..OperationalModels::EMPTY

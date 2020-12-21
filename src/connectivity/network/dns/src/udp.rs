@@ -46,27 +46,27 @@ mod test {
     fn test_udp_stream_ipv4() {
         use trust_dns_proto::tests::udp_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        udp_stream_test::<DnsUdpSocket, FuchsiaExec>(ip!(127.0.0.1), exec)
+        udp_stream_test::<DnsUdpSocket, FuchsiaExec>(ip!("127.0.0.1"), exec)
     }
 
     #[test]
     fn test_udp_stream_ipv6() {
         use trust_dns_proto::tests::udp_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        udp_stream_test::<DnsUdpSocket, FuchsiaExec>(ip!(::1), exec)
+        udp_stream_test::<DnsUdpSocket, FuchsiaExec>(ip!("::1"), exec)
     }
 
     #[test]
     fn test_udp_client_stream_ipv4() {
         use trust_dns_proto::tests::udp_client_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        udp_client_stream_test::<DnsUdpSocket, FuchsiaExec, FuchsiaTime>(ip!(127.0.0.1), exec)
+        udp_client_stream_test::<DnsUdpSocket, FuchsiaExec, FuchsiaTime>(ip!("127.0.0.1"), exec)
     }
 
     #[test]
     fn test_udp_client_stream_ipv6() {
         use trust_dns_proto::tests::udp_client_stream_test;
         let exec = FuchsiaExec::new().expect("failed to create fuchsia executor");
-        udp_client_stream_test::<DnsUdpSocket, FuchsiaExec, FuchsiaTime>(ip!(::1), exec)
+        udp_client_stream_test::<DnsUdpSocket, FuchsiaExec, FuchsiaTime>(ip!("::1"), exec)
     }
 }
