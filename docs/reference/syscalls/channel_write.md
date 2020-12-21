@@ -59,7 +59,7 @@ sequentially copy to the message in order. `num_bytes` specifies the number of
 
 ```c
 typedef struct zx_channel_iovec {
-  void* buffer;            // User-space bytes.
+  const void* buffer;      // User-space bytes.
   uint32_t capacity;       // Number of bytes.
   uint32_t reserved;       // Reserved.
 } zx_channel_iovec_t;

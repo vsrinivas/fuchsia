@@ -51,6 +51,30 @@ typedef struct {
 } zx_channel_call_etc_args_t;
 ```
 
+### ZX_CHANNEL_WRITE_USE_IOVEC option
+
+When the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified, `wr_bytes` is
+interpreted as an array of `zx_channel_iovec_t`, specifying slices of bytes to
+sequentially copy to the message in order. `num_wr_bytes` specifies the number
+of `zx_channel_iovec_t` array elements in `wr_bytes`.
+
+```c
+typedef struct zx_channel_iovec {
+  const void* buffer;      // User-space bytes.
+  uint32_t capacity;       // Number of bytes.
+  uint32_t reserved;       // Reserved.
+} zx_channel_iovec_t;
+```
+
+There can be at most **ZX_CHANNEL_MAX_MSG_IOVEC** or `8192`
+`zx_channel_iovec_t` elements of the `wr_bytes` array with the sum of
+`capacity` across all `zx_channel_iovec_t` not exceeding
+**ZX_CHANNEL_MAX_MSG_BYTES** or `65536` bytes. `buffer` need not be aligned and
+it may only be `NULL` if `capacity` is zero. `reserved` must be set to zero.
+
+Either all `zx_channel_iovec_t` are copied and the message is sent, or none
+are copied and the message is not sent. Usage for sending handles is unchanged.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
@@ -78,6 +102,9 @@ handle in *wr_handles* did not match the object type type.
 or *wr_num_bytes* is less than four, or *options* is nonzero, or any source
 handle in *wr_handles\[i\]->handle* did not have the rights specified in
 *wr_handle\[i\]->rights*.
+If the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified,
+**ZX_ERR_INVALID_ARGS** will be produced if the *buffer* field contains an
+invalid pointer or if the reserved field is non-zero.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE** or
 any element in *handles* does not have **ZX_RIGHT_TRANSFER**.
@@ -97,6 +124,10 @@ In a future build this error will no longer occur.
 
 **ZX_ERR_OUT_OF_RANGE**  *wr_num_bytes* or *wr_num_handles* are larger than the
 largest allowable size for channel messages.
+If the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified,
+**ZX_ERR_OUT_OF_RANGE** will be produced if *num_bytes* is larger than
+**ZX_CHANNEL_MAX_MSG_IOVEC** or the sum of the iovec capacities exceeds
+**ZX_CHANNEL_MAX_MSG_BYTES**.
 
 **ZX_ERR_BUFFER_TOO_SMALL**  *rd_num_bytes* or *rd_num_handles* are too small
 to contain the reply message.

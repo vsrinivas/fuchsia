@@ -25,9 +25,8 @@ class KernelPtrAdapter {
   const char* p_;
 };
 
-zx_status_t BufferChain::CopyInKernel(const char* src, size_t dst_offset, size_t size) {
-  return CopyInCommon(KernelPtrAdapter(src), dst_offset, size);
+zx_status_t BufferChain::AppendKernel(const char* src, size_t size) {
+  return AppendCommon(KernelPtrAdapter(src), size);
 }
 
-template zx_status_t BufferChain::CopyInCommon(user_in_ptr<const char> src, size_t dst_offset,
-                                               size_t size);
+template zx_status_t BufferChain::AppendCommon(user_in_ptr<const char> src, size_t size);

@@ -310,7 +310,7 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
 
   auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
-  if (options != 0u) {
+  if ((options & ~ZX_CHANNEL_WRITE_USE_IOVEC) != 0u) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -322,8 +322,13 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
   }
 
   MessagePacketPtr msg;
-  status =
-      MessagePacket::Create(user_bytes.reinterpret<const char>(), num_bytes, num_handles, &msg);
+  if ((options & ZX_CHANNEL_WRITE_USE_IOVEC) != 0) {
+    status = MessagePacket::Create(user_bytes.reinterpret<const zx_channel_iovec_t>(), num_bytes,
+                                   num_handles, &msg);
+  } else {
+    status =
+        MessagePacket::Create(user_bytes.reinterpret<const char>(), num_bytes, num_handles, &msg);
+  }
   if (status != ZX_OK) {
     return status;
   }
@@ -367,7 +372,7 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
 
   auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
-  if (options || num_bytes < sizeof(zx_txid_t)) {
+  if ((options & ~ZX_CHANNEL_WRITE_USE_IOVEC) != 0u) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -380,9 +385,18 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
 
   // Prepare a MessagePacket for writing
   MessagePacketPtr msg;
-  status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
+  if ((options & ZX_CHANNEL_WRITE_USE_IOVEC) != 0) {
+    status = MessagePacket::Create(user_bytes.reinterpret<const zx_channel_iovec_t>(), num_bytes,
+                                   num_handles, &msg);
+  } else {
+    status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
+  }
   if (status != ZX_OK) {
     return status;
+  }
+
+  if (msg->data_size() < sizeof(zx_txid_t)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // msg_put_handles() always consumes all handles (or there are zero handles,

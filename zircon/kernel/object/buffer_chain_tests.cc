@@ -9,6 +9,8 @@
 #include <lib/user_copy/user_ptr.h>
 #include <stdio.h>
 
+#include <fbl/auto_call.h>
+
 #include "object/buffer_chain.h"
 
 namespace {
@@ -39,27 +41,31 @@ static bool alloc_free_basic() {
   ASSERT_NE(bc, nullptr);
   BufferChain::Free(bc);
 
-  // Two Buffers required.
+  // Two pages allocated, only one used for the buffer.
   bc = BufferChain::Alloc(BufferChain::kContig + 1);
   ASSERT_FALSE(bc->buffers()->is_empty());
-  ASSERT_EQ(bc->buffers()->size_slow(), 2u);
+  ASSERT_EQ(bc->buffers()->size_slow(), 1u);
   ASSERT_NE(bc, nullptr);
   BufferChain::Free(bc);
 
-  // Many Buffers required.
+  // Several pages allocated, only one used for the buffer.
   bc = BufferChain::Alloc(10000 * BufferChain::kRawDataSize);
   ASSERT_FALSE(bc->buffers()->is_empty());
-  ASSERT_EQ(bc->buffers()->size_slow(), 1u + 10000u);
+  ASSERT_EQ(bc->buffers()->size_slow(), 1u);
   ASSERT_NE(bc, nullptr);
   BufferChain::Free(bc);
 
   END_TEST;
 }
 
-static bool copy_in_copy_out() {
+static bool append_copy_out() {
   BEGIN_TEST;
 
-  constexpr size_t kSize = BufferChain::kContig + 2 * BufferChain::kRawDataSize;
+  constexpr size_t kOffset = 24;
+  constexpr size_t kFirstCopy = BufferChain::kContig + 8;
+  constexpr size_t kSecondCopy = BufferChain::kRawDataSize + 16;
+  constexpr size_t kSize = kOffset + kFirstCopy + kSecondCopy;
+
   fbl::AllocChecker ac;
   auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kSize]);
   ASSERT_TRUE(ac.check());
@@ -69,46 +75,51 @@ static bool copy_in_copy_out() {
 
   BufferChain* bc = BufferChain::Alloc(kSize);
   ASSERT_NE(nullptr, bc);
-  ASSERT_FALSE(bc->buffers()->is_empty());
+  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  ASSERT_EQ(1u, bc->buffers()->size_slow());
+
+  bc->Skip(kOffset);
 
   // Fill the chain with 'A'.
-  memset(buf.get(), 'A', kSize);
-  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSize));
-  ASSERT_EQ(ZX_OK, bc->CopyIn(mem_in, 0, kSize));
-
-  // Verify it.
-  ASSERT_EQ(3u, bc->buffers()->size_slow());
-  for (auto& b : *bc->buffers()) {
-    char* data = b.data();
-    for (size_t i = 0; i < b.size(); ++i) {
-      ASSERT_EQ('A', data[i]);
-    }
-  }
-
-  // Write a chunk of 'B' straddling all three buffers.
-  memset(buf.get(), 'B', kSize);
-  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSize));
-  size_t offset = BufferChain::kContig - 1;
-  size_t size = BufferChain::kRawDataSize + 2;
-  ASSERT_EQ(ZX_OK, bc->CopyIn(mem_in, offset, size));
+  memset(buf.get(), 'A', kFirstCopy);
+  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kFirstCopy));
+  ASSERT_EQ(ZX_OK, bc->Append(mem_in, kFirstCopy));
 
   // Verify it.
   auto iter = bc->buffers()->begin();
-  for (size_t i = 0; i < offset; ++i) {
-    char* data = iter->data();
-    ASSERT_EQ('A', data[i]);
-  }
-  ASSERT_EQ('B', *(iter->data() + offset));
-  ++iter;
-  for (size_t i = 0; i < BufferChain::kRawDataSize; ++i) {
-    char* data = iter->data();
-    ASSERT_EQ('B', data[i]);
+  for (size_t i = kOffset; i < BufferChain::kContig; ++i) {
+    ASSERT_EQ('A', iter->data()[i]);
   }
   ++iter;
-  ASSERT_EQ('B', *iter->data());
-  for (size_t i = 1; i < BufferChain::kRawDataSize; ++i) {
-    char* data = iter->data();
-    EXPECT_EQ('A', data[i]);
+  for (size_t i = 0; i < kOffset + kFirstCopy - BufferChain::kContig; ++i) {
+    ASSERT_EQ('A', iter->data()[i]);
+  }
+
+  // Write a chunk of 'B' straddling all three buffers.
+  memset(buf.get(), 'B', kSecondCopy);
+  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kSecondCopy));
+  ASSERT_EQ(ZX_OK, bc->Append(mem_in, kSecondCopy));
+
+  // Verify it.
+  iter = bc->buffers()->begin();
+  for (size_t i = kOffset; i < BufferChain::kContig; ++i) {
+    ASSERT_EQ('A', iter->data()[i]);
+  }
+  ++iter;
+  for (size_t i = 0; i < kOffset + kFirstCopy - BufferChain::kContig; ++i) {
+    ASSERT_EQ('A', iter->data()[i]);
+  }
+  for (size_t i = kOffset + kFirstCopy - BufferChain::kContig; i < BufferChain::kRawDataSize; ++i) {
+    ASSERT_EQ('B', iter->data()[i]);
+  }
+  ++iter;
+  for (size_t i = 0;
+       i < kOffset + kFirstCopy + kSecondCopy - BufferChain::kContig - BufferChain::kRawDataSize;
+       ++i) {
+    if (iter->data()[i] != 'B') {
+      ASSERT_EQ(int(i), -1);
+    }
+    ASSERT_EQ('B', iter->data()[i]);
   }
   ASSERT_TRUE(++iter == bc->buffers()->end());
 
@@ -120,20 +131,95 @@ static bool copy_in_copy_out() {
   // Verify it.
   memset(buf.get(), 0, kSize);
   ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(buf.get(), kSize));
-  size_t index = 0;
-  for (size_t i = 0; i < offset; ++i) {
+  size_t index = kOffset;
+  for (size_t i = 0; i < kFirstCopy; ++i) {
     ASSERT_EQ('A', buf[index++]);
   }
-  EXPECT_EQ('B', buf[index++]);
-  for (size_t i = 0; i < BufferChain::kRawDataSize; ++i) {
+  for (size_t i = 0; i < kSecondCopy; ++i) {
     ASSERT_EQ('B', buf[index++]);
   }
-  ASSERT_EQ('B', buf[index++]);
-  for (size_t i = 1; i < BufferChain::kRawDataSize; ++i) {
-    EXPECT_EQ('A', buf[index++]);
-  }
 
-  BufferChain::Free(bc);
+  END_TEST;
+}
+
+static bool free_unused_pages() {
+  BEGIN_TEST;
+
+  constexpr size_t kSize = 8 * PAGE_SIZE;
+  constexpr size_t kWriteSize = BufferChain::kContig + 1;
+
+  fbl::AllocChecker ac;
+  auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kWriteSize]);
+  ASSERT_TRUE(ac.check());
+  ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteSize);
+  auto mem_in = mem->user_in<char>();
+  auto mem_out = mem->user_out<char>();
+
+  BufferChain* bc = BufferChain::Alloc(kSize);
+  ASSERT_NE(nullptr, bc);
+  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  ASSERT_EQ(1u, bc->buffers()->size_slow());
+
+  memset(buf.get(), 0, kWriteSize);
+  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kWriteSize));
+  ASSERT_EQ(ZX_OK, bc->Append(mem_in, kWriteSize));
+
+  ASSERT_EQ(2u, bc->buffers()->size_slow());
+  bc->FreeUnusedBuffers();
+  ASSERT_EQ(2u, bc->buffers()->size_slow());
+
+  END_TEST;
+}
+
+static bool append_more_than_allocated() {
+  BEGIN_TEST;
+
+  constexpr size_t kAllocSize = 2 * PAGE_SIZE;
+  constexpr size_t kWriteSize = 2 * kAllocSize;
+
+  fbl::AllocChecker ac;
+  auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kWriteSize]);
+  ASSERT_TRUE(ac.check());
+  ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteSize);
+  auto mem_in = mem->user_in<char>();
+  auto mem_out = mem->user_out<char>();
+
+  BufferChain* bc = BufferChain::Alloc(kAllocSize);
+  ASSERT_NE(nullptr, bc);
+  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  ASSERT_EQ(1u, bc->buffers()->size_slow());
+
+  memset(buf.get(), 0, kWriteSize);
+  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kWriteSize));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, bc->Append(mem_in, kWriteSize));
+
+  END_TEST;
+}
+
+static bool append_after_fail_fails() {
+  BEGIN_TEST;
+
+  constexpr size_t kAllocSize = 2 * PAGE_SIZE;
+  constexpr size_t kWriteSize = PAGE_SIZE;
+
+  fbl::AllocChecker ac;
+  auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kWriteSize]);
+  ASSERT_TRUE(ac.check());
+  ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteSize);
+  auto mem_in = mem->user_in<char>();
+  auto mem_out = mem->user_out<char>();
+
+  BufferChain* bc = BufferChain::Alloc(kAllocSize);
+  ASSERT_NE(nullptr, bc);
+  auto free_bc = fbl::MakeAutoCall([&bc]() { BufferChain::Free(bc); });
+  ASSERT_EQ(1u, bc->buffers()->size_slow());
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            bc->Append(make_user_in_ptr(static_cast<const char*>(nullptr)), kWriteSize));
+
+  memset(buf.get(), 0, kWriteSize);
+  ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf.get(), kWriteSize));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, bc->Append(mem_in, kWriteSize));
 
   END_TEST;
 }
@@ -142,5 +228,8 @@ static bool copy_in_copy_out() {
 
 UNITTEST_START_TESTCASE(buffer_chain_tests)
 UNITTEST("alloc_free_basic", alloc_free_basic)
-UNITTEST("copy_in_copy_out", copy_in_copy_out)
+UNITTEST("append_copy_out", append_copy_out)
+UNITTEST("free_unused_pages", free_unused_pages)
+UNITTEST("append_more_than_allocated", append_more_than_allocated)
+UNITTEST("append_after_fail_fails", append_after_fail_fails)
 UNITTEST_END_TESTCASE(buffer_chain_tests, "buffer_chain", "BufferChain tests")

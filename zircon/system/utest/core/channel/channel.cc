@@ -754,6 +754,32 @@ TEST(ChannelTest, CallWrittenBytesSmallerThanZxTxIdReturnsInvalidArgs) {
             ZX_ERR_INVALID_ARGS);
 }
 
+// Currently the check for sufficient space for txid happens after reading in message data.
+// Test failing reading in message data before checking txid size.
+TEST(ChannelTest, CallWrittenBytesSmallerThanZxTxIdWithBadPointerReturnsInvalidArgs) {
+  zx::channel local;
+  zx::channel remote;
+
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  Message reply;
+  zx_channel_call_args_t args = {
+      .wr_bytes = reinterpret_cast<void*>(-1),  // Bad pointer.
+      .wr_handles = nullptr,
+      .rd_bytes = &reply,
+      .rd_handles = nullptr,
+      .wr_num_bytes = sizeof(zx_txid_t) - 1,
+      .wr_num_handles = 0,
+      .rd_num_bytes = Message::kMaxSize,
+      .rd_num_handles = 0,
+  };
+
+  uint32_t actual_bytes = 0;
+  uint32_t actual_handles = 0;
+  ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &actual_bytes, &actual_handles),
+            ZX_ERR_INVALID_ARGS);
+}
+
 template <auto ReplyFiller, uint32_t accumulated_messages = 0>
 void ReplyAndWait(const Message& request, uint32_t message_count, zx::channel svc,
                   std::atomic<const char*>* error, zx::event* wait_for_event) {

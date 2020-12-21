@@ -81,6 +81,30 @@ Messages are drained by [`zx_channel_read()`] or [`zx_channel_read_etc()`]. Fail
 messages in a timely fashion can cause excessive kernel memory to be used which might generate an
 exception. See [ipc limits](/docs/concepts/kernel/ipc_limits.md) for details.
 
+### ZX_CHANNEL_WRITE_USE_IOVEC option
+
+When the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified, `bytes` is
+interpreted as an array of `zx_channel_iovec_t`, specifying slices of bytes to
+sequentially copy to the message in order. `num_bytes` specifies the number of
+`zx_channel_iovec_t` array elements in `bytes`.
+
+```c
+typedef struct zx_channel_iovec {
+  const void* buffer;      // User-space bytes.
+  uint32_t capacity;       // Number of bytes.
+  uint32_t reserved;       // Reserved.
+} zx_channel_iovec_t;
+```
+
+There can be at most **ZX_CHANNEL_MAX_MSG_IOVEC** or `8192`
+`zx_channel_iovec_t` elements of the `bytes` array with the sum of `capacity`
+across all `zx_channel_iovec_t` not exceeding **ZX_CHANNEL_MAX_MSG_BYTES** or
+`65536` bytes. `buffer` need not be aligned and it may only be `NULL` if
+`capacity` is zero. `reserved` must be set to zero.
+
+Either all `zx_channel_iovec_t` are copied and the message is sent, or none
+are copied and the message is not sent. Usage for sending handles is unchanged.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
@@ -107,6 +131,9 @@ is an invalid pointer, or *options* is nonzero, or *operation* is not
 one of ZX_HANDLE_OP_MOVE or ZX_HANDLE_OP_DUPLICATE, or any source
 handle in *handles\[i\]->handle* did not have the rights specified in
 *whandle\[i\]->rights*.
+If the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified,
+**ZX_ERR_INVALID_ARGS** will be produced if the *buffer* field contains an
+invalid pointer or if the reserved field is non-zero.
 
 **ZX_ERR_NOT_SUPPORTED**  *handle* is included in the *handles* array.
 
@@ -121,8 +148,12 @@ any source handle in *handles* does not have **ZX_RIGHT_DUPLICATE** when
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 
-**ZX_ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than the
-largest allowable size for channel messages.
+**ZX_ERR_OUT_OF_RANGE**  *num_bytes* or *num_handles* are larger than
+**ZX_CHANNEL_MAX_MSG_BYTES** or **ZX_CHANNEL_MAX_MSG_HANDLES** respectively.
+If the **ZX_CHANNEL_WRITE_USE_IOVEC** option is specified,
+**ZX_ERR_OUT_OF_RANGE** will be produced if *num_bytes* is larger than
+**ZX_CHANNEL_MAX_MSG_IOVEC** or the sum of the iovec capacities exceeds
+**ZX_CHANNEL_MAX_MSG_BYTES**.
 
 ## NOTES
 

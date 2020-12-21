@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <cstdint>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <ktl/unique_ptr.h>
@@ -19,10 +21,12 @@
 
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 64u;
+constexpr uint32_t kMaxIovecsCount = 8192u;
 
 // ensure public constants are aligned
 static_assert(ZX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
 static_assert(ZX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
+static_assert(ZX_CHANNEL_MAX_MSG_IOVECS == kMaxIovecsCount, "");
 
 class Handle;
 class MessagePacket;
@@ -37,11 +41,19 @@ using MessagePacketPtr = ktl::unique_ptr<MessagePacket, internal::MessagePacketD
 
 class MessagePacket final : public fbl::DoublyLinkedListable<MessagePacketPtr> {
  public:
+  // The number of iovecs to read and process at a time.
+  // If number of iovecs <= kIovecChunkSize, then the message buf size will be computed and the
+  // minimum required number of pages will be allocated. Otherwise, a large enough buffer for
+  // the largest possible message will be allocated.
+  static constexpr uint32_t kIovecChunkSize = 16;
+
   // Creates a message packet containing the provided data and space for
   // |num_handles| handles. The handles array is uninitialized and must
   // be completely overwritten by clients.
   static zx_status_t Create(user_in_ptr<const char> data, uint32_t data_size, uint32_t num_handles,
                             MessagePacketPtr* msg);
+  static zx_status_t Create(user_in_ptr<const zx_channel_iovec_t> iovecs, uint32_t num_iovecs,
+                            uint32_t num_handles, MessagePacketPtr* msg);
   static zx_status_t Create(const char* data, uint32_t data_size, uint32_t num_handles,
                             MessagePacketPtr* msg);
 
@@ -107,11 +119,19 @@ class MessagePacket final : public fbl::DoublyLinkedListable<MessagePacketPtr> {
   friend struct internal::MessagePacketDeleter;
   static void recycle(MessagePacket* packet);
 
+  static zx_status_t CreateIovecBounded(user_in_ptr<const zx_channel_iovec_t> iovecs,
+                                        uint32_t num_iovecs, uint32_t num_handles,
+                                        MessagePacketPtr* msg);
+  static zx_status_t CreateIovecUnbounded(user_in_ptr<const zx_channel_iovec_t> iovecs,
+                                          uint32_t num_iovecs, uint32_t num_handles,
+                                          MessagePacketPtr* msg);
   static zx_status_t CreateCommon(uint32_t data_size, uint32_t num_handles, MessagePacketPtr* msg);
+
+  void set_data_size(uint32_t data_size) { data_size_ = data_size; }
 
   BufferChain* buffer_chain_;
   Handle** const handles_;
-  const uint32_t data_size_;
+  uint32_t data_size_;
   const uint32_t payload_offset_;
   const uint16_t num_handles_;
   bool owns_handles_;

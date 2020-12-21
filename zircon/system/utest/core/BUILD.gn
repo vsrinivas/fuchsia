@@ -23,6 +23,7 @@ core_tests = [
   "c11-thread",
   "channel",
   "channel-call-etc",
+  "channel-iovec",
   "channel-write-etc",
   "clock",
   "elf-tls",

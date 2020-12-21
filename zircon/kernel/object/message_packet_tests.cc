@@ -142,6 +142,53 @@ static bool copy_bad_mem() {
   END_TEST;
 }
 
+// Create a message packet with the specified number of iovec inputs.
+template <uint32_t NIovecs, uint32_t NHandles>
+static bool create_iovec() {
+  BEGIN_TEST;
+  constexpr uint32_t kNumBytes = NIovecs * (NIovecs - 1) / 2;
+  ktl::unique_ptr<UserMemory> bytes_mem = UserMemory::Create(kNumBytes);
+  auto bytes_mem_in = bytes_mem->user_in<char>();
+  auto bytes_mem_out = bytes_mem->user_out<char>();
+
+  char bytes[kNumBytes];
+  for (uint32_t i = 0; i < sizeof(bytes); i++) {
+    bytes[i] = static_cast<char>(i);
+  }
+  ASSERT_EQ(ZX_OK, bytes_mem_out.copy_array_to_user(bytes, kNumBytes));
+
+  zx_channel_iovec_t iovecs[NIovecs];
+  for (uint32_t i = 0; i < NIovecs; i++) {
+    iovecs[i] = zx_channel_iovec_t{
+        .buffer = bytes_mem_in.get(),
+        .capacity = i,
+        .reserved = 0,
+    };
+    bytes_mem_in = bytes_mem_in.byte_offset(i);
+  }
+
+  ktl::unique_ptr<UserMemory> iovec_mem = UserMemory::Create(NIovecs * sizeof(zx_channel_iovec_t));
+  auto iovec_mem_in = iovec_mem->user_in<zx_channel_iovec_t>();
+  auto iovec_mem_out = iovec_mem->user_out<zx_channel_iovec_t>();
+  ASSERT_EQ(ZX_OK, iovec_mem_out.copy_array_to_user(iovecs, NIovecs));
+
+  MessagePacketPtr mp;
+  EXPECT_EQ(ZX_OK, MessagePacket::Create(iovec_mem_in, NIovecs, NHandles, &mp));
+
+  EXPECT_EQ(NHandles, mp->num_handles());
+
+  ktl::unique_ptr<UserMemory> result_mem = UserMemory::Create(kNumBytes);
+  auto result_mem_in = result_mem->user_in<char>();
+  auto result_mem_out = result_mem->user_out<char>();
+  ASSERT_EQ(ZX_OK, mp->CopyDataTo(result_mem_out));
+  char result[kNumBytes];
+  ASSERT_EQ(ZX_OK, result_mem_in.copy_array_from_user(result, kNumBytes));
+
+  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(bytes), reinterpret_cast<uint8_t*>(result), kNumBytes);
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(message_packet_tests)
@@ -151,4 +198,8 @@ UNITTEST("create_zero", create_zero)
 UNITTEST("create_too_many_handles", create_too_many_handles)
 UNITTEST("create_bad_mem", create_bad_mem)
 UNITTEST("copy_bad_mem", copy_bad_mem)
+UNITTEST("create_iovec_bounded", (create_iovec<MessagePacket::kIovecChunkSize, 0>))
+UNITTEST("create_iovec_unbounded", (create_iovec<2 * MessagePacket::kIovecChunkSize, 0>))
+UNITTEST("create_iovec_bounded_handles", (create_iovec<MessagePacket::kIovecChunkSize, 3>))
+UNITTEST("create_iovec_unbounded_handles", (create_iovec<2 * MessagePacket::kIovecChunkSize, 3>))
 UNITTEST_END_TESTCASE(message_packet_tests, "message_packet", "MessagePacket tests")

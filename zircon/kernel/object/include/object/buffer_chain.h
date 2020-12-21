@@ -12,6 +12,7 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <cstddef>
 #include <new>
 
 #include <fbl/algorithm.h>
@@ -23,7 +24,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-// BufferChain is a list of fixed-size buffers allocated from the PMM.
+// BufferChain is a list of buffers allocated from the PMM.
 //
 // It's designed for use with channel messages.  Pages backing a BufferChain are marked as
 // VM_PAGE_STATE_IPC.
@@ -42,6 +43,13 @@
 //   |+------------------------------+|     |+------------------------------+|
 //   +--------------------------------+     +--------------------------------+
 //
+// BufferChain does not dynamically allocate. An initial Alloc() call allocates a list of
+// pages that will be used to build the BufferChain. This allocation can exceed the size
+// actually used by the buffer chain and the excess buffers can be freed with a call to
+// FreeUnusedBuffers(). The motivation for sometimes allocating more than needed and later
+// freeing is that the number of needed buffers is sometimes initially unknown and it is
+// presumed to be more efficient to do a single allocation than multiple allocations.
+//
 class BufferChain {
  public:
   class Buffer;
@@ -58,7 +66,8 @@ class BufferChain {
 
   // Unfortunately, we don't yet know sizeof(BufferChain) so estimate and rely on static_asserts
   // further down to verify.
-  constexpr static size_t kSizeOfBufferChain = sizeof(BufferList) + sizeof(list_node);
+  constexpr static size_t kSizeOfBufferChain =
+      sizeof(BufferList) + 2 * sizeof(list_node) + sizeof(size_t) + sizeof(BufferList::iterator);
 
   // kContig is the number of bytes guaranteed to be stored contiguously in any buffer
   constexpr static size_t kContig = kRawDataSize - kSizeOfBufferChain;
@@ -95,26 +104,21 @@ class BufferChain {
     const size_t num_buffers = (size + kRawDataSize - 1) / kRawDataSize;
 
     // Allocate a list of pages.
-    list_node pages = LIST_INITIAL_VALUE(pages);
-    zx_status_t status = pmm_alloc_pages(num_buffers, 0, &pages);
+    list_node unused_pages = LIST_INITIAL_VALUE(unused_pages);
+    zx_status_t status = pmm_alloc_pages(num_buffers, 0, &unused_pages);
     if (unlikely(status != ZX_OK)) {
       return nullptr;
     }
 
-    // Construct a Buffer in each page and add them to a temporary list.
+    // We now have a list of pages.  Allocate a page for the initial Buffer and construct the
+    // BufferChain within it.
     BufferChain::BufferList temp;
-    vm_page_t* page;
-    list_for_every_entry (&pages, page, vm_page_t, queue_node) {
-      DEBUG_ASSERT(page->state() == VM_PAGE_STATE_ALLOC);
-      page->set_state(VM_PAGE_STATE_IPC);
-      void* va = paddr_to_physmap(page->paddr());
-      temp.push_front(new (va) BufferChain::Buffer);
+    list_node used_pages = LIST_INITIAL_VALUE(used_pages);
+    status = AddNextBuffer(&unused_pages, &used_pages, &temp, temp.end());
+    if (unlikely(status != ZX_OK)) {
+      return nullptr;
     }
-
-    // We now have a list of buffers and a list of pages.  Construct a chain inside the first
-    // buffer and give the buffers and pages to the chain.
-    BufferChain* chain = new (temp.front().data()) BufferChain(&temp, &pages);
-    DEBUG_ASSERT(list_is_empty(&pages));
+    BufferChain* chain = new (temp.front().data()) BufferChain(&temp, &unused_pages, &used_pages);
 
     return chain;
   }
@@ -124,7 +128,8 @@ class BufferChain {
     // Remove the buffers and vm_page_t's from the chain *before* destroying it.
     BufferChain::BufferList buffers(ktl::move(*chain->buffers()));
     list_node pages = LIST_INITIAL_VALUE(pages);
-    list_move(&chain->pages_, &pages);
+    list_move(&chain->used_pages_, &pages);
+    list_splice_after(&chain->unused_pages_, &pages);
 
     chain->~BufferChain();
 
@@ -135,15 +140,37 @@ class BufferChain {
     pmm_free(&pages);
   }
 
-  // Copies |size| bytes from |src| to this chain starting at offset |dst_offset|.
-  //
-  // |dst_offset| must be in the range [0, kContig).
-  zx_status_t CopyIn(user_in_ptr<const char> src, size_t dst_offset, size_t size) {
-    return CopyInCommon(src, dst_offset, size);
+  // Free unused pages.
+  void FreeUnusedBuffers() {
+    if (list_is_empty(&unused_pages_)) {
+      // Avoid calling pmm_free if not needed.
+      return;
+    }
+    list_node pages = LIST_INITIAL_VALUE(pages);
+    list_move(&unused_pages_, &pages);
+    pmm_free(&pages);
   }
 
-  // Same as CopyIn except |src| can be in kernel space.
-  zx_status_t CopyInKernel(const char* src, size_t dst_offset, size_t size);
+  // Skips the specified number of bytes, so they won't be consumed by Append or AppendKernel.
+  //
+  // Assumes that it is called only at the beginning of the buffer chain.
+  void Skip(size_t size) {
+    DEBUG_ASSERT(buffer_offset_ == 0);
+    DEBUG_ASSERT(size <= kContig);
+    buffer_offset_ += size;
+  }
+
+  // Appends |size| bytes from |src| to this chain|.
+  //
+  // If there is insufficient remaining space in the buffer chain, ZX_ERR_OUT_OF_RANGE will be
+  // returned.
+  zx_status_t Append(user_in_ptr<const char> src, size_t size) { return AppendCommon(src, size); }
+
+  // Same as Append except |src| can be in kernel space.
+  //
+  // If there is insufficient remaining space in the buffer chain, ZX_ERR_OUT_OF_RANGE will be
+  // returned.
+  zx_status_t AppendKernel(const char* src, size_t size);
 
   class Buffer final : public fbl::SinglyLinkedListable<Buffer*> {
    public:
@@ -172,33 +199,81 @@ class BufferChain {
   BufferList* buffers() { return &buffers_; }
 
  private:
-  explicit BufferChain(BufferList* buffers, list_node* pages) {
+  explicit BufferChain(BufferList* buffers, list_node* unused_pages, list_node* used_pages) {
+    buffer_tail_ = buffers->begin();
     buffers_.swap(*buffers);
-    list_move(pages, &pages_);
+
+    buffer_offset_ = 0;
+
+    list_move(unused_pages, &unused_pages_);
+    list_move(used_pages, &used_pages_);
 
     // |this| now lives inside the first buffer.
     buffers_.front().set_reserved(sizeof(BufferChain));
   }
 
-  ~BufferChain() { DEBUG_ASSERT(list_is_empty(&pages_)); }
+  ~BufferChain() {
+    DEBUG_ASSERT(list_is_empty(&used_pages_));
+    DEBUG_ASSERT(list_is_empty(&unused_pages_));
+  }
+
+  // Add a new Buffer to the end of |buffers| (marked by |buffer_tail|) by taking a page from the
+  // |unused_pages| list. In doing so, this page will be moved to the |used_pages| list.
+  static zx_status_t AddNextBuffer(list_node* unused_pages, list_node* used_pages,
+                                   BufferList* buffers, BufferList::iterator buffer_tail) {
+    if (list_is_empty(unused_pages)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    vm_page_t* page = list_remove_head_type(unused_pages, vm_page, queue_node);
+    DEBUG_ASSERT(page != nullptr);
+    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_ALLOC);
+    page->set_state(VM_PAGE_STATE_IPC);
+    list_add_tail(used_pages, &page->queue_node);
+
+    void* va = paddr_to_physmap(page->paddr());
+    if (buffers->is_empty()) {
+      buffers->push_front(new (va) BufferChain::Buffer);
+    } else {
+      buffers->insert_after(buffer_tail, new (va) BufferChain::Buffer);
+    }
+    return ZX_OK;
+  }
 
   // |PTR_IN| is a user_in_ptr-like type.
   template <typename PTR_IN>
-  zx_status_t CopyInCommon(PTR_IN src, size_t dst_offset, size_t size) {
-    DEBUG_ASSERT(dst_offset < buffers_.front().size());
-    size_t copy_offset = dst_offset;
+  zx_status_t AppendCommon(PTR_IN src, size_t size) {
+    if (size == 0) {
+      return ZX_OK;
+    }
+    if (buffer_tail_ == buffers_.end()) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
     size_t rem = size;
-    const auto end = buffers_.end();
-    for (auto iter = buffers_.begin(); rem > 0 && iter != end; ++iter) {
-      const size_t copy_len = ktl::min(rem, iter->size() - copy_offset);
-      char* dst = iter->data() + copy_offset;
-      const zx_status_t status = src.copy_array_from_user(dst, copy_len);
+    while (true) {
+      Buffer& buf = *buffer_tail_;
+      const size_t copy_len = ktl::min(rem, buf.size() - buffer_offset_);
+      char* dst = buf.data() + buffer_offset_;
+      zx_status_t status = src.copy_array_from_user(dst, copy_len);
       if (unlikely(status != ZX_OK)) {
+        buffer_tail_ = buffers_.end();
         return status;
       }
+
+      buffer_offset_ += copy_len;
       src = src.byte_offset(copy_len);
       rem -= copy_len;
-      copy_offset = 0;
+
+      if (rem == 0) {
+        break;
+      }
+      status = AddNextBuffer(&unused_pages_, &used_pages_, &buffers_, buffer_tail_);
+      if (status != ZX_OK) {
+        buffer_tail_ = buffers_.end();
+        return status;
+      }
+      buffer_offset_ = 0;
+      buffer_tail_++;
     }
     return ZX_OK;
   }
@@ -206,8 +281,19 @@ class BufferChain {
   // Take care when adding fields as BufferChain lives inside the first buffer of buffers_.
   BufferList buffers_;
 
-  // pages_ is a list of vm_page_t descriptors for the pages that back BufferList.
-  list_node pages_ = LIST_INITIAL_VALUE(pages_);
+  // Iterator pointing to the last valid element in the buffer.
+  BufferList::iterator buffer_tail_;
+
+  // Position of the next byte to write in the Buffer pointed to by |buffer_tail_|.
+  size_t buffer_offset_;
+
+  // used_pages_ is a list of vm_page_t descriptors for the pages that back BufferList.
+  list_node used_pages_ = LIST_INITIAL_VALUE(used_pages_);
+
+  // unused_pages is a list of vm_page_t descriptors for pages that have been allocated but have
+  // not yet been used. These pages will be migrated to used_pages_ once they are needed for
+  // the BufferList.
+  list_node unused_pages_ = LIST_INITIAL_VALUE(unused_pages_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(BufferChain);
 };

@@ -307,11 +307,13 @@ typedef struct zx_iovec {
 
 // Channel options and limits.
 #define ZX_CHANNEL_READ_MAY_DISCARD         ((uint32_t)1u)
+#define ZX_CHANNEL_WRITE_USE_IOVEC          ((uint32_t)2u)
 
 // TODO(fxbug.dev/7802): This must be manually kept in sync with zx_common.fidl.
 // Eventually (some of) this file will be generated from //zircon/vdso.
 #define ZX_CHANNEL_MAX_MSG_BYTES            ((uint32_t)65536u)
 #define ZX_CHANNEL_MAX_MSG_HANDLES          ((uint32_t)64u)
+#define ZX_CHANNEL_MAX_MSG_IOVECS           ((uint32_t)8192u)
 
 // Fifo limits.
 #define ZX_FIFO_MAX_SIZE_BYTES              ZX_PAGE_SIZE
@@ -462,6 +464,12 @@ typedef struct zx_channel_call_etc_args {
     uint32_t rd_num_bytes;
     uint32_t rd_num_handles;
 } zx_channel_call_etc_args_t;
+
+typedef struct zx_channel_iovec {
+  const void* buffer;
+  uint32_t capacity;
+  uint32_t reserved;
+} zx_channel_iovec_t;
 
 // The ZX_VM_FLAG_* constants are to be deprecated in favor of the ZX_VM_*
 // versions.
