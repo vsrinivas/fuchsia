@@ -423,7 +423,7 @@ bool NandDriverImpl::GetBadBlocks() {
   bad_blocks_ = fbl::Array<uint32_t>(bad_block_list.release(), num_bad_blocks);
 
   for (uint32_t bad_block : bad_blocks_) {
-    zxlogf(ERROR, "FTL: Bad block: %x", bad_block);
+    zxlogf(DEBUG, "Bad block: %x", bad_block);
   }
   return true;
 }
