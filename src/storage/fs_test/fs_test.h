@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -133,6 +134,7 @@ class FilesystemImpl : public Filesystem {
   }
 
   virtual std::unique_ptr<FilesystemInstance> Create(RamDevice device, std::string device_path) const {
+    std::cout << "Missing implementation for Create" << std::endl;
     return nullptr;
   }
 };
@@ -151,7 +153,10 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
       return result.take_error();
     }
     auto [device, device_path] = std::move(result).value();
-    auto instance = Create(std::move(device), std::move(device_path));
+    // Call the base class virtual method here rather than just Create directly so that the Create
+    // method isn't implicitly instantiated here (which might not be possible if the instance has
+    // been forward declared).
+    auto instance = FilesystemImpl<T>::Create(std::move(device), std::move(device_path));
     zx::status<> status = instance->Format(options);
     if (status.is_error()) {
       return status.take_error();

@@ -167,35 +167,6 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
-// Returns device and device path.
-zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
-    const TestFilesystemOptions& options) {
-  if (options.use_ram_nand) {
-    auto ram_nand_or = CreateRamNand(options);
-    if (ram_nand_or.is_error()) {
-      return ram_nand_or.take_error();
-    }
-    auto [ram_nand, nand_device_path] = std::move(ram_nand_or).value();
-
-    auto fvm_partition_or =
-        isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
-    if (fvm_partition_or.is_error()) {
-      std::cout << "Failed to create FVM partition: " << fvm_partition_or.status_string()
-                << std::endl;
-      return fvm_partition_or.take_error();
-    }
-
-    return zx::ok(std::make_pair(std::move(ram_nand), std::move(fvm_partition_or).value()));
-  } else {
-    auto ram_disk_or = CreateRamDisk(options);
-    if (ram_disk_or.is_error()) {
-      return ram_disk_or.take_error();
-    }
-    auto [device, device_path] = std::move(ram_disk_or).value();
-    return zx::ok(std::make_pair(std::move(device), std::move(device_path)));
-  }
-}
-
 zx::status<> FsUnbind(const std::string& mount_path) {
   fdio_ns_t* ns;
   if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
@@ -232,6 +203,35 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
 }
 
 }  // namespace
+
+// Returns device and device path.
+zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
+    const TestFilesystemOptions& options) {
+  if (options.use_ram_nand) {
+    auto ram_nand_or = CreateRamNand(options);
+    if (ram_nand_or.is_error()) {
+      return ram_nand_or.take_error();
+    }
+    auto [ram_nand, nand_device_path] = std::move(ram_nand_or).value();
+
+    auto fvm_partition_or =
+        isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
+    if (fvm_partition_or.is_error()) {
+      std::cout << "Failed to create FVM partition: " << fvm_partition_or.status_string()
+                << std::endl;
+      return fvm_partition_or.take_error();
+    }
+
+    return zx::ok(std::make_pair(std::move(ram_nand), std::move(fvm_partition_or).value()));
+  } else {
+    auto ram_disk_or = CreateRamDisk(options);
+    if (ram_disk_or.is_error()) {
+      return ram_disk_or.take_error();
+    }
+    auto [device, device_path] = std::move(ram_disk_or).value();
+    return zx::ok(std::make_pair(std::move(device), std::move(device_path)));
+  }
+}
 
 zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
                       const mkfs_options_t& options) {
