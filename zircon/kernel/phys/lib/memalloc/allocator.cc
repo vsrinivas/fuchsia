@@ -5,205 +5,292 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/memalloc.h>
+#include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <climits>
-#include <cstdint>
-#include <cstring>
+#include <algorithm>
 
-#include <fbl/algorithm.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/span.h>
 
 namespace memalloc {
 
 namespace {
 
-// Return the address of the given object as a uintptr_t.
+// Return an incremented copy of `iterator`.
 //
-// This is really just a short-hand method of writing
-// `reinterpret_cast<uintptr_t>(object)`.
+// Similar to `std::next`, but doesn't require the C++17 iterator traits
+// to be implemented on `iterator`.
 template <typename T>
-uintptr_t AddressOf(const T* object) {
-  return reinterpret_cast<uintptr_t>(object);
+T Next(T iterator) {
+  T copy = iterator;
+  ++copy;
+  return copy;
 }
 
-// In debug mode, overwrite the given range of memory with a pattern.
-//
-// May be used to help catch use-after-free and similar errors.
-void PoisonMemory(std::byte* base, size_t size) {
-#if ZX_DEBUG_ASSERT_IMPLEMENTED
-  memset(base, 0xee, size);
-#endif
+// Return true if the two given ranges overlap.
+bool RangesIntersect(const Range& a, const Range& b, uint64_t* first = nullptr,
+                     uint64_t* last = nullptr) {
+  // Does "a" lie entirely before "b"?
+  if (a.last < b.first) {
+    return false;
+  }
+
+  // Does "b" lie entirely before "a"?
+  if (b.last < a.first) {
+    return false;
+  }
+
+  if (first) {
+    *first = std::max(a.first, b.first);
+  }
+  if (last) {
+    *last = std::min(a.last, b.last);
+  }
+  return true;
+}
+
+// Return true if the end of range `a` is immeadiately before the start of range `b`.
+bool ImmediatelyBefore(const Range& a, const Range& b) {
+  return b.first > 0 && a.last == b.first - 1;
+}
+
+// Return true if the two ranges overlap or are touching.
+bool RangesConnected(const Range& a, const Range& b) {
+  return ImmediatelyBefore(a, b) || ImmediatelyBefore(b, a) || RangesIntersect(a, b);
 }
 
 }  // namespace
 
-// Return true if node `a` is immediately before node `b`.
-bool Allocator::ImmediatelyBefore(const Node* a, const Node* b) {
-  ZX_DEBUG_ASSERT(a != nullptr);
-  ZX_DEBUG_ASSERT(b != nullptr);
-  return AddressOf(a) + a->size == AddressOf(b);
+Allocator::Allocator(fbl::Span<Range> nodes) {
+  for (Range& node : nodes) {
+    free_list_.push_front(new (&node) Range{});
+  }
 }
 
-std::byte* Allocator::AllocateFromNode(Node* prev, Node* current, size_t desired_size,
-                                       size_t alignment) {
-  // Given a node, we want to find a region of memory inside of it that is aligned
-  // to `alignment` with size at least `desired_size`:
-  //
-  //            .--- region_start                       region_end ---.
-  //            v                                                     v
-  //            .-------------+-----------------------+---------------.
-  //  prev ---> | current     |                       | new_next      |  --> next
-  //            '-------------+-----------------------+---------------'
-  //                          ^                       ^
-  //                          '- allocation_start     '- allocation_end
-  //
-  //  In the diagram above, `region_start` and `region_end` are the beginning
-  //  and the end of the node, respectively.
-  //
-  //  If we didn't have alignment constraints, we could just carve off space
-  //  from the beginning of the region. However, if the user has requested for
-  //  a stricter alignment than what `region_start` provides, we may need to
-  //  carve out space in the middle of the region.
-  //
-  //  We calculate `allocation_start` to be the first correctly aligned
-  //  address in the region, and `allocation_end` to be `desired_size` bytes
-  //  after that. We can allocate from this node iff the region
-  //  [allocation_start, allocation_end) falls within [region_start,
-  //  region_end).
+Allocator::~Allocator() {
+  free_list_.clear();
+  ranges_.clear();
+}
 
-  // Get the start/end addresses of this `current`.
-  uintptr_t region_start = AddressOf(current);
-  uintptr_t region_end = region_start + current->size;
-  ZX_DEBUG_ASSERT(region_start < region_end);
+zx::status<> Allocator::RemoveRangeFromNode(RangeIter node, uint64_t first, uint64_t last) {
+  // We want to allocate a given range from inside of the node `current`:
+  //
+  //      .--- current.first                  current.last ---.
+  //      v                                                   v
+  //     .-------------+-----------------------+---------------.
+  //     |             |###### allocation #####|               |
+  //     '-------------+-----------------------+---------------'
+  //                    ^                     ^
+  //                    '- first              '- last
+  //
+  // In the diagram above, `current.first` and `current.last` are the beginning
+  // and the last of the node containing the range, respectively
+  //
+  // `first` and `last` may be the full range or just a subrange of it. If it
+  // happens to be in the middle of the current node's range, we will end up with
+  // one more range node in the list than what we firsted with.
+
+  // Ensure inputs are ordered.
+  ZX_DEBUG_ASSERT(first <= last);
+
+  // If the range doesn't overlap the node at all, we have nothing to do.
+  if (!RangesIntersect(*node, Range{.first = first, .last = last})) {
+    return zx::ok();
+  }
+
+  // If the requested allocation covers the whole range, just delete this node.
+  if (first <= node->first && last >= node->last) {
+    FreeRangeNode(ranges_.erase(*node));
+    return zx::ok();
+  }
+
+  // If the allocation is at the beginning of this node, just adjust the node's
+  // starting point.
+  if (first <= node->first) {
+    node->first = last + 1;
+    return zx::ok();
+  }
+
+  // If the allocation is at the end of this node, just adjust the size.
+  if (last >= node->last) {
+    node->last = first - 1;
+    return zx::ok();
+  }
+
+  // Otherwise, the allocation is in the middle. Update the node to
+  // represent the space at the beginning, and allocate a new node for the space
+  // at the end.
+  Range* new_next = CreateRangeNode(last + 1, node->last);
+  if (new_next == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  node->last = first - 1;
+  ranges_.insert_after(node, new_next);
+  return zx::ok();
+}
+
+zx::status<uint64_t> Allocator::TryToAllocateFromNode(RangeIter node, uint64_t desired_size,
+                                                      uint64_t alignment) {
+  ZX_DEBUG_ASSERT(desired_size > 0);
 
   // Get a potential region for this allocation, ensuring that we don't
-  // overflow while aligning up or calculating the end result.
-  uintptr_t allocation_start = fbl::round_up(region_start, alignment);
-  if (allocation_start == 0) {
-    // overflow while aligning.
-    return nullptr;
+  // overflow while aligning up or calculating the last result.
+  uint64_t allocation_first = fbl::round_up(node->first, alignment);
+  if (node->first != 0 && allocation_first == 0) {
+    // Overflow while aligning.
+    return zx::error(ZX_ERR_NEXT);
   }
-  uintptr_t allocation_end = allocation_start + desired_size;
-  if (allocation_end < allocation_start) {
-    // overflow during add.
-    return nullptr;
-  }
-
-  // Ensure the allocation is entirely within the region.
-  ZX_DEBUG_ASSERT(region_start <= allocation_start);  // implied by calculations above.
-  if (allocation_end > region_end) {
-    return nullptr;
+  uint64_t allocation_last = allocation_first + desired_size - 1;
+  if (allocation_last < allocation_first) {
+    // Overflow during add.
+    return zx::error(ZX_ERR_NEXT);
   }
 
-  // If we have space after our allocation, create a new node between `current`
-  // and `next`.
-  if (region_end > allocation_end) {
-    Node* new_next = reinterpret_cast<Node*>(allocation_end);
-    new_next->next = current->next;
-    new_next->size = region_end - allocation_end;
-    current->next = new_next;
+  // Determine if the proposed allocation can fit in this node's range.
+  ZX_DEBUG_ASSERT(node->first <= allocation_first);  // implied by calculations above.
+  if (allocation_last > node->last) {
+    return zx::error(ZX_ERR_NEXT);
   }
 
-  // If we have space before the allocation, update `current`'s size and
-  // next pointer. Otherwise, remove `current` from the list.
-  if (region_start < allocation_start) {
-    current->size = allocation_start - region_start;
-  } else {
-    prev->next = current->next;
+  // Allocate the node.
+  zx::status<> result = RemoveRangeFromNode(node, allocation_first, allocation_last);
+  if (result.is_error()) {
+    return result.take_error();
   }
-
-  return reinterpret_cast<std::byte*>(allocation_start);
+  return zx::ok(allocation_first);
 }
 
-void Allocator::MergeNodes(Node* a, Node* b) {
-  ZX_DEBUG_ASSERT(ImmediatelyBefore(a, b));
-  a->size += b->size;
-  a->next = b->next;
-  PoisonMemory(reinterpret_cast<std::byte*>(b), sizeof(Node));
+void Allocator::MergeRanges(RangeIter a, RangeIter b) {
+  ZX_DEBUG_ASSERT(RangesConnected(*a, *b));
+  a->first = std::min(a->first, b->first);
+  a->last = std::max(a->last, b->last);
+  FreeRangeNode(ranges_.erase(b));
 }
 
-void Allocator::AddRange(std::byte* base, size_t size) {
+Range* Allocator::CreateRangeNode(uint64_t first, uint64_t last) {
+  Range* node = free_list_.pop_front();
+  node->first = first;
+  node->last = last;
+  return node;
+}
+
+void Allocator::FreeRangeNode(Range* range) {
+  ZX_DEBUG_ASSERT(!range->InContainer());
+  free_list_.push_front(range);
+}
+
+zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
   // Add a new range of memory into the linked list of nodes.
   //
-  // There are several cases we need to deal with, because the new range may
-  // be (i) independent of all other nodes; (ii) behind another node; (iii) in
-  // front of another node; or (iv) causing two existing nodes to merge into
-  // one.
+  // There are several cases we need to deal with, such as (partially)
+  // overlapping nodes or a new range causing to existing nodes to be merged
+  // into one.
   //
-  // We don't attempt to handle the 4 cases directly, but instead simply add
-  // the new node in its rightful location, and then merge the next/previous
-  // nodes in a second pass if the new node happens to be touching any
-  // existing node.
-
-  ZX_ASSERT(base != nullptr);
-  ZX_ASSERT(size % kBlockSize == 0);
-  ZX_ASSERT(AddressOf(base) % kBlockSize == 0);
-  ZX_ASSERT(AddressOf(base) + size >= AddressOf(base));  // ensure range doesn't wrap memory
+  // We don't attempt to handle the cases directly, but instead simply add
+  // the new node in its rightful location, and then merge all nodes in
+  // a second pass.
 
   // If the region is size 0, we have nothing to do.
   if (size == 0) {
-    return;
+    return zx::ok();
   }
 
-  // Clear out the memory being added to help catch use-after-free errors.
-  PoisonMemory(base, size);
+  // Ensure the range doesn't overflow.
+  uint64_t last = base + size - 1;
+  ZX_ASSERT(base <= last);
 
-  // Create a new node out of the memory region [base, base + size).
-  Node* new_node = reinterpret_cast<Node*>(base);
-  new_node->next = nullptr;
-  new_node->size = size;
-
-  // The free list is sorted by address of region.
-  //
-  // Find the two nodes that `new_node` should be placed between.
-  Node* prev = &first_;
-  Node* next = first_.next;
-  while (next != nullptr && AddressOf(new_node) > AddressOf(next)) {
-    prev = next;
-    next = next->next;
+  // Create a new range node for the range.
+  Range* new_range = CreateRangeNode(base, last);
+  if (new_range == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  // Insert the node between `prev` and `next`.
-  prev->next = new_node;
-  new_node->next = next;
+  // The free list is sorted by address of region. Insert the new node in the
+  // correctly sorted location.
+  auto prev = ranges_.end();  // we use "end" to mean "no previous node".
+  auto it = ranges_.begin();
+  while (it != ranges_.end() && new_range->first > it->first) {
+    prev = it;
+    ++it;
+  }
+  // Insert `new_range` before `it`. If `it == ranges_.end()`, then this
+  // simply adds it to the end of list.
+  ranges_.insert(it, new_range);
+  auto new_range_it = ranges_.make_iterator(*new_range);
 
-  // The new node may be adjacent to `prev`, or `next`, or both.
-  //
-  // Merge touching nodes.
-  if (next != nullptr && ImmediatelyBefore(new_node, next)) {
-    MergeNodes(new_node, next);
+  // The new range may be touching the previous range. If so, merge them
+  // together.
+  if (prev != ranges_.end() && RangesConnected(*prev, *new_range_it)) {
+    MergeRanges(prev, new_range_it);
+    new_range_it = prev;
   }
-  if (prev != nullptr && ImmediatelyBefore(prev, new_node)) {
-    MergeNodes(prev, new_node);
+
+  // The new range may be touching or overlapping any number of subsequent
+  // ranges. Keep merging the ranges together there is no more overlap.
+  auto next = Next(new_range_it);
+  while (next != ranges_.end() && RangesConnected(*new_range_it, *next)) {
+    MergeRanges(new_range_it, next);
+    next = Next(new_range_it);
   }
+
+  return zx::ok();
 }
 
-std::byte* Allocator::Allocate(size_t size, size_t alignment) {
-  ZX_ASSERT(size % kBlockSize == 0);
+zx::status<> Allocator::RemoveRange(uint64_t base, uint64_t size) {
+  // If the range to remove is size 0, we have nothing to do.
+  if (size == 0) {
+    return zx::ok();
+  }
+
+  // Ensure the range doesn't overflow.
+  const uint64_t range_first = base;
+  const uint64_t range_last = base + size - 1;
+  ZX_ASSERT(range_first <= range_last);
+
+  // Iterate through the free list, trimming anything that intersects with the
+  // desired range.
+  //
+  // Stop when we get to the end, or we start seeing nodes that start after
+  // our removed range finishes.
+  auto it = ranges_.begin();
+  while (it != ranges_.end() && it->first <= range_last) {
+    auto current = it++;
+    zx::status<> result = RemoveRangeFromNode(current, range_first, range_last);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+  }
+
+  return zx::ok();
+}
+
+zx::status<uint64_t> Allocator::Allocate(uint64_t size, uint64_t alignment) {
   ZX_ASSERT(fbl::is_pow2(alignment));
 
-  // Just return nullptr on 0-size allocations.
+  // Return 0 on 0-size allocations.
   if (size == 0) {
-    return nullptr;
+    return zx::ok(0);
   }
 
-  Node* prev = &first_;
-  Node* head = first_.next;
-
-  while (head != nullptr) {
-    // Attempt to split this node.
-    std::byte* memory = AllocateFromNode(prev, head, size, alignment);
-    if (memory != nullptr) {
-      return memory;
+  // Search through all ranges, attempting to allocate from each one.
+  for (auto it = ranges_.begin(); it != ranges_.end(); ++it) {
+    // Attempt to allocate from this node.
+    zx::status<uint64_t> result = TryToAllocateFromNode(it, size, alignment);
+    if (result.is_ok()) {
+      return result.take_value();
     }
 
-    // Move to the next node.
-    prev = head;
-    head = head->next;
+    // ZX_ERR_NEXT indicates we should keep searching. If we got anything
+    // else, give up.
+    if (result.error_value() != ZX_ERR_NEXT) {
+      return result.take_error();
+    }
   }
 
-  return nullptr;
+  // No range could satisfy the allocation.
+  return zx::error(ZX_ERR_NO_RESOURCES);
 }
 
 }  // namespace memalloc

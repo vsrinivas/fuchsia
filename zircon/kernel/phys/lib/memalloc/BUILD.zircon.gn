@@ -17,7 +17,11 @@ zx_library("memalloc") {
 
   sources = [ "allocator.cc" ]
 
-  deps = [ "$zx/system/ulib/fbl" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxc",
+  ]
   if (is_kernel) {
     deps += [ "$zx/kernel/lib/libc" ]
   }
@@ -25,6 +29,12 @@ zx_library("memalloc") {
   public_deps = [
     # <lib/memalloc.h> has #include <fbl/algorithm.h>.
     "$zx/system/ulib/fbl:headers",
+
+    # <lib/memalloc.h> has #include <zx/status.h>.
+    "$zx/system/ulib/zircon:headers",
+
+    # <lib/memalloc.h> has #include <lib/zx/status.h>.
+    "$zx/system/ulib/zxc:headers",
   ]
 }
 
@@ -38,6 +48,7 @@ if (zx != "/") {
     deps = [
       ":memalloc",
       "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gmock",
       "//third_party/googletest:gtest",
     ]
   }

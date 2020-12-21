@@ -7,71 +7,115 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_H_
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_H_
 
-#include <cstddef>
+#include <lib/zx/status.h>
 
-#include <fbl/algorithm.h>
+#include <cstddef>
+#include <optional>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/span.h>
 
 namespace memalloc {
 
+// The range of uint64_t values [first, last].
+//
+// The [base, base + length) is generally more convenient to work with, but
+// can't represent the range [0, UINT64_MAX]. We thus expose the latter on the
+// API, but use for the former as our internal representation.
+struct Range : public fbl::DoublyLinkedListable<Range*> {
+  uint64_t first;
+  uint64_t last;
+};
+
+// A range allocator class.
+//
+// Space for book-keeping is provided by the caller during construction, via
+// the "fbl::Span<Range>" parameter. One entry is used for every
+// non-contiguous range tracked by the allocator.
+//
+// Ranges may be freely added and removed from the allocator. Newly added
+// ranges may freely overlap previously added ranges, and it is safe to remove
+// ranges that are not currently tracked by the allocator.
+//
+// The book-keeping memory must outlive the class.
 class Allocator {
  public:
-  // Create a new, empty allocator.
-  Allocator() = default;
+  ~Allocator();
+
+  // Create a new allocator, using the given span for book keeping.
+  //
+  // The memory at `nodes` must outlive this class instance.
+  explicit Allocator(fbl::Span<Range> nodes);
 
   // Prevent copy / assign.
   Allocator(const Allocator&) = delete;
   Allocator& operator=(const Allocator&) = delete;
 
-  // Add a range of memory to the allocator.
+  // Add the given range to the allocator.
   //
-  // The range must be unused, and not already managed by the allocator.
+  // Ranges or parts of ranges already added to the allocator may be safely
+  // added again. May fail with ZX_ERR_NO_MEMORY if insufficient
+  // book-keeping space is available.
   //
-  // Both `base` and `size` must be aligned to kBlockSize.
-  void AddRange(std::byte* base, size_t size);
+  // Adding a range is O(n) in the number of ranges tracked.
+  zx::status<> AddRange(uint64_t base, uint64_t size);
 
-  // Allocate memory of the given size and the given alignment.
+  // Remove the given range from the allocator.
   //
-  // Return nullptr if there was insufficient contiguous memory to perform the allocation.
-  [[nodiscard]] std::byte* Allocate(size_t size, size_t alignment = kBlockSize);
+  // Ranges not previously added may safely be removed. May fail with
+  // ZX_ERR_NO_MEMORY if insufficient book-keeping space is available.
+  //
+  // Removing a range is O(n) in the number of ranges tracked.
+  zx::status<> RemoveRange(uint64_t base, uint64_t size);
 
-  // Internal size of blocks used by the allocator.
+  // Allocate a range of the given size and alignment.
   //
-  // All allocations sizes and alignment must be aligned to kBlockSize.
-  static constexpr size_t kBlockSize = sizeof(uint64_t) * 4;
+  // Returns the base of an allocated range of the given size if successful.
+  //
+  // Returns ZX_ERR_NO_RESOURCES if there was no range found that could
+  // satisfy the request.
+  //
+  // Returns ZX_ERR_NO_MEMORY if a range could be found, but there was
+  // insufficient book-keeping memory to track it.
+  //
+  // Allocation is O(n) in the number of ranges tracked.
+  zx::status<uint64_t> Allocate(uint64_t size, uint64_t alignment = 1);
 
  private:
-  // Linked list node.
-  struct Node {
-    Node* next;
-    size_t size;
-  };
+  using RangeIter = fbl::DoublyLinkedList<Range*>::iterator;
 
-  // We need every free region to be large enough to store a Node structure at
-  // the beginning, and aligned to at least alignof(Node).
+  // Remove the given range [first, last] from `node`.
   //
-  // Requiring that all ranges of memory and allocation sizes are aligned to
-  // at least sizeof(Node) ensures this.
-  static_assert(kBlockSize >= sizeof(Node));
-  static_assert(kBlockSize >= alignof(Node));
-  static_assert(fbl::is_pow2(kBlockSize));
+  // [first, last] must fall entirely within `node`.
+  zx::status<> RemoveRangeFromNode(RangeIter node, uint64_t first, uint64_t last);
 
-  // Return true if node `a` is immediately before node `b`, with no gap between the two.
-  static bool ImmediatelyBefore(const Node* a, const Node* b);
+  // Combine two consecutive nodes `a` and `b` into a single node,
+  // deallocating `b`.
+  void MergeRanges(RangeIter a, RangeIter b);
 
-  // Combine two consecutive nodes `a` and `b` into a single node.
-  static void MergeNodes(Node* a, Node* b);
-
-  // Attempt to allocate `desired_size` bytes of memory out the node `current`.
+  // Attempt to allocate a range of size `desired_size` with the given
+  // `alignment` out of `node`.
   //
-  // If successful, return the address of the allocated range of memory and
-  // update the free list to reflect the new allocation. If there is not enough
-  // space in this node, returns nullptr.
-  static std::byte* AllocateFromNode(Node* prev, Node* current, size_t desired_size,
-                                     size_t alignment);
+  // If successful, return the base of the allocated range. If there is not
+  // enough space in this node, returns ZX_ERR_NEXT. If insufficient memory
+  // was available for book-keeping, returns ZX_ERR_NO_MEMORY.
+  //
+  // `desired_size` must be at least 1.
+  zx::status<uint64_t> TryToAllocateFromNode(RangeIter node, uint64_t desired_size,
+                                             uint64_t alignment);
 
-  // List of nodes, sorted by address of the node, with the exception of
-  // the first sentinel node below.
-  Node first_ = {.next = nullptr, .size = 0};
+  // Allocate a Range node from the internal free list, with the given
+  // first/last values.
+  Range* CreateRangeNode(uint64_t first, uint64_t last);
+
+  // Put the given Range Node back on the internal free list.
+  void FreeRangeNode(Range* range);
+
+  // List of nodes, sorted by the beginning of the range.
+  fbl::DoublyLinkedList<Range*> ranges_;
+
+  // List of unused nodes.
+  fbl::DoublyLinkedList<Range*> free_list_;
 };
 
 }  // namespace memalloc

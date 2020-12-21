@@ -1,12 +1,13 @@
 # `memalloc`
 
-A simple, low-dependency memory allocator, intended to be used in environments
-such as early boot. It supports tracking multiple ranges of memory and
-performing allocations of a user-specified size and alignment.
+A simple, low-dependency range allocator, intended to be used in environments
+such as early boot. Fixed ranges can be added or removed, and allocations
+of given sizes and alignment may be made.
 
-Internally, the allocator uses a simple linked list weaved through the free
-memory regions to track space, and ordered by memory address. The allocator
-uses a first-fit algorithm to allocate memory to callers.
+No allocations are made by the library --- rather, a pool of memory used for
+book-keeping is provided externally. Internally, the allocator uses a linked
+list of ranges. We require one element of book-keeping for each range of
+integers.
 
 ## Alternatives
 
@@ -25,9 +26,9 @@ better fit for your needs.
     `Allocate` method.
 
 *   [region-alloc][] supports allocating arbitrarily sized and aligned regions
-    of a 64-bit space. User-specified ranges can be reserved. The library is
-    thread safe, and memory required for book-keeping can be allocated in
-    advance.
+    of a 64-bit space. User-specified ranges can be reserved. The library,
+    however, has more dependencies than this library, such as locking
+    libraries and memory allocation.
 
 [cmpctmalloc]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/kernel/lib/heap/cmpctmalloc/cmpctmalloc.cc
 [scudo]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/third_party/scudo/README.fuchsia.md
