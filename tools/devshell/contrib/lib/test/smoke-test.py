@@ -7,7 +7,6 @@ import argparse
 import collections
 import json
 import os
-import pathlib
 import subprocess
 import sys
 
@@ -52,13 +51,8 @@ def main():
         print("Modified files:")
         print(modified)
 
-    # Rebuild
-    subprocess.check_call(["fx", "build", "updates"])
-    # Note: we know all test labels so we could `fx build` only tests.
-    # However there is no guarantee that GN labels in tests.json are valid.
-    # In fact some of them aren't. o_O
-    # Also, `fx build <target>` is broken when <target> begins with "zircon/"
-    # and is actually in the Fuchsia GN build, not in the legacy ZN build.
+    # Ensure that tests.json is fresh by regenerating Ninja if needed
+    subprocess.check_call(["fx", "build", "build.ninja"])
 
     # Index tests.json
     with open(os.path.join(args.out_dir, "tests.json")) as tests_json:
@@ -77,20 +71,25 @@ def main():
     # Touch all modified files so they're newer than any stamps
     git_base = subprocess.check_output(
         ["git", "rev-parse", "--show-toplevel"], encoding="UTF-8").strip()
+    file_stats = {}
     for path in modified.splitlines():
-        p = pathlib.Path(git_base, path)
-        if p.exists() and not path.endswith("BUILD.gn"):
-            p.touch()
+        p = os.path.join(git_base, path)
+        if not p.endswith("BUILD.gn") and os.path.exists(p):
+            stat = os.stat(p)
+            file_stats[p] = stat.st_atime, stat.st_mtime
+            os.utime(p)
 
     # Find all stale stamps
-    ninja = []
-    for buildtype in ("", ".zircon"):
-        ninja += subprocess.check_output(
-            ["fx", "ninja", "-C", args.out_dir + buildtype, "-n", "-v"],
-            encoding="UTF-8",
-            stderr=subprocess.STDOUT,
-        ).splitlines()
+    ninja = subprocess.check_output(
+        ["fx", "ninja", "-C", args.out_dir, "-n", "-v"],
+        encoding="UTF-8",
+        stderr=subprocess.STDOUT,
+    ).splitlines()
     stale_stamps = [line.partition("] ")[2] for line in ninja]
+
+    # Restore timestamps
+    for p, stat in file_stats.items():
+        os.utime(p, stat)
 
     # Check stale stamps against test labels
     affected_labels = {
