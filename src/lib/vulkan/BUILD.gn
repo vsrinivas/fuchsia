@@ -86,6 +86,7 @@ resource("validation-layers") {
     sources += [ resource.path ]
   }
   outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  data_deps = vulkan_validation_layers.public_deps
 }
 
 resource("image-pipe-swapchain-fb") {
@@ -94,6 +95,7 @@ resource("image-pipe-swapchain-fb") {
     sources += [ resource.path ]
   }
   outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+  data_deps = image_pipe_swapchain_fb.public_deps
 }
 
 sdk_atom("vulkan_layers") {

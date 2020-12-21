@@ -28,11 +28,6 @@ fuchsia_component("cmd-buf-benchmark-component") {
     "//src/lib/vulkan:validation-layers",
     "//third_party/Vulkan-Loader:libvulkan",
   ]
-
-  if (is_fuchsia) {
-    deps += vulkan_validation_layers.public_deps +
-            image_pipe_swapchain_fb.public_deps
-  }
 }
 
 config("vulkan_sdk_linux_config") {
