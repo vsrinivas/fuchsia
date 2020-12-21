@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/appmgr_out_dir_integration_test"
+        "binary": "bin/appmgr_out_dir_integration_test"
     },
     "sandbox": {
         "services": [

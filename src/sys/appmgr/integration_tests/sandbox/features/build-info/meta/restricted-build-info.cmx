@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/restricted-build-info"
+        "binary": "bin/restricted-build-info"
     },
     "sandbox": {
         "features": [

@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("integration_tests") {
   testonly = true
@@ -61,7 +62,7 @@ executable("realm_tests") {
   deps = [
     "fidl:test.component.mockrunner",
     "fidl/fuchsia.testing.appmgr",
-    "mock_runner:appmgr_mock_runner",
+    "mock_runner",
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
     "//garnet//examples/fidl/echo_server_cpp",
@@ -106,7 +107,7 @@ executable("hub_tests") {
   ]
 }
 
-executable("echo_server") {
+executable("echo_server_bin") {
   testonly = true
 
   output_name = "echo_server_for_test"
@@ -138,7 +139,7 @@ config_data("sysmgr_config") {
   sources = [ rebase_path("//src/sys/sysmgr/config/services.config") ]
 }
 
-executable("crashing_component") {
+executable("crashing_component_bin") {
   testonly = true
   output_name = "crashing_component"
   sources = [ "crashing_component.cc" ]
@@ -151,7 +152,7 @@ executable("crashing_component") {
   ]
 }
 
-executable("failing_appmgr") {
+executable("failing_appmgr_bin") {
   testonly = true
   output_name = "failing_appmgr"
   sources = [ "failing_appmgr.cc" ]
@@ -166,68 +167,63 @@ executable("failing_appmgr") {
   ]
 }
 
-test_package("appmgr_integration_tests") {
+fuchsia_component("appmgr_integration_tests_inspect_test_app") {
+  testonly = true
+  deps = [ "//src/sys/appmgr/integration_tests/inspect:bin-vmo" ]
+  manifest = "inspect/meta/inspect_vmo_test_app.cmx"
+}
+
+fuchsia_component("appmgr_full_integration_tests") {
+  testonly = true
+  deps = [ ":full_tests" ]
+  manifest = "meta/appmgr_full_integration_tests.cmx"
+}
+
+fuchsia_component("appmgr_hub_integration_tests") {
+  testonly = true
+  deps = [ ":hub_tests" ]
+  manifest = "meta/appmgr_hub_integration_tests.cmx"
+}
+
+fuchsia_component("appmgr_realm_integration_tests") {
+  testonly = true
+  deps = [ ":realm_tests" ]
+  manifest = "meta/appmgr_realm_integration_tests.cmx"
+}
+
+fuchsia_component("echo_server") {
+  testonly = true
+  deps = [ ":echo_server_bin" ]
+  manifest = "meta/echo_server.cmx"
+}
+
+fuchsia_component("failing_appmgr") {
+  testonly = true
+  deps = [ ":failing_appmgr_bin" ]
+  manifest = "meta/failing_appmgr.cmx"
+}
+
+fuchsia_component("crashing_component") {
+  testonly = true
+  deps = [ ":crashing_component_bin" ]
+  manifest = "meta/crashing_component.cmx"
+}
+
+fuchsia_test_package("appmgr_integration_tests") {
+  test_components = [
+    ":appmgr_full_integration_tests",
+    ":appmgr_hub_integration_tests",
+    ":appmgr_realm_integration_tests",
+  ]
   deps = [
+    ":appmgr_integration_tests_inspect_test_app",
     ":crashing_component",
     ":crashing_process",
     ":echo_server",
     ":failing_appmgr",
-    ":full_tests",
-    ":hub_tests",
-    ":realm_tests",
     ":sysmgr_config",
-    "//src/sys/appmgr/integration_tests/inspect:bin-vmo",
   ]
-
-  binaries = [
-    {
-      name = "inspect_vmo_test_app"
-    },
-    {
-      name = "echo_server_for_test"
-    },
-    {
-      name = "crashing_process"
-    },
-    {
-      name = "crashing_component"
-    },
-    {
-      name = "failing_appmgr"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("inspect/meta/inspect_vmo_test_app.cmx")
-      dest = "appmgr_integration_tests_inspect_test_app.cmx"
-    },
-    {
-      path = rebase_path("meta/echo_server.cmx")
-      dest = "echo_server.cmx"
-    },
-    {
-      path = rebase_path("meta/crashing_component.cmx")
-      dest = "crashing_component.cmx"
-    },
-    {
-      path = rebase_path("meta/failing_appmgr.cmx")
-      dest = "failing_appmgr.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "appmgr_full_integration_tests"
-      environments = basic_envs
-    },
-    {
-      name = "appmgr_realm_integration_tests"
-      environments = basic_envs
-    },
-    {
-      name = "appmgr_hub_integration_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("lifecycle") {
   testonly = true
@@ -18,8 +17,6 @@ executable("appmgr-lifecycle-tests-bin") {
   sources = [ "appmgr_lifecycle_tests.cc" ]
 
   deps = [
-    ":test-lifecycle-component",
-    ":test-sysmgr-bin",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
@@ -32,8 +29,10 @@ executable("appmgr-lifecycle-tests-bin") {
   ]
 }
 
-executable("test-lifecycle-component") {
+executable("test-lifecycle-component-bin") {
   testonly = true
+
+  output_name = "test-lifecycle-component"
 
   sources = [ "test_lifecycle_component.cc" ]
 
@@ -49,6 +48,8 @@ executable("test-lifecycle-component") {
 executable("test-sysmgr-bin") {
   testonly = true
 
+  output_name = "test-sysmgr"
+
   sources = [ "test_sysmgr.cc" ]
 
   deps = [
@@ -59,37 +60,26 @@ executable("test-sysmgr-bin") {
   ]
 }
 
-test_package("appmgr-lifecycle-tests") {
-  public_deps = [
+fuchsia_component("test-lifecycle-component") {
+  testonly = true
+  deps = [ ":test-lifecycle-component-bin" ]
+  manifest = "meta/test-lifecycle-component.cmx"
+}
+
+fuchsia_component("test-sysmgr") {
+  testonly = true
+  deps = [ ":test-sysmgr-bin" ]
+  manifest = "meta/test-sysmgr.cmx"
+}
+
+fuchsia_unittest_package("appmgr-lifecycle-tests") {
+  manifest = "meta/appmgr-lifecycle-tests.cmx"
+  deps = [
     ":appmgr-lifecycle-tests-bin",
     ":test-lifecycle-component",
-    ":test-sysmgr-bin",
+    ":test-sysmgr",
   ]
-
-  binaries = [
-    {
-      name = "test-lifecycle-component"
-    },
-    {
-      name = "test-sysmgr-bin"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/test-lifecycle-component.cmx")
-      dest = "test-lifecycle-component.cmx"
-    },
-    {
-      path = rebase_path("meta/test-sysmgr-bin.cmx")
-      dest = "test-sysmgr-bin.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "appmgr-lifecycle-tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("storage") {
   testonly = true
@@ -66,16 +66,13 @@ executable("isolated_persistent_storage_bin") {
   ]
 }
 
-test_package("isolated_persistent_storage") {
-  tests = [
-    {
-      name = "isolated_persistent_storage"
-      environments = basic_envs
-    },
-  ]
-
+fuchsia_unittest_package("isolated_persistent_storage") {
+  manifest = "meta/isolated_persistent_storage.cmx"
   deps = [
     ":isolated_persistent_storage_bin",
     "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
   ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

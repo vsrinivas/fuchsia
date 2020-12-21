@@ -120,7 +120,7 @@ TEST_F(RealmTest, Resolve) {
 
   bool wait = false;
   resolver->Resolve(
-      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#test/"
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#bin/"
       "appmgr_realm_integration_tests",
       [&wait](zx_status_t status, zx::vmo binary,
               fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader) {
@@ -129,7 +129,7 @@ TEST_F(RealmTest, Resolve) {
         ASSERT_EQ(ZX_OK, status);
 
         std::string expect;
-        files::ReadFileToString("/pkg/test/appmgr_realm_integration_tests", &expect);
+        files::ReadFileToString("/pkg/bin/appmgr_realm_integration_tests", &expect);
         ASSERT_FALSE(expect.empty());
 
         std::vector<char> buf(expect.length());

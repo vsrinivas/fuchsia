@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/appmgr_realm_integration_tests"
+        "binary": "bin/appmgr_realm_integration_tests"
     },
     "sandbox": {
         "features": [

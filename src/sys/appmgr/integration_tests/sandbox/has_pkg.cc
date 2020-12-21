@@ -16,7 +16,7 @@ TEST_F(NamespaceTest, HasPkg) {
   // should succeed, although it returns NOT_SUPPORTED instead of ACCESS_DENIED because of pkgfs
   // differences.
   ExpectPathSupportsRights("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
-  ExpectPathSupportsStrictRights("/pkg/test/has_pkg",
+  ExpectPathSupportsStrictRights("/pkg/bin/has_pkg",
                                  fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                  /*require_access_denied=*/false);
 }

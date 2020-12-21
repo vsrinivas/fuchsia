@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/no_shell_commands"
+        "binary": "bin/no_shell_commands"
     }
 }

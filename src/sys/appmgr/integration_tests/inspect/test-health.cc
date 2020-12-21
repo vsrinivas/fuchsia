@@ -28,7 +28,7 @@ using ::testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
-    "fuchsia-pkg://fuchsia.com/inspect_vmo_integration_tests#meta/"
+    "fuchsia-pkg://fuchsia.com/appmgr_inspect_integration_tests#meta/"
     "inspect_health_test_app.cmx";
 constexpr char kTestProcessName[] = "inspect_health_test_app.cmx";
 

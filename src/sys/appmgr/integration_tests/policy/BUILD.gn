@@ -6,146 +6,168 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("policy") {
   testonly = true
   deps = [ ":policy-integration-tests" ]
 }
 
-test_package("policy-integration-tests") {
+fuchsia_component("none") {
+  manifest = "meta/none.cmx"
+}
+
+fuchsia_component("package_cache_allowed") {
+  manifest = "meta/package_cache.cmx"
+}
+
+fuchsia_component("package_cache_denied") {
+  manifest = "meta/package_cache.cmx"
+}
+
+fuchsia_component("package_resolver_allowed") {
+  manifest = "meta/package_resolver.cmx"
+}
+
+fuchsia_component("package_resolver_denied") {
+  manifest = "meta/package_resolver.cmx"
+}
+
+fuchsia_component("root_job_allowed") {
+  manifest = "meta/root_job.cmx"
+}
+
+fuchsia_component("root_job_denied") {
+  manifest = "meta/root_job.cmx"
+}
+
+fuchsia_component("mmio_resource_allowed") {
+  manifest = "meta/mmio_resource.cmx"
+}
+
+fuchsia_component("mmio_resource_denied") {
+  manifest = "meta/mmio_resource.cmx"
+}
+
+fuchsia_component("irq_resource_allowed") {
+  manifest = "meta/irq_resource.cmx"
+}
+
+fuchsia_component("irq_resource_denied") {
+  manifest = "meta/irq_resource.cmx"
+}
+
+fuchsia_component("ioport_resource_allowed") {
+  manifest = "meta/ioport_resource.cmx"
+}
+
+fuchsia_component("ioport_resource_denied") {
+  manifest = "meta/ioport_resource.cmx"
+}
+
+fuchsia_component("smc_resource_allowed") {
+  manifest = "meta/smc_resource.cmx"
+}
+
+fuchsia_component("smc_resource_denied") {
+  manifest = "meta/smc_resource.cmx"
+}
+
+fuchsia_component("debug_resource_allowed") {
+  manifest = "meta/debug_resource.cmx"
+}
+
+fuchsia_component("debug_resource_denied") {
+  manifest = "meta/debug_resource.cmx"
+}
+
+fuchsia_component("hypervisor_resource_allowed") {
+  manifest = "meta/hypervisor_resource.cmx"
+}
+
+fuchsia_component("hypervisor_resource_denied") {
+  manifest = "meta/hypervisor_resource.cmx"
+}
+
+fuchsia_component("info_resource_allowed") {
+  manifest = "meta/info_resource.cmx"
+}
+
+fuchsia_component("info_resource_denied") {
+  manifest = "meta/info_resource.cmx"
+}
+
+fuchsia_component("root_resource_allowed") {
+  manifest = "meta/root_resource.cmx"
+}
+
+fuchsia_component("root_resource_denied") {
+  manifest = "meta/root_resource.cmx"
+}
+
+fuchsia_component("vmex_resource_allowed") {
+  manifest = "meta/vmex_resource.cmx"
+}
+
+fuchsia_component("vmex_resource_denied") {
+  manifest = "meta/vmex_resource.cmx"
+}
+
+fuchsia_component("deprecated_shell_allowed") {
+  manifest = "meta/deprecated_shell.cmx"
+}
+
+fuchsia_component("deprecated_shell_denied") {
+  manifest = "meta/deprecated_shell.cmx"
+}
+
+fuchsia_component("pkgfs_versions_allowed") {
+  manifest = "meta/pkgfs_versions.cmx"
+}
+
+fuchsia_component("pkgfs_versions_denied") {
+  manifest = "meta/pkgfs_versions.cmx"
+}
+
+fuchsia_unittest_package("policy-integration-tests") {
+  component_name = "policy_integration_test"
   deps = [
+    ":debug_resource_allowed",
+    ":debug_resource_denied",
+    ":deprecated_shell_allowed",
+    ":deprecated_shell_denied",
+    ":hypervisor_resource_allowed",
+    ":hypervisor_resource_denied",
+    ":info_resource_allowed",
+    ":info_resource_denied",
+    ":ioport_resource_allowed",
+    ":ioport_resource_denied",
+    ":irq_resource_allowed",
+    ":irq_resource_denied",
+    ":mmio_resource_allowed",
+    ":mmio_resource_denied",
+    ":none",
+    ":package_cache_allowed",
+    ":package_cache_denied",
+    ":package_resolver_allowed",
+    ":package_resolver_denied",
+    ":pkgfs_versions_allowed",
+    ":pkgfs_versions_denied",
     ":policy_test",
+    ":root_job_allowed",
+    ":root_job_denied",
+    ":root_resource_allowed",
+    ":root_resource_denied",
+    ":smc_resource_allowed",
+    ":smc_resource_denied",
+    ":vmex_resource_allowed",
+    ":vmex_resource_denied",
     "//src/sys/appmgr/integration_tests:echo_server",
   ]
-  tests = [
-    {
-      name = "policy_integration_test"
-      environments = basic_envs
-    },
-  ]
-  binaries = [
-    {
-      name = "echo_server_for_test"
-    },
-  ]
-  meta = [
-    {
-      path = "meta/none.cmx"
-      dest = "none.cmx"
-    },
-    {
-      path = "meta/package_cache.cmx"
-      dest = "package_cache_allowed.cmx"
-    },
-    {
-      path = "meta/package_cache.cmx"
-      dest = "package_cache_denied.cmx"
-    },
-    {
-      path = "meta/package_resolver.cmx"
-      dest = "package_resolver_denied.cmx"
-    },
-    {
-      path = "meta/package_resolver.cmx"
-      dest = "package_resolver_allowed.cmx"
-    },
-    {
-      path = "meta/root_job.cmx"
-      dest = "root_job_denied.cmx"
-    },
-    {
-      path = "meta/root_job.cmx"
-      dest = "root_job_allowed.cmx"
-    },
-    {
-      path = "meta/mmio_resource.cmx"
-      dest = "mmio_resource_denied.cmx"
-    },
-    {
-      path = "meta/mmio_resource.cmx"
-      dest = "mmio_resource_allowed.cmx"
-    },
-    {
-      path = "meta/irq_resource.cmx"
-      dest = "irq_resource_denied.cmx"
-    },
-    {
-      path = "meta/irq_resource.cmx"
-      dest = "irq_resource_allowed.cmx"
-    },
-    {
-      path = "meta/ioport_resource.cmx"
-      dest = "ioport_resource_denied.cmx"
-    },
-    {
-      path = "meta/ioport_resource.cmx"
-      dest = "ioport_resource_allowed.cmx"
-    },
-    {
-      path = "meta/smc_resource.cmx"
-      dest = "smc_resource_denied.cmx"
-    },
-    {
-      path = "meta/smc_resource.cmx"
-      dest = "smc_resource_allowed.cmx"
-    },
-    {
-      path = "meta/debug_resource.cmx"
-      dest = "debug_resource_denied.cmx"
-    },
-    {
-      path = "meta/debug_resource.cmx"
-      dest = "debug_resource_allowed.cmx"
-    },
-    {
-      path = "meta/hypervisor_resource.cmx"
-      dest = "hypervisor_resource_denied.cmx"
-    },
-    {
-      path = "meta/hypervisor_resource.cmx"
-      dest = "hypervisor_resource_allowed.cmx"
-    },
-    {
-      path = "meta/info_resource.cmx"
-      dest = "info_resource_denied.cmx"
-    },
-    {
-      path = "meta/info_resource.cmx"
-      dest = "info_resource_allowed.cmx"
-    },
-    {
-      path = "meta/root_resource.cmx"
-      dest = "root_resource_denied.cmx"
-    },
-    {
-      path = "meta/root_resource.cmx"
-      dest = "root_resource_allowed.cmx"
-    },
-    {
-      path = "meta/vmex_resource.cmx"
-      dest = "vmex_resource_denied.cmx"
-    },
-    {
-      path = "meta/vmex_resource.cmx"
-      dest = "vmex_resource_allowed.cmx"
-    },
-    {
-      path = "meta/deprecated_shell.cmx"
-      dest = "deprecated_shell_denied.cmx"
-    },
-    {
-      path = "meta/deprecated_shell.cmx"
-      dest = "deprecated_shell_allowed.cmx"
-    },
-    {
-      path = "meta/pkgfs_versions.cmx"
-      dest = "pkgfs_versions_denied.cmx"
-    },
-    {
-      path = "meta/pkgfs_versions.cmx"
-      dest = "pkgfs_versions_allowed.cmx"
-    },
-  ]
+  manifest = "meta/policy_integration_test.cmx"
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 rustc_test("policy_test") {

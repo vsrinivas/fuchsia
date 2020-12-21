@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/has-durable-data"
+        "binary": "bin/has-durable-data"
     },
     "sandbox": {
         "features": [

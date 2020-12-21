@@ -6,7 +6,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/component_events_integration_test"
+        "binary": "bin/component_events_integration_test"
     },
     "sandbox": {
         "services": [

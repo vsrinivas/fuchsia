@@ -2,17 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("components") {
   testonly = true
   deps = [ ":components_binary_tests" ]
 }
 
-executable("echo1") {
-  output_name = "components_test_echo1"
+executable("echo1_bin") {
+  output_name = "echo1"
 
   sources = [ "echo.cc" ]
 
@@ -21,8 +20,8 @@ executable("echo1") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
-executable("echo2") {
-  output_name = "components_test_echo2"
+executable("echo2_bin") {
+  output_name = "echo2"
 
   sources = [ "echo.cc" ]
 
@@ -31,8 +30,8 @@ executable("echo2") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
-executable("echo_stdin") {
-  output_name = "components_test_echo_stdin"
+executable("echo_stdin_bin") {
+  output_name = "echo_stdin"
 
   sources = [ "echo_stdin.cc" ]
 
@@ -41,8 +40,8 @@ executable("echo_stdin") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
-executable("getenv") {
-  output_name = "components_test_getenv"
+executable("getenv_bin") {
+  output_name = "getenv"
 
   sources = [ "getenv.cc" ]
 
@@ -51,7 +50,8 @@ executable("getenv") {
   public_deps = [ "//src/lib/fxl" ]
 }
 
-executable("components_binary_test") {
+executable("components_binary_test_bin") {
+  output_name = "components_binary_test"
   testonly = true
 
   sources = [ "components_binary_test.cc" ]
@@ -63,69 +63,55 @@ executable("components_binary_test") {
   ]
 }
 
-test_package("components_binary_tests") {
+fuchsia_component("echo1") {
+  deps = [ ":echo1_bin" ]
+  manifest = "meta/echo1.cmx"
+}
+
+fuchsia_component("echo2") {
+  deps = [ ":echo2_bin" ]
+  manifest = "meta/echo2.cmx"
+}
+
+fuchsia_component("echo_deprecated_shell") {
+  deps = [ ":echo1_bin" ]
+  manifest = "meta/echo_deprecated_shell.cmx"
+}
+
+fuchsia_component("echo_hub") {
+  deps = [ ":echo1_bin" ]
+  manifest = "meta/echo_hub.cmx"
+}
+
+fuchsia_component("echo_stdin") {
+  deps = [ ":echo_stdin_bin" ]
+  manifest = "meta/echo_stdin.cmx"
+}
+
+fuchsia_component("getenv1") {
+  deps = [ ":getenv_bin" ]
+  manifest = "meta/getenv1.cmx"
+}
+
+fuchsia_component("getenv2") {
+  deps = [ ":getenv_bin" ]
+  manifest = "meta/getenv2.cmx"
+}
+
+fuchsia_unittest_package("components_binary_tests") {
+  component_name = "components_binary_test"
+  manifest = "meta/components_binary_test.cmx"
   deps = [
-    ":components_binary_test",
+    ":components_binary_test_bin",
     ":echo1",
     ":echo2",
+    ":echo_deprecated_shell",
+    ":echo_hub",
     ":echo_stdin",
-    ":getenv",
+    ":getenv1",
+    ":getenv2",
   ]
-
-  binaries = [
-    {
-      name = "components_test_echo1"
-      dest = "echo1"
-    },
-    {
-      name = "components_test_echo2"
-      dest = "echo2"
-    },
-    {
-      name = "components_test_echo_stdin"
-      dest = "echo_stdin"
-    },
-    {
-      name = "components_test_getenv"
-      dest = "getenv"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/echo1.cmx")
-      dest = "echo1.cmx"
-    },
-    {
-      path = rebase_path("meta/echo_deprecated_shell.cmx")
-      dest = "echo_deprecated_shell.cmx"
-    },
-    {
-      path = rebase_path("meta/echo_hub.cmx")
-      dest = "echo_hub.cmx"
-    },
-    {
-      path = rebase_path("meta/echo2.cmx")
-      dest = "echo2.cmx"
-    },
-    {
-      path = rebase_path("meta/getenv1.cmx")
-      dest = "getenv1.cmx"
-    },
-    {
-      path = rebase_path("meta/getenv2.cmx")
-      dest = "getenv2.cmx"
-    },
-    {
-      path = rebase_path("meta/echo_stdin.cmx")
-      dest = "echo_stdin.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "components_binary_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

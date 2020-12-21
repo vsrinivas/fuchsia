@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/no_ambient_executable"
+        "binary": "bin/no_ambient_executable"
     },
     "sandbox": {
         "services": [

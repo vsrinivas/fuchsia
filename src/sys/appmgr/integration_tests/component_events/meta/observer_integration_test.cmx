@@ -13,7 +13,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "test/observer_integration_test"
+        "binary": "bin/observer_integration_test"
     },
     "sandbox": {
         "services": [

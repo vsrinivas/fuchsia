@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 # A test that exercises component functionality.
 # See fxbug.dev/3941 for more context.
@@ -33,25 +34,16 @@ template("sandbox_test_package") {
                            ])
   }
 
-  package(target_name) {
+  fuchsia_unittest_package(target_name) {
     forward_variables_from(invoker,
                            [
                              "deprecated_shell",
                              "deprecated_misc_storage",
                            ])
-    testonly = true
-    meta = [
-      {
-        path = "meta/${target_name}.cmx"
-        dest = "${target_name}.cmx"
-      },
-    ]
+    manifest = "meta/${target_name}.cmx"
     deps = [ ":${binary_rule}" ]
-    tests = [
-      {
-        name = binary_name
-        forward_variables_from(invoker, [ "environments" ])
-      },
-    ]
+    test_specs = {
+      forward_variables_from(invoker, [ "environments" ])
+    }
   }
 }

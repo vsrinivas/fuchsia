@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/has-factory-data"
+        "binary": "bin/has-factory-data"
     },
     "sandbox": {
         "features": [

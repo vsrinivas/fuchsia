@@ -7,6 +7,7 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -209,19 +210,14 @@ executable("unittest_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("appmgr") {
+fuchsia_component("component") {
+  component_name = "appmgr"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "appmgr"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/appmgr.cml")
-      dest = "appmgr.cm"
-    },
-  ]
+  manifest = "meta/appmgr.cml"
+}
+
+fuchsia_package("appmgr") {
+  deps = [ ":component" ]
 }
 
 config_data("appmgr_scheme_config") {
@@ -251,38 +247,30 @@ group("unittests") {
   ]
 }
 
-executable("test_component_using_storage") {
+executable("test_component_using_storage_bin") {
   output_name = "test_component_using_storage"
   sources = [ "test/test_component_using_storage.cc" ]
 }
 
-test_package("appmgr_unittests") {
+fuchsia_component("test_component_using_storage") {
+  deps = [ ":test_component_using_storage_bin" ]
+  manifest = "meta/test_component_using_storage.cmx"
+}
+
+fuchsia_unittest_package("appmgr_unittests") {
   deps = [
     ":test_component_using_storage",
     ":unittest_bin",
   ]
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "appmgr_unittests"
-      environments = basic_envs
-    },
-  ]
 
-  binaries = [
-    {
-      name = "test_component_using_storage"
-    },
-  ]
+  manifest = "meta/appmgr_unittests.cmx"
 
-  meta = [
-    {
-      path = rebase_path("meta/test_component_using_storage.cmx")
-      dest = "test_component_using_storage.cmx"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = basic_envs
+  }
 }
 
 package("system_data_file") {

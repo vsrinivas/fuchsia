@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/no-misc-storage"
+        "binary": "bin/no-misc-storage"
     }
 }

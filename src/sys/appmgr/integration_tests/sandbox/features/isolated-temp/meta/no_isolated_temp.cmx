@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/no_isolated_temp"
+        "binary": "bin/no_isolated_temp"
     },
     "sandbox": {
         "services": [

@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("outdir") {
   testonly = true
@@ -39,42 +38,15 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-test_package("appmgr_out_dir_integration_test") {
+fuchsia_unittest_package("appmgr_out_dir_integration_test") {
+  manifest = "meta/appmgr_out_dir_integration_test.cmx"
   deps = [
     ":bin",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
+    "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
     "//src/sys/appmgr:bin",
-    "//src/sys/sysmgr:bin",
+    "//src/sys/sysmgr:sysmgr_component",
   ]
-
-  binaries = [
-    {
-      name = "appmgr"
-    },
-    {
-      name = "sysmgr"
-    },
-    {
-      name = "echo_server_rust"
-      dest = "echo_server"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
-      dest = "echo_server.cmx"
-    },
-    {
-      path = rebase_path("//src/sys/sysmgr/meta/sysmgr.cmx")
-      dest = "sysmgr.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "appmgr_out_dir_integration_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

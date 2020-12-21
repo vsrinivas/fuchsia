@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/isolated_persistent_storage"
+        "binary": "bin/isolated_persistent_storage"
     },
     "sandbox": {
         "services": [

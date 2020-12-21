@@ -18,7 +18,7 @@
 #include "src/sys/appmgr/moniker.h"
 
 constexpr char kSysmgrUrl[] =
-    "fuchsia-pkg://fuchsia.com/appmgr-lifecycle-tests#meta/test-sysmgr-bin.cmx";
+    "fuchsia-pkg://fuchsia.com/appmgr-lifecycle-tests#meta/test-sysmgr.cmx";
 constexpr char kLifecyleComponentUrl[] =
     "fuchsia-pkg://fuchsia.com/appmgr-lifecycle-tests#meta/test-lifecycle-component.cmx";
 constexpr char kRootRealm[] = "app";

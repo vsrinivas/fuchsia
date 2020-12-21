@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/no-build-info"
+        "binary": "bin/no-build-info"
     },
     "sandbox": {
         "services": [

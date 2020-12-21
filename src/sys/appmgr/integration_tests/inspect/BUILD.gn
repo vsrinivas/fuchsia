@@ -2,13 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("inspect") {
   testonly = true
-  deps = [ ":inspect_vmo_integration_tests" ]
+  deps = [ ":appmgr_inspect_integration_tests" ]
 }
 
 executable("bin-vmo") {
@@ -73,42 +72,40 @@ executable("test-health") {
   ]
 }
 
-test_package("inspect_vmo_integration_tests") {
+fuchsia_component("inspect_vmo_integration_tests") {
+  testonly = true
+  deps = [ ":test-vmo" ]
+  manifest = "meta/inspect_vmo_integration_tests.cmx"
+}
+
+fuchsia_component("inspect_health_integration_tests") {
+  testonly = true
+  deps = [ ":test-health" ]
+  manifest = "meta/inspect_health_integration_tests.cmx"
+}
+
+fuchsia_component("inspect_vmo_test_app") {
+  testonly = true
+  deps = [ ":bin-vmo" ]
+  manifest = "meta/inspect_vmo_test_app.cmx"
+}
+
+fuchsia_component("inspect_health_test_app") {
+  testonly = true
+  deps = [ ":bin-health" ]
+  manifest = "meta/inspect_health_test_app.cmx"
+}
+
+fuchsia_test_package("appmgr_inspect_integration_tests") {
+  test_components = [
+    ":inspect_vmo_integration_tests",
+    ":inspect_health_integration_tests",
+  ]
   deps = [
-    ":bin-health",
-    ":bin-vmo",
-    ":test-health",
-    ":test-vmo",
+    ":inspect_health_test_app",
+    ":inspect_vmo_test_app",
   ]
-
-  binaries = [
-    {
-      name = "inspect_vmo_test_app"
-    },
-    {
-      name = "inspect_health_test_app"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_vmo_test_app.cmx")
-      dest = "inspect_vmo_test_app.cmx"
-    },
-    {
-      path = rebase_path("meta/inspect_health_test_app.cmx")
-      dest = "inspect_health_test_app.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "inspect_vmo_integration_tests"
-      environments = basic_envs
-    },
-    {
-      name = "inspect_health_integration_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

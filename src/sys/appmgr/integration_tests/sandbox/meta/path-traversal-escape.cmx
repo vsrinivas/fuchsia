@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/path-traversal-escape"
+        "binary": "bin/path-traversal-escape"
     },
     "sandbox": {
         "pkgfs": [

@@ -4,55 +4,55 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("component_events") {
   testonly = true
   deps = [ ":component_events_integration_tests" ]
 }
 
-test_package("component_events_integration_tests") {
-  deps = [
-    ":component_events_test",
+fuchsia_component("test_component") {
+  testonly = true
+  deps = [ ":test_component_bin" ]
+  manifest = "meta/test_component.cmx"
+}
+
+fuchsia_component("test_component_with_subrealm") {
+  testonly = true
+  deps = [ ":test_component_with_subrealm_bin" ]
+  manifest = "meta/test_component_with_subrealm.cmx"
+}
+
+fuchsia_component("component_events_integration_test") {
+  testonly = true
+  deps = [ ":component_events_test_bin" ]
+  manifest = "meta/component_events_integration_test.cmx"
+}
+
+fuchsia_component("observer_integration_test") {
+  testonly = true
+  deps = [ ":observer_integration_test_bin" ]
+  manifest = "meta/observer_integration_test.cmx"
+}
+
+fuchsia_test_package("component_events_integration_tests") {
+  test_components = [
+    ":component_events_integration_test",
     ":observer_integration_test",
+  ]
+
+  deps = [
     ":test_component",
     ":test_component_with_subrealm",
   ]
 
-  tests = [
-    {
-      name = "component_events_integration_test"
-      environments = basic_envs
-    },
-    {
-      name = "observer_integration_test"
-      environments = basic_envs
-    },
-  ]
-
-  binaries = [
-    {
-      name = "test_component"
-    },
-    {
-      name = "test_component_with_subrealm"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/test_component.cmx"
-      dest = "test_component.cmx"
-    },
-    {
-      path = "meta/test_component_with_subrealm.cmx"
-      dest = "test_component_with_subrealm.cmx"
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
-rustc_test("component_events_test") {
+rustc_test("component_events_test_bin") {
   name = "component_events_integration_test"
   source_root = "./component_events_integration_test.rs"
   edition = "2018"
@@ -78,7 +78,7 @@ rustc_test("component_events_test") {
   sources = [ "component_events_integration_test.rs" ]
 }
 
-rustc_test("observer_integration_test") {
+rustc_test("observer_integration_test_bin") {
   name = "observer_integration_test"
   source_root = "./observer_integration_test.rs"
   edition = "2018"
@@ -100,7 +100,7 @@ rustc_test("observer_integration_test") {
   sources = [ "observer_integration_test.rs" ]
 }
 
-rustc_binary("test_component") {
+rustc_binary("test_component_bin") {
   name = "test_component"
   source_root = "./test_component.rs"
   edition = "2018"
@@ -118,7 +118,7 @@ rustc_binary("test_component") {
   sources = [ "test_component.rs" ]
 }
 
-rustc_binary("test_component_with_subrealm") {
+rustc_binary("test_component_with_subrealm_bin") {
   name = "test_component_with_subrealm"
   source_root = "./test_component_with_subrealm.rs"
   edition = "2018"
