@@ -106,40 +106,6 @@ class {{ .RequestDecoderName }} {
   {{ .RequestDecoderName }}() = default;
   virtual ~{{ .RequestDecoderName }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      {{- range .Methods }}
-        {{- if .HasRequest }}
-      case internal::{{ .OrdinalName }}:
-      {
-        {{ .Name }}(
-          {{- range $index, $param := .Request -}}
-            {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.FullDecl }}>(&request_decoder, {{ .Offset }})
-          {{- end -}}
-        );
-        break;
-      }
-        {{- end }}
-      {{- end }}
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -153,38 +119,6 @@ class {{ .ResponseDecoderName }} {
   {{ .ResponseDecoderName }}() = default;
   virtual ~{{ .ResponseDecoderName }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      {{- range .Methods }}
-        {{- if .HasResponse }}
-      case internal::{{ .OrdinalName }}:
-      {
-        {{ .Name }}(
-          {{- range $index, $param := .Response -}}
-            {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.FullDecl }}>(&response_decoder, {{ .Offset }})
-          {{- end -}}
-        );
-        break;
-      }
-        {{- end }}
-      {{- end }}
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
 
   {{- range .Methods }}
     {{- if .HasResponse }}

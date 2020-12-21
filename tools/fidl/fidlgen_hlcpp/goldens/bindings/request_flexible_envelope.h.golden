@@ -490,41 +490,6 @@ class Protocol_RequestDecoder {
   Protocol_RequestDecoder() = default;
   virtual ~Protocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
-        RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
-                &request_decoder, 16));
-        break;
-      }
-      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
-        RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<
-                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
-                &request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
   virtual void RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::StrictFoo s) = 0;
   virtual void RequestFlexibleResponseStrict(
@@ -536,38 +501,6 @@ class Protocol_ResponseDecoder {
   Protocol_ResponseDecoder() = default;
   virtual ~Protocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
-        RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<
-                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
-        RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
-                &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
   virtual void RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::FlexibleFoo f) = 0;
   virtual void RequestFlexibleResponseStrict(

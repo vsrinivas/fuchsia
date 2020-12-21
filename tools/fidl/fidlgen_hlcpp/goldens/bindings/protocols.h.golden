@@ -1602,36 +1602,6 @@ class Transitional_RequestDecoder {
   Transitional_RequestDecoder() = default;
   virtual ~Transitional_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kTransitional_Request_Ordinal: {
-        Request(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
-        break;
-      }
-      case internal::kTransitional_OneWay_Ordinal: {
-        OneWay(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
   virtual void Request(int64_t x) = 0;
   virtual void OneWay(int64_t x) = 0;
 };
@@ -1641,33 +1611,6 @@ class Transitional_ResponseDecoder {
   Transitional_ResponseDecoder() = default;
   virtual ~Transitional_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kTransitional_Request_Ordinal: {
-        Request(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      case internal::kTransitional_Event_Ordinal: {
-        Event(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
   virtual void Request(int64_t y) = 0;
   virtual void Event(int64_t x) = 0;
 };
@@ -1759,46 +1702,6 @@ class ChannelProtocol_RequestDecoder {
   ChannelProtocol_RequestDecoder() = default;
   virtual ~ChannelProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kChannelProtocol_MethodA_Ordinal: {
-        MethodA(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
-                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_MethodB_Ordinal: {
-        MethodB(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
-                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_TakeHandle_Ordinal: {
-        TakeHandle(::fidl::DecodeAs<::zx::handle>(&request_decoder, 16));
-        break;
-      }
-      case internal::kChannelProtocol_MutateSocket_Ordinal: {
-        MutateSocket(::fidl::DecodeAs<::zx::socket>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
   virtual void MethodA(int64_t a, int64_t b) = 0;
   virtual void MethodB(int64_t a, int64_t b) = 0;
   virtual void TakeHandle(::zx::handle h) = 0;
@@ -1810,42 +1713,6 @@ class ChannelProtocol_ResponseDecoder {
   ChannelProtocol_ResponseDecoder() = default;
   virtual ~ChannelProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kChannelProtocol_EventA_Ordinal: {
-        EventA(::fidl::DecodeAs<int64_t>(&response_decoder, 16),
-               ::fidl::DecodeAs<int64_t>(&response_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_MethodB_Ordinal: {
-        MethodB(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      case internal::kChannelProtocol_TakeHandle_Ordinal: {
-        TakeHandle();
-        break;
-      }
-      case internal::kChannelProtocol_MutateSocket_Ordinal: {
-        MutateSocket(::fidl::DecodeAs<::zx::socket>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
   virtual void EventA(int64_t a, int64_t b) = 0;
   virtual void MethodB(int64_t result) = 0;
   virtual void TakeHandle() = 0;
@@ -1955,61 +1822,6 @@ class WithAndWithoutRequestResponse_RequestDecoder {
   WithAndWithoutRequestResponse_RequestDecoder() = default;
   virtual ~WithAndWithoutRequestResponse_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
-        NoRequestNoResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
-        NoRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
-        NoRequestWithResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
-        WithRequestNoResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
-        WithRequestEmptyResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
-        WithRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
   virtual void NoRequestNoResponse() = 0;
   virtual void NoRequestEmptyResponse() = 0;
   virtual void NoRequestWithResponse() = 0;
@@ -2023,55 +1835,6 @@ class WithAndWithoutRequestResponse_ResponseDecoder {
   WithAndWithoutRequestResponse_ResponseDecoder() = default;
   virtual ~WithAndWithoutRequestResponse_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
-        NoRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
-        NoRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
-        WithRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
-        WithRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-        OnEmptyResponse();
-        break;
-      }
-      case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-        OnWithResponse(::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
   virtual void NoRequestEmptyResponse() = 0;
   virtual void NoRequestWithResponse(::std::string ret) = 0;
   virtual void WithRequestEmptyResponse() = 0;
@@ -2194,40 +1957,6 @@ class WithErrorSyntax_RequestDecoder {
   WithErrorSyntax_RequestDecoder() = default;
   virtual ~WithErrorSyntax_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct();
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive();
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
-        ErrorAsEnum();
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
   virtual void ResponseAsStruct() = 0;
   virtual void ErrorAsPrimitive() = 0;
   virtual void ErrorAsEnum() = 0;
@@ -2238,46 +1967,6 @@ class WithErrorSyntax_ResponseDecoder {
   WithErrorSyntax_ResponseDecoder() = default;
   virtual ~WithErrorSyntax_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct(
-            ::fidl::DecodeAs<::fidl::test::protocols::
-                                 WithErrorSyntax_ResponseAsStruct_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive(
-            ::fidl::DecodeAs<::fidl::test::protocols::
-                                 WithErrorSyntax_ErrorAsPrimitive_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
-        ErrorAsEnum(
-            ::fidl::DecodeAs<
-                ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
   virtual void ResponseAsStruct(
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
           result) = 0;
