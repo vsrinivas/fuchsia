@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using amlogic.platform;
+using fuchsia.google.platform;
+
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
+}
+fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.ASTRO_THERMISTOR;
+

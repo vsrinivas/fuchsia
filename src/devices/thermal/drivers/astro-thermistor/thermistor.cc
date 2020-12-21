@@ -10,13 +10,14 @@
 #include <string.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <soc/aml-common/aml-g12-saradc.h>
+
+#include "src/devices/thermal/drivers/astro-thermistor/astro-thermistor-bind.h"
 
 namespace thermal {
 
@@ -168,9 +169,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(astro-thermistor, thermal::driver_ops, "thermistor", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_ASTRO_THERMISTOR),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
-ZIRCON_DRIVER_END(astro-thermistor)
+ZIRCON_DRIVER(astro-thermistor, thermal::driver_ops, "thermistor", "0.1");

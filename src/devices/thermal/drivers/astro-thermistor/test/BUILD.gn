@@ -15,6 +15,7 @@ executable("astro-thermistor-test-bin") {
     "test.cc",
   ]
   deps = [
+    "../:astro-thermistor-bind",
     "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_llcpp",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
