@@ -62,6 +62,9 @@ openweave_adaptation_layer("adaptation") {
     "//third_party/openweave-core",
     "//zircon/system/ulib/inet6",
   ]
+
+  # TODO(66826): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config("adaptation_config") {

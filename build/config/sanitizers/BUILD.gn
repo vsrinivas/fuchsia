@@ -84,6 +84,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//garnet/bin/trace/tests/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
+    "//src/connectivity/weave/*",
     "//src/developer/debug/debug_agent/*",
     "//src/developer/memory/monitor/tests/*",
     "//src/developer/shell/mirror/*",
