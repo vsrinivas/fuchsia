@@ -1,0 +1,20 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT",
+            "fuchsia.BIND_USB_PID": "0xe300",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ATHEROS"
+        },
+        "expected": "match",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.TRANSPORT",
+            "fuchsia.BIND_USB_PID": "0xaaaa",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ATHEROS"
+        },
+        "expected": "abort",
+        "name": "Bad PID"
+    }
+]
