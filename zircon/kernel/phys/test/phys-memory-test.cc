@@ -17,12 +17,30 @@
 
 const char Symbolize::kProgramName_[] = "phys-memory-test";
 
+namespace {
+
+// Convert a zbi_mem_range_t memory type into a human-readable string.
+const char* RangeTypeString(uint32_t type) {
+  switch (type) {
+    case ZBI_MEM_RANGE_RAM:
+      return "RAM";
+    case ZBI_MEM_RANGE_PERIPHERAL:
+      return "peripheral";
+    case ZBI_MEM_RANGE_RESERVED:
+      return "reserved";
+    default:
+      return "unknown";
+  }
+}
+
+}  // namespace
+
 int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   // Skip tests on systems that don't use ZBI, such as QEMU.
   //
   // In future, we will want to use alternative mechanisms to locate
   // memory in such platforms.
-  if (zbi_ptr == nullptr ) {
+  if (zbi_ptr == nullptr) {
     printf("No ZBI found. Skipping test...\n");
     return 0;
   }
@@ -35,7 +53,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   for (const auto& range : container) {
     printf("  paddr: [0x%16" PRIx64 " -- 0x%16" PRIx64 ") : size %10" PRIu64 " kiB : %s\n",
            range.paddr, range.paddr + range.length, range.length / 1024,
-           range.type == ZBI_MEM_RANGE_RAM ? "RAM" : "reserved");
+           RangeTypeString(range.type));
     count++;
   }
   printf("\n");
