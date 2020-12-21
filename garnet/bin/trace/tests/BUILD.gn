@@ -68,9 +68,6 @@ executable("trace_tests_bin") {
   output_name = "trace_tests"
 
   deps = [ ":gtest_main" ]
-
-  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 source_set("run_test") {
@@ -182,9 +179,6 @@ executable("trace_integration_tests") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("basic_integration_test_app") {
@@ -209,9 +203,6 @@ executable("basic_integration_test_app") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
-
-  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -294,9 +285,6 @@ executable("nested_environment_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/46850): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
