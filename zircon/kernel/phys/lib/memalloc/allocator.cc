@@ -96,7 +96,7 @@ zx::status<> Allocator::RemoveRangeFromNode(RangeIter node, uint64_t first, uint
   ZX_DEBUG_ASSERT(first <= last);
 
   // If the range doesn't overlap the node at all, we have nothing to do.
-  if (!RangesIntersect(*node, Range{.first = first, .last = last})) {
+  if (!RangesIntersect(*node, Range::FromFirstAndLast(first, last))) {
     return zx::ok();
   }
 

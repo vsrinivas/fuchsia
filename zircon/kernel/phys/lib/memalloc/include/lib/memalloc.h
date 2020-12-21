@@ -22,7 +22,15 @@ namespace memalloc {
 // The [base, base + length) is generally more convenient to work with, but
 // can't represent the range [0, UINT64_MAX]. We thus expose the latter on the
 // API, but use for the former as our internal representation.
-struct Range : public fbl::DoublyLinkedListable<Range*> {
+struct Range : public fbl::DoublyLinkedListable<Range*, fbl::NodeOptions::AllowCopyMove> {
+  // Create a range with the given first/last pair.
+  static Range FromFirstAndLast(uint64_t first, uint64_t last) {
+    Range range;
+    range.first = first;
+    range.last = last;
+    return range;
+  }
+
   uint64_t first;
   uint64_t last;
 };
