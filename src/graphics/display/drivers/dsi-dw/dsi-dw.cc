@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
@@ -17,6 +16,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/graphics/display/drivers/dsi-dw/dsi_dw_bind.h"
 
 // Header Creation Macros
 #define GEN_HDR_WC_MSB(x) ((x & 0xFF) << 16)
@@ -934,9 +935,5 @@ static constexpr zx_driver_ops_t dsi_dw_ops = [] {
 }  // namespace dsi_dw
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(dsi_dw, dsi_dw::dsi_dw_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_DSI),
-ZIRCON_DRIVER_END(dsi_dw)
+ZIRCON_DRIVER(dsi_dw, dsi_dw::dsi_dw_ops, "zircon", "0.1");
+
