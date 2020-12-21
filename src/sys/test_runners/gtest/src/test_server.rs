@@ -182,8 +182,6 @@ impl SuiteServer for TestServer {
         self.tests(test_component).await
     }
 
-    // TODO(fxbug.dev/45852): Support disabled tests.
-    // TODO(fxbug.dev/45853): Support test stdout, or devise a mechanism to replace it.
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
