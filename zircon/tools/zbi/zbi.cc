@@ -83,9 +83,11 @@ class AppendBuffer final {
 
   template <typename T>
   void Append(const T* data, size_t bytes = sizeof(T)) {
-    ptr_ = static_cast<std::byte*>(
-               memcpy(static_cast<void*>(ptr_), static_cast<const void*>(data), bytes)) +
-           bytes;
+    if (bytes != 0) {
+      ptr_ = static_cast<std::byte*>(
+                memcpy(static_cast<void*>(ptr_), static_cast<const void*>(data), bytes)) +
+             bytes;
+    }
   }
 
   void Pad(size_t bytes) {
