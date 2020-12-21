@@ -17,6 +17,19 @@ import (
 	"sync"
 )
 
+// FileTree is an in memory representation of the state of the repository.
+type FileTree struct {
+	Name               string                `json:"name"`
+	Path               string                `json:"path"`
+	SingleLicenseFiles map[string][]*License `json:"project licenses"`
+	Files              []*File               `json:"files"`
+	Children           map[string]*FileTree  `json:"children"`
+	Parent             *FileTree             `json:"-"`
+	StrictAnalysis     bool                  `json:"-"`
+
+	sync.RWMutex
+}
+
 // NewFileTree returns an instance of FileTree, given the input configuration
 // file.
 func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) *FileTree {
@@ -116,19 +129,6 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	}
 
 	return &ft
-}
-
-// FileTree is an in memory representation of the state of the repository.
-type FileTree struct {
-	Name               string                `json:"name"`
-	Path               string                `json:"path"`
-	SingleLicenseFiles map[string][]*License `json:"project licenses"`
-	Files              []*File               `json:"files"`
-	Children           map[string]*FileTree  `json:"children"`
-	Parent             *FileTree             `json:"-"`
-	StrictAnalysis     bool                  `json:"-"`
-
-	sync.RWMutex
 }
 
 func (license_file_tree *FileTree) Init() {
@@ -247,6 +247,57 @@ func (file_tree *FileTree) saveTreeState(filename string) error {
 		return err
 	}
 	return nil
+}
+
+func (file_tree *FileTree) Equal(other *FileTree) bool {
+	if file_tree.Name != other.Name {
+		return false
+	}
+	if file_tree.Path != other.Path {
+		return false
+	}
+	if file_tree.Parent != other.Parent {
+		return false
+	}
+	if file_tree.StrictAnalysis != other.StrictAnalysis {
+		return false
+	}
+
+	if len(file_tree.SingleLicenseFiles) != len(other.SingleLicenseFiles) {
+		return false
+	}
+	for k := range file_tree.SingleLicenseFiles {
+		left := file_tree.SingleLicenseFiles[k]
+		right := other.SingleLicenseFiles[k]
+		if len(left) != len(right) {
+			return false
+		}
+		for i := range left {
+			if left[i] != right[i] {
+				return false
+			}
+		}
+	}
+
+	if len(file_tree.Files) != len(other.Files) {
+		return false
+	}
+	for i := range file_tree.Files {
+		if !file_tree.Files[i].Equal(other.Files[i]) {
+			return false
+		}
+	}
+
+	if len(file_tree.Children) != len(other.Children) {
+		return false
+	}
+	for k := range file_tree.Children {
+		if file_tree.Children[k] != other.Children[k] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // hasExt returns true if path has one of the extensions in the list.

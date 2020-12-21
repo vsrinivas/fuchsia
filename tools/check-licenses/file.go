@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"sync"
 )
 
 type File struct {
@@ -19,11 +18,14 @@ type File struct {
 	Licenses []*License `json:"licenses"`
 }
 
-func NewFile(path string, parent *FileTree) (*File, error) {
-	if f := globalFileMap.retrieveFileIfExists(path); f != nil {
-		return f, nil
-	}
+// ByPath implements sort.Interface for []*File based on the Path field.
+type byPath []*File
 
+func (a byPath) Len() int           { return len(a) }
+func (a byPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byPath) Less(i, j int) bool { return a[i].Path < a[j].Path }
+
+func NewFile(path string, parent *FileTree) (*File, error) {
 	symlink, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return nil, fmt.Errorf("error creating file %v: %v\n", path, err)
@@ -34,7 +36,30 @@ func NewFile(path string, parent *FileTree) (*File, error) {
 		Symlink: symlink,
 		Parent:  parent,
 	}
-	return globalFileMap.insertFileIfMissing(file), nil
+	return file, nil
+}
+
+func (f *File) Equal(other *File) bool {
+	if f.Name != other.Name {
+		return false
+	}
+	if f.Path != other.Path {
+		return false
+	}
+	if f.Symlink != other.Symlink {
+		return false
+	}
+
+	if len(f.Licenses) != len(other.Licenses) {
+		return false
+	}
+	for i := range f.Licenses {
+		if f.Licenses[i] != other.Licenses[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Use a custom Marshal function to make Files easier to read in JSON:
@@ -54,33 +79,4 @@ func (f *File) MarshalJSON() ([]byte, error) {
 		Alias:    (*Alias)(f),
 		Licenses: licenseList,
 	})
-}
-
-// ============================================================================
-// Maintain a global map of File objects to ensure we don't accidentally
-// process the same file multiple times, which may happen during dependency
-// traversal.
-
-type fileMap struct {
-	internal map[string]*File
-	sync.RWMutex
-}
-
-var globalFileMap = fileMap{internal: make(map[string]*File)}
-
-func (f *fileMap) retrieveFileIfExists(path string) *File {
-	f.RLock()
-	defer f.RUnlock()
-	return f.internal[path]
-}
-
-func (f *fileMap) insertFileIfMissing(file *File) *File {
-	f.Lock()
-	defer f.Unlock()
-	if val, ok := f.internal[file.Path]; ok {
-		// TODO: merge file info into val before returning.
-		return val
-	}
-	f.internal[file.Path] = file
-	return file
 }

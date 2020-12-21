@@ -6,31 +6,46 @@ package checklicenses
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestFileTreeNew(t *testing.T) {
-	folder := t.TempDir()
-	path := filepath.Join(folder, "config.json")
-	json := `{"filesRegex":[],"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"separatorWidth":80,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","product":"astro","singleLicenseFiles":["LICENSE"],"licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}]}`
-	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	baseDir := filepath.Join(*testDataDir, "filetree", "simple")
+	configPath := filepath.Join(*testDataDir, "filetree", "simple.json")
+	testFile := filepath.Join(*testDataDir, "filetree", "simple", "test.py")
+
 	config := Config{}
-	if err := config.Init(path); err != nil {
+	if err := config.Init(configPath); err != nil {
 		t.Fatal(err)
 	}
+	config.BaseDir = baseDir
+
 	metrics := Metrics{}
 	metrics.Init()
-	config.BaseDir = folder
-	if NewFileTree(context.Background(), config.BaseDir, nil, &config, &metrics) == nil {
-		t.Errorf("%v(): got %v, want %v", t.Name(), nil, "*FileTree")
+	got := NewFileTree(context.Background(), config.BaseDir, nil, &config, &metrics)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+	want := &FileTree{
+		Name: "simple",
+		Path: filepath.Join(cwd, baseDir),
+	}
+	f, err := NewFile(testFile, got)
+	if err != nil {
+		t.Error(err)
+	}
+	want.Files = append(want.Files, f)
+
+	if !got.Equal(want) {
+		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
 
-func TestHasLowerPrefix(t *testing.T) {
+func TestFileTreeHasLowerPrefix(t *testing.T) {
 	name := "LICENSE-THIRD-PARTY"
 	singleLicenseFiles := []string{"license", "readme"}
 	if !hasLowerPrefix(name, singleLicenseFiles) {

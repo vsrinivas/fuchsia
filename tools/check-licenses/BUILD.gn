@@ -107,18 +107,26 @@ if (is_host) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses" ]
     args = [
       "--test_data_dir",
-      rebase_path("$target_gen_dir", root_build_dir),
+      rebase_path("$target_gen_dir/testdata", root_build_dir),
     ]
     deps = [ ":lib" ]
-    non_go_deps = [ ":lib_test_data" ]
+    non_go_deps = [
+      ":config_test_data",
+      ":lib_test_data",
+    ]
   }
 
-  host_test_data("lib_test_data") {
+  host_test_data("config_test_data") {
     sources = [ "config" ]
     outputs = [ "$target_gen_dir/config" ]
   }
 
-  _testdata_path = "$target_gen_dir/golden"
+  host_test_data("lib_test_data") {
+    sources = [ "testdata" ]
+    outputs = [ "$target_gen_dir/testdata" ]
+  }
+
+  _golden_testdata_path = "$target_gen_dir/golden"
 
   go_test("check-licenses_noticetxt_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt" ]
@@ -129,7 +137,7 @@ if (is_host) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]
     args = [
       "--test_data_dir",
-      rebase_path(_testdata_path, root_build_dir),
+      rebase_path(_golden_testdata_path, root_build_dir),
     ]
     deps = [ ":golden" ]
     non_go_deps = [ ":golden_test_data" ]
@@ -137,6 +145,6 @@ if (is_host) {
 
   host_test_data("golden_test_data") {
     sources = [ "golden" ]
-    outputs = [ _testdata_path ]
+    outputs = [ _golden_testdata_path ]
   }
 }
