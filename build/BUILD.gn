@@ -54,7 +54,14 @@ group("deprecated_package") {
     "//third_party/network-conformance/vendor/UDPStub:udpstub",
   ]
 
-  visibility = driver_package_users + shell_true_users
+  non_default_checkout_users = [
+    # This git repo is only checked out when the vulkan-cts attribute is set.
+    "//third_party/vulkan-cts/fuchsia/*",
+    "//third_party/vulkan-cts/fuchsia/split-cts/*",
+  ]
+
+  visibility =
+      driver_package_users + shell_true_users + non_default_checkout_users
 
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed -E 's|([^:]*):.*|"\1\/*",|g' | sed 's|.*//vendor/.*|"//vendor/*",|' | sort | uniq
