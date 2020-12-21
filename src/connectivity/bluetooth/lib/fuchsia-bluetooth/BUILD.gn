@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-bluetooth") {
   name = "fuchsia_bluetooth"
@@ -86,24 +84,19 @@ rustc_library("fuchsia-bluetooth") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bluetooth-crate-tests"
-
+fuchsia_unittest_package("bluetooth-crate-tests") {
+  manifest = "meta/bluetooth-crate-unittests.cmx"
   deps = [
     ":fuchsia-bluetooth_test",
-    "//third_party/rust_crates:matches",
 
     # TODO(armansito): The bt-hci-emulator driver is a runtime dependency of the test utilities
-    # contained within the crate. We should separate them out into a testing library have that
+    # contained within the crate. We should separate them out into a testing library and have that
     # depend on this driver.
     "//src/connectivity/bluetooth/hci/emulator",
   ]
+}
 
-  tests = [
-    {
-      name = "fuchsia_bluetooth_lib_test"
-      dest = "bluetooth-crate-unittests"
-      environments = basic_envs
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bluetooth-crate-tests" ]
 }

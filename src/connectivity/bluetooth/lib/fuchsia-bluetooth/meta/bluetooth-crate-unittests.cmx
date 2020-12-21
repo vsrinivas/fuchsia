@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bluetooth-crate-unittests"
+        "binary": "bin/fuchsia_bluetooth_lib_test"
     },
     "sandbox": {
         "dev": [
