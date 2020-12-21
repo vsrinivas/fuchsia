@@ -1,0 +1,54 @@
+{
+    select: {
+        hang_timeout_count: "INSPECT:bootstrap/driver_manager:root/msd-arm-mali/device:hang_timeout",
+        last_hang_timeout_ns: "INSPECT:bootstrap/driver_manager:root/msd-arm-mali/device:last_hang_timeout_ns",
+    },
+    eval: {
+        last_24_hours: "Fn([time], time > Now() - Hours(24))",
+    },
+    act: {
+        mali_hung_today: {
+            type: "Snapshot",
+            trigger: "And(Apply(last_24_hours, last_hang_timeout_ns), hang_timeout_count > 0)",
+            repeat: "Hours(24)",
+            signature: "mali-hung-today",
+        },
+    },
+    test: {
+        hung_recently: {
+            yes: [
+                "mali_hung_today",
+            ],
+            no: [],
+            now: "Hours(4)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13, these numbers are within the last day.
+                hang_timeout_count: 5,
+                last_hang_timeout_ns: 100,
+            },
+        },
+        not_recent_enough_failure: {
+            yes: [],
+            no: [
+                "mali_hung_today",
+            ],
+            now: "Hours(25)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13, these numbers are not within the last day.
+                hang_timeout_count: 5,
+                last_hang_timeout_ns: 100,
+            },
+        },
+        never_hung: {
+            yes: [],
+            no: [
+                "mali_hung_today",
+            ],
+            now: "Hours(4)",
+            values: {
+                hang_timeout_count: 0,
+                last_hang_timeout_ns: 0,
+            },
+        },
+    },
+}
