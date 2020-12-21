@@ -557,15 +557,15 @@ for us.
 
 The generated component manifest file can be found as follows:
 
-```bash
-fx gn outputs out/default <unittest_target>_generated_manifest
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx gn outputs out/default <var>unittest target</var>_generated_manifest</code>
+</pre>
 
 To print it directly:
 
-```bash
-fx build && cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx build && cat out/default/$(fx gn outputs out/default <var>unittest target</var>_generated_manifest)</code>
+</pre>
 
 Note that `fx gn outputs` prints an output path, but the file at the path
 may not exist or may be stale if you haven't built.
@@ -884,18 +884,18 @@ line follows this structure:
 To find the package manifest for a `fuchsia_package()` or
 `fuchsia_test_package()` target, use the following command:
 
-```bash
-fx gn outputs out/default <package_target>_manifest
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx gn outputs out/default <var>package target</var>_manifest</code>
+</pre>
 
-`<package_target` is a fully-qualified target name, i.e. in the form
+The package target is a fully-qualified target name, i.e. in the form
 `//path/to/your:target`.
 
 Combine this with another command to print the package manifest:
 
-```bash
-cat out/default/`fx gn outputs out/default <package_target>_manifest`
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">cat out/default/$(fx gn outputs out/default <var>package target</var>_manifest)</code>
+</pre>
 
 See also:
 
