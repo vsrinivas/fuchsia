@@ -1,0 +1,137 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove implementations of the event stream",
+                        "Stop handling the event on the client side."
+                    ],
+                    "source": "dart/step_02_during.dart",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove usages of the event."
+                    ],
+                    "source": "go/step_02_after.go",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove any uses of the event being removed."
+                    ],
+                    "source": "hlcpp/step_02_after.cc",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove any uses of the event being removed."
+                    ],
+                    "source": "llcpp/step_02_after.cc",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Add `#[allow(unreachable_patterns)]` to any client event stream match statements, and replace the arm for the event being removed with a catch-all (`_`) arm.",
+                        "Servers should stop sending the event."
+                    ],
+                    "source": "rust/step_02_during.rs",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                },
+                {
+                    "instructions": [
+                        "Remove `#[allow(unreachable_patterns)]` and the catch-all arm."
+                    ],
+                    "source": "rust/step_04_after.rs",
+                    "step_num": 4
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_01_during": {
+            "instructions": [
+                "Mark the method that is being removed with the `[Transitional]` attribute."
+            ],
+            "source": "fidl/step_01_during.test.fidl"
+        },
+        "step_03_after": {
+            "instructions": [
+                "Remove the `[Transitional]` attribute."
+            ],
+            "source": "fidl/step_03_after.test.fidl"
+        }
+    },
+    "title": "Remove a protocol event"
+}

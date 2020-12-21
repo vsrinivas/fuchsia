@@ -4,107 +4,61 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 from pathlib import Path
-import pprint
 import os
-from typing import Dict, List
+import signal
 import sys
 
-import errors
-from gen import generate_test
-import scaffolding
-from transitions import transitions, Binding, Transition, Type, FIDL_ASSISTED
-from serialize import read_transitions, write_transitions, to_flags
-from util import print_err, white, print_warning
-
-EXAMPLES = """
-This tool will create the source compatibility test structure and walk you
-through the implementation step by step, as if you were implementing the
-transition.
-
-Examples:
-
-Generate a test by specifying the types of transitions for each binding with the
-gen command:
-
-    main.py gen protocol-method-add \\
-        --rust mixed \\
-        --go fidl-assisted
-
-The test will only include the specified bindings. When you are ready to add
-more bindings, rerun the tool with any new bindings:
-
-    main.py gen protocol-method-add \\
-        --rust mixed \\
-        --go fidl-assisted \\
-        --hlcpp fidl-assisted
-
-You can get the flags that were invoked for a particular test by running
-
-    main.py describe protocol-method-add
-
-If you ever exit the tool while working an test, you can pick up where you left
-off without respecifying all of the flags, by using --continue:
-
-    main.py gen protocol-method-add --continue
-
-"""
+import generate_test
+from util import print_err, TEST_FILE
+from types_ import CompatTest
 
 
-def gen(args):
+def signal_handler(sig, frame):
+    print('\nGoodbye')
+    sys.exit(0)
+
+
+def gen_test(args):
+    # Users are expected to exit the tool with ^C, so print a message instead of
+    # dumping a stacktrace.
+    signal.signal(signal.SIGINT, signal_handler)
+
     test_dir = Path(os.path.join(args.root, args.name))
     os.makedirs(test_dir, exist_ok=True)
 
-    if args.continue_:
-        transitions_by_binding = read_transitions(test_dir)
+    test_file = test_dir / TEST_FILE
+    if test_file.exists():
+        # This resumes from the latest point. If you'd like to edit existing
+        # steps, this must be done manually.
+        with open(test_file, 'r') as f:
+            test = CompatTest.fromdict(json.load(f))
+        state = generate_test.TransitionState.from_test(test)
+        generate_test.run(test_dir, state)
     else:
-        transitions_by_binding = transitions_from_args(args)
-        try:
-            existing = read_transitions(test_dir)
-        except FileNotFoundError:
-            write_transitions(test_dir, transitions_by_binding)
-        else:
-            if transitions_by_binding != existing:
-                print_warning(
-                    f'specified transitions do not match previously existing ones for {args.name}:'
-                )
-                print('your parameters:')
-                print(f'  {to_flags(transitions_by_binding)}')
-                print('existing parameters:')
-                print(f'  {to_flags(existing)}')
-                if input('\ncontinue? (Y/n) ') == 'n':
-                    return
-                write_transitions(test_dir, transitions_by_binding)
-
-    generate_test(args.fidl, test_dir, transitions_by_binding)
+        generate_test.run(test_dir, None)
 
 
-def describe(args):
-    root = Path(os.path.join(args.root, args.name))
-    transitions_by_binding = read_transitions(root)
-    print(white(f'Parameters for test {args.name}:'))
-    print(to_flags(transitions_by_binding))
-
-
-def transitions_from_args(args) -> Dict[Binding, Transition]:
-    transitions_by_binding = {}
-    for binding in Binding:
-        transition = getattr(args, binding.value)
-        if transition is None:
-            continue
-        if transition not in transitions:
-            print_err(
-                f'error: undefined transition {transition} for binding {binding.value}'
-            )
-            return
-        transitions_by_binding[binding] = transitions[transition]
-    return transitions_by_binding
+def regen(args):
+    tests = args.tests or [
+        p for p in Path(args.root).iterdir()
+        if p.is_dir() and (p / TEST_FILE).exists()
+    ]
+    for name in tests:
+        print(f'Regenerating files for {name}')
+        test_dir = Path(os.path.join(args.root, name))
+        with open(test_dir / TEST_FILE, 'r') as f:
+            test = CompatTest.fromdict(json.load(f))
+        generate_test.regen_files(test_dir, test)
+    if not tests:
+        print('No tests found')
 
 
 parser = argparse.ArgumentParser(
     description="Generate FIDL source compatibility test scaffolding",
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    epilog=EXAMPLES)
+    epilog='For full usage details, refer to the tool README.')
 parser.add_argument(
     '--root',
     help=
@@ -114,38 +68,27 @@ parser.add_argument(
 )
 subparsers = parser.add_subparsers()
 
-gen_parser = subparsers.add_parser("gen", help="Generate or modify a test")
-gen_parser.set_defaults(func=gen)
-gen_parser.add_argument(
-    'fidl',
-    help=
-    'The FIDL library name. Must be a valid library name component, e.g. addmethod'
-)
-gen_parser.add_argument(
+gen_test_parser = subparsers.add_parser(
+    "generate_test", help="Generate a source compatibility test")
+gen_test_parser.set_defaults(func=gen_test)
+gen_test_parser.add_argument(
     'name',
     help=
     'The test name. Ideally, this should match [parent]-[target]-[change] format specificied in the ABI/API compatibility guide, e.g. protocol-method-add'
 )
-gen_parser.add_argument(
-    '--continue',
-    dest='continue_',
-    help='Resume running the tool from an existing test.',
-    action='store_true')
-valid_transitions = set(transitions)
-for binding in Binding:
-    name = binding.value
-    gen_parser.add_argument(
-        f'--{name}',
-        help=
-        f'The type of transition for {name}. Refer to source_compatibility/README.md for a description of the transitions',
-        choices=valid_transitions
-    )
 
-describe_parser = subparsers.add_parser(
-    'describe',
-    help='Get the command line arguments used to generate an existing test')
-describe_parser.set_defaults(func=describe)
-describe_parser.add_argument('name', help='the name of the test/directory')
+regen_parser = subparsers.add_parser(
+    'regen',
+    help=
+    "Regenerates the GN sidecar, docs, and BUILD file based on the test's JSON file. Useful when making manual edits."
+)
+regen_parser.set_defaults(func=regen)
+regen_parser.add_argument(
+    'tests',
+    nargs='*',
+    help=
+    'Tests to regen (i.e. their paths relative to the --root, like "protocol-method-add"). Tries to regen all tests in the --root directory if none are provided'
+)
 
 if __name__ == '__main__':
     args = parser.parse_args()

@@ -6,39 +6,9 @@ import("//build/fidl/fidl.gni")
 
 group("tests") {
   deps = [
-    ":fidl.test.after",
-    ":fidl.test.before",
-    "cpp",
-    "go",
-    "rust",
-
-    # new-style-tests
-    ":source_compatibility",
+    "protocol-event-add:tests",
+    "protocol-event-remove:tests",
+    "protocol-method-add:tests",
+    "protocol-method-remove:tests",
   ]
-}
-
-fidl("fidl.test.before") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "event-names-must-start-with-on" ]
-
-  sources = [ "fidl/before.fidl" ]
-}
-
-fidl("fidl.test.during") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "event-names-must-start-with-on" ]
-
-  sources = [ "fidl/during.fidl" ]
-}
-
-fidl("fidl.test.after") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "event-names-must-start-with-on" ]
-
-  sources = [ "fidl/after.fidl" ]
-}
-
-# New-style tests
-group("source_compatibility") {
-  deps = [ "addmethod" ]
 }

@@ -1,0 +1,17 @@
+{
+    "fidl_names": [
+        "step_00_before",
+        "step_01_during",
+        "step_03_after"
+    ],
+    "fidl_sources": {
+        "step_00_before": "fidl/step_00_before.test.fidl",
+        "step_01_during": "fidl/step_01_during.test.fidl",
+        "step_03_after": "fidl/step_03_after.test.fidl"
+    },
+    "fidl_targets": {
+        "step_00_before": "protocol_event_remove_step_00_before",
+        "step_01_during": "protocol_event_remove_step_01_during",
+        "step_03_after": "protocol_event_remove_step_03_after"
+    }
+}

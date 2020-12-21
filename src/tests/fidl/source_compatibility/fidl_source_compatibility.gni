@@ -17,6 +17,15 @@ template("_hlcpp_compat") {
   }
 }
 
+# LLCPP Compatibility Test
+template("_llcpp_compat") {
+  executable(target_name) {
+    output_dir = target_out_dir
+    sources = [ invoker.source ]
+    deps = [ ":${invoker.fidl}_llcpp" ]
+  }
+}
+
 # Go Source Compatibility Test
 template("_go_compat") {
   gopackage = target_name
@@ -78,6 +87,8 @@ template("_dart_compat") {
 # This keeps track of the source and fidl for each step and invokes the
 # supplied template_name.
 template("_source_compat_steps") {
+  assert(defined(invoker.starting_fidl))
+  assert(defined(invoker.starting_src))
   assert(defined(invoker.steps))
   assert(defined(invoker.template_name))
   assert(defined(invoker.fidl_targets))
@@ -86,27 +97,27 @@ template("_source_compat_steps") {
 
   step_labels = []
 
-  step_source = ""
-  step_fidl = ""
-  step_number = 1
+  # initial state
+  step_source = invoker.starting_src
+  step_fidl = invoker.starting_fidl
+  init_step_label =
+      "${target_name}_${step_fidl}_" + get_path_info(step_source, "name")
+  step_labels += [ ":${init_step_label}" ]
+  target(invoker.template_name, init_step_label) {
+    source = step_source
+    fidl = fidl_targets[step_fidl]
+  }
+
+  # subsequent transition states
   foreach(step, invoker.steps) {
-    if (step_number == 1) {
-      # both source and fidl must be declared
-      assert(defined(step.source) && defined(step.fidl),
-             "Step ${step_number}: both 'source' and 'fidl' must be specified")
+    # exactly one of source or fidl must be declared
+    assert((defined(step.source) || defined(step.fidl)) &&
+               !(defined(step.source) && defined(step.fidl)),
+           "Exactly one of 'source' or 'fidl' must be specified for each step")
+    if (defined(step.source)) {
       step_source = step.source
-      step_fidl = step.fidl
     } else {
-      # exactly one of source and fidl must be declared
-      assert(
-          (defined(step.source) || defined(step.fidl)) &&
-              !(defined(step.source) && defined(step.fidl)),
-          "Step ${step_number}: exactly one of 'source' or 'fidl' must be specified")
-      if (defined(step.source)) {
-        step_source = step.source
-      } else {
-        step_fidl = step.fidl
-      }
+      step_fidl = step.fidl
     }
 
     step_label =
@@ -117,8 +128,6 @@ template("_source_compat_steps") {
       source = step_source
       fidl = fidl_targets[step_fidl]
     }
-
-    step_number = step_number + 1
   }
 
   group(target_name) {
@@ -130,95 +139,91 @@ template("source_compatibility_test") {
   test_name = target_name
   assert(defined(invoker.json),
          "You must supply a json file describing the test.")
+  assert(defined(invoker.sidecar), "You must supply a json sidecar file.")
 
-  json_file = invoker.json
-  json = read_file(json_file, "json")
-  assert(defined(json.fidl), "Tests need fidl libraries.")
-
-  json_fidl = json.fidl
+  json_sidecar = invoker.sidecar
+  sidecar = read_file(json_sidecar, "json")
+  fidls = sidecar.fidl_names
+  fidl_targets = sidecar.fidl_targets
+  fidl_sources = sidecar.fidl_sources
 
   fidl_library = "fidl.test.${test_name}"
-  fidl_targets = {
-    before = test_name + "_fidl_before"
-    during = test_name + "_fidl_during"
-    after = test_name + "_fidl_after"
-  }
 
   # FIDL libraries
-  fidl(fidl_targets.before) {
-    name = fidl_library
-    tmp = json_fidl.before
-    sources = [ tmp.source ]
-    excluded_checks = [ "too-many-nested-libraries" ]
-  }
-  fidl(fidl_targets.during) {
-    name = fidl_library
-    tmp = json_fidl.during
-    sources = [ tmp.source ]
-    excluded_checks = [ "too-many-nested-libraries" ]
-  }
-  fidl(fidl_targets.after) {
-    name = fidl_library
-    tmp = json_fidl.after
-    sources = [ tmp.source ]
-    excluded_checks = [ "too-many-nested-libraries" ]
+  foreach(fidl, fidls) {
+    fidl(fidl_targets[fidl]) {
+      name = fidl_library
+      sources = [ fidl_sources[fidl] ]
+      excluded_checks = [ "too-many-nested-libraries" ]
+    }
   }
 
   test_targets = []
 
   if (is_fuchsia) {
+    json_file = invoker.json
+    json = read_file(json_file, "json")
+    transitions = json.bindings
+
     # HLCPP
-    if (defined(json.hlcpp)) {
+    if (defined(transitions.hlcpp)) {
       _source_compat_steps("${target_name}_hlcpp") {
-        steps = json.hlcpp
+        tmp = transitions.hlcpp
+        starting_fidl = tmp.starting_fidl
+        starting_src = tmp.starting_src
+        steps = tmp.steps
         template_name = "_hlcpp_compat"
       }
       test_targets += [ ":${target_name}_hlcpp" ]
     }
 
+    # LLCPP
+    if (defined(transitions.llcpp)) {
+      _source_compat_steps("${target_name}_llcpp") {
+        tmp = transitions.llcpp
+        starting_fidl = tmp.starting_fidl
+        starting_src = tmp.starting_src
+        steps = tmp.steps
+        template_name = "_llcpp_compat"
+      }
+      test_targets += [ ":${target_name}_llcpp" ]
+    }
+
     # Go
-    if (defined(json.go)) {
+    if (defined(transitions.go)) {
       _source_compat_steps("${target_name}_go") {
-        steps = json.go
+        tmp = transitions.go
+        starting_fidl = tmp.starting_fidl
+        starting_src = tmp.starting_src
+        steps = tmp.steps
         template_name = "_go_compat"
       }
       test_targets += [ ":${target_name}_go" ]
     }
 
     # Rust
-    if (defined(json.rust)) {
+    if (defined(transitions.rust)) {
       _source_compat_steps("${target_name}_rust") {
-        steps = json.rust
+        tmp = transitions.rust
+        starting_fidl = tmp.starting_fidl
+        starting_src = tmp.starting_src
+        steps = tmp.steps
         template_name = "_rust_compat"
       }
       test_targets += [ ":${target_name}_rust" ]
     }
 
     # Dart
-    if (defined(json.dart)) {
+    if (defined(transitions.dart)) {
       _source_compat_steps("${target_name}_dart") {
-        steps = json.dart
+        tmp = transitions.dart
+        starting_fidl = tmp.starting_fidl
+        starting_src = tmp.starting_src
+        steps = tmp.steps
         template_name = "_dart_compat"
       }
       test_targets += [ ":${target_name}_dart" ]
     }
-
-    # Generate documentation
-    docs_md = "${target_gen_dir}/${target_name}_docs.md"
-    docs_target = "${target_name}_docs"
-    action(docs_target) {
-      script = "//src/tests/fidl/source_compatibility/generate_docs.py"
-      inputs = [ json_file ]
-      outputs = [ docs_md ]
-      depfile = "${docs_md}.d"
-
-      args = [
-        "--json=" + rebase_path(json_file),
-        "--out=" + rebase_path(docs_md),
-        "--depfile=" + rebase_path(depfile),
-      ]
-    }
-    test_targets += [ ":${docs_target}" ]
   } else {
     not_needed(invoker, "*")
   }

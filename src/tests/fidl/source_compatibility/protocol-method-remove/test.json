@@ -1,0 +1,146 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove references to the method in client code and server code."
+                    ],
+                    "source": "dart/step_02_after.dart",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Embed the protocol's `WithCtxTransitionBase` struct into the server type.",
+                        "Remove the implementation for the method being removed from the server.",
+                        "Remove any references to the method in client code (e.g. request calls being made)"
+                    ],
+                    "source": "go/step_02_during.go",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                },
+                {
+                    "instructions": [
+                        "Remove the embedded `WithCtxInterface` struct."
+                    ],
+                    "source": "go/step_04_after.go",
+                    "step_num": 4
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove references to the method in client code and server code."
+                    ],
+                    "source": "hlcpp/step_02_after.cc",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Remove references to the method in client code and server code."
+                    ],
+                    "source": "llcpp/step_02_after.cc",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "fidl": "step_01_during",
+                    "step_num": 1
+                },
+                {
+                    "instructions": [
+                        "Add #[allow(unreachable_patterns)] to the server's request stream match.",
+                        "Replace the match arm for the method that is being removed with a catchall (`_`) arm.",
+                        "Remove any references to the method in client code (e.g. as part of implementations of the `ProxyInterface`)."
+                    ],
+                    "source": "rust/step_02_during.rs",
+                    "step_num": 2
+                },
+                {
+                    "fidl": "step_03_after",
+                    "step_num": 3
+                },
+                {
+                    "instructions": [
+                        "Remove the `#[allow(unreachable_patterns)]` attribute and the catch-all match arm."
+                    ],
+                    "source": "rust/step_04_after.rs",
+                    "step_num": 4
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_01_during": {
+            "instructions": [
+                "Mark the method that is being removed with the `[Transitional]` attribute."
+            ],
+            "source": "fidl/step_01_during.test.fidl"
+        },
+        "step_03_after": {
+            "instructions": [
+                "Remove the method."
+            ],
+            "source": "fidl/step_03_after.test.fidl"
+        }
+    },
+    "title": "Remove a protocol method"
+}

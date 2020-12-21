@@ -1,0 +1,17 @@
+{
+    "fidl_names": [
+        "step_00_before",
+        "step_02_during",
+        "step_04_after"
+    ],
+    "fidl_sources": {
+        "step_00_before": "fidl/step_00_before.test.fidl",
+        "step_02_during": "fidl/step_02_during.test.fidl",
+        "step_04_after": "fidl/step_04_after.test.fidl"
+    },
+    "fidl_targets": {
+        "step_00_before": "protocol_method_add_step_00_before",
+        "step_02_during": "protocol_method_add_step_02_during",
+        "step_04_after": "protocol_method_add_step_04_after"
+    }
+}

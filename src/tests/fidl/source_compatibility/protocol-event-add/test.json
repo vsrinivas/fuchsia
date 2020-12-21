@@ -10,8 +10,8 @@
                 },
                 {
                     "instructions": [
-                        "Add the new method to protocol implementations.",
-                        "Start using the new method in client code."
+                        "Implement the stream for the new event for any server implementations.",
+                        "You can start receiving the new event in any clients."
                     ],
                     "source": "dart/step_03_after.dart",
                     "step_num": 3
@@ -27,21 +27,12 @@
             "starting_src": "go/step_00_before.go",
             "steps": [
                 {
-                    "instructions": [
-                        "Embed the protocol's `WithCtxTransitionBase` struct into the server type."
-                    ],
-                    "source": "go/step_01_during.go",
-                    "step_num": 1
-                },
-                {
                     "fidl": "step_02_during",
                     "step_num": 2
                 },
                 {
                     "instructions": [
-                        "Implement the new method for the server type.",
-                        "Remove the protocol's `WithCtxTransitionBase` struct from the server type.",
-                        "Start using the new method in client code."
+                        "You can start using the new event on both the client and server side."
                     ],
                     "source": "go/step_03_after.go",
                     "step_num": 3
@@ -62,8 +53,7 @@
                 },
                 {
                     "instructions": [
-                        "Add the new method to protocol implementations.",
-                        "Start using the new method in client code."
+                        "You can start using the new event on both the client and server side."
                     ],
                     "source": "hlcpp/step_03_after.cc",
                     "step_num": 3
@@ -84,8 +74,9 @@
                 },
                 {
                     "instructions": [
-                        "Add the new method to protocol implementations.",
-                        "Start using the new method in client code."
+                        "For usages of the async event handle struct, add a handler for the new event if desired.",
+                        "For usages of the async event handler class, you must add a handle for the new event.",
+                        "You can start receiving the new event in any clients."
                     ],
                     "source": "llcpp/step_03_after.cc",
                     "step_num": 3
@@ -102,10 +93,9 @@
             "steps": [
                 {
                     "instructions": [
-                        "Add `#[allow(unreachable_patterns)]` to the server's request stream match.",
-                        "Add an underscore arm to the server's request stream match."
+                        "Add `#[allow(unreachable_patterns)]` and a catch-all arm (`_`) to any client event stream match statements"
                     ],
-                    "source": "rust/step_01_during_1.rs",
+                    "source": "rust/step_01_during.rs",
                     "step_num": 1
                 },
                 {
@@ -114,22 +104,15 @@
                 },
                 {
                     "instructions": [
-                        "Add the new method to the protocol's `ProxyInterface` implementation."
+                        "Remove the `#[allow(unreachable_patterns)]` attribute and replace the catch-all arm with the new event.",
+                        "You can start sending the new event in any servers."
                     ],
-                    "source": "rust/step_03_during_2.rs",
+                    "source": "rust/step_03_after.rs",
                     "step_num": 3
                 },
                 {
                     "fidl": "step_04_after",
                     "step_num": 4
-                },
-                {
-                    "instructions": [
-                        "Remove `#[allow(unreachable_patterns)]` from the server's request stream match.",
-                        "Replace the underscore arm in the server's request stream match with one that handles the new method."
-                    ],
-                    "source": "rust/step_05_after.rs",
-                    "step_num": 5
                 }
             ]
         }
@@ -141,16 +124,16 @@
         },
         "step_02_during": {
             "instructions": [
-                "Add the new method and mark it with the `[Transitional]` attribute."
+                "Add the new event and mark it with the `[Transitional]` attribute."
             ],
             "source": "fidl/step_02_during.test.fidl"
         },
         "step_04_after": {
             "instructions": [
-                "Remove the `[Transitional]` attribute from the new method."
+                "Remove the `[Transitional]` attribute."
             ],
             "source": "fidl/step_04_after.test.fidl"
         }
     },
-    "title": "Add a protocol method"
+    "title": "Add a protocol event"
 }
