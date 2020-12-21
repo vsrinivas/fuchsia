@@ -11,6 +11,7 @@ bind_rules("dwmac_bind") {
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.designware.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

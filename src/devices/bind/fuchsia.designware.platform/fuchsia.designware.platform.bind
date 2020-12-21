@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.designware.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  DESIGNWARE = 12,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  DWC3 = 1,
+  DWC2 = 5,
+};

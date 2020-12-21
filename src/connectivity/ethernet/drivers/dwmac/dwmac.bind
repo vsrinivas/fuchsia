@@ -4,7 +4,8 @@
 
 using fuchsia.platform;
 using fuchsia.composite;
+using fuchsia.designware.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.DESIGNWARE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.designware.platform.BIND_PLATFORM_DEV_VID.DESIGNWARE;
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.ETH_MAC;
