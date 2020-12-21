@@ -53,7 +53,7 @@ declare_args() {
 #     Type: string
 #     Default: target_name
 #
-#   deps, data_deps, testonly, assert_no_deps, metadata, visibility
+#   deps, data_deps, testonly, assert_no_deps, visibility
 #     See `gn help`.
 template("zbi") {
   main_target = target_name
@@ -170,6 +170,21 @@ template("zbi") {
       args += [ "--compressed=$compress" ]
     }
 
+    # This templates merges the metadata.images scopes provided by the caller
+    # with th edefault values computed below. Prepare this operation here.
+    if (defined(invoker.metadata)) {
+      _metadata = invoker.metadata
+      if (defined(_metadata.images)) {
+        _metadata_images = _metadata.images
+      }
+    }
+    if (!defined(_metadata_images)) {
+      _metadata_images = [
+        {
+        },
+      ]
+    }
+
     metadata = {
       images = []
       migrated_zbi_input_args = []
@@ -178,26 +193,31 @@ template("zbi") {
       # input, but not this ZBI's inputs.
       migrated_zbi_barrier = []
 
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
+      if (defined(_metadata)) {
+        forward_variables_from(_metadata, "*", [ "images" ])
       }
 
       # For the //:images build_api_module().
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = _output_name
-          path = rebase_path(output_file, root_build_dir)
-          type = "zbi"
-          cpu = cpu
-          compressed = !defined(invoker.compress) ||
-                       (invoker.compress != false && invoker.compress != "none")
-          if (defined(testonly) && testonly) {
-            testonly = true
-          }
-          forward_variables_from(invoker, [ "tags" ])
-        },
-      ]
+      foreach(_images_entry, _metadata_images) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = _output_name
+            path = rebase_path(output_file, root_build_dir)
+            type = "zbi"
+            cpu = cpu
+            compressed =
+                !defined(invoker.compress) ||
+                (invoker.compress != false && invoker.compress != "none")
+            if (defined(testonly) && testonly) {
+              testonly = true
+            }
+            forward_variables_from(invoker, [ "tags" ])
+
+            forward_variables_from(_images_entry, "*")
+          },
+        ]
+      }
 
       # Provide metadata so that a zbi() target can also act as if it were a
       # zbi_input() with `type = "zbi"` and $sources of this target's $outputs.
