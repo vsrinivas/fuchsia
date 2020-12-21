@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+import("//tools/cmc/build/cmc.gni")
 
 group("integration") {
   testonly = true
@@ -57,7 +58,7 @@ rustc_test("font_provider_integration_tests_bin") {
 
 # Generate arg-specialized manifests for font_provider_integration_test
 
-cmx_merge("fonts_with_ephemeral_fonts_cml") {
+cmc_merge("fonts_with_ephemeral_fonts_cml") {
   sources = [
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/ephemeral_fonts_shard.cml"),
@@ -65,7 +66,7 @@ cmx_merge("fonts_with_ephemeral_fonts_cml") {
   output_name = "fonts_with_ephemeral_fonts.cml"
 }
 
-cmx_merge("fonts_with_aliases_fonts_cml") {
+cmc_merge("fonts_with_aliases_fonts_cml") {
   sources = [
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/aliases_fonts_shard.cml"),
@@ -73,7 +74,7 @@ cmx_merge("fonts_with_aliases_fonts_cml") {
   output_name = "fonts_with_aliases_fonts.cml"
 }
 
-cmx_merge("fonts_with_small_fonts_cml") {
+cmc_merge("fonts_with_small_fonts_cml") {
   sources = [
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/small_fonts_shard.cml"),
@@ -81,7 +82,7 @@ cmx_merge("fonts_with_small_fonts_cml") {
   output_name = "fonts_with_small_fonts.cml"
 }
 
-cmx_merge("fonts_with_medium_fonts_cml") {
+cmc_merge("fonts_with_medium_fonts_cml") {
   sources = [
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/medium_fonts_shard.cml"),
@@ -89,7 +90,7 @@ cmx_merge("fonts_with_medium_fonts_cml") {
   output_name = "fonts_with_medium_fonts.cml"
 }
 
-cmx_merge("fonts_with_large_fonts_cml") {
+cmc_merge("fonts_with_large_fonts_cml") {
   sources = [
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/large_fonts_shard.cml"),

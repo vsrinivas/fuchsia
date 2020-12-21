@@ -23,3 +23,48 @@ template("cmc") {
     tool_output_name = "cmc"
   }
 }
+
+# Merges together cmx/cml files
+#
+# Parameters
+#
+#   sources (required)
+#     [list of files] A list of files that are to be merged.
+#
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+#
+#   deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("cmc_merge") {
+  cmc(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "output_name",
+                             "sources",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    merged_output = "${target_out_dir}/${output_name}"
+    inputs = invoker.sources
+    outputs = [ merged_output ]
+
+    args = [
+      "merge",
+      "--output",
+      rebase_path(merged_output, root_build_dir),
+    ]
+
+    foreach(source, sources) {
+      args += [ rebase_path(source, root_build_dir) ]
+    }
+  }
+}

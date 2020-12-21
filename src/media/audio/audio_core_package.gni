@@ -4,7 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//tools/cmc/build/cmx.gni")
+import("//tools/cmc/build/cmc.gni")
 
 template("_audio_core_package") {
   forward_variables_from(invoker, [ "extra_cmx" ])
@@ -17,7 +17,7 @@ template("_audio_core_package") {
     foreach(manifest, invoker.meta) {
       cmx_name = get_path_info(manifest.path, "file")
       manifest_merge_target = "${cmx_name}_merge"
-      cmx_merge(manifest_merge_target) {
+      cmc_merge(manifest_merge_target) {
         sources = [ manifest.path ]
         sources += extra_cmx
         output_name = "${cmx_name}.merged.cmx"

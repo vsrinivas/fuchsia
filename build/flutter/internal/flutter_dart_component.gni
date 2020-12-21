@@ -7,7 +7,7 @@ import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/kernel/dart_kernel.gni")
 import("//src/sys/build/components.gni")
-import("//tools/cmc/build/cmx.gni")
+import("//tools/cmc/build/cmc.gni")
 
 # Creates a flutter asset manifest from the pubspec.yaml file.
 #
@@ -150,7 +150,7 @@ template("flutter_dart_component") {
   # on compilation modes
   _merged_target_name = "${target_name}_merged.cmx"
 
-  cmx_merge(_merged_target_name) {
+  cmc_merge(_merged_target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",

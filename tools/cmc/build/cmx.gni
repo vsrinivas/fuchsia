@@ -55,54 +55,6 @@ template("cmx_validate") {
   }
 }
 
-# Merges together cmx files
-#
-# The cmx_merge template will combine the given cmx files into a single cmx
-# file.
-#
-# Parameters
-#
-#   sources (required)
-#     [list of files] A list of cmx files that are to be merged.
-#
-#   output_name (optional)
-#     [path] Name for the output.
-#     If not specified, the target name is used.
-#
-#   deps (optional)
-#   testonly (optional)
-#   visibility (optional)
-#     Standard GN meaning.
-template("cmx_merge") {
-  cmc(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "output_name",
-                             "sources",
-                             "testonly",
-                             "visibility",
-                           ])
-    if (!defined(output_name)) {
-      output_name = target_name
-    }
-
-    merged_output = "${target_out_dir}/${output_name}"
-    inputs = invoker.sources
-    outputs = [ merged_output ]
-
-    args = [
-      "merge",
-      "--output",
-      rebase_path(merged_output, root_build_dir),
-    ]
-
-    foreach(source, sources) {
-      args += [ rebase_path(source, root_build_dir) ]
-    }
-  }
-}
-
 # Processes a cmx file to add includes.
 #
 # The cmx_include template will add contents from any and all files referenced
@@ -283,7 +235,7 @@ template("cmx") {
   needs_debugdata =
       select_variant + [ "profile" ] - [ "profile" ] != select_variant
 
-  cmx_merge("${target_name}_merge") {
+  cmc_merge("${target_name}_merge") {
     sources = [
       cmx_patches,
       included,
