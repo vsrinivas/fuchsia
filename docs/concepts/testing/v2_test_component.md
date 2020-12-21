@@ -48,8 +48,8 @@ of a test root needs to expose that protocol.
 `hello-world-integration-test-driver` contains the test logic and expectations.
 The component launches the `hello-world` component and asserts that it is
 writing the expected strings to the log. Note that it exposes protocol
-`fuchsia.test.Suite` and uses `rust_runner` in its manifest file. This is how
-the test component integrates with the Test Runner Framework.
+`fuchsia.test.Suite` and uses `rust_test_runner` in its manifest file. This is
+how the test component integrates with the Test Runner Framework.
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/basic/integration_tests/meta/hello-world-integration-test-driver.cml" region_tag="example_snippet" adjust_indentation="auto" %}
