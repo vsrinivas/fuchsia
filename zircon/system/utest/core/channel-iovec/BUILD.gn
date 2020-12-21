@@ -20,5 +20,6 @@ source_set("channel-iovec") {
   deps = [
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/public",
   ]
 }
