@@ -91,10 +91,13 @@ class AudioAdmin {
   bool IsActive(fuchsia::media::AudioRenderUsage usage);
   bool IsActive(fuchsia::media::AudioCaptureUsage usage);
 
- private:
+ protected:
   using RendererPolicies = std::array<fuchsia::media::Behavior, fuchsia::media::RENDER_USAGE_COUNT>;
   using CapturerPolicies =
       std::array<fuchsia::media::Behavior, fuchsia::media::CAPTURE_USAGE_COUNT>;
+
+ private:
+  friend class Reporter;
 
   const BehaviorGain behavior_gain_;
   StreamVolumeManager& stream_volume_manager_ FXL_GUARDED_BY(fidl_thread_checker_);
