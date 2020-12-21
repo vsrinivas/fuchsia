@@ -232,6 +232,11 @@ impl DhcpOption<'_> {
 }
 
 /// An implementation of `RecordsImpl` for `DhcpOption`.
+///
+/// Options in DHCPv6 messages are sequential, so they are parsed/serialized
+/// through the APIs provided in [packet::records].
+///
+/// [packet::records]: https://fuchsia-docs.firebaseapp.com/rust/packet/records/index.html
 #[derive(Debug)]
 struct DhcpOptionsImpl;
 
@@ -540,6 +545,11 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Message<'a, B> {
 }
 
 /// A `DHCPv6Message` builder.
+///
+/// DHCPv6 messages are serialized through [packet::serialize::InnerPacketBuilder] because it won't
+/// encapsulate any other packets.
+///
+/// [packet::serialize::InnerPacketBuilder]: https://fuchsia-docs.firebaseapp.com/rust/packet/serialize/trait.InnerPacketBuilder.html
 pub struct MessageBuilder<'a> {
     msg_type: MessageType,
     transaction_id: TransactionId,
