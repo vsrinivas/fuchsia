@@ -642,9 +642,13 @@ mod tests {
         }
     }
 
+    // N.B. not using Arbitrary impl for duration here due to potential flake issues.
+    // See also https://fxrev.dev/464538 and https://github.com/AltSysrq/proptest/issues/221
+    // for context.
     prop_compose! {
-        fn arb_duration_up_to_percent_of_max(ratio: f32)(duration: Duration) -> Duration {
-            duration.mul_f32(ratio)
+        fn arb_duration_up_to_percent_of_max(ratio: f32)
+                                            (secs: u64, nsec in 0..1_000_000_000u32) -> Duration {
+            Duration::new(secs, nsec).mul_f32(ratio)
         }
     }
 
@@ -681,7 +685,9 @@ mod tests {
         fn test_fuzz_interval_lower_bounds(interval in arb_duration_up_to_percent_of_max(0.50),
             interval_fuzz_seed: u64,
             fuzz_percentage_range in 0u32..50u32) {
-            assert!(interval <= Duration::new(std::u64::MAX / 2, 0));
+            // Account for differences in integer vs single-precision arithmetic.
+            let epsilon = (u64::MAX as f32 * 0.50f32) as u64 - u64::MAX/2;
+            assert!(interval <= Duration::new(u64::MAX / 2 + epsilon, 0));
             let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
 
             let lower_bound_multiplier = 1.0 - fuzz_percentage_range as f32 / 200.0;
@@ -693,7 +699,9 @@ mod tests {
         fn test_fuzz_interval_upper_bounds(interval in arb_duration_up_to_percent_of_max(0.75),
             interval_fuzz_seed: u64,
             fuzz_percentage_range in 0u32..25u32) {
-            assert!(interval <= Duration::new(std::u64::MAX / 4 * 3, 0));
+            // Account for differences in integer vs single-precision arithmetic.
+            let epsilon = (u64::MAX as f32 * 0.75f32) as u64 - u64::MAX/4*3;
+            assert!(interval <= Duration::new(u64::MAX / 4 * 3 + epsilon, 0));
             let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
 
             let upper_bound_multiplier = 1.0 + fuzz_percentage_range as f32 / 200.0;
