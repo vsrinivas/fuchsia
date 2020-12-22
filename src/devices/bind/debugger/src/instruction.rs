@@ -144,15 +144,15 @@ pub enum RawAstLocation {
     AbortStatement,
 }
 
-pub struct InstructionDebugInfo {
+pub struct InstructionDebug {
     pub line: u32,
     pub ast_location: RawAstLocation,
     pub extra: u32,
 }
 
-impl InstructionDebugInfo {
+impl InstructionDebug {
     pub fn none() -> Self {
-        InstructionDebugInfo { line: 0, ast_location: RawAstLocation::Invalid, extra: 0 }
+        InstructionDebug { line: 0, ast_location: RawAstLocation::Invalid, extra: 0 }
     }
 
     fn to_raw(self) -> (u32, u32, u32) {
@@ -160,14 +160,14 @@ impl InstructionDebugInfo {
     }
 }
 
-pub struct InstructionDebug {
+pub struct InstructionInfo {
     pub instruction: Instruction,
-    pub debug: InstructionDebugInfo,
+    pub debug: InstructionDebug,
 }
 
-impl InstructionDebug {
+impl InstructionInfo {
     pub fn new(instruction: Instruction) -> Self {
-        InstructionDebug { instruction, debug: InstructionDebugInfo::none() }
+        InstructionInfo { instruction, debug: InstructionDebug::none() }
     }
 
     pub fn encode(self) -> (u32, u32, u32) {

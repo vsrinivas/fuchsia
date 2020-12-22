@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::bind_program::{Condition, ConditionOp, Statement};
-use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionLocated};
+use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionInfo};
 use crate::device_specification::{DeviceSpecification, Property};
 use crate::errors::UserError;
-use crate::instruction::{InstructionDebugInfo, RawAstLocation};
+use crate::instruction::{InstructionDebug, RawAstLocation};
 use crate::parser_common::{self, CompoundIdentifier, Span, Value};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -50,29 +50,29 @@ pub enum AstLocation<'a> {
 }
 
 impl<'a> AstLocation<'a> {
-    pub fn to_instruction_debug_info(self) -> InstructionDebugInfo {
+    pub fn to_instruction_debug(self) -> InstructionDebug {
         match self {
-            AstLocation::ConditionStatement(statement) => InstructionDebugInfo {
+            AstLocation::ConditionStatement(statement) => InstructionDebug {
                 line: statement.get_span().line,
                 ast_location: RawAstLocation::ConditionStatement,
                 extra: 0,
             },
-            AstLocation::AcceptStatementValue { span, .. } => InstructionDebugInfo {
+            AstLocation::AcceptStatementValue { span, .. } => InstructionDebug {
                 line: span.line,
                 ast_location: RawAstLocation::AcceptStatementValue,
                 extra: 0,
             },
-            AstLocation::AcceptStatementFailure { span, symbol, .. } => InstructionDebugInfo {
+            AstLocation::AcceptStatementFailure { span, symbol, .. } => InstructionDebug {
                 line: span.line,
                 ast_location: RawAstLocation::AcceptStatementFailure,
                 extra: symbol.to_bytecode(),
             },
-            AstLocation::IfCondition(condition) => InstructionDebugInfo {
+            AstLocation::IfCondition(condition) => InstructionDebug {
                 line: condition.span.line,
                 ast_location: RawAstLocation::IfCondition,
                 extra: 0,
             },
-            AstLocation::AbortStatement(statement) => InstructionDebugInfo {
+            AstLocation::AbortStatement(statement) => InstructionDebug {
                 line: statement.get_span().line,
                 ast_location: RawAstLocation::AbortStatement,
                 extra: 0,
@@ -107,7 +107,7 @@ enum DebuggerOutput<'a> {
 }
 
 pub fn debug_from_str<'a>(
-    instructions: &[SymbolicInstructionLocated<'a>],
+    instructions: &[SymbolicInstructionInfo<'a>],
     symbol_table: &SymbolTable,
     device_file: &str,
 ) -> Result<bool, DebuggerError> {
@@ -118,7 +118,7 @@ pub fn debug_from_str<'a>(
 }
 
 pub fn debug_from_device_specification<'a>(
-    instructions: &[SymbolicInstructionLocated<'a>],
+    instructions: &[SymbolicInstructionInfo<'a>],
     symbol_table: &SymbolTable,
     device_specification: DeviceSpecification,
 ) -> Result<bool, DebuggerError> {
@@ -130,7 +130,7 @@ pub fn debug_from_device_specification<'a>(
 
 struct Debugger<'a> {
     device_properties: DevicePropertyMap,
-    instructions: &'a [SymbolicInstructionLocated<'a>],
+    instructions: &'a [SymbolicInstructionInfo<'a>],
     symbol_table: &'a SymbolTable,
     output: Vec<DebuggerOutput<'a>>,
 }
@@ -138,7 +138,7 @@ struct Debugger<'a> {
 impl<'a> Debugger<'a> {
     fn new(
         properties: &[Property],
-        instructions: &'a [SymbolicInstructionLocated<'a>],
+        instructions: &'a [SymbolicInstructionInfo<'a>],
         symbol_table: &'a SymbolTable,
     ) -> Result<Self, DebuggerError> {
         let device_properties = Debugger::construct_property_map(properties, symbol_table)?;

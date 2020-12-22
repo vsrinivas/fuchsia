@@ -41,7 +41,7 @@ pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
 pub fn compile(
     program: &str,
     libraries: &[String],
-) -> Result<Vec<instruction::InstructionDebug>, CompilerError> {
+) -> Result<Vec<instruction::InstructionInfo>, CompilerError> {
     let (symbolic_instructions, _) = compile_to_symbolic(program, libraries)?;
     Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
 }
@@ -49,7 +49,7 @@ pub fn compile(
 pub fn compile_to_symbolic<'a>(
     program_str: &'a str,
     libraries: &[String],
-) -> Result<(Vec<SymbolicInstructionLocated<'a>>, SymbolTable), CompilerError> {
+) -> Result<(Vec<SymbolicInstructionInfo<'a>>, SymbolTable), CompilerError> {
     let ast = bind_program::Ast::try_from(program_str).map_err(CompilerError::BindParserError)?;
 
     let library_asts: Vec<bind_library::Ast> = libraries
@@ -368,18 +368,18 @@ pub fn get_deprecated_key_identifiers() -> HashMap<u32, String> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct SymbolicInstructionLocated<'a> {
+pub struct SymbolicInstructionInfo<'a> {
     pub location: Option<AstLocation<'a>>,
     pub instruction: SymbolicInstruction,
 }
 
-impl<'a> SymbolicInstructionLocated<'a> {
-    pub fn to_instruction(self) -> instruction::InstructionDebug {
-        instruction::InstructionDebug {
+impl<'a> SymbolicInstructionInfo<'a> {
+    pub fn to_instruction(self) -> instruction::InstructionInfo {
+        instruction::InstructionInfo {
             instruction: self.instruction.to_instruction(),
             debug: match self.location {
-                Some(location) => location.to_instruction_debug_info(),
-                None => instruction::InstructionDebugInfo::none(),
+                Some(location) => location.to_instruction_debug(),
+                None => instruction::InstructionDebug::none(),
             },
         }
     }
@@ -433,14 +433,14 @@ impl SymbolicInstruction {
 pub fn compile_statements<'a>(
     statements: Vec<Statement<'a>>,
     symbol_table: &SymbolTable,
-) -> Result<Vec<SymbolicInstructionLocated<'a>>, CompilerError> {
+) -> Result<Vec<SymbolicInstructionInfo<'a>>, CompilerError> {
     let mut compiler = Compiler::new(symbol_table);
     compiler.compile_statements(statements)?;
     Ok(compiler.instructions)
 }
 
 struct Compiler<'a, 'b> {
-    instructions: Vec<SymbolicInstructionLocated<'a>>,
+    instructions: Vec<SymbolicInstructionInfo<'a>>,
     next_label_id: u32,
     symbol_table: &'b SymbolTable,
 }
@@ -475,7 +475,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_block(statements)?;
 
         // If none of the statements caused an abort, then we should bind the driver.
-        self.instructions.push(SymbolicInstructionLocated {
+        self.instructions.push(SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::UnconditionalBind,
         });
@@ -511,7 +511,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                                 rhs: rhs_symbol,
                             },
                         };
-                        self.instructions.push(SymbolicInstructionLocated {
+                        self.instructions.push(SymbolicInstructionInfo {
                             location: Some(AstLocation::ConditionStatement(statement)),
                             instruction,
                         });
@@ -521,7 +521,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                     let lhs_symbol = self.lookup_identifier(&identifier)?;
                     let label_id = self.get_unique_label();
                     for value in values {
-                        self.instructions.push(SymbolicInstructionLocated {
+                        self.instructions.push(SymbolicInstructionInfo {
                             location: Some(AstLocation::AcceptStatementValue {
                                 identifier: identifier.clone(),
                                 value: value.clone(),
@@ -534,7 +534,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                             },
                         });
                     }
-                    self.instructions.push(SymbolicInstructionLocated {
+                    self.instructions.push(SymbolicInstructionInfo {
                         location: Some(AstLocation::AcceptStatementFailure {
                             identifier,
                             symbol: lhs_symbol,
@@ -542,7 +542,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                         }),
                         instruction: SymbolicInstruction::UnconditionalAbort,
                     });
-                    self.instructions.push(SymbolicInstructionLocated {
+                    self.instructions.push(SymbolicInstructionInfo {
                         location: None,
                         instruction: SymbolicInstruction::Label(label_id),
                     });
@@ -574,7 +574,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                                 label: label_id,
                             },
                         };
-                        self.instructions.push(SymbolicInstructionLocated {
+                        self.instructions.push(SymbolicInstructionInfo {
                             location: Some(AstLocation::IfCondition(condition)),
                             instruction,
                         });
@@ -583,7 +583,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                         self.compile_block(block_statements)?;
 
                         // Jump to after the if statement.
-                        self.instructions.push(SymbolicInstructionLocated {
+                        self.instructions.push(SymbolicInstructionInfo {
                             location: None,
                             instruction: SymbolicInstruction::UnconditionalJump {
                                 label: final_label_id,
@@ -591,7 +591,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                         });
 
                         // Insert a label to jump to when the condition fails.
-                        self.instructions.push(SymbolicInstructionLocated {
+                        self.instructions.push(SymbolicInstructionInfo {
                             location: None,
                             instruction: SymbolicInstruction::Label(label_id),
                         });
@@ -604,13 +604,13 @@ impl<'a, 'b> Compiler<'a, 'b> {
                     // could just emit an unconditional bind instead of jumping, since we know that
                     // if statements are terminal, but we do the jump to be consistent with
                     // condition and accept statements.
-                    self.instructions.push(SymbolicInstructionLocated {
+                    self.instructions.push(SymbolicInstructionInfo {
                         location: None,
                         instruction: SymbolicInstruction::Label(final_label_id),
                     });
                 }
                 Statement::Abort { span: _ } => {
-                    self.instructions.push(SymbolicInstructionLocated {
+                    self.instructions.push(SymbolicInstructionInfo {
                         location: Some(AstLocation::AbortStatement(statement)),
                         instruction: SymbolicInstruction::UnconditionalAbort,
                     });
@@ -997,14 +997,14 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::ConditionStatement(condition_statement)),
                     instruction: SymbolicInstruction::AbortIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                         rhs: Symbol::NumberValue(42)
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind
                 }
@@ -1031,7 +1031,7 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::AcceptStatementValue {
                         identifier: make_identifier!("abc"),
                         value: Value::NumericLiteral(42),
@@ -1043,7 +1043,7 @@ mod test {
                         label: 0
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::AcceptStatementValue {
                         identifier: make_identifier!("abc"),
                         value: Value::NumericLiteral(314),
@@ -1055,7 +1055,7 @@ mod test {
                         label: 0
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::AcceptStatementFailure {
                         identifier: make_identifier!("abc"),
                         symbol: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
@@ -1063,11 +1063,11 @@ mod test {
                     }),
                     instruction: SymbolicInstruction::UnconditionalAbort
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::Label(0)
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind
                 },
@@ -1137,7 +1137,7 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::IfCondition(condition1)),
                     instruction: SymbolicInstruction::JumpIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
@@ -1145,22 +1145,22 @@ mod test {
                         label: 1
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::ConditionStatement(statement1)),
                     instruction: SymbolicInstruction::AbortIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                         rhs: Symbol::NumberValue(2)
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalJump { label: 0 }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::Label(1)
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::IfCondition(condition2)),
                     instruction: SymbolicInstruction::JumpIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
@@ -1168,33 +1168,33 @@ mod test {
                         label: 2
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::ConditionStatement(statement2)),
                     instruction: SymbolicInstruction::AbortIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                         rhs: Symbol::NumberValue(3)
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalJump { label: 0 }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::Label(2)
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::ConditionStatement(statement3)),
                     instruction: SymbolicInstruction::AbortIfNotEqual {
                         lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                         rhs: Symbol::NumberValue(3)
                     }
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::Label(0)
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind
                 },
@@ -1266,11 +1266,11 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: Some(AstLocation::AbortStatement(abort_statement)),
                     instruction: SymbolicInstruction::UnconditionalAbort
                 },
-                SymbolicInstructionLocated {
+                SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind
                 }

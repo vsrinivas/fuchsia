@@ -5,7 +5,7 @@
 //! A Fuchsia Driver Bind Program compiler
 
 use anyhow::{anyhow, Context, Error};
-use bind_debugger::instruction::{Condition, Instruction, InstructionDebug};
+use bind_debugger::instruction::{Condition, Instruction, InstructionInfo};
 use bind_debugger::test;
 use bind_debugger::{compiler, offline_debugger};
 use std::fmt::Write;
@@ -118,7 +118,7 @@ fn write_depfile(
     Ok(out)
 }
 
-fn write_bind_bytecode(instructions: Vec<InstructionDebug>) -> Vec<u8> {
+fn write_bind_bytecode(instructions: Vec<InstructionInfo>) -> Vec<u8> {
     instructions
         .into_iter()
         .map(|inst| inst.encode())
@@ -126,7 +126,7 @@ fn write_bind_bytecode(instructions: Vec<InstructionDebug>) -> Vec<u8> {
         .collect::<Vec<_>>()
 }
 
-fn write_bind_template(instructions: Vec<InstructionDebug>) -> Result<String, Error> {
+fn write_bind_template(instructions: Vec<InstructionInfo>) -> Result<String, Error> {
     let bind_count = instructions.len();
     let binding = instructions
         .into_iter()
@@ -244,12 +244,12 @@ fn handle_compile(
         let mut instructions = compiler::compile(&program, &includes)?;
         instructions.insert(
             0,
-            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+            InstructionInfo::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
         );
         instructions
     } else {
         // Autobind is disabled and there are no bind rules. Emit only the autobind check.
-        vec![InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0)))]
+        vec![InstructionInfo::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0)))]
     };
 
     if output_bytecode {
@@ -278,11 +278,11 @@ mod tests {
 
     #[test]
     fn one_instruction() {
-        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
+        let instructions = vec![InstructionInfo::new(Instruction::Match(Condition::Always))];
         let bytecode = write_bind_bytecode(instructions);
         assert_eq!(bytecode, vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
+        let instructions = vec![InstructionInfo::new(Instruction::Match(Condition::Always))];
         let template = write_bind_template(instructions).unwrap();
         assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 1)"));
         assert!(template.contains("{0x1000000,0x0,0x0}"));
@@ -291,15 +291,15 @@ mod tests {
     #[test]
     fn disable_autobind() {
         let instructions = vec![
-            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
-            InstructionDebug::new(Instruction::Match(Condition::Always)),
+            InstructionInfo::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+            InstructionInfo::new(Instruction::Match(Condition::Always)),
         ];
         let bytecode = write_bind_bytecode(instructions);
         assert_eq!(bytecode[..12], [2, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         let instructions = vec![
-            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
-            InstructionDebug::new(Instruction::Match(Condition::Always)),
+            InstructionInfo::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+            InstructionInfo::new(Instruction::Match(Condition::Always)),
         ];
         let template = write_bind_template(instructions).unwrap();
         assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 2)"));
