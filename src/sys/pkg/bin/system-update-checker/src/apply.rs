@@ -155,6 +155,8 @@ async fn monitor_update_progress(
                 .context("notify installer it can reboot when ready")
                 .map_err(|e| (apply_progress, e))?;
             // On success, wait for reboot to happen.
+
+            fx_log_info!("Reboot contoller unblocked, waiting for reboot");
             let () = future::pending().await;
             unreachable!();
         }

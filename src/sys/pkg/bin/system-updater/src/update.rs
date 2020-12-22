@@ -211,6 +211,7 @@ async fn update(
             .run(&mut co, &mut phase, &mut target_version)
             .await;
 
+        fx_log_info!("system update attempt completed, logging metrics");
         let status_code = metrics::result_to_status_code(attempt_res.as_ref().map(|_| ()));
         let target_build_version = target_version.build_version.to_string();
         cobalt.log_ota_result_attempt(
@@ -234,6 +235,7 @@ async fn update(
         }
 
         // wait for all cobalt events to be flushed to the service.
+        fx_log_info!("flushing cobalt events");
         let () = cobalt_forwarder_task.await;
 
         let (state, mode, _packages) = match attempt_res {
@@ -244,6 +246,7 @@ async fn update(
             }
         };
 
+        fx_log_info!("checking if reboot is required or should be deferred, mode: {:?}", mode);
         // Figure out if we should reboot.
         match mode {
             // First priority: Always reboot on ForceRecovery success, even if the caller

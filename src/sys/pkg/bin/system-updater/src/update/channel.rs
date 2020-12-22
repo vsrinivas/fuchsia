@@ -4,12 +4,13 @@
 
 use {
     anyhow::{Context, Error},
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     std::fs,
 };
 
 /// Persists the current channel after a successful update.
 pub async fn update_current_channel() {
+    fx_log_info!("updating current channel");
     const TARGET_PATH: &str = "/misc/ota/target_channel.json";
     const CURRENT_TEMP_PATH: &str = "/misc/ota/current_channel.json.part";
     const CURRENT_PATH: &str = "/misc/ota/current_channel.json";
