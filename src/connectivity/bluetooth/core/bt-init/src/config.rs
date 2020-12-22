@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
     fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::App,
     serde::{Deserialize, Serialize},
     serde_json,
     std::{fs::OpenOptions, io::Read},
@@ -53,15 +53,16 @@ impl Config {
         let mut contents = String::new();
         config.read_to_string(&mut contents).expect("The bt-init config file is corrupted");
 
-        Ok(serde_json::from_str(contents.as_str())?)
+        Ok(serde_json::from_str(contents.as_str()).context("Failed to parse config file")?)
     }
 
     pub fn autostart_snoop(&self) -> bool {
         self.autostart_snoop
     }
 
-    pub async fn set_capabilities(&self) -> Result<(), Error> {
-        let bt_svc = connect_to_service::<ControlMarker>()
+    pub async fn set_capabilities(&self, bt_gap: &App) -> Result<(), Error> {
+        let bt_svc = bt_gap
+            .connect_to_service::<ControlMarker>()
             .expect("failed to connect to bluetooth control interface");
         bt_svc.set_io_capabilities(self.io.input, self.io.output).map_err(Into::into)
     }
