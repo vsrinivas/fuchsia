@@ -7,7 +7,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
-#include <fbl/string_buffer.h>
 
 #include <memory>
 
@@ -17,6 +16,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
+#include <fbl/string_buffer.h>
 
 namespace amlogic_cpu {
 
@@ -359,7 +359,7 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
 void AmlCpu::GetPerformanceStateInfo(uint32_t state,
                                      GetPerformanceStateInfoCompleter::Sync& completer) {
   if (state >= operating_points_.size()) {
-    zxlogf(ERROR, "%s: Requested an operating point that's out of bounds, %u\n", __func__, state);
+    zxlogf(INFO, "%s: Requested an operating point that's out of bounds, %u\n", __func__, state);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
