@@ -62,6 +62,11 @@ func TestQEMUCommandBuilder(t *testing.T) {
 		err: fmt.Errorf("QEMU initrd path must be set."),
 	}, cmd, err)
 
+	// Invalid HCI
+	if err := b.AddHCI("invalid"); err == nil {
+		t.Errorf("SetHCI(invalid) got nil but wanted an error")
+	}
+
 	b.SetInitrd("./data/zircon-a")
 
 	cmd, err = b.Build()
@@ -198,5 +203,59 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
 		err: nil,
+	}, cmd, err)
+
+	b.AddUSBDrive(Drive{
+		ID:   "usb",
+		File: "/usbdrive",
+		Addr: "2.0",
+	})
+
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{
+			"./bin/qemu",
+			"-kernel", "./data/qemu-kernel",
+			"-initrd", "./data/zircon-a",
+			"-machine", "virt-2.12,gic-version=host",
+			"-cpu", "host",
+			"-enable-kvm",
+			"-m", "4096",
+			"-smp", "4",
+			"-object", "iothread,id=iothread-otherdisk",
+			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
+			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
+			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
+			"-serial", "chardev:char0",
+			"-netdev", "user,id=net0",
+			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
+			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
+			"-device", "usb-storage,drive=usb",
+			"-append", "kernel.serial=legacy infra.foo=bar"},
+	}, cmd, err)
+
+	b.AddHCI(XHCI)
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{
+			"./bin/qemu",
+			"-kernel", "./data/qemu-kernel",
+			"-initrd", "./data/zircon-a",
+			"-machine", "virt-2.12,gic-version=host",
+			"-cpu", "host",
+			"-enable-kvm",
+			"-m", "4096",
+			"-smp", "4",
+			"-object", "iothread,id=iothread-otherdisk",
+			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
+			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
+			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
+			"-serial", "chardev:char0",
+			"-netdev", "user,id=net0",
+			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
+			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
+			"-device", "usb-storage,drive=usb",
+			"-device", "qemu-xhci,id=xhci",
+			"-append", "kernel.serial=legacy infra.foo=bar"},
 	}, cmd, err)
 }

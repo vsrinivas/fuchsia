@@ -78,6 +78,16 @@ type NetdevUser struct {
 	Forwards []Forward
 }
 
+// HCI identifies a Host Controller Interface.
+type HCI string
+
+// Host Controller Interface constants.
+const (
+	// XHCI is the Extensible Host Controller Interface.
+	// https://en.wikipedia.org/wiki/Extensible_Host_Controller_Interface
+	XHCI = "xhci"
+)
+
 // NetdevTap defines a netdev backend giving a tap interface.
 type NetdevTap struct {
 	// Name is the name of the interface.
@@ -168,6 +178,20 @@ func (q *QEMUCommandBuilder) AddVirtioBlkPciDrive(d Drive) {
 		device += fmt.Sprintf(",addr=%s", d.Addr)
 	}
 	q.SetFlag("-device", device)
+}
+
+func (q *QEMUCommandBuilder) AddUSBDrive(d Drive) {
+	q.SetFlag("-drive", fmt.Sprintf("if=none,id=%s,file=%s,format=raw", d.ID, d.File))
+	q.SetFlag("-device", fmt.Sprintf("usb-storage,drive=%s", d.ID))
+}
+
+// AddHCI adds an host-controller-interface.
+func (q *QEMUCommandBuilder) AddHCI(hci HCI) error {
+	if hci != XHCI {
+		return fmt.Errorf("unimplemented host controller interface: %q", hci)
+	}
+	q.SetFlag("-device", "qemu-xhci,id=xhci")
+	return nil
 }
 
 func (q *QEMUCommandBuilder) AddSerial(c Chardev) {

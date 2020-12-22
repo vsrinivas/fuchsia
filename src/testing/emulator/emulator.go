@@ -18,6 +18,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
 // Untar untars a tar.gz file into a directory.
@@ -122,6 +124,24 @@ type DistributionParams struct {
 	Emulator Emulator
 }
 
+// commandBuilder is used to build the emulator command-line.
+//
+// See //tools/qemu for the most common implementations.
+type commandBuilder interface {
+	SetBinary(string)
+	SetKernel(string)
+	SetInitrd(string)
+	SetTarget(qemu.Target, bool) error
+	SetFlag(...string)
+	SetMemory(bytes int)
+	AddNetwork(qemu.Netdev)
+	AddHCI(qemu.HCI) error
+	AddKernelArg(string)
+	AddUSBDrive(qemu.Drive)
+	AddVirtioBlkPciDrive(qemu.Drive)
+	Build() ([]string, error)
+}
+
 // Unpack unpacks the QEMU distribution.
 //
 // TODO(fxbug.dev/58804): Replace all call sites to UnpackFrom.
@@ -222,129 +242,83 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 	return X64, fmt.Errorf("unknown target CPU: %s", name)
 }
 
-func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []string {
-	// Append architecture specific QEMU options.  These options
-	// are meant to mirror those used by `fx qemu`.
-	if params.Arch == Arm64 {
-		args = append(args, "-machine", "virtualization=true",
-			"-cpu", "max", "-machine", "virt-2.12,gic-version=3")
-	} else if params.Arch == X64 {
-		args = append(args, "-machine", "q35", "-cpu", "Haswell,+smap,-check,-fsgsbase")
-		if !params.DisableKVM && hostSupportsKVM(params.Arch) {
-			args = append(args, "-enable-kvm")
-		}
-		if !params.DisableDebugExit {
-			args = append(args, "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
-		}
-	} else {
-		panic("unsupported architecture")
-	}
-
+func (d *Distribution) appendCommonQemuArgs(params Params, b commandBuilder) {
+	nic := "none"
 	if params.Networking {
-		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no,model=virtio-net-pci")
-	} else {
-		args = append(args, "-nic", "none")
+		nic = "tap,ifname=qemu,script=no,downscript=no,model=virtio-net-pci"
 	}
-
-	return args
+	b.SetFlag("-nic", nic)
 }
 
-func (d *Distribution) appendCommonFemuArgs(params Params, args []string) []string {
+func (d *Distribution) appendCommonFemuArgs(params Params, b commandBuilder) {
 	// These options should mirror what's used by `fx emu`.
-
-	if params.Arch == Arm64 {
-		args = append(args, "-avd-arch arm64")
+	if params.Arch == X64 && !params.DisableDebugExit {
+		b.SetFlag("-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
 	}
-
-	args = append(args, "-feature", "VirtioInput,GLDirectMem,KVM,Vulkan")
-	args = append(args, "-gpu", "auto")
-	args = append(args, "-no-window")
-
-	// Everything after `-fuchsia` is passed directly to qemu by femu.
-	args = append(args, "-fuchsia")
-	// `fx emu` has slightly different semantics to `fx qemu` for architecture-specific stuff.
-	if params.Arch == Arm64 {
-		args = append(args, "-machine", "virt")
-	} else if params.Arch == X64 {
-		args = append(args, "-machine", "q35")
-		if !params.DisableKVM && hostSupportsKVM(params.Arch) {
-			args = append(args, "-enable-kvm")
-			args = append(args, "-cpu", "host,migratable=no,+invtsc")
-		} else {
-			args = append(args, "-cpu", "Haswell,+smap,-check,-fsgsbase")
-		}
-		if !params.DisableDebugExit {
-			args = append(args, "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
-		}
-	} else {
-		panic("unsupported architecture")
-	}
-	args = append(args, "-vga", "none")
 
 	if params.Networking {
-		args = append(args, "-netdev", "type=tap,ifname=qemu,id=net0,script=no")
-		args = append(args, "-device", "virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:63:5e:7a")
-	} else {
-		args = append(args, "-net", "none")
+		b.AddNetwork(qemu.Netdev{
+			ID:  "net0",
+			MAC: "52:54:00:63:5e:7a",
+			Tap: &qemu.NetdevTap{Name: "qemu"},
+		})
 	}
-
-	return args
 }
 
-func (d *Distribution) appendCommonArgs(params Params, args []string) []string {
-	args = append(args, "-kernel", d.kernelPath(params.Arch))
-	if d.Emulator == Qemu {
-		args = d.appendCommonQemuArgs(params, args)
-	} else if d.Emulator == Femu {
-		args = d.appendCommonFemuArgs(params, args)
+func (d *Distribution) setCommonArgs(params Params, b commandBuilder) {
+	b.SetBinary(d.systemPath(params.Arch))
+	b.SetKernel(d.kernelPath(params.Arch))
+	b.SetInitrd(params.ZBI)
+
+	enableKVM := true
+	if params.Arch == Arm64 {
+		b.SetTarget(qemu.TargetEnum.AArch64, enableKVM)
+	} else {
+		b.SetTarget(qemu.TargetEnum.X86_64, enableKVM)
 	}
 
-	diskParams := []string{}
-	hasUsbDisk := false
+	if d.Emulator == Qemu {
+		d.appendCommonQemuArgs(params, b)
+	} else if d.Emulator == Femu {
+		d.appendCommonFemuArgs(params, b)
+	}
 
+	hasUsbDisk := false
 	for i, disk := range params.Disks {
-		drive_id := fmt.Sprintf("disk%02d", i)
-		diskParams = append(diskParams, "-drive", "if=none,id="+drive_id+",file="+disk.Path+",format=raw")
+		drive := qemu.Drive{ID: fmt.Sprintf("disk%02d", i), File: disk.Path}
 		if disk.USB {
 			hasUsbDisk = true
-			diskParams = append(diskParams, "-device", "usb-storage,drive="+drive_id)
+			b.AddUSBDrive(drive)
 		} else {
-			diskParams = append(diskParams, "-device", "virtio-blk-pci,drive="+drive_id)
+			b.AddVirtioBlkPciDrive(drive)
 		}
 	}
 
 	if hasUsbDisk {
 		// If we have USB disks, we also need to emulate a USB host controller.
-		args = append(args, "-device", "qemu-xhci,id=xhci")
+		b.AddHCI(qemu.XHCI)
 	}
-
-	args = append(args, diskParams...)
 
 	// Ask QEMU to emit a message on stderr once the VM is running
 	// so we'll know whether QEMU has started or not.
-	args = append(args, "-trace", "enable=vm_state_notify")
-	args = append(args, "-smp", "4,threads=2")
+	b.SetFlag("-trace", "enable=vm_state_notify")
+	b.SetFlag("-nographic")
+	b.SetFlag("-smp", "4,threads=2")
+	b.SetMemory(8192)
 
-	args = append(args, "-m", "8192")
-	args = append(args, "-nographic")
-
-	return args
-}
-
-func getCommonKernelCmdline(params Params) string {
-	cmdline := "kernel.serial=legacy " +
-		"kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 " +
-		"kernel.halt-on-panic=true " +
-		// Disable lockup detector heartbeats. In emulated environments, virtualized CPUs
-		// may be starved or fail to execute in a timely fashion, resulting in apparent
-		// lockups. See fxbug.dev/65990.
-		"kernel.lockup-detector.heartbeat-period-ms=0 " +
-		"kernel.lockup-detector.heartbeat-age-threshold-ms=0"
+	b.AddKernelArg("kernel.serial=legacy")
+	b.AddKernelArg("kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564")
+	b.AddKernelArg("kernel.halt-on-panic=true")
+	// Disable lockup detector heartbeats. In emulated environments, virtualized CPUs
+	// may be starved or fail to execute in a timely fashion, resulting in apparent
+	// lockups. See fxbug.dev/65990.
+	b.AddKernelArg("kernel.lockup-detector.heartbeat-period-ms=0")
+	b.AddKernelArg("kernel.lockup-detector.heartbeat-age-threshold-ms=0")
 	if params.AppendCmdline != "" {
-		cmdline += " "
-		cmdline += params.AppendCmdline
+		for _, arg := range strings.Split(params.AppendCmdline, " ") {
+			b.AddKernelArg(arg)
+		}
 	}
-	return cmdline
 }
 
 // Create creates an instance of the emulator with the given parameters.
@@ -352,15 +326,24 @@ func (d *Distribution) Create(params Params) *Instance {
 	if params.ZBI == "" {
 		panic("ZBI must be specified")
 	}
-	args := []string{}
-	args = d.appendCommonArgs(params, args)
-	args = append(args, "-initrd", params.ZBI)
-	args = append(args, "-append", getCommonKernelCmdline(params))
-	path := d.systemPath(params.Arch)
-	fmt.Printf("Running %s %s\n", path, args)
+
+	var b commandBuilder
+	if d.Emulator == Femu {
+		b = qemu.NewAEMUCommandBuilder()
+	} else {
+		b = &qemu.QEMUCommandBuilder{}
+	}
+
+	d.setCommonArgs(params, b)
+	args, err := b.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Running %s %s\n", args[0], args[1:])
 
 	i := &Instance{
-		cmd:      exec.Command(path, args...),
+		cmd:      exec.Command(args[0], args[1:]...),
 		emulator: d.Emulator,
 	}
 	// QEMU looks in the cwd for some specially named files, in particular
@@ -405,7 +388,7 @@ func (d *Distribution) RunNonInteractive(toRun, hostPathMinfsBinary, hostPathZbi
 func (d *Distribution) runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary string, params Params) (string, string, error) {
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
-	b := `mkdir /tmp/testdata-fs
+	script := `mkdir /tmp/testdata-fs
 waitfor class=block topo=/dev/sys/pci/00:06.0/virtio-block/block timeout=60000
 mount /dev/sys/pci/00:06.0/virtio-block/block /tmp/testdata-fs
 ` + toRun + ` 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt
@@ -413,7 +396,7 @@ umount /tmp/testdata-fs
 dm poweroff
 `
 	runcmds := filepath.Join(root, "runcmds.txt")
-	if err := ioutil.WriteFile(runcmds, []byte(b), 0666); err != nil {
+	if err := ioutil.WriteFile(runcmds, []byte(script), 0666); err != nil {
 		return "", "", err
 	}
 	// Make a minfs filesystem to mount in the target.
@@ -424,28 +407,34 @@ dm poweroff
 	}
 
 	// Create the new initrd that references the runcmds file.
-	zbi := filepath.Join(root, "a.zbi")
-	cmd = exec.Command(hostPathZbiBinary, "-o", zbi, params.ZBI, "-e", "runcmds="+runcmds)
+	oldZBI := params.ZBI
+	params.ZBI = filepath.Join(root, "a.zbi")
+	cmd = exec.Command(hostPathZbiBinary, "-o", params.ZBI, oldZBI, "-e", "runcmds="+runcmds)
 	if err := cmd.Run(); err != nil {
 		return "", "", err
 	}
 
-	// Build up the emulator command line from common arguments and the extra goop to
-	// add the temporary disk at 00:06.0. This follows how infra runs qemu with an
-	// extra disk via botanist.
-	path := d.systemPath(params.Arch)
-	args := []string{}
-	args = d.appendCommonArgs(params, args)
-	args = append(args, "-initrd", zbi)
-	args = append(args, "-object", "iothread,id=resultiothread")
-	args = append(args, "-drive", "id=resultdisk,file="+fs+",format=raw,if=none,cache=unsafe,aio=threads")
-	args = append(args, "-device", "virtio-blk-pci,drive=resultdisk,iothread=resultiothread,addr=6.0")
-	cmdline := getCommonKernelCmdline(params)
-	cmdline += " zircon.autorun.boot=/boot/bin/sh+/boot/runcmds"
-	args = append(args, "-append", cmdline)
+	var b commandBuilder
+	if d.Emulator == Femu {
+		b = qemu.NewAEMUCommandBuilder()
+	} else {
+		b = &qemu.QEMUCommandBuilder{}
+	}
 
-	fmt.Printf("Running non-interactive %s %s\n", path, args)
-	cmd = exec.Command(path, args...)
+	d.setCommonArgs(params, b)
+
+	// Add the temporary disk at 00:06.0. This follows how infra runs qemu with an extra
+	// disk via botanist.
+	b.AddVirtioBlkPciDrive(qemu.Drive{ID: "resultdisk", File: fs, Addr: "6.0"})
+	b.AddKernelArg("zircon.autorun.boot=/boot/bin/sh+/boot/runcmds")
+
+	args, err := b.Build()
+	if err != nil {
+		return "", "", err
+	}
+	fmt.Printf("Running non-interactive %s %s\n", args[0], args[1:])
+
+	cmd = exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	// QEMU looks in the cwd for some specially named files, in particular

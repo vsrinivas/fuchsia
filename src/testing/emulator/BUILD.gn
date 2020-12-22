@@ -109,6 +109,7 @@ if (is_linux) {
       "emulator.go",
       "emulator_test.go",
     ]
+    deps = [ "//tools/qemu" ]
   }
 
   go_test("emulator_tests") {
