@@ -325,7 +325,14 @@ impl TestServer {
 
         let test_invoke = Some(format!("__RUST_TEST_INVOKE={}", test));
 
-        let mut args = vec!["--nocapture".to_owned()];
+        let mut args = vec![
+            // Disable stdout capture in the Rust test harness
+            // so we can capture it ourselves
+            "--nocapture".to_owned(),
+            // fxbug.dev(66860): Don't print in color
+            "--color".to_owned(),
+            "never".to_owned(),
+        ];
         args.extend(test_component.args.clone());
         if let Some(user_args) = &run_options.arguments {
             if let Err(e) = Self::validate_args(&user_args) {
@@ -427,9 +434,6 @@ async fn get_tests(
         "unstable-options".to_owned(),
         // List installed commands
         "--list".to_owned(),
-        // fxbug.dev(66860): Don't print in color
-        "--color".to_owned(),
-        "never".to_owned(),
     ];
 
     if let TestFilter::DisabledTests = filter {
