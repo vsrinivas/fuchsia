@@ -325,8 +325,7 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
 // that the unknown data is stored in the value instead of discarded
 success("ChannelMaxUnknownHandlesStored") {
     // LLCPP is tested in the ChannelMaxUnknownHandlesDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

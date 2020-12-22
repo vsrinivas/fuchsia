@@ -283,8 +283,7 @@ decode_success("ResourceTableUnknownReservedDropped") {
 
 success("ValueTableUnknownReservedStored") {
     // LLCPP is tested in the ValueTableUnknownReservedDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -317,8 +316,7 @@ success("ValueTableUnknownReservedStored") {
 
 success("ResourceTableUnknownReservedStored") {
     // LLCPP is tested in the ResourceTableUnknownReservedDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -415,8 +413,7 @@ decode_success("ResourceTableUnknownTrailingDropped") {
 
 success("ValueTableUnknownTrailingStored") {
     // LLCPP is tested in the ValueTableUnknownTrailingDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -451,8 +448,7 @@ success("ValueTableUnknownTrailingStored") {
 
 success("ResourceTableUnknownTrailingStored") {
     // LLCPP is tested in the ResourceTableUnknownTrailingDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -555,8 +551,7 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
     // LLCPP is tested in the ValueTableUnknownTrailingHandlesDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -587,8 +582,7 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
 
 success("ResourceTableUnknownTrailingHandlesStored") {
     // LLCPP is tested in the ResourceTableUnknownTrailingHandlesDropped test
-    // TODO(fxbug.dev/66046): Fix Dart encoding
-    bindings_denylist = [dart,llcpp],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

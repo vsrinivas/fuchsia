@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:zircon/zircon.dart';
@@ -489,7 +490,8 @@ void _encodeHandle(Encoder encoder, Handle? value, int offset, bool nullable) {
     // need to null check it in a way that won't cause a build failure once the
     // feature is implemented.  We can do that using an explicit "if" test.
     // TODO(paulberry): remove this check once the feature is implemented.
-    if (value == null) { // ignore: dead_code
+    if (value == null) {
+      // ignore: dead_code
       throw FidlError('Unreachable');
     }
     encoder.addHandle(value);
@@ -934,6 +936,8 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
 
   @override
   void encode(Encoder encoder, T value, int offset) {
+    final unknownDataMap = value.$unknownData;
+
     // Determining max index
     int maxIndex = -1;
     for (int i = 0; i < members.length; i++) {
@@ -941,6 +945,11 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       if (field != null) {
         maxIndex = i;
       }
+    }
+    if (unknownDataMap != null) {
+      // Update the max index based on the table's unknown fields. The unknown
+      // data map is keyed by ordinal, not index, so subtract by one.
+      maxIndex = max(maxIndex, unknownDataMap.keys.fold(0, max) - 1);
     }
     int maxOrdinal = maxIndex + 1;
 
@@ -953,14 +962,16 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
     int envelopeOffset = encoder.alloc(maxOrdinal * _kEnvelopeSize);
 
     // Envelopes, and fields.
-    final unknownDataMap = value.$unknownData;
     for (int i = 0; i <= maxIndex; i++) {
       var field = value.$field(i);
       FidlType? fieldType;
       if (i < members.length) {
         fieldType = members[i];
-      } else if (unknownDataMap != null) {
-        final unknownData = unknownDataMap[i];
+      }
+      if (fieldType == null && unknownDataMap != null) {
+        // .$field is accessed by index, whereas the unknown data map is
+        // accessed by ordinal
+        final unknownData = unknownDataMap[i + 1];
         if (unknownData != null) {
           _maybeThrowOnUnknownHandles(resource, unknownData);
           field = unknownData;
