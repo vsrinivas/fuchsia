@@ -1,0 +1,33 @@
+{
+   "filesRegex":[
+   ],
+   "skipFiles":[
+      ".gitignore",
+      ".empty"
+   ],
+   "skipDirs":[
+      ".git"
+   ],
+   "textExtensionList":[
+      "go",
+      "py"
+   ],
+   "maxReadSize":6144,
+   "separatorWidth":80,
+   "outputFilePrefix":"NOTICE",
+   "outputFileExtension":"txt",
+   "product":"astro",
+   "singleLicenseFiles":[
+      "LICENSE"
+   ],
+   "licensePatternDir":"golden/",
+   "baseDir":".",
+   "target":"all",
+   "logLevel":"verbose",
+   "customProjectLicenses":[
+      {
+         "projectRoot":"test",
+         "licenseLocation":"test"
+      }
+   ]
+}

@@ -16,8 +16,8 @@ func TestSaveToOutputFile(t *testing.T) {
 	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
-	var config Config
-	if err := config.Init(path); err != nil {
+	config, err := NewConfig(path)
+	if err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 	// TODO(omerlevran): Add test.

@@ -30,8 +30,7 @@ const exampleHeader = "# Copyright %d The Fuchsia Authors. All rights reserved.\
 func Walk(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
 	var wg sync.WaitGroup
-	metrics := new(Metrics)
-	metrics.Init()
+	metrics := NewMetrics()
 	file_tree := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
 	licenses, err := NewLicenses(ctx, config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {

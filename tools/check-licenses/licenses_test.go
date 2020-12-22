@@ -12,15 +12,19 @@ import (
 )
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
+	configPath := filepath.Join(*testDataDir, "filetree", "simple.json")
+	config, err := NewConfig(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	folder := mkLicenseDir(t)
 	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
-	metrics := &Metrics{}
-	metrics.Init()
-	ft := &FileTree{}
-	ft.Init()
+	metrics := NewMetrics()
+	ft := NewFileTree(context.Background(), folder, nil, config, metrics)
 	data := []byte("This is very Apache licensed\nCopyright Foo\n")
 	l.MatchSingleLicenseFile(data, "foo.rs", metrics, ft)
 	data = []byte("BSD much.\nCopyright Bar Inc\n")
@@ -36,8 +40,7 @@ func TestLicensesMatchFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
-	metrics := &Metrics{}
-	metrics.Init()
+	metrics := NewMetrics()
 	data := []byte("This is very Apache licensed\nCopyright Foo\n")
 	ok, _ := l.MatchFile(data, "foo.rs", metrics)
 	if !ok {

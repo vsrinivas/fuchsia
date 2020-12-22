@@ -18,8 +18,6 @@ import (
 	checklicenses "go.fuchsia.dev/fuchsia/tools/check-licenses"
 )
 
-var config checklicenses.Config
-
 var (
 	configFile = flag.String("config_file", "tools/check-licenses/config/config.json", "Location of config.json.")
 
@@ -69,7 +67,8 @@ func mainImpl() error {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	if err := config.Init(*configFile); err != nil {
+	config, err := checklicenses.NewConfig(*configFile)
+	if err != nil {
 		return fmt.Errorf("failed to initialize config: %s", err)
 	}
 
@@ -144,7 +143,7 @@ func mainImpl() error {
 		//config.Target = *target
 	}
 
-	if err := checklicenses.Walk(context.Background(), &config); err != nil {
+	if err := checklicenses.Walk(context.Background(), config); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}
 	return nil

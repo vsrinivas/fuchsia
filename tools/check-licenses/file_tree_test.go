@@ -6,49 +6,70 @@ package checklicenses
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestFileTreeNew(t *testing.T) {
-	baseDir := filepath.Join(*testDataDir, "filetree", "simple")
-	configPath := filepath.Join(*testDataDir, "filetree", "simple.json")
-	testFile := filepath.Join(*testDataDir, "filetree", "simple", "test.py")
+// NewFileTree(empty) should produce a filetree object that correctly
+// represents an empty directory.
+func TestFileTreeCreateEmpty(t *testing.T) {
+	root, config := setupFileTreeTestDir("empty", t)
 
-	config := Config{}
-	if err := config.Init(configPath); err != nil {
-		t.Fatal(err)
-	}
-	config.BaseDir = baseDir
+	got := NewFileTree(context.Background(), root, nil, config, NewMetrics())
 
-	metrics := Metrics{}
-	metrics.Init()
-	got := NewFileTree(context.Background(), config.BaseDir, nil, &config, &metrics)
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
 	want := &FileTree{
-		Name: "simple",
-		Path: filepath.Join(cwd, baseDir),
+		Name:  "empty",
+		Path:  root,
+		Files: []*File{},
 	}
-	f, err := NewFile(testFile, got)
-	if err != nil {
-		t.Error(err)
-	}
-	want.Files = append(want.Files, f)
 
 	if !got.Equal(want) {
 		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
 	}
 }
 
+// NewFileTree(simple) should produce a filetree object that correctly
+// represents the simple testdata directory.
+func TestFileTreeCreateSimple(t *testing.T) {
+	root, config := setupFileTreeTestDir("simple", t)
+
+	got := NewFileTree(context.Background(), root, nil, config, NewMetrics())
+
+	f, err := NewFile(filepath.Join(root, "test.py"), got)
+	if err != nil {
+		t.Error(err)
+	}
+	want := &FileTree{
+		Name:  "simple",
+		Path:  root,
+		Files: []*File{f},
+	}
+
+	if !got.Equal(want) {
+		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
+	}
+}
+
+// hasLowerPrefix must return true if the given filepath has a string prefix
+// in the predefined list.
 func TestFileTreeHasLowerPrefix(t *testing.T) {
 	name := "LICENSE-THIRD-PARTY"
 	singleLicenseFiles := []string{"license", "readme"}
 	if !hasLowerPrefix(name, singleLicenseFiles) {
 		t.Errorf("%v: %v is not a single license file", t.Name(), name)
 	}
+}
+
+func setupFileTreeTestDir(name string, t *testing.T) (string, *Config) {
+	configPath := filepath.Join(*testDataDir, "filetree", name+".json")
+	baseDir, err := filepath.Abs(filepath.Join(*testDataDir, "filetree", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := NewConfig(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return baseDir, config
 }

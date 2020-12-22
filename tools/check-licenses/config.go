@@ -48,16 +48,18 @@ type Config struct {
 // Init populates Config object with values found in the json config file.
 //
 // Both SkipFiles and SingleLicenseFiles are lowered.
-func (c *Config) Init(path string) error {
+func NewConfig(path string) (*Config, error) {
+	c := &Config{}
+
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
 	d := json.NewDecoder(f)
 	d.DisallowUnknownFields()
 	if err = d.Decode(c); err != nil {
-		return err
+		return nil, err
 	}
 	for i := range c.SingleLicenseFiles {
 		c.SingleLicenseFiles[i] = strings.ToLower(c.SingleLicenseFiles[i])
@@ -69,7 +71,7 @@ func (c *Config) Init(path string) error {
 		c.BaseDir = "."
 	}
 	if c.Target != "all" {
-		return errors.New("target must be \"all\"")
+		return nil, errors.New("target must be \"all\"")
 	}
-	return nil
+	return c, nil
 }

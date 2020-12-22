@@ -17,22 +17,26 @@ type Metrics struct {
 	sync.RWMutex
 }
 
-func (metrics *Metrics) Init() {
-	metrics.values = make(map[string]uint)
-	metrics.order = []string{
-		"num_extensions_excluded",
-		"num_licensed",
-		"num_non_single_license_files",
-		"num_one_file_matched_to_multiple_single_licenses",
-		"num_one_file_matched_to_one_single_license",
-		"num_single_license_file_match",
-		"num_single_license_files",
-		"num_unlicensed",
-		"num_with_project_license",
+func NewMetrics() *Metrics {
+	m := &Metrics{
+		values: make(map[string]uint),
+		order: []string{
+			"num_extensions_excluded",
+			"num_licensed",
+			"num_non_single_license_files",
+			"num_one_file_matched_to_multiple_single_licenses",
+			"num_one_file_matched_to_one_single_license",
+			"num_single_license_file_match",
+			"num_single_license_files",
+			"num_unlicensed",
+			"num_with_project_license",
+		},
 	}
-	for _, key := range metrics.order {
-		metrics.values[key] = 0
+
+	for _, key := range m.order {
+		m.values[key] = 0
 	}
+	return m
 }
 
 func (metrics *Metrics) increment(key string) {

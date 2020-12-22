@@ -34,8 +34,10 @@ type FileTree struct {
 // file.
 func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) *FileTree {
 	defer trace.StartRegion(ctx, "NewFileTree").End()
-	var ft FileTree
-	ft.Init()
+	ft := FileTree{
+		Children:           make(map[string]*FileTree),
+		SingleLicenseFiles: make(map[string][]*License),
+	}
 
 	abs, _ := filepath.Abs(root)
 	ft.Name = filepath.Base(abs)
@@ -131,37 +133,32 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	return &ft
 }
 
-func (license_file_tree *FileTree) Init() {
-	license_file_tree.Children = make(map[string]*FileTree)
-	license_file_tree.SingleLicenseFiles = make(map[string][]*License)
-}
-
-func (file_tree *FileTree) propagateProjectLicenses(config *Config) {
+func (ft *FileTree) propagateProjectLicenses(config *Config) {
 	propagate := true
 	for _, dirName := range config.StopLicensePropagation {
-		if file_tree.Name == dirName {
+		if ft.Name == dirName {
 			propagate = false
 			break
 		}
 	}
 
-	if propagate && file_tree.Parent != nil {
-		for key, val := range file_tree.Parent.SingleLicenseFiles {
-			file_tree.SingleLicenseFiles[key] = val
+	if propagate && ft.Parent != nil {
+		for key, val := range ft.Parent.SingleLicenseFiles {
+			ft.SingleLicenseFiles[key] = val
 		}
 	}
 
-	for _, child := range file_tree.Children {
+	for _, child := range ft.Children {
 		child.propagateProjectLicenses(config)
 	}
 }
 
-func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
+func (ft *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 	ch := make(chan *FileTree, 1)
 	go func() {
 		var curr *FileTree
 		var q []*FileTree
-		q = append(q, file_tree)
+		q = append(q, ft)
 		var pos int
 		for len(q) > 0 {
 			pos = len(q) - 1
@@ -181,12 +178,12 @@ func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 	return ch
 }
 
-func (file_tree *FileTree) getFileIterator() <-chan *File {
+func (ft *FileTree) getFileIterator() <-chan *File {
 	ch := make(chan *File, 1)
 	go func() {
 		var curr *FileTree
 		var q []*FileTree
-		q = append(q, file_tree)
+		q = append(q, ft)
 		var pos int
 		for len(q) > 0 {
 			pos = len(q) - 1
@@ -209,16 +206,16 @@ func (file_tree *FileTree) getFileIterator() <-chan *File {
 // Maps are used in FileTree to prevent duplicate values (since go doesn't have sets).
 // However, Maps make the final JSON object difficult to read.
 // Define a custom MarshalJSON function to convert the internal Maps into slices.
-func (file_tree *FileTree) MarshalJSON() ([]byte, error) {
+func (ft *FileTree) MarshalJSON() ([]byte, error) {
 	type Alias FileTree
 	childrenList := []*FileTree{}
 	fileList := []string{}
 
-	for _, c := range file_tree.Children {
+	for _, c := range ft.Children {
 		childrenList = append(childrenList, c)
 	}
 
-	for _, f := range file_tree.Files {
+	for _, f := range ft.Files {
 		fileList = append(fileList, f.Name)
 	}
 
@@ -226,13 +223,13 @@ func (file_tree *FileTree) MarshalJSON() ([]byte, error) {
 		*Alias
 		Children []*FileTree `json:"children"`
 	}{
-		Alias:    (*Alias)(file_tree),
+		Alias:    (*Alias)(ft),
 		Children: childrenList,
 	})
 }
 
-func (file_tree *FileTree) saveTreeState(filename string) error {
-	jsonString, err := json.MarshalIndent(file_tree, "", " ")
+func (ft *FileTree) saveTreeState(filename string) error {
+	jsonString, err := json.MarshalIndent(ft, "", " ")
 	if err != nil {
 		return fmt.Errorf("error marshalling the file tree: %v\n", err)
 	}
@@ -249,25 +246,25 @@ func (file_tree *FileTree) saveTreeState(filename string) error {
 	return nil
 }
 
-func (file_tree *FileTree) Equal(other *FileTree) bool {
-	if file_tree.Name != other.Name {
+func (ft *FileTree) Equal(other *FileTree) bool {
+	if ft.Name != other.Name {
 		return false
 	}
-	if file_tree.Path != other.Path {
+	if ft.Path != other.Path {
 		return false
 	}
-	if file_tree.Parent != other.Parent {
+	if ft.Parent != other.Parent {
 		return false
 	}
-	if file_tree.StrictAnalysis != other.StrictAnalysis {
+	if ft.StrictAnalysis != other.StrictAnalysis {
 		return false
 	}
 
-	if len(file_tree.SingleLicenseFiles) != len(other.SingleLicenseFiles) {
+	if len(ft.SingleLicenseFiles) != len(other.SingleLicenseFiles) {
 		return false
 	}
-	for k := range file_tree.SingleLicenseFiles {
-		left := file_tree.SingleLicenseFiles[k]
+	for k := range ft.SingleLicenseFiles {
+		left := ft.SingleLicenseFiles[k]
 		right := other.SingleLicenseFiles[k]
 		if len(left) != len(right) {
 			return false
@@ -279,20 +276,20 @@ func (file_tree *FileTree) Equal(other *FileTree) bool {
 		}
 	}
 
-	if len(file_tree.Files) != len(other.Files) {
+	if len(ft.Files) != len(other.Files) {
 		return false
 	}
-	for i := range file_tree.Files {
-		if !file_tree.Files[i].Equal(other.Files[i]) {
+	for i := range ft.Files {
+		if !ft.Files[i].Equal(other.Files[i]) {
 			return false
 		}
 	}
 
-	if len(file_tree.Children) != len(other.Children) {
+	if len(ft.Children) != len(other.Children) {
 		return false
 	}
-	for k := range file_tree.Children {
-		if file_tree.Children[k] != other.Children[k] {
+	for k := range ft.Children {
+		if ft.Children[k] != other.Children[k] {
 			return false
 		}
 	}

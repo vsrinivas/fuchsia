@@ -9,8 +9,7 @@ import (
 )
 
 func TestMetricsInit(t *testing.T) {
-	var metrics Metrics
-	metrics.Init()
+	metrics := NewMetrics()
 	num_values := len(metrics.values)
 	num_order := len(metrics.order)
 	want := 0

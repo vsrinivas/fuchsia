@@ -18,8 +18,8 @@ func TestMainLoadConfig(t *testing.T) {
 	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
-	var config checklicenses.Config
-	if err := config.Init(path); err != nil {
+	_, err := checklicenses.NewConfig(path)
+	if err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 }

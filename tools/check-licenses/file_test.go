@@ -15,7 +15,7 @@ import (
 )
 
 // NewFile(path) should successfully return a file object for normal files.
-func TestCreateNormalFile(t *testing.T) {
+func TestFileCreateNormal(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "normal.go")
 	if err != nil {
 		log.Fatal(err)
@@ -29,7 +29,7 @@ func TestCreateNormalFile(t *testing.T) {
 }
 
 // NewFile(path) should successfully return a file object for symlinked files.
-func TestCreateRelativeSymlinkFile(t *testing.T) {
+func TestFileCreateRelativeSymlink(t *testing.T) {
 	// File that we'll be pointing at.
 	target, err := ioutil.TempFile("", "normal.go")
 	if err != nil {
@@ -70,7 +70,7 @@ func TestCreateRelativeSymlinkFile(t *testing.T) {
 
 // NewFile(path) should fail and return an error if the specified path
 // does not exist.
-func TestCreateNonExistentFile(t *testing.T) {
+func TestFileCreateNonExistent(t *testing.T) {
 	// Temporary directory for holding the symlink.
 	tmpdir, err := ioutil.TempDir("", "symdir")
 	if err != nil {
