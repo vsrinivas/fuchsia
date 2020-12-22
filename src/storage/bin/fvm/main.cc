@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <unistd.h>
 
 #include <cstdint>
@@ -598,6 +599,7 @@ int main(int argc, char** argv) {
       }
       std::string tmp_path = std::filesystem::temp_directory_path().generic_string() +
                              "/decompressed_sparse_fvm_XXXXXX";
+
       fbl::unique_fd created_file(mkstemp(tmp_path.data()));
 
       if (!created_file.is_valid()) {
@@ -606,6 +608,12 @@ int main(int argc, char** argv) {
         return -1;
       }
 
+      auto cleanup_temp = fit::defer([tmp_path]() {
+        if (unlink(tmp_path.c_str()) < 0) {
+          fprintf(stderr, "Failed to delete temp file '%s': %s\n", tmp_path.c_str(),
+                  strerror(errno));
+        }
+      });
       if (compressedContainer->Decompress(tmp_path.c_str()) != ZX_OK) {
         return -1;
       }
