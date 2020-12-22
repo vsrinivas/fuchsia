@@ -845,7 +845,7 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut network_selection_futures
                 ).await;
             },
-            operation_result = operation_futures.select_next_some() => {},
+            () = operation_futures.select_next_some() => {},
             network_selection_result = network_selection_futures.select_next_some() => {
                 handle_network_selection_results(
                     network_selection_result,

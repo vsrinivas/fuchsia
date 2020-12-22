@@ -522,7 +522,7 @@ mod tests {
     ) {
         let state_machine = fut.into_state_machine();
         select! {
-            state_machine = state_machine.fuse() => return,
+            _state_machine = state_machine.fuse() => return,
         }
     }
 

@@ -40,7 +40,7 @@ impl DeprecatedConfigurator {
                                     ) {
                                         Ok(()) => {},
                                         Err(e) => error!(
-                                            "could not send SuggestAccessPointMacAddress response"
+                                            "could not send SuggestAccessPointMacAddress response: {:?}", e
                                         )
                                     }
                                     continue;
@@ -52,7 +52,7 @@ impl DeprecatedConfigurator {
                             match responder.send(&mut Ok(())) {
                                 Ok(()) => {}
                                 Err(e) => {
-                                    error!("could not send SuggestAccessPointMacAddress response");
+                                    error!("could not send SuggestAccessPointMacAddress response: {:?}", e);
                                 }
                             }
                         }

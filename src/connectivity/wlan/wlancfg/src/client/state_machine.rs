@@ -499,7 +499,7 @@ async fn connecting_state(
                 Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
                     // Check if it's the same network as we're currently connected to.
                     // If yes, dedupe the request.
-                    if (new_connect_request.target.network == options.connect_request.target.network) {
+                    if new_connect_request.target.network == options.connect_request.target.network {
                         info!("Received duplicate connection request, deduping");
                         new_responder.send(()).unwrap_or_else(|_| ());
                     } else {
@@ -570,7 +570,7 @@ async fn connected_state(
                 match status_response.connected_to {
                     Some(bss_info) => {
                         // TODO(fxbug.dev/53545): send some stats to the saved network manager
-                        if (bss_info.ssid != currently_fulfilled_request.target.network.ssid) {
+                        if bss_info.ssid != currently_fulfilled_request.target.network.ssid {
                             error!("Currently connected SSID changed unexpectedly");
                             return Err(ExitReason(Err(format_err!("Currently connected SSID changed unexpectedly"))));
                         }
@@ -619,7 +619,7 @@ async fn connected_state(
                     }
                     Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
                         // Check if it's the same network as we're currently connected to. If yes, reply immediately
-                        if (new_connect_request.target.network == currently_fulfilled_request.target.network) {
+                        if new_connect_request.target.network == currently_fulfilled_request.target.network {
                             info!("Received connection request for current network, deduping");
                             new_responder.send(()).unwrap_or_else(|_| ());
                         } else {
@@ -728,7 +728,7 @@ mod tests {
     ) {
         let state_machine = fut.into_state_machine();
         select! {
-            state_machine = state_machine.fuse() => return,
+            _state_machine = state_machine.fuse() => return,
         }
     }
 
