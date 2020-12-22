@@ -44,3 +44,17 @@ static_library("libmagma_complete") {
 
   deps = [ ":libmagma_static" ]
 }
+
+# TODO(fxbug.dev/66859): Remove once zxio is available in the SDK and ICDs can use that instead.
+static_library("zxio") {
+  complete_static_lib = true
+
+  deps = [ "//zircon/system/ulib/zxio" ]
+}
+
+group("magma_deps") {
+  deps = [
+    ":libmagma_complete",
+    ":zxio",
+  ]
+}
