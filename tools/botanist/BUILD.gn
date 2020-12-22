@@ -37,6 +37,8 @@ go_library("target") {
     "device.go",
     "device_test.go",
     "errors.go",
+    "gce.go",
+    "gce_test.go",
     "qemu.go",
     "target.go",
   ]

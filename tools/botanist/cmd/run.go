@@ -486,6 +486,12 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (target.
 		}
 		t, err := target.NewDeviceTarget(ctx, cfg, opts)
 		return t, err
+	case "gce":
+		var cfg target.GCEConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid GCE config found: %v", err)
+		}
+		return target.NewGCETarget(ctx, cfg, opts)
 	default:
 		return nil, fmt.Errorf("unknown type found: %q", x.Type)
 	}
