@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -151,96 +150,82 @@ rustc_binary("unresponsive_component") {
   sources = [ "unresponsive_component.rs" ]
 }
 
-package("elf_runner_lifecycle_test") {
+fuchsia_component("lifecycle_integration_test") {
   testonly = true
+  deps = [ ":lifecycle" ]
+  manifest = "meta/lifecycle.cml"
+}
+
+fuchsia_component("lifecycle_timeout_integration_test") {
+  testonly = true
+  deps = [ ":lifecycle_timeout" ]
+  manifest = "meta/lifecycle_timeout.cml"
+}
+
+fuchsia_component("lifecycle_timeout_unresponsive_integration_test") {
+  testonly = true
+  deps = [ ":lifecycle_timeout_unresponsive" ]
+  manifest = "meta/lifecycle_timeout_unresponsive.cml"
+}
+
+fuchsia_component("component_exit_integration_test") {
+  testonly = true
+  deps = [ ":component_exit" ]
+  manifest = "meta/component_exit.cml"
+}
+
+fuchsia_component("lifecycle_timeout_unresponsive_root") {
+  testonly = true
+  manifest = "meta/lifecycle_timeout_unresponsive_root.cml"
+}
+
+fuchsia_component("lifecycle_timeout_unresponsive_node") {
+  testonly = true
+  deps = [ ":unresponsive_component" ]
+  manifest = "meta/lifecycle_timeout_unresponsive_node.cml"
+}
+
+fuchsia_component("lifecycle_timeout_root") {
+  testonly = true
+  manifest = "meta/lifecycle_timeout_root.cml"
+}
+
+fuchsia_component("lifecycle_timeout_node") {
+  testonly = true
+  deps = [ "//examples/components/basic:lifecycle_full_bin" ]
+  manifest = "meta/lifecycle_timeout_node.cml"
+}
+
+fuchsia_component("immediate_exit_component") {
+  testonly = true
+  deps = [ ":immediate_exit" ]
+  manifest = "meta/immediate_exit_component.cml"
+}
+
+fuchsia_component("rendezvous_exit_component") {
+  testonly = true
+  deps = [ ":rendezvous_exit" ]
+  manifest = "meta/rendezvous_exit_component.cml"
+}
+
+fuchsia_test_package("elf_runner_lifecycle_test") {
+  test_components = [
+    ":lifecycle_integration_test",
+    ":lifecycle_timeout_integration_test",
+    ":lifecycle_timeout_unresponsive_integration_test",
+    ":component_exit_integration_test",
+  ]
   deps = [
-    ":component_exit",
-    ":immediate_exit",
-    ":lifecycle",
-    ":lifecycle_timeout",
-    ":lifecycle_timeout_unresponsive",
-    ":rendezvous_exit",
-    ":unresponsive_component",
-    "//examples/components/basic:lifecycle_full_bin",
+    ":immediate_exit_component",
+    ":lifecycle_timeout_node",
+    ":lifecycle_timeout_root",
+    ":lifecycle_timeout_unresponsive_node",
+    ":lifecycle_timeout_unresponsive_root",
+    ":rendezvous_exit_component",
+    "//examples/components/basic:lifecycle-full",
   ]
-
-  binaries = [
-    {
-      name = "lifecycle_full"
-    },
-    {
-      name = "unresponsive_component"
-    },
-    {
-      name = "immediate_exit"
-    },
-    {
-      name = "rendezvous_exit"
-    },
-  ]
-
-  tests = [
-    {
-      name = "lifecycle_integration_test"
-    },
-    {
-      name = "lifecycle_timeout_integration_test"
-    },
-    {
-      name = "lifecycle_timeout_unresponsive_integration_test"
-    },
-    {
-      name = "component_exit_integration_test"
-
-      # This test fails when test cases are executed in parallel.
-      parallel = 1
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//examples/components/basic/meta/lifecycle-full.cml")
-      dest = "lifecycle-full.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle.cml")
-      dest = "lifecycle_integration_test.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout.cml")
-      dest = "lifecycle_timeout_integration_test.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout_root.cml")
-      dest = "lifecycle_timeout_root.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout_node.cml")
-      dest = "lifecycle_timeout_node.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout_unresponsive.cml")
-      dest = "lifecycle_timeout_unresponsive_integration_test.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout_unresponsive_root.cml")
-      dest = "lifecycle_timeout_unresponsive_root.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_timeout_unresponsive_node.cml")
-      dest = "lifecycle_timeout_unresponsive_node.cm"
-    },
-    {
-      path = rebase_path("meta/component_exit.cml")
-      dest = "component_exit_integration_test.cm"
-    },
-    {
-      path = rebase_path("meta/immediate_exit_component.cml")
-      dest = "immediate_exit_component.cm"
-    },
-    {
-      path = rebase_path("meta/rendezvous_exit_component.cml")
-      dest = "rendezvous_exit_component.cm"
-    },
-  ]
+  test_specs = {
+    # `component_exit` fails when test cases are executed in parallel.
+    parallel = 1
+  }
 }

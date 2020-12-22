@@ -3,7 +3,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/trigger",
+        binary: "bin/destruction_trigger",
     },
     capabilities: [
         { protocol: "fidl.test.components.Trigger" },

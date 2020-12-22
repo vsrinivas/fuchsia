@@ -6,7 +6,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/routing_integration_test",
+        binary: "bin/routing_integration_test",
     },
 
     // Two children: a server and client. `echo_client` exposes the `Trigger` service which the

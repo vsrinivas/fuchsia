@@ -2,7 +2,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/collection_realm",
+        binary: "bin/destruction_collection_realm",
     },
     collections: [
         {

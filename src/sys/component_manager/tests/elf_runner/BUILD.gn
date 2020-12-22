@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -28,7 +28,8 @@ rustc_test("elf_runner_test_bin") {
   sources = [ "elf_runner_test.rs" ]
 }
 
-rustc_binary("args_reporter") {
+rustc_binary("args_reporter_bin") {
+  name = "args_reporter"
   edition = "2018"
   source_root = "args_reporter.rs"
   deps = [
@@ -41,32 +42,23 @@ rustc_binary("args_reporter") {
   sources = [ "args_reporter.rs" ]
 }
 
-test_package("elf-runner-test") {
+fuchsia_component("reporter_no_args") {
+  testonly = true
+  deps = [ ":args_reporter_bin" ]
+  manifest = "meta/reporter_no_args.cml"
+}
+
+fuchsia_component("reporter_args") {
+  testonly = true
+  deps = [ ":args_reporter_bin" ]
+  manifest = "meta/reporter_args.cml"
+}
+
+fuchsia_unittest_package("elf-runner-test") {
+  manifest = "meta/elf-runner-test.cmx"
   deps = [
-    ":args_reporter",
     ":elf_runner_test_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/reporter_no_args.cml")
-      dest = "reporter_no_args.cm"
-    },
-    {
-      path = rebase_path("meta/reporter_args.cml")
-      dest = "reporter_args.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "args_reporter"
-    },
-  ]
-
-  tests = [
-    {
-      name = "elf_runner_test"
-    },
+    ":reporter_args",
+    ":reporter_no_args",
   ]
 }

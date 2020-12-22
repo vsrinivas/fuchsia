@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/component_manager_panic_test"
+        "binary": "bin/component_manager_panic_test"
     },
     "sandbox": {
         "features": [

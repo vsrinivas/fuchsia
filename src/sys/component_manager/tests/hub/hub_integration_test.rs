@@ -239,7 +239,7 @@ async fn advanced_routing() {
     // Verify that the 'pkg' directory is available.
     let pkg_dir = format!("{}/{}", in_dir, "pkg");
     test_runner
-        .verify_directory_listing_externally(pkg_dir.as_str(), vec!["bin", "lib", "meta", "test"])
+        .verify_directory_listing_externally(pkg_dir.as_str(), vec!["bin", "lib", "meta"])
         .await;
 
     // Verify that we can connect to the echo service from the in/svc directory.

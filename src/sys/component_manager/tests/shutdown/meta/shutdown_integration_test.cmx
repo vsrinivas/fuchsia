@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/shutdown_integration_test"
+        "binary": "bin/shutdown_integration_test"
     },
     "sandbox": {
         "features": [

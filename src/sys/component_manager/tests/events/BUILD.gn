@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("echo_interposer") {
   name = "echo_interposer"
@@ -67,194 +66,171 @@ rustc_test("events_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
-test_package("events_integration_test") {
+fuchsia_component("async_reporter") {
+  testonly = true
+  deps = [ "components:async_reporter_bin" ]
+  manifest = "components/async/meta/reporter.cml"
+}
+
+fuchsia_component("capability_ready_child") {
+  testonly = true
+  deps = [ "components:capability_ready_child_bin" ]
+  manifest = "components/capability_ready/meta/child.cml"
+}
+
+fuchsia_component("capability_ready_root") {
+  testonly = true
+  deps = [ "components:capability_ready_root_bin" ]
+  manifest = "components/capability_ready/meta/root.cml"
+}
+
+fuchsia_component("echo_realm") {
+  testonly = true
+  manifest = "components/scoped/meta/echo_realm.cml"
+}
+
+fuchsia_component("echo_client") {
+  testonly = true
+  deps = [ "components:echo_client_for_events_bin" ]
+  manifest = "components/scoped/meta/echo_client.cml"
+}
+
+fuchsia_component("echo_server") {
+  testonly = true
+  deps = [ "components:echo_server_for_events_bin" ]
+  manifest = "components/scoped/meta/echo_server.cml"
+}
+
+fuchsia_component("echo_reporter") {
+  testonly = true
+  deps = [ "components:echo_reporter_bin" ]
+  manifest = "components/scoped/meta/echo_reporter.cml"
+}
+
+fuchsia_component("interpose_echo_looper") {
+  testonly = true
+  deps = [ "components:interpose_echo_looper_bin" ]
+  manifest = "components/interpose/meta/echo_looper.cml"
+}
+
+fuchsia_component("interpose_echo_realm") {
+  testonly = true
+  manifest = "components/interpose/meta/echo_realm.cml"
+}
+
+fuchsia_component("nested_reporter") {
+  testonly = true
+  deps = [ "components:nested_reporter_bin" ]
+  manifest = "components/nested/meta/reporter.cml"
+}
+
+fuchsia_component("resolved_error_reporter") {
+  testonly = true
+  deps = [ "components:resolved_error_reporter_bin" ]
+  manifest = "components/resolved_error/meta/reporter.cml"
+}
+
+fuchsia_component("chained_interpose_echo_client") {
+  testonly = true
+  deps = [ "components:chained_interpose_echo_client_bin" ]
+  manifest = "components/chained_interpose/meta/echo_client.cml"
+}
+
+fuchsia_component("chained_interpose_echo_factory") {
+  testonly = true
+  deps = [ "components:chained_interpose_echo_factory_bin" ]
+  manifest = "components/chained_interpose/meta/echo_factory.cml"
+}
+
+fuchsia_component("chained_interpose_echo_realm") {
+  testonly = true
+  manifest = "components/chained_interpose/meta/echo_realm.cml"
+}
+
+fuchsia_component("event_dispatch_order_root") {
+  testonly = true
+  manifest = "components/event_dispatch_order/meta/root.cml"
+}
+
+fuchsia_component("stub_component") {
+  testonly = true
+  deps = [ "components:stub_component_bin" ]
+  manifest = "components/stub/meta/component.cml"
+}
+
+fuchsia_component("synthesis_reporter") {
+  testonly = true
+  deps = [ "components:synthesis_reporter_bin" ]
+  manifest = "components/synthesis/meta/reporter.cml"
+}
+
+fuchsia_component("static_event_stream_trigger_client") {
+  testonly = true
+  deps = [ "components:trigger_client_bin" ]
+  manifest = "components/static_event_stream/meta/trigger_client.cml"
+}
+
+fuchsia_component("static_event_stream_trigger_server") {
+  testonly = true
+  deps = [ "components:trigger_server_bin" ]
+  manifest = "components/static_event_stream/meta/trigger_server.cml"
+}
+
+fuchsia_component("trigger_realm") {
+  testonly = true
+  manifest = "components/static_event_stream/meta/trigger_realm.cml"
+}
+
+fuchsia_component("file_contents_reporter") {
+  testonly = true
+  deps = [ "components:file_contents_reporter_bin" ]
+  manifest = "components/dir_capability_routed/meta/reporter.cml"
+}
+
+fuchsia_component("realm_offered_reporter") {
+  testonly = true
+  deps = [ "components:realm_offered_bin" ]
+  manifest = "components/realm_offered/meta/reporter.cml"
+}
+
+fuchsia_component("realm_offered_nested") {
+  testonly = true
+  deps = [ "components:realm_offered_nested" ]
+  manifest = "components/realm_offered/meta/nested.cml"
+}
+
+fuchsia_component("realm_offered_root") {
+  testonly = true
+  manifest = "components/realm_offered/meta/root.cml"
+}
+
+fuchsia_unittest_package("events_integration_test") {
+  manifest = "meta/events_integration_test.cmx"
   deps = [
+    ":async_reporter",
+    ":capability_ready_child",
+    ":capability_ready_root",
+    ":chained_interpose_echo_client",
+    ":chained_interpose_echo_factory",
+    ":chained_interpose_echo_realm",
+    ":echo_client",
+    ":echo_realm",
+    ":echo_reporter",
+    ":echo_server",
+    ":event_dispatch_order_root",
     ":events_integration_test_bin",
-    "components:async_reporter_bin",
-    "components:capability_ready_child_bin",
-    "components:capability_ready_root_bin",
-    "components:chained_interpose_echo_client_bin",
-    "components:chained_interpose_echo_factory_bin",
-    "components:echo_client_for_events_bin",
-    "components:echo_reporter_bin",
-    "components:echo_server_for_events_bin",
-    "components:file_contents_reporter_bin",
-    "components:interpose_echo_looper_bin",
-    "components:nested_reporter_bin",
-    "components:realm_offered_bin",
-    "components:realm_offered_nested",
-    "components:resolved_error_reporter_bin",
-    "components:stub_component_bin",
-    "components:synthesis_reporter_bin",
-    "components:trigger_client_bin",
-    "components:trigger_server_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("components/async/meta/reporter.cml")
-      dest = "async_reporter.cm"
-    },
-    {
-      path = rebase_path("components/interpose/meta/echo_looper.cml")
-      dest = "interpose_echo_looper.cm"
-    },
-    {
-      path = rebase_path("components/interpose/meta/echo_realm.cml")
-      dest = "interpose_echo_realm.cm"
-    },
-    {
-      path = rebase_path("components/nested/meta/reporter.cml")
-      dest = "nested_reporter.cm"
-    },
-    {
-      path = rebase_path("components/resolved_error/meta/reporter.cml")
-      dest = "resolved_error_reporter.cm"
-    },
-    {
-      path = rebase_path("components/scoped/meta/echo_realm.cml")
-      dest = "echo_realm.cm"
-    },
-    {
-      path = rebase_path("components/scoped/meta/echo_client.cml")
-      dest = "echo_client.cm"
-    },
-    {
-      path = rebase_path("components/scoped/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("components/scoped/meta/echo_reporter.cml")
-      dest = "echo_reporter.cm"
-    },
-    {
-      path = rebase_path("components/chained_interpose/meta/echo_realm.cml")
-      dest = "chained_interpose_echo_realm.cm"
-    },
-    {
-      path = rebase_path("components/chained_interpose/meta/echo_client.cml")
-      dest = "chained_interpose_echo_client.cm"
-    },
-    {
-      path = rebase_path("components/chained_interpose/meta/echo_factory.cml")
-      dest = "chained_interpose_echo_factory.cm"
-    },
-    {
-      path = rebase_path("components/event_dispatch_order/meta/root.cml")
-      dest = "event_dispatch_order_root.cm"
-    },
-    {
-      path = rebase_path("components/realm_offered/meta/root.cml")
-      dest = "realm_offered_root.cm"
-    },
-    {
-      path = rebase_path("components/realm_offered/meta/nested.cml")
-      dest = "realm_offered_nested.cm"
-    },
-    {
-      path = rebase_path("components/realm_offered/meta/reporter.cml")
-      dest = "realm_offered_reporter.cm"
-    },
-    {
-      path = rebase_path("components/stub/meta/component.cml")
-      dest = "stub_component.cm"
-    },
-    {
-      path = rebase_path("components/capability_ready/meta/root.cml")
-      dest = "capability_ready_root.cm"
-    },
-    {
-      path = rebase_path("components/capability_ready/meta/child.cml")
-      dest = "capability_ready_child.cm"
-    },
-    {
-      path = rebase_path("components/synthesis/meta/reporter.cml")
-      dest = "synthesis_reporter.cm"
-    },
-    {
-      path =
-          rebase_path("components/static_event_stream/meta/trigger_client.cml")
-      dest = "static_event_stream_trigger_client.cm"
-    },
-    {
-      path =
-          rebase_path("components/static_event_stream/meta/trigger_realm.cml")
-      dest = "trigger_realm.cm"
-    },
-    {
-      path =
-          rebase_path("components/static_event_stream/meta/trigger_server.cml")
-      dest = "static_event_stream_trigger_server.cm"
-    },
-    {
-      path = rebase_path("components/dir_capability_routed/meta/reporter.cml")
-      dest = "file_contents_reporter.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "async_reporter"
-    },
-    {
-      name = "interpose_echo_looper"
-    },
-    {
-      name = "chained_interpose_echo_client"
-    },
-    {
-      name = "chained_interpose_echo_client"
-    },
-    {
-      name = "chained_interpose_echo_factory"
-    },
-    {
-      name = "file_contents_reporter"
-    },
-    {
-      name = "scoped_echo_server"
-    },
-    {
-      name = "nested_reporter"
-    },
-    {
-      name = "resolved_error_reporter"
-    },
-    {
-      name = "scoped_echo_client"
-    },
-    {
-      name = "scoped_echo_reporter"
-    },
-    {
-      name = "realm_offered_reporter"
-    },
-    {
-      name = "realm_offered_nested"
-    },
-    {
-      name = "stub_component"
-    },
-    {
-      name = "capability_ready_root"
-    },
-    {
-      name = "capability_ready_child"
-    },
-    {
-      name = "synthesis_reporter"
-    },
-    {
-      name = "static_event_stream_trigger_client"
-    },
-    {
-      name = "static_event_stream_trigger_server"
-    },
-  ]
-
-  tests = [
-    {
-      name = "events_integration_test"
-    },
+    ":file_contents_reporter",
+    ":interpose_echo_looper",
+    ":interpose_echo_realm",
+    ":nested_reporter",
+    ":realm_offered_nested",
+    ":realm_offered_reporter",
+    ":realm_offered_root",
+    ":resolved_error_reporter",
+    ":static_event_stream_trigger_client",
+    ":static_event_stream_trigger_server",
+    ":stub_component",
+    ":synthesis_reporter",
+    ":trigger_realm",
   ]
 }

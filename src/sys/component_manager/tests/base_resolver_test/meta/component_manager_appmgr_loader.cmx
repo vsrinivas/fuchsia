@@ -3,6 +3,10 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
+        "args": [
+            "--config",
+            "/pkg/data/component_manager_config_appmgr_loader"
+        ],
         "binary": "bin/component_manager"
     },
     "sandbox": {

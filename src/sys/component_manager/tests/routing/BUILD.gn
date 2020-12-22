@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -29,37 +29,17 @@ rustc_test("routing_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
-test_package("routing_integration_test") {
+fuchsia_component("trigger") {
+  testonly = true
+  deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
+  manifest = "meta/trigger.cml"
+}
+
+fuchsia_unittest_package("routing_integration_test") {
+  manifest = "meta/routing_integration_test.cml"
   deps = [
     ":routing_integration_test_bin",
-    "//examples/components/routing/echo_server",
-    "//src/sys/component_manager/tests:trigger_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("meta/trigger.cml")
-      dest = "trigger.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "echo_server"
-    },
-    {
-      name = "trigger"
-    },
-  ]
-
-  v2_tests = [
-    {
-      name = "routing_integration_test"
-    },
+    ":trigger",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }

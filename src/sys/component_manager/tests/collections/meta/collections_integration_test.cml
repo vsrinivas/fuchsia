@@ -5,7 +5,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/collections_integration_test",
+        binary: "bin/collections_integration_test",
     },
     children: [
         {

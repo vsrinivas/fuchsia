@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("storage_integration_test_bin") {
   name = "storage_integration_test"
@@ -67,48 +67,32 @@ rustc_binary("storage_user_bin") {
   sources = [ "storage_user.rs" ]
 }
 
-test_package("storage_integration_test") {
+fuchsia_component("memfs") {
+  deps = [ "//src/sys/component_manager/tests/memfs" ]
+  manifest = "meta/memfs.cml"
+}
+
+fuchsia_component("storage_user") {
+  deps = [ ":storage_user_bin" ]
+  manifest = "meta/storage_user.cml"
+}
+
+fuchsia_component("storage_realm") {
+  manifest = "meta/storage_realm.cml"
+}
+
+fuchsia_component("storage_realm_coll") {
+  deps = [ ":storage_realm_coll_bin" ]
+  manifest = "meta/storage_realm_coll.cml"
+}
+
+fuchsia_unittest_package("storage_integration_test") {
+  manifest = "meta/storage_integration_test.cmx"
   deps = [
+    ":memfs",
     ":storage_integration_test_bin",
-    ":storage_realm_coll_bin",
-    ":storage_user_bin",
-    "//src/sys/component_manager/tests/memfs",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/memfs.cml")
-      dest = "memfs.cm"
-    },
-    {
-      path = rebase_path("meta/storage_user.cml")
-      dest = "storage_user.cm"
-    },
-    {
-      path = rebase_path("meta/storage_realm.cml")
-      dest = "storage_realm.cm"
-    },
-    {
-      path = rebase_path("meta/storage_realm_coll.cml")
-      dest = "storage_realm_coll.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "memfs"
-    },
-    {
-      name = "storage_user"
-    },
-    {
-      name = "storage_realm_coll"
-    },
-  ]
-
-  tests = [
-    {
-      name = "storage_integration_test"
-    },
+    ":storage_realm",
+    ":storage_realm_coll",
+    ":storage_user",
   ]
 }

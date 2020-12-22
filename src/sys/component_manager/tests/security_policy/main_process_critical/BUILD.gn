@@ -6,7 +6,7 @@ import("//build/component/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -38,7 +38,8 @@ fidl("test.policy") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-rustc_binary("exit_on_command") {
+rustc_binary("exit_on_command_bin") {
+  name = "exit_on_command"
   edition = "2018"
   source_root = "exit_on_command.rs"
   deps = [
@@ -56,55 +57,37 @@ component_config("cm_config") {
   sources = [ "cm_config.json" ]
 }
 
-test_package("security-policy-critical-integration-test") {
+fuchsia_component("test_root") {
+  testonly = true
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_component("exit_on_command") {
+  testonly = true
+  deps = [ ":exit_on_command_bin" ]
+  manifest = "meta/exit_on_command.cml"
+}
+
+fuchsia_component("exit_on_command_no_request") {
+  testonly = true
+  deps = [ ":exit_on_command_bin" ]
+  manifest = "meta/exit_on_command_no_request.cml"
+}
+
+fuchsia_component("component_manager") {
+  testonly = true
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/cm_for_test.cmx"
+}
+
+fuchsia_unittest_package("security-policy-critical-integration-test") {
+  manifest = "meta/security-policy-critical-integration-test.cmx"
   deps = [
     ":cm_config",
+    ":component_manager",
     ":exit_on_command",
+    ":exit_on_command_no_request",
     ":security_policy_critical_integration_test_bin",
-    "//src/sys/component_manager:bin",
-  ]
-
-  tests = [
-    {
-      name = "security_policy_critical_integration_test"
-    },
-  ]
-
-  meta = [
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
-
-    # v2 manifests used in the integration test
-    {
-      path = "meta/test_root.cml"
-      dest = "test_root.cm"
-    },
-    {
-      path = "meta/exit_on_command.cml"
-      dest = "exit_on_command.cm"
-    },
-    {
-      path = "meta/exit_on_command_no_request.cml"
-      dest = "exit_on_command_no_request.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "component_manager"
-    },
-    {
-      name = "exit_on_command"
-    },
-  ]
-
-  resources = [
-    {
-      path = "$target_gen_dir/cm_config"
-      dest = "cm_config"
-    },
+    ":test_root",
   ]
 }

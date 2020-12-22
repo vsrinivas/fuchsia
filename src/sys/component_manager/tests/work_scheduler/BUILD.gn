@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("work_scheduler_dispatch_reporter") {
   name = "work_scheduler_dispatch_reporter"
@@ -45,48 +44,32 @@ rustc_test("work_scheduler_integration_test_bin") {
   sources = [ "work_scheduler_integration_test.rs" ]
 }
 
-test_package("work_scheduler_integration_test") {
+fuchsia_component("unbound_child_worker_child") {
+  deps = [ "components:unbound_child_worker_child_bin" ]
+  manifest = "components/unbound_child/meta/worker_child.cml"
+}
+
+fuchsia_component("unbound_child_worker_sibling") {
+  deps = [ "components:unbound_child_worker_sibling_bin" ]
+  manifest = "components/unbound_child/meta/worker_sibling.cml"
+}
+
+fuchsia_component("unbound_child_worker_parent") {
+  manifest = "components/unbound_child/meta/worker_parent.cml"
+}
+
+fuchsia_component("bound_worker") {
+  deps = [ "components:bound_worker_bin" ]
+  manifest = "components/bound/meta/worker.cml"
+}
+
+fuchsia_unittest_package("work_scheduler_integration_test") {
+  manifest = "meta/work_scheduler_integration_test.cmx"
   deps = [
+    ":bound_worker",
+    ":unbound_child_worker_child",
+    ":unbound_child_worker_parent",
+    ":unbound_child_worker_sibling",
     ":work_scheduler_integration_test_bin",
-    "components:bound_worker_bin",
-    "components:unbound_child_worker_child_bin",
-    "components:unbound_child_worker_sibling_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("components/unbound_child/meta/worker_child.cml")
-      dest = "unbound_child_worker_child.cm"
-    },
-    {
-      path = rebase_path("components/unbound_child/meta/worker_sibling.cml")
-      dest = "unbound_child_worker_sibling.cm"
-    },
-    {
-      path = rebase_path("components/unbound_child/meta/worker_parent.cml")
-      dest = "unbound_child_worker_parent.cm"
-    },
-    {
-      path = rebase_path("components/bound/meta/worker.cml")
-      dest = "bound_worker.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "unbound_child_worker_child"
-    },
-    {
-      name = "unbound_child_worker_sibling"
-    },
-    {
-      name = "bound_worker"
-    },
-  ]
-
-  tests = [
-    {
-      name = "work_scheduler_integration_test"
-    },
   ]
 }

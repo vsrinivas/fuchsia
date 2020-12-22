@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/lifecycle_integration_test",
+        binary: "bin/lifecycle_integration_test",
     },
     collections: [
         {

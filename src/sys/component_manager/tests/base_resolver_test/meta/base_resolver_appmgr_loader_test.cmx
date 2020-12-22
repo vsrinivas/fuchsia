@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/base_resolver_appmgr_loader_test"
+        "binary": "bin/base_resolver_appmgr_loader_test"
     },
     "sandbox": {
         "features": [

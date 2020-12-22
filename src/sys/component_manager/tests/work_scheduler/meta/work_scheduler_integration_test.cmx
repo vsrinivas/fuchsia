@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/work_scheduler_integration_test"
+        "binary": "bin/work_scheduler_integration_test"
     },
     "sandbox": {
         "features": [

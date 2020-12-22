@@ -5,7 +5,7 @@
 import("//build/component/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("base_resolver_disabled_test_bin") {
   name = "base_resolver_disabled_test"
@@ -76,70 +76,59 @@ component_config("component_manager_base_appmgr_loader_test_config") {
   dest = "data/component_manager_config_appmgr_loader"
 }
 
-test_package("base_resolver_test") {
+fuchsia_component("root") {
+  testonly = true
+  deps = [ ":root_component_bin" ]
+  manifest = "meta/root.cml"
+}
+
+fuchsia_component("simple_root") {
+  testonly = true
+  manifest = "meta/simple_root.cml"
+}
+
+fuchsia_component("base_resolver_disabled_test") {
+  testonly = true
+  deps = [ ":base_resolver_disabled_test_bin" ]
+  manifest = "meta/base_resolver_disabled_test.cmx"
+}
+
+fuchsia_component("base_resolver_appmgr_loader_test") {
+  testonly = true
+  deps = [ ":base_resolver_appmgr_loader_test_bin" ]
+  manifest = "meta/base_resolver_appmgr_loader_test.cmx"
+}
+
+fuchsia_component("component_manager_disabled_resolver") {
+  testonly = true
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/component_manager_disabled_resolver.cmx"
+}
+
+fuchsia_component("component_manager_appmgr_loader") {
+  testonly = true
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/component_manager_appmgr_loader.cmx"
+}
+
+fuchsia_component("echo_server") {
+  testonly = true
+  deps = [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin" ]
+  manifest = "meta/echo_server.cml"
+}
+
+fuchsia_test_package("base_resolver_test") {
+  test_components = [
+    ":base_resolver_disabled_test",
+    ":base_resolver_appmgr_loader_test",
+  ]
   deps = [
-    ":base_resolver_appmgr_loader_test_bin",
-    ":base_resolver_disabled_test_bin",
+    ":component_manager_appmgr_loader",
     ":component_manager_base_appmgr_loader_test_config",
     ":component_manager_base_resolver_disabled_test_config",
-    ":root_component_bin",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
-    "//src/sys/component_manager:bin",
-  ]
-
-  resources = [
-    {
-      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_resolver_disabled_test_config"
-      dest = "component_manager_config_resolver_disabled"
-    },
-    {
-      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_appmgr_loader_test_config"
-      dest = "component_manager_config_appmgr_loader"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "root_component"
-    },
-    {
-      name = "echo_server_rust"
-      dest = "echo_server"
-    },
-    {
-      name = "component_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_manager_disabled_resolver.cmx")
-      dest = "component_manager_disabled_resolver.cmx"
-    },
-    {
-      path = rebase_path("meta/component_manager_appmgr_loader.cmx")
-      dest = "component_manager_appmgr_loader.cmx"
-    },
-    {
-      path = rebase_path("meta/root.cml")
-      dest = "root.cm"
-    },
-    {
-      path = rebase_path("meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("meta/simple_root.cml")
-      dest = "simple_root.cm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "base_resolver_disabled_test"
-    },
-    {
-      name = "base_resolver_appmgr_loader_test"
-    },
+    ":component_manager_disabled_resolver",
+    ":echo_server",
+    ":root",
+    ":simple_root",
   ]
 }

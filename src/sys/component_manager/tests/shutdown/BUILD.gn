@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("shutdown_integration_test_bin") {
   name = "shutdown_integration_test"
@@ -19,7 +19,7 @@ rustc_test("shutdown_integration_test_bin") {
   sources = [ "shutdown_integration.rs" ]
 }
 
-rustc_binary("system_controller_client") {
+rustc_binary("system_controller_client_bin") {
   name = "system_controller_client"
   edition = "2018"
   source_root = "system_controller_client.rs"
@@ -34,32 +34,20 @@ rustc_binary("system_controller_client") {
   sources = [ "system_controller_client.rs" ]
 }
 
-test_package("shutdown_integration_test") {
+fuchsia_component("shutdown_integration_root") {
+  manifest = "meta/shutdown_integration_root.cml"
+}
+
+fuchsia_component("system_controller_consumer") {
+  deps = [ ":system_controller_client_bin" ]
+  manifest = "meta/system_controller_consumer.cml"
+}
+
+fuchsia_unittest_package("shutdown_integration_test") {
+  manifest = "meta/shutdown_integration_test.cmx"
   deps = [
+    ":shutdown_integration_root",
     ":shutdown_integration_test_bin",
-    ":system_controller_client",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/shutdown_integration_root.cml")
-      dest = "shutdown_integration_root.cm"
-    },
-    {
-      path = rebase_path("meta/system_controller_consumer.cml")
-      dest = "system_controller_consumer.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "system_controller_client"
-    },
-  ]
-
-  tests = [
-    {
-      name = "shutdown_integration_test"
-    },
+    ":system_controller_consumer",
   ]
 }

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/destruction_integration_test"
+        "binary": "bin/destruction_integration_test"
     },
     "sandbox": {
         "features": [

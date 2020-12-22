@@ -6,7 +6,7 @@ import("//build/component/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -59,57 +59,40 @@ component_config("cm_config") {
   sources = [ "cm_config.json" ]
 }
 
-test_package("security-policy-vmex-integration-test") {
+fuchsia_component("protected_ops") {
+  testonly = true
+  deps = [ ":protected_ops_util" ]
+  manifest = "meta/protected_ops.cml"
+}
+
+fuchsia_component("test_root") {
+  testonly = true
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_component("protected_ops_no_request") {
+  testonly = true
+  deps = [ ":protected_ops_util" ]
+  manifest = "meta/protected_ops_no_request.cml"
+}
+
+# This test needs a slightly customized version of component_manager.cmx that includes
+# deprecated-ambient-replace-as-executable, so that the test ELF runner can actually grant the
+# job policy we're testing. The config file `cm_config` can only be loaded from the same package.
+fuchsia_component("cm_for_test") {
+  testonly = true
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/cm_for_test.cmx"
+}
+
+fuchsia_unittest_package("security-policy-vmex-integration-test") {
+  manifest = "meta/security-policy-vmex-integration-test.cmx"
   deps = [
     ":cm_config",
-    ":protected_ops_util",
+    ":cm_for_test",
+    ":protected_ops",
+    ":protected_ops_no_request",
     ":security_policy_vmex_integration_test_bin",
-    "//src/sys/component_manager:bin",
-  ]
-
-  tests = [
-    {
-      name = "security_policy_vmex_integration_test"
-    },
-  ]
-
-  meta = [
-    # This test needs a slightly customized version of component_manager.cmx that includes
-    # deprecated-ambient-replace-as-executable, so that the test ELF runner can actually grant the
-    # job policy we're testing. The config file below can also only be loaded from the same package.
-    {
-      path = "meta/cm_for_test.cmx"
-      dest = "cm_for_test.cmx"
-    },
-
-    # v2 manifests used in the integration test
-    {
-      path = "meta/test_root.cml"
-      dest = "test_root.cm"
-    },
-    {
-      path = "meta/protected_ops.cml"
-      dest = "protected_ops.cm"
-    },
-    {
-      path = "meta/protected_ops_no_request.cml"
-      dest = "protected_ops_no_request.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "component_manager"
-    },
-    {
-      name = "protected_ops_util"
-    },
-  ]
-
-  resources = [
-    {
-      path = "$target_gen_dir/cm_config"
-      dest = "cm_config"
-    },
+    ":test_root",
   ]
 }

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/base_resolver_test"
+        "binary": "bin/elf_runner_test"
     },
     "sandbox": {
         "features": [

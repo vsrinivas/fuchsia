@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/protected_ops_util",
         job_policy_ambient_mark_vmo_exec: "true",

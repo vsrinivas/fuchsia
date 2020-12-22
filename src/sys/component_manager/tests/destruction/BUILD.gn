@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("destruction_integration_test_bin") {
   name = "destruction_integration_test"
@@ -56,42 +57,30 @@ rustc_binary("destruction_trigger_bin") {
   sources = [ "trigger.rs" ]
 }
 
-test_package("destruction_integration_test") {
+fuchsia_component("trigger") {
+  testonly = true
+  deps = [ ":destruction_trigger_bin" ]
+  manifest = "meta/trigger.cml"
+}
+
+fuchsia_component("trigger_realm") {
+  testonly = true
+  deps = [ ":destruction_trigger_bin" ]
+  manifest = "meta/trigger_realm.cml"
+}
+
+fuchsia_component("collection_realm") {
+  testonly = true
+  deps = [ ":destruction_collection_realm_bin" ]
+  manifest = "meta/collection_realm.cml"
+}
+
+fuchsia_unittest_package("destruction_integration_test") {
+  manifest = "meta/destruction_integration_test.cmx"
   deps = [
-    ":destruction_collection_realm_bin",
+    ":collection_realm",
     ":destruction_integration_test_bin",
-    ":destruction_trigger_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/trigger.cml")
-      dest = "trigger.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_realm.cml")
-      dest = "trigger_realm.cm"
-    },
-    {
-      path = rebase_path("meta/collection_realm.cml")
-      dest = "collection_realm.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "trigger"
-      source = "${root_out_dir}/destruction_trigger"
-    },
-    {
-      name = "collection_realm"
-      source = "${root_out_dir}/destruction_collection_realm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "destruction_integration_test"
-    },
+    ":trigger",
+    ":trigger_realm",
   ]
 }

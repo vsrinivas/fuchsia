@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("collections_integration_test_bin") {
   name = "collections_integration_test"
@@ -25,46 +24,30 @@ rustc_test("collections_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
-test_package("collections_integration_test") {
+fuchsia_component("trigger_a") {
+  testonly = true
+  deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
+  manifest = "meta/trigger_a.cml"
+}
+
+fuchsia_component("trigger_b") {
+  testonly = true
+  deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
+  manifest = "meta/trigger_b.cml"
+}
+
+fuchsia_component("trigger_realm") {
+  testonly = true
+  manifest = "meta/trigger_realm.cml"
+}
+
+fuchsia_unittest_package("collections_integration_test") {
+  manifest = "meta/collections_integration_test.cml"
   deps = [
     ":collections_integration_test_bin",
-    "//examples/components/routing/echo_client",
-    "//examples/components/routing/echo_server",
-    "//src/sys/component_manager/tests:trigger_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_a.cml")
-      dest = "trigger_a.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_b.cml")
-      dest = "trigger_b.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_realm.cml")
-      dest = "trigger_realm.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "echo_server"
-    },
-    {
-      name = "trigger"
-    },
-  ]
-
-  v2_tests = [
-    {
-      name = "collections_integration_test"
-    },
+    ":trigger_a",
+    ":trigger_b",
+    ":trigger_realm",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }
