@@ -19,6 +19,8 @@ abstract class IFxEnv {
   String? get zirconToolsDir;
   String get cwd;
 
+  bool isFeatureEnabled(String featureName) => true;
+
   /// Relative path to the current output directory from the root of the Fuchsia
   /// checkout.
   String? get relativeOutputDir => outputDir?.substring(fuchsiaDir!.length);
@@ -97,4 +99,11 @@ class FxEnv extends IFxEnv {
   /// Current working directory. Pulled from the OS.
   @override
   String get cwd => _envReader.getCwd();
+
+  /// Enable/Disable state of an optional feature.
+  /// See //tools/devshell/lib/fx-optional-features.sh for more information.
+  @override
+  bool isFeatureEnabled(String featureName) {
+    return _envReader.getEnv('FUCHSIA_DISABLED_$featureName') != '1';
+  }
 }

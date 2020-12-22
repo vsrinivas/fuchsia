@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
+import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:path/path.dart' as p;
 import 'package:meta/meta.dart';
 
@@ -75,13 +76,21 @@ class TestBundle {
   /// Calculate the minimal set of build targets based on tests in [testBundles]
   /// Returns null for a full build.
   static Set<String> calculateMinimalBuildTargets(
-      List<TestBundle> testBundles) {
+      TestsConfig testsConfig, List<TestBundle> testBundles) {
     Set<String> targets = {};
     for (var e in testBundles) {
       switch (e.testDefinition.testType) {
         case TestType.component:
         case TestType.suite:
-          targets.add('updates');
+          String target = 'updates';
+          if (testsConfig.fxEnv.isFeatureEnabled('incremental')) {
+            if (e.testDefinition.packageLabel.isNotEmpty) {
+              target = fxutils.getBuildTarget(e.testDefinition.packageLabel);
+            } else if (e.testDefinition.label.isNotEmpty) {
+              target = fxutils.getBuildTarget(e.testDefinition.label);
+            }
+          }
+          targets.add(target);
           break;
         case TestType.command:
         case TestType.host:

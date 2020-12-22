@@ -18,6 +18,7 @@ class TestDefinition {
   final String runtimeDeps;
   final String path;
   final String label;
+  final String packageLabel;
   final String name;
   final String os;
   final PackageUrl packageUrl;
@@ -37,6 +38,7 @@ class TestDefinition {
     this.command,
     this.runtimeDeps,
     this.label,
+    this.packageLabel,
     this.path,
     this.maxLogSeverity,
     this.parallel,
@@ -60,6 +62,7 @@ class TestDefinition {
       cpu: testDetails['cpu'] ?? '',
       runtimeDeps: testDetails['runtime_deps'] ?? '',
       label: testDetails['label'] ?? '',
+      packageLabel: testDetails['package_label'] ?? '',
       name: testDetails['name'] ?? '',
       os: testDetails['os'] ?? '',
       packageUrl: testDetails['package_url'] == null
@@ -78,6 +81,7 @@ class TestDefinition {
   command: ${(command ?? []).join(" ")}
   deps_file: $runtimeDeps
   label: $label
+  package_label: ${packageLabel ?? ''}
   package_url: ${packageUrl ?? ''}
   path: $path
   name: $name

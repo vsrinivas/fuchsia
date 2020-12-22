@@ -154,13 +154,17 @@ class FuchsiaTestCommand {
     }
 
     if (testsConfig.flags.shouldRebuild) {
-      Set<String> buildTargets =
-          TestBundle.calculateMinimalBuildTargets(parsedManifest.testBundles);
+      Set<String> buildArgs = TestBundle.calculateMinimalBuildTargets(
+          testsConfig, parsedManifest.testBundles);
+      // if all tests in the bundle are host-based, skip zircon build.
+      if (buildArgs.isNotEmpty &&
+          !TestBundle.hasDeviceTests(parsedManifest.testBundles)) {
+        buildArgs.add('--no-zircon');
+      }
       emitEvent(TestInfo(testsConfig.wrapWith(
-          '> fx build ${buildTargets?.join(' ') ?? ''}', [green, styleBold])));
+          '> fx build ${buildArgs?.join(' ') ?? ''}', [green, styleBold])));
       try {
-        await fxCommandRun(
-            testsConfig.fxEnv.fx, 'build', buildTargets?.toList());
+        await fxCommandRun(testsConfig.fxEnv.fx, 'build', buildArgs?.toList());
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
@@ -262,14 +266,43 @@ class FuchsiaTestCommand {
         workingDirectory: testsConfig.fxEnv.outputDir,
       );
 
+  bool _maybeAddPackageHash(
+      TestBundle testBundle, PackageRepository repository) {
+    if (testsConfig.flags.shouldUsePackageHash &&
+        testBundle.testDefinition.packageUrl != null) {
+      if (repository == null) {
+        emitEvent(TestResult(
+            runtime: Duration(seconds: 0),
+            exitCode: failureExitCode,
+            message:
+                'Package repository is not available. Run "fx serve-updates" again or use the "--no-use-package-hash" flag.',
+            testName: testBundle.testDefinition.name));
+        return false;
+      } else {
+        String packageName = testBundle.testDefinition.packageUrl.packageName;
+        if (repository[packageName] == null) {
+          emitEvent(TestResult(
+              runtime: Duration(seconds: 0),
+              exitCode: failureExitCode,
+              message:
+                  'Package $packageName is not in the package repository, check if it was correctly built or use the "--no-use-package-hash" flag.',
+              testName: testBundle.testDefinition.name));
+          return false;
+        }
+        testBundle.testDefinition.hash = repository[packageName].merkle;
+      }
+    }
+    return true;
+  }
+
   Future<void> runTests(List<TestBundle> testBundles) async {
     // Enforce a limit
     var _testBundles = testsConfig.flags.limit > 0 &&
             testsConfig.flags.limit < testBundles.length
         ? testBundles.sublist(0, testsConfig.flags.limit)
         : testBundles;
-
-    if (!await checklist.isDeviceReady(_testBundles)) {
+    if (!testsConfig.flags.infoOnly &&
+        !await checklist.isDeviceReady(_testBundles)) {
       emitEvent(FatalError('Device is not ready for running device tests'));
       _exitCodeSetter(failureExitCode);
       return;
@@ -287,10 +320,10 @@ class FuchsiaTestCommand {
     }
 
     for (TestBundle testBundle in _testBundles) {
-      if (packageRepository != null &&
-          testBundle.testDefinition.packageUrl != null) {
-        String packageName = testBundle.testDefinition.packageUrl.packageName;
-        testBundle.testDefinition.hash = packageRepository[packageName].merkle;
+      if (!testsConfig.flags.infoOnly &&
+          !_maybeAddPackageHash(testBundle, packageRepository)) {
+        _exitCodeSetter(failureExitCode);
+        continue;
       }
       await testBundle.run().forEach((TestEvent event) {
         emitEvent(event);

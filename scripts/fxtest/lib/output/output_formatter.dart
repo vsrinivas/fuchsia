@@ -43,7 +43,7 @@ abstract class OutputFormatter {
     @required this.wrapWith,
     this.simpleOutput = false,
     OutputBuffer buffer,
-  })  : buffer = buffer ?? OutputBuffer.realIO();
+  }) : buffer = buffer ?? OutputBuffer.realIO();
 
   factory OutputFormatter.fromConfig(
     TestsConfig testsConfig, {
@@ -72,6 +72,9 @@ abstract class OutputFormatter {
   String get suiteExecutionTime => _getExecutionTime(_testSuiteStartTime);
 
   String _getExecutionTime(DateTime _startTime) {
+    if (_startTime == null) {
+      return '-';
+    }
     Duration elapsedTime = DateTime.now().difference(_startTime);
     String minutes = elapsedTime.inMinutes.toString().padLeft(2, '0');
     String seconds = (elapsedTime.inSeconds % 60).toString().padLeft(2, '0');
@@ -171,7 +174,9 @@ abstract class OutputFormatter {
   void _handleTestInfo(TestInfo event);
 
   /// Handler for fatal errors.
-  void _handleFatalError(FatalError event);
+  void _handleFatalError(FatalError event) {
+    buffer.addLine(wrapWith(event.message, [red]));
+  }
 
   /// Handler for the stream of stdout and stderr content produced by running
   /// tests.
@@ -333,11 +338,6 @@ class StandardOutputFormatter extends OutputFormatter {
     }
   }
 
-  @override
-  void _handleFatalError(FatalError event) {
-    buffer.addLine(wrapWith(event.message, [red]));
-  }
-
   void _finalizeLastTestLine() {
     if (!cleanEndOfOutput) return;
     var verboseHint = wrapWith(
@@ -374,8 +374,6 @@ class InfoFormatter extends OutputFormatter {
 
   @override
   void _handleTestInfo(TestInfo event) {}
-  @override
-  void _handleFatalError(FatalError event) {}
   @override
   void _handleTestStarted(TestStarted event) {
     buffer.addLines([

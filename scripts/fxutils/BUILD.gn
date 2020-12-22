@@ -23,6 +23,7 @@ dart_library("fxutils") {
     "src/exceptions.dart",
     "src/fx.dart",
     "src/fx_env.dart",
+    "src/gn_helper.dart",
     "src/list_iterator.dart",
     "src/mock_process.dart",
     "src/process_launcher.dart",
@@ -42,6 +43,7 @@ dart_library("fxutils") {
 dart_test("fxutils_tests") {
   sources = [
     "fxutils_test.dart",
+    "gn_helper_test.dart",
     "list_iterator_test.dart",
     "process_test.dart",
   ]

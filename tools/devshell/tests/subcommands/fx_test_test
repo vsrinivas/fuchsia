@@ -56,7 +56,7 @@ TEST_fxtest_package_server_integration() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT ${fx} test ${testname} > ${out}
+  BT_EXPECT ${fx} test --no-use-package-hash ${testname} > ${out}
   # ensure that is-package-server-running was called
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
   # ensure that update-if-in-base was called with the proper testname
@@ -68,7 +68,7 @@ TEST_fxtest_build() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT ${fx} test ${testname} > ${out}
+  BT_EXPECT ${fx} test --no-use-package-hash ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -80,7 +80,7 @@ TEST_fxtest_build_failure_exits_with_nonzero_status() {
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
   echo 1 > "${BT_TEMP_DIR}/tools/devshell/build.mock_status"
-  BT_EXPECT_FAIL ${fx} test ${testname} > ${out}
+  BT_EXPECT_FAIL ${fx} test --no-use-package-hash ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -91,7 +91,7 @@ TEST_fxtest_nobuild() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT ${fx} test --no-build ${testname} > ${out}
+  BT_EXPECT ${fx} test --no-use-package-hash --no-build ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -104,7 +104,7 @@ TEST_fxtest_fails_with_no_package_server() {
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname1="overflow_fuzzer_test"
   echo 1 > "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_status"
-  BT_EXPECT_FAIL ${fx} test --no-build ${testname} > ${out}
+  BT_EXPECT_FAIL ${fx} test --no-use-package-hash --no-build ${testname} > ${out}
   # ensure that fx is-package-server-running was called
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
 }
@@ -152,10 +152,10 @@ EOF
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl}"
 }
 
-# Test that "fx test" doesn't fail if a component test doesn't have a hashfile
-# property
+# Test that "fx test" fails if a component test doesn't have an entry in the
+# package repository
 TEST_fxtest_no_hashfile() {
-  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cp -R "${DATA_DIR}/tests_hashfile/out" "${BT_TEMP_DIR}"
   cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
   [{"environments": [],
     "test": {
@@ -163,27 +163,27 @@ TEST_fxtest_no_hashfile() {
       "label": "//examples/fuzzer:fuzzing-examples_pkg(//build/toolchain/fuchsia:arm64)",
       "name": "overflow_fuzzer_test",
       "os": "fuchsia",
-      "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx",
+      "package_url": "fuchsia-pkg://fuchsia.com/example_not_in_repository#meta/overflow_fuzzer_test.cmx",
       "path": ""
     }
   }]
 EOF
   local out="${BT_TEMP_DIR}/_fx_test_output"
 
-  # expect that "fx shell run-test-component URL-WITHOUT-HASH" is executed
-  BT_EXPECT ${fx} test --no-build overflow_fuzzer_test >> "${out}"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
-    "run-test-component" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
+  # expect that fx test fails because the repository doesn't have an entry for
+  # this test's package (example_not_in_repository)
+  BT_EXPECT_FAIL ${fx} test --no-build overflow_fuzzer_test >> "${out}"
 }
 
-# Test that "fx test" builds only the "updates" target for device tests
-TEST_fxtest_build_device_only_updates() {
+# Test that "fx test" builds only the minimal target for device tests
+TEST_fxtest_build_device_only_package() {
   mkdir -p "${BT_TEMP_DIR}/out/default"
   cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
   [{"environments": [],
     "test": {
       "cpu": "arm64",
       "label": "//examples/fuzzer:fuzzing-examples_pkg(//build/toolchain/fuchsia:arm64)",
+      "package_label": "//examples/fuzzer:fuzzing_pkg(//build/toolchain/fuchsia:arm64)",
       "name": "overflow_fuzzer_test",
       "os": "fuchsia",
       "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx",
@@ -193,9 +193,12 @@ TEST_fxtest_build_device_only_updates() {
 EOF
   local out="${BT_TEMP_DIR}/_fx_test_output"
 
-  # expect "fx shell build updates"
-  BT_EXPECT ${fx} test overflow_fuzzer_test >> "${out}"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "updates"
+  # with incremental enabled, expect "fx shell build <test_package>"
+  BT_EXPECT ${fx} --enable=incremental test --no-use-package-hash overflow_fuzzer_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "examples/fuzzer:fuzzing_pkg"
+  # with incremental disabled, expect "fx shell build updates"
+  BT_EXPECT ${fx} --disable=incremental test --no-use-package-hash overflow_fuzzer_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build.mock_state.2" "updates"
 }
 
 # Test that "fx test" builds the default target for an e2e test
@@ -241,7 +244,7 @@ EOF
 
   # expect "fx shell build"
   BT_EXPECT ${fx} test example_host_test >> "${out}"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test" "--no-zircon"
 }
 
 # Test that "fx test" executes an e2e test with the proper env variables set

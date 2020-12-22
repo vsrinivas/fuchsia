@@ -105,7 +105,7 @@ if [[ -n "${device_port}" ]]; then
 fi
 device_addr="$(get-fuchsia-device-addr)" || exit $?
 if [[ -z "${device_addr}" ]]; then
-  # Error output is provided to stderr by get-fuchsia-device-addr
+  fx-error "Cannot find a device."
   exit 1
 fi
 args+=( "${device_addr}" )
@@ -116,13 +116,4 @@ args+=( "$@" )
 # failures much harder to diagnose when helping people. The control master will
 # mean you only get one per TCP socket, which is once per newly booted host.
 # It's not a huge burden compared to end user support.
-fx-command-run ssh "${args[@]}"
-status=$?
-
-# FX_CALLER is not empty if this script was executed via fx-command-run/exec
-# and we only want to show this hint message when the user executes 'fx shell'
-# directly.
-if [[ -z "${FX_CALLER}" && $status -eq 255 ]]; then
-  echo "Hint: use 'fx shell --check' to diagnose SSH configuration issues."
-fi
-exit $status
+fx-command-exec ssh "${args[@]}"
