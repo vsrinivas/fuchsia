@@ -1,0 +1,9 @@
+library foo.bar;
+
+string A_KEY {
+  A_VALUE = "a string value",
+};
+
+extend uint fuchsia.BIND_PROTOCOL {
+  BUS = 84,
+};

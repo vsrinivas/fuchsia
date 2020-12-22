@@ -7,7 +7,8 @@
 use anyhow::{anyhow, Context, Error};
 use bind_debugger::instruction::{Condition, Instruction, InstructionInfo};
 use bind_debugger::test;
-use bind_debugger::{compiler, offline_debugger};
+use bind_debugger::{bind_library, compiler, offline_debugger};
+use std::convert::TryFrom;
 use std::fmt::Write;
 use std::fs::File;
 use std::io::prelude::*;
@@ -85,6 +86,15 @@ enum Command {
         /// A file containing the test specification.
         #[structopt(short = "t", long = "test-spec", parse(from_os_str))]
         test_spec: PathBuf,
+    },
+    #[structopt(name = "generate")]
+    Generate {
+        #[structopt(flatten)]
+        options: SharedOptions,
+
+        /// Output FIDL file.
+        #[structopt(short = "o", long = "output", parse(from_os_str))]
+        output: Option<PathBuf>,
     },
 }
 
@@ -191,6 +201,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
                 depfile,
             )
         }
+        Command::Generate { options, output } => handle_generate(options.input, output),
     }
 }
 
@@ -263,9 +274,110 @@ fn handle_compile(
     Ok(())
 }
 
+/// Converts a declaration to the FIDL constant format.
+fn convert_to_fidl_constant(
+    declaration: bind_library::Declaration,
+    path: &String,
+) -> Result<String, Error> {
+    let mut result = String::new();
+    let identifier_name = declaration.identifier.name.to_uppercase();
+
+    // Generating the key definition is only done when it is not extended.
+    // When it is extended, the key will already be defined in the library that it is
+    // extending from.
+    if !declaration.extends {
+        writeln!(
+            &mut result,
+            "const NodePropertyKey {} = \"{}.{}\";",
+            &identifier_name, &path, &identifier_name
+        )?;
+    }
+
+    for value in declaration.values {
+        let property_output = match &value {
+            bind_library::Value::Number(name, val) => {
+                let name = name.to_string().to_uppercase();
+                format!("const NodePropertyValueUint {}_{} = {};", identifier_name, name, val)
+            }
+            bind_library::Value::Str(name, val) => {
+                let name = name.to_string().to_uppercase();
+                format!("const NodePropertyValueString {}_{} = \"{}\";", identifier_name, name, val)
+            }
+            bind_library::Value::Bool(name, val) => {
+                let name = name.to_string().to_uppercase();
+                format!("const NodePropertyValueBool {}_{} = {};", identifier_name, name, val)
+            }
+            bind_library::Value::Enum(name) => {
+                let name = name.to_string().to_uppercase();
+                format!("const NodePropertyValueEnum {}_{};", identifier_name, name)
+            }
+        };
+        writeln!(&mut result, "{}", property_output)?;
+    }
+
+    Ok(result)
+}
+
+fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> {
+    // Get library path.
+    let path = &syntax_tree.name.to_string();
+
+    // Convert all key value pairs to their equivalent constants.
+    let definition = syntax_tree
+        .declarations
+        .into_iter()
+        .map(|declaration| convert_to_fidl_constant(declaration, path))
+        .collect::<Result<Vec<String>, _>>()?
+        .join("\n");
+
+    // Output result into template.
+    let mut output = String::new();
+    output
+        .write_fmt(format_args!(
+            include_str!("templates/fidl.template"),
+            path = path,
+            definition = definition,
+        ))
+        .context("Failed to format output")?;
+
+    Ok(output.to_string())
+}
+
+fn handle_generate(input: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
+    let input = input.ok_or(anyhow!("An input is required."))?;
+    let input_content = read_file(&input)?;
+
+    // Generate the FIDL library.
+    let keys = bind_library::Ast::try_from(input_content.as_str())
+        .map_err(compiler::CompilerError::BindParserError)?;
+    let template = write_fidl_template(keys)?;
+
+    // Create and open output file.
+    let mut output_writer: Box<dyn io::Write> = if let Some(output) = output {
+        Box::new(File::create(output).context("Failed to create output file.")?)
+    } else {
+        // Output file name was not given. Print result to stdout.
+        Box::new(io::stdout())
+    };
+
+    // Write FIDL library to output.
+    output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn get_test_fidl_template(ast: bind_library::Ast) -> Vec<String> {
+        write_fidl_template(ast)
+            .unwrap()
+            .split("\n")
+            .map(|s| s.to_string())
+            .filter(|x| !x.is_empty())
+            .collect()
+    }
 
     #[test]
     fn zero_instructions() {
@@ -336,5 +448,74 @@ mod tests {
         assert!(result.contains("/a/input"));
         assert!(result.contains("/a/include"));
         assert!(result.contains("/b/include"));
+    }
+
+    #[test]
+    fn zero_keys() {
+        let empty_ast = bind_library::Ast::try_from("library fuchsia.platform;").unwrap();
+        let template: Vec<String> = get_test_fidl_template(empty_ast);
+
+        let expected = vec![
+            "library fuchsia.platform.bind;".to_string(),
+            "using fuchsia.driver.framework;".to_string(),
+        ];
+
+        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+    }
+
+    #[test]
+    fn one_key() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n};",
+        )
+        .unwrap();
+        let template: Vec<String> = get_test_fidl_template(ast);
+
+        let expected = vec![
+            "library fuchsia.platform.bind;".to_string(),
+            "using fuchsia.driver.framework;".to_string(),
+            "const NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
+        ];
+
+        println!("{:#?}\n\n", template);
+        println!("{:#?}", expected);
+
+        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+    }
+
+    #[test]
+    fn one_key_extends() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nextend uint fuchsia.BIND_PROTOCOL {\nBUS = 84,\n};",
+        )
+        .unwrap();
+        let template: Vec<String> = get_test_fidl_template(ast);
+
+        let expected = vec![
+            "library fuchsia.platform.bind;".to_string(),
+            "using fuchsia.driver.framework;".to_string(),
+            "const NodePropertyValueUint BIND_PROTOCOL_BUS = 84;".to_string(),
+        ];
+
+        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+    }
+
+    #[test]
+    fn lower_snake_case() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nstring a_key {\na_value = \"a string value\",\n};",
+        )
+        .unwrap();
+        let template: Vec<String> = get_test_fidl_template(ast);
+
+        let expected = vec![
+            "library fuchsia.platform.bind;".to_string(),
+            "using fuchsia.driver.framework;".to_string(),
+            "const NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
+        ];
+
+        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 }

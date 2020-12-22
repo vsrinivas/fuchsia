@@ -1,0 +1,5 @@
+library {path}.bind;
+
+using fuchsia.driver.framework;
+
+{definition}

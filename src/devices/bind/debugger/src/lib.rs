@@ -5,7 +5,7 @@
 // This crate doesn't comply with all 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 
-mod bind_library;
+pub mod bind_library;
 mod bind_program;
 mod c_generation;
 pub mod compiler;
