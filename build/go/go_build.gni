@@ -121,6 +121,9 @@ template("go_build") {
     target_name = main_target_name
     _variant_shared = false
 
+    if (carchive) {
+    }
+
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -254,13 +257,35 @@ template("go_build") {
 
     if (carchive) {
       args += [ "--buildmode=c-archive" ]
+
+      # carchive is only set when building go fuzzers as static libraries,
+      # that is then linked into a fuzzer executables. Make sure that it
+      # is built in the same build variant as the one used for these, to
+      # ensure they grab the right dependencies.
+      variant_selector_target_type = "fuzzed_executable"
     }
 
     if (is_fuchsia) {
+      # Inject a dependency to libfdio.so. Note that as a special case,
+      # when building fuzzing binaries, this library should be built in
+      # a non-fuzzing variant (because the fuzzing runtime depends on it).
+      # So compute the correct toolchain for it directly here.
+      _fdio_toolchain =
+          string_replace(current_toolchain, "-fuzzer", "") + "-shared"
+      _fdio_label_with_toolchain = "//sdk/lib/fdio($_fdio_toolchain)"
+
       deps += [
-        "//sdk/lib/fdio",
         "//zircon/public/sysroot:go_binary_deps",
+        _fdio_label_with_toolchain,
       ]
+
+      if (_fdio_toolchain != current_toolchain + "-shared") {
+        args += [
+          "--lib-dir",
+          rebase_path(
+              get_label_info(_fdio_label_with_toolchain, "root_out_dir")),
+        ]
+      }
 
       if (!carchive && output_breakpad_syms && host_os != "mac") {
         args += [

@@ -121,15 +121,29 @@ if (_instrumented_target_variant != "") {
 
 _system_target_variant = _uninstrumented_target_variant
 
-# This is the toolchain used to build the C library for regular Fuchsia packages.
-# If an instrumented toolchain is used, it will be installed as lib/<variant>/ld.so.1
-# as expected by other user-level binaries.
-sysroot_libc_toolchain = sysroot_libc_base_toolchain + _user_target_variant
-
 # This is the toolchain used to build the C library that appears in the system package,
 # i.e. that is installed under /lib/ld.so.1. It must be a non-instrumented version of
 # the library, though a variant like "gcc" might be applied to it.
 system_libc_toolchain = sysroot_libc_base_toolchain + _system_target_variant
+
+if (is_fuchsia) {
+  # When in a toolchain variant of the Fuchsia base toolchain, find the
+  # corresponding toolchain variant of user.libc_$target_cpu to build
+  # the C library with it.
+  sysroot_libc_toolchain = sysroot_libc_base_toolchain
+  if (toolchain_variant.suffix != "") {
+    sysroot_libc_toolchain =
+        sysroot_libc_base_toolchain +
+        string_replace(toolchain_variant.suffix, "-fuzzer", "")
+  } else {
+    sysroot_libc_toolchain = system_libc_toolchain
+  }
+} else {
+  # This is the toolchain used to build the C library for regular Fuchsia packages.
+  # If an instrumented toolchain is used, it will be installed as lib/<variant>/ld.so.1
+  # as expected by other user-level binaries.
+  sysroot_libc_toolchain = sysroot_libc_base_toolchain + _user_target_variant
+}
 
 # The GN target that builds the C library for the current variant selection.
 sysroot_libc_target = "$sysroot_libc_label($sysroot_libc_toolchain)"
@@ -259,35 +273,5 @@ sysroot_crt1_obj =
 #   That is the way the build worked before unification, and continues to
 #   do so for now. In the future, it might be possible to use the right
 #   instrumented C library at link time instead.
-#
-#   select_variant = []
-#     No variant is selected. Both libraries are the same binary, installed
-#     as lib/ld.so.1 everywhere,
-#
-# - The fact that the C library can be compiled with GCC, but that
-#   instrumented executables require a C library built in the same
-#   variant toolchain instance means that variant selection for the
-#   C library must happen in a slightly different way than for
-#   regular targets. Consider the following four cases:
-#
-#   select_variant = [ "gcc" ]
-#     The system C library is built with GCC, and installed as lib/ld.so.1
-#     everywhere. Note that the "gcc" selector only applies to zircon-specific
-#     toolchains (e.g. the ones used to build the C library, the Zircon VDSO,
-#     or the Zircon kernel), but not to the toolchain(s) used to build Fuchsia
-#     user binaries. This is intentional (since a lot of Fuchsia user code does
-#     not compile with GCC without errors or warnings-as-errors).
-#
-#   select_variant = [ "asan", "gcc" ]
-#     Variant selection stops at the first variant in the list that matches
-#     the current target. In this specific case, "asan" will always match
-#     for the C library and Fuchsia user binaries, and the "gcc" variant
-#     would be ignored. However, the system C library, which ignores
-#     instrumented variants, will be built with GCC nonetheless.
-#
-#   select_variant = [ "gcc", "asan" ]
-#     Similarly, the "gcc" selector applies to the C library target,
-#     but not to other Fuchsia user binaries. The system C library will
-#     also be built with GCC.
 #
 

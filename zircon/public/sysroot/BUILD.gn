@@ -254,6 +254,9 @@ if (current_toolchain != sysroot_toolchain) {
     # The parent group() that depends on everything else.
     group(target_name) {
       deps = _sysroot_deps
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
     }
   }
 
@@ -268,6 +271,7 @@ if (current_toolchain != sysroot_toolchain) {
   #
   _create_sysroot("cpp_binary_deps") {
     sysroot_dir = cpp_sysroot_dir
+    deps = [ "//zircon/system/ulib/c" ]
   }
 
   # Rust compilation can now use the C++ sysroot directly, so just
@@ -287,6 +291,7 @@ if (current_toolchain != sysroot_toolchain) {
     sysroot_dir = go_sysroot_dir
     add_crt1 = true
     absolute_stub_paths = true
+    deps = [ "//zircon/system/ulib/c" ]
   }
 
   # Depend on this to only require the Zircon headers, but not link to the

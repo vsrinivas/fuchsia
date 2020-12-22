@@ -93,9 +93,7 @@ template("go_fuzzer") {
       disable_syslog_backend = true
     }
 
-    # As noted in go_build.gni, Go libraries do not generate distinct outputs for each variants,
-    # but always use the output of the base toolchain.
-    deps = [ ":${wrapper_name}(${toolchain_variant.base})" ]
+    deps = [ ":$wrapper_name" ]
     base_root_out_dir = get_label_info(deps[0], "root_out_dir")
     base_library_name = get_label_info(deps[0], "name")
     libs = [ "$base_root_out_dir/${base_library_name}.a" ]
