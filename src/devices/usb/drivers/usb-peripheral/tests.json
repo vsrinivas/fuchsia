@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Invalid Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        }
+    },
+    {
+        "name": "usb peripheral",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DCI"
+        }
+    }
+]

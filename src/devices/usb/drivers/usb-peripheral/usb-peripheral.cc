@@ -16,7 +16,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -31,6 +30,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
+#include "src/devices/usb/drivers/usb-peripheral/usb_peripheral-bind.h"
 #include "usb-function.h"
 
 namespace peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
@@ -1033,7 +1033,4 @@ static constexpr zx_driver_ops_t ops = []() {
 
 }  // namespace usb_peripheral
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_device, usb_peripheral::ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DCI),
-ZIRCON_DRIVER_END(usb_device)
+ZIRCON_DRIVER(usb_device, usb_peripheral::ops, "zircon", "0.1");
