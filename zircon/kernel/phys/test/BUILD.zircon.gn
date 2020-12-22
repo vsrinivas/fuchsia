@@ -224,6 +224,7 @@ if (current_toolchain != default_toolchain) {
       ":test-main",
       "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/libc",
+      "$zx/kernel/phys/lib/memalloc",
       "$zx/system/ulib/zbitl",
     ]
   }

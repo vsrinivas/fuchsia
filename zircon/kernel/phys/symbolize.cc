@@ -47,7 +47,6 @@ struct BuildIdNote final {
 
 // These are defined by the linker script.
 extern "C" void __code_start();
-extern "C" char _end[];
 extern "C" const BuildIdNote __start_note_gnu_build_id[];
 extern "C" const BuildIdNote __stop_note_gnu_build_id[];
 

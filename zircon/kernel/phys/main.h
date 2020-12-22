@@ -43,7 +43,9 @@ extern "C" [[noreturn]] void PhysMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD
 // executable defines.  It can use printf (and stdout generally) freely.
 [[noreturn]] void ZbiMain(void* zbi, arch::EarlyTicks) PHYS_SINGLETHREAD;
 
+// These are defined by the linker script.
 extern "C" __LOCAL const char PHYS_LOAD_ADDRESS[];  // Address this file was loaded into memory.
+extern "C" __LOCAL const char _end[];               // End of the image, including ".bss"
 
 // Apply any relocations to our binary.
 //
