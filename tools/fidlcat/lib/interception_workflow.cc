@@ -145,6 +145,11 @@ void InterceptingProcessObserver::WillDestroyProcess(zxdb::Process* process,
   workflow_->ProcessDetached(process->GetKoid());
 }
 
+void InterceptingProcessObserver::OnSymbolLoadFailure(zxdb::Process* process,
+                                                      const zxdb::Err& err) {
+  FX_LOGS(ERROR) << " cannot load symbols for process " << process->GetKoid() << ": " << err.msg();
+}
+
 InterceptionWorkflow::InterceptionWorkflow()
     : session_(new zxdb::Session()),
       delete_session_(true),
