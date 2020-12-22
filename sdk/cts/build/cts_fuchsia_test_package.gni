@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_vars.gni")
+import("//sdk/cts/build/write_cts_file.gni")
 import("//src/sys/build/components.gni")
 
 # Defines a Compatibility Test Suite package.
@@ -44,10 +44,6 @@ template("cts_fuchsia_test_package") {
     }
   }
 
-  # Creates a file to enable other CTS targets to depend on this test package.
-  target_build_dir = get_label_info(":$target_name", "dir")
-  target_build_dir = string_replace(target_build_dir, "//", "/")
-  write_file(
-      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
-      true)
+  write_cts_file(target_name) {
+  }
 }

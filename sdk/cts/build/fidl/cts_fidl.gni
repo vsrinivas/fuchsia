@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_vars.gni")
+import("//sdk/cts/build/write_cts_file.gni")
 
 # Declares a FIDL Library that can be used in CTS.
 #
@@ -27,10 +27,6 @@ template("cts_fidl") {
     }
   }
 
-  # Creates a file to enable other CTS targets to depend on this test package.
-  target_build_dir = get_label_info(":$target_name", "dir")
-  target_build_dir = string_replace(target_build_dir, "//", "/")
-  write_file(
-      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
-      "true")
+  write_cts_file(target_name) {
+  }
 }

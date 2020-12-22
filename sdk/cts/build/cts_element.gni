@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//sdk/cts/build/allowed_cts_deps.gni")
-import("//sdk/cts/build/cts_vars.gni")
 
 # Defines a CTS element.
 #

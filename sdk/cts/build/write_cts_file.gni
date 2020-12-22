@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A helper rule to write a file indicating that a target is a CTS target.
+#
+# This rule should not be called directly, but through cts_* other build rules.
+template("write_cts_file") {
+  not_needed(invoker, "*")
+  cts_extension = "this_is_cts"
+
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      true)
+}
