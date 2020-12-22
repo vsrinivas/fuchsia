@@ -1,7 +1,8 @@
 {
   "apps": [
     "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
-    "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx"
+    "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
+    "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
   ],
   "services": {
     "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
@@ -23,7 +24,6 @@
     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
     "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
-    "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
     "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
     "fuchsia.wlan.policy.AccessPointListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia.wlan.policy.AccessPointProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
@@ -40,8 +40,7 @@
     "fuchsia.wlan.policy.AccessPointProvider",
     "fuchsia.wlan.policy.AccessPointListener",
     "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
-    "fuchsia.time.Utc"
+    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator"
   ],
   "update_dependencies": [
     "fuchsia.posix.socket.Provider",

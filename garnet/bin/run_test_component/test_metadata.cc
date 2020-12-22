@@ -81,7 +81,6 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::sys::test::CacheControl::Name_,
     fuchsia::sysinfo::SysInfo::Name_,
     fuchsia::sysmem::Allocator::Name_,
-    fuchsia::time::Utc::Name_,
     fuchsia::tracing::provider::Registry::Name_,
     fuchsia::tracing::kernel::Controller::Name_,
     fuchsia::tracing::kernel::Reader::Name_,

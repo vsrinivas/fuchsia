@@ -475,9 +475,7 @@ mod tests {
         crate::{
             enums::{SampleValidationError as SVE, StartClockSource, TimeSourceError as TSE},
             time_source::FakeTimeSource,
-            Notifier,
         },
-        fidl_fuchsia_time as ftime,
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
     };
 
@@ -529,11 +527,8 @@ mod tests {
         inspector: &Inspector,
         include_monitor: bool,
     ) -> (InspectDiagnostics, Arc<zx::Clock>) {
-        let primary = PrimaryTrack {
-            time_source: FakeTimeSource::failing(),
-            clock: create_clock(),
-            notifier: Notifier::new(ftime::UtcSource::Backstop),
-        };
+        let primary =
+            PrimaryTrack { time_source: FakeTimeSource::failing(), clock: create_clock() };
         let monitor = match include_monitor {
             true => {
                 Some(MonitorTrack { time_source: FakeTimeSource::failing(), clock: create_clock() })

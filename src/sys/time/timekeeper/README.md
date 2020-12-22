@@ -1,12 +1,9 @@
 # timekeeper
 
-timekeeper implements the [`fuchsia.time.Utc`][utc-fidl] protocol.
-
 Because timekeeper is implemented in Rust, we recommend that you have consulted the [Fuchsia docs on
 developing with Rust](fuchsia-rust-docs).
 
 [fuchsia-rust-docs]: ../../../docs/development/languages/rust/README.md
-[utc-fidl]: ./fidl/utc.fidl
 
 ## Getting Started
 

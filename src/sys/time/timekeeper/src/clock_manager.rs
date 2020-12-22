@@ -9,14 +9,13 @@ use {
             ClockCorrectionStrategy, ClockUpdateReason, StartClockSource, Track, WriteRtcOutcome,
         },
         estimator::Estimator,
-        notifier::Notifier,
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
         util::time_at_monotonic,
     },
     chrono::prelude::*,
-    fidl_fuchsia_time as ftime, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     log::{error, info},
     std::{
         fmt::{self, Debug},
@@ -89,8 +88,6 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     estimator: Option<Estimator<D>>,
     /// An optional real time clock that will be updated when new UTC estimates are produced.
     rtc: Option<R>,
-    /// An optional notifier used to communicate changes in the clock synchronization state.
-    notifier: Option<Notifier>,
     /// A diagnostics implementation for recording events of note.
     diagnostics: Arc<D>,
     /// The track of the estimate being managed.
@@ -106,11 +103,10 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         clock: Arc<zx::Clock>,
         time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
         rtc: Option<R>,
-        notifier: Option<Notifier>,
         diagnostics: Arc<D>,
         track: Track,
     ) {
-        ClockManager::new(clock, time_source_manager, rtc, notifier, diagnostics, track)
+        ClockManager::new(clock, time_source_manager, rtc, diagnostics, track)
             .maintain_clock()
             .await
     }
@@ -125,7 +121,6 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         clock: Arc<zx::Clock>,
         time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
         rtc: Option<R>,
-        notifier: Option<Notifier>,
         diagnostics: Arc<D>,
         track: Track,
     ) -> Self {
@@ -134,7 +129,6 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             time_source_manager,
             estimator: None,
             rtc,
-            notifier,
             diagnostics,
             track,
             delayed_updates: None,
@@ -189,11 +183,6 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                     }
                 };
                 self.diagnostics.record(Event::WriteRtc { outcome });
-            }
-
-            // And trigger the notifier if we have one.
-            if let Some(ref mut notifier) = self.notifier {
-                notifier.set_source(ftime::UtcSource::External).await;
             }
         }
     }
@@ -342,7 +331,6 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
-        std::task::Poll,
         test_util::{assert_geq, assert_leq},
     };
 
@@ -374,7 +362,6 @@ mod tests {
         clock: Arc<zx::Clock>,
         samples: Vec<Sample>,
         rtc: Option<FakeRtc>,
-        notifier: Option<Notifier>,
         diagnostics: Arc<FakeDiagnostics>,
     ) -> ClockManager<FakeTimeSource, FakeRtc, FakeDiagnostics> {
         let mut events: Vec<TimeSourceEvent> =
@@ -387,7 +374,7 @@ mod tests {
             time_source,
             Arc::clone(&diagnostics),
         );
-        ClockManager::new(clock, time_source_manager, rtc, notifier, diagnostics, *TEST_TRACK)
+        ClockManager::new(clock, time_source_manager, rtc, diagnostics, *TEST_TRACK)
     }
 
     #[test]
@@ -421,43 +408,31 @@ mod tests {
     }
 
     #[test]
-    fn single_update_with_rtc_and_notifier() {
+    fn single_update_with_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
 
         let clock = create_clock();
         let rtc = FakeRtc::valid(BACKSTOP_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
-        // Spawn test notifier and verify the initial state
-        let (utc, utc_requests) =
-            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
-        let notifier = Notifier::new(ftime::UtcSource::Backstop);
-        notifier.handle_request_stream(utc_requests);
-        let mut fut1 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
-
-        // Create a clock manager
+        // Create a clock manager.
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             Arc::clone(&clock),
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             Some(rtc.clone()),
-            Some(notifier),
             Arc::clone(&diagnostics),
         );
 
-        // Maintain the clock until no more work remains
+        // Maintain the clock until no more work remains.
         let monotonic_before = zx::Time::get_monotonic();
-        let mut fut2 = clock_manager.maintain_clock().boxed();
-        let _ = executor.run_until_stalled(&mut fut2);
+        let mut fut = clock_manager.maintain_clock().boxed();
+        let _ = executor.run_until_stalled(&mut fut);
         let updated_utc = clock.read().unwrap();
         let monotonic_after = zx::Time::get_monotonic();
 
-        // Check that the clocks and reported time source have been updated. The UTC
-        // should be bounded by the offset we supplied added to the monotonic window in which the
-        // calculation took place.
-        let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut3), Poll::Ready(ftime::UtcSource::External));
+        // Check that the clocks have been updated. The UTC should be bounded by the offset we
+        // supplied added to the monotonic window in which the calculation took place.
         assert_geq!(updated_utc, monotonic_before + OFFSET);
         assert_leq!(updated_utc, monotonic_after + OFFSET);
         assert_geq!(rtc.last_set().unwrap(), monotonic_before + OFFSET);
@@ -473,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn single_update_without_rtc_and_notifier() {
+    fn single_update_without_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
 
         let clock = create_clock();
@@ -482,7 +457,6 @@ mod tests {
         let clock_manager = create_clock_manager(
             Arc::clone(&clock),
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
-            None,
             None,
             Arc::clone(&diagnostics),
         );
@@ -524,7 +498,6 @@ mod tests {
                 ),
                 Sample::new(monotonic_ref + OFFSET_2, monotonic_ref, STD_DEV),
             ],
-            None,
             None,
             Arc::clone(&diagnostics),
         );
@@ -587,7 +560,6 @@ mod tests {
                 ),
                 Sample::new(monotonic_ref + OFFSET + delta_offset, monotonic_ref, STD_DEV),
             ],
-            None,
             None,
             Arc::clone(&diagnostics),
         );

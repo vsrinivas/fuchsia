@@ -53,7 +53,6 @@ rustc_binary("bin") {
     "src/enums.rs",
     "src/estimator.rs",
     "src/main.rs",
-    "src/notifier.rs",
     "src/rtc.rs",
     "src/time_source.rs",
     "src/time_source_manager.rs",

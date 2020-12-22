@@ -10,7 +10,6 @@ mod clock_manager;
 mod diagnostics;
 mod enums;
 mod estimator;
-mod notifier;
 mod rtc;
 mod time_source;
 mod time_source_manager;
@@ -23,7 +22,6 @@ use {
             CobaltDiagnostics, CompositeDiagnostics, Diagnostics, Event, InspectDiagnostics,
         },
         enums::{InitialClockState, InitializeRtcOutcome, Role, StartClockSource, Track},
-        notifier::Notifier,
         rtc::{Rtc, RtcImpl},
         time_source::{PushTimeSource, TimeSource},
         time_source_manager::TimeSourceManager,
@@ -72,7 +70,6 @@ const DEV_COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimension
 struct PrimaryTrack<T: TimeSource> {
     time_source: T,
     clock: Arc<zx::Clock>,
-    notifier: Notifier,
 }
 
 /// The information required to maintain UTC for the monitor track.
@@ -109,10 +106,6 @@ async fn main() -> Result<(), Error> {
     );
 
     info!("constructing time sources");
-    let notifier = Notifier::new(match initial_clock_state(&utc_clock) {
-        InitialClockState::NotSet => ftime::UtcSource::Backstop,
-        InitialClockState::PreviouslySet => ftime::UtcSource::Unverified,
-    });
     let time_source_urls = match options.dev_time_sources {
         true => DEV_TEST_SOURCES,
         false => DEFAULT_SOURCES,
@@ -120,7 +113,6 @@ async fn main() -> Result<(), Error> {
     let primary_track = PrimaryTrack {
         time_source: PushTimeSource::new(time_source_urls.primary.to_string()),
         clock: Arc::new(utc_clock),
-        notifier: notifier.clone(),
     };
     let monitor_track = time_source_urls.monitor.map(|url| MonitorTrack {
         time_source: PushTimeSource::new(url.to_string()),
@@ -171,11 +163,6 @@ async fn main() -> Result<(), Error> {
     })
     .detach();
 
-    info!("serving notifier on servicefs");
-    fs.dir("svc").add_fidl_service(move |requests: ftime::UtcRequestStream| {
-        notifier.handle_request_stream(requests);
-    });
-
     fs.take_and_serve_directory_handle()?;
     Ok(fs.collect().await)
 }
@@ -207,11 +194,10 @@ fn initial_clock_state(utc_clock: &zx::Clock) -> InitialClockState {
 }
 
 /// Attempts to initialize a userspace clock from the current value of the real time clock.
-/// sending progress to diagnosistics and a notifier as appropriate.
+/// sending progress to diagnostics as appropriate.
 async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
     rtc: &R,
     clock: &zx::Clock,
-    notifier: &mut Notifier,
     diagnostics: Arc<D>,
 ) {
     info!("reading initial RTC time.");
@@ -245,7 +231,6 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
     if let Err(status) = clock.update(zx::ClockUpdate::new().value(time)) {
         warn!("failed to start UTC clock from RTC at time {}: {}", utc_chrono, status);
     } else {
-        notifier.set_source(ftime::UtcSource::Unverified).await;
         diagnostics
             .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
         info!("started UTC clock from RTC at time: {}", utc_chrono);
@@ -274,27 +259,17 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
     let initial_clock_state = initial_clock_state(&primary.clock);
     diagnostics.record(Event::Initialized { clock_state: initial_clock_state });
 
-    match initial_clock_state {
-        InitialClockState::NotSet => {
-            if let Some(rtc) = optional_rtc.as_ref() {
-                set_clock_from_rtc(
-                    rtc,
-                    &mut primary.clock,
-                    &mut primary.notifier,
-                    Arc::clone(&diagnostics),
-                )
-                .await;
+    if let Some(rtc) = optional_rtc.as_ref() {
+        match initial_clock_state {
+            InitialClockState::NotSet => {
+                set_clock_from_rtc(rtc, &mut primary.clock, Arc::clone(&diagnostics)).await;
             }
-        }
-        InitialClockState::PreviouslySet => {
-            if optional_rtc.is_some() {
+            InitialClockState::PreviouslySet => {
                 diagnostics.record(Event::InitializeRtc {
                     outcome: InitializeRtcOutcome::ReadNotAttempted,
                     time: None,
                 });
             }
-            info!("clock was already running at initialization, reporting source as unverified");
-            primary.notifier.set_source(ftime::UtcSource::Unverified).await;
         }
     }
 
@@ -325,7 +300,6 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
         primary.clock,
         primary_source_manager,
         optional_rtc,
-        Some(primary.notifier),
         Arc::clone(&diagnostics),
         Track::Primary,
     );
@@ -334,7 +308,6 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
             ClockManager::<T, R, D>::execute(
                 clock,
                 source_manager,
-                None,
                 None,
                 diagnostics,
                 Track::Monitor,
@@ -356,7 +329,6 @@ mod tests {
         },
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
         lazy_static::lazy_static,
-        std::task::Poll,
     };
 
     const NANOS_PER_SECOND: i64 = 1_000_000_000;
@@ -380,24 +352,19 @@ mod tests {
         (Arc::new(clock), initial_update_ticks)
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn successful_update_single_notify_client_with_monitor() {
+    #[test]
+    fn successful_update_with_monitor() {
+        let mut executor = fasync::Executor::new().unwrap();
         let (primary_clock, primary_ticks) = create_clock();
         let (monitor_clock, monitor_ticks) = create_clock();
         let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
-        let (utc, utc_requests) =
-            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let monotonic_ref = zx::Time::get_monotonic();
         let internet_reachable = future::ok(());
 
-        // Spawning test notifier and verifying initial state
-        let notifier = Notifier::new(ftime::UtcSource::Backstop);
-        notifier.handle_request_stream(utc_requests);
-        assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
-
-        let _task = fasync::Task::spawn(maintain_utc(
+        // Maintain UTC until no more work remains
+        let mut fut = maintain_utc(
             PrimaryTrack {
                 clock: Arc::clone(&primary_clock),
                 time_source: FakeTimeSource::events(vec![
@@ -408,7 +375,6 @@ mod tests {
                         STD_DEV,
                     )),
                 ]),
-                notifier: notifier.clone(),
             },
             Some(MonitorTrack {
                 clock: Arc::clone(&monitor_clock),
@@ -426,15 +392,16 @@ mod tests {
             internet_reachable,
             Arc::clone(&diagnostics),
             false,
-        ));
+        )
+        .boxed();
+        let _ = executor.run_until_stalled(&mut fut);
 
-        // Checking that the reported time source has been updated and the clocks are set.
-        assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::External);
+        // Check that the clocks are set.
         assert!(primary_clock.get_details().unwrap().last_value_update_ticks > primary_ticks);
         assert!(monitor_clock.get_details().unwrap().last_value_update_ticks > monitor_ticks);
         assert!(rtc.last_set().is_some());
 
-        // Checking that the correct diagnostic events were logged.
+        // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::Initialized { clock_state: InitialClockState::NotSet },
             Event::InitializeRtc {
@@ -468,29 +435,21 @@ mod tests {
     }
 
     #[test]
-    fn no_update_invalid_rtc_single_notify_client() {
+    fn no_update_invalid_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
         let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
-        let (utc, utc_requests) =
-            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
         }]);
 
         let internet_reachable = future::ok(());
 
-        // Spawning test notifier and verifying the initial state
-        let notifier = Notifier::new(ftime::UtcSource::Backstop);
-        notifier.handle_request_stream(utc_requests);
-        let mut fut1 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
-
         // Maintain UTC until no more work remains
-        let mut fut2 = maintain_utc(
-            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
+        let mut fut = maintain_utc(
+            PrimaryTrack { clock: Arc::clone(&clock), time_source },
             None,
             Some(rtc.clone()),
             internet_reachable,
@@ -498,11 +457,7 @@ mod tests {
             false,
         )
         .boxed();
-        let _ = executor.run_until_stalled(&mut fut2);
-
-        // Checking that the reported time source has not been updated
-        let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut3), Poll::Pending);
+        let _ = executor.run_until_stalled(&mut fut);
 
         // Checking that the clock has not been updated yet
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
@@ -521,29 +476,21 @@ mod tests {
     }
 
     #[test]
-    fn no_update_valid_rtc_single_notify_client() {
+    fn no_update_valid_rtc() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
         let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
-        let (utc, utc_requests) =
-            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
         }]);
 
         let internet_reachable = future::ok(());
 
-        // Spawning test notifier and verifying the initial state
-        let notifier = Notifier::new(ftime::UtcSource::Backstop);
-        notifier.handle_request_stream(utc_requests);
-        let mut fut1 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
-
         // Maintain UTC until no more work remains
-        let mut fut2 = maintain_utc(
-            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
+        let mut fut = maintain_utc(
+            PrimaryTrack { clock: Arc::clone(&clock), time_source },
             None,
             Some(rtc.clone()),
             internet_reachable,
@@ -551,14 +498,7 @@ mod tests {
             false,
         )
         .boxed();
-        let _ = executor.run_until_stalled(&mut fut2);
-
-        // Checking that the reported time source has been updated to reflect the use of RTC
-        let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(
-            executor.run_until_stalled(&mut fut3),
-            Poll::Ready(ftime::UtcSource::Unverified)
-        );
+        let _ = executor.run_until_stalled(&mut fut);
 
         // Checking that the clock was updated to use the valid RTC time.
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
@@ -591,23 +531,15 @@ mod tests {
         let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
-        let (utc, utc_requests) =
-            fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
         }]);
 
         let internet_reachable = future::ok(());
 
-        // Spawning test notifier and verifying the initial state
-        let notifier = Notifier::new(ftime::UtcSource::Backstop);
-        notifier.handle_request_stream(utc_requests);
-        let mut fut1 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
-
         // Maintain UTC until no more work remains
-        let mut fut2 = maintain_utc(
-            PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
+        let mut fut = maintain_utc(
+            PrimaryTrack { clock: Arc::clone(&clock), time_source },
             None,
             Some(rtc.clone()),
             internet_reachable,
@@ -615,15 +547,8 @@ mod tests {
             false,
         )
         .boxed();
-        let _ = executor.run_until_stalled(&mut fut2);
+        let _ = executor.run_until_stalled(&mut fut);
 
-        // Checking that the reported time source has been updated to reflect the fact we're not
-        // using backstop but can't verify whatever the previous source was.
-        let mut fut3 = async { utc.watch_state().await.unwrap().source.unwrap() }.boxed();
-        assert_eq!(
-            executor.run_until_stalled(&mut fut3),
-            Poll::Ready(ftime::UtcSource::Unverified)
-        );
         // Checking that neither the clock nor the RTC were updated.
         assert_eq!(clock.get_details().unwrap().last_value_update_ticks, initial_update_ticks);
         assert_eq!(rtc.last_set(), None);

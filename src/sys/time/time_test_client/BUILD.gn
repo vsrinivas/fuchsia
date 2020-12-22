@@ -10,7 +10,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
