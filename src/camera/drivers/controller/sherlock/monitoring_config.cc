@@ -8,13 +8,12 @@
 // There are three streams in one configuration
 // FR --> OutputStreamMLFR (Directly from ISP) (10fps)
 // FR --> GDC1 --> OutputStreamMLDS
-// DS --> GDC2 --> (GE2D) --> OutputStreamMonitoring
-// Not adding GE2D at the moment.
+// DS --> GDC2 --> GE2D --> OutputStreamMonitoring
 
 namespace camera {
 
 /**********************************
- * Output Stream ML FR paramters  *
+ * Output Stream ML FR parameters *
  **********************************
  */
 
@@ -38,7 +37,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
 }
 
 /***********************************
- * Output Stream ML DS paramters   *
+ * Output Stream ML DS parameters  *
  ***********************************
  */
 
@@ -62,7 +61,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
 }
 
 /******************************************
- * Output Stream DS Monitoring paramters  *
+ * Output Stream DS Monitoring parameters *
  ******************************************
  */
 

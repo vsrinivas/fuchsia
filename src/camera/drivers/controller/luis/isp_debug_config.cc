@@ -17,7 +17,7 @@
 namespace camera {
 
 /*****************************
- * Output Stream paramters*
+ * Output Stream parameters  *
  *****************************
  */
 

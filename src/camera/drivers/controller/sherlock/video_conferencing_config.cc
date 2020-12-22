@@ -4,18 +4,17 @@
 
 #include "src/camera/drivers/controller/sherlock/video_conferencing_config.h"
 
-// This file contains static information for the Video conferencing configuration
-// There are two streams in one configuration
+// This file contains static information for the Video conferencing configuration.
+// There are two streams in one configuration.
 // FR --> (30fps) GDC1 --> (5fps) GDC2 --> ML(640x512)
 //                 :
 //                 :
 //                 ----> (30fps) GE2D --> Video conferencing client
-// Not adding GE2D at the moment.
 
 namespace camera {
 
 /**********************************
- *  ML Video FR paramters         *
+ *  ML Video FR parameters        *
  **********************************
  */
 

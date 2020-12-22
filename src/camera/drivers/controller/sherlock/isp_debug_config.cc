@@ -4,14 +4,14 @@
 
 #include "src/camera/drivers/controller/sherlock/isp_debug_config.h"
 
-// This file contains static information for the ISP Debug Configuration
-// There are three streams in one configuration
+// This file contains static information for the ISP Debug Configuration.
+// There is one stream in one configuration.
 // FR --> OutputStreamML (Directly from ISP)
 
 namespace camera {
 
 /*****************************
- * Output Stream paramters*
+ * Output Stream parameters  *
  *****************************
  */
 
