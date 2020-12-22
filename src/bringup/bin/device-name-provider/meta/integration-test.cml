@@ -1,21 +1,12 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
     program: {
         binary: "test/integration-test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "gtest_runner" },
-        {
-            protocol: [ "fuchsia.device.NameProvider" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
+        { protocol: "fuchsia.device.NameProvider" },
     ],
 }

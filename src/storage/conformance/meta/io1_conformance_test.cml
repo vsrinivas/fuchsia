@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "bin/io1_conformance_test",
     },
@@ -11,11 +14,7 @@
             url: "fuchsia-pkg://fuchsia.com/ulibfs-io1-conformance-test#meta/ulibfs-harness.cm",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: [
                 "fuchsia.process.Launcher",
@@ -36,12 +35,6 @@
             ],
             from: "parent",
             to: [ "#fs_test" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

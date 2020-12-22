@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "test/element_session_bin_test",
     },
@@ -17,12 +20,10 @@
         },
     ],
     capabilities: [
-        { protocol: "fuchsia.test.Suite" },
         { protocol: "fuchsia.session.examples.ElementPing" },
         { protocol: "fuchsia.session.ElementManager" },
     ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
@@ -38,12 +39,6 @@
             protocol: "fuchsia.session.ElementManager",
             from: "self",
             to: [ "#element_proposer" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

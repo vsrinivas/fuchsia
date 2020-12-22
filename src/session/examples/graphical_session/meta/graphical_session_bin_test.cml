@@ -1,21 +1,13 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "test/graphical_session_bin_test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
-
         // The Scenic service allows the session to display images.
         { protocol: "fuchsia.ui.scenic.Scenic" },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
     ],
 }

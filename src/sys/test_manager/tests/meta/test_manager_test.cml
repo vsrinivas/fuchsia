@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "test/test_manager_test",
     },
@@ -9,11 +12,7 @@
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
@@ -29,12 +28,6 @@
             protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [ "#test_manager" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

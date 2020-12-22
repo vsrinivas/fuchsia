@@ -2,24 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
+    ],
     program: {
         binary: "bin/validate-fars",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "gtest_runner" },
-        {
-            storage: "temp",
-            path: "/tmp",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }

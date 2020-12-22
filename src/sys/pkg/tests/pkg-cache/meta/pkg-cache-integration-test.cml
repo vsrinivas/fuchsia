@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
+    ],
     program: {
         binary: "bin/pkg_cache_integration_test",
     },
@@ -12,11 +16,7 @@
             durability: "transient",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
@@ -29,11 +29,6 @@
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-        },
-        {
-            storage: "temp",
-            rights: [ "rw*" ],
-            path: "/tmp",
         },
         {
             directory: "dev",
@@ -52,12 +47,6 @@
             ],
             from: "parent",
             to: [ "#pkg_cache_test_realm" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

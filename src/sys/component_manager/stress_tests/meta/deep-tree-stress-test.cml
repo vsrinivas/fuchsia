@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "bin/deep_tree_stress_test",
     },
@@ -9,11 +12,7 @@
             durability: "transient",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
@@ -24,12 +23,6 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#children" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

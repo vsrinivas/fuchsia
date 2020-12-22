@@ -2,23 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "bin/component_time_test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
-        { runner: "rust_test_runner" },
-    ],
-    expose: [
-        // The Test Runner Framework expects this service to be exposed
-        // from the test component. The Rust test adapter provides this service.
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }

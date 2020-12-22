@@ -1,17 +1,6 @@
 {
+    include: [ "src/sys/test_runners/gtest/default.shard.cml" ],
     program: {
         binary: "bin/long_running_test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "gtest_runner" },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }

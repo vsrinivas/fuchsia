@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "test/component_exit_integration_test",
     },
@@ -10,15 +13,9 @@
         },
     ],
     capabilities: [
-        {
-            protocol: [
-                "fidl.test.components.Trigger",
-                "fuchsia.test.Suite",
-            ],
-        },
+        { protocol: "fidl.test.components.Trigger" },
     ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
@@ -45,12 +42,6 @@
             protocol: "fidl.test.components.Trigger",
             from: "self",
             to: [ "#test-collection" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

@@ -1,23 +1,14 @@
 // Component manifest for the `concurrency_test_driver`.
 // The test cases should run in parallel to succeed.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "bin/concurrency_test_driver_rust",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
-        {
-            protocol: [ "fidl.examples.routing.echo.Echo" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
+        { protocol: "fidl.examples.routing.echo.Echo" },
     ],
 }

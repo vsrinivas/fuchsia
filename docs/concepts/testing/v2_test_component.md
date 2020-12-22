@@ -38,8 +38,9 @@ other components.
 This is a simple component realm which launches
 `hello-world-integration-test-driver` and offers it helper services.
 
-Please note how it exposes `fuchsia.test.Suite` from test driver. Entry point
-of a test root needs to expose that protocol.
+Note that it exposes `fuchsia.test.Suite` from its child the test driver. The
+topmost component in a test realm must always expose this protocol to integrate
+with the Test Runner Framework.
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/basic/integration_tests/meta/hello-world-integration-test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
@@ -47,9 +48,11 @@ of a test root needs to expose that protocol.
 
 `hello-world-integration-test-driver` contains the test logic and expectations.
 The component launches the `hello-world` component and asserts that it is
-writing the expected strings to the log. Note that it exposes protocol
-`fuchsia.test.Suite` and uses `rust_test_runner` in its manifest file. This is
-how the test component integrates with the Test Runner Framework.
+writing the expected strings to the log.
+
+Note that this is a Rust test, and therefore includes
+`rust_test_runner.shard.cml` which sets up capability routing required to
+integrate with the Rust test framework.
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/basic/integration_tests/meta/hello-world-integration-test-driver.cml" region_tag="example_snippet" adjust_indentation="auto" %}

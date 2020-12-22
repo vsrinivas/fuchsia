@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
 
     // The binary to run for this component.
     program: {
@@ -15,15 +18,10 @@
             resolver: "example_resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
-        {
-            protocol: "fuchsia.test.Suite",
-            path: "/svc/fuchsia.test.Suite",
-        },
     ],
 
     // Capabilities used by this component.
     use: [
-        { runner: "rust_test_runner" },
         { protocol: "fidl.test.components.Trigger" },
     ],
 
@@ -31,10 +29,6 @@
     expose: [
         {
             resolver: "example_resolver",
-            from: "self",
-        },
-        {
-            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

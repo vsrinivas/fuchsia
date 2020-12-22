@@ -1,18 +1,9 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
     program: {
         binary: "bin/driver_runner_test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "gtest_runner" },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }

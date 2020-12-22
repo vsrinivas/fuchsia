@@ -1,6 +1,9 @@
 // [START example_snippet]
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "bin/hello_world_integration_test",
     },
@@ -10,11 +13,7 @@
             url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello-world.cm",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
@@ -26,12 +25,6 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#hello_world" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

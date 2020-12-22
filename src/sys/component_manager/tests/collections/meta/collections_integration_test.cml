@@ -1,6 +1,9 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
         binary: "test/collections_integration_test",
     },
@@ -16,12 +19,7 @@
             durability: "transient",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
-        { runner: "rust_test_runner" },
-
         // Needed to bind to and create children
         {
             protocol: "fuchsia.sys2.Realm",
@@ -40,12 +38,6 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#coll" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }
