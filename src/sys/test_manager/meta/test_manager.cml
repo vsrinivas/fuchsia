@@ -5,6 +5,10 @@
     },
     children: [
         {
+            name: "elf_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/elf-test-runner#meta/elf-test-runner.cm",
+        },
+        {
             name: "gtest_runner",
             url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
@@ -80,6 +84,7 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
                 "#runner_memfs",
@@ -91,6 +96,7 @@
             protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [
+                "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
                 "#rust_test_runner",
@@ -161,6 +167,10 @@
             name: "test-env",
             extends: "realm",
             runners: [
+                {
+                    runner: "elf_test_runner",
+                    from: "#elf_test_runner",
+                },
                 {
                     runner: "gtest_runner",
                     from: "#gtest_runner",

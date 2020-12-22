@@ -1,0 +1,25 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/elf_test_runner",
+    },
+    capabilities: [
+        {
+            runner: "elf_test_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+    expose: [
+        {
+            runner: "elf_test_runner",
+            from: "self",
+        },
+    ],
+}

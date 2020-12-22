@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("passing_test") {
+  testonly = true
+  sources = [ "passing_test.cc" ]
+}
+
+fuchsia_component("passing_test_component") {
+  component_name = "passing_test"
+  testonly = true
+  manifest = "meta/passing_test.cml"
+  deps = [ ":passing_test" ]
+}
+
+executable("failing_test") {
+  testonly = true
+  sources = [ "failing_test.cc" ]
+}
+
+fuchsia_component("failing_test_component") {
+  component_name = "failing_test"
+  testonly = true
+  manifest = "meta/failing_test.cml"
+  deps = [ ":failing_test" ]
+}
+
+executable("arg_test") {
+  testonly = true
+  sources = [ "arg_test.cc" ]
+}
+
+fuchsia_component("arg_test_component") {
+  component_name = "arg_test"
+  testonly = true
+  manifest = "meta/arg_test.cml"
+  deps = [ ":arg_test" ]
+}
+
+fuchsia_package("elf-test-runner-example-tests") {
+  testonly = true
+  deps = [
+    ":arg_test_component",
+    ":failing_test_component",
+    ":passing_test_component",
+  ]
+}

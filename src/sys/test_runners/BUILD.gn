@@ -12,12 +12,7 @@ rustc_library("lib") {
   edition = "2018"
 
   # Only for internal use.
-  visibility = [
-    ":*",
-    "gotests/*",
-    "gtest/*",
-    "rust/*",
-  ]
+  visibility = [ "./*" ]
 
   deps = [
     "//garnet/lib/rust/io_util",
@@ -64,12 +59,7 @@ rustc_library("test_lib") {
   source_root = "src/test_lib.rs"
 
   # Only for internal use.
-  visibility = [
-    ":*",
-    "gotests/*",
-    "gtest/*",
-    "rust/*",
-  ]
+  visibility = [ "./*" ]
 
   deps = [
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
@@ -117,6 +107,7 @@ fuchsia_unittest_package("test-runner-test-lib-unit-tests") {
 group("test_runners") {
   testonly = true
   deps = [
+    "elf",
     "gotests",
     "gtest",
     "rust",
@@ -128,6 +119,7 @@ group("tests") {
   deps = [
     ":test-runner-test-lib-unit-tests",
     ":test-runner-unit-tests",
+    "elf:tests",
     "gotests:tests",
     "gtest:tests",
     "rust:tests",
