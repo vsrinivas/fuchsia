@@ -7,6 +7,7 @@ use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
+use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
@@ -45,6 +46,7 @@ pub async fn connect(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
     target_ssid: Vec<u8>,
     target_pwd: Vec<u8>,
+    target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
 ) -> Result<bool, Error> {
     let (connection_proxy, connection_remote) = endpoints::create_proxy()?;
     let target_ssid_clone = target_ssid.clone();
@@ -53,7 +55,7 @@ pub async fn connect(
     let credential = credential_from_bytes(target_pwd)?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid,
-        bss_desc: None,
+        bss_desc: target_bss_desc,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
@@ -261,8 +263,38 @@ mod tests {
         futures::stream::{StreamExt, StreamFuture},
         futures::task::Poll,
         pin_utils::pin_mut,
+        rand::Rng as _,
+        std::convert::TryInto as _,
         wlan_common::assert_variant,
     };
+
+    fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
+        let mut rng = rand::thread_rng();
+        Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
+            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
+            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
+            beacon_period: rng.gen::<u16>(),
+            timestamp: rng.gen::<u64>(),
+            local_time: rng.gen::<u64>(),
+            cap: rng.gen::<u16>(),
+            ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
+            rssi_dbm: rng.gen::<i8>(),
+            chan: fidl_common::WlanChan {
+                primary: rng.gen::<u8>(),
+                cbw: match rng.gen_range(0, 5) {
+                    0 => fidl_common::Cbw::Cbw20,
+                    1 => fidl_common::Cbw::Cbw40,
+                    2 => fidl_common::Cbw::Cbw40Below,
+                    3 => fidl_common::Cbw::Cbw80,
+                    4 => fidl_common::Cbw::Cbw160,
+                    5 => fidl_common::Cbw::Cbw80P80,
+                    _ => panic!(),
+                },
+                secondary80: rng.gen::<u8>(),
+            },
+            snr_db: rng.gen::<i8>(),
+        }))
+    }
 
     fn extract_sme_server_from_get_client_sme_req_and_respond(
         exec: &mut Executor,
@@ -775,8 +807,10 @@ mod tests {
 
         let target_ssid = ssid.as_bytes();
         let target_password = password.as_bytes();
+        let target_bss_desc = generate_random_bss_desc();
 
-        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut =
+            connect(&client_sme, target_ssid.to_vec(), target_password.to_vec(), target_bss_desc);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -823,8 +857,14 @@ mod tests {
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "password".as_bytes();
+        let target_bss_desc = generate_random_bss_desc();
 
-        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut = connect(
+            &client_sme,
+            target_ssid.to_vec(),
+            target_password.to_vec(),
+            target_bss_desc.clone(),
+        );
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -834,6 +874,7 @@ mod tests {
             &mut next_client_sme_req,
             target_ssid,
             credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
+            target_bss_desc,
         );
     }
 
@@ -845,8 +886,14 @@ mod tests {
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "".as_bytes();
+        let target_bss_desc = generate_random_bss_desc();
 
-        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut = connect(
+            &client_sme,
+            target_ssid.to_vec(),
+            target_password.to_vec(),
+            target_bss_desc.clone(),
+        );
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -856,6 +903,7 @@ mod tests {
             &mut next_client_sme_req,
             target_ssid,
             credential_from_bytes(vec![]).expect("password should be valid"),
+            target_bss_desc,
         );
     }
 
@@ -864,11 +912,13 @@ mod tests {
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &[u8],
         expected_credential: fidl_sme::Credential,
+        expected_bss_desc: Option<Box<fidl_internal::BssDescription>>,
     ) {
         match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
                 assert_eq_credentials(&req.credential, &expected_credential);
+                assert_eq!(req.bss_desc, expected_bss_desc);
             }
             _ => panic!("expected a Connect request"),
         }

@@ -15,6 +15,7 @@ rustc_library("wlan-service-util") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/lib/fidl/rust/fidl",
@@ -25,6 +26,7 @@ rustc_library("wlan-service-util") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:rand",
   ]
 
   sources = [

@@ -124,6 +124,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
+                    // TODO(fxbug.dev/66665): pass in a bss description or use Policy layer
+                    None,
                 )
                 // TODO(fxbug.dev/29881): when this bug is fixed, consider removing this timeout
                 .on_timeout(WLAN_CONNECT_TIMEOUT_SECONDS.seconds().after_now(), || {

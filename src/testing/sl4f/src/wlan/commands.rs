@@ -5,13 +5,73 @@
 use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use fidl_fuchsia_wlan_common as fidl_common;
+use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_syslog::macros::*;
+use serde::{Deserialize, Serialize};
 use serde_json::{to_value, Value};
+use std::collections::HashMap;
 
 // Testing helper methods
 use crate::wlan::facade::WlanFacade;
 
 use crate::common_utils::common::parse_u64_identifier;
+
+// We're using serde's "remote derive" feature to allow us to derive (De)Serialize for a third-
+// party type (i.e. fidl_internal::BssDescription). See here for more info:
+// https://serde.rs/remote-derive.html
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_common::Cbw")]
+#[repr(u32)]
+pub enum CbwDef {
+    Cbw20 = 0,
+    Cbw40 = 1,
+    Cbw40Below = 2,
+    Cbw80 = 3,
+    Cbw160 = 4,
+    Cbw80P80 = 5,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_common::WlanChan")]
+pub struct WlanChanDef {
+    pub primary: u8,
+    #[serde(with = "CbwDef")]
+    pub cbw: fidl_common::Cbw,
+    pub secondary80: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_internal::BssTypes")]
+pub enum BssTypesDef {
+    Infrastructure = 1,
+    Personal = 2,
+    Independent = 3,
+    Mesh = 4,
+    AnyBss = 5,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_internal::BssDescription")]
+struct BssDescriptionDef {
+    pub bssid: [u8; 6],
+    #[serde(with = "BssTypesDef")]
+    pub bss_type: fidl_internal::BssTypes,
+    pub beacon_period: u16,
+    pub timestamp: u64,
+    pub local_time: u64,
+    pub cap: u16,
+    pub ies: Vec<u8>,
+    #[serde(with = "WlanChanDef")]
+    pub chan: fidl_common::WlanChan,
+    pub rssi_dbm: i8,
+    pub snr_db: i8,
+}
+#[derive(serde::Serialize)]
+struct BssDescriptionWrapper<'a>(
+    #[serde(with = "BssDescriptionDef")] &'a fidl_internal::BssDescription,
+);
 
 #[async_trait(?Send)]
 impl Facade for WlanFacade {
@@ -21,6 +81,26 @@ impl Facade for WlanFacade {
                 fx_log_info!(tag: "WlanFacade", "performing wlan scan");
                 let results = self.scan().await?;
                 fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
+                // return the scan results
+                to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
+            }
+            "scan_for_bss_info" => {
+                fx_log_info!(tag: "WlanFacade", "performing wlan scan");
+                let results = self.scan_for_bss_info().await?;
+                fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
+                // convert all BssDescription, which can't be serialized, to BssDescriptionWrapper
+                let results: HashMap<String, Vec<BssDescriptionWrapper<'_>>> = results
+                    .iter()
+                    .map(|(ssid, bss_desc)| {
+                        (
+                            String::from_utf8(ssid.clone()).unwrap(),
+                            bss_desc
+                                .iter()
+                                .map(|bss_desc| BssDescriptionWrapper(&**bss_desc))
+                                .collect(),
+                        )
+                    })
+                    .collect();
                 // return the scan results
                 to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
             }
@@ -49,8 +129,16 @@ impl Facade for WlanFacade {
                     _ => vec![0; 0],
                 };
 
+                let target_bss_desc = match args.get("target_bss_desc") {
+                    Some(bss_desc_json) => {
+                        let bss_desc = BssDescriptionDef::deserialize(bss_desc_json)?;
+                        Some(Box::new(bss_desc))
+                    }
+                    None => None,
+                };
+
                 fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
-                let results = self.connect(target_ssid, target_pwd).await?;
+                let results = self.connect(target_ssid, target_pwd, target_bss_desc).await?;
                 to_value(results)
                     .map_err(|e| format_err!("error handling connection result: {}", e))
             }

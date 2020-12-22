@@ -6,9 +6,11 @@ use crate::wlan::types::{ClientStatusResponse, MacRole, QueryIfaceResponse};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_wlan_device;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
+use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use parking_lot::RwLock;
+use std::collections::HashMap;
 
 // WlanFacade: proxies commands from sl4f test to proper fidl APIs
 //
@@ -71,13 +73,43 @@ impl WlanFacade {
         Ok(ssids)
     }
 
-    pub async fn connect(&self, target_ssid: Vec<u8>, target_pwd: Vec<u8>) -> Result<bool, Error> {
+    pub async fn scan_for_bss_info(
+        &self,
+    ) -> Result<HashMap<Vec<u8>, Vec<Box<fidl_internal::BssDescription>>>, Error> {
+        // get the first client interface
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
+            .await
+            .context("Scan: failed to get client iface sme proxy")?;
+
+        // start the scan
+        let mut results =
+            wlan_service_util::client::passive_scan(&sme_proxy).await.context("Scan failed")?;
+
+        // send the bss descriptions back to the test
+        let mut hashmap = HashMap::new();
+        for bss in results.drain(..) {
+            if let Some(bss_desc) = bss.bss_desc {
+                let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
+                entry.push(bss_desc);
+            }
+        }
+
+        Ok(hashmap)
+    }
+
+    pub async fn connect(
+        &self,
+        target_ssid: Vec<u8>,
+        target_pwd: Vec<u8>,
+        target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
+    ) -> Result<bool, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
 
-        wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd).await
+        wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd, target_bss_desc)
+            .await
     }
 
     /// Destroys a WLAN interface by input interface ID.

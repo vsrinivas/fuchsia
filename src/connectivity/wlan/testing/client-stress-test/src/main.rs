@@ -117,6 +117,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
                         opt.target_pwd.as_bytes().to_vec(),
+                        // TODO(fxbug.dev/66665): pass in a bss description or use Policy layer
+                        None,
                     )
                     .await;
                     match result {

@@ -183,6 +183,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
                         target_pwd.to_vec(),
+                        // TODO(fxbug.dev/66665): pass in a bss description or use Policy layer
+                        None,
                     )
                     .await;
 
