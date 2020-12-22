@@ -16,7 +16,6 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/format/format.h"
@@ -195,9 +194,9 @@ class Reporter {
 
   Reporter() {}
   Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
+  ~Reporter();
 
   static constexpr size_t kObjectsToCache = 4;
-  static constexpr size_t kActiveUsagePoliciesToCache = 10;
 
   Container<OutputDevice, kObjectsToCache>::Ptr CreateOutputDevice(const std::string& name,
                                                                    const std::string& thread_name);
@@ -209,12 +208,6 @@ class Reporter {
   // Thermal state of Audio system.
   void SetNumThermalStates(size_t num);
   void SetThermalState(uint32_t state);
-
-  // Audio policy logging of usage activity and behavior (none|duck|mute).
-  void SetAudioPolicyBehaviorGain(AudioAdmin::BehaviorGain behavior_gain);
-  void UpdateActiveUsagePolicy(const std::vector<fuchsia::media::Usage>& active_usages,
-                               const AudioAdmin::RendererPolicies& renderer_policies,
-                               const AudioAdmin::CapturerPolicies& capturer_policies);
 
   // Device creation failures.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);
@@ -244,8 +237,6 @@ class Reporter {
   class ClientPort;
   class RendererImpl;
   class CapturerImpl;
-  class ActiveUsagePolicy;
-  class ActiveUsagePolicyTracker;
   struct Impl;
 
   friend class OverflowUnderflowTracker;
@@ -276,15 +267,16 @@ class Reporter {
     inspect::Node inputs_node;
     inspect::Node renderers_node;
     inspect::Node capturers_node;
+    inspect::Node thermal_state_transitions_node;
 
     std::unique_ptr<ThermalStateTracker> thermal_state_tracker;
-    std::unique_ptr<ActiveUsagePolicyTracker> active_usage_policy_tracker;
 
     // These could be guarded by Reporter::mutex_, but clang's thread safety
     // analysis cannot represent that relationship.
     std::mutex mutex;
     uint64_t next_renderer_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_capturer_name FXL_GUARDED_BY(mutex) = 0;
+    uint64_t next_thermal_transition_name FXL_GUARDED_BY(mutex) = 0;
 
     Impl(sys::ComponentContext& cc, ThreadingModel& tm);
     ~Impl();
@@ -297,6 +289,10 @@ class Reporter {
       std::lock_guard<std::mutex> lock(mutex);
       return std::to_string(++next_capturer_name);
     }
+    std::string NextThermalTransitionName() {
+      std::lock_guard<std::mutex> lock(mutex);
+      return std::to_string(++next_thermal_transition_name);
+    }
   };
 
   std::mutex mutex_;
@@ -307,6 +303,7 @@ class Reporter {
   Container<InputDevice, kObjectsToCache> inputs_;
   Container<Renderer, kObjectsToCache> renderers_;
   Container<Capturer, kObjectsToCache> capturers_;
+  Container<ThermalStateTransition, kThermalStatesToCache> thermal_state_transitions_;
 };
 
 }  // namespace media::audio
