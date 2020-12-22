@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert' show jsonDecode, LineSplitter, utf8;
+import 'dart:convert' show jsonDecode;
 import 'dart:core';
 import 'dart:io' show Directory, File, Platform, Process, sleep;
 
@@ -55,57 +55,30 @@ Future<ZedmonDescription> getZedmonDescription(String zedmonPath) async {
       csvFormat.indexOf('power'));
 }
 
-void validateZedmonCsvLine(String csvLine, ZedmonDescription desc) {
+void validateZedmonCsvLine(
+    String csvLine, ZedmonDescription desc, double powerTolerance) {
   final parts = csvLine.split(',');
   final shuntVoltage = double.parse(parts[desc.shuntVoltageIndex]);
   final busVoltage = double.parse(parts[desc.busVoltageIndex]);
   final power = double.parse(parts[desc.powerIndex]);
 
-  expect(
-      busVoltage * shuntVoltage / desc.shuntResistance, closeTo(power, 1e-4));
+  expect(busVoltage * shuntVoltage / desc.shuntResistance,
+      closeTo(power, powerTolerance));
 }
 
-// Returns the average power measured by `zedmon record` over the specified
-// number of seconds.
+// Returns the average power measured by `zedmon record --average` for the
+// specified number of seconds.
 Future<double> measureAveragePower(String zedmonPath, String tempFilePath,
     ZedmonDescription desc, int seconds) async {
   final result = await Process.run(zedmonPath,
-      ['record', '--out', tempFilePath, '--duration', '${seconds}s']);
-  expect(result.exitCode, 0);
+      ['record', '--out', tempFilePath, '--average', '${seconds}s']);
+  expect(result.exitCode, equals(0));
 
-  bool initialized = false;
+  final lines = await File(tempFilePath).readAsLines();
+  expect(lines.length, equals(1));
 
-  int firstTimestampMicros = 0;
-  int prevTimestampMicros = 0;
-  double prevPower = 0.0;
-  double totalEnergy = 0.0;
-
-  await for (String line in File(tempFilePath)
-      .openRead()
-      .transform(utf8.decoder)
-      .transform(LineSplitter())) {
-    final parts = line.split(',');
-    final timestampMicros = int.parse(parts[desc.timestampIndex]);
-    final power = double.parse(parts[desc.powerIndex]);
-
-    if (initialized) {
-      final dt = timestampMicros - prevTimestampMicros;
-
-      // Use the trapezoid rule to estimate energy consumed since the previous
-      // sample.
-      totalEnergy += dt * (power + prevPower) / 2.0;
-
-      prevTimestampMicros = timestampMicros;
-      prevPower = power;
-    } else {
-      initialized = true;
-      firstTimestampMicros = timestampMicros;
-    }
-
-    prevTimestampMicros = timestampMicros;
-    prevPower = power;
-  }
-  return totalEnergy / (prevTimestampMicros - firstTimestampMicros);
+  final parts = lines[0].split(',');
+  return double.parse(parts[desc.powerIndex]);
 }
 
 // In order to run these tests, the host should be connected to exactly one
@@ -143,10 +116,10 @@ Future<void> main() async {
   // `zedmon list` should yield exactly one word, containing a serial number.
   test('zedmon list', () async {
     final result = await Process.run(zedmonPath, ['list']);
-    expect(result.exitCode, 0);
+    expect(result.exitCode, equals(0));
 
     final regex = RegExp(r'\W+');
-    expect(regex.allMatches(result.stdout).length, 1);
+    expect(regex.allMatches(result.stdout).length, equals(1));
   });
 
   // Records 1 second of Zedmon data and validates the power calculation for
@@ -154,31 +127,59 @@ Future<void> main() async {
   test('zedmon record', () async {
     final result = await Process.run(
         zedmonPath, ['record', '--out', tempFilePath, '--duration', '1s']);
-    expect(result.exitCode, 0);
+    expect(result.exitCode, equals(0));
 
-    var csvLinesRead = 0;
-    await for (String line in File(tempFilePath)
-        .openRead()
-        .transform(utf8.decoder)
-        .transform(LineSplitter())) {
-      validateZedmonCsvLine(line, zedmonDescription);
-      csvLinesRead += 1;
+    final lines = await File(tempFilePath).readAsLines();
+
+    // Zedmon's nominal output rate is about 1500 Hz. Expecting 1400 lines
+    // gives a bit of buffer for packet loss; see fxbug.dev/64161.
+    expect(lines.length, greaterThan(1400));
+
+    for (String line in lines) {
+      validateZedmonCsvLine(line, zedmonDescription, 1e-4);
     }
+  });
 
-    expect(csvLinesRead, greaterThan(1000));
+  test('zedmon record downsampled', () async {
+    final result = await Process.run(zedmonPath, [
+      'record',
+      '--out',
+      tempFilePath,
+      '--duration',
+      '1s',
+      '--interval',
+      '100ms'
+    ]);
+    expect(result.exitCode, equals(0));
+
+    final lines = await File(tempFilePath).readAsLines();
+
+    // We should see exactly 10 records, given a 100ms reporting interval over
+    // a 1s duration. (Zedmon's nominal reporting interval is ~667us, so we'd
+    // have to miss many consecutive packets before a downsampled packet is
+    // skipped, and that would indicate a problem worth investigating.)
+    expect(lines.length, equals(10));
+
+    for (String line in lines) {
+      // Power in each output record is averaged from the power derived from
+      // each sample rather than computed from average shunt voltage and
+      // average bus power. Consequently, the tolerance in the power calculation
+      // needs to be higher here.
+      validateZedmonCsvLine(line, zedmonDescription, 0.01);
+    }
   });
 
   // Tests that the 5-second average power drops by at least 99% when the
   // relay is turned off.
   test('zedmon relay', () async {
     var result = await Process.run(zedmonPath, ['relay', 'off']);
-    expect(result.exitCode, 0);
+    expect(result.exitCode, equals(0));
     sleep(Duration(seconds: 1));
     final offPower = await measureAveragePower(
         zedmonPath, tempFilePath, zedmonDescription, 5);
 
     result = await Process.run(zedmonPath, ['relay', 'on']);
-    expect(result.exitCode, 0);
+    expect(result.exitCode, equals(0));
     sleep(Duration(seconds: 1));
     final onPower = await measureAveragePower(
         zedmonPath, tempFilePath, zedmonDescription, 5);

@@ -20,6 +20,9 @@ use {
 /// Describes allowable values for the --duration arg of `record`.
 const DURATION_REGEX: &'static str = r"^(\d+)(h|m|s|ms)$";
 
+const ZEDMON_NOMINAL_DATA_RATE_HZ: u32 = 1500;
+const ZEDMON_NOMINAL_DATA_INTERVAL_USEC: f32 = 1e6 / ZEDMON_NOMINAL_DATA_RATE_HZ as f32;
+
 /// Validates the --duration arg of `record`.
 fn validate_duration(value: String) -> Result<(), String> {
     let re = regex::Regex::new(DURATION_REGEX).unwrap();
@@ -43,6 +46,16 @@ fn parse_duration(value: &str) -> Duration {
         "m" => Duration::from_secs(number * 60),
         "h" => Duration::from_secs(number * 3600),
         _ => panic!("Invalid duration string: {}", value),
+    }
+}
+
+fn validate_downsampling_interval(value: String) -> Result<(), String> {
+    validate_duration(value.clone())?;
+    let interval = parse_duration(&value);
+    if interval.as_secs_f32() * 1e6 > ZEDMON_NOMINAL_DATA_INTERVAL_USEC {
+        Ok(())
+    } else {
+        Err(format!("Value must be greater than {}us", ZEDMON_NOMINAL_DATA_INTERVAL_USEC))
     }
 }
 
@@ -74,19 +87,60 @@ fn main() -> Result<(), Error> {
                     .long("out")
                     .takes_value(true)
             ).arg(
+                Arg::with_name("average")
+                    .help(
+                        &format!(
+                            "Specifies that the client will output exactly one record, which \
+                            averages data over the specified duration. This is equivalent to \
+                            setting --duration and --interval to the same value. If specified, \
+                            must match the regular expression '{}'.",
+                            DURATION_REGEX)
+                        )
+                    .short("a")
+                    .long("average")
+                    .takes_value(true)
+                    .value_name("duration")
+                    .validator(&validate_duration)
+                    .conflicts_with_all(&["duration", "interval"]),
+            ).arg(
                 Arg::with_name("duration")
                     .help(
                         &format!(
                             "Duration of time on the Zedmon device to be spanned by data \
                             recording. If omitted, recording will continue until ENTER is pressed. \
-                            If specified, must match the regular expression {}",
+                            If specified, must match the regular expression '{}'.",
                             DURATION_REGEX)
                         )
                     .short("d")
                     .long("duration")
                     .takes_value(true)
-                    .validator(&validate_duration),
-            ),
+                    .validator(&validate_duration)
+                    .conflicts_with("average"),
+            ).arg(
+                Arg::with_name("interval")
+                    .help(
+                        &format!(
+                            "Interval at which to report data. Raw measurements from Zedmon will \
+                            be averaged at this interval. \
+                            \n  If --interval is omitted, each sample will be reported. If \
+                            specified, it must match the regular expression '{}'. It must also be \
+                            greater than {:.1}us, Zemdon's nominal reporting interval (corresponding \
+                            to {} Hz). \
+                            \n  If a gap in raw data contains multiple downsampling output times, \
+                            then no samples will be emitted during the gap, and the downsampling \
+                            process will reinitialize with the end of the gap as its starting \
+                            point.",
+                            DURATION_REGEX,
+                            ZEDMON_NOMINAL_DATA_INTERVAL_USEC,
+                            ZEDMON_NOMINAL_DATA_RATE_HZ)
+                        )
+                    .short("i")
+                    .long("interval")
+                    .takes_value(true)
+                    .value_name("duration")
+                    .validator(&validate_downsampling_interval)
+                    .conflicts_with("average"),
+            )
         )
         .subcommand(
             SubCommand::with_name("relay").about("Enables/disables relay").arg(
@@ -178,12 +232,25 @@ impl lib::StopSignal for StdinStopper {
 
 /// Runs the "record" subcommand".
 fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
+    // Parse --out.
     let (output, dest_name): (Box<dyn Write + Send>, &str) = match arg_matches.value_of("out") {
         None => (Box::new(File::create("zedmon.csv")?), "zedmon.csv"),
         Some("-") => (Box::new(std::io::stdout()), "stdout"),
         Some(filename) => (Box::new(File::create(filename)?), filename),
     };
     let dest_name = dest_name.to_string();
+
+    // Parse either --average or --duration and --interval.
+    let (duration, reporting_interval) = match arg_matches.value_of("average") {
+        Some(value) => {
+            let duration = parse_duration(value);
+            (Some(duration), Some(duration))
+        }
+        None => (
+            arg_matches.value_of("duration").map(parse_duration),
+            arg_matches.value_of("interval").map(parse_duration),
+        ),
+    };
 
     let zedmon = lib::zedmon();
 
@@ -193,14 +260,13 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
     println!("Time offset: {}ns ± {}ns\n", offset, uncertainty);
 
     println!("Recording to {}.", dest_name);
-    match arg_matches.value_of("duration") {
-        Some(value) => {
-            let duration = parse_duration(value);
-            zedmon.read_reports(output, lib::DurationStopper::new(duration))
+    match duration {
+        Some(duration) => {
+            zedmon.read_reports(output, lib::DurationStopper::new(duration), reporting_interval)
         }
         None => {
             println!("Press ENTER to stop.");
-            zedmon.read_reports(output, StdinStopper::new())
+            zedmon.read_reports(output, StdinStopper::new(), reporting_interval)
         }
     }
 }

@@ -77,6 +77,121 @@ struct ZedmonRecord {
     power: f32,
 }
 
+struct DownsamplerState {
+    last_output_micros: u64,
+    prev_record: ZedmonRecord,
+    bus_voltage_integral: f32,
+    shunt_voltage_integral: f32,
+    power_integral: f32,
+}
+
+/// Helper struct for downsampling Zedmon data.
+struct Downsampler {
+    interval_micros: u64,
+    state: Option<DownsamplerState>,
+}
+
+impl Downsampler {
+    fn new(interval_micros: u64) -> Self {
+        Self { interval_micros, state: None }
+    }
+
+    /// Process a new record. If `record` completes a resampling interval, returns a ZedmonRecord
+    /// containing values averaged over the interval. Otherwise, returns None.
+    ///
+    /// The average value of y(t) over the interval [t_low, t_high] is computed using the definition
+    ///     avg(y(t), [t_low, t_high]) := 1 / (t_high - t_low) * \int_{t_low}^{t_high} y(s) ds.
+    /// As each record is processed, the integral is udpated over the previous time interval using
+    /// trapezoid rule integration, i.e.
+    ///     \int_{t_1}^{t_2} y(s) ds \approx (t2 - t1) * (y(t1) + y(t2)) / 2.
+    fn process(&mut self, record: ZedmonRecord) -> Option<ZedmonRecord> {
+        // Initialize self.state if it is unset; otherwise grab a reference to it.
+        let state = match self.state.as_mut() {
+            None => {
+                self.state = Some(DownsamplerState {
+                    last_output_micros: record.timestamp_micros,
+                    prev_record: record,
+                    bus_voltage_integral: 0.0,
+                    shunt_voltage_integral: 0.0,
+                    power_integral: 0.0,
+                });
+                return None;
+            }
+            Some(state) => state,
+        };
+
+        // If the latest raw data interval spans multiple output samples, skip output and
+        // reinitialize.
+        if record.timestamp_micros >= state.last_output_micros + 2 * self.interval_micros {
+            eprintln!(
+                "Raw data interval [{}, {}] contains multiple downsampling output times. Skipping \
+                output and reinitializing downsampling.",
+                state.last_output_micros, record.timestamp_micros
+            );
+            self.state = None;
+            return self.process(record);
+        }
+
+        let output_micros = state.last_output_micros + self.interval_micros;
+        let t1 = state.prev_record.timestamp_micros as f32;
+        let t2 = record.timestamp_micros as f32;
+
+        // No output this cycle -- update the state and return None.
+        if record.timestamp_micros < output_micros {
+            let dt_half = (t2 - t1) / 2.0;
+            state.shunt_voltage_integral +=
+                dt_half * (state.prev_record.shunt_voltage + record.shunt_voltage);
+            state.bus_voltage_integral +=
+                dt_half * (state.prev_record.bus_voltage + record.bus_voltage);
+            state.power_integral += dt_half * (state.prev_record.power + record.power);
+
+            state.prev_record = record;
+            return None;
+        }
+
+        let t_out = output_micros as f32;
+        let dt_half = (t_out - t1) / 2.0;
+
+        // Use linear interpolation to estimate the instantaneous value of each measured quantity at
+        // t_out.
+        let interpolate = |y1, y2| y1 + (t_out - t1) / (t2 - t1) * (y2 - y1);
+        let shunt_voltage_interp =
+            interpolate(state.prev_record.shunt_voltage, record.shunt_voltage);
+        let bus_voltage_interp = interpolate(state.prev_record.bus_voltage, record.bus_voltage);
+        let power_interp = interpolate(state.prev_record.power, record.power);
+
+        // For each measured quantity, use the previous value and the interpolated value to update
+        // its integral over [t1, t_out].
+        state.shunt_voltage_integral +=
+            dt_half * (state.prev_record.shunt_voltage + shunt_voltage_interp);
+        state.bus_voltage_integral +=
+            dt_half * (state.prev_record.bus_voltage + bus_voltage_interp);
+        state.power_integral += dt_half * (state.prev_record.power + power_interp);
+
+        // Divide each integral by the total length of the integration interval to get an average
+        // value of the measured quanity. This populates the output record.
+        let record_out = ZedmonRecord {
+            timestamp_micros: output_micros,
+            shunt_voltage: state.shunt_voltage_integral / (self.interval_micros as f32),
+            bus_voltage: state.bus_voltage_integral / (self.interval_micros as f32),
+            power: state.power_integral / (self.interval_micros as f32),
+        };
+
+        // Now integrate over [t_out, t2] to seed the integrals for the next output interval. In the
+        // edge case that t2 is at the reporting interval boundary, t2 - t_out == 0.0 and the
+        // integrals will be appropriately set to 0.0.
+        let dt_half = (t2 - t_out) / 2.0;
+        state.shunt_voltage_integral = dt_half * (shunt_voltage_interp + record.shunt_voltage);
+        state.bus_voltage_integral = dt_half * (bus_voltage_interp + record.bus_voltage);
+        state.power_integral = dt_half * (power_interp + record.power);
+
+        // Update remaining state and return.
+        state.last_output_micros = output_micros;
+        state.prev_record = record;
+        Some(record_out)
+    }
+}
+
 /// Interface to a Zedmon device.
 #[derive(Debug)]
 pub struct ZedmonClient<InterfaceType>
@@ -296,10 +411,12 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         shunt_resistance: f32,
         v_shunt_index: usize,
         v_bus_index: usize,
+        reporting_interval_micros: Option<u64>,
     ) -> std::thread::JoinHandle<Result<(), Error>> {
         std::thread::spawn(move || {
             // The CSV header is suppressed. Clients may query it by using `describe`.
             let mut writer = csv::WriterBuilder::new().has_headers(false).from_writer(writer);
+            let mut downsampler = reporting_interval_micros.map(|r| Downsampler::new(r));
 
             for buffer in packet_receiver.iter() {
                 let reports = parser.parse_reports(&buffer)?;
@@ -321,7 +438,22 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                         bus_voltage,
                         power: bus_voltage * shunt_voltage / shunt_resistance,
                     };
-                    writer.serialize(record)?;
+
+                    // Explicit flushing is performed when downsampling because typically the
+                    // reporting rate is relatively low, and the user may want to see the output in
+                    // realtime. Meanwhile, if not downsampling, there's sufficient output that
+                    // automatic flushing is fairly frequent. This behavior could be tuned if the
+                    // need arises.
+                    match downsampler.as_mut() {
+                        Some(downsampler) => match downsampler.process(record) {
+                            Some(r) => {
+                                writer.serialize(r)?;
+                                writer.flush()?;
+                            }
+                            None => {}
+                        },
+                        None => writer.serialize(record)?,
+                    }
 
                     if stopper.should_stop(report.timestamp_micros)? {
                         writer.flush()?;
@@ -388,6 +520,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         &self,
         writer: Box<dyn Write + Send>,
         stopper: impl StopSignal + Send + 'static,
+        reporting_interval: Option<Duration>,
     ) -> Result<(), Error> {
         // This function's workload is shared between its main thread and processing_thread.
         //
@@ -411,6 +544,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
             self.shunt_resistance,
             self.v_shunt_index,
             self.v_bus_index,
+            reporting_interval.map(|d| d.as_micros() as u64),
         );
 
         let report_io_result = self.run_report_io(packet_sender);
@@ -989,6 +1123,7 @@ mod tests {
     fn run_zedmon_reporting<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write>(
         zedmon: &ZedmonClient<InterfaceType>,
         test_duration: Duration,
+        reporting_interval: Option<Duration>,
     ) -> Result<Vec<u8>, Error> {
         // Implements Write by sending bytes over a channel. The holder of the channel's
         // Receiver can then inspect the data that was written to test expectations.
@@ -1013,7 +1148,7 @@ mod tests {
 
         let (sender, receiver) = mpsc::channel();
         let writer = Box::new(ChannelWriter { sender, buffer: Vec::new() });
-        zedmon.read_reports(writer, DurationStopper::new(test_duration))?;
+        zedmon.read_reports(writer, DurationStopper::new(test_duration), reporting_interval)?;
 
         let mut output = Vec::new();
         while let Ok(mut buffer) = receiver.recv() {
@@ -1210,7 +1345,7 @@ mod tests {
 
             let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
 
-            run_zedmon_reporting(&zedmon, test_duration)
+            run_zedmon_reporting(&zedmon, test_duration, None)
         };
 
         let max_failures = ZedmonClient::<TransientFailureInterface>::num_usb_read_retries();
@@ -1248,20 +1383,18 @@ mod tests {
             v_bus_scale: 0.025,
         };
         let test_duration = Duration::from_secs(10);
-        let reporting_interval = Duration::from_millis(1);
+        let raw_data_interval = Duration::from_millis(1);
 
         let report_queue =
-            make_report_queue(get_voltages, &device_config, test_duration, reporting_interval);
+            make_report_queue(get_voltages, &device_config, test_duration, raw_data_interval);
 
         let coordinator = fake_device::CoordinatorBuilder::new(device_config.clone())
             .with_report_queue(report_queue.clone())
             .build();
         let interface = fake_device::FakeZedmonInterface::new(coordinator);
-
         let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
 
-        let output = run_zedmon_reporting(&zedmon, test_duration)?;
-
+        let output = run_zedmon_reporting(&zedmon, test_duration, None)?;
         let mut reader =
             csv::ReaderBuilder::new().has_headers(false).from_reader(output.as_slice());
 
@@ -1281,7 +1414,84 @@ mod tests {
             );
         }
 
-        assert_eq!(num_records, test_duration.as_millis() / reporting_interval.as_millis() + 1);
+        assert_eq!(num_records, test_duration.as_millis() / raw_data_interval.as_millis() + 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_reports_downsampled() -> Result<(), Error> {
+        // The voltages and device config are all completely made up for mathematical convenience.
+        // They are chosen so that v_shunt, v_bus, and power are easy to integrate analytically over
+        // the downsampling intervals.
+        fn get_voltages(micros: u64) -> (f32, f32) {
+            let seconds = micros as f32 / 1e6;
+            let v_shunt = seconds;
+            let v_bus = seconds.powi(2);
+            (v_shunt, v_bus)
+        }
+
+        let device_config = fake_device::DeviceConfiguration {
+            shunt_resistance: 2.0,
+            v_shunt_scale: 1e-4,
+            v_bus_scale: 1e-4,
+        };
+
+        let test_duration = Duration::from_secs(1);
+        let raw_data_interval = Duration::from_millis(1);
+        let reporting_interval = Duration::from_millis(100);
+
+        // Interval-average formulas follow from the definition
+        //   avg(y(t), [t_low, t_high]) := 1 / (t_high - t_low) * \int_{t_low}^{t_high} y(s) ds.
+        // Input times are in seconds.
+        let v_shunt_integral = |t1: f32, t2: f32| (t2.powi(2) - t1.powi(2)) / (2.0 * (t2 - t1));
+        let v_bus_integral = |t1: f32, t2: f32| (t2.powi(3) - t1.powi(3)) / (3.0 * (t2 - t1));
+        let power_integral = |t1: f32, t2: f32| {
+            (t2.powi(4) - t1.powi(4)) / (4.0 * device_config.shunt_resistance * (t2 - t1))
+        };
+
+        let report_queue =
+            make_report_queue(get_voltages, &device_config, test_duration, raw_data_interval);
+
+        let coordinator = fake_device::CoordinatorBuilder::new(device_config.clone())
+            .with_report_queue(report_queue.clone())
+            .build();
+        let interface = fake_device::FakeZedmonInterface::new(coordinator);
+        let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+
+        let output = run_zedmon_reporting(&zedmon, test_duration, Some(reporting_interval))?;
+        let mut reader =
+            csv::ReaderBuilder::new().has_headers(false).from_reader(output.as_slice());
+
+        // Both v_shunt and v_bus have a max value of 1. Since
+        //     power = v_shunt * v_bus / shunt_resistance,
+        // the maximum error in a raw power measurement should be roughly
+        //     (v_shunt_scale + v_bus_scale) / shunt_resistance.
+        let power_tolerance = (device_config.v_shunt_scale + device_config.v_bus_scale)
+            / device_config.shunt_resistance;
+
+        let mut num_records = 0;
+        let mut prev_timestamp = 0;
+        for result in reader.deserialize::<ZedmonRecord>() {
+            let record = result?;
+
+            num_records = num_records + 1;
+
+            let t = record.timestamp_micros as f32 / 1e6;
+            let t_prev = prev_timestamp as f32 / 1e6;
+
+            assert_near!(
+                record.shunt_voltage,
+                v_shunt_integral(t_prev, t),
+                device_config.v_shunt_scale
+            );
+            assert_near!(record.bus_voltage, v_bus_integral(t_prev, t), device_config.v_bus_scale);
+            assert_near!(record.power, power_integral(t_prev, t), power_tolerance);
+
+            prev_timestamp = record.timestamp_micros;
+        }
+
+        assert_eq!(num_records, test_duration.as_millis() / reporting_interval.as_millis());
 
         Ok(())
     }
@@ -1337,5 +1547,106 @@ mod tests {
         assert_eq!(coordinator.borrow().relay_enabled(), true);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_downsampler_nominal() {
+        // Total duration of the test scenario.
+        let duration_micros = 1_000_000;
+
+        // Interval of the raw signal (100 Hz).
+        let raw_interval_micros = 10_000;
+
+        // Downsample to 80 Hz. This lets us test both when the downsampling interval coincides with
+        // the end of a raw sample interval (t=25,000us, 50,000us, 75,000us, ...) and when it
+        // does not (t=12,500us, 37,500us, 62,500us, ...).
+        let downsampling_interval_micros = 12_500;
+        let mut downsampler = Downsampler::new(downsampling_interval_micros);
+
+        // Functions defining the raw and average values for each quantity. These are made up, and
+        // there is no relationship between the voltages and power in Downsampler's context.
+        //
+        // Interval-average formulas follow from the definition
+        //   avg(y(t), [t_low, t_high]) := 1 / (t_high - t_low) * \int_{t_low}^{t_high} y(s) ds.
+        let shunt_voltage_raw = |t: f32| t;
+        let shunt_voltage_average =
+            |t1: f32, t2: f32| (t2.powi(2) - t1.powi(2)) / (2.0 * (t2 - t1));
+        let bus_voltage_raw = |t: f32| t.powi(2);
+        let bus_voltage_average = |t1: f32, t2: f32| (t2.powi(3) - t1.powi(3)) / (3.0 * (t2 - t1));
+        let power_raw = |t: f32| t.powi(3);
+        let power_average = |t1: f32, t2: f32| (t2.powi(4) - t1.powi(4)) / (4.0 * (t2 - t1));
+
+        // Collect raw samples from t=0s to t=1s.
+        let mut t_micros = 0;
+        let mut records_out = Vec::new();
+        while t_micros <= duration_micros {
+            let t_sec = t_micros as f32 / 1e6;
+            let record = ZedmonRecord {
+                timestamp_micros: t_micros,
+                shunt_voltage: shunt_voltage_raw(t_sec),
+                bus_voltage: bus_voltage_raw(t_sec),
+                power: power_raw(t_sec),
+            };
+            match downsampler.process(record) {
+                Some(r) => records_out.push(r),
+                None => {}
+            }
+
+            t_micros += raw_interval_micros;
+        }
+
+        let dt_sec = downsampling_interval_micros as f32 / 1e6;
+
+        // Confirm expectations.
+        assert_eq!(records_out.len(), (duration_micros / downsampling_interval_micros) as usize);
+
+        for (i, record) in records_out.into_iter().enumerate() {
+            let expected_micros = ((i + 1) as u64) * downsampling_interval_micros;
+
+            // Endpoints of the interval for this sample, in seconds.
+            let t2 = expected_micros as f32 / 1e6;
+            let t1 = t2 - dt_sec;
+
+            assert_eq!(record.timestamp_micros, expected_micros);
+            assert_near!(record.shunt_voltage, shunt_voltage_average(t1, t2), 1e-4);
+            assert_near!(record.bus_voltage, bus_voltage_average(t1, t2), 1e-4);
+            assert_near!(record.power, power_average(t1, t2), 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_downsampler_with_data_gap() {
+        // Run for 1 second with a raw data interval of 10ms and a downsampling interval of 100ms,
+        // with an outage in raw data from 230ms to 440ms, inclusive. Downsampling will skip outputs
+        // at 300ms and 400ms and reinitialize at 450ms, so we should see a gap in timestamps of the
+        // output samples between 200ms and 550ms.
+        let duration_micros = 1_000_000;
+        let raw_interval_micros = 10_000;
+        let downsampling_interval_micros = 100_000;
+        let raw_data_gap_micros = [230_000, 440_000];
+
+        let mut downsampler = Downsampler::new(downsampling_interval_micros);
+
+        let mut t_micros = 0;
+        let mut records_out = Vec::new();
+        while t_micros <= duration_micros {
+            if t_micros < raw_data_gap_micros[0] || t_micros > raw_data_gap_micros[1] {
+                let record = ZedmonRecord {
+                    timestamp_micros: t_micros,
+                    shunt_voltage: 1.0,
+                    bus_voltage: 1.0,
+                    power: 1.0,
+                };
+                match downsampler.process(record) {
+                    Some(r) => records_out.push(r),
+                    None => {}
+                }
+            }
+
+            t_micros += raw_interval_micros;
+        }
+
+        let timestamps: Vec<u64> = records_out.into_iter().map(|r| r.timestamp_micros).collect();
+        assert_eq!(timestamps, vec![100_000, 200_000, 550_000, 650_000, 750_000, 850_000, 950_000]);
     }
 }
