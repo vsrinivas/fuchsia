@@ -10,7 +10,7 @@ use futures::prelude::*;
 use log::{info, warn};
 use omaha_client::{
     metrics::{ClockType, Metrics, MetricsReporter},
-    protocol::request::InstallSource,
+    protocol::request::{EventResult, EventType, InstallSource},
 };
 use std::{convert::TryFrom, time::Duration};
 
@@ -40,6 +40,60 @@ fn duration_to_cobalt_micros(duration: Duration, metric_name: &str) -> Option<i6
     } else {
         warn!("Unable to report {} due to overflow: {:?}", metric_name, duration);
         None
+    }
+}
+
+fn mos_event_type_from_event_type(
+    t: EventType,
+) -> mos_metrics_registry::OmahaEventLostMetricDimensionEventType {
+    match t {
+        EventType::Unknown => mos_metrics_registry::OmahaEventLostMetricDimensionEventType::Unknown,
+        EventType::DownloadComplete => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::DownloadComplete
+        }
+        EventType::InstallComplete => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::InstallComplete
+        }
+        EventType::UpdateComplete => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::UpdateComplete
+        }
+        EventType::UpdateDownloadStarted => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::UpdateDownloadStarted
+        }
+        EventType::UpdateDownloadFinished => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::UpdateDownloadFinished
+        }
+        EventType::RebootedAfterUpdate => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::RebootedAfterUpdate
+        }
+    }
+}
+
+fn mos_event_result_from_event_result(
+    r: EventResult,
+) -> mos_metrics_registry::OmahaEventLostMetricDimensionEventResult {
+    match r {
+        EventResult::Error => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::Error
+        },
+        EventResult::Success => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::Success
+        },
+        EventResult::SuccessAndRestartRequired => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::SuccessAndRestartRequired
+        },
+        EventResult::SuccessAndAppRestartRequired => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::SuccessAndAppRestartRequired
+        },
+        EventResult::Cancelled => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::Cancelled
+        },
+        EventResult::ErrorInSystemInstaller => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::ErrorInSystemInstaller
+        },
+        EventResult::UpdateDeferred => {
+            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::UpdateDeferred
+        },
     }
 }
 
@@ -205,6 +259,16 @@ impl MetricsReporter for CobaltMetricsReporter {
                     count as i64,
                 );
             }
+            Metrics::OmahaEventLost(event) => {
+                let event_type = mos_event_type_from_event_type(event.event_type);
+                let result = mos_event_result_from_event_result(event.event_result);
+                self.cobalt_sender.log_event_count(
+                    mos_metrics_registry::OMAHA_EVENT_LOST_METRIC_ID,
+                    (event_type, result),
+                    0,
+                    1,
+                );
+            }
         }
         Ok(())
     }
@@ -217,7 +281,7 @@ mod tests {
     use fidl_fuchsia_cobalt::{CountEvent, EventPayload};
     use fuchsia_async as fasync;
     use futures::stream::StreamExt;
-    use omaha_client::metrics::UpdateCheckFailureReason;
+    use omaha_client::{metrics::UpdateCheckFailureReason, protocol::request::Event};
     use std::time::Duration;
 
     async fn assert_metrics(metrics: Metrics, expected_events: &[CobaltEvent]) {
@@ -442,6 +506,62 @@ mod tests {
             ],
         )
         .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_failed_boot_attempts() {
+        assert_metrics(
+            Metrics::FailedBootAttempts(42),
+            &[CobaltEvent {
+                metric_id: mos_metrics_registry::FAILED_BOOT_ATTEMPTS_METRIC_ID,
+                event_codes: vec![
+                    mos_metrics_registry::FailedBootAttemptsMetricDimensionResult::Success,
+                ]
+                .as_event_codes(),
+                component: None,
+                payload: EventPayload::EventCount(CountEvent {
+                    period_duration_micros: 0,
+                    count: 42,
+                }),
+            }],
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_omaha_event_lost() {
+        macro_rules! assert_lost_combo {
+            ($typeId:ident, $resId:ident) => {
+                assert_metrics(
+                    Metrics::OmahaEventLost(Event {
+                        event_type: EventType::$typeId,
+                        event_result: EventResult::$resId,
+                        ..Event::default()
+                    }),
+                    &[CobaltEvent {
+                        metric_id: mos_metrics_registry::OMAHA_EVENT_LOST_METRIC_ID,
+                        event_codes: (
+                            mos_metrics_registry::OmahaEventLostMetricDimensionEventType::$typeId,
+                            mos_metrics_registry::OmahaEventLostMetricDimensionEventResult::$resId,
+                        )
+                            .as_event_codes(),
+                        component: None,
+                        payload: EventPayload::EventCount(CountEvent {
+                            period_duration_micros: 0,
+                            count: 1,
+                        }),
+                    }],
+                )
+                .await;
+            };
+        }
+        assert_lost_combo!(Unknown, Error);
+        assert_lost_combo!(DownloadComplete, Success);
+        assert_lost_combo!(InstallComplete, SuccessAndRestartRequired);
+        assert_lost_combo!(UpdateComplete, SuccessAndAppRestartRequired);
+        assert_lost_combo!(UpdateDownloadStarted, Cancelled);
+        assert_lost_combo!(UpdateDownloadFinished, ErrorInSystemInstaller);
+        assert_lost_combo!(RebootedAfterUpdate, UpdateDeferred);
     }
 
     #[test]

@@ -1048,6 +1048,7 @@ where
         }
         request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
         if let Err(e) = self.do_omaha_request_and_update_context(&request_builder, co).await {
+            self.report_metrics(Metrics::OmahaEventLost(event));
             warn!("Unable to report event to Omaha: {:?}", e);
         }
     }
@@ -1871,6 +1872,52 @@ mod tests {
     }
 
     #[test]
+    fn test_metrics_report_omaha_event_lost() {
+        block_on(async {
+            // This is sufficient to trigger a lost Omaha event as oneshot triggers an
+            // update check, which gets the invalid response (but hasn't checked the
+            // validity yet). This invalid response still contains an OK status, resulting
+            // in the UpdateCheckResponseTime and RequestsPerCheck events being generated
+            // reporting success.
+            //
+            // The response is then parsed and found to be incorrect; this parse error is
+            // attempted to be sent back to Omaha as an event with the ParseResponse error
+            // associated. However, the MockHttpRequest has already consumed the one
+            // response it knew how to give; this event is reported via HTTP, but is "lost"
+            // because the mock responds with a 500 error when it has no responses left to
+            // return.
+            //
+            // That finally results in the OmahaEventLost.
+            let http = MockHttpRequest::new(HttpResponse::new("invalid response".into()));
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let _response = StateMachineBuilder::new_stub()
+                .http(http)
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::OmahaEventLost(Event {
+                        event_type: EventType::UpdateComplete,
+                        event_result: EventResult::Error,
+                        errorcode: Some(EventErrorCode::ParseResponse),
+                        previous_version: None,
+                        next_version: None,
+                        download_time_ms: None,
+                    })
+                ]
+            );
+        });
+    }
+
+    #[test]
     fn test_metrics_report_update_check_response_time() {
         block_on(async {
             let mut metrics_reporter = MockMetricsReporter::new();
@@ -1954,6 +2001,14 @@ mod tests {
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
                     Metrics::RequestsPerCheck { count: 3, successful: true },
+                    Metrics::OmahaEventLost(Event {
+                        event_type: EventType::UpdateComplete,
+                        event_result: EventResult::Error,
+                        errorcode: Some(EventErrorCode::ParseResponse),
+                        previous_version: None,
+                        next_version: None,
+                        download_time_ms: None
+                    }),
                 ]
             );
         });
@@ -2534,7 +2589,10 @@ mod tests {
                 [
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
                     Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateDownloadStarted, event_result: EventResult::Success, .. }),
                     Metrics::SuccessfulUpdateDuration(install_duration),
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateDownloadFinished, event_result: EventResult::Success, .. }),
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateComplete, event_result: EventResult::Success, .. }),
                     Metrics::SuccessfulUpdateFromFirstSeen(duration_since_first_seen),
                     Metrics::AttemptsToSuccessfulCheck(1),
                     Metrics::AttemptsToSuccessfulInstall { count: 1, successful: true },
@@ -2707,7 +2765,10 @@ mod tests {
                 [
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
                     Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateDownloadStarted, event_result: EventResult::Success, .. }),
                     Metrics::SuccessfulUpdateDuration(_),
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateDownloadFinished, event_result: EventResult::Success, .. }),
+                    Metrics::OmahaEventLost(Event { event_type: EventType::UpdateComplete, event_result: EventResult::Success, .. }),
                     Metrics::SuccessfulUpdateFromFirstSeen(_),
                     Metrics::AttemptsToSuccessfulCheck(1),
                     Metrics::AttemptsToSuccessfulInstall { count: 1, successful: true },
@@ -2775,6 +2836,7 @@ mod tests {
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
                     Metrics::RequestsPerCheck { count: 1, successful: true },
                     Metrics::SuccessfulUpdateDuration(_),
+                    Metrics::OmahaEventLost(Event { .. }),
                     Metrics::SuccessfulUpdateFromFirstSeen(_),
                     Metrics::AttemptsToSuccessfulCheck(1),
                     Metrics::AttemptsToSuccessfulInstall { count: 2, successful: true }
