@@ -44,6 +44,15 @@ static void smallest_unused_fd(int* fd) {
 
 }  // namespace
 
+// Ensure accessing the global logger is safe when a global object is being torn down.
+class LogDuringTeardownTest {
+ public:
+  ~LogDuringTeardownTest() {
+    // This should not crash.
+    FX_LOG(INFO, NULL, "message");
+  }
+} g_log_during_teardown;
+
 TEST(SyslogTests, test_log_init_with_socket) {
   zx::socket socket0, socket1;
   EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));

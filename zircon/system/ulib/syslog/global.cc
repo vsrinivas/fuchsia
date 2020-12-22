@@ -38,9 +38,10 @@ fx_logger_t* MakeDefaultLogger(bool connect) {
 fx_logger_t* get_or_create_global_logger(bool connect) {
   // Upon initialization, the default logger is either provided with a
   // socket connection, or a fallback file-descriptor (which it will use)
-  // or it will be initialized to log to STDERR.
-  static std::unique_ptr<fx_logger_t> logger(MakeDefaultLogger(connect));
-  return logger.get();
+  // or it will be initialized to log to STDERR. This object is contructed on
+  // the first call to this function and will be leaked on shutdown.
+  static fx_logger_t* logger = MakeDefaultLogger(connect);
+  return logger;
 }
 
 SYSLOG_EXPORT
