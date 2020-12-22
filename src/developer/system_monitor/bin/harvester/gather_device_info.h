@@ -18,15 +18,15 @@ extern const char kAnnotationUptime[];
 // Collect static information about the current device.
 class GatherDeviceInfo : public GatherCategory {
  public:
-  GatherDeviceInfo(zx_handle_t root_resource,
+  GatherDeviceInfo(zx_handle_t info_resource,
                    harvester::DockyardProxy* dockyard_proxy)
-      : GatherDeviceInfo(root_resource, dockyard_proxy,
+      : GatherDeviceInfo(info_resource, dockyard_proxy,
                          std::make_unique<AnnotationsProvider>()) {}
 
-  GatherDeviceInfo(zx_handle_t root_resource,
+  GatherDeviceInfo(zx_handle_t info_resource,
                    harvester::DockyardProxy* dockyard_proxy,
                    std::unique_ptr<AnnotationsProvider> annotations_provider)
-      : GatherCategory(root_resource, dockyard_proxy),
+      : GatherCategory(info_resource, dockyard_proxy),
         annotations_provider_(std::move(annotations_provider)) {}
 
   // GatherCategory.

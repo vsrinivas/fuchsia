@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
-#include "root_resource.h"
+#include "info_resource.h"
 
 class GatherTasksTest : public ::testing::Test {
  public:
@@ -35,10 +35,10 @@ class GatherTasksTest : public ::testing::Test {
 };
 
 TEST_F(GatherTasksTest, MemoryData) {
-  zx_handle_t root_resource;
-  ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+  zx_handle_t info_resource;
+  ASSERT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
-  harvester::GatherTasks gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherTasks gatherer(info_resource, &dockyard_proxy);
   gatherer.Gather();
 
   std::string test_string;

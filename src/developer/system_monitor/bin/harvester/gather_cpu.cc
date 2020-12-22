@@ -24,11 +24,11 @@ void AddCpuValue(SampleBundle* samples, size_t cpu, const std::string& path,
 
 }  // namespace
 
-void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t root_resource) {
+void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t info_resource) {
   // TODO(fxbug.dev/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
-  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,
+  zx_status_t err = zx_object_get_info(info_resource, ZX_INFO_CPU_STATS, &stats,
                                        sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
     FX_LOGS(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
@@ -68,7 +68,7 @@ void GatherCpu::GatherDeviceProperties() {
   const std::string CPU_COUNT = "cpu:count";
   zx_info_cpu_stats_t stats[1];
   size_t actual, avail;
-  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,
+  zx_status_t err = zx_object_get_info(InfoResource(), ZX_INFO_CPU_STATS,
                                        &stats, sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
     FX_LOGS(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
@@ -85,7 +85,7 @@ void GatherCpu::GatherDeviceProperties() {
 
 void GatherCpu::Gather() {
   SampleBundle samples;
-  AddGlobalCpuSamples(&samples, RootResource());
+  AddGlobalCpuSamples(&samples, InfoResource());
   samples.Upload(DockyardPtr());
 }
 

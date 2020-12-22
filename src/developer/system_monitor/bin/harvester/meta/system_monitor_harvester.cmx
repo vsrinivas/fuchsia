@@ -11,8 +11,8 @@
             "hub"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
             "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.kernel.InfoResource",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",

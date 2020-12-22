@@ -29,7 +29,7 @@ namespace harvester {
 // different types of Dockyard Samples as directed by the Harvester.
 class Harvester {
  public:
-  Harvester(zx_handle_t root_resource,
+  Harvester(zx_handle_t info_resource,
             std::unique_ptr<DockyardProxy> dockyard_proxy,
             std::unique_ptr<OS> os);
 
@@ -44,26 +44,26 @@ class Harvester {
   void GatherSlowData(async_dispatcher_t* dispatcher);
 
  private:
-  zx_handle_t root_resource_;
+  zx_handle_t info_resource_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
   std::unique_ptr<harvester::OS> os_;
   LogListener log_listener_;
 
-  GatherChannels gather_channels_{root_resource_, dockyard_proxy_.get()};
-  GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
-  GatherDeviceInfo gather_device_info_{root_resource_, dockyard_proxy_.get()};
-  GatherInspectable gather_inspectable_{root_resource_, dockyard_proxy_.get()};
-  GatherIntrospection gather_introspection_{root_resource_,
+  GatherChannels gather_channels_{info_resource_, dockyard_proxy_.get()};
+  GatherCpu gather_cpu_{info_resource_, dockyard_proxy_.get()};
+  GatherDeviceInfo gather_device_info_{info_resource_, dockyard_proxy_.get()};
+  GatherInspectable gather_inspectable_{info_resource_, dockyard_proxy_.get()};
+  GatherIntrospection gather_introspection_{info_resource_,
                                             dockyard_proxy_.get()};
-  GatherMemory gather_memory_{root_resource_, dockyard_proxy_.get()};
-  GatherMemoryDigest gather_memory_digest_{root_resource_,
+  GatherMemory gather_memory_{info_resource_, dockyard_proxy_.get()};
+  GatherMemoryDigest gather_memory_digest_{info_resource_,
                                            dockyard_proxy_.get()};
-  GatherTasks gather_tasks_{root_resource_, dockyard_proxy_.get()};
-  GatherThreadsAndCpu gather_threads_and_cpu_{root_resource_,
+  GatherTasks gather_tasks_{info_resource_, dockyard_proxy_.get()};
+  GatherThreadsAndCpu gather_threads_and_cpu_{info_resource_,
                                               dockyard_proxy_.get()};
-  GatherProcessesAndMemory gather_processes_and_memory_{root_resource_,
+  GatherProcessesAndMemory gather_processes_and_memory_{info_resource_,
                                                         dockyard_proxy_.get()};
-  GatherVmos gather_vmos_{root_resource_, dockyard_proxy_.get(),
+  GatherVmos gather_vmos_{info_resource_, dockyard_proxy_.get(),
                           g_slow_data_task_tree, os_.get()};
 
   friend class ::SystemMonitorHarvesterTest;

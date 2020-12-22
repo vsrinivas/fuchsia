@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_MEMORY_DIGEST_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_MEMORY_DIGEST_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_MEMORY_DIGEST_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_MEMORY_DIGEST_H_
 
 #include "gather_category.h"
 #include "src/developer/memory/metrics/digest.h"
@@ -15,9 +15,9 @@ namespace harvester {
 // categories. I.e. it creates a digest of the memory usage.
 class GatherMemoryDigest : public GatherCategory {
  public:
-  GatherMemoryDigest(zx_handle_t root_resource,
+  GatherMemoryDigest(zx_handle_t info_resource,
                      harvester::DockyardProxy* dockyard_proxy)
-      : GatherCategory(root_resource, dockyard_proxy) {}
+      : GatherCategory(info_resource, dockyard_proxy) {}
 
   // GatherCategory.
   void Gather() override;
@@ -29,4 +29,4 @@ class GatherMemoryDigest : public GatherCategory {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_MEMORY_DIGEST_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_MEMORY_DIGEST_H_

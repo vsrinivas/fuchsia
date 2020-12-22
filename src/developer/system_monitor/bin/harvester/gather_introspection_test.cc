@@ -14,10 +14,10 @@ class GatherIntrospectionTest : public ::testing::Test {
 };
 
 TEST_F(GatherIntrospectionTest, Introspection) {
-  zx_handle_t root_resource = 0;
+  zx_handle_t info_resource = 0;
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherIntrospection gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherIntrospection gatherer(info_resource, &dockyard_proxy);
   gatherer.Gather();
   std::string test_string;
   EXPECT_TRUE(dockyard_proxy.CheckJsonSent("inspect:/hub/fake/234/faux.Inspect",

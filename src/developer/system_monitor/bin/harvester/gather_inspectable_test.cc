@@ -14,10 +14,10 @@ class GatherInspectableTest : public ::testing::Test {
 };
 
 TEST_F(GatherInspectableTest, DISABLED_Inspectable) {
-  zx_handle_t root_resource = 0;
+  zx_handle_t info_resource = 0;
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherInspectable gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherInspectable gatherer(info_resource, &dockyard_proxy);
   gatherer.Gather();
   std::string test_string;
   EXPECT_TRUE(dockyard_proxy.CheckStringPrefixSent(

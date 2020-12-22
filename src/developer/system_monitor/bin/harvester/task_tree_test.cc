@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-#include "root_resource.h"
+#include "info_resource.h"
 
 class TaskTreeForTesting : public ::harvester::TaskTree {
  public:

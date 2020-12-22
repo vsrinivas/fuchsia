@@ -30,7 +30,7 @@ class GatherMemoryActions {
 // Gather samples for process and global memory stats.
 class GatherProcessesAndMemory : public GatherCategory {
  public:
-  GatherProcessesAndMemory(zx_handle_t root_resource,
+  GatherProcessesAndMemory(zx_handle_t info_resource,
                            harvester::DockyardProxy* dockyard_proxy);
 
   // GatherCategory.

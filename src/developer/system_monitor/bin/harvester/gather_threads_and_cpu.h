@@ -32,7 +32,7 @@ class TaskActions {
 // Gather samples for threads and global CPU stats.
 class GatherThreadsAndCpu : public GatherCategory {
  public:
-  GatherThreadsAndCpu(zx_handle_t root_resource,
+  GatherThreadsAndCpu(zx_handle_t info_resource,
                       harvester::DockyardProxy* dockyard_proxy);
 
   // GatherCategory.

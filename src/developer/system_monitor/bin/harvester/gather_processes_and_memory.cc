@@ -16,8 +16,8 @@
 namespace harvester {
 
 GatherProcessesAndMemory::GatherProcessesAndMemory(
-    zx_handle_t root_resource, harvester::DockyardProxy* dockyard_proxy)
-    : GatherCategory(root_resource, dockyard_proxy) {}
+    zx_handle_t info_resource, harvester::DockyardProxy* dockyard_proxy)
+    : GatherCategory(info_resource, dockyard_proxy) {}
 
 void GatherProcessesAndMemory::Gather() {
   SampleBundle samples;
@@ -30,7 +30,7 @@ void GatherProcessesAndMemory::Gather() {
     AddTaskBasics(&samples, task_tree->Threads(), dockyard::KoidType::THREAD);
   }
   AddProcessStats(&samples, task_tree->Processes());
-  AddGlobalMemorySamples(&samples, RootResource());
+  AddGlobalMemorySamples(&samples, InfoResource());
   samples.Upload(DockyardPtr());
   actions_.NextInterval();
 }

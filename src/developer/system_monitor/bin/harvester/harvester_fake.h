@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_FAKE_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_FAKE_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_FAKE_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_FAKE_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
@@ -24,9 +24,9 @@ class Harvester;
 
 class HarvesterFake : public Harvester {
  public:
-  HarvesterFake(zx_handle_t root_resource,
+  HarvesterFake(zx_handle_t info_resource,
                 std::unique_ptr<DockyardProxy> dockyard_proxy)
-      : Harvester(root_resource, /*dispatcher=*/nullptr,
+      : Harvester(info_resource, /*dispatcher=*/nullptr,
                   std::move(dockyard_proxy)) {}
 
   void GatherData() {}
@@ -37,4 +37,4 @@ class HarvesterFake : public Harvester {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_FAKE_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_HARVESTER_FAKE_H_

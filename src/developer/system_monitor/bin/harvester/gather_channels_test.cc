@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
-#include "root_resource.h"
+#include "info_resource.h"
 
 namespace {
 
@@ -26,10 +26,10 @@ class GatherChannelsTest : public ::testing::Test {
 };
 
 TEST_F(GatherChannelsTest, SmokeTest) {
-  zx_handle_t root_resource;
-  ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+  zx_handle_t info_resource;
+  ASSERT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
-  harvester::GatherChannels gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherChannels gatherer(info_resource, &dockyard_proxy);
   harvester::g_slow_data_task_tree.Gather();
   gatherer.Gather();
   // Verify that something is being sent.
@@ -43,10 +43,10 @@ TEST_F(GatherChannelsTest, SmokeTest) {
 }
 
 TEST_F(GatherChannelsTest, ProcessesAndPeers) {
-  zx_handle_t root_resource;
-  ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+  zx_handle_t info_resource;
+  ASSERT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
-  harvester::GatherChannels gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherChannels gatherer(info_resource, &dockyard_proxy);
   harvester::g_slow_data_task_tree.Gather();
   gatherer.Gather();
 

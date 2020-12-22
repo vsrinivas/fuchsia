@@ -15,9 +15,9 @@ class SampleBundle;
 // Gather Samples for jobs, processes, and threads.
 class GatherChannels : public GatherCategory {
  public:
-  GatherChannels(zx_handle_t root_resource,
+  GatherChannels(zx_handle_t info_resource,
                  harvester::DockyardProxy* dockyard_proxy)
-      : GatherCategory(root_resource, dockyard_proxy) {}
+      : GatherCategory(info_resource, dockyard_proxy) {}
 
   // GatherCategory.
   void Gather() override;

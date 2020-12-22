@@ -7,21 +7,21 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
-#include "root_resource.h"
+#include "info_resource.h"
 
 namespace harvester {
-  const std::map<std::string, std::string>& GetBucketMap();
+const std::map<std::string, std::string>& GetBucketMap();
 }  // namespace harvester.
 
 class GatherMemoryDigestTest : public ::testing::Test {};
 
 TEST_F(GatherMemoryDigestTest, Inspectable) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherMemoryDigest gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherMemoryDigest gatherer(info_resource, &dockyard_proxy);
 
   // No samples are currently gathered in this call. Test that  this is
   // available to call and doesn't crash.

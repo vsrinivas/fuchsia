@@ -12,9 +12,9 @@
 
 namespace harvester {
 
-void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t root_resource) {
+void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t info_resource) {
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
+  zx_status_t err = zx_object_get_info(info_resource, ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats),
                                        /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
@@ -55,7 +55,7 @@ void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t root_resource) {
 void GatherMemory::GatherDeviceProperties() {
   const std::string DEVICE_TOTAL = "memory:device_total_bytes";
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
+  zx_status_t err = zx_object_get_info(InfoResource(), ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats),
                                        /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
@@ -73,7 +73,7 @@ void GatherMemory::GatherDeviceProperties() {
 
 void GatherMemory::Gather() {
   SampleBundle samples;
-  AddGlobalMemorySamples(&samples, RootResource());
+  AddGlobalMemorySamples(&samples, InfoResource());
   samples.Upload(DockyardPtr());
 }
 

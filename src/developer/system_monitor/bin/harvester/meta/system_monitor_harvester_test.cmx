@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootResource",
+                "fuchsia.kernel.InfoResource",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
@@ -22,14 +22,14 @@
             "hub"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
             "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.kernel.InfoResource",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
-            "fuchsia.sysinfo.SysInfo",
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Environment",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

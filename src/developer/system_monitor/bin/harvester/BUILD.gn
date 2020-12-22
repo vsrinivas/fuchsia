@@ -49,11 +49,11 @@ source_set("lib") {
     "gather_vmos.h",
     "harvester.cc",
     "harvester.h",
+    "info_resource.cc",
+    "info_resource.h",
     "log_listener.cc",
     "log_listener.h",
     "os.h",
-    "root_resource.cc",
-    "root_resource.h",
     "sample_bundle.cc",
     "sample_bundle.h",
     "task_tree.cc",
@@ -62,8 +62,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
@@ -81,6 +81,7 @@ source_set("lib") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zircon:zircon-headers",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -142,8 +143,8 @@ executable("system_monitor_harvester_test") {
     "gather_vmos_test.cc",
     "harvester_fake.h",
     "harvester_test.cc",
+    "info_resource_test.cc",
     "mock_dockyard_stub.h",
-    "root_resource_test.cc",
     "sample_bundle_test.cc",
     "task_tree_test.cc",
     "union_find_test.cc",

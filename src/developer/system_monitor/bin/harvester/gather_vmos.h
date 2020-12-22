@@ -48,11 +48,11 @@ class GatherVmos : public GatherCategory {
     char name[ZX_MAX_NAME_LEN];
   };
 
-  GatherVmos(zx_handle_t root_resource,
+  GatherVmos(zx_handle_t info_resource,
              harvester::DockyardProxy* dockyard_proxy,
-             harvester::TaskTree& task_tree,
-             OS* os)
-      : GatherCategory(root_resource, dockyard_proxy), task_tree_(task_tree),
+             harvester::TaskTree& task_tree, OS* os)
+      : GatherCategory(info_resource, dockyard_proxy),
+        task_tree_(task_tree),
         os_(os) {}
 
   // GatherCategory.
@@ -155,4 +155,3 @@ class GatherVmos : public GatherCategory {
 }  // namespace harvester
 
 #endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_VMOS_H_
-

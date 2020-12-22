@@ -13,8 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
+#include "info_resource.h"
 #include "os.h"
-#include "root_resource.h"
 
 namespace {
 
@@ -37,13 +37,13 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
         std::make_unique<harvester::DockyardProxyFake>();
     std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
 
-    EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+    EXPECT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, std::move(dockyard_proxy), std::move(os));
+        info_resource, std::move(dockyard_proxy), std::move(os));
   }
 
-  zx_handle_t GetHarvesterRootResource() const {
-    return test_harvester->root_resource_;
+  zx_handle_t GetHarvesterInfoResource() const {
+    return test_harvester->info_resource_;
   }
   zx::duration GetGatherThreadsAndCpuPeriod() const {
     return test_harvester->gather_threads_and_cpu_.update_period_;
@@ -63,13 +63,13 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
 
   std::unique_ptr<harvester::Harvester> test_harvester;
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx_handle_t root_resource;
+  zx_handle_t info_resource;
 };
 
 TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
   AsyncDispatcherFake fast_dispatcher;
   AsyncDispatcherFake slow_dispatcher;
-  EXPECT_EQ(root_resource, GetHarvesterRootResource());
+  EXPECT_EQ(info_resource, GetHarvesterInfoResource());
 
   test_harvester->GatherFastData(&fast_dispatcher);
   EXPECT_EQ(zx::msec(100), GetGatherThreadsAndCpuPeriod());
@@ -91,13 +91,13 @@ class SystemMonitorHarvesterIntegrationTest
     dockyard_proxy = dockyard_proxy_ptr.get();
     std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
 
-    EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+    EXPECT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, std::move(dockyard_proxy_ptr), std::move(os));
+        info_resource, std::move(dockyard_proxy_ptr), std::move(os));
   }
 
   std::unique_ptr<harvester::Harvester> test_harvester;
-  zx_handle_t root_resource;
+  zx_handle_t info_resource;
   harvester::DockyardProxyFake* dockyard_proxy;
 };
 

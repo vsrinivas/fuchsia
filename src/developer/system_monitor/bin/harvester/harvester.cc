@@ -26,10 +26,10 @@
 
 namespace harvester {
 
-Harvester::Harvester(zx_handle_t root_resource,
+Harvester::Harvester(zx_handle_t info_resource,
                      std::unique_ptr<DockyardProxy> dockyard_proxy,
                      std::unique_ptr<OS> os)
-    : root_resource_(root_resource),
+    : info_resource_(info_resource),
       dockyard_proxy_(std::move(dockyard_proxy)),
       os_(std::move(os)),
       log_listener_(sys::ServiceDirectory::CreateFromNamespace()) {}

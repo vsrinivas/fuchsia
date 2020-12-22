@@ -36,9 +36,9 @@ std::string ZxErrorString(const std::string& cmd, zx_status_t err);
 // manageable and enabling/disabling categories.
 class GatherCategory {
  public:
-  GatherCategory(zx_handle_t root_resource,
+  GatherCategory(zx_handle_t info_resource,
                  harvester::DockyardProxy* dockyard_proxy)
-      : root_resource_(root_resource), dockyard_proxy_(dockyard_proxy) {}
+      : info_resource_(info_resource), dockyard_proxy_(dockyard_proxy) {}
   virtual ~GatherCategory() = default;
 
   // The dockyard proxy is used to send data to the remote Dockyard.
@@ -51,8 +51,8 @@ class GatherCategory {
   // Override this in a base class to gather sample data.
   virtual void Gather() = 0;
 
-  // Get the root resource of the job/process/thread tree.
-  zx_handle_t RootResource() { return root_resource_; }
+  // Get the info resource of the job/process/thread tree.
+  zx_handle_t InfoResource() const { return info_resource_; }
 
   // Set (or reset) the time this task will run on |dispatcher|.
   // |Gather()| will be called at (or after) |start| and then every multiple of
@@ -67,7 +67,7 @@ class GatherCategory {
  private:
   async::TaskMethod<GatherCategory, &GatherCategory::TaskHandler> task_method_{
       this};
-  zx_handle_t root_resource_;
+  zx_handle_t info_resource_;
   harvester::DockyardProxy* dockyard_proxy_;
 
   zx::duration update_period_;

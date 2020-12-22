@@ -8,7 +8,7 @@
 
 #include "build_info.h"
 #include "dockyard_proxy_fake.h"
-#include "root_resource.h"
+#include "info_resource.h"
 
 class GatherDeviceInfoTest : public ::testing::Test {};
 
@@ -48,8 +48,8 @@ class FakeAnnotationsProvider : public harvester::AnnotationsProvider {
 };
 
 TEST_F(GatherDeviceInfoTest, WithAllExpectedValues) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
   std::unique_ptr<FakeAnnotationsProvider> annotations_provider =
@@ -59,7 +59,7 @@ TEST_F(GatherDeviceInfoTest, WithAllExpectedValues) {
   annotations_provider->SetAnnotation("build.product", "some-product");
   annotations_provider->SetAnnotation("device.board-name", "device-board-name");
 
-  harvester::GatherDeviceInfo gatherer(root_resource, &dockyard_proxy,
+  harvester::GatherDeviceInfo gatherer(info_resource, &dockyard_proxy,
                                        std::move(annotations_provider));
 
   gatherer.GatherDeviceProperties();
@@ -77,8 +77,8 @@ TEST_F(GatherDeviceInfoTest, WithAllExpectedValues) {
 }
 
 TEST_F(GatherDeviceInfoTest, HandlesSomeMissingExpectedValues) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
   std::unique_ptr<FakeAnnotationsProvider> annotations_provider =
@@ -88,7 +88,7 @@ TEST_F(GatherDeviceInfoTest, HandlesSomeMissingExpectedValues) {
   annotations_provider->SetAnnotation("device.NOT-board-name",
                                       "NOT-device-board-name");
 
-  harvester::GatherDeviceInfo gatherer(root_resource, &dockyard_proxy,
+  harvester::GatherDeviceInfo gatherer(info_resource, &dockyard_proxy,
                                        std::move(annotations_provider));
 
   gatherer.GatherDeviceProperties();
@@ -104,14 +104,14 @@ TEST_F(GatherDeviceInfoTest, HandlesSomeMissingExpectedValues) {
 }
 
 TEST_F(GatherDeviceInfoTest, HandlesAllMissingExpectedValues) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
   std::unique_ptr<FakeAnnotationsProvider> annotations_provider =
       std::make_unique<FakeAnnotationsProvider>();
 
-  harvester::GatherDeviceInfo gatherer(root_resource, &dockyard_proxy,
+  harvester::GatherDeviceInfo gatherer(info_resource, &dockyard_proxy,
                                        std::move(annotations_provider));
 
   gatherer.GatherDeviceProperties();
@@ -126,14 +126,14 @@ TEST_F(GatherDeviceInfoTest, HandlesAllMissingExpectedValues) {
 }
 
 TEST_F(GatherDeviceInfoTest, GatherGetsUptime) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
   std::unique_ptr<FakeAnnotationsProvider> annotations_provider =
       std::make_unique<FakeAnnotationsProvider>();
 
-  harvester::GatherDeviceInfo gatherer(root_resource, &dockyard_proxy,
+  harvester::GatherDeviceInfo gatherer(info_resource, &dockyard_proxy,
                                        std::move(annotations_provider));
 
   gatherer.Gather();

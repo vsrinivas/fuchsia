@@ -7,17 +7,17 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
-#include "root_resource.h"
+#include "info_resource.h"
 
 class GatherCpuTest : public ::testing::Test {};
 
 TEST_F(GatherCpuTest, CheckValues) {
-  zx_handle_t root_resource;
-  zx_status_t ret = harvester::GetRootResource(&root_resource);
+  zx_handle_t info_resource;
+  zx_status_t ret = harvester::GetInfoResource(&info_resource);
   ASSERT_EQ(ret, ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
 
-  harvester::GatherCpu gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherCpu gatherer(info_resource, &dockyard_proxy);
   uint64_t test_value;
 
   gatherer.GatherDeviceProperties();

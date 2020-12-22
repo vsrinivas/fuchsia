@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CPU_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CPU_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CPU_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CPU_H_
 
 #include "gather_category.h"
 
 namespace harvester {
 
 class SampleBundle;
-void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t root_resource);
+void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t info_resource);
 
 class GatherCpu : public GatherCategory {
  public:
-  GatherCpu(zx_handle_t root_resource, harvester::DockyardProxy* dockyard_proxy)
-      : GatherCategory(root_resource, dockyard_proxy) {}
+  GatherCpu(zx_handle_t info_resource, harvester::DockyardProxy* dockyard_proxy)
+      : GatherCategory(info_resource, dockyard_proxy) {}
 
   // GatherCategory.
   void GatherDeviceProperties() override;
@@ -24,4 +24,4 @@ class GatherCpu : public GatherCategory {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_CPU_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_GATHER_CPU_H_
