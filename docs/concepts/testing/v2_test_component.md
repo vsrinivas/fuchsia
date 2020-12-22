@@ -51,8 +51,8 @@ The component launches the `hello-world` component and asserts that it is
 writing the expected strings to the log.
 
 Note that this is a Rust test, and therefore includes
-`rust_test_runner.shard.cml` which sets up capability routing required to
-integrate with the Rust test framework.
+`rust/default.shard.cml` which sets up capability routing required to integrate
+with the Rust test framework.
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/basic/integration_tests/meta/hello-world-integration-test-driver.cml" region_tag="example_snippet" adjust_indentation="auto" %}
