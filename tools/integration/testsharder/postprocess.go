@@ -23,7 +23,7 @@ const (
 	// TODO(olivernewman): Apply a maximum to user-specified values too, but
 	// probably not in testsharder since we'll want to get feedback to users ASAP if
 	// validation fails.
-	multipliedTestMaxRuns = 2000
+	multipliedTestMaxRuns = 1000
 
 	// The maximum number of tests that a multiplier can match. testsharder will
 	// fail if this is exceeded.
