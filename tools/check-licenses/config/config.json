@@ -195,6 +195,10 @@
       "licenseLocation": "repo/apache-2.0.txt"
     },
     {
+      "projectRoot": "third_party/openthread/openthread-tmp/third_party/mbedtls",
+      "licenseLocation": "repo/apache-2.0.txt"
+    },
+    {
       "projectRoot": "third_party/zlib",
       "licenseLocation": "README"
     },
