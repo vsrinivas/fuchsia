@@ -8,13 +8,14 @@
 
 #include <cmath>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/ui/light/drivers/aml-light/aml_light_bind.h"
 
 namespace aml_light {
 
@@ -292,11 +293,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace aml_light
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_light, aml_light::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_LIGHT),
-ZIRCON_DRIVER_END(aml_light)
-    // clang-format on
+ZIRCON_DRIVER(aml_light, aml_light::driver_ops, "zircon", "0.1");
