@@ -412,8 +412,8 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
 
   const zx::duration utc_monotonic_difference(utc.get() - monotonic.get());
 
-  ASSERT_EQ(clock_.Now(&monotonic), ZX_OK);
-  ASSERT_EQ(clock_.Now(&utc), ZX_OK);
+  monotonic = clock_.Now();
+  ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
   const auto metadata_json = MakeJsonReport(::fit::ok<Annotations>(std::move(annotations)),
                                             ::fit::ok<Attachments>(std::move(attachments)));

@@ -74,11 +74,9 @@ TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
   StartClock(zx::time(0));
   RunLoopUntilIdle();
 
-  zx::time monotonic;
+  zx::time monotonic = clock_.Now();
   zx::time_utc utc;
-
-  ASSERT_EQ(clock_.Now(&monotonic), ZX_OK);
-  ASSERT_EQ(clock_.Now(&utc), ZX_OK);
+  ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
   const auto utc_monotonic_difference = utc_provider_->CurrentUtcMonotonicDifference();
   ASSERT_TRUE(utc_monotonic_difference.has_value());

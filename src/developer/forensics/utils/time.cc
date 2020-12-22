@@ -37,7 +37,7 @@ std::optional<std::string> FormatDuration(zx::duration duration) {
 
 std::optional<zx::time_utc> CurrentUtcTimeRaw(timekeeper::Clock* clock) {
   zx::time_utc now_utc;
-  if (const zx_status_t status = clock->Now(&now_utc); status != ZX_OK) {
+  if (const zx_status_t status = clock->UtcNow(&now_utc); status != ZX_OK) {
     return std::nullopt;
   }
 
