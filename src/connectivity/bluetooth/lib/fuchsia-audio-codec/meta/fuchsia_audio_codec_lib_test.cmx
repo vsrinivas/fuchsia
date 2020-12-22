@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fuchsia_audio_codec_lib_test"
+        "binary": "bin/fuchsia_audio_codec_lib_test"
     },
     "sandbox": {
         "services": [
