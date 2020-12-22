@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("cmx_schema_json") {
   inputs = [ "cmx_schema.json" ]
@@ -31,16 +31,12 @@ rustc_library("cm_json") {
   inputs = [ "cmx_schema.json" ]
 }
 
-test_package("cm_json_tests") {
+fuchsia_unittest_package("cm_json_tests") {
+  manifest = "meta/cm_json_tests.cmx"
   deps = [ ":cm_json_test" ]
-
-  tests = [
-    {
-      name = "cm_json_lib_test"
-      dest = "cm_json_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

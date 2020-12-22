@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-bootfs") {
   name = "fuchsia_bootfs"
@@ -27,39 +27,34 @@ rustc_library("fuchsia-bootfs") {
   ]
 }
 
-test_package("fuchsia-bootfs-tests") {
-  deps = [ ":fuchsia-bootfs_test" ]
+resource("testdata_bootfs") {
+  sources = [ "testdata/basic.bootfs.uncompressed" ]
+  outputs = [ "data/basic.bootfs.uncompressed" ]
+}
 
-  resources = [
-    {
-      path = rebase_path("testdata/basic.bootfs.uncompresssed")
-      dest = "basic.bootfs.uncompresssed"
-    },
-    {
-      path = rebase_path("testdata/input/dir/empty")
-      dest = "golden/dir/empty"
-    },
-    {
-      path = rebase_path("testdata/input/dir/lorem.txt")
-      dest = "golden/dir/lorem.txt"
-    },
-    {
-      path = rebase_path("testdata/input/empty")
-      dest = "golden/empty"
-    },
-    {
-      path = rebase_path("testdata/input/random.dat")
-      dest = "golden/random.dat"
-    },
-    {
-      path = rebase_path("testdata/input/simple.txt")
-      dest = "golden/simple.txt"
-    },
+resource("testdata_golden_subdir") {
+  sources = [
+    "testdata/input/dir/empty",
+    "testdata/input/dir/lorem.txt",
   ]
+  outputs = [ "data/golden/dir/{{source_file_part}}" ]
+}
 
-  tests = [
-    {
-      name = "fuchsia_bootfs_lib_test"
-    },
+resource("testdata_golden_root") {
+  sources = [
+    "testdata/input/empty",
+    "testdata/input/random.dat",
+    "testdata/input/simple.txt",
+  ]
+  outputs = [ "data/golden/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("fuchsia-bootfs-tests") {
+  manifest = "meta/fuchsia_bootfs_lib_test.cmx"
+  deps = [
+    ":fuchsia-bootfs_test",
+    ":testdata_bootfs",
+    ":testdata_golden_root",
+    ":testdata_golden_subdir",
   ]
 }

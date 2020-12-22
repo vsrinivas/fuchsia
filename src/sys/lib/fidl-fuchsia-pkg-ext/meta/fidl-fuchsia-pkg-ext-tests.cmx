@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fidl-fuchsia-pkg-ext-tests"
+        "binary": "bin/fidl_fuchsia_pkg_ext_lib_test"
     }
 }

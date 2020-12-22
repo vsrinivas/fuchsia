@@ -4,8 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia_backoff") {
   version = "0.1.0"
@@ -21,13 +21,10 @@ rustc_library("fuchsia_backoff") {
   sources = [ "src/lib.rs" ]
 }
 
-unittest_package("fuchsia_backoff_tests") {
+fuchsia_unittest_package("fuchsia_backoff_tests") {
+  executable_path = "bin/fuchsia_backoff_lib_test"
   deps = [ ":fuchsia_backoff_test" ]
-
-  tests = [
-    {
-      name = "fuchsia_backoff_lib_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

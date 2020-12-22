@@ -800,7 +800,7 @@ mod tests {
             let ns = setup_namespace(true, vec![])?;
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
                 ns: ns,
@@ -816,7 +816,7 @@ mod tests {
 
             let ls = recv.await?;
 
-            assert_eq!(ls.args, vec!("/pkg/test/runner_tests".to_owned()));
+            assert_eq!(ls.args, vec!("/pkg/bin/runner_lib_test".to_owned()));
 
             Ok(())
         }
@@ -830,7 +830,7 @@ mod tests {
             let args = vec!["args1".to_owned(), "arg2".to_owned()];
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: Some(args.clone()),
                 ns: ns,
@@ -846,7 +846,7 @@ mod tests {
 
             let ls = recv.await?;
 
-            let mut expected = vec!["/pkg/test/runner_tests".to_owned()];
+            let mut expected = vec!["/pkg/bin/runner_lib_test".to_owned()];
             expected.extend(args);
             assert_eq!(ls.args, expected);
 
@@ -860,7 +860,7 @@ mod tests {
             let ns = setup_namespace(true, vec!["/some_path1", "/some_path2"])?;
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
                 ns: ns,
@@ -906,7 +906,7 @@ mod tests {
             }
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
                 ns: ns,
@@ -940,7 +940,7 @@ mod tests {
             let ns = setup_namespace(true, vec![])?;
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
                 ns: ns,
@@ -984,7 +984,7 @@ mod tests {
             }
 
             let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "test/runner_tests",
+                bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
                 ns: ns,

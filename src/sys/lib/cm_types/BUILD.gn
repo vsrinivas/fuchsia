@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("cm_types") {
   with_unit_tests = true
@@ -21,16 +21,12 @@ rustc_library("cm_types") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("cm_types_tests") {
+fuchsia_unittest_package("cm_types_tests") {
+  manifest = "meta/cm_types_tests.cmx"
   deps = [ ":cm_types_test" ]
-
-  tests = [
-    {
-      name = "cm_types_lib_test"
-      dest = "cm_types_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

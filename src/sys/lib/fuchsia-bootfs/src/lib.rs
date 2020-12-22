@@ -237,7 +237,7 @@ mod tests {
     };
 
     static GOLDEN_DIR: &str = "/pkg/data/golden/";
-    static BASIC_BOOTFS_UNCOMPRESSED_FILE: &str = "/pkg/data/basic.bootfs.uncompresssed";
+    static BASIC_BOOTFS_UNCOMPRESSED_FILE: &str = "/pkg/data/basic.bootfs.uncompressed";
 
     fn read_file_into_hashmap(dir: &str, filename: &str, map: &mut HashMap<String, Vec<u8>>) {
         let mut file_buffer = Vec::new();

@@ -4,8 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("measure_fuchsia_pkg_index_entry") {
@@ -65,16 +65,12 @@ rustc_library("fidl-fuchsia-pkg-ext") {
   ]
 }
 
-test_package("fidl-fuchsia-pkg-ext-tests") {
+fuchsia_unittest_package("fidl-fuchsia-pkg-ext-tests") {
+  manifest = "meta/fidl-fuchsia-pkg-ext-tests.cmx"
   deps = [ ":fidl-fuchsia-pkg-ext_test" ]
-
-  tests = [
-    {
-      name = "fidl_fuchsia_pkg_ext_lib_test"
-      dest = "fidl-fuchsia-pkg-ext-tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

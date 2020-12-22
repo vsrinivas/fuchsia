@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("cm_rust") {
   with_unit_tests = true
@@ -27,16 +27,12 @@ rustc_library("cm_rust") {
   ]
 }
 
-test_package("cm_rust_tests") {
+fuchsia_unittest_package("cm_rust_tests") {
+  manifest = "meta/cm_rust_tests.cmx"
   deps = [ ":cm_rust_test" ]
-
-  tests = [
-    {
-      name = "cm_rust_lib_test"
-      dest = "cm_rust_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

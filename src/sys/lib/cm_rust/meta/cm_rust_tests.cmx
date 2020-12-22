@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cm_rust_tests"
+        "binary": "bin/cm_rust_lib_test"
     }
 }

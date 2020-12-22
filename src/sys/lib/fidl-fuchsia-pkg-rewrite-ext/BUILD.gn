@@ -4,8 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
   version = "0.1.0"
@@ -33,16 +33,12 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
   ]
 }
 
-test_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
+fuchsia_unittest_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
+  manifest = "meta/fidl-fuchsia-pkg-rewrite-ext-tests.cmx"
   deps = [ ":fidl-fuchsia-pkg-rewrite-ext_test" ]
-
-  tests = [
-    {
-      name = "fidl_fuchsia_pkg_rewrite_ext_lib_test"
-      dest = "fidl-fuchsia-pkg-rewrite-ext-tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cm_fidl_validator_tests"
+        "binary": "bin/cm_fidl_validator_lib_test"
     }
 }

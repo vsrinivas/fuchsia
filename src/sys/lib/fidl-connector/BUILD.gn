@@ -4,8 +4,8 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fidl-connector") {
   name = "fidl_connector"
@@ -30,15 +30,12 @@ rustc_library("fidl-connector") {
   sources = [ "src/lib.rs" ]
 }
 
-unittest_package("fidl-connector-tests") {
+fuchsia_unittest_package("fidl-connector-tests") {
+  executable_path = "bin/fidl_connector_lib_test"
   deps = [ ":fidl-connector_test" ]
-
-  tests = [
-    {
-      name = "fidl_connector_lib_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 fidl("test.fidl.connector") {

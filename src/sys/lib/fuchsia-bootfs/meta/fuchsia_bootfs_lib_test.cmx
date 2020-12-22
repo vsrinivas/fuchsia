@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fuchsia_bootfs_lib_test"
+        "binary": "bin/fuchsia_bootfs_lib_test"
     }
 }
