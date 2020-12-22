@@ -38,5 +38,14 @@ TEST(SystemClockTest, ThreadClock) {
   EXPECT_GE(time2, time1);
 }
 
+TEST(SystemClockTest, UtcNow) {
+  SystemClock clock;
+
+  zx::time_utc time1;
+  ASSERT_EQ(ZX_OK, clock.UtcNow(&time1));
+
+  EXPECT_GT(time1, zx::time_utc(0));
+}
+
 }  // namespace
 }  // namespace timekeeper

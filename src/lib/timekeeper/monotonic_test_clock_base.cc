@@ -27,6 +27,11 @@ zx_status_t MonotonicTestClockBase::GetTime(zx_clock_t clock_id, zx_time_t* time
   return ZX_OK;
 }
 
+zx_status_t MonotonicTestClockBase::GetUtcTime(zx_time_t* time) const {
+  *time = GetClockStartingValue(ZX_CLOCK_UTC) + GetMonotonicTime();
+  return ZX_OK;
+}
+
 zx_time_t MonotonicTestClockBase::GetMonotonicTime() const {
   zx_time_t result = std::max(clock_(), last_returned_value_ + 1);
   last_returned_value_ = result;

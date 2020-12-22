@@ -29,12 +29,22 @@ class Clock {
     return status;
   }
 
+  // Returns the current UTC time.
+  zx_status_t UtcNow(zx::time_utc* result) const {
+    zx_time_t time;
+    zx_status_t status = GetUtcTime(&time);
+    *result = zx::time_utc(time);
+    return status;
+  }
+
   // Returns the current monotonic time. See |zx_clock_get_monotonic|.
   zx::time Now() const { return zx::time(GetMonotonicTime()); }
 
  protected:
   // Returns the current time for |kClockId|. See |zx_clock_get|.
   virtual zx_status_t GetTime(zx_clock_t clock_id, zx_time_t* time) const = 0;
+  // Returns the current UTC time.
+  virtual zx_status_t GetUtcTime(zx_time_t* time) const = 0;
   // Returns the current monotonic time. See |zx_clock_get_monotonic|.
   virtual zx_time_t GetMonotonicTime() const = 0;
 };
