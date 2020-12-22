@@ -161,7 +161,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   BlobCache& Cache() { return blob_cache_; }
 
-  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
+  zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual);
 
   BlockDevice* Device() const { return block_device_.get(); }
 

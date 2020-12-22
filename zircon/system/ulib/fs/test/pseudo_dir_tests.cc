@@ -57,7 +57,7 @@ TEST(PseudoDir, ApiTest) {
 
   // readdir
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t length;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
@@ -71,7 +71,7 @@ TEST(PseudoDir, ApiTest) {
 
   // readdir with small buffer
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[2 * sizeof(vdirent) + 13];
     size_t length;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
@@ -91,7 +91,7 @@ TEST(PseudoDir, ApiTest) {
   // test removed entries do not appear in readdir or lookup
   dir->RemoveEntry("file1");
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t length;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
@@ -108,7 +108,7 @@ TEST(PseudoDir, ApiTest) {
 
   // readdir again
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t length;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);

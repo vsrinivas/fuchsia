@@ -138,8 +138,7 @@ class VnodeDir final : public VnodeMemfs {
   void SetRemote(zx::channel remote) final;
 
  private:
-  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                      size_t* out_actual) final;
+  zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
 
   // Resolves the question, "Can this directory create a child node with the name?"
   // Returns "ZX_OK" on success; otherwise explains failure with error message.

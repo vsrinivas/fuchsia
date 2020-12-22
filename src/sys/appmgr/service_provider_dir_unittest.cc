@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <test/placeholders/cpp/fidl.h>
-
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
 #include <gtest/gtest.h>
+#include <test/placeholders/cpp/fidl.h>
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -210,7 +209,7 @@ TEST_F(ServiceProviderTest, Readdir_Simple) {
   AddService(&service_provider, "my", 2);
   AddService(&service_provider, "my", 3);
 
-  fs::vdircookie_t cookie = {};
+  fs::VdirCookie cookie;
   uint8_t buffer[kBufSz];
   size_t len;
   {
@@ -238,7 +237,7 @@ TEST_F(ServiceProviderTest, Readdir_WithParent) {
   AddService(parent_service_provider.get(), "parent", 2);
   service_provider.set_parent(parent_service_provider);
 
-  fs::vdircookie_t cookie = {};
+  fs::VdirCookie cookie;
   uint8_t buffer[kBufSz];
   size_t len;
   {

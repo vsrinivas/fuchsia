@@ -80,8 +80,8 @@ bool TestReaddir(perftest::RepeatState* state, size_t file_count, size_t buffer_
     dir->AddEntry({id++, name, V_TYPE_FILE});
   }
 
+  fs::VdirCookie cookie;
   while (state->KeepRunning()) {
-    fs::vdircookie_t cookie;
     size_t real_len = 0;
     while (dir->Readdir(&cookie, buffer.data(), buffer_size, &real_len) != ZX_OK) {
       ZX_ASSERT(real_len != 0);

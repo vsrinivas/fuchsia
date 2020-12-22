@@ -27,7 +27,7 @@ zx_status_t Directory::Create(fbl::StringPiece name_view, uint32_t mode,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
   // TODO(manalib)
   return ZX_ERR_NOT_SUPPORTED;

@@ -42,7 +42,7 @@ zx_status_t Directory::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
 
 fs::VnodeProtocolSet Directory::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
-zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
   return blobfs_->Readdir(cookie, dirents, len, out_actual);
 }

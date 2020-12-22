@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/watcher.h>
-
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <memory>
+
+#include <fs/watcher.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
@@ -35,8 +35,7 @@ WatcherContainer::WatcherContainer() = default;
 WatcherContainer::~WatcherContainer() = default;
 
 WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask)
-    : h(std::move(h)),
-      mask(mask & ~(fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE)) {}
+    : h(std::move(h)), mask(mask & ~(fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE)) {}
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
 
@@ -101,7 +100,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
   }
 
   if (mask & fio::WATCH_MASK_EXISTING) {
-    vdircookie_t dircookie;
+    VdirCookie dircookie;
     memset(&dircookie, 0, sizeof(dircookie));
     char readdir_buf[FDIO_CHUNK_SIZE];
     WatchBuffer wb;

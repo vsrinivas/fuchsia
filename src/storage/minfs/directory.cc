@@ -528,10 +528,10 @@ struct DirCookie {
   uint32_t seqno;     // inode seq no
 };
 
-static_assert(sizeof(DirCookie) <= sizeof(fs::vdircookie_t),
+static_assert(sizeof(DirCookie) <= sizeof(fs::VdirCookie),
               "MinFS DirCookie too large to fit in IO state");
 
-zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
   TRACE_DURATION("minfs", "Directory::Readdir");
   FX_LOGS(DEBUG) << "minfs_readdir() vn=" << this << "(#" << GetIno() << ") cookie=" << cookie

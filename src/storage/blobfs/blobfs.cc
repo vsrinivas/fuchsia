@@ -561,11 +561,10 @@ zx_status_t Blobfs::GetFsId(zx::event* out_fs_id) const {
   return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
 }
 
-static_assert(sizeof(DirectoryCookie) <= sizeof(fs::vdircookie_t),
+static_assert(sizeof(DirectoryCookie) <= sizeof(fs::VdirCookie),
               "Blobfs dircookie too large to fit in IO state");
 
-zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                            size_t* out_actual) {
+zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blobfs::Readdir", "len", len);
   fs::DirentFiller df(dirents, len);
   DirectoryCookie* c = reinterpret_cast<DirectoryCookie*>(cookie);

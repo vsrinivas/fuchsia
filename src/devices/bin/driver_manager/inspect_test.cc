@@ -29,9 +29,10 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
   uint8_t buffer[4096];
   size_t length;
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     EXPECT_EQ(inspect_manager().diagnostics_dir().Readdir(&cookie, buffer, sizeof(buffer), &length),
               ZX_OK);
+
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("driver_manager", V_TYPE_DIR);
@@ -43,8 +44,10 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
   {
     fbl::RefPtr<fs::Vnode> node;
     inspect_manager().diagnostics_dir().Lookup("driver_manager", &node);
-    fs::vdircookie_t cookie = {};
+
+    fs::VdirCookie cookie;
     EXPECT_EQ(node->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("driver_host", V_TYPE_DIR);
@@ -182,8 +185,10 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
     ASSERT_NE(dir, nullptr);
     ASSERT_NE(seqcount, nullptr);
     ASSERT_EQ(*seqcount, 1);
-    fs::vdircookie_t cookie = {};
+
+    fs::VdirCookie cookie;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("000.inspect", V_TYPE_FILE);
@@ -223,8 +228,10 @@ TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
     ASSERT_NE(dir, nullptr);
     ASSERT_NE(seqcount, nullptr);
     ASSERT_EQ(*seqcount, 1);
-    fs::vdircookie_t cookie = {};
+
+    fs::VdirCookie cookie;
     EXPECT_EQ(dir->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
+
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
     dc.ExpectEntry("000.inspect", V_TYPE_FILE);

@@ -396,7 +396,7 @@ zx_status_t Vfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::Stri
   return ZX_OK;
 }
 
-zx_status_t Vfs::Readdir(Vnode* vn, vdircookie_t* cookie, void* dirents, size_t len,
+zx_status_t Vfs::Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t len,
                          size_t* out_actual) {
   fbl::AutoLock lock(&vfs_lock_);
   return vn->Readdir(cookie, dirents, len, out_actual);

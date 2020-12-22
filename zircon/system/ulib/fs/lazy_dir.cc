@@ -25,7 +25,7 @@ int CompareLazyDirPtrs(const void* a, const void* b) {
   return a_id < b_id ? -1 : 1;
 }
 
-bool DoDot(vdircookie_t* cookie) {
+bool DoDot(VdirCookie* cookie) {
   if (cookie->p == 0) {
     cookie->p = (void*)1;
     return true;
@@ -62,7 +62,7 @@ zx_status_t LazyDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out_v
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) {
+zx_status_t LazyDir::Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) {
   LazyEntryVector entries;
   GetContents(&entries);
   qsort(entries.data(), entries.size(), sizeof(LazyEntry), CompareLazyDirPtrs);

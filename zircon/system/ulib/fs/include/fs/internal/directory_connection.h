@@ -74,7 +74,7 @@ class DirectoryConnection final : public Connection,
   void GetDevicePath(GetDevicePathCompleter::Sync& completer) final;
 
   // Directory cookie for readdir operations.
-  fs::vdircookie_t dircookie_{};
+  fs::VdirCookie dircookie_;
 };
 
 }  // namespace internal

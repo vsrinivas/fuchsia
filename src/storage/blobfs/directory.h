@@ -43,8 +43,7 @@ class Directory final : public fs::Vnode {
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
   fs::VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                      size_t* out_actual) final;
+  zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;

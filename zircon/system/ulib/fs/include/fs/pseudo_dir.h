@@ -72,7 +72,7 @@ class PseudoDir : public Vnode {
   zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) final;
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-  zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
+  zx_status_t Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

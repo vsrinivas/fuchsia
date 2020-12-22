@@ -53,7 +53,7 @@ zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, size_t* out_actual) {
+zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_t* out_actual) {
   fs::DirentFiller df(data, len);
   zx_status_t r = 0;
   if (cookie->n < kDotId) {

@@ -83,8 +83,8 @@ bool PseudoDirReaddirTest(perftest::RepeatState* state, int file_count, int buff
     dir->AddEntry(name, file);
   }
 
+  fs::VdirCookie cookie;
   while (state->KeepRunning()) {
-    fs::vdircookie_t cookie;
     size_t real_len = 0;
     do {
       auto status = dir->Readdir(&cookie, buffer.data(), buffer.size(), &real_len);

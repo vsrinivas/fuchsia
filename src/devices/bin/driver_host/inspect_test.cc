@@ -31,7 +31,7 @@ TEST_F(DriverHostInspectTestCase, DirectoryEntries) {
   uint8_t buffer[4096];
   size_t length;
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     EXPECT_EQ(inspect().diagnostics_dir().Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);

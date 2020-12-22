@@ -41,7 +41,7 @@
 namespace fs {
 
 class Vfs;
-struct vdircookie_t;
+struct VdirCookie;
 
 inline bool vfs_valid_name(fbl::StringPiece name) {
   return name.length() > 0 && name.length() <= NAME_MAX &&
@@ -270,11 +270,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual void Sync(SyncCallback closure);
 
   // Read directory entries of vn, error if not a directory.
-  // FS-specific Cookie must be a buffer of vdircookie_t size or smaller.
+  // FS-specific Cookie must be a buffer of VdirCookie size or smaller.
   // Cookie must be zero'd before first call and will be used by
   // the readdir implementation to maintain state across calls.
   // To "rewind" and start from the beginning, cookie may be zero'd.
-  virtual zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
+  virtual zx_status_t Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual);
 
   // METHODS FOR OPENED OR UNOPENED NODES
   //

@@ -117,7 +117,7 @@ std::vector<std::string> GetDirectoryEntries(fbl::RefPtr<fs::Vnode> dir) {
   // Arbitrary size.
   uint8_t buffer[4096];
 
-  fs::vdircookie_t cookie{};
+  fs::VdirCookie cookie;
   // Actual number of bytes read into the buffer.
   size_t real_len = 0;
   while (dir->Readdir(&cookie, buffer, sizeof(buffer), &real_len) == ZX_OK && real_len > 0) {

@@ -49,7 +49,7 @@ zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
 struct HostFile {
   fbl::RefPtr<fs::Vnode> vn;
   uint64_t off = 0;
-  fs::vdircookie_t dircookie;
+  fs::VdirCookie dircookie;
 };
 
 constexpr int kMaxFd = 64;
@@ -268,7 +268,7 @@ int emu_close(int fd) {
   f->vn->Close();
   f->vn.reset();
   f->off = 0;
-  f->dircookie.Reset();
+  f->dircookie = fs::VdirCookie();
   return 0;
 }
 
@@ -443,7 +443,7 @@ struct MinDir {
 
   uint64_t magic = minfs::kMinfsMagic0;
   fbl::RefPtr<fs::Vnode> vn;
-  fs::vdircookie_t cookie = {};
+  fs::VdirCookie cookie;
   uint8_t* ptr = nullptr;
   uint8_t data[kDirBufSize] = {0};
   size_t size = 0;

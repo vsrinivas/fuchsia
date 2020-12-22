@@ -216,7 +216,7 @@ void DirectoryConnection::Rewind(RewindCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_BAD_HANDLE);
     return;
   }
-  dircookie_.Reset();
+  dircookie_ = VdirCookie();
   completer.Reply(ZX_OK);
 }
 

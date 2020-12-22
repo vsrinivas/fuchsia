@@ -49,7 +49,7 @@ TEST(LazyDir, ApiTest) {
   TestLazyDirHelper test;
 
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t len;
 
@@ -61,7 +61,7 @@ TEST(LazyDir, ApiTest) {
 
   test.AddContent({1, "test"});
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t len;
 
@@ -81,7 +81,7 @@ TEST(LazyDir, ApiTest) {
   }
   test.AddContent({33, "aaaa"});
   {
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     uint8_t buffer[4096];
     size_t len;
 
@@ -100,7 +100,7 @@ TEST(LazyDir, ApiTest) {
   }
   {
     // Ensure manually setting cookie past entries excludes them, but leaves "."
-    fs::vdircookie_t cookie = {};
+    fs::VdirCookie cookie;
     cookie.n = 30;
     uint8_t buffer[4096];
     size_t len;
