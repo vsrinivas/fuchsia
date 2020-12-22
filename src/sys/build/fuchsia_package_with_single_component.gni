@@ -1,0 +1,92 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("fuchsia_component.gni")
+import("fuchsia_package.gni")
+
+# Defines a package that contains a single component.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# Developers often define a package that contains a single component.
+# This template fuses together fuchsia_package() and fuchsia_component() as a
+# convenience.
+#
+# Packages are units of distribution. It is beneficial to define multiple
+# components in the same package if you need to guarantee that several
+# components are always co-present, or if you'd like to be able to update
+# several components at once (by updating a single package).
+# This pattern is also commonly used to create hermetic integration tests.
+# For instance an integration test between two components where one is a client
+# of a service implemented in another component would include both the client
+# and server components.
+# However for the sake of simplicity, if you're developing a package with just
+# a single component then this template will save you some boilerplate.
+#
+# Example:
+# ```
+# executable("rot13_encoder_decoder") {
+#   sources = [ "rot13_encoder_decoder.cc" ]
+# }
+#
+# fuchsia_package_with_single_component("rot13") {
+#   manifest = "meta/rot13.cmx"
+#   deps = [ ":rot13_encoder_decoder" ]
+# }
+# ```
+#
+# Parameters
+#
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
+#   component_name (optional)
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
+#   manifest (required)
+#     The component manifest.
+#     Type: path
+#
+#   deps
+#   testonly
+#   visibility
+template("fuchsia_package_with_single_component") {
+  assert(
+      defined(invoker.manifest),
+      "A `manifest` argument was missing when calling fuchsia_package_with_single_component($target_name)")
+
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+  component_name = target_name
+  if (defined(invoker.component_name)) {
+    component_name = invoker.component_name
+  }
+
+  component_target = "${target_name}_component"
+  fuchsia_component(component_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "testonly",
+                           ])
+    component_name = component_name
+    visibility = [ ":*" ]
+  }
+
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    package_name = package_name
+    deps = [ ":$component_target" ]
+  }
+}

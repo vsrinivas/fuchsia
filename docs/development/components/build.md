@@ -206,7 +206,7 @@ paths.
    }
    ```
 
-  * {Dart}
+   * {Dart}
 
    ```gn
    import("//build/dart/dart_component.gni")
@@ -681,6 +681,70 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
      ]
    }
    ```
+
+### Packages with a single component {#packages-with-single-component}
+
+Developers often define a package that contains a single component.
+The template below fuses together `fuchsia_package()` and `fuchsia_component()`
+as a convenience.
+
+   * {C++}
+
+   ```gn
+   import("//src/sys/build/components.gni")
+
+   executable("rot13_encoder_decoder") {
+     sources = [ "rot13_encoder_decoder.cc" ]
+   }
+
+   fuchsia_package_with_single_component("rot13") {
+     manifest = "meta/rot13.cmx"
+     deps = [ ":rot13_encoder_decoder" ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   import("//build/rust/rustc_binary.gni")
+   import("//src/sys/build/components.gni")
+
+   rustc_binary("rot13_encoder_decoder") {
+   }
+
+   fuchsia_package_with_single_component("rot13") {
+     manifest = "meta/rot13.cmx"
+     deps = [ ":rot13_encoder_decoder" ]
+   }
+   ```
+
+   * {Go}
+
+   ```gn
+   import("//build/go/go_binary.gni")
+   import("//src/sys/build/components.gni")
+
+   go_binary("rot13_encoder_decoder") {
+   }
+
+   fuchsia_component("rot13") {
+     manifest = "meta/rot13.cmx"
+     deps = [ ":rot13_encoder_decoder" ]
+   }
+   ```
+
+Packages are units of distribution. It is beneficial to define multiple
+components in the same package if you need to guarantee that several
+components are always co-present, or if you'd like to be able to update
+several components at once (by updating a single package).
+
+This pattern is also commonly used to create hermetic integration tests.
+For instance an integration test between two components where one is a client
+of a service implemented in another component would include both the client
+and server components.
+
+However for the sake of simplicity, if you're developing a package with just
+a single component then this template will save you some boilerplate.
 
 ## Test-driven development
 

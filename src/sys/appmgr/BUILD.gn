@@ -210,14 +210,9 @@ executable("unittest_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_component("component") {
-  component_name = "appmgr"
-  deps = [ ":bin" ]
+fuchsia_package_with_single_component("appmgr") {
   manifest = "meta/appmgr.cml"
-}
-
-fuchsia_package("appmgr") {
-  deps = [ ":component" ]
+  deps = [ ":bin" ]
 }
 
 config_data("appmgr_scheme_config") {
