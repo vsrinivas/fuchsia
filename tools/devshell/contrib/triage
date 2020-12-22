@@ -144,7 +144,8 @@ done
 if [ -z "${select_filters}" ]; then
 
   if (( !"${#config_paths[@]}" )); then
-    config_paths=( "${FUCHSIA_DIR}/src/diagnostics/config/triage/" )
+    config_paths=( "${FUCHSIA_DIR}/src/diagnostics/config/triage/"
+                   "${FUCHSIA_DIR}/src/diagnostics/config/triage/detect/" )
   fi
 
   config_files=( )
