@@ -421,7 +421,16 @@ async fn get_tests(
     test_component: Arc<Component>,
     filter: TestFilter,
 ) -> Result<Vec<String>, EnumerationError> {
-    let mut args = vec!["-Z".to_owned(), "unstable-options".to_owned(), "--list".to_owned()];
+    let mut args = vec![
+        // Allow the usage of unstable options
+        "-Z".to_owned(),
+        "unstable-options".to_owned(),
+        // List installed commands
+        "--list".to_owned(),
+        // fxbug.dev(66860): Don't print in color
+        "--color".to_owned(),
+        "never".to_owned(),
+    ];
 
     if let TestFilter::DisabledTests = filter {
         args.push("--ignored".to_owned());
