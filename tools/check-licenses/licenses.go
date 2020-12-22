@@ -26,19 +26,22 @@ type Licenses struct {
 // the .lic folder location specified in Config
 func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []string) (*Licenses, error) {
 	defer trace.StartRegion(ctx, "NewLicenses").End()
-	f, err := os.Open(root)
-	if err != nil {
-		return nil, err
-	}
-	names, err := f.Readdirnames(0)
-	f.Close()
+	licensesPath := []string{}
+	err := filepath.Walk(root,
+		func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			licensesPath = append(licensesPath, path)
+			return nil
+		})
 	if err != nil {
 		return nil, err
 	}
 
 	l := &Licenses{}
-	for _, n := range names {
-		bytes, err := ioutil.ReadFile(filepath.Join(root, n))
+	for _, path := range licensesPath {
+		bytes, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -52,14 +55,15 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 
 		re, err := regexp.Compile(regex)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", n, err)
+			return nil, fmt.Errorf("%s: %w", path, err)
 		}
+		base := filepath.Base(path)
 		l.licenses = append(
 			l.licenses,
 			&License{
 				pattern:      re,
-				Category:     n,
-				ValidType:    contains(prohibitedLicenseTypes, n),
+				Category:     base,
+				ValidType:    contains(prohibitedLicenseTypes, filepath.Base(base)),
 				matches:      map[string]*Match{},
 				matchChannel: make(chan *Match, 10),
 			})

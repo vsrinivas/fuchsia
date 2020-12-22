@@ -6,6 +6,7 @@ package golden
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,28 +25,50 @@ func TestPatternsMatchExamples(t *testing.T) {
 			t.Errorf("%v(%v doesn't exist): got %v, want %v", t.Name(), p, err, nil)
 		}
 	}
-	example_files, err := ioutil.ReadDir(filepath.Join(*testDataDir, "examples"))
+	examplesRoot := filepath.Join(*testDataDir, "examples")
+	exampleFilesPath := []string{}
+	err := filepath.Walk(examplesRoot,
+		func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			exampleFilesPath = append(exampleFilesPath, path)
+			return nil
+		})
 	if err != nil {
 		t.Errorf("%v, got %v", t.Name(), err)
 	}
-	pattern_files, err := ioutil.ReadDir(filepath.Join(*testDataDir, "patterns"))
+
+	patternsRoot := filepath.Join(*testDataDir, "patterns")
+	patternFilesPath := []string{}
+	err = filepath.Walk(patternsRoot,
+		func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			patternFilesPath = append(patternFilesPath, path)
+			return nil
+		})
 	if err != nil {
 		t.Errorf("%v, got %v", t.Name(), err)
 	}
-	if len(example_files) != len(pattern_files) {
-		t.Errorf("%v, got %v != %v", t.Name(), len(example_files), len(pattern_files))
+
+	if len(exampleFilesPath) != len(patternFilesPath) {
+		t.Errorf("%v, got %v != %v", t.Name(), len(exampleFilesPath), len(patternFilesPath))
 	}
-	for _, pattern_file := range pattern_files {
-		pattern, err := ioutil.ReadFile(filepath.Join(*testDataDir, "patterns", pattern_file.Name()))
+	fmt.Printf("LENGTH %v", len(patternFilesPath))
+	for _, patternFilePath := range patternFilesPath {
+		patternFile, err := ioutil.ReadFile(patternFilePath)
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}
-		example_file := strings.TrimSuffix(pattern_file.Name(), filepath.Ext(pattern_file.Name())) + ".txt"
-		example, err := ioutil.ReadFile(filepath.Join(*testDataDir, "examples", example_file))
+		exampleFilePath := strings.Replace(patternFilePath, ".lic", ".txt", -1)
+		exampleFilePath = strings.Replace(exampleFilePath, "patterns", "examples", -1)
+		exampleFile, err := ioutil.ReadFile(exampleFilePath)
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}
-		regex := string(pattern)
+		regex := string(patternFile)
 		// Update regex to ignore multiple white spaces, newlines, comments.
 		// But first, trim whitespace away so we don't include unnecessary
 		// comment syntax.
@@ -53,8 +76,8 @@ func TestPatternsMatchExamples(t *testing.T) {
 		regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
 		regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
 
-		if !regexp.MustCompile(regex).Match(example) {
-			t.Errorf("%v, %v pattern doesn't match example", t.Name(), pattern_file.Name())
+		if !regexp.MustCompile(regex).Match(exampleFile) {
+			t.Errorf("%v, %v pattern doesn't match example", t.Name(), patternFilePath)
 		}
 	}
 }
