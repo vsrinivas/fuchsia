@@ -64,10 +64,6 @@ source_set("fvm-test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/lz4",
   ]
-
-  # TODO(66402): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 test_data_image_path = "$target_out_dir/test_data.blk"

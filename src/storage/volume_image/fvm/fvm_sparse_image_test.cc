@@ -355,59 +355,49 @@ std::vector<FvmSparsePartitionEntry> GetExpectedPartitionEntries(const FvmDescri
 // structures and aligning them.  Things might have been a little easier if fvm::SparseImage was a
 // multiple of 8 bytes since it would have meant that fvm::PartitionDescriptor was 8 byte aligned
 // when it immediately follows the header, but we are where we are.
-struct alignas(8) AlignedSparseImage : fvm::SparseImage {
-  explicit AlignedSparseImage(const fvm::SparseImage& image) {
-    memcpy(this, &image, sizeof(*this));
+template<typename T>
+struct Aligner {
+  struct alignas(8) Aligned : T {};
+
+  Aligned operator ()(const T& in) {
+    Aligned out;
+    memcpy(&out, &in, sizeof(T));
+    return out;
   }
 };
 
 auto HeaderEq(const fvm::SparseImage& expected_header) {
-  using Header = AlignedSparseImage;
-  const Header header(expected_header);
-  return testing::AllOf(
-      testing::Field(&Header::header_length, testing::Eq(header.header_length)),
-      testing::Field(&Header::flags, testing::Eq(header.flags)),
-      testing::Field(&Header::magic, testing::Eq(header.magic)),
-      testing::Field(&Header::partition_count, testing::Eq(header.partition_count)),
-      testing::Field(&Header::slice_size, testing::Eq(header.slice_size)),
-      testing::Field(&Header::maximum_disk_size, testing::Eq(header.maximum_disk_size)),
-      testing::Field(&Header::version, testing::Eq(header.version)));
+  using Header = fvm::SparseImage;
+  return testing::ResultOf(Aligner<Header>(), testing::AllOf(
+      testing::Field(&Header::header_length, testing::Eq(expected_header.header_length)),
+      testing::Field(&Header::flags, testing::Eq(expected_header.flags)),
+      testing::Field(&Header::magic, testing::Eq(expected_header.magic)),
+      testing::Field(&Header::partition_count, testing::Eq(expected_header.partition_count)),
+      testing::Field(&Header::slice_size, testing::Eq(expected_header.slice_size)),
+      testing::Field(&Header::maximum_disk_size, testing::Eq(expected_header.maximum_disk_size)),
+      testing::Field(&Header::version, testing::Eq(expected_header.version))));
 }
 
-struct alignas(8) AlignedPartitionDescriptor : fvm::PartitionDescriptor {
-  explicit AlignedPartitionDescriptor(const fvm::PartitionDescriptor& descriptor) {
-    memcpy(this, &descriptor, sizeof(*this));
-  }
-};
-
 auto PartitionDescriptorEq(const fvm::PartitionDescriptor& expected_descriptor) {
-  using PartitionDescriptor = AlignedPartitionDescriptor;
-  const PartitionDescriptor descriptor(expected_descriptor);
-  return testing::AllOf(
-      testing::Field(&PartitionDescriptor::magic, testing::Eq(descriptor.magic)),
-      testing::Field(&PartitionDescriptor::flags, testing::Eq(descriptor.flags)),
-      testing::Field(&PartitionDescriptor::name, testing::ElementsAreArray(descriptor.name)),
-      testing::Field(&PartitionDescriptor::type, testing::ElementsAreArray(descriptor.type)));
+  using fvm::PartitionDescriptor;
+  return testing::ResultOf(Aligner<PartitionDescriptor>(), testing::AllOf(
+      testing::Field(&PartitionDescriptor::magic, testing::Eq(expected_descriptor.magic)),
+      testing::Field(&PartitionDescriptor::flags, testing::Eq(expected_descriptor.flags)),
+      testing::Field(&PartitionDescriptor::name, testing::ElementsAreArray(expected_descriptor.name)),
+      testing::Field(&PartitionDescriptor::type, testing::ElementsAreArray(expected_descriptor.type))));
 }
 
 auto PartitionDescriptorMatchesEntry(const FvmSparsePartitionEntry& expected_descriptor) {
-  return PartitionDescriptorEq(AlignedPartitionDescriptor(expected_descriptor.descriptor));
+  return PartitionDescriptorEq(expected_descriptor.descriptor);
 }
 
-struct alignas(8) AlignedExtentDescriptor : fvm::ExtentDescriptor {
-  explicit AlignedExtentDescriptor(const fvm::ExtentDescriptor& descriptor) {
-    memcpy(this, &descriptor, sizeof(*this));
-  }
-};
-
 [[maybe_unused]] auto ExtentDescriptorEq(const fvm::ExtentDescriptor& expected_descriptor) {
-  using ExtentDescriptor = AlignedExtentDescriptor;
-  const ExtentDescriptor descriptor(expected_descriptor);
-  return testing::AllOf(
-      testing::Field(&ExtentDescriptor::magic, testing::Eq(descriptor.magic)),
-      testing::Field(&ExtentDescriptor::slice_start, testing::Eq(descriptor.slice_start)),
-      testing::Field(&ExtentDescriptor::slice_count, testing::Eq(descriptor.slice_count)),
-      testing::Field(&ExtentDescriptor::extent_length, testing::Eq(descriptor.extent_length)));
+  using fvm::ExtentDescriptor;
+  return testing::ResultOf(Aligner<ExtentDescriptor>(), testing::AllOf(
+      testing::Field(&ExtentDescriptor::magic, testing::Eq(expected_descriptor.magic)),
+      testing::Field(&ExtentDescriptor::slice_start, testing::Eq(expected_descriptor.slice_start)),
+      testing::Field(&ExtentDescriptor::slice_count, testing::Eq(expected_descriptor.slice_count)),
+      testing::Field(&ExtentDescriptor::extent_length, testing::Eq(expected_descriptor.extent_length))));
 }
 
 MATCHER(ExtentDescriptorsAreEq, "Compares to Extent Descriptors") {
@@ -989,7 +979,7 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   std::unique_ptr<fvm::SparseReader> sparse_reader = nullptr;
   // This verifies metadata(header, partition descriptors and extent descriptors.)
   ASSERT_EQ(ZX_OK, fvm::SparseReader::Create(std::move(sparse_reader_impl), &sparse_reader));
-  ASSERT_THAT(sparse_reader->Image(), HeaderEq(container.serialized_image().header));
+  ASSERT_THAT(sparse_reader->Image(), Pointee(HeaderEq(container.serialized_image().header)));
 
   // Partition 1 metadata.
   {
@@ -1055,7 +1045,7 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
   std::unique_ptr<fvm::SparseReader> sparse_reader = nullptr;
   // This verifies metadata(header, partition descriptors and extent descriptors.)
   ASSERT_EQ(ZX_OK, fvm::SparseReader::Create(std::move(sparse_reader_impl), &sparse_reader));
-  ASSERT_THAT(sparse_reader->Image(), HeaderEq(container.serialized_image().header));
+  ASSERT_THAT(sparse_reader->Image(), Pointee(HeaderEq(container.serialized_image().header)));
 
   // Partition 1 metadata.
   {
