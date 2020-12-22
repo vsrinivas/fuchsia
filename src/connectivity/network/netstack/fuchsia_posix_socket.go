@@ -565,6 +565,15 @@ func (eps *endpointWithSocket) close() {
 			panic(err)
 		}
 
+		// TODO(https://github.com/google/gvisor/issues/5155): Remove this when
+		// link address resolution failures deliver EventHUp.
+		switch tcp.EndpointState(eps.ep.State()) {
+		case tcp.StateConnecting, tcp.StateSynSent, tcp.StateError:
+			if cb := eps.onHUp.Callback; cb != nil {
+				cb.Callback(nil, 0)
+			}
+		}
+
 		eps.ep.Close()
 
 		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
@@ -1318,7 +1327,7 @@ func (ns *Netstack) onRemoveEndpoint(key uint64) {
 	// Key value 0 would indicate that the endpoint was never
 	// added to the endpoints map.
 	if key == 0 {
-		syslog.Errorf("endpoint map delete error, endpoint with key 0 is not be removed")
+		syslog.Errorf("endpoint map delete error, endpoint with key 0 is not being removed")
 		return
 	}
 	if _, loaded := ns.endpoints.LoadAndDelete(key); !loaded {

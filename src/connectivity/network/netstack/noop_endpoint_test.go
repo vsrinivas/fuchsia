@@ -19,16 +19,17 @@ import (
 var _ stack.LinkEndpoint = (*noopEndpoint)(nil)
 
 type noopEndpoint struct {
-	linkAddress tcpip.LinkAddress
-	attached    chan struct{}
+	capabilities stack.LinkEndpointCapabilities
+	linkAddress  tcpip.LinkAddress
+	attached     chan struct{}
 }
 
 func (*noopEndpoint) MTU() uint32 {
 	return 0
 }
 
-func (*noopEndpoint) Capabilities() stack.LinkEndpointCapabilities {
-	return 0
+func (ep *noopEndpoint) Capabilities() stack.LinkEndpointCapabilities {
+	return ep.capabilities
 }
 
 func (*noopEndpoint) MaxHeaderLength() uint16 {

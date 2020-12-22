@@ -14,8 +14,8 @@ import (
 	"math"
 	"net"
 	"os"
-	"runtime"
 	"sort"
+	"sync/atomic"
 	"syscall/zx"
 	"testing"
 	"time"
@@ -40,6 +40,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -76,6 +77,9 @@ func TestMain(m *testing.M) {
 			panic(fmt.Sprintf("syslog.NewLogger(%#v) = %s", options, err))
 		}
 		syslog.SetDefaultLogger(l)
+
+		// As of this writing we set this value to 0 in netstack/main.go.
+		atomic.StoreUint32(&sniffer.LogPackets, 1)
 	}
 
 	os.Exit(m.Run())
@@ -238,18 +242,18 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 
 func TestEndpoint_Close(t *testing.T) {
 	ns := newNetstack(t)
-	wq := &waiter.Queue{}
+	var wq waiter.Queue
 	// Avoid polluting everything with err of type *tcpip.Error.
 	ep := func() tcpip.Endpoint {
-		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, &wq)
 		if err != nil {
-			t.Fatalf("NewEndpoint() = %s", err)
+			t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, _) = %s", err)
 		}
 		return ep
 	}()
 	defer ep.Close()
 
-	eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns)
+	eps, err := newEndpointWithSocket(ep, &wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,14 +278,13 @@ func TestEndpoint_Close(t *testing.T) {
 		}
 	}
 
-	key := eps.endpoint.key
-	if _, ok := eps.ns.endpoints.Load(key); !ok {
+	if _, ok := eps.ns.endpoints.Load(eps.endpoint.key); !ok {
 		var keys []uint64
 		eps.ns.endpoints.Range(func(key uint64, _ tcpip.Endpoint) bool {
 			keys = append(keys, key)
 			return true
 		})
-		t.Errorf("got endpoints map = %v at creation, want %d", keys, key)
+		t.Errorf("got endpoints map = %d at creation, want %d", keys, eps.endpoint.key)
 	}
 
 	if t.Failed() {
@@ -345,13 +348,13 @@ func TestEndpoint_Close(t *testing.T) {
 		}
 	}
 
-	if _, ok := eps.ns.endpoints.Load(key); !ok {
+	if _, ok := eps.ns.endpoints.Load(eps.endpoint.key); !ok {
 		var keys []uint64
 		eps.ns.endpoints.Range(func(key uint64, _ tcpip.Endpoint) bool {
 			keys = append(keys, key)
 			return true
 		})
-		t.Errorf("got endpoints map prematurely = %v, want %d", keys, key)
+		t.Errorf("got endpoints map prematurely = %d, want %d", keys, eps.endpoint.key)
 	}
 
 	if t.Failed() {
@@ -382,9 +385,9 @@ func TestEndpoint_Close(t *testing.T) {
 				keys = append(keys, key)
 				return true
 			})
-			t.Errorf("got endpoints map = %v after closure, want *not* %d", keys, key)
+			t.Errorf("got endpoints map = %d after closure, want *not* %d", keys, eps.endpoint.key)
 		default:
-			if _, ok := eps.ns.endpoints.Load(key); ok {
+			if _, ok := eps.ns.endpoints.Load(eps.endpoint.key); ok {
 				continue
 			}
 		}
@@ -405,16 +408,11 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
 
-	createEP := func() (tcpip.Endpoint, *waiter.Queue) {
-		var wq waiter.Queue
-		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wq)
-		if err != nil {
-			t.Fatalf("NewEndpoint() = %s", err)
-		}
-		return ep, &wq
+	var listenerWQ waiter.Queue
+	listener, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &listenerWQ)
+	if err != nil {
+		t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, _) = %s", err)
 	}
-
-	listener, listenerWQ := createEP()
 	if err := listener.Bind(tcpip.FullAddress{}); err != nil {
 		t.Fatalf("Bind({}) = %s", err)
 	}
@@ -422,7 +420,10 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		t.Fatalf("Listen(1) = %s", err)
 	}
 
-	client, _ := createEP()
+	client, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, new(waiter.Queue))
+	if err != nil {
+		t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, _) = %s", err)
+	}
 
 	// Connect and wait for the incoming connection.
 	func() {
@@ -464,35 +465,164 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		return server, wq
 	}()
 
-	eps, err := newEndpointWithSocket(accepted, acceptedWQ, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
+	{
+		eps, err := newEndpointWithSocket(accepted, acceptedWQ, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer eps.close()
+
+		channels := []struct {
+			ch   <-chan struct{}
+			name string
+		}{
+			{ch: eps.closing, name: "closing"},
+			{ch: eps.loopReadDone, name: "loopReadDone"},
+			{ch: eps.loopWriteDone, name: "loopWriteDone"},
+			{ch: eps.loopPollDone, name: "loopPollDone"},
+		}
+
+		// Give a generous timeout for the closed channel to be detected.
+		timeout := make(chan struct{})
+		time.AfterFunc(5*time.Second, func() { close(timeout) })
+		for _, ch := range channels {
+			select {
+			case <-ch.ch:
+			case <-timeout:
+				t.Errorf("%s not cleaned up", ch.name)
+			}
+		}
+
+		if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
+			t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
+		}
+	}
+}
+
+func createEP(t *testing.T, ns *Netstack, wq *waiter.Queue) *endpointWithSocket {
+	// Avoid polluting the scope with err of type *tcpip.Error.
+	ep := func() tcpip.Endpoint {
+		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+		if err != nil {
+			t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, _) = %s", err)
+		}
+		return ep
+	}()
+	t.Cleanup(ep.Close)
+	eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer eps.close()
+	t.Cleanup(eps.close)
+	return eps
+}
 
-	channels := []struct {
-		ch   <-chan struct{}
-		name string
-	}{
-		{ch: eps.closing, name: "closing"},
-		{ch: eps.loopReadDone, name: "loopReadDone"},
-		{ch: eps.loopWriteDone, name: "loopWriteDone"},
-		{ch: eps.loopPollDone, name: "loopPollDone"},
+func TestTCPEndpointMapClose(t *testing.T) {
+	ns := newNetstack(t)
+	eps := createEP(t, ns, new(waiter.Queue))
+
+	// Closing the endpoint should remove it from the endpoints map.
+	if _, ok := ns.endpoints.Load(eps.endpoint.key); !ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, false)", eps.endpoint.key)
+	}
+	eps.close()
+	if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
+	}
+}
+
+func TestTCPEndpointMapConnect(t *testing.T) {
+	ns := newNetstack(t)
+
+	var linkEP tcpipstack.LinkEndpoint = &noopEndpoint{
+		capabilities: tcpipstack.CapabilityResolutionRequired,
+	}
+	if testing.Verbose() {
+		linkEP = sniffer.New(linkEP)
+	}
+	ifs, err := ns.addEndpoint(
+		func(tcpip.NICID) string { return t.Name() },
+		linkEP,
+		nil,
+		nil,
+		false, /* doFilter */
+		0,     /* metric */
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ns.stack.EnableNIC(ifs.nicid); err != nil {
+		t.Fatal(err)
 	}
 
-	// Give a generous timeout for the closed channel to be detected.
-	timeout := make(chan struct{})
-	time.AfterFunc(5*time.Second, func() { close(timeout) })
-	for _, ch := range channels {
-		select {
-		case <-ch.ch:
-		case <-timeout:
-			t.Errorf("%s not cleaned up", ch.name)
-		}
+	address := tcpip.Address([]byte{1, 2, 3, 4})
+	destination := tcpip.FullAddress{
+		Addr: address,
+		Port: 1,
+	}
+	source := tcpip.Address([]byte{5, 6, 7, 8})
+	if err := ns.stack.AddAddress(ifs.nicid, ipv4.ProtocolNumber, source); err != nil {
+		t.Fatalf("AddAddress(%d, %d, %s) = %s", ifs.nicid, ipv4.ProtocolNumber, source, err)
 	}
 
-	if _, ok := ns.endpoints.Load(eps.key); ok {
-		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.key)
+	ns.stack.SetRouteTable([]tcpip.Route{
+		{
+			Destination: address.WithPrefix().Subnet(),
+			NIC:         ifs.nicid,
+		},
+	})
+
+	// TODO(https://github.com/google/gvisor/issues/5155): Remove the poll=false
+	// case when link address resolution failures deliver EventHUp.
+	for _, pollForError := range []bool{false, true} {
+		t.Run(fmt.Sprintf("pollForError=%t", pollForError), func(t *testing.T) {
+			var wq waiter.Queue
+			eps := createEP(t, ns, &wq)
+
+			events := make(chan waiter.EventMask)
+			if pollForError {
+				// TODO(https://github.com/google/gvisor/issues/5155): Remove the else
+				// branch when link address resolution failures deliver EventHUp.
+				if false {
+					waitEntry := waiter.Entry{Callback: callback(func(_ *waiter.Entry, m waiter.EventMask) {
+						events <- m
+					})}
+					wq.EventRegister(&waitEntry, math.MaxUint64)
+					defer wq.EventUnregister(&waitEntry)
+				} else {
+					go func() {
+						ticker := time.NewTicker(10 * time.Millisecond)
+						defer ticker.Stop()
+						// Wait until link address resolution fails.
+						for {
+							if tcp.EndpointState(eps.ep.State()) == tcp.StateError {
+								break
+							}
+							<-ticker.C
+						}
+						close(events)
+					}()
+				}
+			} else {
+				close(events)
+			}
+
+			if want, got := tcpip.ErrConnectStarted, eps.ep.Connect(destination); got != want {
+				t.Fatalf("got Connect(%#v) = %s, want %s", destination, got, want)
+			}
+			// TODO(https://github.com/google/gvisor/issues/5155): Assert on the
+			// signals here when link address resolution failures deliver EventHUp.
+			<-events
+
+			// Closing the endpoint should remove it from the endpoints map.
+			if _, ok := ns.endpoints.Load(eps.endpoint.key); !ok {
+				t.Fatalf("got endpoints.Load(%d) = (_, false)", eps.endpoint.key)
+			}
+			eps.close()
+			if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
+				t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
+			}
+		})
 	}
 }
 
@@ -504,25 +634,7 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	if err := ns.addLoopback(); err != nil {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
-	createEP := func() *endpointWithSocket {
-		wq := &waiter.Queue{}
-		// Avoid polluting everything with err of type *tcpip.Error.
-		ep := func() tcpip.Endpoint {
-			ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
-			if err != nil {
-				t.Fatalf("NewEndpoint() = %s", err)
-			}
-			return ep
-		}()
-		t.Cleanup(ep.Close)
-		eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(eps.close)
-		return eps
-	}
-	listener := createEP()
+	listener := createEP(t, ns, new(waiter.Queue))
 
 	if err := listener.ep.Bind(tcpip.FullAddress{}); err != nil {
 		t.Fatalf("ep.Bind({}) = %s", err)
@@ -534,7 +646,7 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ep.GetLocalAddress() = %s", err)
 	}
-	client := createEP()
+	client := createEP(t, ns, new(waiter.Queue))
 
 	waitEntry, inCh := waiter.NewChannelEntry(nil)
 	listener.wq.EventRegister(&waitEntry, waiter.EventIn)
@@ -570,15 +682,10 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	defer ticker.Stop()
 	// Wait and check for the client active close to reach FIN_WAIT2 state.
 	for {
-		select {
-		case <-ticker.C:
-			state := tcp.EndpointState(client.ep.State())
-			if state != tcp.StateFinWait2 {
-				runtime.Gosched()
-				continue
-			}
+		if tcp.EndpointState(client.ep.State()) == tcp.StateFinWait2 {
+			break
 		}
-		break
+		<-ticker.C
 	}
 
 	// Lookup for the client once more in the endpoints map, it should still not
@@ -598,16 +705,12 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	// gVisor stack notifies EventHUp on entering TIME_WAIT. Wait for some time
 	// for the EventHUp to be processed by netstack.
 	for {
-		select {
-		case <-ticker.C:
-			// The client endpoint would be removed from the endpoints map as a result
-			// of processing EventHUp.
-			if _, ok := ns.endpoints.Load(client.endpoint.key); ok {
-				runtime.Gosched()
-				continue
-			}
+		// The client endpoint would be removed from the endpoints map as a result
+		// of processing EventHUp.
+		if _, ok := ns.endpoints.Load(client.endpoint.key); !ok {
+			break
 		}
-		break
+		<-ticker.C
 	}
 }
 
@@ -618,13 +721,13 @@ func TestEndpointsMapKey(t *testing.T) {
 	}
 
 	tcpipEP := func() (*waiter.Queue, tcpip.Endpoint) {
-		wq := &waiter.Queue{}
-		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+		var wq waiter.Queue
+		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, &wq)
 		if err != nil {
-			t.Fatalf("NewEndpoint() = %s", err)
+			t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, _) = %s", err)
 		}
 		t.Cleanup(ep.Close)
-		return wq, ep
+		return &wq, ep
 	}
 	// Test if we always skip key value 0 while adding to the map.
 	for _, key := range []uint64{0, math.MaxUint64} {
