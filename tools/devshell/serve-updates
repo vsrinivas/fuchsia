@@ -5,12 +5,18 @@
 
 #### CATEGORY=Software delivery
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [-l host[:port]]
-##   -l host:port for "pm serve" to listen on
-##   --no-auto-config do not configure this host as a package server on the device
-##   -v verbose (do not suppress `pm serve` output)
+## usage: fx serve-updates [-v] [-l host[:port]] [--no-auto-config]
+##   -l host:port       host and port that "pm serve" will listen on
+##   --no-auto-config   do not configure this host as a package server on the device
+##   -v                 verbose mode, shows info and debug messages from "pm"
+##
+## This command supports incremental package publishing. If enabled, it will
+## auto-publish packages as they are created or modified.
+##
+## To enable incremental package serving, run "fx --enable=incremental serve-updates ..."
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-optional-features.sh || exit $?
 fx-config-read
 
 function usage {
@@ -110,18 +116,35 @@ with-pinned-target() {
   )
 }
 
+if is_feature_enabled "incremental"; then
+  fx-info "Incremental package auto-publishing is enabled."
+  serve_flags+=( -p "all_package_manifests.list" )
+
+  $verbose && echo -n >&2 "Preparing the package repository..."
+  # only show output of prepare_publish if it fails
+  out="$(fx-command-run build --no-zircon build/images:prepare_publish 2>&1)"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "$out"
+    return $?
+  fi
+  $verbose && echo >&2 "done"
+fi
+
+pm_serve_args=( serve -vt -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}" )
+
+# the manifest list file has relative paths and "pm serve" looks for them
+# from PWD, so pm command needs to be executed in "$FUCHSIA_BUILD_DIR"
+cd "${FUCHSIA_BUILD_DIR}"
+
 if [[ "${auto_config}" == false ]]; then
   log "Flag '--no-auto-config' used, automatic device configuration disabled."
   log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
   log "Serving packages on port ${port}..."
-  exec "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}"
+  fx-command-exec host-tool pm "${pm_serve_args[@]}"
 fi
 
-if [[ -z "${pm_srv_pid}" ]]; then
-  # The use of host_x64/ is deliberate over tools/.
-  "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}" &
-  pm_srv_pid=$!
-fi
+fx-command-run host-tool pm "${pm_serve_args[@]}" &
+pm_srv_pid=$!
 
 # Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
 sleep 0.1
