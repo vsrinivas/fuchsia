@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("no_suite_service") {
+rustc_binary("no_suite_service_bin") {
   testonly = true
   name = "no_suite_service"
   edition = "2018"
@@ -19,6 +20,12 @@ rustc_binary("no_suite_service") {
   ]
 
   sources = [ "no_suite_service.rs" ]
+}
+
+fuchsia_component("no_suite_service") {
+  testonly = true
+  deps = [ ":no_suite_service_bin" ]
+  manifest = "meta/no_suite_service.cml"
 }
 
 group("test_data") {

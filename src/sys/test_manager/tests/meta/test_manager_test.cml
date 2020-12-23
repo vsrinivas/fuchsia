@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/test_manager_test",
+        binary: "bin/test_manager_test",
     },
     children: [
         {

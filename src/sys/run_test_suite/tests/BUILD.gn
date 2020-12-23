@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("tests_bin") {
   edition = "2018"
@@ -24,7 +25,8 @@ rustc_test("tests_bin") {
   sources = [ "main.rs" ]
 }
 
-executable("run_test_suite_long_running_test") {
+executable("long_running_test_bin") {
+  output_name = "long_running_test"
   testonly = true
   sources = [ "long_running_test.cc" ]
 
@@ -34,108 +36,32 @@ executable("run_test_suite_long_running_test") {
   ]
 }
 
-test_package("run_test_suite_integration_tests") {
+fuchsia_component("long_running_test") {
+  testonly = true
+  deps = [ ":long_running_test_bin" ]
+  manifest = "meta/long_running_test.cml"
+}
+
+fuchsia_unittest_package("run_test_suite_integration_tests") {
+  manifest = "meta/run_test_suite_integration_tests.cmx"
   deps = [
-    ":run_test_suite_long_running_test",
+    ":long_running_test",
     ":tests_bin",
-    "//examples/tests:all_bins",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//examples/tests/meta/failing-test-example.cml")
-      dest = "failing-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/disabled-test-example.cml")
-      dest = "disabled-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/incomplete-test-example.cml")
-      dest = "incomplete-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/invalid-test-example.cml")
-      dest = "invalid-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/no-test-example.cml")
-      dest = "no-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/huge-test-example.cml")
-      dest = "huge-test-example.cm"
-    },
-
-    {
-      path = rebase_path(
-              "//examples/tests/meta/no-onfinished-after-test-example.cml")
-      dest = "no-onfinished-after-test-example.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/passing-test-example.cml")
-      dest = "passing-test-example_v2.cm"
-    },
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/echo_test_client.cml")
-      dest = "echo_test_client.cm"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/echo_test_realm.cml")
-      dest = "echo_test_realm.cm"
-    },
-    {
-      path = rebase_path("meta/long_running_test.cml")
-      dest = "long_running_test.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "passing-test-example"
-    },
-    {
-      name = "no-onfinished-after-test-example"
-    },
-    {
-      name = "disabled-test-example"
-    },
-    {
-      name = "failing-test-example"
-    },
-    {
-      name = "no-test-example"
-    },
-    {
-      name = "huge-test-example"
-    },
-    {
-      name = "echo_test_client"
-    },
-    {
-      name = "echo_server"
-    },
-    {
-      name = "incomplete-test-example"
-    },
-    {
-      name = "invalid-test-example"
-    },
-    {
-      name = "run_test_suite_long_running_test"
-      dest = "long_running_test"
-    },
-  ]
-
-  tests = [
-    {
-      name = "run_test_suite_integration_tests"
-    },
+    "//examples/components/routing/echo_server:echo_server_component",
+    "//examples/tests:disabled-test-example",
+    "//examples/tests:echo_test_client",
+    "//examples/tests:echo_test_realm",
+    "//examples/tests:failing-test-example",
+    "//examples/tests:get-tests-closes-channel-example",
+    "//examples/tests:get-tests-hangs-example",
+    "//examples/tests:huge-test-example",
+    "//examples/tests:incomplete-test-example",
+    "//examples/tests:invalid-test-example",
+    "//examples/tests:no-onfinished-after-test-example",
+    "//examples/tests:no-test-example",
+    "//examples/tests:passing-test-example",
+    "//examples/tests:run-closes-channel-example",
+    "//examples/tests:run-hangs-example",
   ]
 }
 

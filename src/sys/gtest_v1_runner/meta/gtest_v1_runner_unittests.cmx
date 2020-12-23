@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/gtest_v1_runner_unittests"
+        "binary": "bin/gtest_v1_runner_bin_test"
     }
 }

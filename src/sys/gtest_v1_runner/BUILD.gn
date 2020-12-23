@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "gtest_v1_runner"
@@ -44,33 +43,17 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("gtest_v1_runner") {
+fuchsia_package_with_single_component("gtest_v1_runner") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "gtest_v1_runner"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/gtest_v1_runner.cmx"
-      dest = "gtest_v1_runner.cmx"
-    },
-  ]
+  manifest = "meta/gtest_v1_runner.cmx"
 }
 
-test_package("gtest_v1_runner_unittests") {
+fuchsia_unittest_package("gtest_v1_runner_unittests") {
+  manifest = "meta/gtest_v1_runner_unittests.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "gtest_v1_runner_bin_test"
-      dest = "gtest_v1_runner_unittests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {

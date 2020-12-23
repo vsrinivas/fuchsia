@@ -101,7 +101,7 @@ async fn launch_and_test_passing_v2_test() {
 
     let run_result = run_test_once(
             new_test_params(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm",
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
             &mut output
         )
@@ -143,7 +143,7 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 
     let run_results = run_test_suite_lib::run_test(
             new_test_params(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm",
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
             10, &mut output
         )
@@ -168,8 +168,9 @@ async fn launch_and_test_with_filter() {
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
     let mut test_params = new_test_params(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm",
-            harness);
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+        harness,
+    );
 
     test_params.test_filter = Some("*Test3".to_string());
     let run_result =

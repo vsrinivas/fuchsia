@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/component_manager_for_test_integration_test"
+        "binary": "bin/component_manager_for_test_integration_test"
     },
     "sandbox": {
         "services": [

@@ -3,37 +3,31 @@
 # found in the LICENSE file.
 
 import("//build/component/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 component_config("component_manager_config") {
   sources = [ "config.json" ]
 }
 
-package("component_manager_for_test_pkg") {
-  deps = [
-    ":component_manager_config",
-    "//src/sys/component_manager:bin",
-  ]
+fuchsia_component("component_manager_for_test_cmp") {
+  testonly = true
+  component_name = "component_manager_for_test"
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/component_manager_for_test.cmx"
+}
+
+resource("component_manager_config_resource") {
+  deps = [ ":component_manager_config" ]
+  sources = [ "${target_gen_dir}/component_manager_config" ]
+  outputs = [ "data/component_manager_config" ]
+}
+
+fuchsia_package("component_manager_for_test_pkg") {
+  testonly = true
   package_name = "component_manager_for_test"
-
-  resources = [
-    {
-      path = "${target_gen_dir}/component_manager_config"
-      dest = "component_manager_config"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "component_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_manager_for_test.cmx")
-      dest = "component_manager_for_test.cmx"
-    },
+  deps = [
+    ":component_manager_config_resource",
+    ":component_manager_for_test_cmp",
   ]
 }
 

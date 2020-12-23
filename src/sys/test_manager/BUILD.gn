@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "test_manager_lib"
@@ -59,32 +59,23 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("test_manager_pkg") {
+fuchsia_component("test_manager_cmp") {
+  component_name = "test_manager"
+  deps = [ ":bin" ]
+  manifest = "meta/test_manager.cml"
+}
+
+fuchsia_component("memfs") {
+  deps = [ "//src/sys/component_manager/tests/memfs" ]
+  manifest = "meta/memfs.cml"
+}
+
+fuchsia_package("test_manager_pkg") {
   testonly = true
-  deps = [
-    ":bin",
-    "//src/sys/component_manager/tests/memfs",
-  ]
   package_name = "test_manager"
-
-  binaries = [
-    {
-      name = "test_manager"
-    },
-    {
-      name = "memfs"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/test_manager.cml")
-      dest = "test_manager.cm"
-    },
-    {
-      path = rebase_path("meta/memfs.cml")
-      dest = "memfs.cm"
-    },
+  deps = [
+    ":memfs",
+    ":test_manager_cmp",
   ]
 }
 

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("measure_tape_for_case") {
@@ -27,70 +27,157 @@ source_set("test_suite_lib") {
   ]
 }
 
-executable("passing-test-example") {
+executable("passing-test-example-bin") {
+  output_name = "passing-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "passing_test_example.cc" ]
 }
 
-executable("no-onfinished-after-test-example") {
+executable("no-onfinished-after-test-example-bin") {
+  output_name = "no-onfinished-after-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "no_onfinished_after_test_example.cc" ]
 }
 
-executable("disabled-test-example") {
+executable("disabled-test-example-bin") {
+  output_name = "disabled-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "disabled_test_example.cc" ]
 }
 
-executable("failing-test-example") {
+executable("failing-test-example-bin") {
+  output_name = "failing-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "failing_test_example.cc" ]
 }
 
-executable("incomplete-test-example") {
+executable("incomplete-test-example-bin") {
+  output_name = "incomplete-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "incomplete_test_example.cc" ]
 }
 
-executable("invalid-test-example") {
+executable("invalid-test-example-bin") {
+  output_name = "invalid-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "invalid_test_example.cc" ]
 }
 
-executable("no-test-example") {
+executable("no-test-example-bin") {
+  output_name = "no-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "no_test_example.cc" ]
 }
 
-executable("huge-test-example") {
+executable("huge-test-example-bin") {
+  output_name = "huge-test-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "huge_test_example.cc" ]
 }
 
-executable("get-tests-hangs-example") {
+executable("get-tests-hangs-example-bin") {
+  output_name = "get-tests-hangs-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "get_tests_hangs_example.cc" ]
 }
 
-executable("get-tests-closes-channel-example") {
+executable("get-tests-closes-channel-example-bin") {
+  output_name = "get-tests-closes-channel-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "get_tests_closes_channel_example.cc" ]
 }
 
-executable("run-hangs-example") {
+executable("run-hangs-example-bin") {
+  output_name = "run-hangs-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "run_hangs_example.cc" ]
 }
 
-executable("run-closes-channel-example") {
+executable("run-closes-channel-example-bin") {
+  output_name = "run-closes-channel-example"
   deps = [ ":test_suite_lib" ]
   sources = [ "run_closes_channel_example.cc" ]
 }
 
-group("all_bins") {
-  testonly = true
-  public_deps = [
+fuchsia_component("disabled-test-example") {
+  deps = [ ":disabled-test-example-bin" ]
+  manifest = "meta/disabled-test-example.cml"
+}
+
+fuchsia_component("failing-test-example") {
+  deps = [ ":failing-test-example-bin" ]
+  manifest = "meta/failing-test-example.cml"
+}
+
+fuchsia_component("get-tests-closes-channel-example") {
+  deps = [ ":get-tests-closes-channel-example-bin" ]
+  manifest = "meta/get-tests-closes-channel-example.cmx"
+}
+
+fuchsia_component("get-tests-hangs-example") {
+  deps = [ ":get-tests-hangs-example-bin" ]
+  manifest = "meta/get-tests-hangs-example.cmx"
+}
+
+fuchsia_component("huge-test-example") {
+  deps = [ ":huge-test-example-bin" ]
+  manifest = "meta/huge-test-example.cml"
+}
+
+fuchsia_component("incomplete-test-example") {
+  deps = [ ":incomplete-test-example-bin" ]
+  manifest = "meta/incomplete-test-example.cml"
+}
+
+fuchsia_component("invalid-test-example") {
+  deps = [ ":invalid-test-example-bin" ]
+  manifest = "meta/invalid-test-example.cml"
+}
+
+fuchsia_component("no-onfinished-after-test-example") {
+  deps = [ ":no-onfinished-after-test-example-bin" ]
+  manifest = "meta/no-onfinished-after-test-example.cml"
+}
+
+fuchsia_component("no-test-example") {
+  deps = [ ":no-test-example-bin" ]
+  manifest = "meta/no-test-example.cml"
+}
+
+fuchsia_component("passing-test-example") {
+  deps = [ ":passing-test-example-bin" ]
+  manifest = "meta/passing-test-example.cml"
+}
+
+fuchsia_component("passing-test-example-v1") {
+  deps = [ ":passing-test-example-bin" ]
+  manifest = "meta/passing-test-example.cmx"
+}
+
+fuchsia_component("run-closes-channel-example") {
+  deps = [ ":run-closes-channel-example-bin" ]
+  manifest = "meta/run-closes-channel-example.cmx"
+}
+
+fuchsia_component("run-hangs-example") {
+  deps = [ ":run-hangs-example-bin" ]
+  manifest = "meta/run-hangs-example.cmx"
+}
+
+fuchsia_component("echo_test_client") {
+  deps = [ "rust:echo_test_client" ]
+  manifest = "meta/echo_test_client.cml"
+}
+
+fuchsia_component("echo_test_realm") {
+  manifest = "meta/echo_test_realm.cml"
+}
+
+fuchsia_test_package("example-tests") {
+  test_components = [ ":echo_test_realm" ]
+  deps = [
     ":disabled-test-example",
+    ":echo_test_client",
     ":failing-test-example",
     ":get-tests-closes-channel-example",
     ":get-tests-hangs-example",
@@ -100,134 +187,10 @@ group("all_bins") {
     ":no-onfinished-after-test-example",
     ":no-test-example",
     ":passing-test-example",
+    ":passing-test-example-v1",
     ":run-closes-channel-example",
     ":run-hangs-example",
-    "rust:all_bins",
-    "//examples/components/routing/echo_server",
-  ]
-}
-
-package("example-tests") {
-  testonly = true
-  deps = [ ":all_bins" ]
-
-  binaries = [
-    {
-      name = "passing-test-example"
-    },
-    {
-      name = "no-test-example"
-    },
-    {
-      name = "huge-test-example"
-    },
-    {
-      name = "disabled-test-example"
-    },
-    {
-      name = "failing-test-example"
-    },
-    {
-      name = "incomplete-test-example"
-    },
-    {
-      name = "get-tests-hangs-example"
-    },
-    {
-      name = "run-hangs-example"
-    },
-    {
-      name = "no-onfinished-after-test-example"
-    },
-    {
-      name = "get-tests-closes-channel-example"
-    },
-    {
-      name = "run-closes-channel-example"
-    },
-    {
-      name = "invalid-test-example"
-    },
-    {
-      name = "echo_test_client"
-    },
-    {
-      name = "echo_server"
-    },
-  ]
-
-  tests = [
-    {
-      name = "echo_test_realm"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/passing-test-example.cmx"
-      dest = "passing-test-example.cmx"
-    },
-    {
-      path = "meta/no-onfinished-after-test-example.cml"
-      dest = "no-onfinished-after-test-example.cm"
-    },
-    {
-      path = "meta/passing-test-example.cml"
-      dest = "passing-test-example.cm"
-    },
-    {
-      path = "meta/no-test-example.cml"
-      dest = "no-test-example.cm"
-    },
-    {
-      path = "meta/huge-test-example.cml"
-      dest = "huge-test-example.cm"
-    },
-    {
-      path = "meta/disabled-test-example.cml"
-      dest = "disabled-test-example.cm"
-    },
-    {
-      path = "meta/failing-test-example.cml"
-      dest = "failing-test-example.cm"
-    },
-    {
-      path = "meta/incomplete-test-example.cml"
-      dest = "incomplete-test-example.cm"
-    },
-    {
-      path = "meta/get-tests-hangs-example.cmx"
-      dest = "get-tests-hangs-example.cmx"
-    },
-    {
-      path = "meta/get-tests-closes-channel-example.cmx"
-      dest = "get-tests-closes-channel-example.cmx"
-    },
-    {
-      path = "meta/run-closes-channel-example.cmx"
-      dest = "run-closes-channel-example.cmx"
-    },
-    {
-      path = "meta/run-hangs-example.cmx"
-      dest = "run-hangs-example.cmx"
-    },
-    {
-      path = "meta/invalid-test-example.cml"
-      dest = "invalid-test-example.cm"
-    },
-    {
-      path = "meta/echo_test_realm.cml"
-      dest = "echo_test_realm.cm"
-    },
-    {
-      path = "meta/echo_test_client.cml"
-      dest = "echo_test_client.cm"
-    },
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }
 

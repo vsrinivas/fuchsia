@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
@@ -59,43 +57,35 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("stash_secure") {
+  deps = [ ":bin" ]
   manifest = "meta/stash_secure.cmx"
-  deps = [ ":bin" ]
 }
 
-# TODO: migrate to `fuchsia_package`.
-package("pkg") {
+fuchsia_component("stash_cmp") {
+  component_name = "stash"
+  deps = [ ":bin" ]
+  manifest = "meta/stash.cmx"
+}
+
+fuchsia_component("stash2_cmp") {
+  component_name = "stash2"
+  deps = [ ":bin" ]
+  manifest = "meta/stash2.cmx"
+}
+
+fuchsia_package("pkg") {
   package_name = "stash"
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "stash"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/stash.cmx")
-      dest = "stash.cmx"
-    },
-    {
-      path = rebase_path("meta/stash2.cmx")
-      dest = "stash2.cmx"
-    },
-    {
-      path = rebase_path("meta/stash_secure.cmx")
-      dest = "stash_secure.cmx"
-    },
+  deps = [
+    ":stash2_cmp",
+    ":stash_cmp",
+    ":stash_secure",
   ]
 }
 
-test_package("stash-tests") {
+fuchsia_unittest_package("stash-tests") {
+  manifest = "meta/stash_bin_test.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "stash_bin_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

@@ -4,7 +4,7 @@
 
 import("//build/component/config.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("bin") {
   name = "component_manager_for_test_integration_test"
@@ -28,46 +28,19 @@ component_config("component_manager_config") {
   sources = [ "config.json" ]
 }
 
-test_package("component_manager_for_test_integration_test") {
+resource("component_manager_config_resource") {
+  deps = [ ":component_manager_config" ]
+  sources = [ "${target_gen_dir}/component_manager_config" ]
+  outputs = [ "data/component_manager_config" ]
+}
+
+fuchsia_unittest_package("component_manager_for_test_integration_test") {
+  manifest = "meta/component_manager_for_test_integration_test.cmx"
   deps = [
     ":bin",
-    ":component_manager_config",
+    ":component_manager_config_resource",
     "//examples/tests:passing-test-example",
-    "//src/sys/component_manager:bin",
-  ]
-
-  resources = [
-    {
-      path = "${target_gen_dir}/component_manager_config"
-      dest = "component_manager_config"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//examples/tests/meta/passing-test-example.cml")
-      dest = "passing-test-example.cm"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/component_manager_for_test/meta/component_manager_for_test.cmx")
-      dest = "component_manager_for_test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "passing-test-example"
-    },
-    {
-      name = "component_manager"
-    },
-  ]
-
-  tests = [
-    {
-      name = "component_manager_for_test_integration_test"
-    },
+    "//src/sys/component_manager_for_test:component_manager_for_test_cmp",
   ]
 }
 

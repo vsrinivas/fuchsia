@@ -27,20 +27,6 @@ rustc_binary("echo_test_client") {
   sources = [ "echo_test_client.rs" ]
 }
 
-rustc_binary("echo_test_realm") {
-  edition = "2018"
-  source_root = "echo_test_realm.rs"
-
-  sources = [ "echo_test_realm.rs" ]
-}
-
-group("all_bins") {
-  public_deps = [
-    ":echo_test_client",
-    ":echo_test_realm",
-  ]
-}
-
 rustc_test("temp_user_bin") {
   name = "temp_user_bin_test"
   edition = "2018"

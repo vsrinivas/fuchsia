@@ -1,5 +1,8 @@
 {
-    include: [ "src/sys/test_runners/gtest/default.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
     program: {
         binary: "bin/long_running_test",
     },

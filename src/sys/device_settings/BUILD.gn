@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("device_settings") {
   testonly = true
@@ -40,31 +39,17 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("device_settings_manager") {
+fuchsia_package_with_single_component("device_settings_manager") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "device_settings_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/device_settings_manager.cmx")
-      dest = "device_settings_manager.cmx"
-    },
-  ]
+  manifest = "meta/device_settings_manager.cmx"
 }
 
-test_package("device_settings_manager_tests") {
+fuchsia_unittest_package("device_settings_manager_tests") {
+  manifest = "meta/device_settings_manager_bin_test.cmx"
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "device_settings_manager_bin_test"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
