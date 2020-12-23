@@ -257,7 +257,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
     // Infinite loop by jumping back to the link command.
     command_stream->EtnaLink(0x8 /* prefetch */, command_stream->etna_buffer->gpu_address_);
 
-    static constexpr uint32_t kTimeoutMs = 6000;
+    static constexpr uint32_t kTimeoutMs = 7000;
     ExecuteCommand(command_stream, kTimeoutMs);
 
     EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(magma_vsi_.GetConnection()));

@@ -328,7 +328,7 @@ int MsdVsiDevice::DeviceThreadLoop() {
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
 
   while (!stop_device_thread_) {
-    constexpr uint32_t kTimeoutMs = 5000;
+    constexpr uint32_t kTimeoutMs = 6000;
 
     auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
         progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
