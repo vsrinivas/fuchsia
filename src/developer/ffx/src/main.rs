@@ -13,7 +13,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    futures::try_join,
+    fuchsia_async::TimeoutExt,
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
     std::time::Duration,
@@ -115,7 +115,7 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     false
 }
 
-async fn run() -> Result<((), ())> {
+async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
@@ -133,24 +133,34 @@ async fn run() -> Result<((), ())> {
 
     let notice_writer = Box::new(std::io::stderr());
     show_analytics_notice(notice_writer);
-    let args: Vec<String> = std::env::args().collect();
 
-    // drop arg[0]: executable with hard path
-    // TODO do we want to break out subcommands for analytics?
-    let args_str = &args[1..].join(" ");
-    let launch_args = format!("{}", &args_str);
-    let build_info = build_info();
-    let build_version = build_info.build_version.as_deref();
-    try_join!(
-        add_launch_event(APP_NAME, build_version, Some(&launch_args)),
-        ffx_lib_suite::ffx_plugin_impl(
-            get_daemon_proxy,
-            get_remote_proxy,
-            get_fastboot_proxy,
-            is_experiment_subcommand_on,
-            app,
-        )
+    let analytics_task = fuchsia_async::Task::spawn(async {
+        let args: Vec<String> = std::env::args().collect();
+        // drop arg[0]: executable with hard path
+        // TODO do we want to break out subcommands for analytics?
+        let args_str = &args[1..].join(" ");
+        let launch_args = format!("{}", &args_str);
+        let build_info = build_info();
+        let build_version = build_info.build_version;
+        add_launch_event(APP_NAME, build_version.as_deref(), Some(launch_args).as_deref()).await
+    });
+    let res = ffx_lib_suite::ffx_plugin_impl(
+        get_daemon_proxy,
+        get_remote_proxy,
+        get_fastboot_proxy,
+        is_experiment_subcommand_on,
+        app,
     )
+    .await;
+    let _ = analytics_task
+        // TODO(66918): make configurable, and evaluate chosen time value.
+        .on_timeout(Duration::from_secs(2), || {
+            log::error!("analytics submission timed out");
+            // Analytics timeouts should not impact user flows
+            Ok(())
+        })
+        .await;
+    res
 }
 
 #[fuchsia_async::run_singlethreaded]
