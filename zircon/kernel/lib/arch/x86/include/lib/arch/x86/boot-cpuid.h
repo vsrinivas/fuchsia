@@ -54,14 +54,32 @@ inline constexpr CpuidIo kBootCpuidInitializer = {{Leaf, 0, Subleaf, 0}};
 
 }  // namespace internal
 
-// This can be instantiated for any type <lib/arch/x86/cpuid.h> defines.
+// A "CPUID I/O provider", BootCpuidIo's methods are expected to be
+// instantiated by "CPUID value types", defined in <lib/arch/x86/cpuid.h>.
+//
 // `BootCpuidIo<T>{}.Get()` returns a `const arch::CpuidIo*` that can be used
-// with the `hwreg` objects from `T::Get()`.  InitializeBootCpuid() fills in
+// with the `hwreg` objects from `T::Get()`. InitializeBootCpuid() fills in
 // the data for all the instantiations linked in.
 //
 // This template can be used as a parameter for template functions, e.g.
 // `arch::GetVendor(BootCpuidIo{})`.
-struct BootCpuidIo {
+class BootCpuidIo {
+ public:
+  // Most often just Get<Type> is used instead to reach a particular (sub)leaf.
+  // Multiple different CpuidValue types reach the same (sub)leaf, usually one
+  // type for each of the four registers.
+  template <typename CpuidValue>
+  const CpuidIo* Get() const {
+    return GetLeaf<CpuidValue::kLeaf, CpuidValue::kSubleaf>();
+  }
+
+  // Convenience accessor for the common case.
+  template <typename CpuidValue>
+  auto Read() const {
+    return CpuidValue::Get().ReadFrom(Get<CpuidValue>());
+  }
+
+ private:
   // The underlying instantiation is indexed by leaf and subleaf.
   template <uint32_t Leaf, uint32_t Subleaf = 0>
   const CpuidIo* GetLeaf() const {
@@ -100,20 +118,6 @@ struct BootCpuidIo {
     }();
 #endif  // __clang__
     return &gCpuidIo;
-  }
-
-  // Most often just Get<Type> is used instead to reach a particular (sub)leaf.
-  // Multiple different CpuidValue types reach the same (sub)leaf, usually one
-  // type for each of the four registers.
-  template <typename CpuidValue>
-  const CpuidIo* Get() const {
-    return GetLeaf<CpuidValue::kLeaf, CpuidValue::kSubleaf>();
-  }
-
-  // Convenience accessor for the common case.
-  template <typename CpuidValue>
-  auto Read() const {
-    return CpuidValue::Get().ReadFrom(Get<CpuidValue>());
   }
 };
 

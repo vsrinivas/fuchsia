@@ -17,25 +17,26 @@ namespace arch::testing {
 
 // FakeCpuidIo is a fake analogue to arch::BootCpuidIo, which may be provided
 // in its place for tests - in the kernel and on host - for logic templated
-// on any type the interface contract of the latter. Using `Populate`, test
-// authors can provide dummy data for specific (sub)leaves.
+// on any type the interface contract of the latter. A "CPUID I/O provider",
+// FakeCpuidIo's methods are expected to be instantiated by "CPUID value
+// types", defined in <lib/arch/x86/cpuid.h>.
+//
+// Using `Populate`, test authors can provide dummy data for specific
+// (sub)leaves.
 //
 // FakeCpuidIo is immovable and non-copyable; it is expected to be passed
 // around by const reference.
 class FakeCpuidIo {
  public:
   // Returns the cached CpuidIo object corresponding to the particular CPUID
-  // register type. This method mirrors that of arch::BootCpuidIo and is
-  // required to meet its interface contract.
+  // register type.
   template <typename CpuidValue>
   const CpuidIo* Get() const {
     return Get(CpuidValue::kLeaf, CpuidValue::kSubleaf);
   }
 
   // A convenience method to directly read a particular CPUID register type in
-  // consultation with the associated cached CpuidIo objects. This method
-  // mirrors that of arch::BootCpuidIo and is required to meet its interface
-  // contract.
+  // consultation with the associated cached CpuidIo objects.
   template <typename CpuidValue>
   auto Read() const {
     return CpuidValue::Get().ReadFrom(Get<CpuidValue>());

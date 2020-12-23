@@ -47,6 +47,43 @@ struct CpuidIo {
   uint32_t values_[4];
 };
 
+// Define a "CPUID value type" as any type with the following:
+// * static constexpr uint32_t members, `kLeaf` and `kSubleaf` giving the
+//   associated leaf and subleaf;
+// * a static `Get()` method returning a `hwreg::RegisterAddr` object holding
+//   an "address" of one of the `CpuidIo::Register` values.
+//
+// CPUID "I/O" providers will deal in such types. See arch::BootCpuidIo and
+// arch::testing::FakeCpuidIo for instances of such contracts.
+//
+// Note: there is no inherent relationship between the CPUID value type and the
+// return type of `Get()`. In practice, a CPUID value type might be precisely
+// the hwreg register type expressing the bit layout or a sort of getter for
+// such a type (the utility of which lies in the fact that hwreg register
+// types cannot be templated, for various reasons).
+//
+// We use Intel's terms of "leaf" and "subleaf" over AMD's "function" and
+// "subfunction" as the latter pair is more overloaded and ambiguous.
+
+// CpuidIoValue is a convenience type for defining a CPUID value type.
+template <typename ValueType, uint32_t Leaf, uint32_t Subleaf, CpuidIo::Register OutputRegister>
+struct CpuidIoValue {
+  static constexpr uint32_t kLeaf = Leaf;
+  static constexpr uint32_t kSubleaf = Subleaf;
+
+  static auto Get() { return hwreg::RegisterAddr<ValueType>(OutputRegister); }
+};
+
+// CpuidIoValueBase is a convenience type for defining both a CPUID value type
+// as well as the associated register type.
+//
+// Assembly macro generation requires the use of `hwreg::EnablePrinter`; to
+// make such use-cases more conveniently accessible - and since the code-gen
+// cost here is rather minimal - we generally use the feature  below.
+template <typename ValueType, uint32_t Leaf, uint32_t Subleaf, CpuidIo::Register OutputRegister>
+struct CpuidIoValueBase : public hwreg::RegisterBase<ValueType, uint32_t, hwreg::EnablePrinter>,
+                          public CpuidIoValue<ValueType, Leaf, Subleaf, OutputRegister> {};
+
 enum class Vendor {
   kUnknown,
   kIntel,
@@ -92,28 +129,6 @@ enum class Microarchitecture {
 std::string_view ToString(Vendor vendor);
 std::string_view ToString(Microarchitecture microarch);
 
-// A convenient and self-documenting wrapper for defining CPUID value bitsets
-// as hwreg register objects, along with their associated leaf and subleaf
-// values (which are always expected to be defined as static constexpr
-// members).
-//
-// We use Intel's terms of "leaf", "subleaf" over AMD's "function", "subfuntion"
-// as the latter pair is more overloaded and ambiguous.
-//
-// Assembly macro generation requires the use of `hwreg::EnablePrinter`.
-//
-// TODO(joshuaseaton|mcgrathr): When global templated CpuidIo objects are
-// defined, also define a templated getter that takes a CpuidValue type,
-// consults kLeaf and kSubleaf, and returns the appropriate object (e.g.,
-// `GetCpuidFor<ValueType>()`).
-template <typename ValueType, uint32_t Leaf, uint32_t Subleaf, CpuidIo::Register OutputRegister>
-struct CpuidValueBase : public hwreg::RegisterBase<ValueType, uint32_t, hwreg::EnablePrinter> {
-  static constexpr uint32_t kLeaf = Leaf;
-  static constexpr uint32_t kSubleaf = Subleaf;
-
-  static auto Get() { return hwreg::RegisterAddr<ValueType>(OutputRegister); }
-};
-
 //---------------------------------------------------------------------------//
 // Leaf/Function 0x0.
 //
@@ -122,18 +137,18 @@ struct CpuidValueBase : public hwreg::RegisterBase<ValueType, uint32_t, hwreg::E
 //---------------------------------------------------------------------------//
 
 // [amd/vol3]: E.3.1, CPUID Fn0000_0000_EAX Largest Standard Function Number.
-struct CpuidMaximumLeaf : public CpuidValueBase<CpuidMaximumLeaf, 0x0, 0x0, CpuidIo::kEax> {
+struct CpuidMaximumLeaf : public CpuidIoValueBase<CpuidMaximumLeaf, 0x0, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, leaf);
 };
 
 // [amd/vol3]: E.3.1, CPUID Fn0000_0000_E[D,C,B]X Processor Vendor.
-struct CpuidVendorB : public CpuidValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEbx> {
+struct CpuidVendorB : public CpuidIoValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEbx> {
   DEF_FIELD(31, 0, value);
 };
-struct CpuidVendorC : public CpuidValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {
+struct CpuidVendorC : public CpuidIoValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {
   DEF_FIELD(31, 0, value);
 };
-struct CpuidVendorD : public CpuidValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {
+struct CpuidVendorD : public CpuidIoValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 0, value);
 };
 
@@ -164,7 +179,7 @@ Vendor GetVendor(CpuidIoProvider&& io) {
 
 // [intel/vol2]: Figure 3-6.  Version Information Returned by CPUID in EAX.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_EAX  Family, Model, Stepping Identifiers.
-struct CpuidVersionInfo : public CpuidValueBase<CpuidVersionInfo, 0x1, 0x0, CpuidIo::kEax> {
+struct CpuidVersionInfo : public CpuidIoValueBase<CpuidVersionInfo, 0x1, 0x0, CpuidIo::kEax> {
   // [intel/vol2]: Table 3-9.  Processor Type Field.
   enum class IntelProcessorType : uint8_t {
     kOriginalOem = 0b00,
@@ -199,7 +214,7 @@ Microarchitecture GetMicroarchitecture(CpuidIoProvider&& io) {
 
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_ECX Feature Identifiers.
-struct CpuidFeatureFlagsC : public CpuidValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx> {
+struct CpuidFeatureFlagsC : public CpuidIoValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx> {
   // AMD documented "RAZ. Reserved for use by hypervisor to indicate guest
   // status."; Intel documents "Not Used. Always returns 0.".
   DEF_BIT(31, hypervisor);
@@ -238,7 +253,7 @@ struct CpuidFeatureFlagsC : public CpuidValueBase<CpuidFeatureFlagsC, 0x1, 0x0, 
 
 // [intel/vol2]: Table 3-11.  More on Feature Information Returned in the EDX Register.
 // [amd/vol3]: E.3.6  Function 7h—Structured Extended Feature Identifiers.
-struct CpuidFeatureFlagsD : public CpuidValueBase<CpuidFeatureFlagsD, 0x1, 0x0, CpuidIo::kEdx> {
+struct CpuidFeatureFlagsD : public CpuidIoValueBase<CpuidFeatureFlagsD, 0x1, 0x0, CpuidIo::kEdx> {
   DEF_BIT(31, pbe);
   // Bit 30 is reserved.
   DEF_BIT(29, tm);
@@ -280,23 +295,23 @@ struct CpuidFeatureFlagsD : public CpuidValueBase<CpuidFeatureFlagsD, 0x1, 0x0, 
 // [amd/vol3]: E.3.4  Function 5h—Monitor and MWait Features.
 //---------------------------------------------------------------------------//
 
-struct CpuidMonitorMwaitA : public CpuidValueBase<CpuidMonitorMwaitA, 0x5, 0x0, CpuidIo::kEax> {
+struct CpuidMonitorMwaitA : public CpuidIoValueBase<CpuidMonitorMwaitA, 0x5, 0x0, CpuidIo::kEax> {
   DEF_RSVDZ_FIELD(31, 16);
   DEF_FIELD(15, 0, smallest_monitor_line_size);
 };
 
-struct CpuidMonitorMwaitB : public CpuidValueBase<CpuidMonitorMwaitB, 0x5, 0x0, CpuidIo::kEbx> {
+struct CpuidMonitorMwaitB : public CpuidIoValueBase<CpuidMonitorMwaitB, 0x5, 0x0, CpuidIo::kEbx> {
   DEF_RSVDZ_FIELD(31, 16);
   DEF_FIELD(15, 0, largest_monitor_line_size);
 };
 
-struct CpuidMonitorMwaitC : public CpuidValueBase<CpuidMonitorMwaitC, 0x5, 0x0, CpuidIo::kEcx> {
+struct CpuidMonitorMwaitC : public CpuidIoValueBase<CpuidMonitorMwaitC, 0x5, 0x0, CpuidIo::kEcx> {
   // Bits [31: 2] are reserved.
   DEF_BIT(1, ibe);
   DEF_BIT(0, emx);
 };
 
-struct CpuidMonitorMwaitD : public CpuidValueBase<CpuidMonitorMwaitD, 0x5, 0x0, CpuidIo::kEdx> {
+struct CpuidMonitorMwaitD : public CpuidIoValueBase<CpuidMonitorMwaitD, 0x5, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 28, c7_sub_c_states);
   DEF_FIELD(27, 24, c6_sub_c_states);
   DEF_FIELD(23, 20, c5_sub_c_states);
@@ -316,7 +331,7 @@ struct CpuidMonitorMwaitD : public CpuidValueBase<CpuidMonitorMwaitD, 0x5, 0x0, 
 
 // [amd/vol3]: E.3.6, CPUID Fn0000_0007_EBX_x0 Structured Extended Feature Identifiers (ECX=0).
 struct CpuidExtendedFeatureFlagsB
-    : public CpuidValueBase<CpuidExtendedFeatureFlagsB, 0x7, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidExtendedFeatureFlagsB, 0x7, 0x0, CpuidIo::kEbx> {
   DEF_BIT(31, avx512vl);
   DEF_BIT(30, avx512bw);
   DEF_BIT(29, sha);
@@ -358,7 +373,7 @@ struct CpuidExtendedFeatureFlagsB
 //---------------------------------------------------------------------------//
 
 struct CpuidPerformanceMonitoringA
-    : public CpuidValueBase<CpuidPerformanceMonitoringA, 0xa, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidPerformanceMonitoringA, 0xa, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 24, ebx_vector_length);
   DEF_FIELD(23, 16, general_counter_width);
   DEF_FIELD(15, 8, num_general_counters);
@@ -366,7 +381,7 @@ struct CpuidPerformanceMonitoringA
 };
 
 struct CpuidPerformanceMonitoringB
-    : public CpuidValueBase<CpuidPerformanceMonitoringB, 0xa, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidPerformanceMonitoringB, 0xa, 0x0, CpuidIo::kEbx> {
   DEF_RSVDZ_FIELD(31, 7);
   DEF_BIT(6, branch_mispredict_retired_event_unavailable);
   DEF_BIT(5, branch_instruction_retired_event_unavailable);
@@ -378,7 +393,7 @@ struct CpuidPerformanceMonitoringB
 };
 
 struct CpuidPerformanceMonitoringD
-    : public CpuidValueBase<CpuidPerformanceMonitoringD, 0xa, 0x0, CpuidIo::kEdx> {
+    : public CpuidIoValueBase<CpuidPerformanceMonitoringD, 0xa, 0x0, CpuidIo::kEdx> {
   DEF_RSVDZ_FIELD(31, 16);
   DEF_BIT(15, anythread_deprecation);
   DEF_RSVDZ_FIELD(14, 13);
@@ -393,7 +408,7 @@ struct CpuidPerformanceMonitoringD
 //---------------------------------------------------------------------------//
 
 struct CpuidProcessorTraceMainB
-    : public CpuidValueBase<CpuidProcessorTraceMainB, 0x14, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidProcessorTraceMainB, 0x14, 0x0, CpuidIo::kEbx> {
   DEF_RSVDZ_FIELD(31, 6);
   DEF_BIT(5, power_event_trace);
   DEF_BIT(4, ptwrite);
@@ -404,7 +419,7 @@ struct CpuidProcessorTraceMainB
 };
 
 struct CpuidProcessorTraceMainC
-    : public CpuidValueBase<CpuidProcessorTraceMainC, 0x14, 0x0, CpuidIo::kEcx> {
+    : public CpuidIoValueBase<CpuidProcessorTraceMainC, 0x14, 0x0, CpuidIo::kEcx> {
   DEF_BIT(31, lip);
   DEF_RSVDZ_FIELD(30, 4);
   DEF_BIT(3, trace_transport);
@@ -427,20 +442,20 @@ struct CpuidProcessorTraceMainC
 //---------------------------------------------------------------------------//
 
 struct CpuidMaximumHypervisorLeaf
-    : public CpuidValueBase<CpuidMaximumHypervisorLeaf, 0x4000'0000, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidMaximumHypervisorLeaf, 0x4000'0000, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, leaf);
 };
 
 struct CpuidHypervisorNameB
-    : public CpuidValueBase<CpuidHypervisorNameB, 0x4000'0000, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidHypervisorNameB, 0x4000'0000, 0x0, CpuidIo::kEbx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidHypervisorNameC
-    : public CpuidValueBase<CpuidHypervisorNameC, 0x4000'0000, 0x0, CpuidIo::kEcx> {
+    : public CpuidIoValueBase<CpuidHypervisorNameC, 0x4000'0000, 0x0, CpuidIo::kEcx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidHypervisorNameD
-    : public CpuidValueBase<CpuidHypervisorNameD, 0x4000'0000, 0x0, CpuidIo::kEdx> {
+    : public CpuidIoValueBase<CpuidHypervisorNameD, 0x4000'0000, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 0, value);
 };
 
@@ -485,7 +500,7 @@ class HypervisorName {
 
 // [amd/vol3]: CPUID Fn8000_0000_EAX Largest Extended Function Number
 struct CpuidMaximumExtendedLeaf
-    : public CpuidValueBase<CpuidMaximumExtendedLeaf, 0x8000'0000, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidMaximumExtendedLeaf, 0x8000'0000, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, leaf);
 };
 
@@ -500,53 +515,53 @@ struct CpuidMaximumExtendedLeaf
 // express (zero-based) index into how the combine to form the processor name
 // string.
 struct CpuidProcessorName2A
-    : public CpuidValueBase<CpuidProcessorName2A, 0x8000'0002, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidProcessorName2A, 0x8000'0002, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName2B
-    : public CpuidValueBase<CpuidProcessorName2B, 0x8000'0002, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidProcessorName2B, 0x8000'0002, 0x0, CpuidIo::kEbx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName2C
-    : public CpuidValueBase<CpuidProcessorName2C, 0x8000'0002, 0x0, CpuidIo::kEcx> {
+    : public CpuidIoValueBase<CpuidProcessorName2C, 0x8000'0002, 0x0, CpuidIo::kEcx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName2D
-    : public CpuidValueBase<CpuidProcessorName2D, 0x8000'0002, 0x0, CpuidIo::kEdx> {
+    : public CpuidIoValueBase<CpuidProcessorName2D, 0x8000'0002, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 0, value);
 };
 
 struct CpuidProcessorName3A
-    : public CpuidValueBase<CpuidProcessorName3A, 0x8000'0003, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidProcessorName3A, 0x8000'0003, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName3B
-    : public CpuidValueBase<CpuidProcessorName3B, 0x8000'0003, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidProcessorName3B, 0x8000'0003, 0x0, CpuidIo::kEbx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName3C
-    : public CpuidValueBase<CpuidProcessorName3C, 0x8000'0003, 0x0, CpuidIo::kEcx> {
+    : public CpuidIoValueBase<CpuidProcessorName3C, 0x8000'0003, 0x0, CpuidIo::kEcx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName3D
-    : public CpuidValueBase<CpuidProcessorName3D, 0x8000'0003, 0x0, CpuidIo::kEdx> {
+    : public CpuidIoValueBase<CpuidProcessorName3D, 0x8000'0003, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 0, value);
 };
 
 struct CpuidProcessorName4A
-    : public CpuidValueBase<CpuidProcessorName4A, 0x8000'0004, 0x0, CpuidIo::kEax> {
+    : public CpuidIoValueBase<CpuidProcessorName4A, 0x8000'0004, 0x0, CpuidIo::kEax> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName4B
-    : public CpuidValueBase<CpuidProcessorName4B, 0x8000'0004, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidProcessorName4B, 0x8000'0004, 0x0, CpuidIo::kEbx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName4C
-    : public CpuidValueBase<CpuidProcessorName4C, 0x8000'0004, 0x0, CpuidIo::kEcx> {
+    : public CpuidIoValueBase<CpuidProcessorName4C, 0x8000'0004, 0x0, CpuidIo::kEcx> {
   DEF_FIELD(31, 0, value);
 };
 struct CpuidProcessorName4D
-    : public CpuidValueBase<CpuidProcessorName4D, 0x8000'0004, 0x0, CpuidIo::kEdx> {
+    : public CpuidIoValueBase<CpuidProcessorName4D, 0x8000'0004, 0x0, CpuidIo::kEdx> {
   DEF_FIELD(31, 0, value);
 };
 
