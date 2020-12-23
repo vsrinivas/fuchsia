@@ -385,3 +385,29 @@ TEST(EmptyTest, EmptyProtocolHasBindableInterface) {
   EmptyImpl server;
   fidl::BindServer(loop.dispatcher(), std::move(server_end), &server);
 }
+
+// Test creating a typed channel endpoint pair.
+TEST(Endpoints, CreateFromProtocol) {
+  // `std::move` pattern
+  {
+    auto endpoints = fidl::CreateEndpoints<test::Empty>();
+    ASSERT_TRUE(endpoints.is_ok());
+    ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+    fidl::ClientEnd<test::Empty> client_end = std::move(endpoints->client);
+    fidl::ServerEnd<test::Empty> server_end = std::move(endpoints->server);
+
+    ASSERT_TRUE(client_end.is_valid());
+    ASSERT_TRUE(server_end.is_valid());
+  }
+
+  // Destructuring pattern
+  {
+    auto endpoints = fidl::CreateEndpoints<test::Empty>();
+    ASSERT_TRUE(endpoints.is_ok());
+    ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+    auto [client_end, server_end] = std::move(endpoints.value());
+
+    ASSERT_TRUE(client_end.is_valid());
+    ASSERT_TRUE(server_end.is_valid());
+  }
+}

@@ -103,10 +103,8 @@ template("_gidl_cc_source_set") {
 
   source_set(target_name) {
     sources = [ output_filename ]
-    deps = [
-      ":${gidl_target}",
-      fidl_bindings,
-    ]
+    deps = [ ":${gidl_target}" ]
+    public_deps = [ fidl_bindings ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

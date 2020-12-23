@@ -40,7 +40,6 @@ executable("bin") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/perftest",
-    benchmark_suite_fidl_target,
   ]
 }
 
