@@ -271,6 +271,51 @@ impl AbsoluteMoniker {
         )
     }
 
+    /// Given an absolute moniker realm `start`, and a relative moniker from `start` to an `end`
+    /// realm, returns the absolute moniker of the `end` realm.
+    ///
+    /// If an absolute moniker cannot be computed, then a MonikerError::InvalidMoniker error is
+    /// returned.
+    ///
+    /// Example:
+    ///
+    ///          a
+    ///        /   \
+    ///      b      c
+    ///    /
+    ///  d
+    ///
+    ///  Given:
+    ///    `start` = /a/c
+    ///    `start_to_end` (c -> d) = .\c/b/d
+    ///  Returns:
+    ///    /a/b/d
+    pub fn from_relative(
+        start: &AbsoluteMoniker,
+        start_to_end: &RelativeMoniker,
+    ) -> Result<AbsoluteMoniker, MonikerError> {
+        // Verify that `start.path`'s tail is of `start_to_end.up_path`.
+        if start_to_end.up_path.len() > start.path.len()
+            || !start_to_end.up_path.iter().eq(start
+                .path
+                .iter()
+                .rev()
+                .take(start_to_end.up_path.len()))
+        {
+            return Err(MonikerError::invalid_moniker(format!("{}", start)));
+        }
+
+        Ok(AbsoluteMoniker::new(
+            start
+                .path
+                .iter()
+                .take(start.path.len() - start_to_end.up_path.len()) // remove the first `start_to_end.up_path` elements from `from`
+                .chain(start_to_end.down_path.iter()) // append the `start_to_end.down_path` elements
+                .cloned()
+                .collect(),
+        ))
+    }
+
     pub fn path(&self) -> &Vec<ChildMoniker> {
         &self.path
     }
@@ -982,6 +1027,65 @@ mod tests {
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
+    }
+
+    #[test]
+    fn absolute_moniker_from_relative_success() {
+        // This test assumes the following topology:
+        //        a
+        //     b     c
+        // d
+
+        // ====
+        // Test cases where relative moniker has up path *and* down path
+        let ac = AbsoluteMoniker::parse_string_without_instances("/a/c").unwrap();
+        let abd = AbsoluteMoniker::parse_string_without_instances("/a/b/d").unwrap();
+        let c_to_d = RelativeMoniker::from_absolute(&ac, &abd);
+        assert_eq!(abd, AbsoluteMoniker::from_relative(&ac, &c_to_d).unwrap());
+        // Test the opposite direction
+        let d_to_c = RelativeMoniker::from_absolute(&abd, &ac);
+        assert_eq!(ac, AbsoluteMoniker::from_relative(&abd, &d_to_c).unwrap());
+
+        // ===
+        // Test case where relative moniker has only up path
+        let ab = AbsoluteMoniker::parse_string_without_instances("/a/b").unwrap();
+        let d_to_b = RelativeMoniker::from_absolute(&abd, &ab);
+        assert_eq!(ab, AbsoluteMoniker::from_relative(&abd, &d_to_b).unwrap());
+
+        // ===
+        // Test case where relative moniker has only down path
+        let b_to_d = RelativeMoniker::from_absolute(&ab, &abd);
+        assert_eq!(abd, AbsoluteMoniker::from_relative(&ab, &b_to_d).unwrap());
+    }
+
+    #[test]
+    fn absolute_moniker_from_relative_failure() {
+        // This test assumes the following topology:
+        //        a
+        //     b     c
+        //  d
+
+        // Absolute moniker does not point to the right path
+        let a = AbsoluteMoniker::parse_string_without_instances("/a").unwrap();
+        let ab = AbsoluteMoniker::parse_string_without_instances("/a/b").unwrap();
+        let ac = AbsoluteMoniker::parse_string_without_instances("/a/c").unwrap();
+        let abd = AbsoluteMoniker::parse_string_without_instances("/a/b/d").unwrap();
+
+        let d_to_c = RelativeMoniker::from_absolute(&abd, &ac);
+        // error: `d_to_c`'s up_path is longer than `a`'s path
+        assert!(d_to_c.up_path.len() > a.path.len());
+        assert!(matches!(
+            AbsoluteMoniker::from_relative(&a, &d_to_c),
+            Err(MonikerError::InvalidMoniker { rep: _ })
+        ));
+
+        let b_to_a = RelativeMoniker::from_absolute(&ab, &a);
+        // error: `b_to_a`'s up_path is the same length as `a`'s path, but up_path doesn't overlap with `a`'s path
+        assert!(b_to_a.up_path.len() == a.path.len());
+        assert!(matches!(
+            AbsoluteMoniker::from_relative(&a, &b_to_a),
+            Err(MonikerError::InvalidMoniker { rep: _ })
+        ));
     }
 
     #[test]
