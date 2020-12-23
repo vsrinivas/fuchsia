@@ -18,7 +18,6 @@ type CustomProjectLicense struct {
 
 // Config values are populated from the the json file at the default or user-specified path
 type Config struct {
-	FilesRegex                   []string               `json:"filesRegex,omitempty"`
 	SkipDirs                     []string               `json:"skipDirs"`
 	SkipFiles                    []string               `json:"skipFiles"`
 	ProhibitedLicenseTypes       []string               `json:"prohibitedLicenseTypes"`

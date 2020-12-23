@@ -1,5 +1,4 @@
 {
-  "filesRegex": [],
   "skipFiles": [
     ".gitignore",
     "API_EVOLUTION.md",
