@@ -50,6 +50,7 @@ test_package("josh-tests") {
     "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
   ]
+  resource_deps = [ "josh/lib:js_libs" ]
 
   binaries = [
     {
@@ -66,8 +67,7 @@ test_package("josh-tests") {
       environments = basic_envs
     },
   ]
-  extra = get_target_outputs(":generate_fidl_json") +
-          [ "$target_gen_dir/josh/lib/libs.manifest" ]
+  extra = get_target_outputs(":generate_fidl_json")
 }
 
 group("tests") {
@@ -92,14 +92,14 @@ package("josh") {
     "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh/lib:js_libs",
   ]
+  resource_deps = [ "josh/lib:js_libs" ]
   binaries = [
     {
       name = "josh"
       shell = true
     },
   ]
-  extra = get_target_outputs(":generate_fidl_json") +
-          [ "$target_gen_dir/josh/lib/libs.manifest" ]
+  extra = get_target_outputs(":generate_fidl_json")
 }
 
 # "cliff" is the CLI For Fuchsia.  Need a better name.

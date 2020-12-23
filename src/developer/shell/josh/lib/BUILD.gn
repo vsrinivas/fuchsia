@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//third_party/quickjs/compiled_js.gni")
 
 static_library("lib") {
@@ -56,18 +57,14 @@ compiled_js("zx") {
   ]
 }
 
-action("js_libs") {
-  script = "generate_js_libs.sh"
+resource("js_libs") {
   sources = [
     "ns.js",
     "pp.js",
     "task.js",
     "util.js",
   ]
-  generated_output = "$target_gen_dir/libs.manifest"
-  outputs = [ "$generated_output" ]
-  args = [ rebase_path("$generated_output", root_build_dir) ] +
-         rebase_path(sources, root_build_dir)
+  outputs = [ "data/lib/{{source_file_part}}" ]
 }
 
 compiled_js("repl_init") {
