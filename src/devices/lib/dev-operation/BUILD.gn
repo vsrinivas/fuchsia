@@ -5,11 +5,11 @@
 import("//build/unification/zx_library.gni")
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":operation-test-package" ]
+  deps = [ ":operation-test" ]
 }
 
 zx_library("dev-operation") {
@@ -22,7 +22,8 @@ zx_library("dev-operation") {
   ]
 }
 
-test("operation-test") {
+test("operation-test-bin") {
+  output_name = "operation-test"
   sources = [
     "operation-list-test.cc",
     "operation-pool-test.cc",
@@ -39,14 +40,7 @@ test("operation-test") {
   ]
 }
 
-unittest_package("operation-test-package") {
-  package_name = "operation-test"
-  deps = [ ":operation-test" ]
-
-  tests = [
-    {
-      name = "operation-test"
-      dest = "operation-test"
-    },
-  ]
+fuchsia_unittest_package("operation-test") {
+  executable_path = "test/operation-test"
+  deps = [ ":operation-test-bin" ]
 }

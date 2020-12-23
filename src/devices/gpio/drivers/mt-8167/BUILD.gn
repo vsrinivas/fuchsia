@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("mt-8167") {
   configs += [
@@ -37,7 +37,7 @@ driver_module("mt-8167") {
   ]
 }
 
-test("mtk-gpio") {
+test("mtk-gpio-bin") {
   configs += [
     "//build/unification/config:zircon-migrated",
     "//build/config:all_source",
@@ -46,6 +46,7 @@ test("mtk-gpio") {
     "mt8167-gpio-test.cc",
     "mt8167-gpio.cc",
   ]
+  output_name = "mtk-gpio"
   deps = [
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
@@ -70,19 +71,15 @@ test("mtk-gpio") {
   ]
 }
 
-unittest_package("mtk-gpio-package") {
-  package_name = "mtk-gpio"
-  deps = [ ":mtk-gpio" ]
-
-  tests = [
-    {
-      name = "mtk-gpio"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("mtk-gpio") {
+  executable_path = "test/mtk-gpio"
+  deps = [ ":mtk-gpio-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":mtk-gpio-package" ]
+  deps = [ ":mtk-gpio" ]
 }

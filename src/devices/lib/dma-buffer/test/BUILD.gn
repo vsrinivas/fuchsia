@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("dma-buffer-test") {
+test("dma-buffer-test-bin") {
   output_name = "dma-buffer-test"
   sources = [ "dma-buffer-test.cc" ]
   deps = [
@@ -18,14 +18,7 @@ test("dma-buffer-test") {
   ]
 }
 
-unittest_package("dma-buffer-test-package") {
-  package_name = "dma-buffer-test-test"
-  deps = [ ":dma-buffer-test" ]
-
-  tests = [
-    {
-      name = "dma-buffer-test"
-      dest = "dma-buffer-test"
-    },
-  ]
+fuchsia_unittest_package("dma-buffer-test") {
+  executable_path = "test/dma-buffer-test"
+  deps = [ ":dma-buffer-test-bin" ]
 }

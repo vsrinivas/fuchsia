@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("skip-block") {
   deps = [
@@ -49,7 +49,7 @@ source_set("common") {
   ]
 }
 
-test("skip-block-test") {
+test("skip-block-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "skip-block-test"
   sources = [
@@ -68,21 +68,18 @@ test("skip-block-test") {
   ]
 }
 
-unittest_package("skip-block-test-package") {
-  package_name = "skip-block-test"
-  deps = [ ":skip-block-test" ]
-
-  tests = [
-    {
-      name = "skip-block-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("skip-block-test") {
+  executable_path = "test/skip-block-test"
+  deps = [ ":skip-block-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
+
 group("tests") {
   testonly = true
   deps = [
     ":skip-block-bind_test",
-    ":skip-block-test-package",
+    ":skip-block-test",
   ]
 }

@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("dw_i2c-bind") {
   rules = "dw_i2c.bind"
@@ -38,7 +38,7 @@ driver_module("dw-i2c") {
   ]
 }
 
-test("dw-i2c-test") {
+test("dw-i2c-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "dw-i2c-test"
   sources = [
@@ -66,22 +66,15 @@ test("dw-i2c-test") {
   ]
 }
 
-unittest_package("dw-i2c-test-package") {
-  package_name = "dw-i2c-test"
-  deps = [
-    ":dw-i2c-test",
-    ":dw_i2c-bind_test",
-  ]
-
-  tests = [
-    {
-      name = "dw-i2c-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("dw-i2c-test") {
+  executable_path = "test/dw-i2c-test"
+  deps = [ ":dw-i2c-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":dw-i2c-test-package" ]
+  deps = [ ":dw-i2c-test" ]
 }

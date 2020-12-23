@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("cadence-hpnfc-bind") {
   rules = "cadence-hpnfc.bind"
@@ -41,7 +41,7 @@ driver_module("cadence-hpnfc") {
   ]
 }
 
-test("cadence-hpnfc-test") {
+test("cadence-hpnfc-test-bin") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -80,21 +80,18 @@ test("cadence-hpnfc-test") {
   ]
 }
 
-unittest_package("cadence-hpnfc-test-package") {
-  package_name = "cadence-hpnfc-test"
-  deps = [ ":cadence-hpnfc-test" ]
-
-  tests = [
-    {
-      name = "cadence-hpnfc-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("cadence-hpnfc-test") {
+  executable_path = "test/cadence-hpnfc-test"
+  deps = [ ":cadence-hpnfc-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
+
 group("tests") {
   testonly = true
   deps = [
     ":cadence-hpnfc-bind_test",
-    ":cadence-hpnfc-test-package",
+    ":cadence-hpnfc-test",
   ]
 }

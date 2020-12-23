@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("perf-mon") {
   visibility = [ ":*" ]
@@ -64,11 +64,11 @@ driver_module("cpu-trace") {
 
 group("tests") {
   testonly = true
-  deps = [ ":perf-mon-tests-package" ]
+  deps = [ ":perf-mon-tests" ]
 }
 
-test("perf-mon-tests") {
-  output_name = "perf-mon-tests-test"
+test("perf-mon-tests-bin") {
+  output_name = "perf-mon-tests"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
@@ -84,13 +84,7 @@ test("perf-mon-tests") {
   ]
 }
 
-unittest_package("perf-mon-tests-package") {
-  package_name = "perf-mon-tests"
-  deps = [ ":perf-mon-tests" ]
-
-  tests = [
-    {
-      name = "perf-mon-tests-test"
-    },
-  ]
+fuchsia_unittest_package("perf-mon-tests") {
+  executable_path = "test/perf-mon-tests"
+  deps = [ ":perf-mon-tests-bin" ]
 }

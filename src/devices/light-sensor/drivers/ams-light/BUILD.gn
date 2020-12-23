@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("ams-light") {
   configs += [
@@ -38,7 +38,7 @@ driver_module("ams-light") {
   ]
 }
 
-test("ams-light-test") {
+test("ams-light-test-bin") {
   configs += [ "//build/config:all_source" ]
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -77,19 +77,15 @@ test("ams-light-test") {
   ]
 }
 
-unittest_package("ams-light-test-package") {
-  package_name = "ams-light-test"
-  deps = [ ":ams-light-test" ]
-
-  tests = [
-    {
-      name = "ams-light-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("ams-light-test") {
+  executable_path = "test/ams-light-test"
+  deps = [ ":ams-light-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":ams-light-test-package" ]
+  deps = [ ":ams-light-test" ]
 }

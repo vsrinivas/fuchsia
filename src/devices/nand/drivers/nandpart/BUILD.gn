@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("nandpart-bind") {
   rules = "nandpart.bind"
@@ -43,7 +43,7 @@ driver_module("nandpart") {
   ]
 }
 
-test("nandpart-test") {
+test("nandpart-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "nandpart-test"
   sources = [
@@ -72,21 +72,18 @@ test("nandpart-test") {
   ]
 }
 
-unittest_package("nandpart-test-package") {
-  package_name = "nandpart-test"
-  deps = [ ":nandpart-test" ]
-
-  tests = [
-    {
-      name = "nandpart-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("nandpart-test") {
+  executable_path = "test/nandpart-test"
+  deps = [ ":nandpart-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
+
 group("tests") {
   testonly = true
   deps = [
     ":nandpart-bind_test",
-    ":nandpart-test-package",
+    ":nandpart-test",
   ]
 }
