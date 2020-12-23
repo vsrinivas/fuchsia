@@ -6,6 +6,7 @@ import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
+import("//build/images/vbmeta.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/zbi.gni")
 
@@ -124,5 +125,34 @@ if (custom_signing_script != "") {
     deps = [ ":bringup" ]
     zbi_outputs = get_target_outputs(":bringup")
     zbi = [ zbi_outputs[0] ]
+  }
+}
+
+if (use_vbmeta) {
+  vbmeta("bringup.vbmeta") {
+    output_name = "bringup"
+    testonly = true
+    if (custom_signing_script != "") {
+      deps = [ ":signed" ]
+      zbi_outputs = get_target_outputs(":signed")
+      zbi = [ zbi_outputs[0] ]
+    } else {
+      deps = [ ":bringup" ]
+      zbi_outputs = get_target_outputs(":bringup")
+      zbi = [ zbi_outputs[0] ]
+    }
+
+    metadata = {
+      images = [
+        {
+          name = "zircon-a"
+          path = "bringup.vbmeta"
+          type = "vbmeta"
+
+          archive = true
+          bootserver_pave = [ "--vbmetaa" ]
+        },
+      ]
+    }
   }
 }

@@ -304,6 +304,10 @@ var (
 	GUIDFuchsiaZirconA   = mustNewGUID("DE30CC86-1F4A-4A31-93C4-66F147D33E05")
 	GUIDFuchsiaZirconB   = mustNewGUID("23CC04DF-C278-4CE7-8471-897D1A4BCDF7")
 	GUIDFuchsiaZirconR   = mustNewGUID("A0E5CF57-2DEF-46BE-A80C-A2067C37CD49")
+	GUIDFuchsiaVbmetaA   = mustNewGUID("A13B4D9A-EC5F-11E8-97D8-6C3BE52705BF")
+	GUIDFuchsiaVbmetaB   = mustNewGUID("A288ABF2-EC5F-11E8-97D8-6C3BE52705BF")
+	GUIDFuchsiaVbmetaR   = mustNewGUID("6A2460C3-CD11-4E8B-80A8-12CCE268ED0A")
+	GUIDFuchsiaMisc      = mustNewGUID("1D75395D-F2C6-476B-A8B7-45CC1C97B476")
 )
 
 // GUIDS contains a map of known GUIDS to their names.
@@ -329,6 +333,9 @@ var GUIDS = map[string]GUID{
 	"zircon-a":           GUIDFuchsiaZirconA,
 	"zircon-b":           GUIDFuchsiaZirconB,
 	"zircon-r":           GUIDFuchsiaZirconR,
+	"vbmeta_a":           GUIDFuchsiaVbmetaA,
+	"vbmeta_b":           GUIDFuchsiaVbmetaB,
+	"vbmeta_r":           GUIDFuchsiaVbmetaR,
 }
 
 // ReadHeader reads a single GPT header from r.

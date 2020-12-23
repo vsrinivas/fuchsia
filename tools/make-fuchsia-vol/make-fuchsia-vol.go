@@ -41,11 +41,15 @@ var (
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
-	abr     = flag.Bool("abr", true, "add Zircon-{A,B,R} partitions")
-	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
-	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
-	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: zircon-r from image manifests)")
-	abrSize = flag.Int64("abr-size", 256*1024*1024, "Kernel partition size for A/B/R")
+	abr        = flag.Bool("abr", true, "add Zircon-{A,B,R} partitions")
+	zirconA    = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
+	vbmetaA    = flag.String("vbmetaA", "", "path to partition image for Vbmeta-A")
+	zirconB    = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
+	vbmetaB    = flag.String("vbmetaB", "", "path to partition image for Vbmeta-B")
+	zirconR    = flag.String("zirconR", "", "path to partition image for Zircon-R (default: zircon-r from image manifests)")
+	vbmetaR    = flag.String("vbmetaR", "", "path to partition image for Vbmeta-R")
+	abrSize    = flag.Int64("abr-size", 256*1024*1024, "Kernel partition size for A/B/R")
+	vbmetaSize = flag.Int64("vbmeta-size", 8*1024, "partition size for vbmeta A/B/R")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
@@ -157,11 +161,20 @@ func main() {
 			needFuchsiaBuildDir()
 			*zirconA = *zbi
 		}
+		if *vbmetaA == "" {
+			*vbmetaA = filepath.Join(*fuchsiaBuildDir, getImage("vbmeta_zircon-a"))
+		}
 		if *zirconB == "" {
 			*zirconB = *zbi
 		}
+		if *vbmetaB == "" {
+			*vbmetaB = filepath.Join(*fuchsiaBuildDir, getImage("vbmeta_zircon-a"))
+		}
 		if *zirconR == "" {
 			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("zbi_zircon-r"))
+		}
+		if *vbmetaR == "" {
+			*vbmetaR = filepath.Join(*fuchsiaBuildDir, getImage("vbmeta_zircon-r"))
 		}
 	}
 
@@ -344,6 +357,7 @@ func main() {
 	}
 
 	var aStart, bStart, rStart uint64
+	var vbmetaAStart, vbmetaBStart, vbmetaRStart, miscStart uint64
 	if *abr {
 		aStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
@@ -351,6 +365,15 @@ func main() {
 			UniquePartitionGUID: gpt.NewRandomGUID(),
 			PartitionName:       gpt.NewPartitionName("ZIRCON-A"),
 			StartingLBA:         aStart,
+			EndingLBA:           end,
+		})
+
+		vbmetaAStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaA,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("VBMETA_A"),
+			StartingLBA:         vbmetaAStart,
 			EndingLBA:           end,
 		})
 
@@ -363,12 +386,39 @@ func main() {
 			EndingLBA:           end,
 		})
 
+		vbmetaBStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaB,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("VBMETA_B"),
+			StartingLBA:         vbmetaBStart,
+			EndingLBA:           end,
+		})
+
 		rStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconR,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
 			PartitionName:       gpt.NewPartitionName("ZIRCON-R"),
 			StartingLBA:         rStart,
+			EndingLBA:           end,
+		})
+
+		vbmetaRStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaR,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("VBMETA_R"),
+			StartingLBA:         vbmetaRStart,
+			EndingLBA:           end,
+		})
+
+		miscStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaMisc,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("MISC"),
+			StartingLBA:         miscStart,
 			EndingLBA:           end,
 		})
 	}
@@ -417,8 +467,11 @@ func main() {
 	f.Sync()
 
 	aStart = aStart * logical
+	vbmetaAStart = vbmetaAStart * logical
 	bStart = bStart * logical
+	vbmetaBStart = vbmetaBStart * logical
 	rStart = rStart * logical
+	vbmetaRStart = vbmetaRStart * logical
 	efiStart = efiStart * logical
 	fvmStart = fvmStart * logical
 
@@ -485,11 +538,14 @@ func main() {
 
 	if *abr {
 		if *verbose {
-			log.Print("Populating A/B/R partitions")
+			log.Print("Populating A/B/R and vbmeta partitions")
 		}
 		partitionCopy(f, int64(aStart), *abrSize, *zirconA)
+		partitionCopy(f, int64(vbmetaAStart), *vbmetaSize, *vbmetaA)
 		partitionCopy(f, int64(bStart), *abrSize, *zirconB)
+		partitionCopy(f, int64(vbmetaBStart), *vbmetaSize, *vbmetaB)
 		partitionCopy(f, int64(rStart), *abrSize, *zirconR)
+		partitionCopy(f, int64(vbmetaRStart), *vbmetaSize, *vbmetaR)
 	}
 
 	f.Sync()

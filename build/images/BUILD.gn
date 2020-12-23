@@ -1721,6 +1721,9 @@ paver_targets = [
     # reaching fuchsia.zbi must be excluded from the build graph.
     if (bootfs_only) {
       deps += [ "bringup" ]
+      if (use_vbmeta) {
+        deps += [ "//build/images/bringup:bringup.vbmeta" ]
+      }
     } else {
       deps += [ ":netboot" ]
     }
@@ -1741,6 +1744,9 @@ paver_targets = [
     deps = [ ":bootserver" ]
     if (bootfs_only) {
       deps += [ "bringup" ]
+      if (use_vbmeta) {
+        deps += [ "//build/images/bringup:bringup.vbmeta" ]
+      }
       switch = "--netboot="
     } else {
       deps += default_image_deps
@@ -1768,6 +1774,9 @@ if (recovery_is_zedboot) {
       deps = [ ":bootserver" ]
       if (bootfs_only) {
         deps += [ "bringup" ]
+        if (use_vbmeta) {
+          deps += [ "//build/images/bringup:bringup.vbmeta" ]
+        }
         switch = "--netboot="
       } else {
         deps += [ "zedboot" ]
