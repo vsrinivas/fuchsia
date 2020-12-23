@@ -10,7 +10,6 @@
       "py"
    ],
    "maxReadSize":6144,
-   "separatorWidth":80,
    "outputFilePrefix":"NOTICE",
    "outputFileExtension":"txt",
    "product":"astro",

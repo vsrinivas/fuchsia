@@ -5,7 +5,6 @@
   "strictTextExtensionList": [],
   "textExtensionList": [],
   "maxReadSize": 6144,
-  "separatorWidth": 80,
   "prohibitedLicenseTypes" :[],
   "exitOnProhibitedLicenseTypes": true,
   "exitOnUnlicensedFiles": true,

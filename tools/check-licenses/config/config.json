@@ -120,7 +120,6 @@
     "yaml"
   ],
   "maxReadSize": 6144,
-  "separatorWidth": 80,
   "prohibitedLicenseTypes" :[
     "gcc",
     "gnu",

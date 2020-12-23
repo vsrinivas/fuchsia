@@ -28,7 +28,6 @@ type Config struct {
 	StrictAnalysis               bool                   `json:"strictAnalysis"`
 	OutputLicenseFile            bool                   `json:"outputLicenseFile"`
 	MaxReadSize                  int                    `json:"maxReadSize"`
-	SeparatorWidth               int                    `json:"separatorWidth"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`
 	OutputTreeStateFilename      string                 `json:"outputTreeStateFilename"`
