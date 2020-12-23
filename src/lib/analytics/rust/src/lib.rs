@@ -41,7 +41,7 @@ pub async fn add_launch_event(
 
     let body = make_body_with_hash(&app_name, app_version, args);
     let client = new_https_client();
-    let req = Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body)).unwrap();
+    let req = Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body))?;
     let mut res = client.request(req).await;
     match res {
         Ok(res) => log::info!("Analytics response: {}", res.status()),
