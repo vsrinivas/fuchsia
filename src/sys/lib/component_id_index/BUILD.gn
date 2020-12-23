@@ -13,13 +13,17 @@ rustc_library("component_id_index") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:proptest" ]
+  test_deps = [
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:serde_json",
+  ]
 
   sources = [
     "src/fidl_convert.rs",

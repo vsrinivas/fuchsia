@@ -4,14 +4,17 @@
 
 // This library must remain platform-agnostic because it used by a host tool and within Fuchsia.
 
-use anyhow::{anyhow, Context, Result};
-use fidl_fuchsia_component_internal as fcomponent_internal;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::fs;
-use std::str;
-use thiserror::Error;
+use {
+    anyhow::{anyhow, Context, Result},
+    fidl_fuchsia_component_internal as fcomponent_internal,
+    moniker::AbsoluteMoniker,
+    serde::{Deserialize, Deserializer, Serialize, Serializer},
+    std::collections::HashMap,
+    std::convert::TryFrom,
+    std::fs,
+    std::str,
+    thiserror::Error,
+};
 
 pub mod fidl_convert;
 
@@ -26,7 +29,39 @@ pub struct AppmgrMoniker {
 pub struct InstanceIdEntry {
     pub instance_id: Option<String>,
     pub appmgr_moniker: Option<AppmgrMoniker>,
-    pub moniker: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "str_to_abs_moniker",
+        serialize_with = "abs_moniker_to_str"
+    )]
+    pub moniker: Option<AbsoluteMoniker>,
+}
+
+fn str_to_abs_moniker<'de, D>(deserializer: D) -> Result<Option<AbsoluteMoniker>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let moniker_str: Option<String> = Option::deserialize(deserializer)?;
+    match &moniker_str {
+        Some(m) => Ok(Some(
+            AbsoluteMoniker::parse_string_without_instances(m).map_err(serde::de::Error::custom)?,
+        )),
+        None => Ok(None),
+    }
+}
+
+fn abs_moniker_to_str<S>(
+    abs_moniker: &Option<AbsoluteMoniker>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if let Some(abs_moniker) = abs_moniker {
+        serializer.serialize_str(&abs_moniker.to_string_without_instances())
+    } else {
+        serializer.serialize_none()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -197,6 +232,7 @@ fn is_valid_instance_id(id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use proptest::prelude::*;
     use rand::*;
 
@@ -307,7 +343,8 @@ mod tests {
         let mut index = gen_index(1);
         // this entry has both an `appmgr_moniker` *and* a `moniker`.
         assert!(index.instances[0].appmgr_moniker.is_some());
-        index.instances[0].moniker = Some("/a/b/c".to_string());
+        index.instances[0].moniker =
+            Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
 
         let mut ctx = MergeContext::new();
         let merge_result: Result<(), ValidationError> = ctx.merge("/a/b/c", &index);
@@ -361,5 +398,40 @@ mod tests {
         assert!(!is_valid_instance_id(
             "8;90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280"
         ));
+    }
+
+    #[test]
+    fn serialize_deserialize_valid_absolute_moniker() -> Result<()> {
+        let mut expected_index = gen_index(3);
+        expected_index.instances[0].moniker =
+            Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
+        expected_index.instances[1].moniker =
+            Some(AbsoluteMoniker::parse_string_without_instances("/a/b:b/c/b:b").unwrap());
+        expected_index.instances[2].moniker =
+            Some(AbsoluteMoniker::parse_string_without_instances("/").unwrap());
+
+        let json_index = serde_json::to_string(&expected_index)?;
+        let actual_index = serde_json::from_str(&json_index)?;
+        assert_eq!(expected_index, actual_index);
+
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_invalid_absolute_moniker() {
+        let mut expected_index = gen_index(1);
+        let valid_moniker = "/a/b:b/c/b:b";
+        expected_index.instances[0].moniker =
+            Some(AbsoluteMoniker::parse_string_without_instances(&valid_moniker).unwrap());
+
+        let valid_json = serde_json::to_string(&expected_index).unwrap();
+        let invalid_json = valid_json.replace(&valid_moniker, "an invalid moniker!");
+
+        // serde doesn't carry over the inner error types, so we're we have to test against the error string.
+        assert!(serde_json::from_str::<Index>(&invalid_json)
+            .err()
+            .unwrap()
+            .to_string()
+            .starts_with("invalid moniker: an invalid moniker!"));
     }
 }

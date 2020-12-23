@@ -47,11 +47,11 @@ impl ComponentIdIndex {
 
         let mut moniker_to_instance_id = HashMap::<AbsoluteMoniker, ComponentInstanceId>::new();
         for entry in &index.instances {
-            if let Some(moniker) = &entry.moniker {
-                let absolute_moniker = AbsoluteMoniker::parse_string_without_instances(moniker)
-                    .map_err(|e| ComponentIdIndexError::MonikerError(e))?;
+            if let Some(absolute_moniker) = &entry.moniker {
+                // let absolute_moniker = AbsoluteMoniker::parse_string_without_instances(moniker)
+                //     .map_err(|e| ComponentIdIndexError::MonikerError(e))?;
                 moniker_to_instance_id.insert(
-                    absolute_moniker,
+                    absolute_moniker.clone(),
                     entry
                         .instance_id
                         .as_ref()
@@ -96,25 +96,6 @@ pub mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn invalid_moniker() {
-        let index_file = make_index_file(component_id_index::Index {
-            instances: vec![component_id_index::InstanceIdEntry {
-                instance_id: Some("0".repeat(64)),
-                appmgr_moniker: None,
-                moniker: Some("invalid moniker".to_string()),
-            }],
-            ..component_id_index::Index::default()
-        })
-        .unwrap();
-
-        let moniker = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await;
-        assert!(matches!(
-            moniker.err().unwrap(),
-            ComponentIdIndexError::MonikerError(MonikerError::InvalidMoniker { rep: _ }),
-        ));
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn look_up_moniker_no_exists() {
         let index_file = make_index_file(component_id_index::Index::default()).unwrap();
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
@@ -130,7 +111,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some("/a/b/c".to_string()),
+                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
             }],
             ..component_id_index::Index::default()
         })

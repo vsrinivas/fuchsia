@@ -4,6 +4,7 @@
 
 use {
     core::cmp::{self, Ord, Ordering},
+    itertools,
     log::*,
     std::{convert::TryFrom, fmt, iter},
     thiserror::Error,
@@ -253,6 +254,21 @@ impl AbsoluteMoniker {
             .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
         Ok(Self::new(path))
+    }
+
+    // Serializes absolute moniker into its string format, omitting instance ids.
+    //
+    // This method is the inverse of `parse_string_without_instances()`.
+    pub fn to_string_without_instances(&self) -> String {
+        format!(
+            "/{}",
+            itertools::join(
+                (&self.path)
+                    .into_iter()
+                    .map(|segment: &ChildMoniker| segment.to_partial().as_str().to_string()),
+                "/"
+            )
+        )
     }
 
     pub fn path(&self) -> &Vec<ChildMoniker> {
@@ -841,6 +857,25 @@ mod tests {
         assert!(under_test("/a:a:0").is_err(), "cannot contain instance id");
 
         Ok(())
+    }
+
+    #[test]
+    fn absolute_moniker_to_string_without_instance_id() {
+        assert_eq!("/", AbsoluteMoniker::root().to_string_without_instances());
+
+        let a = ChildMoniker::new("a".to_string(), None, 0);
+        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
+
+        assert_eq!("/a", AbsoluteMoniker::new(vec![a.clone()]).to_string_without_instances());
+        assert_eq!(
+            "/a/b:b",
+            AbsoluteMoniker::new(vec![a.clone(), bb.clone()]).to_string_without_instances()
+        );
+        assert_eq!(
+            "/a/b:b/a/b:b",
+            AbsoluteMoniker::new(vec![a.clone(), bb.clone(), a.clone(), bb.clone()])
+                .to_string_without_instances()
+        );
     }
 
     #[test]

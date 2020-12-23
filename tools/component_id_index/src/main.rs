@@ -108,6 +108,7 @@ fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use moniker::AbsoluteMoniker;
     use pretty_assertions::assert_eq;
     use regex;
     use std::io::Write;
@@ -127,7 +128,9 @@ mod tests {
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
                         transitional_realm_paths: None,
                     }),
-                    moniker: Some("/a/b/c".to_string()),
+                    moniker: Some(
+                        AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                    ),
                 })
                 .collect(),
         }

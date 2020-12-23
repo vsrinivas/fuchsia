@@ -4,6 +4,7 @@
 
 use crate::{AppmgrMoniker, Index, InstanceIdEntry};
 use fidl_fuchsia_component_internal as fcomponent_internal;
+use moniker::{AbsoluteMoniker, MonikerError};
 use std::convert::TryFrom;
 use thiserror::Error;
 
@@ -17,6 +18,8 @@ pub enum FidlConversionError {
     MissingAppmgrMonikerUrl,
     #[error("Missing appmgr_moniker.realm_path")]
     MissingAppmgrMonikerRealmPath,
+    #[error("Moniker error")]
+    MonikerError(#[from] MonikerError),
 }
 
 // This converter translates between different encodings but does not do any semantic validation.
@@ -48,7 +51,12 @@ impl TryFrom<fcomponent_internal::ComponentIdIndex> for Index {
                         })
                     })
                     .transpose()?,
-                moniker: entry.moniker,
+                moniker: entry
+                    .moniker
+                    .map(|moniker_str| {
+                        AbsoluteMoniker::parse_string_without_instances(&moniker_str)
+                    })
+                    .transpose()?,
             });
         }
         Ok(Index { appmgr_restrict_isolated_persistent_storage, instances })
@@ -75,7 +83,9 @@ impl From<Index> for fcomponent_internal::ComponentIdIndex {
                                 ..fcomponent_internal::AppmgrMoniker::EMPTY
                             }
                         }),
-                        moniker: entry.moniker,
+                        moniker: entry
+                            .moniker
+                            .map(|abs_moniker| abs_moniker.to_string_without_instances()),
                         ..fcomponent_internal::InstanceIdEntry::EMPTY
                     })
                     .collect(),
@@ -124,7 +134,7 @@ mod tests {
                         "path".to_string(),
                     ]]),
                 }),
-                moniker: Some("/a/b/c".to_string()),
+                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
             }],
         };
 

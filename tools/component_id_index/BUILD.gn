@@ -23,6 +23,7 @@ rustc_binary("component_id_index") {
   ]
 
   test_deps = [
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",

@@ -12,11 +12,14 @@ rustc_library("moniker") {
 
   visibility = [
     "//src/sys/component_manager/*",
+    "//src/sys/lib/component_id_index/*",
     "//src/sys/lib/moniker/*",
+    "//tools/component_id_index/*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 
   deps = [
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
