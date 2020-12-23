@@ -31,7 +31,6 @@ type Config struct {
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`
 	OutputTreeStateFilename      string                 `json:"outputTreeStateFilename"`
-	Product                      string                 `json:"product"`
 	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
 	StopLicensePropagation       []string               `json:"stopLicensePropagation"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`

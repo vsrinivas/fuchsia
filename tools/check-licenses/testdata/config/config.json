@@ -13,7 +13,6 @@
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
   "outputTreeStateFilename": "",
-  "product": "astro",
   "singleLicenseFiles": [],
   "customProjectLicenses" : [],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

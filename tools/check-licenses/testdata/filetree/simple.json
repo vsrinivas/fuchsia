@@ -12,7 +12,6 @@
    "maxReadSize":6144,
    "outputFilePrefix":"NOTICE",
    "outputFileExtension":"txt",
-   "product":"astro",
    "singleLicenseFiles":[
       "LICENSE"
    ],

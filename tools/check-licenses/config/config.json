@@ -132,7 +132,6 @@
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
   "outputTreeStateFilename": "",
-  "product": "astro",
   "singleLicenseFiles": [
     "about_os_credits.html",
     "copying",
