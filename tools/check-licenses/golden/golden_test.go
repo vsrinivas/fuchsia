@@ -6,7 +6,6 @@ package golden
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -56,7 +55,7 @@ func TestPatternsMatchExamples(t *testing.T) {
 	if len(exampleFilesPath) != len(patternFilesPath) {
 		t.Errorf("%v, got %v != %v", t.Name(), len(exampleFilesPath), len(patternFilesPath))
 	}
-	fmt.Printf("LENGTH %v", len(patternFilesPath))
+
 	for _, patternFilePath := range patternFilesPath {
 		patternFile, err := ioutil.ReadFile(patternFilePath)
 		if err != nil {
