@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -534,40 +535,38 @@ rustc_test("metrics") {
   sources = [ "src/metrics.rs" ]
 }
 
-generate_manifest("empty-repo.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  sources = []
-  args = []
-
-  foreach(path,
-          [
-            "keys/root.json",
-            "keys/snapshot.json",
-            "keys/targets.json",
-            "keys/timestamp.json",
-            "repository/1.root.json",
-            "repository/1.snapshot.json",
-            "repository/1.targets.json",
-            "repository/root.json",
-            "repository/snapshot.json",
-            "repository/targets.json",
-            "repository/timestamp.json",
-          ]) {
-    source = "template/${path}"
-    sources += [ source ]
-    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
+empty_repo_deps = []
+foreach(path,
+        [
+          "keys/root.json",
+          "keys/snapshot.json",
+          "keys/targets.json",
+          "keys/timestamp.json",
+          "repository/1.root.json",
+          "repository/1.snapshot.json",
+          "repository/1.targets.json",
+          "repository/root.json",
+          "repository/snapshot.json",
+          "repository/targets.json",
+          "repository/timestamp.json",
+        ]) {
+  resource_target = string_replace(path, "/", "_")
+  resource(resource_target) {
+    sources = [ "template/$path" ]
+    outputs = [ "empty-repo/$path" ]
   }
+  empty_repo_deps += [ ":$resource_target" ]
 }
-empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
-empty_repo_manifest_file = empty_repo_manifest_outputs[0]
+
+group("empty-repo") {
+  deps = empty_repo_deps
+}
 
 test_package("pkg-resolver-integration-tests") {
   deps = [
     ":base_pinning",
     ":dynamic_repositories_disabled",
     ":dynamic_rewrite_disabled",
-    ":empty-repo.manifest",
     ":get_hash",
     ":lib",
     ":metrics",
@@ -585,8 +584,6 @@ test_package("pkg-resolver-integration-tests") {
     "//src/sys/pkg/bin/pkg-local-mirror:bin",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
-
-  extra = [ empty_repo_manifest_file ]
 
   binaries = [
     {
@@ -619,6 +616,8 @@ test_package("pkg-resolver-integration-tests") {
       dest = "ssl/cert.pem"
     },
   ]
+
+  resource_deps = [ ":empty-repo" ]
 
   meta = [
     {

@@ -36,40 +36,9 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-generate_manifest("empty-repo.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  sources = []
-  args = []
-
-  foreach(path,
-          [
-            "keys/root.json",
-            "keys/snapshot.json",
-            "keys/targets.json",
-            "keys/timestamp.json",
-            "repository/1.root.json",
-            "repository/1.snapshot.json",
-            "repository/1.targets.json",
-            "repository/root.json",
-            "repository/snapshot.json",
-            "repository/targets.json",
-            "repository/timestamp.json",
-          ]) {
-    source = "//src/sys/pkg/tests/pkg-resolver/template/${path}"
-    sources += [ source ]
-    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
-  }
-}
-
-empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
-empty_repo_manifest = empty_repo_manifest_outputs[0]
-
 test_package("isolated-ota-integration-tests") {
-  extra = [ empty_repo_manifest ]
   deps = [
     ":driver",
-    ":empty-repo.manifest",
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",
@@ -94,6 +63,8 @@ test_package("isolated-ota-integration-tests") {
       dest = "ssl/cert.pem"
     },
   ]
+
+  resource_deps = [ "//src/sys/pkg/tests/pkg-resolver:empty-repo" ]
 
   tests = [
     {
