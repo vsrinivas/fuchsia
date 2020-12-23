@@ -1973,14 +1973,14 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 
   auto step = StartConsumeStep();
 
-  auto alias_list = std::move(file->alias_list);
-  for (auto& alias_declaration : alias_list) {
-    step.ForAliasDeclaration(std::move(alias_declaration));
-  }
-
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
     step.ForUsing(std::move(using_directive));
+  }
+
+  auto alias_list = std::move(file->alias_list);
+  for (auto& alias_declaration : alias_list) {
+    step.ForAliasDeclaration(std::move(alias_declaration));
   }
 
   auto bits_declaration_list = std::move(file->bits_declaration_list);

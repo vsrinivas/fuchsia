@@ -412,6 +412,32 @@ alias foo.bar.baz = uint8;
   ASSERT_EQ(1, errors.size());
 }
 
+TEST(AliasTests, using_library) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Bar {
+    int8 s;
+};
+
+)FIDL",
+                         &shared);
+  ASSERT_TRUE(dependency.Compile());
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependent;
+
+alias Bar2 = dependent.Bar;
+
+)FIDL",
+                      &shared);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_TRUE(library.Compile());
+}
+
 }  // namespace
 // TODO(pascallouis): Test various handle parametrization scenarios, and
 // capture maybe_handle_subtype into FromTypeAlias struct.
