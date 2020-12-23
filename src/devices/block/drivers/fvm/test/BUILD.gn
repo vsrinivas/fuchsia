@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("fvm-driver-unittests") {
-  output_name = "fvm-driver-unittests-test"
+test("fvm-driver-unittests-bin") {
+  output_name = "fvm-driver-unittests"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "block-device-test.cc",
@@ -20,13 +20,7 @@ test("fvm-driver-unittests") {
   ]
 }
 
-unittest_package("fvm-driver-unittests-package") {
-  package_name = "fvm-driver-unittests"
-  deps = [ ":fvm-driver-unittests" ]
-
-  tests = [
-    {
-      name = "fvm-driver-unittests-test"
-    },
-  ]
+fuchsia_unittest_package("fvm-driver-unittests") {
+  executable_path = "test/fvm-driver-unittests"
+  deps = [ ":fvm-driver-unittests-bin" ]
 }

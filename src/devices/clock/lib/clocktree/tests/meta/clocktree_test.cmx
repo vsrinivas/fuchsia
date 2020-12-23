@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/clocktree_test"
+        "binary": "bin/clocktree_test"
     }
 }

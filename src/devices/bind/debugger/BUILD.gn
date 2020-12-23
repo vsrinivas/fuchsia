@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("debugger") {
   deps = [ ":bind_debugger" ]
@@ -69,16 +68,12 @@ rustc_library("lib") {
   inputs = [ "tests_schema.json" ]
 }
 
-test_package("bind_debugger_tests") {
+fuchsia_unittest_package("bind_debugger_tests") {
+  manifest = "meta/bind_debugger_tests.cmx"
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "bind_debugger_lib_test"
-      dest = "bind_debugger_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
@@ -86,18 +81,7 @@ group("tests") {
   deps = [ ":bind_debugger_tests" ]
 }
 
-package("bind_debugger") {
+fuchsia_package_with_single_component("bind_debugger") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "bind_debugger"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/bind_debugger.cmx")
-      dest = "bind_debugger.cmx"
-    },
-  ]
+  manifest = "meta/bind_debugger.cmx"
 }

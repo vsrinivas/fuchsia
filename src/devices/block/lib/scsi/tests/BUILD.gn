@@ -3,15 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":scsilib-disk-test-package" ]
+  deps = [ ":scsilib-disk-test" ]
 }
 
-test("scsilib-disk-test") {
-  output_name = "scsilib-disk-test-test"
+test("scsilib-disk-test-bin") {
+  output_name = "scsilib-disk-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -41,13 +41,7 @@ test("scsilib-disk-test") {
   ]
 }
 
-unittest_package("scsilib-disk-test-package") {
-  package_name = "scsilib-disk-test"
-  deps = [ ":scsilib-disk-test" ]
-
-  tests = [
-    {
-      name = "scsilib-disk-test-test"
-    },
-  ]
+fuchsia_unittest_package("scsilib-disk-test") {
+  executable_path = "test/scsilib-disk-test"
+  deps = [ ":scsilib-disk-test-bin" ]
 }

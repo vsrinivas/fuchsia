@@ -4,11 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":mbr-test-package" ]
+  deps = [ ":mbr-test" ]
 }
 
 driver_module("mbr") {
@@ -41,7 +41,7 @@ driver_module("mbr") {
   ]
 }
 
-test("mbr-test") {
+test("mbr-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mbr-test"
   sources = [
@@ -69,12 +69,7 @@ test("mbr-test") {
   ]
 }
 
-unittest_package("mbr-test-package") {
-  package_name = "mbr-test"
-  deps = [ ":mbr-test" ]
-  tests = [
-    {
-      name = "mbr-test"
-    },
-  ]
+fuchsia_unittest_package("mbr-test") {
+  executable_path = "test/mbr-test"
+  deps = [ ":mbr-test-bin" ]
 }

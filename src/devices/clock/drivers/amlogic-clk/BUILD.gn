@@ -4,11 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":amlogic-clk-test-package" ]
+  deps = [ ":amlogic-clk-test" ]
 }
 
 driver_module("amlogic-clk") {
@@ -45,7 +45,8 @@ driver_module("amlogic-clk") {
   ]
 }
 
-test("amlogic-clk-test") {
+test("amlogic-clk-test-bin") {
+  output_name = "amlogic-clk-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-clk-test.cc",
@@ -79,12 +80,7 @@ test("amlogic-clk-test") {
   ]
 }
 
-unittest_package("amlogic-clk-test-package") {
-  package_name = "amlogic-clk-test"
-  deps = [ ":amlogic-clk-test" ]
-  tests = [
-    {
-      name = "amlogic-clk-test"
-    },
-  ]
+fuchsia_unittest_package("amlogic-clk-test") {
+  executable_path = "test/amlogic-clk-test"
+  deps = [ ":amlogic-clk-test-bin" ]
 }

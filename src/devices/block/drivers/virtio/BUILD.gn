@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("virtio_block") {
   configs += [
@@ -63,7 +63,7 @@ driver_module("virtio_scsi") {
   ]
 }
 
-test("virtio-block-test") {
+test("virtio-block-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -73,6 +73,7 @@ test("virtio-block-test") {
       configs -= fdio_config
     }
   }
+  output_name = "virtio-block-test"
   sources = [ "block_test.cc" ]
   deps = [
     ":block_lib",
@@ -86,7 +87,7 @@ test("virtio-block-test") {
   ]
 }
 
-test("virtio-scsi-test") {
+test("virtio-scsi-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -96,6 +97,7 @@ test("virtio-scsi-test") {
       configs -= fdio_config
     }
   }
+  output_name = "virtio-scsi-test"
   sources = [ "scsi_test.cc" ]
   deps = [
     ":scsi_lib",
@@ -112,29 +114,17 @@ test("virtio-scsi-test") {
 group("tests") {
   testonly = true
   deps = [
-    ":virtio-block-test-package",
-    ":virtio-scsi-test-package",
+    ":virtio-block-test",
+    ":virtio-scsi-test",
   ]
 }
 
-unittest_package("virtio-block-test-package") {
-  package_name = "virtio-block-test"
-  deps = [ ":virtio-block-test" ]
-
-  tests = [
-    {
-      name = "virtio-block-test"
-    },
-  ]
+fuchsia_unittest_package("virtio-block-test") {
+  executable_path = "test/virtio-block-test"
+  deps = [ ":virtio-block-test-bin" ]
 }
 
-unittest_package("virtio-scsi-test-package") {
-  package_name = "virtio-scsi-test"
-  deps = [ ":virtio-scsi-test" ]
-
-  tests = [
-    {
-      name = "virtio-scsi-test"
-    },
-  ]
+fuchsia_unittest_package("virtio-scsi-test") {
+  executable_path = "test/virtio-scsi-test"
+  deps = [ ":virtio-scsi-test-bin" ]
 }

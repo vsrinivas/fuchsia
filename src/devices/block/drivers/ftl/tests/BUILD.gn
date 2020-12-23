@@ -4,7 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 source_set("shared") {
@@ -23,11 +23,11 @@ group("tests") {
   testonly = true
   deps = [
     ":ftl-fuzzers",
-    ":ftl-package",
+    ":ftl-test",
   ]
 }
 
-test("ftl") {
+test("ftl-test-bin") {
   output_name = "ftl-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -52,6 +52,11 @@ test("ftl") {
     ":shared",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+fuchsia_unittest_package("ftl-test") {
+  executable_path = "test/ftl-test"
+  deps = [ ":ftl-test-bin" ]
 }
 
 test("ftl-integration") {
@@ -117,15 +122,4 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
   ]
-}
-
-unittest_package("ftl-package") {
-  package_name = "ftl"
-  tests = [
-    {
-      name = "ftl-test"
-    },
-  ]
-
-  deps = [ ":ftl" ]
 }

@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("aml-cpu") {
   configs += [
@@ -40,12 +40,13 @@ driver_module("aml-cpu") {
   ]
 }
 
-test("aml-cpu-test") {
+test("aml-cpu-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-cpu-test.cc",
     "aml-cpu.cc",
   ]
+  output_name = "aml-cpu-test"
   deps = [
     "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.composite",
@@ -74,19 +75,15 @@ test("aml-cpu-test") {
   ]
 }
 
-unittest_package("aml-cpu-test-package") {
-  package_name = "aml-cpu-test"
-  deps = [ ":aml-cpu-test" ]
-
-  tests = [
-    {
-      name = "aml-cpu-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("aml-cpu-test") {
+  executable_path = "test/aml-cpu-test"
+  deps = [ ":aml-cpu-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-cpu-test-package" ]
+  deps = [ ":aml-cpu-test" ]
 }

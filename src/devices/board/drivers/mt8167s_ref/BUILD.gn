@@ -4,11 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":mt8167s-ref-test-package" ]
+  deps = [ ":mt8167s-ref-test" ]
 }
 
 driver_module("mt8167s_ref") {
@@ -69,7 +69,7 @@ driver_module("mt8167s_ref") {
   # boot shims.
 }
 
-test("mt8167s-ref-test") {
+test("mt8167s-ref-test-bin") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -134,12 +134,7 @@ test("mt8167s-ref-test") {
   ]
 }
 
-unittest_package("mt8167s-ref-test-package") {
-  package_name = "mt8167s-ref-test"
-  deps = [ ":mt8167s-ref-test" ]
-  tests = [
-    {
-      name = "mt8167s-ref-test"
-    },
-  ]
+fuchsia_unittest_package("mt8167s-ref-test") {
+  executable_path = "test/mt8167s-ref-test"
+  deps = [ ":mt8167s-ref-test-bin" ]
 }
