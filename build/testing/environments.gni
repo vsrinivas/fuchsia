@@ -12,6 +12,9 @@ declare_args() {
 
   # The list of environment names to include in "basic_envs".
   basic_env_names = [ "emu" ]
+
+  # Adds GCE as a basic env if true.
+  enable_test_on_gce = false
 }
 
 _all_named_envs = []
@@ -144,6 +147,22 @@ _all_named_envs += [
     env = vim3_env
   },
 ]
+
+if (enable_test_on_gce) {
+  basic_env_names += [ "gce" ]
+  gce_env = {
+    dimensions = {
+      device_type = "GCE"
+    }
+  }
+
+  _all_named_envs += [
+    {
+      name = "gce"
+      env = gce_env
+    },
+  ]
+}
 
 ### END Individual test environments
 

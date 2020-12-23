@@ -244,6 +244,7 @@ template("test_spec") {
       "AEMU",
       "QEMU",
       "Intel NUC Kit NUC7i5DNHE",
+      "GCE",
     ]
   } else if (board_name == "qemu-arm64") {
     allowed_device_types = [ "QEMU" ]

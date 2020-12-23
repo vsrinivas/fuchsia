@@ -110,4 +110,10 @@ test_platforms = [
     device_type = "Vim3"
     cpu = "arm64"
   },
+
+  # fxbug.dev/9127
+  {
+    device_type = "GCE"
+    cpu = "x64"
+  },
 ]
