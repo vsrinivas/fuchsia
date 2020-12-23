@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package_metadata.gni")
+import("//build/packages/package_metadata.gni")
 
 # Collect from the transitive closure of package dependencies all blobs into a
 # single de-duplicated manfiest file. The paths in the manifest file will be

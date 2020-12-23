@@ -4,7 +4,7 @@
 
 import("//build/dist/fini_manifest.gni")
 import("//build/images/args.gni")
-import("//build/package_metadata.gni")
+import("//build/packages/package_metadata.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//tools/cmc/build/validate_component_manifest_references.gni")
 
