@@ -83,7 +83,7 @@ driver_module("driver") {
 }
 
 package("usb-hci-test-driver") {
-  deprecated_system_image = true
+  __deprecated_system_image = true
 
   deps = [ ":driver" ]
 

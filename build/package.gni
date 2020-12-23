@@ -190,36 +190,30 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg_target_name = target_name
     pkg = {
-      forward_variables_from(
-          invoker,
-          [
-            "binaries",
-            "data_deps",
-            "deprecated_system_image",  # TODO(bwb) remove after soft-transition
-            "__deprecated_system_image",
-            "deps",
-            "public_deps",
-            "drivers",
-            "extra",
-            "libraries",
-            "loadable_modules",
-            "meta",
-            "package_name",
-            "resources",
-            "resource_deps",
-            "visibility",
-            "tests",
-            "testonly",
-          ])
+      forward_variables_from(invoker,
+                             [
+                               "binaries",
+                               "data_deps",
+                               "__deprecated_system_image",
+                               "deps",
+                               "public_deps",
+                               "drivers",
+                               "extra",
+                               "libraries",
+                               "loadable_modules",
+                               "meta",
+                               "package_name",
+                               "resources",
+                               "resource_deps",
+                               "visibility",
+                               "tests",
+                               "testonly",
+                             ])
       if (!defined(binaries)) {
         binaries = []
       }
-      if (!defined(__deprecated_system_image) &&
-          !defined(deprecated_system_image)) {
+      if (!defined(__deprecated_system_image)) {
         __deprecated_system_image = false
-      }
-      if (defined(deprecated_system_image)) {
-        __deprecated_system_image = deprecated_system_image
       }
       if (!defined(deps)) {
         deps = []

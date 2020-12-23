@@ -50,7 +50,7 @@ go_library("pmd") {
 }
 
 package("disable-executability-restrictions") {
-  deprecated_system_image = true
+  __deprecated_system_image = true
 
   resources = [
     {
