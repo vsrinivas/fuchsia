@@ -43,7 +43,7 @@ pub fn get_legacy_wpa_association(
     }
     let s_wpa = construct_s_wpa(&a_wpa);
     let negotiated_protection = NegotiatedProtection::from_legacy_wpa(&s_wpa)?;
-    let psk = compute_psk(credential, &bss.ssid[..])?;
+    let psk = compute_psk(credential, bss.ssid())?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.

@@ -110,9 +110,9 @@ pub fn get_wpa2_rsna(
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, anyhow::Error> {
-    let a_rsne_bytes = match bss.rsne.as_ref() {
+    let a_rsne_bytes = match bss.rsne() {
         None => return Err(format_err!("RSNE not present in BSS")),
-        Some(rsne) => &rsne[..],
+        Some(rsne) => rsne,
     };
 
     // Credentials supplied and BSS is protected.
@@ -121,7 +121,7 @@ pub fn get_wpa2_rsna(
     let s_rsne = a_rsne.derive_wpa2_s_rsne()?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
 
-    let psk = compute_psk(credential, &bss.ssid[..])?;
+    let psk = compute_psk(credential, bss.ssid())?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
@@ -192,9 +192,9 @@ pub fn get_wpa3_rsna(
         fidl_sme::Credential::Password(pwd) => pwd.to_vec(),
         _ => bail!("Unexpected credential type"),
     };
-    let a_rsne_bytes = match bss.rsne.as_ref() {
+    let a_rsne_bytes = match bss.rsne() {
         None => return Err(format_err!("RSNE not present in BSS")),
-        Some(rsne) => &rsne[..],
+        Some(rsne) => rsne,
     };
 
     let (_, a_rsne) = rsne::from_bytes(a_rsne_bytes)

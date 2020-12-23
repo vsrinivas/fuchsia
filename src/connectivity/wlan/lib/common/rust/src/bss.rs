@@ -97,20 +97,56 @@ pub struct BssDescription {
     pub ies: Vec<u8>,
 
     // *** Fields parsed out of fidl_internal::BssDescription IEs
-    pub ssid: Vec<u8>,
+    ssid: Vec<u8>,
     // IEEE Std 802.11-2016 9.4.2.3
     // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
-    pub rates: Vec<u8>,
-    pub dtim_period: u8,
-    pub country: Option<Vec<u8>>,
-    pub rsne: Option<Vec<u8>>,
-    pub ht_cap: Option<fidl_internal::HtCapabilities>,
-    pub ht_op: Option<fidl_internal::HtOperation>,
-    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
-    pub vht_op: Option<fidl_internal::VhtOperation>,
+    rates: Vec<u8>,
+    dtim_period: u8,
+    country: Option<Vec<u8>>,
+    rsne: Option<Vec<u8>>,
+    ht_cap: Option<fidl_internal::HtCapabilities>,
+    ht_op: Option<fidl_internal::HtOperation>,
+    vht_cap: Option<fidl_internal::VhtCapabilities>,
+    vht_op: Option<fidl_internal::VhtOperation>,
 }
 
 impl BssDescription {
+    pub fn ssid(&self) -> &[u8] {
+        &self.ssid[..]
+    }
+
+    pub fn rates(&self) -> &[u8] {
+        &self.rates[..]
+    }
+
+    pub fn dtim_period(&self) -> u8 {
+        self.dtim_period
+    }
+
+    pub fn country(&self) -> Option<&[u8]> {
+        self.country.as_deref()
+    }
+
+    pub fn rsne(&self) -> Option<&[u8]> {
+        self.rsne.as_deref()
+    }
+
+    pub fn ht_cap(&self) -> Option<&fidl_internal::HtCapabilities> {
+        self.ht_cap.as_ref()
+    }
+
+    pub fn ht_op(&self) -> Option<&fidl_internal::HtOperation> {
+        self.ht_op.as_ref()
+    }
+
+    pub fn vht_cap(&self) -> Option<&fidl_internal::VhtCapabilities> {
+        self.vht_cap.as_ref()
+    }
+
+    pub fn vht_op(&self) -> Option<&fidl_internal::VhtOperation> {
+        self.vht_op.as_ref()
+    }
+
     /// Return bool on whether BSS is protected.
     pub fn is_protected(&self) -> bool {
         self.protection() != Protection::Open

@@ -108,14 +108,14 @@ pub fn derive_phy_cbw(
         Some(bc) => bc,
     };
 
-    let supported_phy = if band_cap.ht_cap.is_none() || bss.ht_cap.is_none() || bss.ht_op.is_none()
-    {
-        fidl_common::Phy::Erp
-    } else if band_cap.vht_cap.is_none() || bss.vht_cap.is_none() || bss.vht_op.is_none() {
-        fidl_common::Phy::Ht
-    } else {
-        fidl_common::Phy::Vht
-    };
+    let supported_phy =
+        if band_cap.ht_cap.is_none() || bss.ht_cap().is_none() || bss.ht_op().is_none() {
+            fidl_common::Phy::Erp
+        } else if band_cap.vht_cap.is_none() || bss.vht_cap().is_none() || bss.vht_op().is_none() {
+            fidl_common::Phy::Ht
+        } else {
+            fidl_common::Phy::Vht
+        };
 
     let phy_to_use = match radio_cfg.phy {
         None => supported_phy,
@@ -130,7 +130,7 @@ pub fn derive_phy_cbw(
         fidl_common::Phy::Ht => derive_cbw_ht(
             &parse_ht_capabilities(&band_cap.ht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs ht_cap"),
-            &parse_ht_operation(&bss.ht_op.as_ref().unwrap().bytes[..])
+            &parse_ht_operation(&bss.ht_op().unwrap().bytes[..])
                 .expect("bss is expected to have ht_op"),
         ),
         fidl_common::Phy::Vht | fidl_common::Phy::Hew => derive_cbw_vht(
@@ -138,9 +138,8 @@ pub fn derive_phy_cbw(
                 .expect("band capability needs ht_cap"),
             &parse_vht_capabilities(&band_cap.vht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs vht_cap"),
-            &parse_ht_operation(&bss.ht_op.as_ref().unwrap().bytes[..]).expect("bss needs ht_op"),
-            &parse_vht_operation(&bss.vht_op.as_ref().unwrap().bytes[..])
-                .expect("bss needs vht_op"),
+            &parse_ht_operation(&bss.ht_op().unwrap().bytes[..]).expect("bss needs ht_op"),
+            &parse_vht_operation(&bss.vht_op().unwrap().bytes[..]).expect("bss needs vht_op"),
         ),
     };
 

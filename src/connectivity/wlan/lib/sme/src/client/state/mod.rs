@@ -541,7 +541,7 @@ impl Associated {
                 last_rssi: self.last_rssi,
                 last_snr: self.last_snr,
                 bssid: self.bss.bssid,
-                ssid: self.bss.ssid.clone(),
+                ssid: self.bss.ssid().to_vec(),
                 channel: Channel::from_fidl(self.bss.chan),
                 reason_code: ind.reason_code,
                 disconnect_source: if ind.locally_initiated {
@@ -600,7 +600,7 @@ impl Associated {
                     last_rssi: self.last_rssi,
                     last_snr: self.last_snr,
                     bssid: self.bss.bssid,
-                    ssid: self.bss.ssid.clone(),
+                    ssid: self.bss.ssid().to_vec(),
                     channel: Channel::from_fidl(self.bss.chan),
                     reason_code: ind.reason_code.into_primitive(),
                     disconnect_source: if ind.locally_initiated {
@@ -897,7 +897,7 @@ impl ClientState {
         let (chan, cap) = match derive_join_channel_and_capabilities(
             Channel::from_fidl(cmd.bss.chan),
             cmd.radio_cfg.cbw,
-            &cmd.bss.rates[..],
+            cmd.bss.rates(),
             &context.device_info,
         ) {
             Ok(chan_and_cap) => chan_and_cap,
@@ -943,8 +943,8 @@ impl ClientState {
             ctx: msg,
             bssid: cmd.bss.bssid.to_mac_str(),
             bssid_hash: context.inspect.hasher.hash_mac_addr(&cmd.bss.bssid),
-            ssid: String::from_utf8_lossy(&cmd.bss.ssid[..]).as_ref(),
-            ssid_hash: context.inspect.hasher.hash(&cmd.bss.ssid[..]),
+            ssid: String::from_utf8_lossy(cmd.bss.ssid()).as_ref(),
+            ssid_hash: context.inspect.hasher.hash(cmd.bss.ssid()),
         });
         let state = Self::new(cfg.clone());
         match state {
@@ -965,7 +965,7 @@ impl ClientState {
                     last_rssi: state.last_rssi,
                     last_snr: state.last_snr,
                     bssid: state.bss.bssid,
-                    ssid: state.bss.ssid.clone(),
+                    ssid: state.bss.ssid().to_vec(),
                     channel: Channel::from_fidl(state.bss.chan),
                     reason_code,
                     disconnect_source: DisconnectSource::User,
@@ -1041,19 +1041,21 @@ impl ClientState {
         match self {
             Self::Idle(_) => Status { connected_to: None, connecting_to: None },
             Self::Joining(joining) => {
-                Status { connected_to: None, connecting_to: Some(joining.cmd.bss.ssid.clone()) }
+                Status { connected_to: None, connecting_to: Some(joining.cmd.bss.ssid().to_vec()) }
             }
             Self::Authenticating(authenticating) => Status {
                 connected_to: None,
-                connecting_to: Some(authenticating.cmd.bss.ssid.clone()),
+                connecting_to: Some(authenticating.cmd.bss.ssid().to_vec()),
             },
-            Self::Associating(associating) => {
-                Status { connected_to: None, connecting_to: Some(associating.cmd.bss.ssid.clone()) }
-            }
+            Self::Associating(associating) => Status {
+                connected_to: None,
+                connecting_to: Some(associating.cmd.bss.ssid().to_vec()),
+            },
             Self::Associated(associated) => match associated.link_state {
-                LinkState::EstablishingRsna { .. } => {
-                    Status { connected_to: None, connecting_to: Some(associated.bss.ssid.clone()) }
-                }
+                LinkState::EstablishingRsna { .. } => Status {
+                    connected_to: None,
+                    connecting_to: Some(associated.bss.ssid().to_vec()),
+                },
                 LinkState::LinkUp { .. } => Status {
                     connected_to: {
                         let mut bss = associated
@@ -1234,14 +1236,14 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
          rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
         cap = bss.cap,
-        rates = bss.rates,
-        protected = bss.rsne.is_some(),
+        rates = bss.rates(),
+        protected = bss.rsne().is_some(),
         chan = bss.chan,
         rssi = bss.rssi_dbm,
-        ht_cap = bss.ht_cap.is_some(),
-        ht_op = bss.ht_op.is_some(),
-        vht_cap = bss.vht_cap.is_some(),
-        vht_op = bss.vht_op.is_some()
+        ht_cap = bss.ht_cap().is_some(),
+        ht_op = bss.ht_op().is_some(),
+        vht_cap = bss.vht_cap().is_some(),
+        vht_op = bss.vht_op().is_some()
     )
 }
 
@@ -1303,7 +1305,8 @@ mod tests {
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{
-        assert_variant, fake_bss, hasher::WlanHasher, ie::rsn::rsne::Rsne, RadioConfig,
+        assert_variant, fake_bss, hasher::WlanHasher, ie::rsn::rsne::Rsne,
+        test_utils::fake_stas::IesOverrides, RadioConfig,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
@@ -2202,8 +2205,14 @@ mod tests {
     #[test]
     fn join_failure_capabilities_incompatible_softmac() {
         let (mut command, _receiver) = connect_command_one();
-        // empty rates will cause build_join_capabilities to fail, which in turn fails the join.
-        command.bss.rates = vec![];
+        command.bss = Box::new(fake_bss!(Open,
+            ssid: b"foo".to_vec(),
+            bssid: [7, 7, 7, 7, 7, 7],
+            // Set a fake basic rate that our mocked client can't support, causing
+            // `derive_join_and_capabilities` to fail, which in turn fails the join.
+            ies_overrides: IesOverrides::new()
+                .set(ie::IeType::SUPPORTED_RATES, vec![0xff])
+        ));
 
         let mut h = TestHelper::new();
         let state = idle_state().connect(command, &mut h.context);
@@ -2215,8 +2224,14 @@ mod tests {
     #[test]
     fn join_failure_capabilities_incompatible_fullmac() {
         let (mut command, _receiver) = connect_command_one();
-        // empty rates will cause build_join_capabilities to fail, which in turn fails the join.
-        command.bss.rates = vec![];
+        command.bss = Box::new(fake_bss!(Open,
+            ssid: b"foo".to_vec(),
+            bssid: [7, 7, 7, 7, 7, 7],
+            // Set a fake basic rate that our mocked client can't support, causing
+            // `derive_join_and_capabilities` to fail, which in turn fails the join.
+            ies_overrides: IesOverrides::new()
+                .set(ie::IeType::SUPPORTED_RATES, vec![0xff])
+        ));
 
         let mut h = TestHelper::new();
         // set as full mac
@@ -2300,8 +2315,8 @@ mod tests {
             association_id: 1,
             cap_info: 0,
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-            ht_cap: cmd.bss.ht_cap.clone().map(Box::new),
-            vht_cap: cmd.bss.vht_cap.clone().map(Box::new),
+            ht_cap: cmd.bss.ht_cap().map(|cap| Box::new(*cap)),
+            vht_cap: cmd.bss.vht_cap().map(|cap| Box::new(*cap)),
             wmm_param: Some(Box::new(fake_wmm_param())),
         };
 
@@ -2879,7 +2894,7 @@ mod tests {
     }
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
-        let bss = BssDescription { ssid: b"foo".to_vec(), bssid, ..fake_bss!(Wpa2) };
+        let bss = fake_bss!(Wpa2, bssid: bssid, ssid: b"foo".to_vec());
         let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)

@@ -220,11 +220,11 @@ impl ClientMlme {
         match self.join_device(&bss) {
             Ok(()) => {
                 self.sta.replace(Client::new(
-                    bss.ssid.clone(),
+                    bss.ssid().to_vec(),
                     Bssid(bss.bssid),
                     self.ctx.device.wlan_info().ifc_info.mac_addr,
                     bss.beacon_period,
-                    bss.rsne.is_some()
+                    bss.rsne().is_some()
                     // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
                     // purposes only. In particular, connect-to-wpa1-network relies
                     // on this half of the OR statement.

@@ -53,6 +53,27 @@ impl SsidFmt for Vec<u8> {
     }
 }
 
+impl SsidFmt for &[u8] {
+    fn to_ssid_str_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String,
+    {
+        format!("{}", &hash(self)[..SSID_HASH_LEN])
+    }
+}
+
+impl<T> SsidFmt for &T
+where
+    T: SsidFmt,
+{
+    fn to_ssid_str_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String,
+    {
+        (*self).to_ssid_str_hashed(hash)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

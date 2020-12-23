@@ -331,7 +331,7 @@ fn convert_bss_map(
             }
             bss
         })
-        .filter(|v| ssid_filter.as_ref().map(|ssid| &v.ssid == ssid).unwrap_or(true))
+        .filter(|v| ssid_filter.as_deref().map(|ssid| v.ssid() == ssid).unwrap_or(true))
         .collect()
 }
 
@@ -522,7 +522,7 @@ mod tests {
         let mut ssid_list = result
             .expect("expected a successful scan result")
             .into_iter()
-            .map(|bss| bss.ssid)
+            .map(|bss| bss.ssid().to_vec())
             .collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"foo".to_vec(), b"qux".to_vec()], ssid_list);
@@ -570,7 +570,7 @@ mod tests {
         let mut ssid_list = result
             .expect("expected a successful scan result")
             .into_iter()
-            .map(|bss| bss.ssid)
+            .map(|bss| bss.ssid().to_vec())
             .collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"baz".to_vec()], ssid_list);
@@ -818,7 +818,7 @@ mod tests {
         let mut ssid_list = result
             .expect("expected a successful scan result")
             .into_iter()
-            .map(|bss| bss.ssid)
+            .map(|bss| bss.ssid().to_vec())
             .collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(ssid_list, expected_ssids);

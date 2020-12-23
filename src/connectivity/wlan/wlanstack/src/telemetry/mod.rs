@@ -607,7 +607,7 @@ fn log_connection_gap_time_stats(
     }
 
     let ssid = match &connect_stats.candidate_network {
-        Some(bss) => &bss.ssid,
+        Some(bss) => bss.ssid(),
         None => {
             warn!("No candidate_network in successful connect stats");
             return None;
@@ -1326,7 +1326,7 @@ mod tests {
             attempts: 1,
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
-                ssid: fake_bss!(Open).ssid,
+                ssid: fake_bss!(Open).ssid().to_vec(),
                 disconnect_source: DisconnectSource::User,
                 disconnect_at: now - DURATION_SINCE_LAST_DISCONNECT,
             }),

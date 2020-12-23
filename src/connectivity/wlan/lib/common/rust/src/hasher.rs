@@ -29,7 +29,7 @@ impl WlanHasher {
         mac_addr.to_mac_str_partial_hashed(|bytes| self.hash(bytes))
     }
 
-    pub fn hash_ssid(&self, ssid: &impl SsidFmt) -> String {
+    pub fn hash_ssid(&self, ssid: impl SsidFmt) -> String {
         ssid.to_ssid_str_hashed(|bytes| self.hash(bytes))
     }
 }
@@ -75,5 +75,8 @@ mod tests {
         assert!(!hasher.hash_ssid(&ssid_foo).contains("foo"));
         assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo));
         assert_ne!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_bar));
+
+        // Verify that `&[u8]` argument is accepted.
+        assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo[..]));
     }
 }

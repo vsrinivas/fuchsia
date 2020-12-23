@@ -45,15 +45,15 @@ impl ClientConfig {
 
         BssInfo {
             bssid: bss.bssid.clone(),
-            ssid: bss.ssid.clone(),
+            ssid: bss.ssid().to_vec(),
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             signal_report_time: zx::Time::ZERO,
             channel: Channel::from_fidl(bss.chan),
             protection: bss.protection(),
             compatible: self.is_bss_compatible(bss),
-            ht_cap: bss.ht_cap.as_ref().map(|cap| *cap),
-            vht_cap: bss.vht_cap.as_ref().map(|cap| *cap),
+            ht_cap: bss.ht_cap().map(|cap| *cap),
+            vht_cap: bss.vht_cap().map(|cap| *cap),
             probe_resp_wsc,
             wmm_param,
             bss_desc: Some(bss.clone().to_fidl()),
@@ -69,8 +69,8 @@ impl ClientConfig {
             Protection::Wep => self.cfg.wep_supported,
             Protection::Wpa1 => self.cfg.wpa1_supported,
             Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal if self.wpa3_supported => {
-                match bss.rsne.as_ref() {
-                    Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
+                match bss.rsne() {
+                    Some(rsne) if privacy => match rsne::from_bytes(rsne) {
                         Ok((_, a_rsne)) => a_rsne.is_wpa3_rsn_compatible(),
                         _ => false,
                     },
@@ -80,8 +80,8 @@ impl ClientConfig {
             Protection::Wpa2Legacy
             | Protection::Wpa1Wpa2Personal
             | Protection::Wpa2Personal
-            | Protection::Wpa2Wpa3Personal => match bss.rsne.as_ref() {
-                Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
+            | Protection::Wpa2Wpa3Personal => match bss.rsne() {
+                Some(rsne) if privacy => match rsne::from_bytes(rsne) {
                     Ok((_, a_rsne)) => a_rsne.is_wpa2_rsn_compatible(),
                     _ => false,
                 },
