@@ -909,6 +909,13 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:66
 
+### enable_test_on_gce
+Adds GCE as a basic env if true.
+
+**Current value (from the default):** `false`
+
+From //build/testing/environments.gni:17
+
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
 shaders on disk are up to date and reflect the current shader source code
