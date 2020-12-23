@@ -41,28 +41,8 @@ source_set("app") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  include_dirs = [
-    "//third_party/openthread/openthread-tmp/src/core",
-    "//third_party/openthread/openthread-tmp/src/core/common",
-    "//third_party/openthread/openthread-tmp/src/core/radio",
-    "//third_party/openthread/openthread-tmp/include",
-    "//third_party/openthread/openthread-tmp/src",
-    "//third_party/openthread/openthread-tmp/src/ncp",
-    "//third_party/openthread/openthread-tmp/src/lib/spinel",
-    "//third_party/openthread/openthread-tmp/third_party/mbedtls",
-    "//third_party/openthread/openthread-tmp/third_party/mbedtls/repo/include",
-    "//src/connectivity/openthread/third_party/openthread/platform",
-  ]
-
-  defines = [
-    "MBEDTLS_CONFIG_FILE=\"mbedtls-config.h\"",
-    "OPENTHREAD_FTD=1",
-    "SPINEL_PLATFORM_HEADER=\"spinel_platform.h\"",
-    "OPENTHREAD_CONFIG_FILE=<openthread-config-android.h>",
-    "OPENTHREAD_SPINEL_CONFIG_OPENTHREAD_MESSAGE_ENABLE=1",
-    "PACKAGE_NAME=\"OPENTHREAD-CORE\"",
-    "PACKAGE_VERSION=\"1.0.0\"",
-  ]
+  include_dirs =
+      [ "//src/connectivity/openthread/third_party/openthread/platform" ]
 
   configs += [ ":unused" ]
 

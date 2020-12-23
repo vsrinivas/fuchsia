@@ -12,7 +12,7 @@
 
 #include "openthread-system.h"
 
-#include <spinel_interface.hpp>
+#include <spinel/spinel_interface.hpp>
 namespace ot {
 namespace Fuchsia {
 /**

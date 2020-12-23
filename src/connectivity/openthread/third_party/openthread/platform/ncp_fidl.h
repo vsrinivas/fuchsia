@@ -9,7 +9,6 @@
 
 #include "openthread-system.h"
 
-#include <lib/hdlc/hdlc.hpp>
 #include <ncp/ncp_base.hpp>
 
 namespace ot {

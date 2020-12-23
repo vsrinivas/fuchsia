@@ -67,7 +67,7 @@ executable("unittests") {
   ]
 
   include_dirs = [
-    "//third_party/openthread/openthread-tmp/include",
+    "//third_party/openthread/include",
     "//src/connectivity/openthread/third_party/openthread/platform",
   ]
 

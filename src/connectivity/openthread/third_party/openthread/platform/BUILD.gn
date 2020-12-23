@@ -25,27 +25,6 @@ source_set("platform") {
     "time.cc",
   ]
 
-  include_dirs = [
-    "//third_party/openthread/openthread-tmp/src/core",
-    "//third_party/openthread/openthread-tmp/src/core/common",
-    "//third_party/openthread/openthread-tmp/src/core/radio",
-    "//third_party/openthread/openthread-tmp/include",
-    "//third_party/openthread/openthread-tmp/src",
-    "//third_party/openthread/openthread-tmp/src/lib/spinel",
-    "//third_party/openthread/openthread-tmp/third_party/mbedtls",
-    "//third_party/openthread/openthread-tmp/third_party/mbedtls/repo/include",
-  ]
-
-  defines = [
-    "MBEDTLS_CONFIG_FILE=\"mbedtls-config.h\"",
-    "OPENTHREAD_FTD=1",
-    "SPINEL_PLATFORM_HEADER=\"spinel_platform.h\"",
-    "OPENTHREAD_CONFIG_FILE=<openthread-config-android.h>",
-    "OPENTHREAD_SPINEL_CONFIG_OPENTHREAD_MESSAGE_ENABLE=1",
-    "PACKAGE_NAME=\"OPENTHREAD-CORE\"",
-    "PACKAGE_VERSION=\"1.0.0\"",
-  ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.thread",
     "//sdk/lib/sys/cpp",
@@ -54,7 +33,7 @@ source_set("platform") {
     "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/modp_b64",
-    "//third_party/openthread/openthread-tmp:lib-ot-core",
+    "//third_party/openthread:lib-ot-core",
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config:Wno-conversion" ]

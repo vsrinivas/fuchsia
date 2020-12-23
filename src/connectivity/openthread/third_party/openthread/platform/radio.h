@@ -14,7 +14,7 @@
 #include "spinel_fidl_interface.h"
 
 #define NEW_HPP_
-#include <radio_spinel.hpp>
+#include <spinel/radio_spinel.hpp>
 #undef NEW_HPP_
 
 extern "C" void platformRadioInit(const otPlatformConfig *a_platform_config);
