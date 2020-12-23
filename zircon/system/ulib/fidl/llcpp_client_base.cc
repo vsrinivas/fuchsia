@@ -45,11 +45,9 @@ void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
   do {
     do {
       context->txid_ = ++txid_base_ & kUserspaceTxidMask;  // txid must be within mask.
-    } while (!context->txid_);                             // txid must be non-zero.
-  } while (contexts_.find(context->txid_) != contexts_.end());
+    } while (unlikely(!context->txid_));                   // txid must be non-zero.
+  } while (unlikely(!contexts_.insert_or_find(context)));
 
-  // Insert the ResponseContext.
-  contexts_.insert(context);
   list_add_tail(&delete_list_, context);
 }
 
@@ -80,7 +78,7 @@ void ClientBase::ReleaseResponseContextsWithError() {
 std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
 
-  if (hdr->ordinal == kFidlOrdinalEpitaph) {
+  if (unlikely(hdr->ordinal == kFidlOrdinalEpitaph)) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
     if (hdr->txid != 0) {
       return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
@@ -93,10 +91,8 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
     ResponseContext* context = nullptr;
     {
       std::scoped_lock lock(lock_);
-      auto it = contexts_.find(hdr->txid);
-      if (it != contexts_.end()) {
-        context = &(*it);
-        contexts_.erase(it);
+      context = contexts_.erase(hdr->txid);
+      if (likely(context != nullptr)) {
         list_delete(static_cast<list_node_t*>(context));
       } else {
         fprintf(stderr, "%s: Received response for unknown txid %u.\n", __func__, hdr->txid);
@@ -109,7 +105,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
     zx_status_t status = fidl_decode_etc(context->type(), msg->bytes, msg->num_bytes, msg->handles,
                                          msg->num_handles, &error_message);
     fidl_trace(DidLLCPPDecode);
-    if (status != ZX_OK) {
+    if (unlikely(status != ZX_OK)) {
       context->OnError();
       return UnbindInfo{UnbindInfo::kDecodeError, status};
     }
@@ -133,7 +129,7 @@ zx::channel ChannelRefTracker::WaitForChannel() {
   {
     std::scoped_lock lock(lock_);
     // Ensure that only one thread receives the channel.
-    if (!channel_)
+    if (unlikely(!channel_))
       return zx::channel();
     ephemeral_channel_ref = std::move(channel_);
   }
