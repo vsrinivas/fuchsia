@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("library_loader") {
   version = "0.1.0"
@@ -34,30 +34,26 @@ rustc_library("library_loader") {
 # files using OPEN_RIGHT_EXECUTABLE/VMO_FLAG_EXEC, and the easiest way to provide a test directory
 # that supports that is a real pkgfs directory.
 # TODO(fxbug.dev/37534): Remove this once Rust vfs supports OPEN_RIGHT_EXECUTABLE
-generate_manifest("config_test_files") {
-  args = [
-    "--entry=lib/config_test/foo=" +
-        rebase_path("config_test_files/foo", root_build_dir),
-    "--entry=lib/config_test/bar/baz=" +
-        rebase_path("config_test_files/bar/baz", root_build_dir),
-  ]
+resource("config_test_foo") {
+  sources = [ "config_test_files/foo" ]
+  outputs = [ "lib/config_test/foo" ]
 }
 
-test_package("library_loader_tests") {
+resource("config_test_bar_baz") {
+  sources = [ "config_test_files/bar/baz" ]
+  outputs = [ "lib/config_test/bar/baz" ]
+}
+
+fuchsia_unittest_package("library_loader_tests") {
   deps = [
-    ":config_test_files",
+    ":config_test_bar_baz",
+    ":config_test_foo",
     ":library_loader_test",
   ]
-
-  extra = get_target_outputs(":config_test_files")
-
-  tests = [
-    {
-      name = "library_loader_lib_test"
-      dest = "library_loader_tests"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/library_loader_tests.cmx"
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
