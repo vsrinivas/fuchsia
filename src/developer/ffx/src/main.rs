@@ -16,7 +16,7 @@ use {
     fuchsia_async::TimeoutExt,
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
-    std::time::Duration,
+    std::time::{Duration, Instant},
 };
 
 // app name for analytics
@@ -125,6 +125,8 @@ async fn run() -> Result<()> {
     let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
     ffx_config::logging::init(log_to_stdio).await?;
 
+    log::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
+
     // HACK(64402): hoist uses a lazy static initializer obfuscating access to inject
     // this value by other means, so:
     let _ = ffx_config::get("overnet.socket").await.map(|sockpath: String| {
@@ -134,7 +136,11 @@ async fn run() -> Result<()> {
     let notice_writer = Box::new(std::io::stderr());
     show_analytics_notice(notice_writer);
 
-    let analytics_task = fuchsia_async::Task::spawn(async {
+    let analytics_start = Instant::now();
+    // Spawn analytics as "blocking", even though it is not - it is
+    // desirable for analytics submission to execute in parallel with
+    // the command execution.
+    let analytics_task = fuchsia_async::Task::blocking(async {
         let args: Vec<String> = std::env::args().collect();
         // drop arg[0]: executable with hard path
         // TODO do we want to break out subcommands for analytics?
@@ -142,8 +148,15 @@ async fn run() -> Result<()> {
         let launch_args = format!("{}", &args_str);
         let build_info = build_info();
         let build_version = build_info.build_version;
-        add_launch_event(APP_NAME, build_version.as_deref(), Some(launch_args).as_deref()).await
+        if let Err(e) =
+            add_launch_event(APP_NAME, build_version.as_deref(), Some(launch_args).as_deref()).await
+        {
+            log::error!("analytics submission failed: {}", e);
+        }
+        Instant::now()
     });
+
+    let command_start = Instant::now();
     let res = ffx_lib_suite::ffx_plugin_impl(
         get_daemon_proxy,
         get_remote_proxy,
@@ -152,14 +165,24 @@ async fn run() -> Result<()> {
         app,
     )
     .await;
-    let _ = analytics_task
+    let command_done = Instant::now();
+    log::info!("Command completed. Success: {}", res.is_ok());
+
+    let analytics_done = analytics_task
         // TODO(66918): make configurable, and evaluate chosen time value.
         .on_timeout(Duration::from_secs(2), || {
             log::error!("analytics submission timed out");
             // Analytics timeouts should not impact user flows
-            Ok(())
+            Instant::now()
         })
         .await;
+
+    log::info!(
+        "Run finished. success: {}, command time: {}, analytics time: {}",
+        res.is_ok(),
+        (command_done - command_start).as_secs_f32(),
+        (analytics_done - analytics_start).as_secs_f32()
+    );
     res
 }
 
