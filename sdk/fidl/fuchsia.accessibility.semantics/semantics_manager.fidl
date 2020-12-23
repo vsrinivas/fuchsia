@@ -22,6 +22,9 @@ const uint64 MAX_LABEL_SIZE = 16384;
 /// Maximum size of a value string, in bytes.
 const uint64 MAX_VALUE_SIZE = 16384;
 
+/// Maximum size of a message string, in bytes.
+const uint64 MAX_MESSAGE_SIZE = 16384;
+
 /// An interface to manage connections with views for the purposes of gathering semantic information
 /// about their current UI state.
 ///
@@ -34,6 +37,20 @@ protocol SemanticsManager {
     RegisterViewForSemantics(fuchsia.ui.views.ViewRef view_ref,
                              SemanticListener listener,
                              request<SemanticTree> semantic_tree_request);
+};
+
+/// Represents a Semantic Event that is fired on a Semantic Tree.
+union SemanticEvent {
+    1: AnnounceEvent announce;
+};
+
+/// An announce event is one where a message is sent to a Semantic Tree,
+/// informing a change of some global state in the application. Because this
+/// announcement can be disruptive to assistive technology, it should be used
+/// sparingly.
+table AnnounceEvent {
+    /// A message describing the change in the application. This message is expected to be localized in the language that the application is in.
+    1: string:MAX_MESSAGE_SIZE message;
 };
 
 /// Interface to update the semantic tree for a particular view. Nodes can be added, updated or
@@ -64,6 +81,13 @@ protocol SemanticTree {
     /// committed updates result in an ill-formed tree (for example a missing root node or a cycle)
     /// the semantic manager will close the channel.
     CommitUpdates() -> ();
+
+    /// Sends a Semantic Event related to this tree. This applies immediately
+    /// and does not wait for CommitUpdates(). It is the caller's
+    /// responsibility to fire events on nodes that have been already commited.
+    /// The return callback is invoked to acknowledge that the event was received.
+    [Transitional]
+    SendSemanticEvent(SemanticEvent semantic_event) -> ();
 };
 
 /// Results of hit testing on a view's semantic tree which is implemented by
