@@ -177,8 +177,16 @@ async fn main() {
                 eprintln!("BUG: An internal command error occurred.\n{:?}", err);
             }
             let err_msg = format!("{}", err);
-            add_crash_event(&err_msg).await.unwrap(); // unwrap because return is always empty and
-                                                      // users can't act on analytics failures
+            // TODO(66918): make configurable, and evaluate chosen time value.
+            if let Err(e) = add_crash_event(&err_msg)
+                .on_timeout(Duration::from_secs(2), || {
+                    log::error!("analytics timed out reporting crash event");
+                    Ok(())
+                })
+                .await
+            {
+                log::error!("analytics failed to submit crash event: {}", e);
+            }
             std::process::exit(1);
         }
     }
