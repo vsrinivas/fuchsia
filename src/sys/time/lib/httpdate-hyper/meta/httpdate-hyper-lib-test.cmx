@@ -5,7 +5,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/httpdate_hyper_lib_test"
+        "binary": "bin/httpdate_hyper_lib_test"
     },
     "sandbox": {
         "features": [

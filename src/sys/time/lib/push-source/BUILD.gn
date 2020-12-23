@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -36,12 +36,7 @@ rustc_library("push-source") {
   test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
-test_package("push-source-tests") {
+fuchsia_unittest_package("push-source-tests") {
+  manifest = "meta/push-source-lib-test.cmx"
   deps = [ ":push-source_test" ]
-
-  tests = [
-    {
-      name = "push_source_lib_test"
-    },
-  ]
 }

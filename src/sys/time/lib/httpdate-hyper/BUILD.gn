@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -50,12 +50,7 @@ rustc_library("httpdate-hyper") {
   ]
 }
 
-test_package("httpdate-hyper-tests") {
+fuchsia_unittest_package("httpdate-hyper-tests") {
+  manifest = "meta/httpdate-hyper-lib-test.cmx"
   deps = [ ":httpdate-hyper_test" ]
-
-  tests = [
-    {
-      name = "httpdate_hyper_lib_test"
-    },
-  ]
 }
