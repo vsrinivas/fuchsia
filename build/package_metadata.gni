@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/generated_resource.gni")
+
 # Generate a list of package metadata exported from all packages in the
 # transitive closure of declared dependencies.
 #
@@ -103,5 +105,24 @@ template("define_package_metadata") {
       meta_far_merkle_index_entries = [ invoker.meta_far_merkle_index_entry ]
       package_output_manifests = [ invoker.package_output_manifest ]
     }
+  }
+}
+
+# Generate meta/package file.
+#
+# Parameters
+#
+#   package_name (required)
+#   testonly
+#   visibility
+template("generate_meta_package") {
+  generated_resource(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    contents = "{\"name\":\"${invoker.package_name}\",\"version\":\"0\"}"
+    outputs = [ "meta/package" ]
   }
 }

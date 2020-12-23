@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/fini_manifest.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
 import("//build/images/manifest.gni")
+import("//build/package_metadata.gni")
 import("//build/testing/test_spec.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -158,6 +160,10 @@ import("//tools/cmc/build/validate_component_manifest_references.gni")
 #     build. Resources are placed in the `data/` directory of the assembled
 #     package.
 #
+#   resource_deps (optional)
+#     [list of labels] Dependencies on resource() targets to include in the
+#     package.
+#
 #     Entries in a scope in the resources list:
 #
 #       path (required)
@@ -184,7 +190,6 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg_target_name = target_name
     pkg = {
-      package_version = "0"  # placeholder
       forward_variables_from(
           invoker,
           [
@@ -201,6 +206,7 @@ template("package") {
             "meta",
             "package_name",
             "resources",
+            "resource_deps",
             "visibility",
             "tests",
             "testonly",
@@ -244,6 +250,9 @@ template("package") {
       }
       if (!defined(resources)) {
         resources = []
+      }
+      if (!defined(resource_deps)) {
+        resource_deps = []
       }
       if (!defined(tests)) {
         tests = []
@@ -621,12 +630,22 @@ template("package") {
 
     # Synthesize the meta/package file.
     pkg_meta_generated = "${pkg_target_name}_meta_package.json"
-    pkg_meta_output = "$target_out_dir/${pkg_target_name}_meta_package.json"
-    generated_file(pkg_meta_generated) {
-      contents = "{\"name\":\"${pkg.package_name}\",\"version\":\"${pkg.package_version}\"}"
-      outputs = [ pkg_meta_output ]
-      output_conversion = "string"
+    generate_meta_package(pkg_meta_generated) {
+      forward_variables_from(pkg, [ "testonly" ])
+      package_name = pkg.package_name
+      visibility = [ ":*" ]
     }
+
+    # Generate an extra manifest with meta/package and resource_deps
+    fini_target = "${pkg_target_name}_resource_deps"
+    fini_manifest("$fini_target") {
+      forward_variables_from(pkg, [ "testonly" ])
+      visibility = [ ":*" ]
+      deps = [ ":$pkg_meta_generated" ] + pkg.resource_deps
+    }
+    fini_file = get_target_outputs(":$fini_target")
+    fini_file = rebase_path(fini_file[0], root_build_dir)
+    manifest_args += [ "--manifest=$fini_file" ]
 
     # Fuchsia package aggregates a manifest from its arguments and builds a
     # metadata archive.
@@ -634,12 +653,10 @@ template("package") {
     generate_manifest(manifest) {
       forward_variables_from(pkg, [ "testonly" ])
       visibility = [ ":*" ]
-      sources = manifest_sources + [ pkg_meta_output ]
-      args =
-          manifest_args + [ "--entry=meta/package=" +
-                            rebase_path(pkg_meta_output, "", target_out_dir) ]
+      sources = manifest_sources
+      args = manifest_args
       deps = pkg.deps + [
-               ":$pkg_meta_generated",
+               ":$fini_target",
                "//zircon/public/sysroot:system_libc_deps",
              ]
       public_deps = pkg.public_deps
