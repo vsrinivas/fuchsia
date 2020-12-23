@@ -26,14 +26,14 @@ source_set("platform") {
   ]
 
   include_dirs = [
-    "//third_party/openthread/src/core",
-    "//third_party/openthread/src/core/common",
-    "//third_party/openthread/src/core/radio",
-    "//third_party/openthread/include",
-    "//third_party/openthread/src",
-    "//third_party/openthread/src/lib/spinel",
-    "//third_party/openthread/third_party/mbedtls",
-    "//third_party/openthread/third_party/mbedtls/repo/include",
+    "//third_party/openthread/openthread-tmp/src/core",
+    "//third_party/openthread/openthread-tmp/src/core/common",
+    "//third_party/openthread/openthread-tmp/src/core/radio",
+    "//third_party/openthread/openthread-tmp/include",
+    "//third_party/openthread/openthread-tmp/src",
+    "//third_party/openthread/openthread-tmp/src/lib/spinel",
+    "//third_party/openthread/openthread-tmp/third_party/mbedtls",
+    "//third_party/openthread/openthread-tmp/third_party/mbedtls/repo/include",
   ]
 
   defines = [
@@ -54,7 +54,7 @@ source_set("platform") {
     "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/modp_b64",
-    "//third_party/openthread:lib-ot-core",
+    "//third_party/openthread/openthread-tmp:lib-ot-core",
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config:Wno-conversion" ]

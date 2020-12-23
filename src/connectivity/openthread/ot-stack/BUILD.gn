@@ -42,15 +42,15 @@ source_set("app") {
   ]
 
   include_dirs = [
-    "//third_party/openthread/src/core",
-    "//third_party/openthread/src/core/common",
-    "//third_party/openthread/src/core/radio",
-    "//third_party/openthread/include",
-    "//third_party/openthread/src",
-    "//third_party/openthread/src/ncp",
-    "//third_party/openthread/src/lib/spinel",
-    "//third_party/openthread/third_party/mbedtls",
-    "//third_party/openthread/third_party/mbedtls/repo/include",
+    "//third_party/openthread/openthread-tmp/src/core",
+    "//third_party/openthread/openthread-tmp/src/core/common",
+    "//third_party/openthread/openthread-tmp/src/core/radio",
+    "//third_party/openthread/openthread-tmp/include",
+    "//third_party/openthread/openthread-tmp/src",
+    "//third_party/openthread/openthread-tmp/src/ncp",
+    "//third_party/openthread/openthread-tmp/src/lib/spinel",
+    "//third_party/openthread/openthread-tmp/third_party/mbedtls",
+    "//third_party/openthread/openthread-tmp/third_party/mbedtls/repo/include",
     "//src/connectivity/openthread/third_party/openthread/platform",
   ]
 
