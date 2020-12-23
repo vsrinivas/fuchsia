@@ -122,21 +122,29 @@ struct CpuidValueBase : public hwreg::RegisterBase<ValueType, uint32_t, hwreg::E
 //---------------------------------------------------------------------------//
 
 // [amd/vol3]: E.3.1, CPUID Fn0000_0000_EAX Largest Standard Function Number.
-struct CpuidMaximumLeaf : public CpuidValueBase<CpuidMaximumLeaf, 0x0, 0x0, CpuidIo::kEax> {};
+struct CpuidMaximumLeaf : public CpuidValueBase<CpuidMaximumLeaf, 0x0, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, leaf);
+};
 
 // [amd/vol3]: E.3.1, CPUID Fn0000_0000_E[D,C,B]X Processor Vendor.
-struct CpuidVendorB : public CpuidValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEbx> {};
-struct CpuidVendorC : public CpuidValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {};
-struct CpuidVendorD : public CpuidValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {};
+struct CpuidVendorB : public CpuidValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 0, value);
+};
+struct CpuidVendorC : public CpuidValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 0, value);
+};
+struct CpuidVendorD : public CpuidValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 0, value);
+};
 
 template <typename CpuidIoProvider>
 Vendor GetVendor(CpuidIoProvider&& io) {
   using namespace std::string_view_literals;
 
   const uint32_t ids[] = {
-      io.template Read<CpuidVendorB>().reg_value(),
-      io.template Read<CpuidVendorD>().reg_value(),
-      io.template Read<CpuidVendorC>().reg_value(),
+      io.template Read<CpuidVendorB>().value(),
+      io.template Read<CpuidVendorD>().value(),
+      io.template Read<CpuidVendorC>().value(),
   };
   std::string_view name{reinterpret_cast<const char*>(ids), sizeof(ids)};
   if (name == "GenuineIntel"sv) {
@@ -419,14 +427,22 @@ struct CpuidProcessorTraceMainC
 //---------------------------------------------------------------------------//
 
 struct CpuidMaximumHypervisorLeaf
-    : public CpuidValueBase<CpuidMaximumHypervisorLeaf, 0x4000'0000, 0x0, CpuidIo::kEax> {};
+    : public CpuidValueBase<CpuidMaximumHypervisorLeaf, 0x4000'0000, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, leaf);
+};
 
 struct CpuidHypervisorNameB
-    : public CpuidValueBase<CpuidHypervisorNameB, 0x4000'0000, 0x0, CpuidIo::kEbx> {};
+    : public CpuidValueBase<CpuidHypervisorNameB, 0x4000'0000, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidHypervisorNameC
-    : public CpuidValueBase<CpuidHypervisorNameC, 0x4000'0000, 0x0, CpuidIo::kEcx> {};
+    : public CpuidValueBase<CpuidHypervisorNameC, 0x4000'0000, 0x0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidHypervisorNameD
-    : public CpuidValueBase<CpuidHypervisorNameD, 0x4000'0000, 0x0, CpuidIo::kEdx> {};
+    : public CpuidValueBase<CpuidHypervisorNameD, 0x4000'0000, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 0, value);
+};
 
 // HypervisorName is a simple class that serves to hold the content of a
 // hypervisor's name (or "vendor string").
@@ -437,9 +453,9 @@ class HypervisorName {
     // Check if we are actually within a hypervisor.
     if (io.template Read<CpuidFeatureFlagsC>().hypervisor()) {
       const uint32_t values[] = {
-          io.template Read<CpuidHypervisorNameB>().reg_value(),
-          io.template Read<CpuidHypervisorNameC>().reg_value(),
-          io.template Read<CpuidHypervisorNameD>().reg_value(),
+          io.template Read<CpuidHypervisorNameB>().value(),
+          io.template Read<CpuidHypervisorNameC>().value(),
+          io.template Read<CpuidHypervisorNameD>().value(),
       };
       static_assert(kSize == sizeof(values));
       memcpy(str_.data(), values, kSize);
@@ -469,7 +485,9 @@ class HypervisorName {
 
 // [amd/vol3]: CPUID Fn8000_0000_EAX Largest Extended Function Number
 struct CpuidMaximumExtendedLeaf
-    : public CpuidValueBase<CpuidMaximumExtendedLeaf, 0x8000'0000, 0x0, CpuidIo::kEax> {};
+    : public CpuidValueBase<CpuidMaximumExtendedLeaf, 0x8000'0000, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, leaf);
+};
 
 //---------------------------------------------------------------------------//
 // Leaves/Functions 0x8000'0002 - 0x8000'0004
@@ -482,31 +500,55 @@ struct CpuidMaximumExtendedLeaf
 // express (zero-based) index into how the combine to form the processor name
 // string.
 struct CpuidProcessorName2A
-    : public CpuidValueBase<CpuidProcessorName2A, 0x8000'0002, 0x0, CpuidIo::kEax> {};
+    : public CpuidValueBase<CpuidProcessorName2A, 0x8000'0002, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName2B
-    : public CpuidValueBase<CpuidProcessorName2B, 0x8000'0002, 0x0, CpuidIo::kEbx> {};
+    : public CpuidValueBase<CpuidProcessorName2B, 0x8000'0002, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName2C
-    : public CpuidValueBase<CpuidProcessorName2C, 0x8000'0002, 0x0, CpuidIo::kEcx> {};
+    : public CpuidValueBase<CpuidProcessorName2C, 0x8000'0002, 0x0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName2D
-    : public CpuidValueBase<CpuidProcessorName2D, 0x8000'0002, 0x0, CpuidIo::kEdx> {};
+    : public CpuidValueBase<CpuidProcessorName2D, 0x8000'0002, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 0, value);
+};
 
 struct CpuidProcessorName3A
-    : public CpuidValueBase<CpuidProcessorName3A, 0x8000'0003, 0x0, CpuidIo::kEax> {};
+    : public CpuidValueBase<CpuidProcessorName3A, 0x8000'0003, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName3B
-    : public CpuidValueBase<CpuidProcessorName3B, 0x8000'0003, 0x0, CpuidIo::kEbx> {};
+    : public CpuidValueBase<CpuidProcessorName3B, 0x8000'0003, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName3C
-    : public CpuidValueBase<CpuidProcessorName3C, 0x8000'0003, 0x0, CpuidIo::kEcx> {};
+    : public CpuidValueBase<CpuidProcessorName3C, 0x8000'0003, 0x0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName3D
-    : public CpuidValueBase<CpuidProcessorName3D, 0x8000'0003, 0x0, CpuidIo::kEdx> {};
+    : public CpuidValueBase<CpuidProcessorName3D, 0x8000'0003, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 0, value);
+};
 
 struct CpuidProcessorName4A
-    : public CpuidValueBase<CpuidProcessorName4A, 0x8000'0004, 0x0, CpuidIo::kEax> {};
+    : public CpuidValueBase<CpuidProcessorName4A, 0x8000'0004, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName4B
-    : public CpuidValueBase<CpuidProcessorName4B, 0x8000'0004, 0x0, CpuidIo::kEbx> {};
+    : public CpuidValueBase<CpuidProcessorName4B, 0x8000'0004, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName4C
-    : public CpuidValueBase<CpuidProcessorName4C, 0x8000'0004, 0x0, CpuidIo::kEcx> {};
+    : public CpuidValueBase<CpuidProcessorName4C, 0x8000'0004, 0x0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 0, value);
+};
 struct CpuidProcessorName4D
-    : public CpuidValueBase<CpuidProcessorName4D, 0x8000'0004, 0x0, CpuidIo::kEdx> {};
+    : public CpuidValueBase<CpuidProcessorName4D, 0x8000'0004, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 0, value);
+};
 
 // ProcessorName is a simple class that serves to hold the content of a
 // processor name (or "brand string" in Intel-speak), a general identifier.
@@ -515,20 +557,20 @@ class ProcessorName {
   template <typename CpuidIoProvider>
   explicit ProcessorName(CpuidIoProvider&& io) {
     // The name string needs leaves 0x8000'0002-0x8000'0004.
-    if (io.template Read<CpuidMaximumExtendedLeaf>().reg_value() >= CpuidProcessorName4D::kLeaf) {
+    if (io.template Read<CpuidMaximumExtendedLeaf>().leaf() >= CpuidProcessorName4D::kLeaf) {
       const uint32_t values[] = {
-          io.template Read<CpuidProcessorName2A>().reg_value(),
-          io.template Read<CpuidProcessorName2B>().reg_value(),
-          io.template Read<CpuidProcessorName2C>().reg_value(),
-          io.template Read<CpuidProcessorName2D>().reg_value(),
-          io.template Read<CpuidProcessorName3A>().reg_value(),
-          io.template Read<CpuidProcessorName3B>().reg_value(),
-          io.template Read<CpuidProcessorName3C>().reg_value(),
-          io.template Read<CpuidProcessorName3D>().reg_value(),
-          io.template Read<CpuidProcessorName4A>().reg_value(),
-          io.template Read<CpuidProcessorName4B>().reg_value(),
-          io.template Read<CpuidProcessorName4C>().reg_value(),
-          io.template Read<CpuidProcessorName4D>().reg_value(),
+          io.template Read<CpuidProcessorName2A>().value(),
+          io.template Read<CpuidProcessorName2B>().value(),
+          io.template Read<CpuidProcessorName2C>().value(),
+          io.template Read<CpuidProcessorName2D>().value(),
+          io.template Read<CpuidProcessorName3A>().value(),
+          io.template Read<CpuidProcessorName3B>().value(),
+          io.template Read<CpuidProcessorName3C>().value(),
+          io.template Read<CpuidProcessorName3D>().value(),
+          io.template Read<CpuidProcessorName4A>().value(),
+          io.template Read<CpuidProcessorName4B>().value(),
+          io.template Read<CpuidProcessorName4C>().value(),
+          io.template Read<CpuidProcessorName4D>().value(),
       };
       static_assert(kSize == sizeof(values));
       memcpy(str_.data(), values, kSize);

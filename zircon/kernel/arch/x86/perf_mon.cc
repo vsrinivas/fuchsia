@@ -420,8 +420,7 @@ static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
 }
 
 static void x86_perfmon_init_once(uint level) {
-  if (arch::BootCpuid<arch::CpuidMaximumLeaf>().reg_value() <
-      arch::CpuidPerformanceMonitoringA::kLeaf) {
+  if (arch::BootCpuid<arch::CpuidMaximumLeaf>().leaf() < arch::CpuidPerformanceMonitoringA::kLeaf) {
     return;
   }
 

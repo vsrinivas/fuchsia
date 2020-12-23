@@ -111,7 +111,8 @@ static zx_insntrace_trace_mode_t trace_mode TA_GUARDED(IptLock::Get()) = IPT_MOD
 static uint32_t ipt_num_traces TA_GUARDED(IptLock::Get());
 
 void x86_processor_trace_init(void) {
-  if (!arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().intel_pt()) {
+  if ((arch::BootCpuid<arch::CpuidMaximumLeaf>().leaf() < arch::CpuidProcessorTraceMainB::kLeaf) ||
+      !arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().intel_pt()) {
     return;
   }
 

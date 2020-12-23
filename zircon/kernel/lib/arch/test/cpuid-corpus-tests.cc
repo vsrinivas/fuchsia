@@ -546,7 +546,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
   auto hypervisor = arch::HypervisorName(cpuid);
   EXPECT_TRUE(hypervisor.name() == "VBoxVBoxVBox"sv);
 
-  EXPECT_EQ(0x4000'0006, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+  EXPECT_EQ(0x4000'0006, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -596,7 +596,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
   auto hypervisor = arch::HypervisorName(cpuid);
   EXPECT_TRUE(hypervisor.name() == "KVMKVMKVM"sv);
 
-  EXPECT_EQ(0x4000'0001, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+  EXPECT_EQ(0x4000'0001, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -646,7 +646,7 @@ TEST(CpuidTests, Ryzen3950X_VMware) {
   auto hypervisor = arch::HypervisorName(cpuid);
   EXPECT_TRUE(hypervisor.name() == "VMwareVMware"sv);
 
-  EXPECT_EQ(0x4000'0010, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+  EXPECT_EQ(0x4000'0010, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -694,7 +694,7 @@ TEST(CpuidTests, Ryzen3950X_WSL2) {
   auto hypervisor = arch::HypervisorName(cpuid);
   EXPECT_TRUE(hypervisor.name() == "Microsoft Hv"sv);
 
-  EXPECT_EQ(0x4000'000b, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+  EXPECT_EQ(0x4000'000b, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().leaf());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();

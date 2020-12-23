@@ -59,7 +59,7 @@ TEST(FakeCpuidIoTests, Read) {
 
   // Read should be a shortcut to reading our the value type.
   EXPECT_EQ(0x0000'0014, io->values_[arch::CpuidIo::kEax]);
-  EXPECT_EQ(0x0000'0014, cpuid.Read<arch::CpuidMaximumLeaf>().reg_value());
+  EXPECT_EQ(0x0000'0014, cpuid.Read<arch::CpuidMaximumLeaf>().leaf());
 }
 
 TEST(FakeCpuidIoTests, PopulateOverwrites) {
