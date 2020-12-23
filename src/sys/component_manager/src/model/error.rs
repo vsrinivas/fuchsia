@@ -4,9 +4,9 @@
 
 use {
     crate::model::{
-        environment::EnvironmentError, events::error::EventsError, policy::PolicyError,
-        resolver::ResolverError, rights::RightsError, routing::RoutingError, runner::RunnerError,
-        storage::StorageError,
+        component_id_index::ComponentIdIndexError, environment::EnvironmentError,
+        events::error::EventsError, policy::PolicyError, resolver::ResolverError,
+        rights::RightsError, routing::RoutingError, runner::RunnerError, storage::StorageError,
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -30,6 +30,11 @@ pub enum ModelError {
     CollectionNotFound { name: String },
     #[error("context not found")]
     ContextNotFound,
+    #[error("component id index invalid: {}", err)]
+    ComponentIdIndexError {
+        #[from]
+        err: ComponentIdIndexError,
+    },
     #[error("environment {} not found in realm {}", name, moniker)]
     EnvironmentNotFound { name: String, moniker: AbsoluteMoniker },
     #[error("environment {} in realm {} is not valid: {}", name, moniker, err)]

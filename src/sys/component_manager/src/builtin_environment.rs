@@ -240,7 +240,7 @@ impl BuiltinEnvironmentBuilder {
             runtime_config: Arc::clone(&runtime_config),
             namespace_capabilities: runtime_config.namespace_capabilities.clone(),
         };
-        let model = Arc::new(Model::new(params));
+        let model = Arc::new(Model::new(params).await?);
 
         // If we previously created a resolver that requires the Model (in
         // add_available_resolvers_from_namespace), send the just-created model to it.

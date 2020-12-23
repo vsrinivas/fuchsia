@@ -5,7 +5,9 @@
 use {
     crate::{
         config::RuntimeConfig,
-        model::{error::ModelError, policy::GlobalPolicyChecker},
+        model::{
+            component_id_index::ComponentIdIndex, error::ModelError, policy::GlobalPolicyChecker,
+        },
     },
     std::sync::{Arc, Weak},
 };
@@ -15,17 +17,28 @@ use {
 /// want to share with Realms.
 pub struct ModelContext {
     policy_checker: GlobalPolicyChecker,
+    component_id_index: ComponentIdIndex,
 }
 
 impl ModelContext {
     /// Constructs a new ModelContext from a RuntimeConfig.
-    pub fn new(runtime_config: Arc<RuntimeConfig>) -> Self {
-        Self { policy_checker: GlobalPolicyChecker::new(runtime_config) }
+    pub async fn new(runtime_config: Arc<RuntimeConfig>) -> Result<Self, ModelError> {
+        Ok(Self {
+            component_id_index: match &runtime_config.component_id_index_path {
+                Some(path) => ComponentIdIndex::new(&path).await?,
+                None => ComponentIdIndex::default(),
+            },
+            policy_checker: GlobalPolicyChecker::new(runtime_config),
+        })
     }
 
     /// Returns the runtime policy checker for the model.
     pub fn policy(&self) -> &GlobalPolicyChecker {
         &self.policy_checker
+    }
+
+    pub fn component_id_index(&self) -> &ComponentIdIndex {
+        &self.component_id_index
     }
 }
 

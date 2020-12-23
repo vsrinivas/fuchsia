@@ -32,6 +32,7 @@ struct Config {
     builtin_pkg_resolver: Option<BuiltinPkgResolver>,
     out_dir_contents: Option<OutDirContents>,
     root_component_url: Option<Url>,
+    component_id_index_path: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -186,6 +187,7 @@ impl TryFrom<Config> for component_internal::Config {
                 Some(root_component_url) => Some(root_component_url.as_str().to_string()),
                 None => None,
             },
+            component_id_index_path: config.component_id_index_path,
             ..Self::EMPTY
         })
     }
@@ -274,6 +276,7 @@ impl Config {
         extend_if_unset!(self, another, builtin_pkg_resolver);
         extend_if_unset!(self, another, out_dir_contents);
         extend_if_unset!(self, another, root_component_url);
+        extend_if_unset!(self, another, component_id_index_path);
         Ok(self)
     }
 
@@ -336,6 +339,7 @@ fn compile(args: Args) -> Result<(), Error> {
         args.input.iter().map(Config::from_json_file).collect::<Result<Vec<Config>, _>>()?;
     let config_json =
         configs.into_iter().try_fold(Config::default(), |acc, next| acc.extend(next))?;
+
     let mut config_fidl: component_internal::Config = config_json.try_into()?;
     let bytes = encode_persistent(&mut config_fidl).map_err(|e| Error::FidlEncoding(e))?;
     let mut file = File::create(args.output).map_err(|e| Error::Io(e))?;
@@ -407,6 +411,7 @@ mod tests {
             num_threads: 321,
             out_dir_contents: "svc",
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
+            component_id_index_path: "/this/is/an/absolute/path",
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -475,6 +480,7 @@ mod tests {
                 num_threads: Some(321),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
+                component_id_index_path: Some("/this/is/an/absolute/path".to_string()),
                 ..component_internal::Config::EMPTY
             }
         );

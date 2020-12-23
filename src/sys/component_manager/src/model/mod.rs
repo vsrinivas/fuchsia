@@ -14,6 +14,7 @@ pub mod realm;
 // fuctionality in this module. Factor out the externally-depended code into its own module.
 pub mod testing;
 
+pub(crate) mod component_id_index;
 pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;

@@ -535,7 +535,7 @@ impl TryFrom<&str> for RelativeMoniker {
 }
 
 /// Errors produced by `MonikerEnvironment`.
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum MonikerError {
     #[error("invalid moniker: {}", rep)]
     InvalidMoniker { rep: String },

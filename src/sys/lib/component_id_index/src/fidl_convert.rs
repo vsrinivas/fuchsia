@@ -7,7 +7,7 @@ use fidl_fuchsia_component_internal as fcomponent_internal;
 use std::convert::TryFrom;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Clone, Debug, PartialEq)]
 pub enum FidlConversionError {
     #[error("Missing appmgr_restrict_isolated_persistent_storage")]
     MissingAppmgrRestrictIsolatedPersistentStorage,

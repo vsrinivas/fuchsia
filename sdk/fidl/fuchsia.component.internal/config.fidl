@@ -60,6 +60,10 @@ table Config {
     /// is passed to component manager. If value is passed in both places, then
     /// an error is raised.
     10: string:fuchsia.component.MAX_URL_SCHEME_LENGTH root_component_url;
+
+    /// Path to the component ID index. An empty value defaults to an empty index.
+    /// An invalid index causes component_manager to abort.
+    11: string:fuchsia.component.MAX_PATH_LENGTH component_id_index_path;
 };
 
 /// The builtin resolver to use, if any.

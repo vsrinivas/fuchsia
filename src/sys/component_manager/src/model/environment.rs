@@ -311,12 +311,16 @@ mod tests {
             registry
         };
 
-        let model = Arc::new(Model::new(ModelParams {
-            runtime_config: Arc::new(RuntimeConfig::default()),
-            root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-            namespace_capabilities: vec![],
-        }));
+        let model = Arc::new(
+            Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
+                root_component_url: "test:///root".to_string(),
+                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+                namespace_capabilities: vec![],
+            })
+            .await
+            .unwrap(),
+        );
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
 
@@ -374,12 +378,16 @@ mod tests {
             registry
         };
 
-        let model = Arc::new(Model::new(ModelParams {
-            runtime_config: Arc::new(RuntimeConfig::default()),
-            root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-            namespace_capabilities: vec![],
-        }));
+        let model = Arc::new(
+            Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
+                root_component_url: "test:///root".to_string(),
+                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+                namespace_capabilities: vec![],
+            })
+            .await
+            .unwrap(),
+        );
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
 
@@ -441,12 +449,16 @@ mod tests {
             registry
         };
 
-        let model = Arc::new(Model::new(ModelParams {
-            runtime_config: Arc::new(RuntimeConfig::default()),
-            root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-            namespace_capabilities: vec![],
-        }));
+        let model = Arc::new(
+            Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
+                root_component_url: "test:///root".to_string(),
+                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+                namespace_capabilities: vec![],
+            })
+            .await
+            .unwrap(),
+        );
         // Add instance to collection.
         {
             let parent_realm = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
@@ -506,12 +518,16 @@ mod tests {
             registry
         };
 
-        let model = Arc::new(Model::new(ModelParams {
-            runtime_config: Arc::new(RuntimeConfig::default()),
-            root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-            namespace_capabilities: vec![],
-        }));
+        let model = Arc::new(
+            Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
+                root_component_url: "test:///root".to_string(),
+                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+                namespace_capabilities: vec![],
+            })
+            .await
+            .unwrap(),
+        );
 
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -557,12 +573,16 @@ mod tests {
             registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
-        let model = Arc::new(Model::new(ModelParams {
-            runtime_config: Arc::new(RuntimeConfig::default()),
-            root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::default(), registry),
-            namespace_capabilities: vec![],
-        }));
+        let model = Arc::new(
+            Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
+                root_component_url: "test:///root".to_string(),
+                root_environment: Environment::new_root(RunnerRegistry::default(), registry),
+                namespace_capabilities: vec![],
+            })
+            .await
+            .unwrap(),
+        );
         assert_matches!(
             model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await,
             Err(ModelError::ResolverError { .. })

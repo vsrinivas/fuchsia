@@ -43,17 +43,21 @@ pub struct Model {
 
 impl Model {
     /// Creates a new component model and initializes its topology.
-    pub fn new(params: ModelParams) -> Model {
+    pub async fn new(params: ModelParams) -> Result<Model, ModelError> {
         let component_manager_realm =
             Arc::new(ComponentManagerRealm::new(params.namespace_capabilities));
-        let context = Arc::new(ModelContext::new(params.runtime_config));
+        let context = Arc::new(ModelContext::new(params.runtime_config).await?);
         let root_realm = Arc::new(Realm::new_root_realm(
             params.root_environment,
             Arc::downgrade(&context),
             Arc::downgrade(&component_manager_realm),
             params.root_component_url,
         ));
-        Model { root_realm, _context: context, _component_manager_realm: component_manager_realm }
+        Ok(Model {
+            root_realm,
+            _context: context,
+            _component_manager_realm: component_manager_realm,
+        })
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved

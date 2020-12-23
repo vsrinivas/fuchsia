@@ -74,6 +74,10 @@ pub struct RuntimeConfig {
     /// is passed to component manager. If value is passed in both places, then
     /// an error is raised.
     pub root_component_url: Option<Url>,
+
+    /// Path to the component ID index, parsed from
+    /// `fuchsia.component.internal.RuntimeConfig.component_id_index_path`.
+    pub component_id_index_path: Option<String>,
 }
 
 /// Runtime security policy.
@@ -142,6 +146,7 @@ impl Default for RuntimeConfig {
             builtin_pkg_resolver: BuiltinPkgResolver::None,
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
+            component_id_index_path: None,
         }
     }
 }
@@ -247,6 +252,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .unwrap_or(default.builtin_pkg_resolver),
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
+            component_id_index_path: config.component_id_index_path,
         })
     }
 }
@@ -397,6 +403,7 @@ mod tests {
             builtin_pkg_resolver: None,
             out_dir_contents: None,
             root_component_url: None,
+            component_id_index_path: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
@@ -418,6 +425,7 @@ mod tests {
             namespace_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
+            component_id_index_path: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
@@ -482,6 +490,7 @@ mod tests {
                 ]),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
+                component_id_index_path: Some("/boot/config/component_id_index".to_string()),
                 ..component_internal::Config::EMPTY
             },
             RuntimeConfig {
@@ -540,6 +549,7 @@ mod tests {
                 builtin_pkg_resolver: BuiltinPkgResolver::None,
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
+                component_id_index_path: Some("/boot/config/component_id_index".to_string()),
             }
         ),
     }
@@ -564,6 +574,7 @@ mod tests {
             namespace_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
+            component_id_index_path: None,
             ..component_internal::Config::EMPTY
         }, MonikerError, MonikerError::InvalidMoniker {rep: "bad".to_string()}),
         invalid_capability_policy_empty_allowlist_cap => (component_internal::Config {
@@ -592,6 +603,7 @@ mod tests {
             namespace_capabilities: None,
             out_dir_contents: None,
             root_component_url: None,
+            component_id_index_path: None,
         ..component_internal::Config::EMPTY
     }, PolicyConfigError, PolicyConfigError::EmptyAllowlistedCapability),
     invalid_capability_policy_empty_source_moniker => (component_internal::Config {
@@ -619,6 +631,7 @@ mod tests {
         namespace_capabilities: None,
         out_dir_contents: None,
         root_component_url: None,
+        component_id_index_path: None,
         ..component_internal::Config::EMPTY
     }, PolicyConfigError, PolicyConfigError::EmptySourceMoniker),
     invalid_root_component_url => (component_internal::Config {
@@ -632,6 +645,7 @@ mod tests {
         namespace_capabilities: None,
         out_dir_contents: None,
         root_component_url: Some("invalid url".to_string()),
+        component_id_index_path: None,
         ..component_internal::Config::EMPTY
     }, ParseError, ParseError::InvalidValue),
     }

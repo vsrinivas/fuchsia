@@ -5,32 +5,42 @@
 // This library must remain platform-agnostic because it used by a host tool and within Fuchsia.
 
 use anyhow::{anyhow, Context, Result};
+use fidl_fuchsia_component_internal as fcomponent_internal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fs;
 use std::str;
 use thiserror::Error;
 
 pub mod fidl_convert;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct AppmgrMoniker {
     pub url: String,
     pub realm_path: Vec<String>,
     pub transitional_realm_paths: Option<Vec<Vec<String>>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct InstanceIdEntry {
     pub instance_id: Option<String>,
     pub appmgr_moniker: Option<AppmgrMoniker>,
     pub moniker: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Index {
     pub appmgr_restrict_isolated_persistent_storage: Option<bool>,
     pub instances: Vec<InstanceIdEntry>,
+}
+
+#[derive(Debug, Clone, Error, PartialEq)]
+pub enum IndexError {
+    #[error("invalid index")]
+    ValidationError(#[from] ValidationError),
+    #[error("could not convert FIDL index")]
+    FidlConversionError(#[from] fidl_convert::FidlConversionError),
 }
 
 impl Index {
@@ -42,22 +52,40 @@ impl Index {
     // See `ValidationError` for possible errors.
     pub fn from_files_with_decoder(
         index_file_paths: &[String],
-        decoder: impl Fn(&str) -> anyhow::Result<Index>,
+        decoder: impl Fn(&[u8]) -> anyhow::Result<Index>,
     ) -> anyhow::Result<Index> {
         let mut ctx = MergeContext::new();
         for input_file_path in index_file_paths {
             let contents = fs::read_to_string(&input_file_path)
                 .with_context(|| anyhow!("Could not read index file {}", &input_file_path))?;
-            let index = decoder(contents.as_str())
+            let index = decoder(contents.as_str().as_bytes())
                 .with_context(|| anyhow!("Could not parse index file {}", &input_file_path))?;
             ctx.merge(&input_file_path, &index)
                 .with_context(|| anyhow!("Could not merge index file {}", &input_file_path))?;
         }
         Ok(ctx.output())
     }
+
+    // Construct an Index from the given FIDL-schema'd index.
+    //
+    // The given fidl_index is validated.
+    pub fn from_fidl(
+        fidl_index: fcomponent_internal::ComponentIdIndex,
+    ) -> Result<Index, IndexError> {
+        let native_index = Index::try_from(fidl_index)?;
+        let mut ctx = MergeContext::new();
+        ctx.merge("", &native_index)?;
+        Ok(ctx.output())
+    }
 }
 
-#[derive(Error, Debug, PartialEq)]
+impl Default for Index {
+    fn default() -> Self {
+        Index { appmgr_restrict_isolated_persistent_storage: Some(true), instances: vec![] }
+    }
+}
+
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum ValidationError {
     #[error("Instance ID '{}' must be unique but exists in following index files:\n {}\n {}", .instance_id, .source1, .source2)]
     DuplicateIds { instance_id: String, source1: String, source2: String },

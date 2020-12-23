@@ -41,7 +41,8 @@ struct CommandLineOpts {
 // Make an Index using a set of JSON5-encoded index files.
 fn merge_index_from_json5_files(index_files: &[String]) -> anyhow::Result<Index> {
     Index::from_files_with_decoder(index_files, |json5| {
-        serde_json5::from_str(json5).context("Unable to parse JSON5")
+        let json5_str = std::str::from_utf8(json5).context("Unable to parse as UTF-8")?;
+        serde_json5::from_str(json5_str).context("Unable to parse JSON5")
     }).map_err(|e|{
         match e.downcast_ref::<ValidationError>() {
             Some(ValidationError::MissingInstanceIds{entries}) => {

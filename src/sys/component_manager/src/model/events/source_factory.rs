@@ -266,15 +266,19 @@ mod tests {
                 registry.register("test".to_string(), Box::new(resolver)).unwrap();
                 registry
             };
-            Arc::new(Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(
-                    RunnerRegistry::default(),
-                    resolver_registry,
-                ),
-                namespace_capabilities: vec![],
-            }))
+            Arc::new(
+                Model::new(ModelParams {
+                    runtime_config: Arc::new(RuntimeConfig::default()),
+                    root_component_url: "test:///root".to_string(),
+                    root_environment: Environment::new_root(
+                        RunnerRegistry::default(),
+                        resolver_registry,
+                    ),
+                    namespace_capabilities: vec![],
+                })
+                .await
+                .unwrap(),
+            )
         };
         let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
         let event_source_factory = Arc::new(EventSourceFactory::new(
@@ -301,12 +305,16 @@ mod tests {
     async fn passes_on_capability_routed_from_framework_not_on_root() {
         let model = {
             let resolver = ResolverRegistry::new();
-            Arc::new(Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
-                namespace_capabilities: vec![],
-            }))
+            Arc::new(
+                Model::new(ModelParams {
+                    runtime_config: Arc::new(RuntimeConfig::default()),
+                    root_component_url: "test:///root".to_string(),
+                    root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
+                    namespace_capabilities: vec![],
+                })
+                .await
+                .unwrap(),
+            )
         };
         let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
         let event_source_factory = Arc::new(EventSourceFactory::new(
