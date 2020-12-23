@@ -43,12 +43,14 @@ impl IesMerger {
             let new_addition_len = range.end - range.start;
             // IesMerger has a buffer limit so an unfriendly AP can't cause us to run out of
             // memory by repeatedly changing the IEs.
-            if add_new && self.ies_updater.buf_len() + new_addition_len <= IES_MERGER_BUFFER_LIMIT {
-                // Setting IE should not fail because we parsed them from an IE chain in the
-                // first place, so the length of the IE body would not exceed 255 bytes.
-                let _result = self.ies_updater.set(ie_type, &ies[range]);
-            } else {
-                self.buffer_overflow = true;
+            if add_new {
+                if self.ies_updater.buf_len() + new_addition_len <= IES_MERGER_BUFFER_LIMIT {
+                    // Setting IE should not fail because we parsed them from an IE chain in the
+                    // first place, so the length of the IE body would not exceed 255 bytes.
+                    let _result = self.ies_updater.set(ie_type, &ies[range]);
+                } else {
+                    self.buffer_overflow = true;
+                }
             }
         }
     }
@@ -379,6 +381,7 @@ mod tests {
         ies_merger.merge(BEACON_FRAME_IES);
         let ies = ies_merger.finalize();
         assert_eq!(&ies[..], BEACON_FRAME_IES);
+        assert!(!ies_merger.buffer_overflow());
     }
 
     #[test]
@@ -386,7 +389,8 @@ mod tests {
         let mut ies_merger = IesMerger::new(BEACON_FRAME_IES.to_vec());
         ies_merger.merge(PROBE_RESP_IES);
         let ies = ies_merger.finalize();
-        assert_eq!(&ies[..], MERGED_IES)
+        assert_eq!(&ies[..], MERGED_IES);
+        assert!(!ies_merger.buffer_overflow());
     }
 
     // Verify that merging IEs in a different order should still produce the same result
