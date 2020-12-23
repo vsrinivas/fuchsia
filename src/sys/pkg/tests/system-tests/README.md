@@ -154,7 +154,7 @@ output to the terminal:
 ```
 % fx set ... \
   --with //src/sys/pkg:tests \
-  --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
+  --args 'dev_bootfs_labels+=["//src/zircon/kernel/cmdline:serial-legacy"]'
 % fx build
 ```
 
