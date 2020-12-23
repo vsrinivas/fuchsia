@@ -18,5 +18,37 @@ export IMAGE_ZIRCONA_ZBI
 export FUCHSIA_BUILD_DIR
 export FUCHSIA_ZBI_COMPRESSION
 
-FVDL="${HOST_OUT_DIR}/fvdl"
-"${FVDL}" "$@"
+function main {
+  local build=false
+  if is_feature_enabled "incremental"; then
+    # In incremental workflows, build/refresh images is enabled by default
+    build=true
+  fi
+  args=()
+  while (( $# )); do
+    case "$1" in
+      --no-build)
+        build=false
+        ;;
+      --build)
+        build=true
+        ;;
+      --help|kill)
+        # these options don't require building images
+        build=false
+        args+=( "$1" )
+        ;;
+      *)
+        args+=( "$1" )
+    esac
+    shift
+  done
+
+  if $build; then
+    fx-info "Building/refreshing target 'images'"
+    fx-command-run build images
+  fi
+  fx-command-exec host-tool fvdl "${args[@]}"
+}
+
+main "$@"
