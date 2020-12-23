@@ -58,12 +58,6 @@ TEST_tool_not_built() {
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
 
-TEST_force_build() {
-  BT_EXPECT ${fx} host-tool --force-build "device-finder" "--flag1" "arg1"
-  # tool exists, but build should be called anyway because --force-build
-  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
-}
-
 TEST_build_if_not_found() {
   # tool does not exist, but is known to the build, so build should be called
   mv "${devfinder}" "${devfinder}_backup"
