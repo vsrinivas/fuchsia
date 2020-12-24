@@ -109,9 +109,10 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			ft.SingleLicenseFiles[path] = []*License{}
 			return nil
 		}
-		extensions := config.TextExtensionList
-		if ft.StrictAnalysis {
-			extensions = config.StrictTextExtensionList
+
+		extensions := config.StrictTextExtensionList
+		if !ft.StrictAnalysis {
+			extensions = append(extensions, config.TextExtensionList...)
 		}
 		if hasExt(info.Name(), extensions) {
 			metrics.increment("num_non_single_license_files")
