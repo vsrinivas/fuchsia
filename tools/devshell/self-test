@@ -104,7 +104,8 @@ list_tests() {
 }
 
 list_tests_in_dir() {
-  local d="$1"
+  # the old 'find' tool in MacOS does not handle trailing slashs correctly.
+  local d="${1%/}"
   if [[ -d "$d" ]]; then
     find "$d" -type f -path "*/devshell/*" -not -path "*/lib/*" -not -path "*/data/*" -name "*_test"
   elif [[ -f "$d" ]]; then
