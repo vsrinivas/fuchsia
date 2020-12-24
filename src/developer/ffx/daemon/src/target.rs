@@ -597,7 +597,7 @@ impl Target {
         self.inner.addrs.write().await.replace(t);
     }
 
-    async fn addrs_extend<T>(&self, iter: T)
+    async fn addrs_extend<T>(&self, new_addrs: T)
     where
         T: IntoIterator<Item = TargetAddr>,
     {
@@ -606,17 +606,24 @@ impl Target {
         // This is functionally the same as the regular extend function, instead
         // replacing each item. This is to ensure that the timestamps are
         // updated as they are seen.
-        iter.into_iter().for_each(move |e| {
-            // Subtle: If there's an IP match on a target entry, grab the original IP we had, which
-            // likely comes from a manual add or mdns, as that one will be scoped. If RCS is merging
-            // into us, the addresses that come from it are never scoped, and as such are not
-            // actually routable.
-
-            let mut entry = e;
-            if let Some(orig) = addrs.get(&(entry, now.clone()).into()) {
-                entry = orig.addr.clone();
+        new_addrs.into_iter().for_each(move |new_addr| {
+            let mut addr = new_addr;
+            // Subtle:
+            // Some sources of addresses can not be scoped, such as those which come from queries
+            // over Overnet.
+            // Link-local IPv6 addresses require scopes in order to be routable, and mdns events will
+            // provide us with valid scopes. As such, if an incoming address is not scoped, try to
+            // find an existing address entry with a scope, and carry the scope forward.
+            // If the incoming address has a scope, it is likely to be more recent than one that was
+            // originally present, for example if a directly connected USB target has restarted,
+            // wherein the scopeid could be incremented due to the device being given a new
+            // interface id allocation.
+            if addr.ip().is_ipv6() && addr.scope_id == 0 {
+                if let Some(entry) = addrs.get(&(addr, now.clone()).into()) {
+                    addr.scope_id = entry.addr.scope_id;
+                }
             }
-            addrs.replace((entry, now.clone()).into());
+            addrs.replace((addr, now.clone()).into());
         });
     }
 
@@ -1302,6 +1309,21 @@ mod test {
         assert_eq!(*merged_target.inner.last_response.read().await, fake_elapsed());
         assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
         assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
+
+        // Insert another instance of the a2 address, but with a missing scope_id, and ensure that the scope is preserved from the
+        // pre-existing value in t1 a2.
+        let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
+        t3.addrs_insert((a2.clone(), 0).into()).await;
+        tc.merge_insert(clone_target(&t3).await).await;
+        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 1).count(), 2);
+
+        // Insert another instance of the a2 address, but with a new scope_id, and ensure that the new scope is used.
+        let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
+        t3.addrs_insert((a2.clone(), 3).into()).await;
+        tc.merge_insert(clone_target(&t3).await).await;
+        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 3).count(), 1);
     }
 
     fn setup_fake_remote_control_service(
