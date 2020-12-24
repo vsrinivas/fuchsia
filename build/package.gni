@@ -281,8 +281,6 @@ template("package") {
              "$pkg_desc libraries requires __deprecated_system_image")
     }
 
-    formatted_manifest = []
-    meta_deps = []
     foreach(meta, pkg.meta) {
       manifest_target = pkg_target_name + "_" + get_path_info(meta.dest, "file")
       manifest_output = []
@@ -332,8 +330,6 @@ template("package") {
         manifest_target = false
       }
 
-      formatted_manifest += [ meta ]
-
       resource_target =
           pkg_target_name + "_resource_" + get_path_info(meta.dest, "file")
       resource(resource_target) {
@@ -344,21 +340,13 @@ template("package") {
         sources = [ meta.path ]
         outputs = [ "meta/${meta.dest}" ]
       }
-      meta_deps += [ ":$resource_target" ]
+      pkg.resource_deps += [ ":$resource_target" ]
     }
 
     # Collect the package's primary manifest.  For a system_image package,
     # this is its contributions to the /system manifest.  For an isolated
     # package, this is the manifest for the package's `pkg/` filesystem.
     pkg_manifest = []
-    foreach(meta, formatted_manifest) {
-      pkg_manifest += [
-        {
-          dest = "meta/${meta.dest}"
-          source = rebase_path(meta.path)
-        },
-      ]
-    }
     shell_binaries = []
     foreach(binary, pkg.binaries) {
       if (defined(binary.dest)) {
@@ -688,7 +676,7 @@ template("package") {
         forward_variables_from(pkg.metadata, "*")
       }
 
-      deps = pkg.deps + meta_deps + resources_deps + library_deps
+      deps = pkg.deps + resources_deps + library_deps
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
 
