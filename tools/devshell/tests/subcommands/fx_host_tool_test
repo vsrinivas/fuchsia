@@ -67,7 +67,20 @@ TEST_build_if_not_found() {
     mv "${devfinder}_backup" "${devfinder}"
 EOF
 
+  # When run under the fx test framework, stdout is not a tty, so
+  # host-tool will not build, instead it will print an error.
+  BT_EXPECT_FAIL ${fx} host-tool "device-finder" "--flag1" "arg1" 2>/dev/null
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+
+  # HACK: this tool checks to see if stdout is a tty, and builds iff it
+  # is, so it is mocked.
+  cat >>"${BT_TEMP_DIR}/tools/devshell/lib/vars.sh" <<EOF
+  function fx-is-stderr-tty {
+    return 0
+  }
+EOF
   BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
+
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
   btf::expect-mock-args "${devfinder}" "--flag1" "arg1"
 }
