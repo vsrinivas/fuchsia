@@ -7,7 +7,9 @@ import '../blocs/webpage_bloc.dart';
 import 'history_buttons.dart';
 import 'navigation_field.dart';
 
+// TODO(fxb/45264): Make the common factors as part of Ermine central styles.
 const _kNavbarHeight = 24.0;
+const _kIconSize = 14.0;
 
 enum _LayoutId { historyButtons, url, addTabButton }
 
@@ -81,9 +83,11 @@ class NavigationBar extends StatelessWidget {
             child: Container(
               color: Theme.of(context).accentColor,
               alignment: Alignment.center,
-              child: Text(
-                '+',
-                style: TextStyle(color: Theme.of(context).primaryColor),
+              child: Icon(
+                Icons.add,
+                key: Key('new_tab'),
+                color: Theme.of(context).primaryColor,
+                size: _kIconSize,
               ),
             ),
           ),

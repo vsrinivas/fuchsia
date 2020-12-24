@@ -68,6 +68,7 @@ resource("keyboard-shortcuts") {
 
 flutter_component("component") {
   component_name = "simple-browser"
+  flutter_driver_extendable = flutter_driver_enabled
   manifest = "meta/simple_browser.cmx"
   deps = [
     ":keyboard-shortcuts",

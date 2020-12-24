@@ -13,7 +13,7 @@ import 'package:internationalization/strings.dart';
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
-import 'package:simple_browser/src/blocs/webpage_bloc.dart';
+import 'src/blocs/webpage_bloc.dart';
 import 'src/models/app_model.dart';
 import 'src/widgets/error_page.dart';
 import 'src/widgets/navigation_bar.dart';

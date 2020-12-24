@@ -9,11 +9,11 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
   sources = [
     "ermine_driver.dart",
 
-    # TODO(43263): Re-write ermine tests to use FlutterDriver.
-    # "ermine_session_shell_simple_browser_test.dart",
     # "ermine_session_shell_status_test.dart",
+    # TODO(43263): Re-write ermine tests to use FlutterDriver.
     "ermine_intl_test.dart",
     "ermine_session_shell_ask_test.dart",
+    "ermine_session_shell_simple_browser_test.dart",
     "ermine_smoke_test.dart",
   ]
 
@@ -22,7 +22,10 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/webdriver",
   ]
+
+  non_dart_deps = [ ":runtime_deps" ]
 
   environments = [
     {
@@ -32,6 +35,18 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
       tags = [ "e2e-fyi" ]
     },
   ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/chromedriver" ]
+  }
 }
 
 group("test") {

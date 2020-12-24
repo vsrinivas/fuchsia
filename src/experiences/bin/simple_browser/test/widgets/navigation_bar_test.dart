@@ -157,7 +157,7 @@ Future<void> _setUpNavigationBar(
   );
 }
 
-Finder _findNewTabButton() => find.text('+');
+Finder _findNewTabButton() => find.byKey(Key('new_tab'));
 
 class MockSimpleBrowserNavigationEventListener extends Mock
     implements SimpleBrowserNavigationEventListener {}
