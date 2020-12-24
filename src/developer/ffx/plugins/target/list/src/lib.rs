@@ -34,7 +34,11 @@ async fn list_impl<W: Write>(
         Ok(r) => {
             match r.len() {
                 0 => {
-                    writeln!(writer, "No devices found.")?;
+                    // Printed to stderr, so that if a user is parsing output, say from a formatted
+                    // output, that the message is not consumed. A stronger future strategy would
+                    // have richer behavior dependent upon whether the user has a controlling
+                    // terminal, which would require passing in more and richer IO delegates.
+                    eprintln!("No devices found.");
                 }
                 _ => {
                     let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, r))?;
@@ -120,7 +124,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_no_devices_and_no_nodename() -> Result<()> {
         let output = run_list_test(0, tab_list_cmd(None)).await;
-        assert_eq!("No devices found.\n".to_string(), output);
+        assert_eq!("".to_string(), output);
         Ok(())
     }
 
