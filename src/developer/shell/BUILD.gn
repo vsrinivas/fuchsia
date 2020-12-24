@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/distribution_manifest.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
@@ -9,7 +10,7 @@ import("//build/test/test_package.gni")
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK (and any other FIDL files we might want).
 action("generate_fidl_json") {
-  script = "generate_fidl_json.sh"
+  script = "generate_fidl_json.py"
   generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
   outputs = [ "$generated_output" ]
   testonly = true
@@ -23,10 +24,9 @@ action("generate_fidl_json") {
     "//third_party/quickjs:qjs($host_toolchain)",
   ]
   args = [
-    "--qjs=" + rebase_path("$root_build_dir/host_$host_cpu/qjs"),
-    "--fidl-json-file=" +
-        rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
-    "--out-file=" + rebase_path("$generated_output", root_build_dir),
+    "--out-file",
+    rebase_path("$generated_output", root_build_dir),
+    "@" + rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
     rebase_path(
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.device.manager/fuchsia.device.manager.fidl.json",
         root_build_dir),
@@ -40,17 +40,29 @@ action("generate_fidl_json") {
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.boot/fuchsia.boot.fidl.json",
         root_build_dir),
   ]
+  metadata = {
+    # Don't pick up resources from SDK deps
+    distribution_entries_barrier = []
+  }
+}
+
+distribution_entries_file("fidl_json") {
+  testonly = true
+  deps = [ ":generate_fidl_json" ]
+  file = get_target_outputs(deps[0])
+  file = file[0]
 }
 
 test_package("josh-tests") {
   deps = [
-    ":generate_fidl_json",
     "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh:josh_tests_bin",
-    "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
   ]
-  resource_deps = [ "josh/lib:js_libs" ]
+  resource_deps = [
+    ":fidl_json",
+    "josh/lib:js_libs",
+  ]
 
   binaries = [
     {
@@ -67,7 +79,6 @@ test_package("josh-tests") {
       environments = basic_envs
     },
   ]
-  extra = get_target_outputs(":generate_fidl_json")
 }
 
 group("tests") {
@@ -87,34 +98,29 @@ group("tests") {
 package("josh") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
-  deps = [
-    "//src/developer/shell:generate_fidl_json",
-    "//src/developer/shell/josh:bin",
-    "//src/developer/shell/josh/lib:js_libs",
+  deps = [ "//src/developer/shell/josh:bin" ]
+  resource_deps = [
+    ":fidl_json",
+    "josh/lib:js_libs",
   ]
-  resource_deps = [ "josh/lib:js_libs" ]
   binaries = [
     {
       name = "josh"
       shell = true
     },
   ]
-  extra = get_target_outputs(":generate_fidl_json")
 }
 
 # "cliff" is the CLI For Fuchsia.  Need a better name.
 package("cliff") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
-  deps = [
-    "//src/developer/shell:generate_fidl_json",
-    "//src/developer/shell/console:bin",
-  ]
+  deps = [ "//src/developer/shell/console:bin" ]
   binaries = [
     {
       name = "cliff"
       shell = true
     },
   ]
-  extra = get_target_outputs(":generate_fidl_json")
+  resource_deps = [ ":fidl_json" ]
 }
