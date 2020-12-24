@@ -87,7 +87,7 @@ impl Repository {
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
         local_mirror: Option<LocalMirrorProxy>,
-        tuf_metadata_deadline: Duration,
+        tuf_metadata_timeout: Duration,
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
         let local = get_local_repo(persisted_repos_dir, config)?;
@@ -104,8 +104,8 @@ impl Repository {
                     local,
                     remote,
                 )
-                .map_err(error::TufOrDeadline::Tuf)
-                .on_timeout(tuf_metadata_deadline, || Err(error::TufOrDeadline::DeadlineExceeded))
+                .map_err(error::TufOrTimeout::Tuf)
+                .on_timeout(tuf_metadata_timeout, || Err(error::TufOrTimeout::Timeout))
                 .await
                 .map_err(|e| {
                     cobalt_sender.log_event_count(
@@ -117,7 +117,7 @@ impl Repository {
                     anyhow!(e).context("creating rust-tuf client")
                 })?,
                 mirror_config,
-                tuf_metadata_deadline,
+                tuf_metadata_timeout,
                 node.create_child("updating_tuf_client"),
                 cobalt_sender.clone(),
             );
@@ -159,7 +159,7 @@ impl Repository {
                 updating_client.metadata_versions(),
                 target_path
             ),
-            Err(error::TufOrDeadline::Tuf(TufError::NotFound)) => {
+            Err(error::TufOrTimeout::Tuf(TufError::NotFound)) => {
                 return Err(MerkleForError::NotFound)
             }
             Err(other) => {
@@ -289,7 +289,7 @@ fn get_root_keys(config: &RepositoryConfig) -> Result<Vec<PublicKey>, anyhow::Er
 mod tests {
     use {
         super::*,
-        crate::DEFAULT_TUF_METADATA_DEADLINE,
+        crate::DEFAULT_TUF_METADATA_TIMEOUT,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{
             serve::{handler, ServedRepository, ServedRepositoryBuilder, UriPathHandler},
@@ -365,7 +365,7 @@ mod tests {
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),
                 None,
-                DEFAULT_TUF_METADATA_DEADLINE,
+                DEFAULT_TUF_METADATA_TIMEOUT,
             )
             .await
         }
@@ -619,7 +619,7 @@ mod tests {
 mod inspect_tests {
     use {
         super::*,
-        crate::DEFAULT_TUF_METADATA_DEADLINE,
+        crate::DEFAULT_TUF_METADATA_TIMEOUT,
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_pkg_testing::{serve::handler, PackageBuilder, RepositoryBuilder},
@@ -656,7 +656,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
-            DEFAULT_TUF_METADATA_DEADLINE,
+            DEFAULT_TUF_METADATA_TIMEOUT,
         )
         .await
         .expect("created Repository");
@@ -709,7 +709,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
-            DEFAULT_TUF_METADATA_DEADLINE,
+            DEFAULT_TUF_METADATA_TIMEOUT,
         )
         .await
         .expect("created Repository");
@@ -768,7 +768,7 @@ mod inspect_tests {
             dummy_sender(),
             inspector.root().create_child("repo-node"),
             None,
-            DEFAULT_TUF_METADATA_DEADLINE,
+            DEFAULT_TUF_METADATA_TIMEOUT,
         )
         .await
         .expect("created opened repo");

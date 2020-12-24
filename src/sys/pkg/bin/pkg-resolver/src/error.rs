@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Wraps a TUF error and provides an additional Deadline variant
+/// Wraps a TUF error and provides an additional Timeout variant
 #[derive(Debug, thiserror::Error)]
-pub enum TufOrDeadline {
+pub enum TufOrTimeout {
     #[error("rust tuf error")]
     Tuf(#[source] tuf::Error),
 
-    #[error("tuf operation exceeded its deadline")]
-    DeadlineExceeded,
+    #[error("tuf operation timed out")]
+    Timeout,
 }

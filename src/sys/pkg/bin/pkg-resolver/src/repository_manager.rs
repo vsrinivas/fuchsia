@@ -8,7 +8,7 @@ use {
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
-        DEFAULT_TUF_METADATA_DEADLINE,
+        DEFAULT_TUF_METADATA_TIMEOUT,
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
@@ -43,7 +43,7 @@ pub struct RepositoryManager {
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
-    tuf_metadata_deadline: Duration,
+    tuf_metadata_timeout: Duration,
 }
 
 #[derive(Debug)]
@@ -258,7 +258,7 @@ impl RepositoryManager {
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
-            self.tuf_metadata_deadline,
+            self.tuf_metadata_timeout,
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -292,7 +292,7 @@ impl RepositoryManager {
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
             self.local_mirror.clone(),
-            self.tuf_metadata_deadline,
+            self.tuf_metadata_timeout,
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -316,7 +316,7 @@ async fn open_cached_or_new_repository(
     cobalt_sender: CobaltSender,
     inspect_node: Arc<inspect::Node>,
     local_mirror: Option<LocalMirrorProxy>,
-    tuf_metadata_deadline: Duration,
+    tuf_metadata_timeout: Duration,
 ) -> Result<Arc<AsyncMutex<Repository>>, OpenRepoError> {
     if let Some(conn) = repositories.read().get(url) {
         return Ok(conn.clone());
@@ -334,7 +334,7 @@ async fn open_cached_or_new_repository(
             cobalt_sender,
             inspect_node.create_child(url.host()),
             local_mirror,
-            tuf_metadata_deadline,
+            tuf_metadata_timeout,
         )
         .await
         .map_err(|e| OpenRepoError { repo_url: config.repo_url().clone(), source: e })?,
@@ -364,7 +364,7 @@ pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode>
     cobalt_sender: S,
     inspect_node: N,
     local_mirror: Option<LocalMirrorProxy>,
-    tuf_metadata_deadline: Duration,
+    tuf_metadata_timeout: Duration,
 }
 
 impl<S, N> RepositoryManagerBuilder<S, N> {
@@ -408,8 +408,8 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
         self
     }
 
-    pub fn tuf_metadata_deadline(mut self, deadline: Duration) -> Self {
-        self.tuf_metadata_deadline = deadline;
+    pub fn tuf_metadata_timeout(mut self, timeout: Duration) -> Self {
+        self.tuf_metadata_timeout = timeout;
         self
     }
 }
@@ -450,7 +450,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
             cobalt_sender: UnsetCobaltSender,
             inspect_node: UnsetInspectNode,
             local_mirror: None,
-            tuf_metadata_deadline: DEFAULT_TUF_METADATA_DEADLINE,
+            tuf_metadata_timeout: DEFAULT_TUF_METADATA_TIMEOUT,
         };
 
         if let Some(err) = err {
@@ -498,7 +498,7 @@ impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
             cobalt_sender: self.cobalt_sender,
             inspect_node,
             local_mirror: self.local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
         }
     }
 }
@@ -518,7 +518,7 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
             cobalt_sender,
             inspect_node: self.inspect_node,
             local_mirror: self.local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
         }
     }
 }
@@ -561,7 +561,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
     /// Build the [RepositoryManager].
     pub fn build(self) -> RepositoryManager {
         self.inspect_node
-            .record_uint("tuf_metadata_deadline_seconds", self.tuf_metadata_deadline.as_secs());
+            .record_uint("tuf_metadata_timeout_seconds", self.tuf_metadata_timeout.as_secs());
         let inspect = RepositoryManagerInspectState {
             dynamic_configs_path_property: self
                 .inspect_node
@@ -592,7 +592,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
             cobalt_sender: self.cobalt_sender,
             inspect,
             local_mirror: self.local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
         }
     }
 }
@@ -1628,7 +1628,7 @@ mod tests {
                     },
                     repos: {},
                     persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                    tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE.as_secs(),
+                    tuf_metadata_timeout_seconds: DEFAULT_TUF_METADATA_TIMEOUT.as_secs(),
                 }
             }
         );
@@ -1658,7 +1658,7 @@ mod tests {
                     },
                     repos: {},
                     persisted_repos_dir: format!("{:?}", env.persisted_repos_dir()),
-                    tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE.as_secs(),
+                    tuf_metadata_timeout_seconds: DEFAULT_TUF_METADATA_TIMEOUT.as_secs(),
                 }
             }
         );

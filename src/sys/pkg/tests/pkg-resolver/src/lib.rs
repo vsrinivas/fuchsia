@@ -244,8 +244,9 @@ where
     boot_arguments_service: Option<BootArgumentsService<'static>>,
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
     allow_local_mirror: bool,
-    tuf_metadata_deadline: Option<Duration>,
-    blob_network_deadline: Option<Duration>,
+    tuf_metadata_timeout: Option<Duration>,
+    blob_network_header_timeout: Option<Duration>,
+    blob_network_body_timeout: Option<Duration>,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
@@ -262,8 +263,9 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
             boot_arguments_service: None,
             local_mirror_repo: None,
             allow_local_mirror: false,
-            tuf_metadata_deadline: None,
-            blob_network_deadline: None,
+            tuf_metadata_timeout: None,
+            blob_network_header_timeout: None,
+            blob_network_body_timeout: None,
         }
     }
 }
@@ -281,8 +283,9 @@ where
             self.boot_arguments_service,
             self.local_mirror_repo,
             self.allow_local_mirror,
-            self.tuf_metadata_deadline,
-            self.blob_network_deadline,
+            self.tuf_metadata_timeout,
+            self.blob_network_header_timeout,
+            self.blob_network_body_timeout,
         )
         .await
     }
@@ -299,8 +302,9 @@ where
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
-            blob_network_deadline: self.blob_network_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
+            blob_network_header_timeout: self.blob_network_header_timeout,
+            blob_network_body_timeout: self.blob_network_body_timeout,
         }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
@@ -310,8 +314,9 @@ where
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
-            blob_network_deadline: self.blob_network_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
+            blob_network_header_timeout: self.blob_network_header_timeout,
+            blob_network_body_timeout: self.blob_network_body_timeout,
         }
     }
     pub fn boot_arguments_service(
@@ -324,8 +329,9 @@ where
             boot_arguments_service: Some(svc),
             local_mirror_repo: self.local_mirror_repo,
             allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_deadline: self.tuf_metadata_deadline,
-            blob_network_deadline: self.blob_network_deadline,
+            tuf_metadata_timeout: self.tuf_metadata_timeout,
+            blob_network_header_timeout: self.blob_network_header_timeout,
+            blob_network_body_timeout: self.blob_network_body_timeout,
         }
     }
 
@@ -340,21 +346,48 @@ where
         self
     }
 
-    pub fn tuf_metadata_deadline(mut self, deadline: Duration) -> Self {
+    pub fn tuf_metadata_timeout(mut self, timeout: Duration) -> Self {
         assert!(
-            self.tuf_metadata_deadline.is_none(),
-            "tuf_metadata_deadline should only be set once"
+            self.tuf_metadata_timeout.is_none(),
+            "tuf_metadata_timeout should only be set once"
         );
-        self.tuf_metadata_deadline = Some(deadline);
+        assert_eq!(
+            timeout,
+            Duration::from_secs(timeout.as_secs()),
+            "tuf_metadata_timeout must be a whole number of seconds, because the command line \
+            flag is in seconds"
+        );
+        self.tuf_metadata_timeout = Some(timeout);
         self
     }
 
-    pub fn blob_network_deadline(mut self, deadline: Duration) -> Self {
+    pub fn blob_network_header_timeout(mut self, timeout: Duration) -> Self {
         assert!(
-            self.blob_network_deadline.is_none(),
-            "blob_network_deadline should only be set once"
+            self.blob_network_header_timeout.is_none(),
+            "blob_network_header_timeout should only be set once"
         );
-        self.blob_network_deadline = Some(deadline);
+        assert_eq!(
+            timeout,
+            Duration::from_secs(timeout.as_secs()),
+            "blob_network_header_timeout must be a whole number of seconds, because the command line \
+            flag is in seconds"
+        );
+        self.blob_network_header_timeout = Some(timeout);
+        self
+    }
+
+    pub fn blob_network_body_timeout(mut self, timeout: Duration) -> Self {
+        assert!(
+            self.blob_network_body_timeout.is_none(),
+            "blob_network_body_timeout should only be set once"
+        );
+        assert_eq!(
+            timeout,
+            Duration::from_secs(timeout.as_secs()),
+            "blob_network_body_timeout must be a whole number of seconds, because the command line \
+            flag is in seconds"
+        );
+        self.blob_network_body_timeout = Some(timeout);
         self
     }
 }
@@ -590,8 +623,9 @@ impl<P: PkgFs> TestEnv<P> {
         boot_arguments_service: Option<BootArgumentsService<'static>>,
         local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
         allow_local_mirror: bool,
-        tuf_metadata_deadline: Option<Duration>,
-        blob_network_deadline: Option<Duration>,
+        tuf_metadata_timeout: Option<Duration>,
+        blob_network_header_timeout: Option<Duration>,
+        blob_network_body_timeout: Option<Duration>,
     ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
@@ -635,19 +669,28 @@ impl<P: PkgFs> TestEnv<P> {
             pkg_resolver
         };
 
-        let pkg_resolver = if let Some(deadline) = tuf_metadata_deadline {
+        let pkg_resolver = if let Some(timeout) = tuf_metadata_timeout {
             pkg_resolver.args(vec![
-                "--tuf-metadata-deadline-seconds".to_string(),
-                deadline.as_secs().to_string(),
+                "--tuf-metadata-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
             ])
         } else {
             pkg_resolver
         };
 
-        let pkg_resolver = if let Some(deadline) = blob_network_deadline {
+        let pkg_resolver = if let Some(timeout) = blob_network_header_timeout {
             pkg_resolver.args(vec![
-                "--blob-network-deadline-seconds".to_string(),
-                deadline.as_secs().to_string(),
+                "--blob-network-header-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(timeout) = blob_network_body_timeout {
+            pkg_resolver.args(vec![
+                "--blob-network-body-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
             ])
         } else {
             pkg_resolver

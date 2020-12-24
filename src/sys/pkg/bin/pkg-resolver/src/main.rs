@@ -87,10 +87,11 @@ const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 // HttpRepository) results in a duration of (10 * 100,000 B) / (4,096 B/s) = 244 seconds.
 // Round to the minute boundary to make it more clear when reconstructing logs
 // that there is a designed timeout involved.
-// TODO(fxbug.dev/62300) replace with granular deadlines in rust-tuf.
-const DEFAULT_TUF_METADATA_DEADLINE: Duration = Duration::from_secs(240);
+// TODO(fxbug.dev/62300) replace with granular timeouts in rust-tuf.
+const DEFAULT_TUF_METADATA_TIMEOUT: Duration = Duration::from_secs(240);
 
-const DEFAULT_BLOB_NETWORK_DEADLINE: Duration = Duration::from_secs(30);
+const DEFAULT_BLOB_NETWORK_BODY_TIMEOUT: Duration = Duration::from_secs(30);
+const DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
@@ -150,7 +151,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         &config,
         cobalt_sender.clone(),
         local_mirror.clone(),
-        args.tuf_metadata_deadline_seconds,
+        args.tuf_metadata_timeout,
     )));
     let rewrite_manager = Arc::new(RwLock::new(
         load_rewrite_manager(
@@ -170,7 +171,9 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         repo_manager.read().stats(),
         cobalt_sender.clone(),
         local_mirror,
-        args.blob_network_deadline_seconds,
+        cache::BlobNetworkTimeouts::builder()
+            .header(args.blob_network_header_timeout)
+            .body(args.blob_network_body_timeout),
     );
     futures.push(blob_fetch_queue.boxed_local());
 
@@ -294,7 +297,7 @@ fn load_repo_manager(
     config: &Config,
     mut cobalt_sender: CobaltSender,
     local_mirror: Option<LocalMirrorProxy>,
-    tuf_metadata_deadline: Duration,
+    tuf_metadata_timeout: Duration,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
@@ -305,7 +308,7 @@ fn load_repo_manager(
             fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
         })
-        .tuf_metadata_deadline(tuf_metadata_deadline)
+        .tuf_metadata_timeout(tuf_metadata_timeout)
         .with_local_mirror(local_mirror)
         .inspect_node(node)
         .load_static_configs_dir(STATIC_REPO_DIR)

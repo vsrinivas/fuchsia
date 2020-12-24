@@ -10,10 +10,10 @@ use {
 };
 
 pub fn tuf_error_as_update_tuf_client_event_code(
-    e: &error::TufOrDeadline,
+    e: &error::TufOrTimeout,
 ) -> UpdateTufClientMetricDimensionResult {
     use {
-        error::TufOrDeadline::*, tuf::error::Error::*,
+        error::TufOrTimeout::*, tuf::error::Error::*,
         UpdateTufClientMetricDimensionResult as EventCodes,
     };
     match e {
@@ -31,16 +31,16 @@ pub fn tuf_error_as_update_tuf_client_event_code(
         Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
         Tuf(Http(_)) => EventCodes::Http,
         Tuf(Hyper(_)) => EventCodes::Hyper,
-        DeadlineExceeded => EventCodes::DeadlineExceeded,
+        Timeout => EventCodes::DeadlineExceeded,
         _ => EventCodes::UnexpectedTufErrorVariant,
     }
 }
 
 pub fn tuf_error_as_create_tuf_client_event_code(
-    e: &error::TufOrDeadline,
+    e: &error::TufOrTimeout,
 ) -> CreateTufClientMetricDimensionResult {
     use {
-        error::TufOrDeadline::*, tuf::error::Error::*,
+        error::TufOrTimeout::*, tuf::error::Error::*,
         CreateTufClientMetricDimensionResult as EventCodes,
     };
     match e {
@@ -58,7 +58,7 @@ pub fn tuf_error_as_create_tuf_client_event_code(
         Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
         Tuf(Http(_)) => EventCodes::Http,
         Tuf(Hyper(_)) => EventCodes::Hyper,
-        DeadlineExceeded => EventCodes::DeadlineExceeded,
+        Timeout => EventCodes::DeadlineExceeded,
         _ => EventCodes::UnexpectedTufErrorVariant,
     }
 }

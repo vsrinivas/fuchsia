@@ -78,11 +78,11 @@ async fn resolve_local_and_remote_mirrors_fails() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn create_tuf_client_deadline() {
+async fn create_tuf_client_timeout() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
 
-    let env = TestEnvBuilder::new().tuf_metadata_deadline(Duration::from_secs(0)).build().await;
+    let env = TestEnvBuilder::new().tuf_metadata_timeout(Duration::from_secs(0)).build().await;
     let server = repo
         .server()
         .uri_path_override_handler(handler::ForPath::new("/1.root.json", handler::Hang))
@@ -107,13 +107,14 @@ async fn create_tuf_client_deadline() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn update_tuf_client_deadline() {
+async fn update_tuf_client_timeout() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
 
-    // pkg-resolver uses this deadline when creating and updating tuf metadata, so since this test
-    // hangs the update, the deadline needs to be long enough for the create to succeed.
-    let env = TestEnvBuilder::new().tuf_metadata_deadline(Duration::from_secs(10)).build().await;
+    // pkg-resolver uses this timeout when creating and updating tuf metadata, so since this test
+    // hangs the update, the timeout needs to be long enough for the create to succeed.
+    // TODO(fxbug.dev/66946) have separate tuf client create and update timeout durations.
+    let env = TestEnvBuilder::new().tuf_metadata_timeout(Duration::from_secs(10)).build().await;
 
     // pkg-resolver uses tuf::client::Client::with_trusted_root_keys to create its TUF client.
     // That method will only retrieve the specified version of the root metadata (1 for these
@@ -147,7 +148,7 @@ async fn update_tuf_client_deadline() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_header_deadline() {
+async fn download_blob_header_timeout() {
     let pkg = PackageBuilder::new("test").build().await.unwrap();
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -157,7 +158,8 @@ async fn download_blob_header_deadline() {
             .unwrap(),
     );
 
-    let env = TestEnvBuilder::new().blob_network_deadline(Duration::from_secs(0)).build().await;
+    let env =
+        TestEnvBuilder::new().blob_network_header_timeout(Duration::from_secs(0)).build().await;
 
     let server = repo
         .server()
@@ -180,7 +182,7 @@ async fn download_blob_header_deadline() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_body_deadline() {
+async fn download_blob_body_timeout() {
     let pkg = PackageBuilder::new("test").build().await.unwrap();
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -190,10 +192,7 @@ async fn download_blob_body_deadline() {
             .unwrap(),
     );
 
-    // pkg-resolver uses this deadline for both reading the entire blob header and for waiting for
-    // more bytes from the blob body, so the deadline needs to be long enough for downloading the
-    // header to succeed (including on asan builds).
-    let env = TestEnvBuilder::new().blob_network_deadline(Duration::from_secs(10)).build().await;
+    let env = TestEnvBuilder::new().blob_network_body_timeout(Duration::from_secs(0)).build().await;
 
     let server = repo
         .server()

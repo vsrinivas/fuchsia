@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{DEFAULT_BLOB_NETWORK_DEADLINE, DEFAULT_TUF_METADATA_DEADLINE},
+    crate::{
+        DEFAULT_BLOB_NETWORK_BODY_TIMEOUT, DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT,
+        DEFAULT_TUF_METADATA_TIMEOUT,
+    },
     argh::FromArgs,
     std::time::Duration,
 };
@@ -17,24 +20,36 @@ pub struct Args {
 
     #[argh(
         option,
-        default = "DEFAULT_TUF_METADATA_DEADLINE",
-        from_str_fn(parse_unsigned_integer_as_seconds)
+        default = "DEFAULT_TUF_METADATA_TIMEOUT",
+        from_str_fn(parse_unsigned_integer_as_seconds),
+        long = "tuf-metadata-timeout-seconds"
     )]
-    /// the deadline, in seconds, to use when performing TUF metadata operations.
+    /// the timeout, in seconds, to use when performing TUF metadata operations.
     /// The default is 240 seconds. This flag exists for integration testing and
     /// should not be used elsewhere.
-    pub tuf_metadata_deadline_seconds: Duration,
+    pub tuf_metadata_timeout: Duration,
 
     #[argh(
         option,
-        default = "DEFAULT_BLOB_NETWORK_DEADLINE",
-        from_str_fn(parse_unsigned_integer_as_seconds)
+        default = "DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT",
+        from_str_fn(parse_unsigned_integer_as_seconds),
+        long = "blob-network-header-timeout-seconds"
     )]
-    /// the deadline, in seconds, to use when waiting for bytes while performing
-    /// blob operations that use the network.
+    /// the timeout, in seconds, to use when GET'ing a blob http header.
     /// The default is 30 seconds. This flag exists for integration testing and
     /// should not be used elsewhere.
-    pub blob_network_deadline_seconds: Duration,
+    pub blob_network_header_timeout: Duration,
+
+    #[argh(
+        option,
+        default = "DEFAULT_BLOB_NETWORK_BODY_TIMEOUT",
+        from_str_fn(parse_unsigned_integer_as_seconds),
+        long = "blob-network-body-timeout-seconds"
+    )]
+    /// the timeout, in seconds, to use when waiting for a blob's http body bytes.
+    /// The default is 30 seconds. This flag exists for integration testing and
+    /// should not be used elsewhere.
+    pub blob_network_body_timeout: Duration,
 }
 
 fn parse_unsigned_integer_as_seconds(flag: &str) -> Result<Duration, String> {
@@ -66,40 +81,60 @@ mod tests {
     }
 
     #[test]
-    fn tuf_metadata_deadline_seconds_success() {
+    fn tuf_metadata_timeout_seconds_success() {
         assert_matches!(
-            Args::from_args(&["pkg-resolver"], &["--tuf-metadata-deadline-seconds", "23"]),
-            Ok(Args { tuf_metadata_deadline_seconds, .. })
-                if tuf_metadata_deadline_seconds.as_secs() == 23
+            Args::from_args(&["pkg-resolver"], &["--tuf-metadata-timeout-seconds", "23"]),
+            Ok(Args { tuf_metadata_timeout, .. })
+                if tuf_metadata_timeout == Duration::from_secs(23)
         );
     }
 
     #[test]
-    fn tuf_metadata_deadline_seconds_failure() {
+    fn tuf_metadata_timeout_seconds_failure() {
         assert_matches!(
             Args::from_args(
                 &["pkg-resolver"],
-                &["--tuf-metadata-deadline-seconds", "not-an-integer"]
+                &["--tuf-metadata-timeout-seconds", "not-an-integer"]
             ),
             Err(_)
         );
     }
 
     #[test]
-    fn blob_network_deadline_seconds_success() {
+    fn blob_network_header_timeout_seconds_success() {
         assert_matches!(
-            Args::from_args(&["pkg-resolver"], &["--blob-network-deadline-seconds", "24"]),
-            Ok(Args { blob_network_deadline_seconds, .. })
-                if blob_network_deadline_seconds.as_secs() == 24
+            Args::from_args(&["pkg-resolver"], &["--blob-network-header-timeout-seconds", "24"]),
+            Ok(Args { blob_network_header_timeout, .. })
+                if blob_network_header_timeout == Duration::from_secs(24)
         );
     }
 
     #[test]
-    fn blob_network_deadline_seconds_failure() {
+    fn blob_network_header_timeout_seconds_failure() {
         assert_matches!(
             Args::from_args(
                 &["pkg-resolver"],
-                &["--blob-network-deadline-seconds", "also-not-an-integer"]
+                &["--blob-network-header-timeout-seconds", "also-not-an-integer"]
+            ),
+            Err(_)
+        );
+    }
+
+    #[test]
+    fn blob_network_body_timeout_seconds_success() {
+        assert_matches!(
+            Args::from_args(&["pkg-resolver"], &["--blob-network-body-timeout-seconds", "25"]),
+            Ok(Args { blob_network_body_timeout, .. })
+                if blob_network_body_timeout == Duration::from_secs(25)
+        );
+    }
+
+    #[test]
+    fn blob_network_body_timeout_seconds_failure() {
+        assert_matches!(
+            Args::from_args(
+                &["pkg-resolver"],
+                &["--blob-network-body-timeout-seconds", "also-not-an-integer-too"]
             ),
             Err(_)
         );
@@ -111,8 +146,9 @@ mod tests {
             Args::from_args(&["pkg-resolver"], &[]),
             Ok(Args {
                 allow_local_mirror: false,
-                tuf_metadata_deadline_seconds: DEFAULT_TUF_METADATA_DEADLINE,
-                blob_network_deadline_seconds: DEFAULT_BLOB_NETWORK_DEADLINE,
+                tuf_metadata_timeout: DEFAULT_TUF_METADATA_TIMEOUT,
+                blob_network_body_timeout: DEFAULT_BLOB_NETWORK_BODY_TIMEOUT,
+                blob_network_header_timeout: DEFAULT_BLOB_NETWORK_HEADER_TIMEOUT,
             })
         );
     }

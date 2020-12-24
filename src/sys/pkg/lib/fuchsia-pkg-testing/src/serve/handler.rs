@@ -495,3 +495,26 @@ impl UriPathHandler for HangBody {
         .boxed()
     }
 }
+
+/// Handler that forwards to its wrapped handler once.
+pub struct Once<H: UriPathHandler> {
+    already_forwarded: AtomicBool,
+    handler: H,
+}
+
+impl<H: UriPathHandler> UriPathHandler for Once<H> {
+    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        if self.already_forwarded.fetch_or(true, Ordering::SeqCst) {
+            ready(response).boxed()
+        } else {
+            self.handler.handle(uri_path, response)
+        }
+    }
+}
+
+impl<H: UriPathHandler> Once<H> {
+    /// Creates a handler that forwards to `handler` once.
+    pub fn new(handler: H) -> Self {
+        Self { already_forwarded: AtomicBool::new(false), handler }
+    }
+}

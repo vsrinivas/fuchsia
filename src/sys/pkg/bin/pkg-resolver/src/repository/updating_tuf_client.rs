@@ -46,7 +46,7 @@ pub struct UpdatingTufClient {
     /// `Some` if there is an AutoClient task, dropping it stops the task.
     auto_client_aborter: Option<AbortHandleOnDrop>,
 
-    tuf_metadata_deadline: Duration,
+    tuf_metadata_timeout: Duration,
 
     inspect: UpdatingTufClientInspectState,
 
@@ -123,7 +123,7 @@ impl UpdatingTufClient {
             tuf::client::DefaultTranslator,
         >,
         config: Option<&MirrorConfig>,
-        tuf_metadata_deadline: Duration,
+        tuf_metadata_timeout: Duration,
         node: inspect::Node,
         cobalt_sender: CobaltSender,
     ) -> Arc<AsyncMutex<Self>> {
@@ -145,7 +145,7 @@ impl UpdatingTufClient {
                 "last_update_successfully_checked_time",
             ),
             auto_client_aborter,
-            tuf_metadata_deadline,
+            tuf_metadata_timeout,
             inspect: UpdatingTufClientInspectState {
                 update_check_failure_count: inspect_util::Counter::new(
                     &node,
@@ -199,7 +199,7 @@ impl UpdatingTufClient {
 
     /// Updates the tuf client metadata if it is considered to be stale, returning whether or not
     /// updates were performed.
-    pub async fn update_if_stale(&mut self) -> Result<UpdateResult, error::TufOrDeadline> {
+    pub async fn update_if_stale(&mut self) -> Result<UpdateResult, error::TufOrTimeout> {
         if self.is_stale() {
             if self.update().await? {
                 Ok(UpdateResult::Updated)
@@ -232,14 +232,12 @@ impl UpdatingTufClient {
         }
     }
 
-    async fn update(&mut self) -> Result<bool, error::TufOrDeadline> {
+    async fn update(&mut self) -> Result<bool, error::TufOrTimeout> {
         let res = self
             .client
             .update()
-            .map_err(error::TufOrDeadline::Tuf)
-            .on_timeout(self.tuf_metadata_deadline, || {
-                Err(crate::error::TufOrDeadline::DeadlineExceeded)
-            })
+            .map_err(error::TufOrTimeout::Tuf)
+            .on_timeout(self.tuf_metadata_timeout, || Err(crate::error::TufOrTimeout::Timeout))
             .await;
         self.inspect.root_version.set(self.client.root_version().into());
         self.inspect

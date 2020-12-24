@@ -30,7 +30,10 @@ use {
         net::{Ipv6Addr, SocketAddr},
         path::{Path, PathBuf},
         pin::Pin,
-        sync::Arc,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
     },
 };
 
@@ -88,6 +91,7 @@ impl ServedRepositoryBuilder {
             .map_err(Error::from)
             .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn });
 
+        let connection_attempts = Arc::new(AtomicU64::new(0));
         let connections: Pin<
             Box<dyn Stream<Item = Result<Pin<Box<dyn AsyncReadWrite>>, Error>> + Send>,
         > = if self.use_https {
@@ -95,12 +99,16 @@ impl ServedRepositoryBuilder {
             let certs = parse_cert_chain(&include_bytes!("../certs/server.certchain")[..]);
             let key = parse_private_key(&include_bytes!("../certs/server.rsa")[..]);
             let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+            // Configure ALPN and prefer H2 over HTTP/1.1.
+            tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
             tls_config.set_single_cert(certs, key).unwrap();
             let tls_acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config));
+            let connection_attempts = Arc::clone(&connection_attempts);
 
             // wrap incoming tcp streams
             listener
                 .and_then(move |conn| {
+                    connection_attempts.fetch_add(1, Ordering::SeqCst);
                     tls_acceptor.accept(conn).map(|res| match res {
                         Ok(conn) => Ok(Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>),
                         Err(e) => Err(Error::from(e)),
@@ -108,7 +116,13 @@ impl ServedRepositoryBuilder {
                 })
                 .boxed()
         } else {
-            listener.map_ok(|conn| Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>).boxed()
+            let connection_attempts = Arc::clone(&connection_attempts);
+            listener
+                .map_ok(move |conn| {
+                    connection_attempts.fetch_add(1, Ordering::SeqCst);
+                    Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>
+                })
+                .boxed()
         };
 
         let root = self.repo.path();
@@ -167,6 +181,7 @@ impl ServedRepositoryBuilder {
             addr,
             use_https: self.use_https,
             auto_event_sender,
+            connection_attempts,
         })
     }
 }
@@ -190,6 +205,7 @@ pub struct ServedRepository {
     addr: SocketAddr,
     use_https: bool,
     auto_event_sender: EventSender,
+    connection_attempts: Arc<AtomicU64>,
 }
 
 impl ServedRepository {
@@ -277,6 +293,11 @@ impl ServedRepository {
     pub fn stop(self) -> RemoteHandle<()> {
         self.stop.send(()).expect("remote end to still be open");
         self.wait_stop
+    }
+
+    /// Number of connection attempts.
+    pub fn connection_attempts(&self) -> u64 {
+        self.connection_attempts.load(Ordering::SeqCst)
     }
 
     async fn handle_tuf_repo_request(

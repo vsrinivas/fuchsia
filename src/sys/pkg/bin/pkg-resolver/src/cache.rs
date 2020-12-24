@@ -42,6 +42,48 @@ mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
 
+/// Root of typesafe builder for BlobNetworkTimeouts.
+#[derive(Clone, Copy, Debug)]
+pub struct BlobNetworkTimeoutsBuilderNeedsHeader;
+
+impl BlobNetworkTimeoutsBuilderNeedsHeader {
+    pub fn header(self, header: Duration) -> BlobNetworkTimeoutsBuilderNeedsBody {
+        BlobNetworkTimeoutsBuilderNeedsBody { header }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct BlobNetworkTimeoutsBuilderNeedsBody {
+    header: Duration,
+}
+
+impl BlobNetworkTimeoutsBuilderNeedsBody {
+    pub fn body(self, body: Duration) -> BlobNetworkTimeouts {
+        BlobNetworkTimeouts { header: self.header, body }
+    }
+}
+
+/// Timeouts for blob network operations.
+#[derive(Clone, Copy, Debug)]
+pub struct BlobNetworkTimeouts {
+    header: Duration,
+    body: Duration,
+}
+
+impl BlobNetworkTimeouts {
+    pub fn builder() -> BlobNetworkTimeoutsBuilderNeedsHeader {
+        BlobNetworkTimeoutsBuilderNeedsHeader
+    }
+
+    pub fn header(&self) -> Duration {
+        self.header
+    }
+
+    pub fn body(&self) -> Duration {
+        self.body
+    }
+}
+
 /// Provides access to the package cache components.
 #[derive(Clone)]
 pub struct PackageCache {
@@ -332,8 +374,8 @@ impl ToResolveStatus for FetchError {
             FetchError::LocalMirror(_) => Status::INTERNAL,
             FetchError::NoBlobSource { .. } => Status::INTERNAL,
             FetchError::ConflictingBlobSources => Status::INTERNAL,
-            FetchError::BlobHeaderDeadlineExceeded { .. } => Status::UNAVAILABLE,
-            FetchError::BlobBodyDeadlineExceeded { .. } => Status::UNAVAILABLE,
+            FetchError::BlobHeaderTimeout { .. } => Status::UNAVAILABLE,
+            FetchError::BlobBodyTimeout { .. } => Status::UNAVAILABLE,
         }
     }
 }
@@ -443,10 +485,10 @@ pub fn make_blob_fetch_queue(
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
     local_mirror_proxy: Option<LocalMirrorProxy>,
-    blob_network_deadline: Duration,
+    blob_network_timeouts: BlobNetworkTimeouts,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
-    let inspect = inspect::BlobFetcher::from_node(node);
+    let inspect = inspect::BlobFetcher::from_node_and_timeouts(node, &blob_network_timeouts);
 
     let (blob_fetch_queue, blob_fetcher) =
         queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
@@ -467,7 +509,7 @@ pub fn make_blob_fetch_queue(
                     merkle,
                     context,
                     local_mirror_proxy.as_ref(),
-                    blob_network_deadline,
+                    blob_network_timeouts,
                 )
                 .map_err(Arc::new)
                 .await;
@@ -487,7 +529,7 @@ async fn fetch_blob(
     merkle: BlobId,
     context: FetchBlobContext,
     local_mirror_proxy: Option<&LocalMirrorProxy>,
-    blob_network_deadline: Duration,
+    blob_network_timeouts: BlobNetworkTimeouts,
 ) -> Result<(), FetchError> {
     let use_remote_mirror = context.mirrors.len() != 0;
     let use_local_mirror = context.use_local_mirror;
@@ -517,7 +559,7 @@ async fn fetch_blob(
                 merkle,
                 context.blob_kind,
                 context.expected_len,
-                blob_network_deadline,
+                blob_network_timeouts,
                 &cache,
                 stats,
                 cobalt_sender,
@@ -541,7 +583,7 @@ async fn fetch_blob_http(
     merkle: BlobId,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
-    blob_network_deadline: Duration,
+    blob_network_timeouts: BlobNetworkTimeouts,
     cache: &PackageCache,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
@@ -575,7 +617,7 @@ async fn fetch_blob_http(
                     &blob_url,
                     expected_len,
                     blob,
-                    blob_network_deadline,
+                    blob_network_timeouts,
                 )
                 .await;
                 inspect.state(inspect::Http::CloseBlob);
@@ -694,7 +736,7 @@ async fn download_blob(
     uri: &http::Uri,
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
-    blob_network_deadline: Duration,
+    blob_network_timeouts: BlobNetworkTimeouts,
 ) -> Result<(), FetchError> {
     inspect.state(inspect::Http::HttpGet);
     let request = Request::get(uri)
@@ -703,8 +745,8 @@ async fn download_blob(
     let response = client
         .request(request)
         .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
-        .on_timeout(blob_network_deadline, || {
-            Err(FetchError::BlobHeaderDeadlineExceeded { uri: uri.to_string() })
+        .on_timeout(blob_network_timeouts.header(), || {
+            Err(FetchError::BlobHeaderTimeout { uri: uri.to_string() })
         })
         .await?;
 
@@ -737,8 +779,8 @@ async fn download_blob(
     while let Some(chunk) = chunks
         .try_next()
         .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
-        .on_timeout(blob_network_deadline, || {
-            Err(FetchError::BlobBodyDeadlineExceeded { uri: uri.to_string() })
+        .on_timeout(blob_network_timeouts.body(), || {
+            Err(FetchError::BlobBodyTimeout { uri: uri.to_string() })
         })
         .await?
     {
@@ -837,13 +879,13 @@ pub enum FetchError {
     #[error("Tried to request a blob with HTTP and local mirrors")]
     ConflictingBlobSources,
 
-    #[error("exceeded deadline waiting for http response header while downloading blob: {uri}")]
-    BlobHeaderDeadlineExceeded { uri: String },
+    #[error("timed out waiting for http response header while downloading blob: {uri}")]
+    BlobHeaderTimeout { uri: String },
 
     #[error(
-        "exceeded deadline waiting for bytes from the http response body while downloading blob: {uri}"
+        "timed out waiting for bytes from the http response body while downloading blob: {uri}"
     )]
-    BlobBodyDeadlineExceeded { uri: String },
+    BlobBodyTimeout { uri: String },
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
@@ -867,8 +909,8 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
             FetchError::LocalMirror { .. } => EventCodes::LocalMirror,
             FetchError::NoBlobSource { .. } => EventCodes::NoBlobSource,
             FetchError::ConflictingBlobSources => EventCodes::ConflictingBlobSources,
-            FetchError::BlobHeaderDeadlineExceeded { .. } => EventCodes::BlobHeaderDeadlineExceeded,
-            FetchError::BlobBodyDeadlineExceeded { .. } => EventCodes::BlobBodyDeadlineExceeded,
+            FetchError::BlobHeaderTimeout { .. } => EventCodes::BlobHeaderDeadlineExceeded,
+            FetchError::BlobBodyTimeout { .. } => EventCodes::BlobBodyDeadlineExceeded,
         }
     }
 }

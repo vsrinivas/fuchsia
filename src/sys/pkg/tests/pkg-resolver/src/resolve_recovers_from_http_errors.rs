@@ -15,7 +15,7 @@ use {
     fuchsia_zircon::Status,
     lib::{extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
-    std::sync::Arc,
+    std::{sync::Arc, time::Duration},
 };
 
 async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
@@ -224,4 +224,60 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
         Status::INTERNAL,
     )
     .await
+}
+
+// The hyper clients used by the pkg-resolver to download blobs and TUF metadata sometimes end up
+// waiting on operations on their TCP connections that will never return (e.g. because of an
+// upstream network partition). To detect this, the pkg-resolver wraps the hyper client response
+// futures with timeout futures. To recover from this, the pkg-resolver drops the hyper client
+// response futures when the timeouts are hit. This recovery plan requires that dropping the hyper
+// response future causes hyper to close the underlying TCP connection and create a new one the
+// next time hyper is asked to perform a network operation. This assumption holds for http1, but
+// not for http2.
+//
+// This test verifies the "dropping a hyper response future prevents the underlying connection
+// from being reused" requirement. It does so by verifying that if a resolve fails due to a blob
+// download timeout and the resolve is retried, the retry will cause pkg-resolver to make an
+// additional TCP connection to the blob mirror.
+//
+// This test uses https because the test exists to catch changes to the Fuchsia hyper client
+// that would cause pkg-resolver to use http2 before the Fuchsia hyper client is able to recover
+// from bad TCP connections when using http2. The pkg-resolver does not explicitly enable http2
+// on its hyper clients, so the way this change would sneak in is if the hyper client is changed
+// to use ALPN to prefer http2. The blob server used in this test has ALPN configured to prefer
+// http2.
+#[fasync::run_singlethreaded(test)]
+async fn blob_timeout_causes_new_tcp_connection() {
+    let pkg = PackageBuilder::new("test").build().await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let env = TestEnvBuilder::new().blob_network_body_timeout(Duration::from_secs(0)).build().await;
+
+    let server = repo
+        .server()
+        .uri_path_override_handler(handler::ForPathPrefix::new(
+            "/blobs/",
+            handler::Once::new(handler::HangBody),
+        ))
+        .use_https(true)
+        .start()
+        .expect("Starting server succeeds");
+
+    env.register_repo(&server).await;
+
+    let result = env.resolve_package("fuchsia-pkg://test/test").await;
+    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(server.connection_attempts(), 2);
+
+    let result = env.resolve_package("fuchsia-pkg://test/test").await;
+    assert!(result.is_ok());
+    assert_eq!(server.connection_attempts(), 3);
+
+    env.stop().await;
 }

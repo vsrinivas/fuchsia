@@ -52,13 +52,16 @@ async fn initial_inspect_state() {
                 stats: {
                     mirrors: {}
                 },
-                tuf_metadata_deadline_seconds: 240u64,
+                tuf_metadata_timeout_seconds: 240u64,
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
                 active_package_resolves: {}
             },
-            blob_fetcher: {}
+            blob_fetcher: {
+                blob_header_timeout_seconds: 30u64,
+                blob_body_timeout_seconds: 30u64,
+            }
         }
     );
     env.stop().await;
@@ -231,6 +234,8 @@ async fn package_and_blob_queues() {
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
             blob_fetcher: {
+                blob_header_timeout_seconds: 30u64,
+                blob_body_timeout_seconds: 30u64,
                 pkg.meta_far_merkle_root().to_string() => {
                     fetch_ts: AnyProperty,
                     source: "http",
@@ -259,7 +264,10 @@ async fn package_and_blob_queues() {
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
-            blob_fetcher: {}
+            blob_fetcher: {
+                blob_header_timeout_seconds: 30u64,
+                blob_body_timeout_seconds: 30u64,
+            }
         }
     );
 

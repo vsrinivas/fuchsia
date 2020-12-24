@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::cache::BlobNetworkTimeouts,
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_inspect::{
         IntProperty, Node, NumericProperty as _, Property as _, StringProperty, UintProperty,
@@ -22,7 +23,9 @@ pub struct BlobFetcher {
 
 impl BlobFetcher {
     /// Create a `BlobFetcher` from an Inspect node.
-    pub fn from_node(node: Node) -> Self {
+    pub fn from_node_and_timeouts(node: Node, timeouts: &BlobNetworkTimeouts) -> Self {
+        node.record_uint("blob_header_timeout_seconds", timeouts.header().as_secs());
+        node.record_uint("blob_body_timeout_seconds", timeouts.body().as_secs());
         Self { node }
     }
 
@@ -190,6 +193,12 @@ mod tests {
         "0000000000000000000000000000000000000000000000000000000000000000";
     const ONES_HASH: &'static str =
         "1111111111111111111111111111111111111111111111111111111111111111";
+
+    impl BlobFetcher {
+        fn from_node(node: Node) -> Self {
+            Self { node }
+        }
+    }
 
     #[test]
     fn http_state_progression() {
