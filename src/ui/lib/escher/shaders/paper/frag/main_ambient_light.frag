@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_control_flow_attributes : enable
 
 // A simple ambient-only lighting pass.
 
@@ -17,12 +18,24 @@ void main() {
   outColor = model_color;
 
 #ifndef DISABLE_AMBIENT_LIGHT
-  outColor *= vec4(ambient_light_color, 1);
+  outColor.rgb *= ambient_light_color;
 #endif
 
 #ifdef USE_ATTRIBUTE_UV
   vec4 material_color = texture(material_tex, inUV);
-  material_color.rgb = pow(material_color.rgb, gamma_power.xxx);
+
+  [[dont_flatten]]
+  if (gamma_power.x != 1.0) {
+    // Gamma correction is required.  Check whether we can avoid pow().
+    [[dont_flatten]]
+    if (gamma_power.x == 2.0) {
+      // Squaring is cheaper than pow().
+      material_color.rgb *= material_color.rgb;
+    } else {
+      // pow() is required in the general case.
+      material_color.rgb = pow(material_color.rgb, gamma_power.xxx);
+    }
+  }
   outColor *= material_color;
 #endif
 }
