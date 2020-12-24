@@ -1,0 +1,58 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected usage of device-finder in fx scripts
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+  "tools/devshell/pave"
+)
+
+BT_MOCKED_TOOLS=(
+  "out/default/pave.sh"
+  "tools/devshell/build"
+)
+
+declare fx build pavesh
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  fx-config-read
+  build="${BT_TEMP_DIR}/tools/devshell/build"
+  pavesh="${BT_TEMP_DIR}/out/default/pave.sh"
+}
+
+TEST_pave_noincr_noargs() {
+  local out="${BT_TEMP_DIR}/_fx_pave_output"
+  BT_EXPECT ${fx} --disable=incremental pave > "$out" 2>&1
+  # build was not called
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${build}.mock_state"
+  # pave.sh was called
+  BT_ASSERT_FILE_EXISTS "${pavesh}.mock_state"
+  # pave.sh was called without option "-1"
+  BT_EXPECT btf::does-mock-args-not-contain "${pavesh}.mock_state" "-1"
+}
+
+TEST_pave_singlerun() {
+  local out="${BT_TEMP_DIR}/_fx_pave_output"
+  BT_EXPECT ${fx} pave -1 > "$out" 2>&1
+  # pave.sh was called with option "-1"
+  BT_EXPECT btf::does-mock-args-contain "${pavesh}.mock_state" "-1"
+}
+
+TEST_pave_helpoptions() {
+  local out="${BT_TEMP_DIR}/_fx_pave_output"
+  BT_EXPECT ${fx} pave --build --help > "$out" 2>&1
+  BT_EXPECT btf::does-mock-args-contain "${pavesh}.mock_state" "--help"
+}
+
+BT_RUN_TESTS "$@"

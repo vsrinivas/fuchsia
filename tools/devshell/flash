@@ -5,10 +5,15 @@
 
 #### CATEGORY=Device management
 ### flash and, optionally, pave a connected device
-## usage: fx flash [-s <serial>] [--pave]
-##   -s        Serial of device you wish to flash to (only necessary if multiple
-##             devices in fastboot mode)
-##   --pave    Pave device after flashing (recommended)
+## usage: fx flash [-s <serial>] [--build|--no-build] [--pave]
+##   --build | --no-build    Build (or not) the required dependencies
+##   --pave                  Pave device after flashing (recommended)
+##   -s                      Serial of device you wish to flash to (only necessary
+##                           if multiple devices in fastboot mode)
+##
+## Defaults are defined by the "incremental" feature:
+##    'fx --enable=incremental flash'  defaults to "--build"
+##    'fx --disable=incremental flash'  defaults to "--no-build"
 
 set -e
 
@@ -18,10 +23,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-fl
 usage() {
     fx-command-help
     echo "Available devices:"
-    fastboot devices -l
+    fx-command-run host-tool fastboot devices -l
     exit 1
 }
 
+build=false
+if is_feature_enabled "incremental"; then
+  # In incremental workflows, these defaults have changed.
+  # Keep old behavior if incremental is not enabled.
+  build=true
+fi
 pave=false
 serial=
 device=$(get-device-name)
@@ -30,10 +41,16 @@ while [[ $# -ge 1 ]]; do
   -h|--help)
     usage
     ;;
+  --no-build)
+    build=false
+    ;;
+  --build)
+    build=true
+    ;;
   --pave)
     pave=true
     ;;
-  --nopave)
+  --nopave|--no-pave)
     pave=false
     ;;
   -s)
@@ -50,9 +67,19 @@ while [[ $# -ge 1 ]]; do
   shift
 done
 
+if $build; then
+  artifacts=($(fx-command-run list-build-artifacts flash)) || exit $?
+  if $pave; then
+    artifacts+=($(fx-command-run list-build-artifacts pave)) || exit $?
+  fi
+  fx-info "Building/refreshing targets ${artifacts[@]}"
+  fx-command-run build "${artifacts[@]}"
+fi
+
 cd "${FUCHSIA_BUILD_DIR}"
 fx-flash "${serial}" "${device}"
 
-if [[ "${pave}" == "true" ]]; then
-  fx-command-exec pave -1
+if $pave; then
+  # no need to build, since all dependencies were already built above.
+  fx-command-exec pave -1 --no-build
 fi

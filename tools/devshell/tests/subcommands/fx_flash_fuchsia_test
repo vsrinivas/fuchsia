@@ -16,6 +16,10 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
 )
 
+BT_MOCKED_TOOLS=(
+  "tools/devshell/build"
+)
+
 declare fx fastboot_mock flash_script
 
 BT_SET_UP() {
@@ -27,13 +31,18 @@ BT_SET_UP() {
   btf::make_mock "$flash_script"
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
   btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/host-tool"
 
   btf::make_installed_hosttools_mock "device-finder" >/dev/null
 
   fastboot_mock="$(btf::make_mock_binary "fastboot")"
 
-  echo '[[ "$4" == "fastboot" ]] && echo ' "${fastboot_mock}" \
-    > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects"
+  cat > "${BT_TEMP_DIR}/tools/devshell/host-tool.mock_side_effects" <<EOF
+    if [[ "\$1" == "fastboot" ]]; then
+      shift
+      "${fastboot_mock}" "\$@"
+    fi
+EOF
 }
 
 TEST_fx_flash_ssh() {
@@ -42,7 +51,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash
+  BT_EXPECT ${fx} flash --no-build
   source "${flash_script}.mock_state"
   BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
 }
@@ -55,7 +64,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash 2>/dev/null
+  BT_EXPECT ${fx} flash --no-build 2>/dev/null
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" --recovery
 }

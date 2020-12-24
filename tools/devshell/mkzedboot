@@ -6,8 +6,14 @@
 #### CATEGORY=Software delivery
 ### make a zedboot USB key
 
-## usage: fx mkzedboot [options] <usb device>
-##  -f            force writing to a non-usb target
+## usage: fx mkzedboot [-f] [--build|--no-build] <usb device>
+##
+##   --build | --no-build     build (or not) the image required to run mkzedboot.
+##   -f                       force writing to a non-usb target.
+##
+## The default for --build is defined by the "incremental" feature:
+##    'fx --enable=incremental mkzedboot'  defaults to '--build'
+##    'fx --disable=incremental mkzedboot'  defaults to '--no-build'
 
 set -e
 
@@ -17,19 +23,49 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-mk
 fx-config-read
 
 force=false
-if [[ "$1" == "-f" ]]; then
-  shift
-  force=true
+build=false
+if is_feature_enabled "incremental"; then
+  # In incremental workflows, these defaults have changed.
+  # Keep old behavior if incremental is not enabled.
+  build=true
 fi
+while (( $# )); do
+  case "$1" in
+    --help)
+      fx-command-help
+      exit 0
+      ;;
+    --no-build)
+      build=false
+      ;;
+    --build)
+      build=true
+      ;;
+    -f)
+      force=true
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
 
-USB_DEVICE="$1"
-
-if [[ -z "${USB_DEVICE}" ]]; then
-    echo >&2 "device argument required"
+if [[ $# -gt 1 ]]; then
+  fx-error "Invalid syntax"
+  fx-command-help
+  exit 1
+fi
+if [[ $# -eq 0 ]]; then
+    fx-error "Device argument required!"
+    fx-command-help
+    echo
     echo "USB disks:"
     fx-command-run list-usb-disks
     exit 1
 fi
+
+USB_DEVICE="$1"
 
 image=""
 type=""
@@ -47,8 +83,12 @@ if [[ -z "${image}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${FUCHSIA_BUILD_DIR}/${image}" ]]; then
-  fx-warn "Cannot find image to run mkzedboot: $image. Attempting to build it..."
+if ! $build && [[ ! -f "${FUCHSIA_BUILD_DIR}/${image}" ]]; then
+  fx-warn "Cannot find image to run mkzedboot: $image, will attempt to build it."
+  build=true
+fi
+
+if $build; then
   fx-command-run build "${image}"
 fi
 

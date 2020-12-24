@@ -62,6 +62,8 @@ test_scripts = [
   "tests/subcommands/fx_list_build_artifacts_test",
   "tests/subcommands/fx_log_test",
   "tests/subcommands/fx_mkzedboot_test",
+  "tests/subcommands/fx_ota_test",
+  "tests/subcommands/fx_pave_test",
   "tests/subcommands/fx_regen_goldens_test",
   "tests/subcommands/fx_remote_test",
   "tests/subcommands/fx_runtest_test",
@@ -155,6 +157,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/image_build_vars.sh",
         "//tools/devshell/lib/metrics.sh",
         "//tools/devshell/lib/platform.sh",
+        "//tools/devshell/lib/updates.sh",
         "//tools/devshell/lib/style.sh",
         "//tools/devshell/lib/vars.sh",
         "//tools/devshell/lib/verify-default-keys.sh",
@@ -162,6 +165,8 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/log",
         "//tools/devshell/metrics",
         "//tools/devshell/mkzedboot",
+        "//tools/devshell/ota",
+        "//tools/devshell/pave",
         "//tools/devshell/pave-remote",
         "//tools/devshell/run-test",
         "//tools/devshell/serve-remote",
@@ -190,6 +195,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/tests/subcommands/data/fx_test_test/tests_package_server_integration.json",
         "//tools/devshell/vendor",
         "//tools/devshell/vdl",
+        "//tools/devshell/wait",
       ]
     },
     {

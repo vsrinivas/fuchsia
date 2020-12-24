@@ -6,27 +6,103 @@
 #### CATEGORY=Software delivery
 ### run bootserver for paving
 
-## usage: fx pave [extra bootserver arguments]
+## usage: fx pave [--build|--no-build] [-1|--keep-running] [extra bootserver arguments]
+##
+##   --build | --no-build     build (or not) the images required to pave.
+##   -1 | --keep-running      perform a single pave and exit or keep the bootserver
+##                            running after the first paving
+##   extra bootserver args    arguments passed directly to bootserver
+##
+## Start a bootserver for paving a device, optionally performing a build of the
+## system images before.
+##
+## Defaults are defined by the "incremental" feature:
+##    'fx --enable=incremental pave'  defaults to "--build" and "-1"
+##    'fx --disable=incremental pave'  defaults to "--no-build" and "--keep-running"
+##
+## For bootserver specific arguments, use 'fx pave --help'
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-name_args=()
-name="$(get-device-name)" || exit $?
-if [[ -n "$name" ]]; then
-  name_args+=("-n" "${name}")
-fi
+function main {
+  local single_run=false
+  local build=false
+  if is_feature_enabled "incremental"; then
+    # In incremental workflows, these defaults have changed.
+    # Keep old behavior if incremental is not enabled.
+    single_run=true
+    build=true
+  fi
+  local pave_args=()
+  local help=false
+  while (( $# )); do
+    case "$1" in
+      --help)
+        help=true
+        ;;
+      --no-build)
+        build=false
+        ;;
+      --build)
+        build=true
+        ;;
+      --keep-running)
+        single_run=false
+        ;;
+      -1)
+        single_run=true
+        ;;
+      *)
+        pave_args+=("$1")
+        ;;
+    esac
+    shift
+  done
 
-authkeys_path="$(get-ssh-authkeys)" || {
-  fx-error "Cannot continue without a valid authorized keys file."
-  exit 1
+  if $help; then
+    if ! $build; then
+      # bootserver options cannot be shown if depedencies cannot be built, so
+      # if --no-build flag is used, just show the simple help.
+      fx-command-help
+      exit 0
+    fi
+    fx-command-help 2>&1 | grep -v "fx pave --help" >&2
+    fx-info
+    fx-info "Building and executing 'pave.sh --help' to show bootserver specific options."
+    fx-info "Press Ctrl+C to interrupt."
+    fx-info
+    pave_args=(--help)
+
+  else
+    if $single_run; then
+      pave_args+=( "-1" )
+    fi
+
+    name="$(get-device-name)" || exit $?
+    if [[ -n "$name" ]]; then
+      pave_args+=("-n" "${name}")
+    fi
+
+    if ! fx-is-bringup; then
+      authkeys_path="$(get-ssh-authkeys)" || {
+        fx-error "Cannot continue without a valid authorized keys file."
+        exit 1
+      }
+      pave_args+=(--authorized-keys "${authkeys_path}")
+    fi
+  fi
+
+  if $build; then
+    local artifacts=($(fx-command-run list-build-artifacts pave)) || exit $?
+    fx-info "Building/refreshing targets ${artifacts[@]}"
+    fx-command-run build "${artifacts[@]}"
+  fi
+
+  exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${pave_args[@]}"
 }
 
-auth_keys_args=(--authorized-keys "${authkeys_path}" "$@")
-if fx-is-bringup; then
-  auth_keys_args=()
-fi
+main "$@"
 
-exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${name_args[@]}" "${auth_keys_args[@]}" "$@"

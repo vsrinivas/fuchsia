@@ -6,15 +6,20 @@
 #### CATEGORY=Software delivery
 ### perform a system OTA on a connected device
 
-## usage: fx ota [-h|--help]
+## usage: fx ota [--help] [--build|--no-build]
 ##
-## Ask the target to do an OTA. The target will use any update server available
-## to it to do the update. This requires the target have a update server
-## available to it. The 'serve' fx command is typically used to make your
-## development host available to the target as an update server.
+##   --build | --no-build   Build (or not) the 'updates' target before initiating OTA.
+##   --help                 Print out this message.
 ##
-## Arguments:
-##   -h|--help    Print out this message.
+## Ask the connected Fuchsia device to do an OTA.
+## Depending on the flags, this command will attempt to build the necessary
+## dependencies ('fx build updates') before requesting the OTA.
+##
+## The default for --build is defined by the "incremental" feature:
+##    'fx --enable=incremental ota'  defaults to '--build'
+##    'fx --disable=incremental ota'  defaults to '--no-build'
+##
+## A package server needs to be running and this command will fail if it is not.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
@@ -26,10 +31,38 @@ function needs-update {
 }
 
 function main {
-  fx-standard-switches "$@"
-  set -- "${FX_ARGV[@]}"
+  local build=false
+  if is_feature_enabled "incremental"; then
+    # In incremental workflows, these defaults have changed.
+    # Keep old behavior if incremental is not enabled.
+    build=true
+  fi
+  while (( $# )); do
+    case "$1" in
+      --help)
+        fx-command-help
+        exit 0
+        ;;
+      --no-build)
+        build=false
+        ;;
+      --build)
+        build=true
+        ;;
+      *)
+       fx-error 'Invalid syntax'
+       fx-command-help
+       exit 1
+    esac
+    shift
+  done
 
   check-for-amber-server || return 1
+
+  if $build; then
+    fx-info "Building/refreshing target 'updates'"
+    fx-command-run build updates
+  fi
 
   # Note: the following command continues to run as the system goes into
   # reboot, so we lose SSH connection before it "completes". As such the

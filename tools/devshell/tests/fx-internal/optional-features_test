@@ -100,4 +100,34 @@ TEST_features_are_valid() {
   done
 }
 
+TEST_get_fx_flags_non_default_features() {
+  cat >> "${BT_TEMP_DIR}/tools/devshell/lib/fx-optional-features.sh" <<EOF
+    list_optional_features() {
+      echo "feature1" "feature2"
+    }
+    is_feature_enabled_by_default() {
+      if [[ "\$1" == "feature1" ]]; then return 0; fi  # enabled by default
+      if [[ "\$1" == "feature2" ]]; then return 1; fi  # disabled by default
+    }
+EOF
+
+  local cmd="mycmd"
+  local cmd_path="${BT_TEMP_DIR}/tools/devshell/${cmd}"
+  mkdir -p "$(dirname "${cmd_path}")"
+  # create a command that prints get_fx_flags_non_default_features
+  cat >"${cmd_path}" <<EOF
+#!/bin/bash
+source ${BT_TEMP_DIR}/tools/devshell/lib/fx-optional-features.sh || exit \$\?
+get_fx_flags_non_default_features
+EOF
+  chmod u+x "${cmd_path}"
+
+  BT_EXPECT_EQ "$(${fx} --enable=feature1 ${cmd})" ""  # feature1 is enabled by default
+  BT_EXPECT_EQ "$(${fx} --disable=feature1 ${cmd})" "--disable=feature1"
+
+  BT_EXPECT_EQ "$(${fx} --enable=feature2 ${cmd})" "--enable=feature2"
+  BT_EXPECT_EQ "$(${fx} --disable=feature2 ${cmd})" ""  # feature2 is disabled by default
+
+  BT_EXPECT_EQ "$(${fx} --disable=feature1 --enable=feature2 ${cmd})" "--disable=feature1 --enable=feature2"
+}
 BT_RUN_TESTS "$@"

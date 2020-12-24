@@ -43,11 +43,10 @@ function fx-flash {
     "./flash.sh" "${flash_args[@]}" "-s" "udp:${gb_device_ip}"
   else
     # Process traditional fastboot over USB.
-    fastboot="$(fx-command-run list-build-artifacts --build --expect-one --name fastboot tools)"
     fastboot_args=()
     if [[ -z "${serial}" ]]; then
       # If the user didn't specify a device with -s, see if there's exactly 1.
-      num_devices=$("${fastboot}" devices | wc -l)
+      num_devices=$(fx-command-run host-tool fastboot devices | wc -l)
       if [[ "${num_devices}" -lt 1 ]]; then
         fx-error "No device detected, boot into fastboot mode or provide -s <serial>!"
         return 1

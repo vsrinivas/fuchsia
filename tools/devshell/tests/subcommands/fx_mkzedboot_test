@@ -70,7 +70,7 @@ EOF
 TEST_fx-mkzedboot-no-args() {
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   BT_EXPECT_FAIL ${fx} mkzedboot >"$out" 2>&1
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'device argument required'
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'Device argument required'
 }
 
 # Ensure that invalid USB disks are detected.

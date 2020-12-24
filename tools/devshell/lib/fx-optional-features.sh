@@ -69,6 +69,22 @@ function is_valid_feature {
   return 1
 }
 
+function get_fx_flags_non_default_features {
+  local out=()
+  for el in $(list_optional_features); do
+    local default=false
+    local current=false
+    is_feature_enabled_by_default $el && default=true
+    is_feature_enabled $el && current=true
+    if $default && ! $current; then
+      out+=("--disable=$el")
+    elif ! $default && $current; then
+      out+=("--enable=$el")
+    fi
+  done
+  echo "${out[@]}"
+}
+
 function get_disable_feature_env_name {
   local feature
   feature="$1"
