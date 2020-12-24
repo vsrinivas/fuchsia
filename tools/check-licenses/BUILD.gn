@@ -15,8 +15,8 @@ go_binary("check-licenses") {
 go_library("main") {
   source_dir = "cmd"
   deps = [
-    ":golden",
     ":lib",
+    "golden",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/logger",
@@ -77,11 +77,6 @@ go_library("noticetxt") {
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
-go_library("golden") {
-  source_dir = "golden"
-  sources = [ "golden_test.go" ]
-}
-
 install_host_tools("host") {
   deps = [ ":check-licenses" ]
   outputs = [ "check-licenses" ]
@@ -126,8 +121,6 @@ if (is_host) {
     outputs = [ "$target_gen_dir/testdata" ]
   }
 
-  _golden_testdata_path = "$target_gen_dir/golden"
-
   go_test("check-licenses_noticetxt_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt" ]
     deps = [ ":noticetxt" ]
@@ -137,14 +130,9 @@ if (is_host) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]
     args = [
       "--test_data_dir",
-      rebase_path(_golden_testdata_path, root_build_dir),
+      rebase_path("$target_gen_dir/golden", root_build_dir),
     ]
-    deps = [ ":golden" ]
-    non_go_deps = [ ":golden_test_data" ]
-  }
-
-  host_test_data("golden_test_data") {
-    sources = [ "golden" ]
-    outputs = [ _golden_testdata_path ]
+    deps = [ "golden" ]
+    non_go_deps = [ "golden:licenses" ]
   }
 }
