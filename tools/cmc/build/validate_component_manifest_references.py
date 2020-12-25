@@ -16,7 +16,7 @@ def main():
       '--component_manifests',
       required=True,
       type=argparse.FileType('r'),
-      nargs='+',
+      nargs='*',
       help='Path to a component manifest to validate (cmx/cml file)')
   parser.add_argument(
       '--package_manifest',
