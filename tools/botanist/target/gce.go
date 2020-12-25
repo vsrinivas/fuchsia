@@ -18,9 +18,11 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -129,11 +131,13 @@ type GCEConfig struct {
 // GCETarget represents a GCE VM running Fuchsia.
 type GCETarget struct {
 	config       GCEConfig
+	currentUser  string
+	instanceName string
+	loggerCtx    context.Context
 	opts         Options
 	pubkeyPath   string
-	instanceName string
-	zone         string
 	serial       io.ReadWriteCloser
+	zone         string
 }
 
 // createInstanceRes is returned by the gcem_client's create-instance
@@ -160,69 +164,105 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 	}
 	logger.Infof(ctx, "generated SSH key pair for use with GCE instance")
 
-	// Set up and execute the command to create the instance.
-	taskID := os.Getenv("SWARMING_TASK_ID")
-	if taskID == "" {
-		return nil, errors.New("task did not specify SWARMING_TASK_ID")
-	}
 	u, err := user.Current()
 	if err != nil {
 		return nil, err
 	}
+	g := &GCETarget{
+		config:      config,
+		currentUser: u.Username,
+		loggerCtx:   ctx,
+		opts:        opts,
+		pubkeyPath:  pubkeyPath,
+	}
+
+	// Set up and execute the command to create the instance.
+	logger.Infof(ctx, "creating the GCE instance")
+	expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
+	createInstanceErrs := make(chan error)
+	defer close(createInstanceErrs)
+	go logErrors(ctx, "createInstance()", createInstanceErrs)
+	if err := retry.Retry(ctx, expBackoff, g.createInstance, createInstanceErrs); err != nil {
+		return nil, err
+	}
+
+	// Connect to the serial line.
+	logger.Infof(ctx, "setting up the serial connection to the GCE instance")
+	expBackoff = retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
+	connectSerialErrs := make(chan error)
+	defer close(connectSerialErrs)
+	go logErrors(ctx, "connectToSerial()", connectSerialErrs)
+	if err := retry.Retry(ctx, expBackoff, g.connectToSerial, connectSerialErrs); err != nil {
+		return nil, err
+	}
+	return g, nil
+}
+
+func logErrors(ctx context.Context, functionName string, errs <-chan error) {
+	for {
+		err, more := <-errs
+		if err != nil {
+			logger.Errorf(ctx, "%s failed: %s, retrying", functionName, err)
+		}
+		if !more {
+			return
+		}
+	}
+}
+
+func (g *GCETarget) connectToSerial() error {
+	username := fmt.Sprintf(
+		"%s.%s.%s.%s",
+		g.config.CloudProject,
+		g.zone,
+		g.instanceName,
+		g.currentUser,
+	)
+	serial, err := newGCESerial(g.opts.SSHKey, username, gceSerialEndpoint)
+	g.serial = serial
+	return err
+}
+
+func (g *GCETarget) createInstance() error {
+	taskID := os.Getenv("SWARMING_TASK_ID")
+	if taskID == "" {
+		return errors.New("task did not specify SWARMING_TASK_ID")
+	}
+
 	invocation := []string{
 		gcemClientBinary,
 		"create-instance",
-		"-host", config.MediatorURL,
-		"-project", config.CloudProject,
-		"-build-id", config.BuildID,
+		"-host", g.config.MediatorURL,
+		"-project", g.config.CloudProject,
+		"-build-id", g.config.BuildID,
 		"-task-id", taskID,
-		"-swarming-host", config.SwarmingServer,
-		"-machine-shape", config.MachineShape,
-		"-user", u.Username,
-		"-pubkey", pubkeyPath,
+		"-swarming-host", g.config.SwarmingServer,
+		"-machine-shape", g.config.MachineShape,
+		"-user", g.currentUser,
+		"-pubkey", g.pubkeyPath,
 	}
-	logger.Infof(ctx, "creating instance using gcem_client: %v", invocation)
 
+	logger.Infof(g.loggerCtx, "GCE Mediator client command: %v", invocation)
 	cmd := exec.Command(invocation[0], invocation[1:]...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return err
 	}
 	var res createInstanceRes
 	if err := json.NewDecoder(stdout).Decode(&res); err != nil {
-		return nil, err
+		return err
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, err
+		return err
 	}
-
-	// Set up the "serial" line.
-	logger.Infof(ctx, "setting up the serial connection to the GCE instance")
-	username := fmt.Sprintf(
-		"%s.%s.%s.%s",
-		config.CloudProject,
-		res.Zone,
-		res.InstanceName,
-		u.Username,
-	)
-	serial, err := newGCESerial(opts.SSHKey, username, gceSerialEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GCETarget{
-		config:       config,
-		opts:         opts,
-		pubkeyPath:   pubkeyPath,
-		instanceName: res.InstanceName,
-		zone:         res.Zone,
-		serial:       serial,
-	}, nil
+	g.instanceName = res.InstanceName
+	g.zone = res.Zone
+	return nil
 }
 
 // generatePrivateKey generates a 2048 bit RSA private key, writes it to
