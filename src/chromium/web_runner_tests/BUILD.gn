@@ -75,7 +75,7 @@ executable("web_runner_integration_tests") {
     "//zircon/public/lib/fit",
   ]
 
-  data_deps = [ "//src/fonts:downstream_test_deps" ]
+  data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]
 }
 
 executable("web_runner_pixel_tests") {
@@ -104,7 +104,7 @@ executable("web_runner_pixel_tests") {
     "//zircon/public/lib/fit",
   ]
 
-  data_deps = [ "//src/fonts:downstream_test_deps" ]
+  data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]
 }
 
 test_package("web_runner_tests") {

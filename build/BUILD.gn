@@ -67,9 +67,6 @@ group("deprecated_package") {
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed -E 's|([^:]*):.*|"\1\/*",|g' | sed 's|.*//vendor/.*|"//vendor/*",|' | sort | uniq
   visibility += [
     "//build/images/*",
-    "//build/images/guest/*",
-    "//build/images/overnet/*",
-    "//build/images/recovery/*",
     "//build/info/*",
     "//examples/cowsay/*",
     "//examples/criterion_bench/*",

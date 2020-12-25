@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/dist/distribution_manifest.gni")
 import("//build/testing/golden_file.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Used by config_package().
@@ -55,18 +56,22 @@ template("config_data") {
            "Exactly one output pattern required.")
 
     metadata = {
-      config_package_entries = []
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+      config_package_entries = []
       foreach(source, sources) {
         foreach(target, process_file_template([ source ], outputs)) {
           # Config files are usually small, so package them in meta/ so they're
           # archived together rather than spread across individual blobs.
           # See also: fxbug.dev/37055
-          config_package_entries +=
-              [ "meta/data/" + for_pkg + "/" + target + "=" +
-                rebase_path(source, root_build_dir) ]
+          config_package_entries += [
+            {
+              source = rebase_path(source, root_build_dir)
+              destination = "meta/data/$for_pkg/$target"
+              label = get_label_info(":$target_name", "label_with_toolchain")
+            },
+          ]
         }
       }
     }
@@ -93,56 +98,51 @@ template("config_data") {
 #     fx set ... --args=sysmgr_golden_warn_override=true
 #
 #   deps (required)
-#   public_deps (optional)
-#   data_deps (optional)
 #   testonly (optional)
+#   visibility (optional)
 #     Usual GN meanings.
 template("config_package") {
-  config_package_manifest = "${target_name}.config-package-extra.manifest"
-  config_package_manifest_path = target_gen_dir + "/" + config_package_manifest
-  validate_sysmgr_config_target_name = "${target_name}_validate_sysmgr_config"
-
-  generated_file(config_package_manifest) {
+  config_package_entries_target = "${target_name}_config_package_entries"
+  config_package_entries = "$target_out_dir/$config_package_entries_target"
+  generated_file(config_package_entries_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "public_deps",
-                             "data_deps",
                              "testonly",
                            ])
-
-    # This contract is known to package.gni.
+    visibility = [ ":*" ]
     data_keys = [ "config_package_entries" ]
     walk_keys = [ "config_package_barrier" ]
-    outputs = [ config_package_manifest_path ]
+    outputs = [ config_package_entries ]
+    output_conversion = "json"
+    metadata = {
+      # Don't pick up resources from deps
+      distribution_entries_barrier = []
+    }
   }
 
-  merged_sysmgr_config = "$target_gen_dir/$target_name.sysmgr"
-  action(validate_sysmgr_config_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "data_deps",
-                             "testonly",
-                           ])
-    deps += [ ":${config_package_manifest}" ]
+  distribution_entries_target = "${target_name}_distribution_entries_file"
+  distribution_entries_file(distribution_entries_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    deps = [ ":$config_package_entries_target" ]
+    file = config_package_entries
+  }
 
+  validate_sysmgr_config_target = "${target_name}_validate_sysmgr_config"
+  merged_sysmgr_config = "$target_gen_dir/{$target_name}_merged_sysmgr_config"
+  action(validate_sysmgr_config_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    deps = [ ":$config_package_entries_target" ]
     script = "//build/tools/validate_sysmgr_config.py"
-
-    inputs = [ config_package_manifest_path ]
-
+    inputs = [ config_package_entries ]
     depfile = "$target_out_dir/$target_name.d"
-    stamp_file = "$target_out_dir/$target_name.script.stamp"
-    outputs = [
-      merged_sysmgr_config,
-      stamp_file,
-    ]
+    outputs = [ merged_sysmgr_config ]
 
     args = [
-      rebase_path(config_package_manifest_path, root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
+      "--config-entries",
+      rebase_path(config_package_entries, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
       "--merged",
@@ -151,44 +151,35 @@ template("config_package") {
   }
 
   if (defined(invoker.sysmgr_golden)) {
-    golden_file("${target_name}_sysmgr_golden") {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "public_deps",
-                               "data_deps",
-                               "testonly",
-                             ])
+    golden_file_target = "${target_name}_sysmgr_golden"
+    golden_file(golden_file_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$validate_sysmgr_config_target" ]
+      visibility = [ ":*" ]
       golden = invoker.sysmgr_golden
       current = merged_sysmgr_config
       warn_on_changes =
           (defined(invoker.sysmgr_golden_warn) && invoker.sysmgr_golden_warn) ||
           sysmgr_golden_warn_override
-
-      deps += [ ":$validate_sysmgr_config_target_name" ]
     }
   }
 
-  package(target_name) {
+  fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
-                             "data_deps",
-                             "deps",
                              "package_name",
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
-    deps += [
-      ":${config_package_manifest}",
-      ":${validate_sysmgr_config_target_name}",
+    deps = [
+      ":$distribution_entries_target",
+      ":$validate_sysmgr_config_target",
     ]
 
-    if (defined(invoker.sysmgr_golden)) {
-      deps += [ ":${target_name}_sysmgr_golden" ]
+    if (defined(golden_file_target)) {
+      deps += [ ":$golden_file_target" ]
     }
 
-    extra = [ config_package_manifest_path ]
     metadata = {
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")

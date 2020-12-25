@@ -47,28 +47,29 @@ import sys
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--stamp', metavar='FILE', help='Touch FILE at the end.', required=True)
-    parser.add_argument(
         '--depfile',
-        metavar='FILE',
+        type=argparse.FileType('w'),
         help='Write a GN depfile to the given path',
         required=True)
     parser.add_argument(
         '--merged',
-        metavar='FILE',
+        type=argparse.FileType('w'),
         help='Write a snapshot of this sysmgr config to the given path',
         required=True)
-    parser.add_argument('manifest', help='config-data package manifest')
+    parser.add_argument(
+        '--config-entries',
+        type=argparse.FileType('r'),
+        help='config_data entries',
+        required=True)
     args = parser.parse_args()
 
-    with open(args.manifest, 'r') as f:
-        lines = f.read().splitlines()
-
     # Build a list of all the source paths that contribute to sysmgr's config-data
-    sysmgr_lines = [
-        line for line in lines if line.startswith('meta/data/sysmgr/')
+    config_entries = json.load(args.config_entries)
+    sysmgr_config_files = [
+        e['source']
+        for e in config_entries
+        if e['destination'].startswith('meta/data/sysmgr/')
     ]
-    sysmgr_config_files = [line.split('=')[1] for line in sysmgr_lines]
 
     # Parse all config files.
     #
@@ -113,18 +114,17 @@ def main():
             else:
                 merged_config[category] = values
 
-    with open(args.merged, 'w') as f:
-        json.dump(
-            merged_config, f, indent=2, separators=(',', ': '), sort_keys=True)
+    json.dump(
+        merged_config,
+        args.merged,
+        indent=2,
+        separators=(',', ': '),
+        sort_keys=True)
 
     # Write the depfile, which is a Makefile format file that has a single output
-    # (the stamp file) and lists all input files as dependencies.
-    with open(args.depfile, 'w') as f:
-        f.write('{}: {}\n'.format(args.stamp, ' '.join(sysmgr_config_files)))
-
-    # Write the stampfile.
-    with open(args.stamp, 'w') as f:
-        os.utime(f.name, None)
+    # (the merged file) and lists all input files as dependencies.
+    args.depfile.write(
+        '{}: {}\n'.format(args.merged, ' '.join(sysmgr_config_files)))
 
     return 0
 

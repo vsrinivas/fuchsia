@@ -130,6 +130,10 @@ template("fuchsia_package") {
     manifest = ":$package_manifest_target"
     deps = [ ":$validate_target" ]
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
       # Add barriers so that the contents of this package do not get
       # accidentally picked up by other packages via improper dependencies.
       component_manifests_barrier = []
