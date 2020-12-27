@@ -38,6 +38,7 @@ type gceSerial struct {
 	out    io.Reader
 	sess   *ssh.Session
 	client *ssh.Client
+	closed bool
 }
 
 func newGCESerial(pkeyPath, username, endpoint string) (*gceSerial, error) {
@@ -88,6 +89,9 @@ func newGCESerial(pkeyPath, username, endpoint string) (*gceSerial, error) {
 }
 
 func (s *gceSerial) Read(b []byte) (int, error) {
+	if s.closed {
+		return 0, os.ErrClosed
+	}
 	return s.out.Read(b)
 }
 
@@ -106,6 +110,7 @@ func (s *gceSerial) Close() error {
 	if err := s.client.Close(); err != nil {
 		multierr += fmt.Sprintf("failed to close serial SSH client: %s", err)
 	}
+	s.closed = true
 	if multierr != "" {
 		return errors.New(multierr)
 	}
