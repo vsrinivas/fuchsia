@@ -179,12 +179,10 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 	// Set up and execute the command to create the instance.
 	logger.Infof(ctx, "creating the GCE instance")
 	expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
-	createInstanceErrs := make(chan error)
-	defer close(createInstanceErrs)
-	go logErrors(ctx, "createInstance()", createInstanceErrs)
-	if err := retry.Retry(ctx, expBackoff, g.createInstance, createInstanceErrs); err != nil {
+	if err := retry.Retry(ctx, expBackoff, g.createInstance, nil); err != nil {
 		return nil, err
 	}
+	logger.Infof(ctx, "successfully created the GCE instance")
 
 	// Connect to the serial line.
 	logger.Infof(ctx, "setting up the serial connection to the GCE instance")
@@ -195,6 +193,7 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 	if err := retry.Retry(ctx, expBackoff, g.connectToSerial, connectSerialErrs); err != nil {
 		return nil, err
 	}
+	logger.Infof(ctx, "successfully connected to serial")
 	return g, nil
 }
 
