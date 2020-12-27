@@ -2965,7 +2965,7 @@ parameter to true regardless of whether it is specified on a target.
 
 **Current value (from the default):** `false`
 
-From //build/config.gni:12
+From //build/config.gni:13
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
