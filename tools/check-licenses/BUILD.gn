@@ -105,20 +105,7 @@ if (is_host) {
       rebase_path("$target_gen_dir/testdata", root_build_dir),
     ]
     deps = [ ":lib" ]
-    non_go_deps = [
-      ":config_test_data",
-      ":lib_test_data",
-    ]
-  }
-
-  host_test_data("config_test_data") {
-    sources = [ "config" ]
-    outputs = [ "$target_gen_dir/config" ]
-  }
-
-  host_test_data("lib_test_data") {
-    sources = [ "testdata" ]
-    outputs = [ "$target_gen_dir/testdata" ]
+    non_go_deps = [ "testdata" ]
   }
 
   go_test("check-licenses_noticetxt_tests") {

@@ -12,8 +12,8 @@ import (
 
 type File struct {
 	Name     string
-	Path     string     `json:"-"`
-	Symlink  string     `json:"-"`
+	Path     string     `json:"path"`
+	Symlink  string     `json:"symlink"`
 	Parent   *FileTree  `json:"-"`
 	Licenses []*License `json:"licenses"`
 }

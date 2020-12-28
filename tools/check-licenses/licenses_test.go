@@ -12,7 +12,7 @@ import (
 )
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
-	configPath := filepath.Join(*testDataDir, "filetree", "simple.json")
+	configPath := filepath.Join(*testDataDir, "filetree", "simple", "config.json")
 	config, err := NewConfig(configPath)
 	if err != nil {
 		t.Fatal(err)

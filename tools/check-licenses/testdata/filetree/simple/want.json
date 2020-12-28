@@ -1,0 +1,11 @@
+{
+	"name": "root",
+	"path": "{root}",
+	"files": [
+		{
+			"name": "test.py",
+			"path": "{root}/test.py",
+			"symlink": "{root}/test.py"
+		}
+	]
+}
