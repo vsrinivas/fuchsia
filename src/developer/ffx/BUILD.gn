@@ -64,6 +64,9 @@ if (is_host) {
     ]
 
     deps = [ ":ffx_bin" ]
+
+    # TODO(65933): re-enable on Mac once flake issues are resolved.
+    environments = [ linux_env ]
   }
 
   host_test("ffx-e2e-with-target") {
