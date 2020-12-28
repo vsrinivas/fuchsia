@@ -90,133 +90,6 @@ pub struct ArchivistBuilder {
 }
 
 impl ArchivistBuilder {
-    async fn collect_component_events(
-        event_stream: EventStream,
-        state: ArchivistState,
-        pipeline_exists: bool,
-    ) {
-        let events = event_stream.listen().await;
-        if !pipeline_exists {
-            component::health().set_unhealthy("Pipeline config has an error");
-        } else {
-            component::health().set_ok();
-        }
-        state.run(events).await
-    }
-
-    /// Install controller service.
-    pub fn install_controller_service(&mut self) -> &mut Self {
-        let (stop_sender, stop_recv) = mpsc::channel(0);
-        self.fs
-            .dir("svc")
-            .add_fidl_service(move |stream| Self::spawn_controller(stream, stop_sender.clone()));
-        self.stop_recv = Some(stop_recv);
-        debug!("Controller services initialized.");
-        self
-    }
-
-    /// The spawned controller listens for the stop request and forwards that to the archivist stop
-    /// channel if received.
-    fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::Sender<()>) {
-        fasync::Task::spawn(
-            async move {
-                while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
-                    debug!("Stop request received.");
-                    stop_sender.send(()).await.ok();
-                    break;
-                }
-                Ok(())
-            }
-            .map(|o: Result<(), fidl::Error>| {
-                if let Err(e) = o {
-                    error!(%e, "error serving controller");
-                }
-            }),
-        )
-        .detach();
-    }
-
-    fn take_lifecycle_channel() -> LifecycleRequestStream {
-        let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
-        let lifecycle_handle = take_startup_handle(lifecycle_handle_info)
-            .expect("must have been provided a lifecycle channel in procargs");
-        let x: zx::Channel = lifecycle_handle.into();
-        let async_x = AsyncChannel::from(
-            fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
-        );
-        LifecycleRequestStream::from_channel(async_x)
-    }
-
-    pub fn install_lifecycle_listener(&mut self) -> &mut Self {
-        let (mut stop_sender, stop_recv) = mpsc::channel(0);
-        let mut req_stream = Self::take_lifecycle_channel();
-
-        Task::spawn(async move {
-            debug!("Awaiting request to close");
-            while let Some(LifecycleRequest::Stop { .. }) =
-                req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
-            {
-                info!("Initiating shutdown.");
-                stop_sender.send(()).await.unwrap();
-            }
-        })
-        .detach();
-
-        self.stop_recv = Some(stop_recv);
-        debug!("Lifecycle listener initialized.");
-        self
-    }
-
-    /// Installs `LogSink` and `Log` services. Panics if called twice.
-    /// # Arguments:
-    /// * `log_connector` - If provided, install log connector.
-    pub fn install_logger_services(&mut self) -> &mut Self {
-        let data_repo_1 = self.data_repo().clone();
-        let data_repo_2 = self.data_repo().clone();
-        let data_repo_3 = self.data_repo().clone();
-        let log_sender = self.log_sender.clone();
-        let log_sender2 = self.log_sender.clone();
-        let listen_sender = self.listen_sender.clone();
-
-        self.fs
-            .dir("svc")
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.logger.Log connection");
-                data_repo_1.clone().handle_log(stream, listen_sender.clone());
-            })
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.logger.LogSink connection");
-                let source = Arc::new(SourceIdentity::EMPTY);
-                fasync::Task::spawn(data_repo_2.clone().handle_log_sink(
-                    stream,
-                    source,
-                    log_sender.clone(),
-                ))
-                .detach();
-            })
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.sys.EventStream connection");
-                fasync::Task::spawn(
-                    data_repo_3.clone().handle_event_stream(stream, log_sender2.clone()),
-                )
-                .detach()
-            });
-        debug!("Log services initialized.");
-        self
-    }
-
-    // Sets event provider which is used to collect component events, Panics if called twice.
-    pub fn add_event_source(
-        &mut self,
-        name: impl Into<String>,
-        source: Box<dyn EventSource>,
-    ) -> &mut Self {
-        let name = name.into();
-        debug!("{} event source initialized", &name);
-        self.event_stream.add_source(name, source);
-        self
-    }
-
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_logger_services`, `add_event_source`.
@@ -384,6 +257,119 @@ impl ArchivistBuilder {
         &self.log_sender
     }
 
+    /// Install controller service.
+    pub fn install_controller_service(&mut self) -> &mut Self {
+        let (stop_sender, stop_recv) = mpsc::channel(0);
+        self.fs
+            .dir("svc")
+            .add_fidl_service(move |stream| Self::spawn_controller(stream, stop_sender.clone()));
+        self.stop_recv = Some(stop_recv);
+        debug!("Controller services initialized.");
+        self
+    }
+
+    /// The spawned controller listens for the stop request and forwards that to the archivist stop
+    /// channel if received.
+    fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::Sender<()>) {
+        fasync::Task::spawn(
+            async move {
+                while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
+                    debug!("Stop request received.");
+                    stop_sender.send(()).await.ok();
+                    break;
+                }
+                Ok(())
+            }
+            .map(|o: Result<(), fidl::Error>| {
+                if let Err(e) = o {
+                    error!(%e, "error serving controller");
+                }
+            }),
+        )
+        .detach();
+    }
+
+    fn take_lifecycle_channel() -> LifecycleRequestStream {
+        let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
+        let lifecycle_handle = take_startup_handle(lifecycle_handle_info)
+            .expect("must have been provided a lifecycle channel in procargs");
+        let x: zx::Channel = lifecycle_handle.into();
+        let async_x = AsyncChannel::from(
+            fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
+        );
+        LifecycleRequestStream::from_channel(async_x)
+    }
+
+    pub fn install_lifecycle_listener(&mut self) -> &mut Self {
+        let (mut stop_sender, stop_recv) = mpsc::channel(0);
+        let mut req_stream = Self::take_lifecycle_channel();
+
+        Task::spawn(async move {
+            debug!("Awaiting request to close");
+            while let Some(LifecycleRequest::Stop { .. }) =
+                req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
+            {
+                info!("Initiating shutdown.");
+                stop_sender.send(()).await.unwrap();
+            }
+        })
+        .detach();
+
+        self.stop_recv = Some(stop_recv);
+        debug!("Lifecycle listener initialized.");
+        self
+    }
+
+    /// Installs `LogSink` and `Log` services. Panics if called twice.
+    /// # Arguments:
+    /// * `log_connector` - If provided, install log connector.
+    pub fn install_logger_services(&mut self) -> &mut Self {
+        let data_repo_1 = self.data_repo().clone();
+        let data_repo_2 = self.data_repo().clone();
+        let data_repo_3 = self.data_repo().clone();
+        let log_sender = self.log_sender.clone();
+        let log_sender2 = self.log_sender.clone();
+        let listen_sender = self.listen_sender.clone();
+
+        self.fs
+            .dir("svc")
+            .add_fidl_service(move |stream| {
+                debug!("fuchsia.logger.Log connection");
+                data_repo_1.clone().handle_log(stream, listen_sender.clone());
+            })
+            .add_fidl_service(move |stream| {
+                debug!("fuchsia.logger.LogSink connection");
+                let source = Arc::new(SourceIdentity::EMPTY);
+                fasync::Task::spawn(data_repo_2.clone().handle_log_sink(
+                    stream,
+                    source,
+                    log_sender.clone(),
+                ))
+                .detach();
+            })
+            .add_fidl_service(move |stream| {
+                debug!("fuchsia.sys.EventStream connection");
+                fasync::Task::spawn(
+                    data_repo_3.clone().handle_event_stream(stream, log_sender2.clone()),
+                )
+                .detach()
+            });
+        debug!("Log services initialized.");
+        self
+    }
+
+    // Sets event provider which is used to collect component events, Panics if called twice.
+    pub fn add_event_source(
+        &mut self,
+        name: impl Into<String>,
+        source: Box<dyn EventSource>,
+    ) -> &mut Self {
+        let name = name.into();
+        debug!("{} event source initialized", &name);
+        self.event_stream.add_source(name, source);
+        self
+    }
+
     /// Run archivist to completion.
     /// # Arguments:
     /// * `outgoing_channel`- channel to serve outgoing directory on.
@@ -429,6 +415,20 @@ impl ArchivistBuilder {
         debug!("Entering core loop.");
         // Combine all three futures into a main future.
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
+    }
+
+    async fn collect_component_events(
+        event_stream: EventStream,
+        state: ArchivistState,
+        pipeline_exists: bool,
+    ) {
+        let events = event_stream.listen().await;
+        if !pipeline_exists {
+            component::health().set_unhealthy("Pipeline config has an error");
+        } else {
+            component::health().set_ok();
+        }
+        state.run(events).await
     }
 }
 
