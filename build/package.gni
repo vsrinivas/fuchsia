@@ -361,8 +361,13 @@ template("package") {
         write_file(
             shellfile,
             [ "#!resolve fuchsia-pkg://fuchsia.com/${pkg.package_name}#${dest}" ])
-        shell_binaries +=
-            [ "${dest}=" + rebase_path(shellfile, root_build_dir) ]
+        shell_binaries += [
+          {
+            source = rebase_path(shellfile, root_build_dir)
+            destination = dest
+            label = get_label_info(":$pkg_target_name", "label_with_toolchain")
+          },
+        ]
 
         # The shell environment is not intended for production use.
         pkg.deps += [ "//build/validate:non_production_tag" ]

@@ -2,47 +2,61 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/dist/distribution_manifest.gni")
+import("//src/sys/build/components.gni")
 
 # Produce a package that collects all binaries entries produced by packages
 # declared in deps, into a new package.
 #
 # Paramters
+#
+#   package_name (optional)
+#     Default: target_name
+#
 #   deps (optional)
-#   public_deps (optional)
-#   data_deps (optional)
 #   testonly (optional)
+#   visibility (optional)
 #     Usual GN meanings.
 template("shell_commands") {
-  shell_commands_manifest = "${target_name}.shell-commands-extra.manifest"
-  shell_commands_manifest_path = target_gen_dir + "/" + shell_commands_manifest
-
-  generated_file(shell_commands_manifest) {
+  shell_binary_entries_target = "${target_name}_shell_binary_entries"
+  shell_binary_entries = "$target_out_dir/$shell_binary_entries_target"
+  generated_file(shell_binary_entries_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "public_deps",
-                             "data_deps",
                              "testonly",
                            ])
+    visibility = [ ":*" ]
 
     # This contract is known to package.gni.
     data_keys = [ "shell_binary_entries" ]
     walk_keys = [ "shell_binary_barrier" ]
-    outputs = [ shell_commands_manifest_path ]
+    outputs = [ shell_binary_entries ]
+    output_conversion = "json"
+    metadata = {
+      # Don't pick up resources from deps
+      distribution_entries_barrier = []
+    }
   }
 
-  package(target_name) {
-    metadata = {
-      shell_binary_barrier = []
-    }
+  distribution_entries_target = "${target_name}_distribution_entries_file"
+  distribution_entries_file(distribution_entries_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    deps = [ ":$shell_binary_entries_target" ]
+    file = shell_binary_entries
+  }
+
+  fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
                              "package_name",
                              "testonly",
                              "visibility",
                            ])
-    extra = [ shell_commands_manifest_path ]
-    deps = [ ":$shell_commands_manifest" ]
+    deps = [ ":$distribution_entries_target" ]
+    metadata = {
+      shell_binary_barrier = []
+    }
   }
 }
