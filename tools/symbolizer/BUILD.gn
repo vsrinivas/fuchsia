@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   source_set("src") {
@@ -51,14 +52,18 @@ if (is_host) {
     ]
   }
 
+  host_test_data("e2e_test_data") {
+    sources = [
+      "//prebuilt/test_data/symbolizer/symbols",
+      "test_cases",
+    ]
+    outputs = [ "$root_out_dir/test_data/symbolizer/{{source_file_part}}" ]
+  }
+
   test("symbolizer_e2e_tests") {
     sources = [ "e2e_test.cc" ]
-    defines = [
-      "TEST_CASES_DIR=" + rebase_path("test_cases"),
-      "TEST_SYMBOLS_DIR=" +
-          rebase_path("//prebuilt/test_data/symbolizer/symbols"),
-    ]
     deps = [
+      ":e2e_test_data",
       ":src",
       "//third_party/googletest:gtest",
     ]

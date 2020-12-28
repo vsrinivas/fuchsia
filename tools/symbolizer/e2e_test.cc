@@ -9,16 +9,16 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/common/host_util.h"
 #include "tools/symbolizer/log_parser.h"
 #include "tools/symbolizer/symbolizer_impl.h"
 
-#define TO_STRING_INTERNAL(var) #var
-#define TO_STRING_LITERAL(var) TO_STRING_INTERNAL(var)
-
 namespace {
 
-const std::filesystem::path kSymbolsDir = TO_STRING_LITERAL(TEST_SYMBOLS_DIR);
-const std::filesystem::path kTestCasesDir = TO_STRING_LITERAL(TEST_CASES_DIR);
+const std::filesystem::path kSelfPath = zxdb::GetSelfPath();
+const std::filesystem::path kTestDataDir = kSelfPath.parent_path() / "test_data" / "symbolizer";
+const std::filesystem::path kSymbolsDir = kTestDataDir / "symbols";
+const std::filesystem::path kTestCasesDir = kTestDataDir / "test_cases";
 
 class TestCase : public testing::Test {
  public:
