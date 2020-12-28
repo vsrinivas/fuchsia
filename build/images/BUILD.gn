@@ -537,15 +537,6 @@ devmgr_config("devmgr_config_prime") {
   testonly = true
 }
 
-group("fuchsia_contents") {
-  testonly = true
-  deps = [
-    "//build/unification/future/images:fuchsia_kernel_cmdline",
-    "//build/unification/zbi:kernel",
-  ]
-  deps += [ "//build/input:bootfs" ]
-}
-
 # The main bootable image, which requires `blob.blk` to appear on some
 # attached storage device at runtime.
 zbi("fuchsia") {
@@ -553,7 +544,10 @@ zbi("fuchsia") {
 
   output_dir = root_out_dir
 
-  deps = [ ":fuchsia_contents" ]
+  deps = [
+    "//build/input:bootfs",
+    "//build/unification/zbi:kernel",
+  ]
 
   if (!include_devmgr_config_in_vbmeta) {
     deps += [ ":devmgr_config" ]
@@ -714,7 +708,10 @@ zbi("fuchsia_prime") {
 
   output_dir = root_out_dir
 
-  deps = [ ":fuchsia_contents" ]
+  deps = [
+    "//build/input:bootfs",
+    "//build/unification/zbi:kernel",
+  ]
 
   if (!include_devmgr_config_in_vbmeta) {
     deps += [ ":devmgr_config_prime" ]

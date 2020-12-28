@@ -62,10 +62,9 @@ zbi("bringup") {
   deps = [
     ":devmgr_config",
     ":system_package.manifest_args",
-    "//build/unification/future/images:fuchsia_kernel_cmdline",
+    "//build/input:bootfs",
     "//build/unification/zbi:kernel",
   ]
-  deps += [ "//build/input:bootfs" ]
 
   metadata = {
     images = [
