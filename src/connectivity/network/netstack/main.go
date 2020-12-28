@@ -207,6 +207,8 @@ func Main() {
 	log.SetFlags(log.Lshortfile)
 	glog.SetTarget(&glogEmitter{})
 
+	_ = syslog.Infof("starting...")
+
 	secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
