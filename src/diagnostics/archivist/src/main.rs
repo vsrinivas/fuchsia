@@ -102,7 +102,7 @@ fn main() -> Result<(), Error> {
 
     let num_threads = archivist_configuration.num_threads;
 
-    let mut archivist = archivist::Archivist::new(archivist_configuration)?;
+    let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
     archivist.install_logger_services().add_event_source("v1", Box::new(legacy_event_provider));

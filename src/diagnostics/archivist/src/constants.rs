@@ -33,3 +33,6 @@ pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: usize = 1 << 20; // 1 MiB
 
 /// Store 4 MB of log messages and delete on FIFO basis.
 pub const MAXIMUM_CACHED_LOGS_BYTES: usize = 4 * 1024 * 1024;
+
+/// Keep only the 50 most recent events.
+pub const INSPECT_LOG_WINDOW_SIZE: usize = 50;

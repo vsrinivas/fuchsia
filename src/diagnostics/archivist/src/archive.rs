@@ -3,23 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        configs, diagnostics,
-        events::types::{
-            ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
-            EventMetadata,
-        },
-        pipeline::Pipeline,
-        repository::DataRepo,
-    },
+    crate::diagnostics,
     anyhow::{format_err, Error},
     chrono::prelude::*,
-    fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
-    fuchsia_zircon as zx,
-    futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
-    parking_lot::{Mutex, RwLock},
     regex::Regex,
     serde::{Deserialize, Serialize},
     serde_json::Deserializer,
@@ -28,12 +16,7 @@ use {
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
-    std::sync::Arc,
-    tracing::{debug, error, warn},
 };
-
-// Keep only the 50 most recent events.
-static INSPECT_LOG_WINDOW_SIZE: usize = 50;
 
 /// Archive represents the top-level directory tree for the Archivist's storage.
 pub struct Archive {
@@ -360,17 +343,17 @@ impl ArchiveWriter {
         temp_log.close()
     }
 
-    fn add_group_stat(&mut self, log_file_path: &Path, stat: EventFileGroupStats) {
+    pub fn add_group_stat(&mut self, log_file_path: &Path, stat: EventFileGroupStats) {
         self.group_stats.insert(log_file_path.to_string_lossy().to_string(), stat);
         diagnostics::set_group_stats(&self.group_stats);
     }
 
-    fn remove_group_stat(&mut self, log_file_path: &Path) {
+    pub fn remove_group_stat(&mut self, log_file_path: &Path) {
         self.group_stats.remove(&log_file_path.to_string_lossy().to_string());
         diagnostics::set_group_stats(&self.group_stats);
     }
 
-    fn archived_size(&self) -> u64 {
+    pub fn archived_size(&self) -> u64 {
         let mut ret = 0;
         for (_, v) in &self.group_stats {
             ret += v.size;
@@ -568,297 +551,6 @@ impl<'a> EventBuilder<'a> {
         delete_files(&self.event_files.as_ref().unwrap_or(&vec![]))
             .expect("Failed to delete files");
         self.event_files = Err(error)
-    }
-}
-
-/// ArchivistState owns the tools needed to persist data
-/// to the archive, as well as the service-specific repositories
-/// that are populated by the archivist server and exposed in the
-/// service sessions.
-pub struct ArchivistState {
-    /// Writer for the archive. If a path was not configured it will be `None`.
-    writer: Option<ArchiveWriter>,
-    log_node: BoundedListNode,
-    configuration: configs::Config,
-    diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-    pub diagnostics_repo: DataRepo,
-}
-
-impl ArchivistState {
-    pub fn new(
-        configuration: configs::Config,
-        diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-        diagnostics_repo: DataRepo,
-        writer: Option<ArchiveWriter>,
-    ) -> Result<Self, Error> {
-        let mut log_node = BoundedListNode::new(
-            diagnostics::root().create_child("events"),
-            INSPECT_LOG_WINDOW_SIZE,
-        );
-
-        inspect_log!(log_node, event: "Archivist started");
-
-        Ok(ArchivistState {
-            writer,
-            log_node,
-            configuration,
-            diagnostics_pipelines,
-            diagnostics_repo,
-        })
-    }
-}
-
-async fn populate_inspect_repo(
-    state: &Arc<Mutex<ArchivistState>>,
-    diagnostics_ready_data: DiagnosticsReadyEvent,
-) {
-    // The DiagnosticsReadyEvent should always contain a directory_proxy. Its existence
-    // as an Option is only to support mock objects for equality in tests.
-    let diagnostics_proxy = diagnostics_ready_data.directory.unwrap();
-
-    let component_id = diagnostics_ready_data.metadata.component_id.clone();
-
-    let locked_state = &state.lock();
-
-    // Update the central repository to reference the new diagnostics source.
-    locked_state
-        .diagnostics_repo
-        .write()
-        .add_inspect_artifacts(
-            component_id.clone(),
-            diagnostics_ready_data.metadata.component_url.clone(),
-            diagnostics_proxy,
-            diagnostics_ready_data.metadata.timestamp.clone(),
-        )
-        .unwrap_or_else(|e| {
-            warn!(
-                component = ?component_id.clone(), ?e,
-                "Failed to add inspect artifacts to repository"
-            );
-        });
-
-    // Let each pipeline know that a new component arrived, and allow the pipeline
-    // to eagerly bucket static selectors based on that component's moniker.
-    // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-    for pipeline in &locked_state.diagnostics_pipelines {
-        pipeline.write().add_inspect_artifacts(component_id.clone()).unwrap_or_else(|e| {
-            warn!(
-                component = ?component_id.clone(), ?e,
-                "Failed to add inspect artifacts to pipeline wrapper"
-            );
-        });
-    }
-}
-
-fn add_new_component(
-    state: &Arc<Mutex<ArchivistState>>,
-    identifier: ComponentIdentifier,
-    component_url: String,
-    event_timestamp: zx::Time,
-    component_start_time: Option<zx::Time>,
-) {
-    let locked_state = &state.lock();
-
-    // Update the central repository to reference the new diagnostics source.
-    locked_state
-        .diagnostics_repo
-        .write()
-        .add_new_component(
-            identifier.clone(),
-            component_url.clone(),
-            event_timestamp,
-            component_start_time,
-        )
-        .unwrap_or_else(|e| {
-            error!(
-                id = ?identifier, ?e,
-                "Failed to add new component to repository",
-            );
-        });
-}
-
-fn remove_from_inspect_repo(
-    state: &Arc<Mutex<ArchivistState>>,
-    component_id: &ComponentIdentifier,
-) {
-    let locked_state = &state.lock();
-    locked_state.diagnostics_repo.write().remove(&component_id);
-
-    // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-    for pipeline in &locked_state.diagnostics_pipelines {
-        pipeline.write().remove(&component_id);
-    }
-}
-
-async fn process_event(
-    state: Arc<Mutex<ArchivistState>>,
-    event: ComponentEvent,
-) -> Result<(), Error> {
-    match event {
-        ComponentEvent::Start(start) => {
-            let archived_metadata = start.metadata.clone();
-            debug!(
-                "Adding new component. id={:?} url={}",
-                &start.metadata.component_id, &start.metadata.component_url
-            );
-            add_new_component(
-                &state,
-                start.metadata.component_id,
-                start.metadata.component_url,
-                start.metadata.timestamp,
-                None,
-            );
-            archive_event(&state, "START", archived_metadata).await
-        }
-        ComponentEvent::Running(running) => {
-            let archived_metadata = running.metadata.clone();
-            debug!("Component is running. id={:?}", &running.metadata.component_id,);
-            add_new_component(
-                &state,
-                running.metadata.component_id,
-                running.metadata.component_url,
-                running.metadata.timestamp,
-                Some(running.component_start_time),
-            );
-            archive_event(&state, "RUNNING", archived_metadata.clone()).await
-        }
-        ComponentEvent::Stop(stop) => {
-            // TODO(fxbug.dev/53939): Get inspect data from repository before removing
-            // for post-mortem inspection.
-            debug!("Component stopped. id={:?}", &stop.metadata.component_id);
-            remove_from_inspect_repo(&state, &stop.metadata.component_id);
-            archive_event(&state, "STOP", stop.metadata).await
-        }
-        ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
-            debug!(
-                "Diagnostics directory is ready. id={:?}",
-                &diagnostics_ready.metadata.component_id
-            );
-            populate_inspect_repo(&state, diagnostics_ready).await;
-            Ok(())
-        }
-    }
-}
-
-async fn archive_event(
-    state: &Arc<Mutex<ArchivistState>>,
-    _event_name: &str,
-    _event_data: EventMetadata,
-) -> Result<(), Error> {
-    let mut state = state.lock();
-    let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
-
-    let writer = if let Some(w) = writer.as_mut() {
-        w
-    } else {
-        return Ok(());
-    };
-
-    let max_archive_size_bytes = configuration.max_archive_size_bytes;
-    let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
-
-    // TODO(fxbug.dev/53939): Get inspect data from repository before removing
-    // for post-mortem inspection.
-    //let log = writer.get_log().new_event(event_name, event_data.component_id);
-    // if let Some(data_map) = event_data.component_data_map {
-    //     for (path, object) in data_map {
-    //         match object {
-    //             InspectData::Empty
-    //             | InspectData::DeprecatedFidl(_)
-    //             | InspectData::Tree(_, None) => {}
-    //             InspectData::Vmo(vmo) | InspectData::Tree(_, Some(vmo)) => {
-    //                 let mut contents = vec![0u8; vmo.get_size()? as usize];
-    //                 vmo.read(&mut contents[..], 0)?;
-
-    //                 // Truncate the bytes down to the last non-zero 4096-byte page of data.
-    //                 // TODO(fxbug.dev/4703): Handle truncation of VMOs without reading the whole thing.
-    //                 let mut last_nonzero = 0;
-    //                 for (i, v) in contents.iter().enumerate() {
-    //                     if *v != 0 {
-    //                         last_nonzero = i;
-    //                     }
-    //                 }
-    //                 if last_nonzero % 4096 != 0 {
-    //                     last_nonzero = last_nonzero + 4096 - last_nonzero % 4096;
-    //                 }
-    //                 contents.resize(last_nonzero, 0);
-
-    //                 log = log.add_event_file(path, &contents);
-    //             }
-    //             InspectData::File(contents) => {
-    //                 log = log.add_event_file(path, &contents);
-    //             }
-    //         }
-    //     }
-    // }
-
-    let current_group_stats = writer.get_log().get_stats();
-
-    if current_group_stats.size >= max_event_group_size_bytes {
-        let (path, stats) = writer.rotate_log()?;
-        inspect_log!(log_node, event:"Rotated log",
-                     new_path: path.to_string_lossy().to_string());
-        writer.add_group_stat(&path, stats);
-    }
-
-    let archived_size = writer.archived_size();
-    let mut current_archive_size = current_group_stats.size + archived_size;
-    if current_archive_size > max_archive_size_bytes {
-        let dates = writer.get_archive().get_dates().unwrap_or_else(|e| {
-            warn!("Garbage collection failure");
-            inspect_log!(log_node, event: "Failed to get dates for garbage collection",
-                         reason: format!("{:?}", e));
-            vec![]
-        });
-
-        for date in dates {
-            let groups = writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
-                warn!("Garbage collection failure");
-                inspect_log!(log_node, event: "Failed to get event file",
-                             date: &date,
-                             reason: format!("{:?}", e));
-                vec![]
-            });
-
-            for group in groups {
-                let path = group.log_file_path();
-                match group.delete() {
-                    Err(e) => {
-                        inspect_log!(log_node, event: "Failed to remove group",
-                                 path: &path,
-                                 reason: format!(
-                                     "{:?}", e));
-                        continue;
-                    }
-                    Ok(stat) => {
-                        current_archive_size -= stat.size;
-                        writer.remove_group_stat(&PathBuf::from(&path));
-                        inspect_log!(log_node, event: "Garbage collected group",
-                                     path: &path,
-                                     removed_files: stat.file_count as u64,
-                                     removed_bytes: stat.size as u64);
-                    }
-                };
-
-                if current_archive_size < max_archive_size_bytes {
-                    return Ok(());
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-pub async fn run_archivist(archivist_state: ArchivistState, mut events: ComponentEventStream) {
-    let state = Arc::new(Mutex::new(archivist_state));
-
-    while let Some(event) = events.next().await {
-        process_event(state.clone(), event).await.unwrap_or_else(|e| {
-            let mut state = state.lock();
-            inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
-            error!(?e, "Failed to log event");
-        });
     }
 }
 
