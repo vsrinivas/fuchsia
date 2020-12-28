@@ -3,6 +3,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("//build/zbi/kernel_cmdline.gni")
 
 driver_package("virtual_audio") {
   deps = [ ":virtual_audio_driver" ]
@@ -49,4 +50,8 @@ driver_module("virtual_audio_driver") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+kernel_cmdline("kernel-logging") {
+  args = [ "driver.virtual_audio.log=trace" ]
 }
