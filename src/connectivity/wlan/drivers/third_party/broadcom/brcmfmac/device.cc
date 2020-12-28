@@ -212,6 +212,9 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s",
                   zx_status_get_string(status));
+        // Set the wdev back to WlanInterface if the deletion failed, because it means that wdev is
+        // not actually released.
+        client_interface_->set_wdev(wdev);
         return status;
       }
       client_interface_->DdkAsyncRemove();
@@ -226,6 +229,9 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
         BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s",
                   zx_status_get_string(status));
+        // Set the wdev back to WlanInterface if the deletion failed, because it means that wdev is
+        // not actually released.
+        ap_interface_->set_wdev(wdev);
         return status;
       }
       ap_interface_->DdkAsyncRemove();

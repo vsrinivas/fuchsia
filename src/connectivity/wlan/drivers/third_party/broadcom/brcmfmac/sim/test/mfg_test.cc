@@ -47,7 +47,7 @@ void MfgTest::CreateIF(wlan_info_mac_role_t role) {
       break;
   }
 }
-void MfgTest::DelIF(SimInterface* ifc) { DeleteInterface(ifc); }
+void MfgTest::DelIF(SimInterface* ifc) { EXPECT_EQ(DeleteInterface(ifc), ZX_OK); }
 
 void MfgTest::StartSoftAP() {
   softap_ifc_.StartSoftAp(SimInterface::kDefaultSoftApSsid, kDefaultChannel);
@@ -76,13 +76,13 @@ TEST_F(MfgTest, BasicTest) {
             ZX_OK);
 
   // Now delete the Client IF and SoftAP creation should pass
-  DeleteInterface(&client_ifc_);
+  EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), 1U);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid),
             ZX_OK);
   // Now that SoftAP IF is created, Client IF creation should fail
   ASSERT_NE(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  DeleteInterface(&softap_ifc_);
+  EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
 }
 
 // Start client and SoftAP interfaces and check if

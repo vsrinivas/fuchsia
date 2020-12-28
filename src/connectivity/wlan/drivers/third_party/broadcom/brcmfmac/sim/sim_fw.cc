@@ -1693,7 +1693,6 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
   if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, fw_err, nullptr, ifidx)) {
     return status;
   }
-
   // Check against the entire command string.
   size_t cmd_len = strlen(name);
 

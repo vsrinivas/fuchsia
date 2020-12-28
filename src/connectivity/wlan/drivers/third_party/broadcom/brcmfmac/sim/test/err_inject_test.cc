@@ -104,6 +104,19 @@ TEST_F(ErrInjTest, ErrInjectorFirmwareError) {
   // status code will be adjusted to ZX_ERR_IO_REFUSED even when no error was injected to it.
   EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
   EXPECT_EQ(fw_err, BCME_BADARG);
+
+  // Delete the error injections to verify the deletion logic.
+  sim->sim_fw->err_inj_.DelErrInjIovar("country");
+  sim->sim_fw->err_inj_.DelErrInjCmd(BRCMF_C_SET_SSID);
+
+  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(fw_err, BCME_OK);
+
+  status =
+      brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(fw_err, BCME_OK);
 }
 
 }  // namespace wlan::brcmfmac

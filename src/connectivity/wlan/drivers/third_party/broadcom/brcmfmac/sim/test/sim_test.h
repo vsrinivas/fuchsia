@@ -212,7 +212,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
       std::optional<common::MacAddr> mac_addr = std::nullopt);
 
   // Stop and delete a SimInterface
-  void DeleteInterface(SimInterface* ifc);
+  zx_status_t DeleteInterface(SimInterface* ifc);
 
   // Fake device manager
   std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;

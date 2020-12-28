@@ -169,6 +169,11 @@ zx_device_t* WlanInterface::zxdev() { return zx_device_; }
 
 const zx_device_t* WlanInterface::zxdev() const { return zx_device_; }
 
+void WlanInterface::set_wdev(wireless_dev* wdev) {
+  std::lock_guard<std::shared_mutex> guard(lock_);
+  wdev_ = wdev;
+}
+
 wireless_dev* WlanInterface::take_wdev() {
   std::lock_guard<std::shared_mutex> guard(lock_);
   wireless_dev* wdev = wdev_;

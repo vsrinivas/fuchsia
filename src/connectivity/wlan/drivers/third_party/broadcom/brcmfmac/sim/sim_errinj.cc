@@ -76,7 +76,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status, bcm
 
 void SimErrorInjector::DelErrInjIovar(const char* iovar) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
-    if (!it->iovar.empty() && std::memcmp(it->iovar.data(), iovar, strlen(iovar) + 1) != 0) {
+    if (!it->iovar.empty() && std::memcmp(it->iovar.data(), iovar, strlen(iovar) + 1) == 0) {
       BRCMF_DBG(SIMERRINJ, "Del Err Inj entry found status:%d iovar:%s", it->ret_status, iovar);
       iovars_.erase(it);
       BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", iovars_.size());

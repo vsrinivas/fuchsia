@@ -37,7 +37,7 @@ class WlanInterface {
                             WlanInterface** out_interface);
 
   // Accessors.
-
+  void set_wdev(wireless_dev* wdev);
   wireless_dev* take_wdev();
 
   // Device operations.

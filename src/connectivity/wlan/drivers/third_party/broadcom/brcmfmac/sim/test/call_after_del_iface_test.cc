@@ -25,7 +25,7 @@ TEST_F(SimTest, SetMulticastPromiscClient) {
   // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset client_ifc_.
   void* if_impl_ctx = client_ifc.if_impl_ctx_;
   wlanif_impl_protocol_ops_t if_impl_ops = *client_ifc.if_impl_ops_;
-  DeleteInterface(&client_ifc);
+  EXPECT_EQ(DeleteInterface(&client_ifc), ZX_OK);
   EXPECT_NE(if_impl_ops.set_multicast_promisc(if_impl_ctx, true), ZX_OK);
 
   dev_mgr_->DeviceAsyncRemove(fake_child);
@@ -49,7 +49,7 @@ TEST_F(SimTest, SetMulticastPromiscAP) {
   // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset client_ifc_.
   void* if_impl_ctx = ap_ifc.if_impl_ctx_;
   wlanif_impl_protocol_ops_t if_impl_ops = *ap_ifc.if_impl_ops_;
-  DeleteInterface(&ap_ifc);
+  EXPECT_EQ(DeleteInterface(&ap_ifc), ZX_OK);
   // Ensure any call into the IF fails after it has been deleted.
   EXPECT_NE(if_impl_ops.set_multicast_promisc(if_impl_ctx, true), ZX_OK);
 
@@ -74,7 +74,7 @@ TEST_F(SimTest, StopAP) {
   // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset ap_ifc.
   void* if_impl_ctx = ap_ifc.if_impl_ctx_;
   wlanif_impl_protocol_ops_t if_impl_ops = *ap_ifc.if_impl_ops_;
-  DeleteInterface(&ap_ifc);
+  EXPECT_EQ(DeleteInterface(&ap_ifc), ZX_OK);
   // Delete should have reset the IF's if_impl_ctx
   ASSERT_EQ(ap_ifc.if_impl_ctx_, nullptr);
   // Ensure any call into the IF fails after it has been deleted.
@@ -97,7 +97,26 @@ TEST_F(SimTest, ScanResultAfterIfaceStop) {
   // The scan result will arrive after the iface is torn down.
   env_->Run(zx::sec(1));  // This should be a no-op, not a crash.
 
-  DeleteInterface(&client_ifc);
+  EXPECT_EQ(DeleteInterface(&client_ifc), ZX_OK);
 }
 
+// Verify that calling WlanphyImplDestroyIface() twice will not cause a crash when the first call
+// failed.
+TEST_F(SimTest, DeleteIfaceTwice) {
+  ASSERT_EQ(Init(), ZX_OK);
+
+  SimInterface softap_ifc;
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc), ZX_OK);
+
+  // Inject firmware error to "interface_remove" iovar.
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("interface_remove", ZX_OK, BCME_ERROR, softap_ifc.iface_id_);
+
+  EXPECT_EQ(DeleteInterface(&softap_ifc), ZX_ERR_IO_REFUSED);
+
+  // Cancel the injected error.
+  sim->sim_fw->err_inj_.DelErrInjIovar("interface_remove");
+
+  EXPECT_EQ(DeleteInterface(&softap_ifc), ZX_OK);
+};
 }  // namespace wlan::brcmfmac

@@ -484,21 +484,27 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   return ZX_OK;
 }
 
-void SimTest::DeleteInterface(SimInterface* ifc) {
+zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
   auto iter = iface_id_set_.find(ifc->iface_id_);
+  zx_status_t err;
+
   if (iter == iface_id_set_.end()) {
     BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
 
   BRCMF_DBG(SIM, "Del IF: %d", ifc->iface_id_);
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(*iter), ZX_OK);
+  if ((err = device_->WlanphyImplDestroyIface(*iter)) != ZX_OK) {
+    BRCMF_ERR("Failed to destroy interface.\n");
+    return err;
+  }
 
   // Once the interface data structures have been deleted, our pointers are no longer valid.
   ifc->if_impl_ctx_ = nullptr;
   ifc->if_impl_ops_ = nullptr;
 
   iface_id_set_.erase(iter);
+  return ZX_OK;
 }
 
 }  // namespace wlan::brcmfmac
