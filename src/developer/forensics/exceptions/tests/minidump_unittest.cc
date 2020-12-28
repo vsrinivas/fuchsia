@@ -46,8 +46,10 @@ TEST(MinidumpTest, GenerateMinidump) {
   }
   ASSERT_TRUE(MarkExceptionAsHandled(&ec));
 
-  zx::vmo minidump_vmo = GenerateMinidump(std::move(ec.exception));
+  std::optional<PolicyError> policy_error;
+  zx::vmo minidump_vmo = GenerateMinidump(std::move(ec.exception), &policy_error);
   ASSERT_TRUE(minidump_vmo.is_valid());
+  ASSERT_FALSE(policy_error.has_value());
 
   uint64_t vmo_size;
   ASSERT_EQ(minidump_vmo.get_size(&vmo_size), ZX_OK);

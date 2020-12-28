@@ -36,6 +36,28 @@ TEST_F(CrashReportBuilderTest, SetsMinidump) {
   EXPECT_STREQ(minidump_content.c_str(), "minidump");
 }
 
+TEST_F(CrashReportBuilderTest, PolicyError_ChannelOverflow) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo())).SetPolicyError(PolicyError::kChannelOverflow);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-channel-overflow");
+}
+
+TEST_F(CrashReportBuilderTest, PolicyError_PortOverflow) {
+  fsl::SizedVmo minidump_vmo;
+  ASSERT_TRUE(fsl::VmoFromString("minidump", &minidump_vmo));
+
+  builder_.SetMinidump(std::move(minidump_vmo.vmo())).SetPolicyError(PolicyError::kPortOverflow);
+
+  auto crash_report = builder_.Consume();
+  ASSERT_TRUE(crash_report.has_crash_signature());
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-unknown_process-port-overflow");
+}
+
 TEST_F(CrashReportBuilderTest, ProcessTerminated) {
   builder_.SetProcessTerminated();
 

@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/exception.h>
 
+#include <optional>
+
 #include "src/developer/forensics/exceptions/handler/component_lookup.h"
 #include "src/developer/forensics/exceptions/handler/minidump.h"
 #include "src/developer/forensics/exceptions/handler/report_builder.h"
@@ -68,7 +70,8 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
   builder.SetProcess(crashed_process).SetThread(crashed_thread);
 
   if (exception.is_valid()) {
-    zx::vmo minidump = GenerateMinidump(exception);
+    std::optional<PolicyError> policy_error{std::nullopt};
+    zx::vmo minidump = GenerateMinidump(exception, &policy_error);
     ResetException(dispatcher_, std::move(exception), crashed_process);
 
     if (minidump.is_valid()) {
@@ -76,6 +79,7 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
     } else {
       builder.SetProcessTerminated();
     }
+    builder.SetPolicyError(policy_error);
   } else {
     builder.SetExceptionExpired();
   }

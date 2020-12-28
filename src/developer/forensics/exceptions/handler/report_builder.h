@@ -14,6 +14,8 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/exceptions/handler/minidump.h"
+
 namespace forensics {
 namespace exceptions {
 namespace handler {
@@ -23,6 +25,7 @@ class CrashReportBuilder {
   CrashReportBuilder& SetProcess(const zx::process& process);
   CrashReportBuilder& SetThread(const zx::thread& thread);
   CrashReportBuilder& SetMinidump(zx::vmo minidump);
+  CrashReportBuilder& SetPolicyError(const std::optional<PolicyError>& policy_error);
   CrashReportBuilder& SetComponentInfo(
       const fuchsia::sys::internal::SourceIdentity& component_info);
   CrashReportBuilder& SetExceptionExpired();
@@ -36,6 +39,7 @@ class CrashReportBuilder {
   std::optional<std::string> thread_name_;
   std::optional<zx_koid_t> thread_koid_;
   std::optional<zx::vmo> minidump_{std::nullopt};
+  std::optional<PolicyError> policy_error_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
   bool exception_expired_{false};

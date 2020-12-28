@@ -65,9 +65,24 @@ zx::thread GetThread(const zx::exception& exception) {
   return thread;
 }
 
+std::optional<PolicyError> DetectPolicyError(const zx_exception_report_t& exception_report) {
+  if (exception_report.header.type != ZX_EXCP_POLICY_ERROR) {
+    return std::nullopt;
+  }
+
+  switch (exception_report.context.synth_code) {
+    case ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE:
+      return PolicyError::kChannelOverflow;
+    case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS:
+      return PolicyError::kPortOverflow;
+    default:
+      return std::nullopt;
+  }
+}
+
 }  // namespace
 
-zx::vmo GenerateMinidump(const zx::exception& exception) {
+zx::vmo GenerateMinidump(const zx::exception& exception, std::optional<PolicyError>* policy_error) {
   zx::process process = GetProcess(exception);
   if (!process.is_valid())
     return {};
@@ -92,6 +107,9 @@ zx::vmo GenerateMinidump(const zx::exception& exception) {
                               << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
     return {};
   }
+
+  // Set the policy error.
+  *policy_error = DetectPolicyError(report);
 
   // Create a process snapshot form the process and the exception thread.
   crashpad::ProcessSnapshotFuchsia process_snapshot;

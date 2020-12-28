@@ -6,12 +6,30 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <optional>
+
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace exceptions {
 namespace handler {
+namespace {
+
+std::string Sanitize(std::string process_name) {
+  // Determine if ".cm" is present in |process_name| and use the substring that precedes it. This
+  // works for components v1 and v2 because their processes will end with ".cmx" and ".cm"
+  // respectively.
+  const size_t cm_pos = process_name.find(".cm");
+  if (cm_pos != std::string::npos) {
+    process_name = process_name.substr(0, cm_pos);
+  }
+
+  return process_name;
+}
+
+}  // namespace
 
 CrashReportBuilder& CrashReportBuilder::SetProcess(const zx::process& process) {
   process_name_ = (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
@@ -34,6 +52,12 @@ CrashReportBuilder& CrashReportBuilder::SetThread(const zx::thread& thread) {
 CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
   FX_CHECK(minidump.is_valid());
   minidump_ = std::move(minidump);
+  return *this;
+}
+
+CrashReportBuilder& CrashReportBuilder::SetPolicyError(
+    const std::optional<PolicyError>& policy_error) {
+  policy_error_ = policy_error;
   return *this;
 }
 
@@ -93,6 +117,19 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   }
 
   FX_CHECK(minidump_.has_value() || exception_expired_ || process_already_terminated_);
+
+  if (policy_error_.has_value()) {
+    switch (policy_error_.value()) {
+      case PolicyError::kChannelOverflow:
+        crash_report.set_crash_signature(fxl::StringPrintf(
+            "fuchsia-%s-channel-overflow", Sanitize(process_name_.value()).c_str()));
+        break;
+      case PolicyError::kPortOverflow:
+        crash_report.set_crash_signature(
+            fxl::StringPrintf("fuchsia-%s-port-overflow", Sanitize(process_name_.value()).c_str()));
+        break;
+    }
+  }
 
   if (minidump_.has_value()) {
     NativeCrashReport native_crash_report;
