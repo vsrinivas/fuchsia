@@ -217,7 +217,6 @@ isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
     "//src/devices/block/bin/iochk",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ftl",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
@@ -225,6 +224,7 @@ isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
     "//src/devices/nand/drivers/nand",
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }
 

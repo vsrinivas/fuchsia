@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "slice-extent.h"
+#include "src/storage/fvm/driver/slice_extent.h"
 
 #include <zircon/assert.h>
 

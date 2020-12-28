@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#ifndef SRC_STORAGE_FVM_DRIVER_VPARTITION_MANAGER_H_
+#define SRC_STORAGE_FVM_DRIVER_VPARTITION_MANAGER_H_
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -31,11 +31,11 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
-#include "diagnostics.h"
-#include "slice-extent.h"
+#include "src/storage/fvm/driver/diagnostics.h"
+#include "src/storage/fvm/driver/slice_extent.h"
+#include "src/storage/fvm/driver/vpartition.h"
 #include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/metadata.h"
-#include "vpartition.h"
 
 namespace fvm {
 
@@ -225,4 +225,4 @@ class VPartitionManager : public ManagerDeviceType {
 
 }  // namespace fvm
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#endif  // SRC_STORAGE_FVM_DRIVER_VPARTITION_MANAGER_H_

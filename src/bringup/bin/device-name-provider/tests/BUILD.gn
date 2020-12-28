@@ -31,7 +31,6 @@ isolated_devmgr_unittest_component("device-name-provider-test-component") {
     ":device-name-provider-test",
     "//src/bringup/bin/device-name-provider",
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/board/drivers/integration-test",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
+#ifndef SRC_STORAGE_FVM_DRIVER_VPARTITION_H_
+#define SRC_STORAGE_FVM_DRIVER_VPARTITION_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
@@ -19,7 +19,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 
-#include "slice-extent.h"
+#include "src/storage/fvm/driver/slice_extent.h"
 
 namespace fvm {
 
@@ -121,4 +121,4 @@ class VPartition : public PartitionDeviceType,
 
 }  // namespace fvm
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_VPARTITION_H_
+#endif  // SRC_STORAGE_FVM_DRIVER_VPARTITION_H_

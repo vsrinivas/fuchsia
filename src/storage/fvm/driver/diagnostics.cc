@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics.h"
+#include "src/storage/fvm/driver/diagnostics.h"
 
 #include <lib/inspect/cpp/inspect.h>
 

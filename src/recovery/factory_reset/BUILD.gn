@@ -160,11 +160,11 @@ isolated_devmgr_unittest_package("factory-reset-tests") {
     ":factory_reset_unittests",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ftl",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }
 

@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -12,13 +12,12 @@ test("fvm-driver-integration") {
     "partition_load_test.cc",
     "volume_manager_api_test.cc",
   ]
-  include_dirs = [ ".." ]
+
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
-    "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/no_ddk",
-    "//src/storage/fvm",
+    "//src/storage/fvm/driver:shared",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
@@ -34,9 +33,9 @@ isolated_devmgr_unittest_package("fvm-driver-integration-test") {
   deps = [
     ":fvm-driver-integration",
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }

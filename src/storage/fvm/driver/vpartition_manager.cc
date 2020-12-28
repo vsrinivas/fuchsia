@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/driver/vpartition_manager.h"
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -36,13 +36,13 @@
 #include <fbl/auto_lock.h>
 #include <safemath/clamped_math.h>
 
-#include "fvm-private.h"
-#include "slice-extent.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/fvm/driver/slice_extent.h"
+#include "src/storage/fvm/driver/vpartition.h"
 #include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/metadata.h"
 #include "src/storage/fvm/vmo_metadata_buffer.h"
-#include "vpartition.h"
 
 namespace fvm {
 namespace {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_
+#ifndef SRC_STORAGE_FVM_DRIVER_SLICE_EXTENT_H_
+#define SRC_STORAGE_FVM_DRIVER_SLICE_EXTENT_H_
 
 #include <stdint.h>
 
@@ -87,4 +87,4 @@ class SliceExtent : public fbl::WAVLTreeContainable<std::unique_ptr<SliceExtent>
 
 }  // namespace fvm
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_
+#endif  // SRC_STORAGE_FVM_DRIVER_SLICE_EXTENT_H_

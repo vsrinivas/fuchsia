@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/driver/vpartition_manager.h"
+
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 
@@ -10,19 +12,14 @@
 #include <ddktl/protocol/block.h>
 #include <zxtest/zxtest.h>
 
-#include "fvm-private.h"
+#include "src/storage/fvm/driver/vpartition.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata.h"
-#include "vpartition.h"
 
-namespace {
+namespace fvm {
 
-using fvm::Header;
-using fvm::VPartition;
-using fvm::VPartitionManager;
-
-constexpr size_t kFvmSliceSize = 8 * fvm::kBlockSize;
-constexpr size_t kDiskSize = 64 * fvm::kBlockSize;
+constexpr size_t kFvmSliceSize = 8 * kBlockSize;
+constexpr size_t kDiskSize = 64 * kBlockSize;
 constexpr uint32_t kBlocksPerSlice = 128;
 
 // Provides a very simple ramdisk-like interface where we can track trim operations
@@ -90,7 +87,7 @@ class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
   std::vector<uint8_t> data_;
 };
 
-TEST(BlockDeviceTest, TrivialLifetime) {
+TEST(VPartitionManager, TrivialLifetime) {
   FakeBlockDevice block_device;
   block_info_t info;
   size_t block_op_size;
@@ -103,7 +100,7 @@ TEST(BlockDeviceTest, TrivialLifetime) {
 // Initializes a block device containing an FVM header with one partition with the given oldest
 // revision.
 template <uint64_t oldest_revision>
-class BlockDeviceTestAtRevision : public zxtest::Test {
+class VPartitionManagerTestAtRevision : public zxtest::Test {
  public:
   void SetUp() override {
     block_info_t info;
@@ -111,9 +108,9 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
 
     // Generate the FVM partition information for the initial device state. This contains no
     // partitions or allocated slices.
-    Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kDiskSize, kFvmSliceSize);
+    Header header = Header::FromDiskSize(kMaxUsablePartitions, kDiskSize, kFvmSliceSize);
     header.oldest_revision = oldest_revision;
-    auto metadata_or = fvm::Metadata::Synthesize(header, nullptr, 0u, nullptr, 0u);
+    auto metadata_or = Metadata::Synthesize(header, nullptr, 0u, nullptr, 0u);
     ASSERT_TRUE(metadata_or.is_ok());
 
     // Write the FVM data to the device.
@@ -129,12 +126,12 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
   }
 
   // Returns a copy of the FVM metadata written to the block device.
-  zx::status<fvm::Metadata> GetMetadata() const {
+  zx::status<Metadata> GetMetadata() const {
     // Need to look at the header to tell how big the metadata will be.
-    fvm::Header header;
-    if (block_device_.data().size() < sizeof(fvm::Header))
+    Header header;
+    if (block_device_.data().size() < sizeof(Header))
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-    memcpy(&header, block_device_.data().data(), sizeof(fvm::Header));
+    memcpy(&header, block_device_.data().data(), sizeof(Header));
 
     // Now copy the full metadata out.
     size_t metadata_size = header.GetMetadataAllocatedBytes();
@@ -146,9 +143,9 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
     memcpy(metadata_b_buffer.get(),
            block_device_.data().data() + header.GetMetadataAllocatedBytes(), metadata_size);
 
-    return fvm::Metadata::Create(
-        std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_a_buffer), metadata_size),
-        std::make_unique<fvm::HeapMetadataBuffer>(std::move(metadata_b_buffer), metadata_size));
+    return Metadata::Create(
+        std::make_unique<HeapMetadataBuffer>(std::move(metadata_a_buffer), metadata_size),
+        std::make_unique<HeapMetadataBuffer>(std::move(metadata_b_buffer), metadata_size));
   }
 
   // Create a partition and returns it on success.
@@ -176,10 +173,10 @@ class BlockDeviceTestAtRevision : public zxtest::Test {
   size_t block_op_size_ = 0;
 };
 
-using BlockDeviceTest = BlockDeviceTestAtRevision<fvm::kCurrentRevision>;
+using VPartitionManagerTest = VPartitionManagerTestAtRevision<kCurrentRevision>;
 
 // Verifies that simple TRIM commands are forwarded to the underlying device.
-TEST_F(BlockDeviceTest, QueueTrimOneSlice) {
+TEST_F(VPartitionManagerTest, QueueTrimOneSlice) {
   auto partition_or = AllocatePartition();
   ASSERT_TRUE(partition_or.is_ok());
 
@@ -197,7 +194,7 @@ TEST_F(BlockDeviceTest, QueueTrimOneSlice) {
 }
 
 // Verifies that TRIM commands that span slices are forwarded to the underlying device.
-TEST_F(BlockDeviceTest, QueueTrimConsecutiveSlices) {
+TEST_F(VPartitionManagerTest, QueueTrimConsecutiveSlices) {
   // Ideally this should use AllocatePartition to have the VPartitionManager create the partition in
   // the correct way. This test is suspicious because pslice values aren't supposed to be zero whic
   // is used below, and haveing the VPartitionManager create the partition makes this test code
@@ -221,7 +218,7 @@ TEST_F(BlockDeviceTest, QueueTrimConsecutiveSlices) {
 
 // Verifies that TRIM commands spanning non-consecutive slices are forwarded to the underlying
 // device.
-TEST_F(BlockDeviceTest, QueueTrimDisjointSlices) {
+TEST_F(VPartitionManagerTest, QueueTrimDisjointSlices) {
   auto partition_or = AllocatePartition();
   ASSERT_TRUE(partition_or.is_ok());
 
@@ -240,19 +237,19 @@ TEST_F(BlockDeviceTest, QueueTrimDisjointSlices) {
   EXPECT_EQ(kOperationLength, block_device_.last_trim_length());
 }
 
-TEST_F(BlockDeviceTest, InspectVmoPopulatedWithInitialState) {
+TEST_F(VPartitionManagerTest, InspectVmoPopulatedWithInitialState) {
   fit::result<inspect::Hierarchy> hierarchy =
       inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
   ASSERT_TRUE(hierarchy.is_ok());
   const inspect::Hierarchy* mount_time = hierarchy.value().GetByPath({"fvm", "mount_time"});
   ASSERT_NE(mount_time, nullptr);
   EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("format_version")->value(),
-            fvm::kCurrentFormatVersion);
+            kCurrentFormatVersion);
   EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("oldest_revision")->value(),
-            fvm::kCurrentRevision);
+            kCurrentRevision);
 }
 
-TEST_F(BlockDeviceTest, InspectVmoTracksSliceAllocations) {
+TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
   auto partition_or = AllocatePartition("part1", 3u);
   ASSERT_TRUE(partition_or.is_ok());
 
@@ -289,9 +286,9 @@ TEST_F(BlockDeviceTest, InspectVmoTracksSliceAllocations) {
 
 // Tests that opening a device at a newer "oldest revision" updates the device's oldest revision to
 // the current revision value.
-constexpr uint64_t kNextRevision = fvm::kCurrentRevision + 1;
-using BlockDeviceTestAtNextRevision = BlockDeviceTestAtRevision<kNextRevision>;
-TEST_F(BlockDeviceTestAtNextRevision, UpdateOldestRevision) {
+constexpr uint64_t kNextRevision = kCurrentRevision + 1;
+using VPartitionManagerTestAtNextRevision = VPartitionManagerTestAtRevision<kNextRevision>;
+TEST_F(VPartitionManagerTestAtNextRevision, UpdateOldestRevision) {
   auto first_metadata_or = GetMetadata();
   ASSERT_TRUE(first_metadata_or.is_ok());
 
@@ -314,13 +311,13 @@ TEST_F(BlockDeviceTestAtNextRevision, UpdateOldestRevision) {
   EXPECT_NE(first_metadata_type, second_metadata_type);
 
   // The newly active header should have the oldest revision downgraded to the current one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, fvm::kCurrentRevision);
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, kCurrentRevision);
 }
 
 // Tests that opening a device at a older "oldest revision" doesn't change the oldest revision.
-constexpr uint64_t kPreviousRevision = fvm::kCurrentRevision - 1;
-using BlockDeviceTestAtPreviousRevision = BlockDeviceTestAtRevision<kPreviousRevision>;
-TEST_F(BlockDeviceTestAtPreviousRevision, DontUpdateOldestRevision) {
+constexpr uint64_t kPreviousRevision = kCurrentRevision - 1;
+using VPartitionManagerTestAtPreviousRevision = VPartitionManagerTestAtRevision<kPreviousRevision>;
+TEST_F(VPartitionManagerTestAtPreviousRevision, DontUpdateOldestRevision) {
   auto first_metadata_or = GetMetadata();
   ASSERT_TRUE(first_metadata_or.is_ok());
 
@@ -347,4 +344,4 @@ TEST_F(BlockDeviceTestAtPreviousRevision, DontUpdateOldestRevision) {
   EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, kPreviousRevision);
 }
 
-}  // namespace
+}  // namespace fvm

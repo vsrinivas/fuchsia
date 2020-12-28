@@ -46,9 +46,9 @@ isolated_devmgr_unittest_package("zxcrypt-test") {
   deps = [
     ":zxcrypt",
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }

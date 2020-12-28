@@ -12,7 +12,6 @@ group("tests") {
     "block-verity:tests",
     "core:tests",
     "ftl:tests",
-    "fvm:tests",
     "gpt:tests",
     "mbr:tests",
     "msm8x53-sdhci:tests",

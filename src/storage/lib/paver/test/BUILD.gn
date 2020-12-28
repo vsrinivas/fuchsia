@@ -74,7 +74,6 @@ isolated_devmgr_unittest_package("paver-test") {
     ":test",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ftl",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/mbr",
     "//src/devices/block/drivers/ramdisk",
@@ -85,6 +84,7 @@ isolated_devmgr_unittest_package("paver-test") {
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/nand/drivers/skip-block",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }
 

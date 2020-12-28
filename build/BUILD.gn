@@ -610,6 +610,7 @@ group("deprecated_package") {
     "//src/storage/ext4/server/*",
     "//src/storage/extractor/*",
     "//src/storage/factory/export_ffs/*",
+    "//src/storage/fvm/driver/*",
     "//src/storage/volume_image/*",
     "//src/sys/appmgr:system_data_file",
     "//src/sys/component_index/*",

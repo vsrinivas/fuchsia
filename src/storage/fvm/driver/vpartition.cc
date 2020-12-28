@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vpartition.h"
+#include "src/storage/fvm/driver/vpartition.h"
 
 #include <zircon/assert.h>
 
@@ -16,7 +16,7 @@
 #include <fbl/vector.h>
 #include <safemath/checked_math.h>
 
-#include "fvm-private.h"
+#include "src/storage/fvm/driver/vpartition_manager.h"
 
 namespace fvm {
 

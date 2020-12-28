@@ -47,11 +47,11 @@ isolated_devmgr_unittest_package("fs-recovery-test") {
     ":fs-recovery",
     ":zxcrypt_config.txt",
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
+    "//src/storage/fvm/driver",
   ]
 }
 

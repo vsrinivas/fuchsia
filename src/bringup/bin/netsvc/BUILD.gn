@@ -187,7 +187,6 @@ isolated_devmgr_unittest_component("netsvc-test-component") {
     ":netsvc",
     ":netsvc-test",
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/board/drivers/integration-test",

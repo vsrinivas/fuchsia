@@ -1,0 +1,101 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+driver_module("driver") {
+  output_name = "fvm"
+
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    ":shared",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/devices/lib/driver",
+  ]
+}
+
+# Also used by test/.
+source_set("shared") {
+  visibility = [ "./*" ]
+
+  sources = [
+    "diagnostics.cc",
+    "diagnostics.h",
+    "slice_extent.cc",
+    "slice_extent.h",
+    "vpartition.cc",
+    "vpartition.h",
+    "vpartition_manager.cc",
+    "vpartition_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.block",
+    "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/banjo/ddk.protocol.block.volume",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+    "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//src/lib/ddktl",
+    "//src/lib/uuid",
+    "//src/storage/fvm",
+    "//third_party/boringssl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/inspect",
+  ]
+
+  configs += [ "//build/config:all_source" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fvm-driver-unittests-package",
+    "//src/storage/fvm/driver/test:fvm-driver-integration-test",
+  ]
+}
+
+test("fvm-driver-unittests") {
+  output_name = "fvm-driver-unittests-test"
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "slice_extent_test.cc",
+    "vpartition_manager_test.cc",
+  ]
+  deps = [
+    ":shared",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("fvm-driver-unittests-package") {
+  package_name = "fvm-driver-unittests"
+  deps = [ ":fvm-driver-unittests" ]
+
+  tests = [
+    {
+      name = "fvm-driver-unittests-test"
+    },
+  ]
+}
