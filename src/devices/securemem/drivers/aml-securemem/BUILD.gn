@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("aml-securemem-bind") {
   rules = "aml-securemem.bind"
@@ -21,7 +21,7 @@ group("tests") {
   testonly = true
   deps = [
     ":aml-securemem-bind_test",
-    ":aml-securemem-test-package",
+    ":aml-securemem-test",
   ]
 }
 
@@ -65,7 +65,7 @@ driver_module("aml-securemem") {
   ]
 }
 
-test("aml-securemem-test") {
+test("aml-securemem-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -106,12 +106,7 @@ test("aml-securemem-test") {
   ]
 }
 
-unittest_package("aml-securemem-test-package") {
-  package_name = "aml-securemem-test"
-  deps = [ ":aml-securemem-test" ]
-  tests = [
-    {
-      name = "aml-securemem-test"
-    },
-  ]
+fuchsia_unittest_package("aml-securemem-test") {
+  executable_path = "test/aml-securemem-test"
+  deps = [ ":aml-securemem-test-bin" ]
 }

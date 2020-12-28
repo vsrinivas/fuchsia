@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("mtk-power-bind") {
   rules = "mtk-power.bind"
@@ -45,7 +45,7 @@ driver_module("mtk-power") {
   ]
 }
 
-test("mtk-power-test") {
+test("mtk-power-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mtk-power-test"
   sources = [
@@ -73,22 +73,18 @@ test("mtk-power-test") {
   ]
 }
 
-unittest_package("mtk-power-test-package") {
-  package_name = "mtk-power-test"
-  deps = [ ":mtk-power-test" ]
-
-  tests = [
-    {
-      name = "mtk-power-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("mtk-power-test") {
+  executable_path = "test/mtk-power-test"
+  deps = [ ":mtk-power-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":mtk-power-bind_test",
-    ":mtk-power-test-package",
+    ":mtk-power-test",
   ]
 }

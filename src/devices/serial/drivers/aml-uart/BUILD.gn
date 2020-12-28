@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("aml-uart") {
   configs += [
@@ -38,7 +38,7 @@ driver_module("aml-uart") {
   ]
 }
 
-test("aml-uart-test") {
+test("aml-uart-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-uart-test"
   configs += [ "//build/config:all_source" ]
@@ -75,19 +75,15 @@ test("aml-uart-test") {
   ]
 }
 
-unittest_package("aml-uart-test-package") {
-  package_name = "aml-uart-test"
-  deps = [ ":aml-uart-test" ]
-
-  tests = [
-    {
-      name = "aml-uart-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("aml-uart-test") {
+  executable_path = "test/aml-uart-test"
+  deps = [ ":aml-uart-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-uart-test-package" ]
+  deps = [ ":aml-uart-test" ]
 }

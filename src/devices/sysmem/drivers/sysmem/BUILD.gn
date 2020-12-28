@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -93,7 +93,7 @@ driver_module("sysmem") {
   ]
 }
 
-test("sysmem-unittest-executable") {
+test("sysmem-unittest-bin") {
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -137,11 +137,7 @@ test("sysmem-unittest-executable") {
   ]
 }
 
-unittest_package("sysmem-unittest") {
-  deps = [ ":sysmem-unittest-executable" ]
-  tests = [
-    {
-      name = "sysmem-unittest"
-    },
-  ]
+fuchsia_unittest_package("sysmem-unittest") {
+  executable_path = "test/sysmem-unittest"
+  deps = [ ":sysmem-unittest-bin" ]
 }

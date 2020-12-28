@@ -3,14 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":serial-async-unittest" ]
+  deps = [ ":serial-async-unittest-bin" ]
 }
 
-test("serial-async-unittest") {
+test("serial-async-unittest-bin") {
+  output_name = "serial-async-unittest"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-async-test.cc" ]
   include_dirs = [ ".." ]
@@ -23,19 +24,15 @@ test("serial-async-unittest") {
   ]
 }
 
-unittest_package("serial-async-unittest-package") {
-  package_name = "serial-async-unittest"
-  deps = [ ":serial-async-unittest" ]
-
-  tests = [
-    {
-      name = "serial-async-unittest"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("serial-async-unittest") {
+  executable_path = "test/serial-async-unittest"
+  deps = [ ":serial-async-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":serial-async-unittest-package" ]
+  deps = [ ":serial-async-unittest" ]
 }

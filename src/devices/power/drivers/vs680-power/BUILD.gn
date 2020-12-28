@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("vs680-power-bind") {
   rules = "vs680-power.bind"
@@ -40,7 +40,7 @@ driver_module("vs680-power") {
   ]
 }
 
-test("vs680-power-test") {
+test("vs680-power-test-bin") {
   output_name = "vs680-power-test"
   sources = [
     "vs680-power-test.cc",
@@ -65,22 +65,18 @@ test("vs680-power-test") {
   ]
 }
 
-unittest_package("vs680-power-test-package") {
-  package_name = "vs680-power-test"
-  deps = [ ":vs680-power-test" ]
-
-  tests = [
-    {
-      name = "vs680-power-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("vs680-power-test") {
+  executable_path = "test/vs680-power-test"
+  deps = [ ":vs680-power-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":vs680-power-bind_test",
-    ":vs680-power-test-package",
+    ":vs680-power-test",
   ]
 }

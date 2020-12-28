@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
 
 test("sysmem") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -27,13 +27,9 @@ test("sysmem") {
   ]
 }
 
-test_package("sysmem-test") {
+fuchsia_unittest_package("sysmem-test") {
+  manifest = "meta/sysmem.cmx"
   deps = [ ":sysmem" ]
-  tests = [
-    {
-      name = "sysmem"
-    },
-  ]
 }
 
 bootfs_test("sysmem-bootfs-test") {

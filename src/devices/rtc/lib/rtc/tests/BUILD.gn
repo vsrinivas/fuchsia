@@ -3,17 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":rtc-lib-llcpp-package",
-    ":rtc-lib-package",
+    ":rtc-lib-llcpp-test",
+    ":rtc-lib-test",
   ]
 }
 
-test("rtc-lib") {
+test("rtc-lib-test-bin") {
   output_name = "rtc-lib-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc.cc" ]
@@ -27,18 +27,12 @@ test("rtc-lib") {
   ]
 }
 
-unittest_package("rtc-lib-package") {
-  package_name = "rtc-lib"
-  deps = [ ":rtc-lib" ]
-
-  tests = [
-    {
-      name = "rtc-lib-test"
-    },
-  ]
+fuchsia_unittest_package("rtc-lib-test") {
+  executable_path = "test/rtc-lib-test"
+  deps = [ ":rtc-lib-test-bin" ]
 }
 
-test("rtc-lib-llcpp") {
+test("rtc-lib-llcpp-test-bin") {
   output_name = "rtc-lib-llcpp-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc_llcpp_unittest.cc" ]
@@ -49,13 +43,7 @@ test("rtc-lib-llcpp") {
   ]
 }
 
-unittest_package("rtc-lib-llcpp-package") {
-  package_name = "rtc-lib-llcpp"
-  deps = [ ":rtc-lib-llcpp" ]
-
-  tests = [
-    {
-      name = "rtc-lib-llcpp-test"
-    },
-  ]
+fuchsia_unittest_package("rtc-lib-llcpp-test") {
+  executable_path = "test/rtc-lib-llcpp-test"
+  deps = [ ":rtc-lib-llcpp-test-bin" ]
 }

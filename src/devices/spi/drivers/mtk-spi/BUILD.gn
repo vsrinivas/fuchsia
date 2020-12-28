@@ -4,11 +4,11 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":mtk-spi-test-package" ]
+  deps = [ ":mtk-spi-test" ]
 }
 
 driver_module("mtk-spi") {
@@ -36,7 +36,7 @@ driver_module("mtk-spi") {
   ]
 }
 
-test("mtk-spi-test") {
+test("mtk-spi-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mtk-spi-test"
   sources = [
@@ -63,12 +63,7 @@ test("mtk-spi-test") {
   ]
 }
 
-unittest_package("mtk-spi-test-package") {
-  package_name = "mtk-spi-test"
-  deps = [ ":mtk-spi-test" ]
-  tests = [
-    {
-      name = "mtk-spi-test"
-    },
-  ]
+fuchsia_unittest_package("mtk-spi-test") {
+  executable_path = "test/mtk-spi-test"
+  deps = [ ":mtk-spi-test-bin" ]
 }

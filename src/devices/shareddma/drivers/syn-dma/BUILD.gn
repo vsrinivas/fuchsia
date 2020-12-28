@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("syn-dma") {
   configs += [
@@ -44,7 +44,7 @@ driver_module("syn-dma") {
   ]
 }
 
-test("syn-dhub-test") {
+test("syn-dhub-test-bin") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -89,19 +89,15 @@ test("syn-dhub-test") {
   ]
 }
 
-unittest_package("syn-dhub-test-package") {
-  package_name = "syn-dhub-test"
-  deps = [ ":syn-dhub-test" ]
-
-  tests = [
-    {
-      name = "syn-dhub-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("syn-dhub-test") {
+  executable_path = "test/syn-dhub-test"
+  deps = [ ":syn-dhub-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":syn-dhub-test-package" ]
+  deps = [ ":syn-dhub-test" ]
 }
