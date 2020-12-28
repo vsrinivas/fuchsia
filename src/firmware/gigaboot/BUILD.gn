@@ -28,13 +28,10 @@ if (current_toolchain == default_toolchain) {
         "instrumented",
         "gcc",
       ]
-      toolchain_variant_args = {
-        configs = [ "//src/firmware/gigaboot:efi_config" ]
+      configs = [ "//src/firmware/gigaboot:efi_config" ]
 
-        # TODO: harmless, but just to match build.mk
-        remove_common_configs =
-            [ "//build/config/zircon:default_frame_pointers" ]
-      }
+      # TODO: harmless, but just to match build.mk
+      remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
     }
   }
 

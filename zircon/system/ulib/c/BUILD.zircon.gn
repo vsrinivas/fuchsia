@@ -21,9 +21,7 @@ if (zx != "/") {
         with_shared = false
         is_pic_default = true
         strip = "--strip-sections"
-        toolchain_variant_args = {
-          configs = [ "//zircon/system/ulib/c:libc_config" ]
-        }
+        configs = [ "//zircon/system/ulib/c:libc_config" ]
 
         # NOTE: kernel artifacts currently do not build under fuzzer
         # variants. This was also true with the Zircon build, but

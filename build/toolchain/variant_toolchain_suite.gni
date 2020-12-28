@@ -10,6 +10,13 @@ import("//build/toolchain/toolchain_tags.gni")
 import("//build/toolchain/variant_tags.gni")
 import("//build/toolchain/zircon/zircon_toolchain.gni")
 
+# List of keys in toolchain_variant scope related to configs.
+_config_keys = [
+  "configs",
+  "remove_common_configs",
+  "remove_shared_configs",
+]
+
 # Private subroutine of variant_toolchain_suite(), below, used to instantiate
 # a single variant toolchain() instance.
 #
@@ -29,9 +36,12 @@ import("//build/toolchain/zircon/zircon_toolchain.gni")
 #     Only its with_shared and toolchain_args keys will be forwarded,
 #     to its toolchain_variant and toolchain_args scope, respectively.
 #
-#   this_pic_default: Required boolean flag that is forwarded to the
+#   is_pic_default: Required boolean flag that is forwarded to the
 #     toolchain()'s toolchain_variant scope, overriding any value from
 #     this_variant, if any.
+#
+#   with_shared: Required boolean flag that is forwarded to the toolchain()'s
+#   toolchain_variant scope, overriding any value from this_variant, if any.
 #
 template("_variant_toolchain") {
   this_variant = invoker.this_variant
@@ -46,6 +56,35 @@ template("_variant_toolchain") {
 
   _target_type = invoker.toolchain_template
 
+  # Build the toolchain_variant scope used for this toolchain() instance.
+  _toolchain_variant = {
+    # First forward configs from the variant.
+    forward_variables_from(this_variant, "*")
+
+    # Then add toolchain-specific configs.
+    if (defined(this_invoker.configs)) {
+      if (!defined(configs)) {
+        configs = []
+      }
+      configs += this_invoker.configs
+    }
+    if (defined(this_invoker.remove_common_configs)) {
+      if (!defined(remove_common_configs)) {
+        remove_common_configs = []
+      }
+      remove_common_configs += this_invoker.remove_common_configs
+    }
+    if (defined(this_invoker.remove_shared_configs)) {
+      if (!defined(remove_shared_configs)) {
+        remove_shared_configs = []
+      }
+      remove_shared_configs += this_invoker.remove_shared_configs
+    }
+
+    is_pic_default = invoker.is_pic_default
+    with_shared = invoker.with_shared
+  }
+
   target(_target_type, target_name) {
     forward_variables_from(invoker.toolchain_template_args, "*")
     toolchain_args = {
@@ -55,11 +94,7 @@ template("_variant_toolchain") {
       # here, we have to set it to the empty scope first.
       toolchain_variant = {
       }
-      toolchain_variant = {
-        forward_variables_from(this_variant, "*")
-        is_pic_default = invoker.this_pic_default
-        with_shared = this_invoker.with_shared
-      }
+      toolchain_variant = _toolchain_variant
       if (defined(this_variant.toolchain_args)) {
         forward_variables_from(this_variant.toolchain_args, "*")
       }
@@ -109,6 +144,20 @@ template("_variant_toolchain") {
 #   exclude_variant_tags:
 #     Optional: A list of variant tags that this toolchain suite should
 #     *not* instantiate.
+#
+#   configs:
+#     Optional: A list of configs added to all targets built by toolchain()
+#     instances in this suite. Note that these are added after the default
+#     configs set in //build/config/BUILDCONFIG.gn.
+#
+#   remove_common_configs:
+#     Optional: A list of configs that are removed for all targets built by
+#     toolchain() instances in this suite. Useful to remove specific default
+#     configs when needed.
+#
+#   remove_shared_configs:
+#     Optional: Same as remove_common_configs, but will only apply to
+#     shared_library() targets.
 #
 #   toolchain_args:
 #     Optional: Scope of common variables to be set in the variant toolchains'
@@ -204,12 +253,12 @@ template("variant_toolchain_suite") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "enable_variants",
-                             "is_pic_default",
-                             "toolchain_args",
-                             "toolchain_template",
-                             "with_shared",
-                           ])
+                                 "enable_variants",
+                                 "is_pic_default",
+                                 "toolchain_args",
+                                 "toolchain_template",
+                                 "with_shared",
+                               ] + _config_keys)
   }
   not_needed([ "invoker_toolchain_template_args" ])
 
@@ -288,7 +337,8 @@ template("variant_toolchain_suite") {
         toolchain_template_args = invoker_toolchain_template_args
         this_variant = variant
         this_invoker = invoker
-        this_pic_default = is_pic_default
+        is_pic_default = is_pic_default
+        with_shared = with_shared
       }
       if (with_shared) {
         _variant_toolchain("${target_name}${variant.suffix}-shared") {
@@ -299,7 +349,8 @@ template("variant_toolchain_suite") {
           }
           this_variant = variant
           this_invoker = invoker
-          this_pic_default = true
+          is_pic_default = true
+          with_shared = true
         }
       }
     }

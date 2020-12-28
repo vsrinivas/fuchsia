@@ -110,11 +110,6 @@ _buildidtool =
 #     that will appear in as `zircon_toolchain.environment` and can be checked
 #     in build rules, as requested by several Zircon artefacts.
 #
-#   toolchain_variant_args
-#     Optional: Additional keys/values to export in the toolchain_variant
-#     scope for this toolchain. Several standard fields are set automatically,
-#     this can supply others.
-#
 # The following parameters from the original Zircon builds are NOT SUPPORTED
 # and documented here for historical reasons!
 #
@@ -189,51 +184,39 @@ template("zircon_toolchain") {
 
   # Compute what will be the value of `toolchain_variant` for this instance.
   # This is invoker.toolchain_args.toolchain_variant, eventually augmented
-  # by invoker.toolchain_variant_args.
-
-  if (defined(invoker.toolchain_variant_args)) {
-    _tv_args = invoker.toolchain_variant_args
-  }
+  # by default key values.
   if (defined(invoker.toolchain_args)) {
     _t_args = invoker.toolchain_args
-  } else {
-    _t_args = {
-      toolchain_variant = {
-      }
-      toolchain_variant = {
-        base = get_label_info(":$target_name", "label_no_toolchain")
-        name = ""
-        suffix = ""
-        configs = []
-        remove_common_configs = []
-        remove_shared_configs = []
-        deps = []
-        is_pic_default = false
-        with_shared = false
-        instrumented = false
-        tags = []
-      }
+    if (defined(_t_args.toolchain_variant)) {
+      _tv_args = _t_args.toolchain_variant
     }
   }
   _toolchain_variant = {
-    # Forward the variables that come from the variant definition that is
-    # applied to the base toolchain here.
-    forward_variables_from(_t_args.toolchain_variant, "*")
+    # Default non-list values
+    base = get_label_info(":$target_name", "label_no_toolchain")
+    name = ""
+    suffix = ""
+    is_pic_default = false
+    with_shared = false
+    instrumented = false
 
-    # If the toolchain provides additional variant settings, apply them here.
+    # Forward values from invoker.toolchain_args.toolchain_variant, if any.
     if (defined(_tv_args)) {
-      if (defined(_tv_args.configs)) {
-        configs += _tv_args.configs
-      }
-      if (defined(_tv_args.remove_common_configs)) {
-        remove_common_configs += _tv_args.remove_common_configs
-      }
-      if (defined(_tv_args.remove_shared_configs)) {
-        remove_shared_configs += _tv_args.remove_shared_configs
-      }
-      if (defined(_tv_args.tags)) {
-        tags += _tv_args.tags
-      }
+      forward_variables_from(_tv_args, "*")
+    }
+
+    # Create empty lists if they were not forwarded above.
+    if (!defined(configs)) {
+      configs = []
+    }
+    if (!defined(remove_common_configs)) {
+      remove_common_configs = []
+    }
+    if (!defined(remove_shared_configs)) {
+      remove_shared_configs = []
+    }
+    if (!defined(tags)) {
+      tags = []
     }
   }
 

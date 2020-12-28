@@ -21,9 +21,7 @@ if (current_toolchain == default_toolchain) {
     toolchain_tags = [ "kernel" ]
     with_shared = false
     exclude_variant_tags = [ "instrumented" ]
-    toolchain_variant_args = {
-      configs = [ "//zircon/kernel/target/pc/multiboot:multiboot_config" ]
-    }
+    configs = [ "//zircon/kernel/target/pc/multiboot:multiboot_config" ]
   }
 }
 

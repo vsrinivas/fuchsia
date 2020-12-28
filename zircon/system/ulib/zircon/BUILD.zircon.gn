@@ -58,9 +58,7 @@ if (current_toolchain == default_toolchain) {
         with_shared = false
         is_pic_default = true
 
-        toolchain_variant_args = {
-          configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
-        }
+        configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
 
         exclude_variant_tags = [
           # The vDSO can't use instrumentation runtimes.

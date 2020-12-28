@@ -64,18 +64,16 @@ if (current_toolchain == default_toolchain) {
         cpu = cpu
         os = "fuchsia"
         environment = "userboot"
-        toolchain_variant_args = {
-          configs = [
-            "//zircon/kernel/lib/userabi/userboot:userboot_config",
+        configs = [
+          "//zircon/kernel/lib/userabi/userboot:userboot_config",
 
-            # TODO(fxbug.dev/48501): This is needed pervasively and not just
-            # in the linking target so its compile-time flags can
-            # work around fxbug.dev/48501.  It's separate from
-            # userboot_config so it can be removed by other links
-            # reusing this environment, e.g. hermetic_module().
-            "$zx_build_config:rodso",
-          ]
-        }
+          # TODO(fxbug.dev/48501): This is needed pervasively and not just
+          # in the linking target so its compile-time flags can
+          # work around fxbug.dev/48501.  It's separate from
+          # userboot_config so it can be removed by other links
+          # reusing this environment, e.g. hermetic_module().
+          "$zx_build_config:rodso",
+        ]
 
         # This doesn't get a separate shlib sub-toolchain, but the main one
         # can do loadable_module().

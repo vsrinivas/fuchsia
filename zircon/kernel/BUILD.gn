@@ -21,16 +21,14 @@ if (current_toolchain == default_toolchain) {
       os = "fuchsia"
       environment = "kernel"
 
-      toolchain_variant_args = {
-        # IMPORTANT: This definition currently lacks the appropriate
-        # `remove_common_configs` and `configs` to really build anything
-        # for the Zircon kernel per se. This will be addressed in the
-        # near future.
-        tags = [
-          "kernel",
-          "standalone",
-        ]
-      }
+      # IMPORTANT: This definition currently lacks the appropriate
+      # `remove_common_configs` and `configs` to really build anything
+      # for the Zircon kernel per se. This will be addressed in the
+      # near future.
+      toolchain_tags = [
+        "kernel",
+        "standalone",
+      ]
 
       # NOTE: kernel artifacts currently do not build under fuzzer
       # variants. This was also true with the Zircon build, but

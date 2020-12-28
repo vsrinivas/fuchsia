@@ -21,9 +21,17 @@ all_toolchain_tags += [
   # tag.
   "kernel",
 
+  # This tag is used by Zircon toolchains that generate static PIE executable
+  # binaries.
+  "static-pie",
+
   # This tag is used by Zircon toolchains that generate code that assumes that
   # unaligned access will crash the system.
   "strict-align",
+
+  # This tag is used by Zircon toolchain that generate code that doesn't link
+  # to any system runtime (e.g. the C library).
+  "standalone",
 
   # This tag is used by Zircon toolchains that enables the 'tiny' code generation
   # model (i.e. the program and its statically defined symbols must be within 1 GiB).

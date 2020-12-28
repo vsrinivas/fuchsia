@@ -70,16 +70,14 @@ if (current_toolchain == default_toolchain) {
       environment = "kernel.phys32"
       with_shared = false
 
-      toolchain_variant_args = {
-        configs = [ "//zircon/kernel/arch/x86/phys:phys32_config" ]
+      toolchain_tags = [ "kernel" ]
 
-        # Always enable frame pointers.
-        # NOTE: This works because frame_pointers is added in the
-        # phys32_config definition below.
-        remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+      configs = [ "//zircon/kernel/arch/x86/phys:phys32_config" ]
 
-        tags = [ "kernel" ]
-      }
+      # Always enable frame pointers.
+      # NOTE: This works because frame_pointers is added in the
+      # phys32_config definition below.
+      remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
 
       exclude_variant_tags = [
         # There is no possibility of fancy runtimes like ASan for phys.

@@ -77,15 +77,13 @@ if (current_toolchain == default_toolchain) {
         environment = "kernel.phys"
         with_shared = false
 
-        toolchain_variant_args = {
-          configs = [ "//zircon/kernel/phys:phys_config" ]
+        toolchain_tags = [ "kernel" ]
 
-          # Always enable frame pointers. This works because frame_pointers
-          # is added as part of :phys_config below.
-          remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+        configs = [ "//zircon/kernel/phys:phys_config" ]
 
-          tags = [ "kernel" ]
-        }
+        # Always enable frame pointers. This works because frame_pointers
+        # is added as part of :phys_config below.
+        remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
 
         exclude_variant_tags = [
           # There is no possibility of fancy runtimes like ASan for phys.
@@ -98,7 +96,7 @@ if (current_toolchain == default_toolchain) {
         # Append the arch-specific lists.  The phys/phys.gni file in each
         # arch subdirectory defines phys_* lists to append to the parameters.
         import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
-        toolchain_variant_args.tags += phys_tags
+        toolchain_tags += phys_tags
         exclude_variant_tags += phys_exclude_variant_tags
       }
     }
