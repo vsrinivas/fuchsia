@@ -219,9 +219,6 @@ def main():
         cflags.extend(['-isystem', dir])
     ldflags.extend(['-L' + dir for dir in args.lib_dir])
 
-    if args.sysroot:
-        ldflags.extend(['-L' + args.sysroot + '/lib'])
-
     cflags_joined = ' '.join(cflags)
     ldflags_joined = ' '.join(ldflags)
 
