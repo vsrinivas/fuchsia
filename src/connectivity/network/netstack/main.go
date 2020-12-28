@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -404,7 +405,8 @@ func Main() {
 		}
 		pprofCache := filepath.Join(isolatedCache, "pprof")
 		if err := os.Mkdir(pprofCache, os.ModePerm); err != nil && !os.IsExist(err) {
-			if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrNoSpace {
+			var zxError *zx.Error
+			if errors.As(err, &zxError) && zxError.Status == zx.ErrNoSpace {
 				_ = syslog.Errorf("isolated-cache-storage is full; snapshots will not include pprof data: %s", err)
 				return
 			}
