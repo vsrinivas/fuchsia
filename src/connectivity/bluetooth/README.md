@@ -76,7 +76,7 @@ Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](d
 
 In general, the Bluetooth codebase defines an associated unit test binary for each production
 binary and library, as well as a number of integration test binaries. Look in the GN file of a
-production binary or library to find its associated unit tests. 
+production binary or library to find its associated unit tests.
 
 Each test binary is a [component](/docs/glossary.md#component)
 whose runtime environment is defined by its [`.cmx` component manifest](/docs/the-book/package_metadata.md#Component-Manifest)
@@ -139,41 +139,12 @@ See the [Integration Test README](tests/integration/README.md)
 The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
 
   ```
-  fx set workstation.x64 --args="kernel_cmdline_files=[\"//local/kernel_cmdline.txt\"]"
+  fx set workstation.x64 --args="dev_bootfs_labels=[\"//src/connectivity/bluetooth:driver-debug-logging\"]"
   ```
 
-Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`.
+This will enable debug-level logging for all supported chipsets.
 Using `fx set` writes these values into the image, so they will survive a restart.
 For more detail on driver logging, see [Zircon driver logging](/docs/concepts/drivers/driver-development.md#logging)
-
-The following flag registers driver_host as a trace provider and is a prerequisite to
-all following flags.
-
-  ```
-  driver.tracing.enable=1
-  ```
-
-The following are flags that can be set for the HCI driver for each chipset we support.
-
-  ```
-  driver.bt_hci_broadcom.log
-  driver.bt_hci_mediatek.log
-  driver.bt_hci_atheros.log
-  driver.bt_hci_intel.log
-  driver.bt_hci_passthrough.log
-  driver.bt_hci_emulator.log
-  ```
-
-Specifying a flag for different chipset from what you're running has no effect.
-
-e.g. To enable full logging for the USB transport, Intel HCI, and host drivers:
-
-  ```
-  $ cat $FUCHSIA_DIR/local/kernel_cmdline.txt
-  driver.bt_host.log=trace
-  driver.bt_hci_intel.log=trace
-  driver.bt_transport_usb.log=trace
-  ```
 
 #### Profile Level Logging
 Each Bluetooth profile has logging that can be turned on and can be useful during debugging.

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/zbi/kernel_cmdline.gni")
+
 group("bluetooth") {
   testonly = true
   deps = [
@@ -87,4 +89,27 @@ group("tests") {
     "tests/bt-profile-test-server:tests",
     "tools:tests",
   ]
+}
+
+# Kernel cmdline options.
+
+kernel_cmdline("driver-debug-logging") {
+  args = [
+    "driver.bcm_hci.log=debug",
+    "driver.bt_hci_atheros.log=debug",
+    "driver.bt_hci_broadcom.log=debug",
+    "driver.bt_hci_emulator.log=debug",
+    "driver.bt_hci_intel.log=debug",
+    "driver.bt_hci_mediatek.log=debug",
+    "driver.bt_hci_passthrough.log=debug",
+    "driver.bt_host.log=debug",
+    "driver.bt_intel.log=debug",
+    "driver.bt_transport_uart.log=debug",
+    "driver.bt_transport_usb.log=debug",
+    "driver.tracing.enable=1",
+  ]
+}
+
+kernel_cmdline("disable-bt-host") {
+  args = [ "driver.bt_host.disable" ]
 }

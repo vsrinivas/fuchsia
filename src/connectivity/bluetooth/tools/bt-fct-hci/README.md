@@ -16,5 +16,5 @@ kernel command-line.
 
 On the host machine while configuring set options add:
 ```
-$ fx set --args=kernel_cmdline_args+=\[\"driver.bt_host.disable\"\] ...
+$ fx set --args=dev_bootfs_labels+=\[\"//src/connectivity/bluetooth/tools:disable-bt-host\"\] ...
 ```
