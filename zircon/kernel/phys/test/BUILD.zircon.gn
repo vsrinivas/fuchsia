@@ -94,6 +94,11 @@ if (current_toolchain != default_toolchain) {
     zbi_test(zbi_target) {
       visibility = [ ":*" ]
 
+      # Ensure the file, and its images.json entry, is not named
+      # _qemu_phys_test.xxxx.zbi_test, which is pretty unreadable and
+      # an implementation detail anyway.
+      output_name = main_target
+
       # The ZBI is empty other than the boilerplate cmdline, and does not
       # contain a ZBI-bootable kernel.
       args = []

@@ -66,7 +66,6 @@ template("zbi_test") {
                              "output_dir",
                              "output_extension",
                              "output_name",
-                             "tags",
                              "visibility",
                            ])
     if (defined(visibility)) {
@@ -78,6 +77,48 @@ template("zbi_test") {
     deps = invoker.deps + [ ":$input_target" ]
     if (defined(invoker.qemu_kernel)) {
       data_deps += [ invoker.qemu_kernel ]
+    }
+
+    _output_dir = target_out_dir
+    if (defined(output_dir)) {
+      _output_dir = output_dir
+    }
+    _output_extension = "zbi"
+    if (defined(output_extension)) {
+      _output_extension = output_extension
+    }
+    _output_file = "${_output_dir}/${output_name}"
+    if (_output_extension != "") {
+      _output_file += ".${_output_extension}"
+    }
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$zbi_target", "label_with_toolchain")
+          name = output_name
+          path = rebase_path(_output_file, root_build_dir)
+          type = "zbi"
+          cpu = current_cpu
+          compressed =
+              !defined(invoker.compressed) ||
+              (invoker.compressed != false && invoker.compressed != "none")
+          if (defined(testonly) && testonly) {
+            testonly = true
+          }
+          forward_variables_from(invoker, [ "tags" ])
+        },
+      ]
+
+      # Provide metadata so that a zbi() target can also act as if it were a
+      # zbi_input() with type == "zbi" and $sources of this target's $outputs.
+      # Thus a zbi() target can be a dependency of another zbi() target to
+      # combine them without requiring an intervening zbi_input() target.
+      migrated_zbi_input_barrier = []
+      migrated_zbi_input_args = [
+        "--type=container",
+        rebase_path(_output_file, root_build_dir),
+      ]
     }
   }
 
