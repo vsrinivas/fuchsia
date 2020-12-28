@@ -497,6 +497,18 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     goto acpi_error;
   }
 
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  status = zx_ioports_request(get_root_resource(), dev->data_port, 1);
+  if (status != ZX_OK) {
+    xprintf("acpi-ec: Failed to map ec data port: %d", status);
+    goto acpi_error;
+  }
+  status = zx_ioports_request(get_root_resource(), dev->cmd_port, 1);
+  if (status != ZX_OK) {
+    xprintf("acpi-ec: Failed to map ec cmd port: %d", status);
+    goto acpi_error;
+  }
+
   /* Setup GPE handling */
   status = AcpiInstallGpeHandler(dev->gpe_block, dev->gpe, ACPI_GPE_EDGE_TRIGGERED,
                                  raw_ec_event_gpe_handler, dev);
