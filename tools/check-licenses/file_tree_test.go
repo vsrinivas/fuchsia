@@ -31,6 +31,15 @@ func TestFileTreeCreateSimple(t *testing.T) {
 	}
 }
 
+// StrictAnalysis should be initially set by the config file,
+// and propagated down from the parent tree properly.
+func TestFileTreeStrictAnalysis(t *testing.T) {
+	want, got := setupFileTreeTestDir("strictanalysis", t)
+	if !got.Equal(want) {
+		t.Errorf("%v(): got %v, want %v", t.Name(), got, want)
+	}
+}
+
 // hasLowerPrefix must return true if the given filepath has a string prefix
 // in the predefined list.
 func TestFileTreeHasLowerPrefix(t *testing.T) {

@@ -25,7 +25,7 @@ type FileTree struct {
 	Files              []*File               `json:"files"`
 	Children           map[string]*FileTree  `json:"children"`
 	Parent             *FileTree             `json:"-"`
-	StrictAnalysis     bool                  `json:"-"`
+	StrictAnalysis     bool                  `json:"strict analysis"`
 
 	sync.RWMutex
 }
@@ -86,6 +86,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 				ft.Children[path] = child
 				return filepath.SkipDir
 			}
+			return nil
 		}
 
 		if info.Size() == 0 {
@@ -254,9 +255,6 @@ func (ft *FileTree) Equal(other *FileTree) bool {
 	if ft.Path != other.Path {
 		return false
 	}
-	if ft.Parent != other.Parent {
-		return false
-	}
 	if ft.StrictAnalysis != other.StrictAnalysis {
 		return false
 	}
@@ -290,7 +288,7 @@ func (ft *FileTree) Equal(other *FileTree) bool {
 		return false
 	}
 	for k := range ft.Children {
-		if ft.Children[k] != other.Children[k] {
+		if ft.Children[k].Equal(other.Children[k]) {
 			return false
 		}
 	}
