@@ -209,6 +209,9 @@ template("zircon_toolchain") {
     if (!defined(configs)) {
       configs = []
     }
+    if (!defined(prefix_configs)) {
+      prefix_configs = []
+    }
     if (!defined(remove_common_configs)) {
       remove_common_configs = []
     }

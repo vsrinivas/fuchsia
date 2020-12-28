@@ -13,6 +13,7 @@ import("//build/toolchain/zircon/zircon_toolchain.gni")
 # List of keys in toolchain_variant scope related to configs.
 _config_keys = [
   "configs",
+  "prefix_configs",
   "remove_common_configs",
   "remove_shared_configs",
 ]
@@ -67,6 +68,12 @@ template("_variant_toolchain") {
         configs = []
       }
       configs += this_invoker.configs
+    }
+    if (defined(this_invoker.prefix_configs)) {
+      if (!defined(prefix_configs)) {
+        prefix_configs = []
+      }
+      prefix_configs += this_invoker.prefix_configs
     }
     if (defined(this_invoker.remove_common_configs)) {
       if (!defined(remove_common_configs)) {
@@ -149,6 +156,12 @@ template("_variant_toolchain") {
 #     Optional: A list of configs added to all targets built by toolchain()
 #     instances in this suite. Note that these are added after the default
 #     configs set in //build/config/BUILDCONFIG.gn.
+#
+#   prefix_configs:
+#     Optional: Like configs, but these configs are added before the default
+#     configs. Should only be used for kernel toolchains that need to
+#     override the system include directories to provide their own
+#     standard C and C++ headers.
 #
 #   remove_common_configs:
 #     Optional: A list of configs that are removed for all targets built by

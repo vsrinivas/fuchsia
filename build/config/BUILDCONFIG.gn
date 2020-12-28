@@ -116,8 +116,11 @@ declare_args() {
   #         property of this toolchain instance. See
   #         //build/toolchain/variant_tags.gni for more details.
   #     `toolchain_variant.configs`
-  #         [list of configs] A list of configs that are added to all linkable
-  #         targets for this toolchain() instance.
+  #         [list of configs] A list of configs that are added after the default
+  #         ones to all linkable targets for this toolchain() instance.
+  #     `toolchain_variant.prefix_configs`
+  #         [list of configs] A list of configs that are added before the default
+  #         ones to all linkable targets for this toolchain() instance.
   #     `toolchain_variant.remove_common_configs`
   #         [list of configs] A list of configs that are removed from all
   #         linkable targets for this toolchain() instance. Useful when
@@ -162,6 +165,7 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.name = ""
   toolchain_variant.suffix = ""
   toolchain_variant.configs = []
+  toolchain_variant.prefix_configs = []
   toolchain_variant.remove_common_configs = []
   toolchain_variant.remove_shared_configs = []
   toolchain_variant.deps = []
@@ -230,11 +234,14 @@ if (toolchain_variant.base == host_x64_toolchain ||
 # `"label(${target_toolchain}-shared)"` or anything else.
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 
+# Prepend the prefix configs, if any, before the default ones.
+default_common_binary_configs = toolchain_variant.prefix_configs
+
 # Note that Zircon toolchains and non-Zircon ones have a very different set
 # of default configs for all target types.
 if (zircon_toolchain == false) {
   # All binary targets will get this list of configs by default.
-  default_common_binary_configs = [
+  default_common_binary_configs += [
     "//build/config:compiler",
     "//build/config:language",
     "//build/config:relative_paths",
@@ -334,7 +341,7 @@ if (zircon_toolchain == false) {
   # TODO(fxbug.dev/60410): After build unification completes, emove the
   # intermediate configs.
   #
-  default_common_binary_configs = [
+  default_common_binary_configs += [
     "//build/config/zircon:compiler",
     "//build/config/zircon:language",
     "//build/config/zircon:machine",
@@ -1346,6 +1353,7 @@ if (in_default_toolchain) {
     all_toolchain_variants += [
       {
         configs = []
+        prefix_configs = []
         remove_common_configs = []
         remove_shared_configs = []
         deps = []
