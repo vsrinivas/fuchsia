@@ -108,6 +108,10 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     (*annotations)[kEventIdKey] = report.event_id();
   }
 
+  if (report.has_crash_signature()) {
+    (*annotations)[kCrashSignatureKey] = report.crash_signature();
+  }
+
   // Generic-specific annotations.
   if (report.has_specific_report() && report.specific_report().is_generic()) {
     const auto& generic_report = report.specific_report().generic();

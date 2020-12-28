@@ -377,6 +377,15 @@ class CrashReporterTest : public UnitTestFixture {
     return FileOneCrashReport(std::move(report));
   }
 
+  // Files one crash report with the provided crash signature.
+  ::fit::result<void, zx_status_t> FileOneCrashReportWithSignature(const std::string& signature) {
+    CrashReport report;
+    report.set_program_name("crashing_program_generic");
+    report.set_crash_signature(signature);
+
+    return FileOneCrashReport(std::move(report));
+  }
+
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
     FX_CHECK(privacy_settings_server_);
 
@@ -668,6 +677,20 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   CheckAnnotationsOnServer({
       {"type", "DartError"},
       {"signature", "fuchsia-no-dart-stack-trace"},
+  });
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
+}
+
+TEST_F(CrashReporterTest, Succeed_OInputCrashReportWithSignature) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  ASSERT_TRUE(FileOneCrashReportWithSignature("some-signature").is_ok());
+  CheckAnnotationsOnServer({
+      {"signature", "some-signature"},
   });
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
