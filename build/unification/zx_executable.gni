@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+template("zx_executable") {
+  executable(target_name) {
+    forward_variables_from(invoker, "*", [ "sdk_migrated" ])
+  }
+  not_needed(invoker, [ "sdk_migrated" ])
+}
+
+set_defaults("zx_executable") {
+  configs = default_executable_configs
+}
