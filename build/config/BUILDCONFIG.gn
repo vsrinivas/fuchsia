@@ -1969,13 +1969,6 @@ template("executable") {
       }
     }
 
-    add_distribution_metadata = is_fuchsia
-    if (add_distribution_metadata && defined(invoker.metadata)) {
-      meta = invoker.metadata
-      add_distribution_metadata = !defined(meta.distribution_entries)
-      not_needed([ "meta" ])
-    }
-
     rebased_output_file = rebase_path(output_file, root_build_dir)
     rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
 
@@ -2004,7 +1997,31 @@ template("executable") {
         },
       ]
 
-      if (!is_fuchsia) {
+      if (is_fuchsia) {
+        # Used by the distribution_manifest() template.
+        if (!defined(distribution_entries)) {
+          distribution_entries = [
+            {
+              source = rebased_output_file
+              destination = "bin/$output_name"
+              label =
+                  get_label_info(":$_executable_name", "label_with_toolchain")
+            },
+          ]
+        }
+
+        if (!defined(test_component_manifest_program)) {
+          # Used by the fuchsia_test_component_manifest() template.
+          test_component_manifest_program = [
+            {
+              program = {
+                binary = "bin/$output_name"
+              }
+            },
+          ]
+          test_component_manifest_program_barrier = []
+        }
+      } else {
         tool_paths = [
           {
             cpu = current_cpu
@@ -2012,17 +2029,6 @@ template("executable") {
             name = output_name
             os = current_os
             path = rebased_output_file
-          },
-        ]
-      }
-
-      if (add_distribution_metadata) {
-        # Used by the distribution_manifest template.
-        distribution_entries = [
-          {
-            source = rebased_output_file
-            destination = "bin/$output_name"
-            label = get_label_info(":$_executable_name", "label_with_toolchain")
           },
         ]
       }
@@ -2105,12 +2111,6 @@ template("loadable_module") {
     output_file = "$output_dir/$output_file_name"
     link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
-    add_distribution_metadata = true
-    if (defined(invoker.metadata)) {
-      meta = invoker.metadata
-      add_distribution_metadata = !defined(meta.distribution_entries)
-      not_needed([ "meta" ])
-    }
     rebased_output_file = rebase_path(output_file, root_build_dir)
     rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
 
@@ -2139,7 +2139,7 @@ template("loadable_module") {
         },
       ]
 
-      if (add_distribution_metadata) {
+      if (!defined(distribution_entries)) {
         # Used by the distribution_manifest template.
         distribution_entries = [
           {
