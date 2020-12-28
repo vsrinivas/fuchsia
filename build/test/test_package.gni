@@ -256,9 +256,6 @@ template("test_package") {
 #       name (required)
 #         [string] Name of the test.
 #
-#       args (optional)
-#         [list of strings] Arguments for the test binary.
-#
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
 #
@@ -307,10 +304,6 @@ template("unittest_package") {
     if (defined(test.dest)) {
       test_dest = test.dest
     }
-    test_args = []
-    if (defined(test.args)) {
-      test_args = test.args
-    }
     test_manifest = "${target_gen_dir}/meta/${test_dest}.cmx"
 
     package_tests += [
@@ -344,9 +337,6 @@ template("unittest_package") {
         include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
         program = {
           binary = "test/${test_dest}"
-          if (test_args != []) {
-            args = test_args
-          }
         }
       }
       output_conversion = "json"
