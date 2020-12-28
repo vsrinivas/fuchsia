@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
@@ -31,6 +32,8 @@ struct StackType {
   const char* name;
   size_t size;
 };
+
+KCOUNTER(vm_kernel_stack_bytes, "vm.kstack.allocated_bytes")
 
 constexpr StackType kSafe = {"kernel-safe-stack", DEFAULT_STACK_SIZE};
 #if __has_feature(safe_stack)
@@ -95,6 +98,7 @@ static zx_status_t allocate_vmar(const StackType& type, fbl::RefPtr<VmMapping>* 
   if (status != ZX_OK) {
     return status;
   }
+  vm_kernel_stack_bytes.Add(type.size);
 
   // Cancel the cleanup handler on the vmar since we're about to save a
   // reference to it.
@@ -167,6 +171,7 @@ zx_status_t KernelStack::Teardown() {
       return status;
     }
     vmar_.reset();
+    vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kSafe.size));
   }
 #if __has_feature(safe_stack)
   unsafe_base_ = 0;
@@ -176,6 +181,7 @@ zx_status_t KernelStack::Teardown() {
       return status;
     }
     unsafe_vmar_.reset();
+    vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kUnsafe.size));
   }
 #endif
 #if __has_feature(shadow_call_stack)
@@ -186,6 +192,7 @@ zx_status_t KernelStack::Teardown() {
       return status;
     }
     shadow_call_vmar_.reset();
+    vm_kernel_stack_bytes.Add(-static_cast<int64_t>(kShadowCall.size));
   }
 #endif
   return ZX_OK;
