@@ -2,16 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("logs") {
-  testonly = true
-  deps = [ ":tests" ]
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    "ddk:tests",
-    "encoding:tests",
-    "sink:tests",
-  ]
+  deps = [ "sink:tests" ]
 }

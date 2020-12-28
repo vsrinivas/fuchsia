@@ -1,0 +1,38 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("log-test-driver-bind") {
+  rules = "log-test.bind"
+  output = "log-test-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+bind_library("log.test.bind") {
+  source = "log-test-driver.bind"
+}
+
+source_set("common") {
+  configs += [ "//build/config:all_source" ]
+  sources = [ "log-tester.cc" ]
+  public_deps = [
+    ":log-test-driver-bind",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+driver_module("log-test-driver") {
+  deps = [
+    ":common",
+    "//src/devices/lib/driver",
+  ]
+}

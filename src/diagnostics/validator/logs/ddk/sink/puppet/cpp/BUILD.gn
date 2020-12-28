@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This Puppet launches an isolated devmgr and proxies the LogSinkPuppet
+# to Rust, so that the log output can be read using the ArchiveReader API.
+
+import("//src/sys/build/components.gni")
+
+executable("ddk-puppet") {
+  output_name = "accessor_validator_ddk_puppet"
+  testonly = true
+  sources = [ "puppet.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//sdk/lib/vfs/cpp",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fs",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "accessor-validator-ddk-puppet"
+  testonly = true
+  manifest = "meta/puppet.cmx"
+  deps = [ ":ddk-puppet" ]
+}

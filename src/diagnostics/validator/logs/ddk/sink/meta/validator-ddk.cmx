@@ -1,0 +1,20 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/accessor-validator-ddk#meta/accessor-validator-ddk-puppet.cmx"
+        ],
+        "binary": "bin/accessor_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/accessor_validator_ddk_puppet"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
