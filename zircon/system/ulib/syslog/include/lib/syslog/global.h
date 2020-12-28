@@ -118,9 +118,6 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
     }                                                                                        \
   } while (0)
 
-#define _FX_LOGVF2(severity, tag, file, line, message, args) \
-  _FX_LOGVF(severity, tag, file, line, message, args)
-
 // Writes a message to the global logger.
 // |severity| is one of TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
@@ -140,10 +137,6 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
 // |line| is the line number of the file writing the log.
 // |message| is the message to write, or NULL if none.
 // |args| are the arguments to |message|.
-#define FX_LOGVF2(severity, tag, file, line, message, args) \
-  _FX_LOGVF((FX_LOG_##severity), tag, file, line, message, args)
-
-// Temporary for soft-transition.
 #define FX_LOGVF(severity, tag, file, line, message, args) \
   _FX_LOGVF((FX_LOG_##severity), tag, file, line, message, args)
 
