@@ -216,11 +216,12 @@ func logErrors(ctx context.Context, functionName string, errs <-chan error) {
 
 func (g *GCETarget) connectToSerial() error {
 	username := fmt.Sprintf(
-		"%s.%s.%s.%s",
+		"%s.%s.%s.%s.%s",
 		g.config.CloudProject,
 		g.zone,
 		g.instanceName,
 		g.currentUser,
+		"replay-from=0",
 	)
 	serial, err := newGCESerial(g.opts.SSHKey, username, gceSerialEndpoint)
 	g.serial = serial
