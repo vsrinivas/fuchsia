@@ -31,7 +31,7 @@
 ##   this command.
 ##
 ##   --experimental / --legacy controls which implementation to use. The default
-##   is to use the legacy Go symbolizer.
+##   is to use the experimental symbolizer.
 ##
 ## Authentication
 ##
@@ -90,7 +90,7 @@ function cpp_symbolizer {
   done
   if [[ "${is_remote}" -eq 1 ]]; then
     if [[ ! -f ~/.fuchsia/debug/googleapi_auth && ! -f ~/.config/gcloud/application_default_credentials.json ]]; then
-      fx-error "Please authenticate first using \`fx symbolize --experimental --auth\`."
+      fx-error "Please authenticate first using \`fx symbolize --auth\`."
       exit 1
     fi
     extra_args+=(
@@ -154,15 +154,6 @@ while [[ $# -ne 0 ]]; do
   esac
   shift
 done
-
-if [[ "${is_remote}" -eq 1 ]]; then
-  extra_args+=(
-    "-symbol-cache" "$HOME/.fuchsia-symbol-cache"
-    "-symbol-server" "gs://fuchsia-artifacts/debug"
-    "-symbol-server" "gs://fuchsia-artifacts-internal/debug"
-    "-symbol-server" "gs://fuchsia-artifacts-release/debug"
-  )
-fi
 
 if [[ "${use_experimental}" -eq 1 ]]; then
   cpp_symbolizer
