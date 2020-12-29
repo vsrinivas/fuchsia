@@ -60,16 +60,12 @@ namespace {
 
 fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
   // Build the crash report.
-  fuchsia::feedback::GenericCrashReport generic_report;
-  generic_report.set_crash_signature(ToCrashSignature(reboot_log.RebootReason()));
-  fuchsia::feedback::SpecificCrashReport specific_report;
-  specific_report.set_generic(std::move(generic_report));
   fuchsia::feedback::CrashReport report;
-  report.set_program_name(ToCrashProgramName(reboot_log.RebootReason()));
+  report.set_program_name(ToCrashProgramName(reboot_log.RebootReason()))
+      .set_crash_signature(ToCrashSignature(reboot_log.RebootReason()));
   if (reboot_log.HasUptime()) {
     report.set_program_uptime(reboot_log.Uptime().get());
   }
-  report.set_specific_report(std::move(specific_report));
 
   // Build the crash report attachments.
   if (reboot_log.HasRebootLogStr()) {

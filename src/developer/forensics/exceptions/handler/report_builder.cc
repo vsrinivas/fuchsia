@@ -143,15 +143,11 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
     crash_report.set_specific_report(
         SpecificCrashReport::WithNative(std::move(native_crash_report)));
   } else {
-    GenericCrashReport generic_crash_report;
     if (exception_expired_) {
-      generic_crash_report.set_crash_signature("fuchsia-no-minidump-exception-expired");
+      crash_report.set_crash_signature("fuchsia-no-minidump-exception-expired");
     } else if (process_already_terminated_) {
-      generic_crash_report.set_crash_signature("fuchsia-no-minidump-process-terminated");
+      crash_report.set_crash_signature("fuchsia-no-minidump-process-terminated");
     }
-
-    crash_report.set_specific_report(
-        SpecificCrashReport::WithGeneric(std::move(generic_crash_report)));
   }
   return crash_report;
 }

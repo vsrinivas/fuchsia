@@ -62,24 +62,20 @@ TEST_F(CrashReportBuilderTest, ProcessTerminated) {
   builder_.SetProcessTerminated();
 
   auto crash_report = builder_.Consume();
-  ASSERT_TRUE(crash_report.has_specific_report());
-  ASSERT_TRUE(crash_report.specific_report().is_generic());
-  ASSERT_TRUE(crash_report.specific_report().generic().has_crash_signature());
+  ASSERT_FALSE(crash_report.has_specific_report());
+  ASSERT_TRUE(crash_report.has_crash_signature());
 
-  EXPECT_EQ(crash_report.specific_report().generic().crash_signature(),
-            "fuchsia-no-minidump-process-terminated");
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-process-terminated");
 }
 
 TEST_F(CrashReportBuilderTest, ExpiredException) {
   builder_.SetExceptionExpired();
 
   auto crash_report = builder_.Consume();
-  ASSERT_TRUE(crash_report.has_specific_report());
-  ASSERT_TRUE(crash_report.specific_report().is_generic());
-  ASSERT_TRUE(crash_report.specific_report().generic().has_crash_signature());
+  ASSERT_FALSE(crash_report.has_specific_report());
+  ASSERT_TRUE(crash_report.has_crash_signature());
 
-  EXPECT_EQ(crash_report.specific_report().generic().crash_signature(),
-            "fuchsia-no-minidump-exception-expired");
+  EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-exception-expired");
 }
 
 }  // namespace

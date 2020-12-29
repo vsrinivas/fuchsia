@@ -166,15 +166,10 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
 
 // Utilities ---------------------------------------------------------------------------------------
 
-inline void ValidateGenericReport(const fuchsia::feedback::CrashReport& report,
-                                  const std::string& crash_signature) {
-  ASSERT_TRUE(report.has_specific_report());
-  const fuchsia::feedback::SpecificCrashReport& specific_report = report.specific_report();
-
-  ASSERT_TRUE(specific_report.is_generic());
-
-  ASSERT_TRUE(specific_report.generic().has_crash_signature());
-  EXPECT_EQ(specific_report.generic().crash_signature(), crash_signature);
+inline void ValidateCrashSignature(const fuchsia::feedback::CrashReport& report,
+                                   const std::string& crash_signature) {
+  ASSERT_TRUE(report.has_crash_signature());
+  EXPECT_EQ(report.crash_signature(), crash_signature);
 }
 
 inline void ValidateCrashReport(const fuchsia::feedback::CrashReport& report,
@@ -279,7 +274,7 @@ TEST_F(HandlerTest, NoException) {
                           {"crash.thread.name", thread_name},
                           {"crash.thread.koid", std::to_string(thread_koid)},
                       });
-  ValidateGenericReport(report, "fuchsia-no-minidump-exception-expired");
+  ValidateCrashSignature(report, "fuchsia-no-minidump-exception-expired");
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
