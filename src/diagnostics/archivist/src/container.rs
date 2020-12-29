@@ -19,6 +19,11 @@ pub enum ReadSnapshot {
     Finished(DiagnosticsHierarchy),
 }
 
+/// Holds all diagnostics data artifacts for a given component.
+///
+/// While all members are public for convenience, other data types may be added in the future and
+/// so this is marked with `#[non_exhaustive]`.
+#[non_exhaustive]
 pub struct ComponentDiagnostics {
     /// Relative moniker of the component that this artifacts container
     /// is representing.
@@ -31,6 +36,39 @@ pub struct ComponentDiagnostics {
     pub inspect: Option<InspectArtifactsContainer>,
     /// Container holding the artifacts needed to serve lifecycle data.
     pub lifecycle: Option<LifecycleArtifactsContainer>,
+}
+
+impl ComponentDiagnostics {
+    #[cfg(test)]
+    pub fn empty(moniker: Vec<String>, url: String) -> Self {
+        Self { relative_moniker: moniker, component_url: url, inspect: None, lifecycle: None }
+    }
+
+    pub fn new_with_lifecycle(
+        moniker: Vec<String>,
+        url: String,
+        lifecycle: LifecycleArtifactsContainer,
+    ) -> Self {
+        Self {
+            relative_moniker: moniker,
+            component_url: url,
+            inspect: None,
+            lifecycle: Some(lifecycle),
+        }
+    }
+
+    pub fn new_with_inspect(
+        moniker: Vec<String>,
+        url: String,
+        inspect: InspectArtifactsContainer,
+    ) -> Self {
+        Self {
+            relative_moniker: moniker,
+            component_url: url,
+            inspect: Some(inspect),
+            lifecycle: None,
+        }
+    }
 }
 
 /// Packet containing a snapshot and all the metadata needed to

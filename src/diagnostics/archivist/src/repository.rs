@@ -488,12 +488,11 @@ impl DataRepoState {
                         // time encountering this moniker segment.
                         self.data_directories.insert(
                             key,
-                            ComponentDiagnostics {
-                                relative_moniker: relative_moniker,
-                                component_url: component_url.into(),
-                                lifecycle: Some(lifecycle_artifact_container),
-                                inspect: None,
-                            },
+                            ComponentDiagnostics::new_with_lifecycle(
+                                relative_moniker,
+                                component_url.into(),
+                                lifecycle_artifact_container,
+                            ),
                         )
                     }
                     [existing_diagnostics_artifact_container] => {
@@ -520,12 +519,11 @@ impl DataRepoState {
             // lifecycle event and it promotes the instantiation of a new data repository entry.
             None => self.data_directories.insert(
                 key,
-                ComponentDiagnostics {
-                    relative_moniker: relative_moniker,
-                    component_url: component_url.into(),
-                    lifecycle: Some(lifecycle_artifact_container),
-                    inspect: None,
-                },
+                ComponentDiagnostics::new_with_lifecycle(
+                    relative_moniker,
+                    component_url.into(),
+                    lifecycle_artifact_container,
+                ),
             ),
         }
         Ok(())
@@ -576,12 +574,11 @@ impl DataRepoState {
                         // time encountering this moniker segment.
                         self.data_directories.insert(
                             key,
-                            ComponentDiagnostics {
-                                relative_moniker: relative_moniker,
+                            ComponentDiagnostics::new_with_inspect(
+                                relative_moniker,
                                 component_url,
-                                lifecycle: None,
-                                inspect: Some(inspect_container),
-                            },
+                                inspect_container,
+                            ),
                         )
                     }
                     [existing_diagnostics_artifact_container] => {
@@ -613,12 +610,11 @@ impl DataRepoState {
             // event before a start or existing event!
             None => self.data_directories.insert(
                 key,
-                ComponentDiagnostics {
-                    relative_moniker: relative_moniker,
+                ComponentDiagnostics::new_with_inspect(
+                    relative_moniker,
                     component_url,
-                    lifecycle: None,
-                    inspect: Some(inspect_container),
-                },
+                    inspect_container,
+                ),
             ),
         }
         Ok(())
@@ -929,12 +925,10 @@ mod tests {
 
         let mutable_values =
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
-        mutable_values.push(ComponentDiagnostics {
-            relative_moniker: component_id.relative_moniker_for_selectors(),
-            component_url: TEST_URL.to_string(),
-            inspect: None,
-            lifecycle: None,
-        });
+        mutable_values.push(ComponentDiagnostics::empty(
+            component_id.relative_moniker_for_selectors(),
+            TEST_URL.to_string(),
+        ));
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
