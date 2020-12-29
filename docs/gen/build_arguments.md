@@ -520,7 +520,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2196
+From //build/config/BUILDCONFIG.gn:2201
 
 ### build_uefi_disk
 Generate a UEFI disk image
