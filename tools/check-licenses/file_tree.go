@@ -32,14 +32,18 @@ type FileTree struct {
 
 // NewFileTree returns an instance of FileTree, given the input configuration
 // file.
-func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) *FileTree {
+func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) (*FileTree, error) {
 	defer trace.StartRegion(ctx, "NewFileTree").End()
 	ft := FileTree{
 		Children:           make(map[string]*FileTree),
 		SingleLicenseFiles: make(map[string][]*License),
 	}
 
-	abs, _ := filepath.Abs(root)
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+
 	ft.Name = filepath.Base(abs)
 	ft.Path = abs
 	ft.Parent = parent
@@ -70,7 +74,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		}
 	}
 
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -82,7 +86,10 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 				}
 			}
 			if path != root {
-				child := NewFileTree(ctx, path, &ft, config, metrics)
+				child, err := NewFileTree(ctx, path, &ft, config, metrics)
+				if err != nil {
+					return err
+				}
 				ft.Children[path] = child
 				return filepath.SkipDir
 			}
@@ -128,11 +135,10 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 	})
 	if err != nil {
 		// TODO(jcecil): This must be an error.
-		fmt.Printf("error while traversing directory '%v", err)
-		return nil
+		return nil, err
 	}
 
-	return &ft
+	return &ft, nil
 }
 
 func (ft *FileTree) propagateProjectLicenses(config *Config) {

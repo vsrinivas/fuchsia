@@ -91,7 +91,10 @@ func setupFileTreeTestDir(name string, t *testing.T) (*FileTree, *FileTree) {
 		t.Fatal(err)
 	}
 
-	got := NewFileTree(context.Background(), root, nil, config, NewMetrics())
+	got, err := NewFileTree(context.Background(), root, nil, config, NewMetrics())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return &want, got
 }

@@ -31,7 +31,10 @@ func Walk(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
 	var wg sync.WaitGroup
 	metrics := NewMetrics()
-	file_tree := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
+	file_tree, err := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
+	if err != nil {
+		return err
+	}
 	licenses, err := NewLicenses(ctx, config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err

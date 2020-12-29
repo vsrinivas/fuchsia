@@ -24,7 +24,10 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
 	metrics := NewMetrics()
-	ft := NewFileTree(context.Background(), folder, nil, config, metrics)
+	ft, err := NewFileTree(context.Background(), folder, nil, config, metrics)
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := []byte("This is very Apache licensed\nCopyright Foo\n")
 	l.MatchSingleLicenseFile(data, "foo.rs", metrics, ft)
 	data = []byte("BSD much.\nCopyright Bar Inc\n")
