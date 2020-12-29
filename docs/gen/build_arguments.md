@@ -13,7 +13,7 @@ From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_pa
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:87
+From //build/images/args.gni:76
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -21,7 +21,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:93
+From //build/images/args.gni:82
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -31,7 +31,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:99
+From //build/images/args.gni:88
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -47,14 +47,14 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1271
+From //build/config/BUILDCONFIG.gn:1278
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:114
+From //build/images/args.gni:103
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -179,7 +179,7 @@ The format blobfs should store blobs in.
 
 **Current value (from the default):** `"compact"`
 
-From //build/images/args.gni:111
+From //build/images/args.gni:100
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -360,7 +360,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:144
+From //build/images/args.gni:133
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -520,7 +520,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2188
+From //build/config/BUILDCONFIG.gn:2196
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -579,7 +579,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:94
 
 ### chromium_build_dir
 This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
@@ -645,7 +645,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:108
+From //build/images/args.gni:97
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -757,7 +757,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:61
+From //build/images/args.gni:50
 
 ### debian_guest_earlycon
 
@@ -907,7 +907,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:66
+From //build/images/args.gni:55
 
 ### enable_test_on_gce
 Adds GCE as a basic env if true.
@@ -988,13 +988,13 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1034
+From //build/config/BUILDCONFIG.gn:1041
 
 ### fastboot_product
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:88
+From //build/images/args.gni:77
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -1014,7 +1014,7 @@ Each entry in the list is a scope containing:
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:46
+From //build/images/args.gni:35
 
 ### firmware_prebuilts_path_suffix
 Suffix to append to all `firmware_prebuilts` `path` variables.
@@ -1024,7 +1024,7 @@ that users can easily switch revisions using a single arg.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:52
+From //build/images/args.gni:41
 
 ### flutter_default_build_cfg
 Non-product AOT
@@ -1180,7 +1180,7 @@ From //build/images/fvm.gni:30
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:86
+From //build/images/args.gni:75
 
 ### fvm_reserved_slices
 Number of slices reserved by FVM for internal usage. A reservation
@@ -1249,7 +1249,7 @@ Typically useful for initially flashing a device from zero-state.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:57
+From //build/images/args.gni:46
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
@@ -1375,7 +1375,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:121
+From //build/images/args.gni:110
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1474,25 +1474,6 @@ From //build/config/BUILDCONFIG.gn:35
 **Current value (from the default):** `"0xffffffff00000000"`
 
 From //zircon/kernel/params.gni:28
-
-### kernel_cmdline_args
-List of kernel command line arguments to bake into the boot image.
-See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
-[`devmgr_config`](#devmgr_config).
-
-**Current value (from the default):** `[]`
-
-From //build/images/args.gni:26
-
-### kernel_cmdline_files
-Files containing additional kernel command line arguments to bake into
-the boot image.  The contents of these files (in order) come after any
-arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
-These can be GN `//` source pathnames or absolute system pathnames.
-
-**Current value (from the default):** `[]`
-
-From //build/images/args.gni:32
 
 ### kernel_debug_level
 Enables various kernel debugging and diagnostic features.  Valid
@@ -1652,7 +1633,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:926
+From //build/config/BUILDCONFIG.gn:933
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1899,7 +1880,7 @@ From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:58
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -1907,7 +1888,7 @@ From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:58
 
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
@@ -2461,7 +2442,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:133
+From //build/images/args.gni:122
 
 ### persist_logs
 
@@ -2473,7 +2454,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:118
+From //build/images/args.gni:107
 
 ### platform_enable_user_pci
 
@@ -2485,7 +2466,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:89
+From //build/images/args.gni:78
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -2563,7 +2544,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:130
+From //build/images/args.gni:119
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2823,7 +2804,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1261
+From //build/config/BUILDCONFIG.gn:1268
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2832,7 +2813,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1266
+From //build/config/BUILDCONFIG.gn:1273
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2870,7 +2851,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1080
+From //build/config/BUILDCONFIG.gn:1087
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3080,8 +3061,11 @@ This variable is a scope giving details about the current toolchain:
         property of this toolchain instance. See
         //build/toolchain/variant_tags.gni for more details.
     `toolchain_variant.configs`
-        [list of configs] A list of configs that are added to all linkable
-        targets for this toolchain() instance.
+        [list of configs] A list of configs that are added after the default
+        ones to all linkable targets for this toolchain() instance.
+    `toolchain_variant.prefix_configs`
+        [list of configs] A list of configs that are added before the default
+        ones to all linkable targets for this toolchain() instance.
     `toolchain_variant.remove_common_configs`
         [list of configs] A list of configs that are removed from all
         linkable targets for this toolchain() instance. Useful when
@@ -3106,7 +3090,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:137
+From //build/config/BUILDCONFIG.gn:140
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3137,7 +3121,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1064
+From //build/config/BUILDCONFIG.gn:1071
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3181,7 +3165,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:38
+From //build/images/args.gni:27
 
 ### use_cast_runner_canary
 If true then the most recent canary version of the Cast Runner is used,
@@ -3318,19 +3302,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:72
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:84
+From //build/images/args.gni:73
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:74
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -3499,7 +3483,7 @@ doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:69
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -3541,7 +3525,7 @@ From //build/config/fuchsia/BUILD.gn:136
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:81
+From //build/images/args.gni:70
 
 ### zircon_build_root
 
@@ -3605,7 +3589,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:71
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
@@ -3624,7 +3608,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:154
+From //build/config/BUILDCONFIG.gn:157
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if

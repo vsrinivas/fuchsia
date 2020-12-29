@@ -343,7 +343,7 @@ revision found by `git rev-parse HEAD` in this checkout directory.
 
 **Current value (from the default):** `"//.."`
 
-From //kernel/lib/version/BUILD.zircon.gn:18
+From //kernel/lib/version/BUILD.zircon.gn:20
 
 ### kernel_version_git_dirty_check
 If this is true, then the kernel version string generated based on
@@ -352,7 +352,7 @@ the checkout are modified from what's committed in git.
 
 **Current value (from the default):** `true`
 
-From //kernel/lib/version/BUILD.zircon.gn:23
+From //kernel/lib/version/BUILD.zircon.gn:25
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -362,7 +362,7 @@ settings, which see.
 
 **Current value (from the default):** `""`
 
-From //kernel/lib/version/BUILD.zircon.gn:14
+From //kernel/lib/version/BUILD.zircon.gn:16
 
 ### lsan_default_options
 Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
