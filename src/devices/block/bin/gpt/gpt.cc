@@ -332,15 +332,14 @@ zx_status_t RemovePartition(const char* dev, uint32_t n) {
     fprintf(stderr, "Failed to get partition at index %u\n", n);
     return ZX_ERR_INVALID_ARGS;
   }
-
+  char name[gpt::kGuidStrLength];
+  utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(p->name), gpt::kGuidStrLength - 1);
   zx_status_t status;
   if ((status = gpt->RemovePartition(p->guid)) != ZX_OK) {
     fprintf(stderr, "Failed to remove partiton: %s\n", zx_status_get_string(status));
     return status;
   }
-  char name[gpt::kGuidStrLength];
-  printf("remove partition: n=%u name=%s\n", n,
-         utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1));
+  printf("remove partition: n=%u name=%s\n", n, name);
   return Commit(gpt.get(), dev);
 }
 
