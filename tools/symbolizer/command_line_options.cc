@@ -71,6 +71,9 @@ const char kVersionHelp[] = R"(  --version
 const char kAuthHelp[] = R"(  --auth
       Starts the authentication process for symbol servers.)";
 
+const char kOmitModuleLinesHelp[] = R"(  --omit-module-lines
+      Omit the "[[[ELF module ...]]]" lines from the output.)";
+
 }  // namespace
 
 Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
@@ -85,6 +88,8 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("auth", 0, kAuthHelp, &CommandLineOptions::auth_mode);
   parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
+  parser.AddSwitch("omit-module-lines", 0, kOmitModuleLinesHelp,
+                   &CommandLineOptions::omit_module_lines);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

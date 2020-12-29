@@ -86,7 +86,7 @@ std::string FormatFrameIndexAndAddress(int frame_index, int inline_index, uint64
 }  // namespace
 
 SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& options)
-    : printer_(printer) {
+    : printer_(printer), omit_module_lines_(options.omit_module_lines) {
   // Hook observers.
   session_.system().AddObserver(this);
   session_.AddDownloadObserver(this);
@@ -160,7 +160,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
     }
   }
 
-  if (!module.printed) {
+  if (!omit_module_lines_ && !module.printed) {
     printer_->OutputWithContext(
         fxl::StringPrintf("[[[ELF module #0x%" PRIx64 " \"%s\" BuildID=%s 0x%" PRIx64 "]]]",
                           module_id, module.name.c_str(), module.build_id.c_str(), base));

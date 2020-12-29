@@ -90,6 +90,9 @@ class SymbolizerImpl : public Symbolizer,
   // Mapping from base address of each module to the module_id.
   // Useful when doing binary search for the module from an address.
   std::map<uint64_t, int> address_to_module_id_;
+
+  // Omit the [[[ELF module]]] lines.
+  bool omit_module_lines_ = false;
 };
 
 }  // namespace symbolizer

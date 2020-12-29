@@ -48,6 +48,18 @@ TEST_F(SymbolizerImplTest, MMap) {
   ASSERT_EQ(ss_.str(), "symbolizer: Invalid module id.\n");
 }
 
+TEST(SymbolizerImplTestNoFixture, OmitModuleLines) {
+  std::stringstream ss;
+  Printer printer(ss);
+  CommandLineOptions options;
+  options.omit_module_lines = true;
+  SymbolizerImpl symbolizer(&printer, options);
+
+  symbolizer.Module(0, "some_module", "deadbeef");
+  symbolizer.MMap(0x1000, 0x2000, 0, 0x0);
+  ASSERT_EQ(ss.str(), "");
+}
+
 TEST_F(SymbolizerImplTest, Backtrace) {
   symbolizer_.Module(0, "some_module", "deadbeef");
   symbolizer_.MMap(0x1000, 0x2000, 0, 0x0);

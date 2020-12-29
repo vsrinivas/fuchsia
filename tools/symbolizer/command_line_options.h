@@ -24,6 +24,9 @@ struct CommandLineOptions {
 
   bool auth_mode = false;
   bool requested_version = false;
+
+  // Whether to omit the "[[[ELF module..." lines in the output.
+  bool omit_module_lines = false;
 };
 
 // Parses the command line into options.
