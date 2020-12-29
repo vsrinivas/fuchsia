@@ -157,6 +157,10 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_loop_(true),
       process_observer_(this),
       thread_observer_(this) {
+  std::string error;
+  if (!loop_->Init(&error)) {
+    FX_LOGS(ERROR) << error;
+  }
   session_->process_observers().AddObserver(&process_observer_);
   session_->thread_observers().AddObserver(&thread_observer_);
 }
