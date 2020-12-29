@@ -8,6 +8,9 @@
 #include "cmpctmalloc.h"
 
 #include <inttypes.h>
+#ifdef _KERNEL
+#include <lib/counters.h>
+#endif
 #include <lib/heap.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
@@ -126,6 +129,16 @@
 #include <trace.h>
 
 using LockGuard = ::Guard<Mutex>;
+
+KCOUNTER(malloc_size_le_64, "malloc.size_le_64")
+KCOUNTER(malloc_size_le_96, "malloc.size_le_96")
+KCOUNTER(malloc_size_le_128, "malloc.size_le_128")
+KCOUNTER(malloc_size_le_256, "malloc.size_le_256")
+KCOUNTER(malloc_size_le_384, "malloc.size_le_384")
+KCOUNTER(malloc_size_le_512, "malloc.size_le_512")
+KCOUNTER(malloc_size_le_1024, "malloc.size_le_1024")
+KCOUNTER(malloc_size_le_2048, "malloc.size_le_2048")
+KCOUNTER(malloc_size_other, "malloc.size_other")
 
 #else
 
@@ -851,6 +864,27 @@ NO_ASAN void* cmpct_alloc(size_t size) {
     return NULL;
   }
 
+#ifdef _KERNEL
+  if (size <= 64) {
+    kcounter_add(malloc_size_le_64, 1);
+  } else if (size <= 96) {
+    kcounter_add(malloc_size_le_96, 1);
+  } else if (size <= 128) {
+    kcounter_add(malloc_size_le_128, 1);
+  } else if (size <= 256) {
+    kcounter_add(malloc_size_le_256, 1);
+  } else if (size <= 384) {
+    kcounter_add(malloc_size_le_384, 1);
+  } else if (size <= 512) {
+    kcounter_add(malloc_size_le_512, 1);
+  } else if (size <= 1024) {
+    kcounter_add(malloc_size_le_1024, 1);
+  } else if (size <= 2048) {
+    kcounter_add(malloc_size_le_2048, 1);
+  } else {
+    kcounter_add(malloc_size_other, 1);
+  }
+#endif
   // Large allocations are no longer allowed. See fxbug.dev/31229 for details.
   if (size > kHeapMaxAllocSize) {
     return NULL;
