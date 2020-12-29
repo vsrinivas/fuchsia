@@ -6,7 +6,7 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "test:fake-resource-package" ]
+  deps = [ "test:fake-resource-test" ]
 }
 
 zx_library("fake-resource") {

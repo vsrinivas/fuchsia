@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("fake-bti") {
+test("fake-bti-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -13,6 +13,7 @@ test("fake-bti") {
       configs -= fdio_config
     }
   }
+  output_name = "fake-bti-test"
   sources = [ "fake-bti-test.cc" ]
   deps = [
     "//src/devices/testing/fake-bti",
@@ -23,14 +24,7 @@ test("fake-bti") {
   ]
 }
 
-unittest_package("fake-bti-package") {
-  package_name = "fake-bti"
-  deps = [ ":fake-bti" ]
-
-  tests = [
-    {
-      name = "fake-bti"
-      dest = "fake-bti-test"
-    },
-  ]
+fuchsia_unittest_package("fake-bti-test") {
+  executable_path = "test/fake-bti-test"
+  deps = [ ":fake-bti-test-bin" ]
 }

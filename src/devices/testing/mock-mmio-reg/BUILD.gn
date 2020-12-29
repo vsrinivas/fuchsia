@@ -6,7 +6,7 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "test:mock-mmio-reg-package" ]
+  deps = [ "test:mock-mmio-reg-test" ]
 }
 
 zx_library("mock-mmio-reg") {

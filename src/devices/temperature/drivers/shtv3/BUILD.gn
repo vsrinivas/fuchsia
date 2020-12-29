@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("shtv3-bind") {
   rules = "shtv3.bind"
@@ -38,7 +38,7 @@ driver_module("shtv3") {
   deps = [ ":common" ]
 }
 
-test("shtv3-test") {
+test("shtv3-test-bin") {
   output_name = "shtv3-test"
   sources = [
     "shtv3-test.cc",
@@ -51,22 +51,18 @@ test("shtv3-test") {
   ]
 }
 
-unittest_package("shtv3-test-package") {
-  package_name = "shtv3-test"
-  deps = [ ":shtv3-test" ]
-
-  tests = [
-    {
-      name = "shtv3-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("shtv3-test") {
+  executable_path = "test/shtv3-test"
+  deps = [ ":shtv3-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":shtv3-bind_test",
-    ":shtv3-test-package",
+    ":shtv3-test",
   ]
 }

@@ -3,12 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("fake-ddk") {
+test("fake-ddk-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
+  output_name = "fake-ddk-test"
   sources = [ "fake-ddk-test.cc" ]
   deps = [
     "//src/devices/testing/fake_ddk",
@@ -19,14 +20,7 @@ test("fake-ddk") {
   ]
 }
 
-unittest_package("fake-ddk-package") {
-  package_name = "fake-ddk"
-  deps = [ ":fake-ddk" ]
-
-  tests = [
-    {
-      name = "fake-ddk"
-      dest = "fake-ddk-test"
-    },
-  ]
+fuchsia_unittest_package("fake-ddk-test") {
+  executable_path = "test/fake-ddk-test"
+  deps = [ ":fake-ddk-test-bin" ]
 }

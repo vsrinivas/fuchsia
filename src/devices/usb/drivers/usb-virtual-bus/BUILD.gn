@@ -6,7 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 bind_rules("usb-virtual-bus-bind") {
@@ -116,7 +115,8 @@ driver_module("virtual-bus-tester-function") {
   ]
 }
 
-test("usb-virtual-bus-test") {
+test("usb-virtual-bus-test-bin") {
+  output_name = "usb-virtual-bus-test"
   sources = [ "usb-virtual-bus-test.cc" ]
   deps = [
     ":fuchsia.hardware.usb.virtualbustest_llcpp",
@@ -133,11 +133,10 @@ test("usb-virtual-bus-test") {
   ]
 }
 
-isolated_devmgr_unittest_package("usb-virtual-bus-test-package") {
-  package_name = "usb-virtual-bus-test"
+isolated_devmgr_unittest_package("usb-virtual-bus-test") {
   executable_path = "test/usb-virtual-bus-test"
   deps = [
-    ":usb-virtual-bus-test",
+    ":usb-virtual-bus-test-bin",
     ":virtual-bus-tester",
     ":virtual-bus-tester-function",
     "//src/devices/board/drivers/integration-test",
@@ -149,8 +148,9 @@ isolated_devmgr_unittest_package("usb-virtual-bus-test-package") {
   ]
 }
 
-test("usb-virtual-bus-unit-test") {
+test("usb-virtual-bus-unit-test-bin") {
   sources = [ "usb-virtual-bus-unit-test.cc" ]
+  output_name = "usb-virtual-bus-unit-test"
   deps = [
     ":common",
     "//sdk/banjo/ddk.protocol.usb.dci",
@@ -159,22 +159,18 @@ test("usb-virtual-bus-unit-test") {
   ]
 }
 
-unittest_package("usb-virtual-bus-unit-test-package") {
-  package_name = "usb-virtual-bus-unit-test"
-  deps = [ ":usb-virtual-bus-unit-test" ]
-
-  tests = [
-    {
-      name = "usb-virtual-bus-unit-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("usb-virtual-bus-unit-test") {
+  executable_path = "test/usb-virtual-bus-unit-test"
+  deps = [ ":usb-virtual-bus-unit-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":usb-virtual-bus-test-package",
-    ":usb-virtual-bus-unit-test-package",
+    ":usb-virtual-bus-test",
+    ":usb-virtual-bus-unit-test",
   ]
 }

@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("xhci") {
   configs += [
@@ -95,7 +95,7 @@ source_set("test-libs") {
   ]
 }
 
-test("xhci-unittest") {
+test("xhci-unittest-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -116,7 +116,7 @@ test("xhci-unittest") {
   ]
 }
 
-test("xhci-core-unittest") {
+test("xhci-core-unittest-bin") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -140,7 +140,7 @@ test("xhci-core-unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test("xhci-event-ring-unittest") {
+test("xhci-event-ring-unittest-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -165,7 +165,7 @@ test("xhci-event-ring-unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test("xhci-transfer-ring-unittest") {
+test("xhci-transfer-ring-unittest-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -186,60 +186,44 @@ test("xhci-transfer-ring-unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-unittest_package("xhci-unittest-package") {
-  package_name = "xhci-unittest"
-  deps = [ ":xhci-unittest" ]
-
-  tests = [
-    {
-      name = "xhci-unittest"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("xhci-unittest") {
+  executable_path = "test/xhci-unittest"
+  deps = [ ":xhci-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
-unittest_package("xhci-core-unittest-package") {
-  package_name = "xhci-core-unittest"
-  deps = [ ":xhci-core-unittest" ]
-
-  tests = [
-    {
-      name = "xhci-core-unittest"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("xhci-core-unittest") {
+  executable_path = "test/xhci-core-unittest"
+  deps = [ ":xhci-core-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
-unittest_package("xhci-event-ring-unittest-package") {
-  package_name = "xhci-event-ring-unittest"
-  deps = [ ":xhci-event-ring-unittest" ]
-
-  tests = [
-    {
-      name = "xhci-event-ring-unittest"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("xhci-event-ring-unittest") {
+  executable_path = "test/xhci-event-ring-unittest"
+  deps = [ ":xhci-event-ring-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
-unittest_package("xhci-transfer-ring-unittest-package") {
-  package_name = "xhci-transfer-ring-unittest"
-  deps = [ ":xhci-transfer-ring-unittest" ]
-
-  tests = [
-    {
-      name = "xhci-transfer-ring-unittest"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("xhci-transfer-ring-unittest") {
+  executable_path = "test/xhci-transfer-ring-unittest"
+  deps = [ ":xhci-transfer-ring-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":xhci-core-unittest-package",
-    ":xhci-event-ring-unittest-package",
-    ":xhci-transfer-ring-unittest-package",
-    ":xhci-unittest-package",
+    ":xhci-core-unittest",
+    ":xhci-event-ring-unittest",
+    ":xhci-transfer-ring-unittest",
+    ":xhci-unittest",
   ]
 }

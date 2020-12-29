@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 driver_module("aml-usb-phy-v2") {
   configs += [
@@ -33,7 +33,7 @@ driver_module("aml-usb-phy-v2") {
   ]
 }
 
-test("aml-usb-phy-test") {
+test("aml-usb-phy-test-bin") {
   configs += [
     "//build/config:all_source",
     "//build/unification/config:zircon-migrated",
@@ -42,6 +42,7 @@ test("aml-usb-phy-test") {
     "aml-usb-phy-test.cc",
     "aml-usb-phy.cc",
   ]
+  output_name = "aml-usb-phy-test"
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -72,19 +73,15 @@ test("aml-usb-phy-test") {
   ]
 }
 
-unittest_package("aml-usb-phy-test-package") {
-  package_name = "aml-usb-phy-test"
-  deps = [ ":aml-usb-phy-test" ]
-
-  tests = [
-    {
-      name = "aml-usb-phy-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("aml-usb-phy-test") {
+  executable_path = "test/aml-usb-phy-test"
+  deps = [ ":aml-usb-phy-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-usb-phy-test-package" ]
+  deps = [ ":aml-usb-phy-test" ]
 }

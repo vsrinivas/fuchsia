@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":mock-mmio-reg" ]
+  deps = [ ":mock-mmio-reg-test-bin" ]
 }
 
-test("mock-mmio-reg") {
+test("mock-mmio-reg-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -20,6 +20,7 @@ test("mock-mmio-reg") {
       configs -= fdio_config
     }
   }
+  output_name = "mock-mmio-reg-test"
   sources = [ "mock-mmio-reg-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -31,14 +32,7 @@ test("mock-mmio-reg") {
   ]
 }
 
-unittest_package("mock-mmio-reg-package") {
-  package_name = "mock-mmio-reg"
-  deps = [ ":mock-mmio-reg" ]
-
-  tests = [
-    {
-      name = "mock-mmio-reg"
-      dest = "mock-mmio-reg-test"
-    },
-  ]
+fuchsia_unittest_package("mock-mmio-reg-test") {
+  executable_path = "test/mock-mmio-reg-test"
+  deps = [ ":mock-mmio-reg-test-bin" ]
 }

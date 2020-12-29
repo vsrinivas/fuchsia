@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("optee_lib") {
   sources = [
@@ -65,7 +65,7 @@ group("tests") {
   deps = [ ":optee-unittest" ]
 }
 
-test("optee-message-test") {
+test("optee-message-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -78,9 +78,10 @@ test("optee-message-test") {
   ]
 }
 
-test("optee-controller-test") {
+test("optee-controller-test-bin") {
   sources = [ "test/optee-controller-test.cc" ]
   include_dirs = [ "." ]
+  output_name = "optee-controller-test"
   deps = [
     ":optee_lib",
     "//sdk/banjo/ddk.protocol.composite",
@@ -92,9 +93,10 @@ test("optee-controller-test") {
   ]
 }
 
-test("optee-client-test") {
+test("optee-client-test-bin") {
   sources = [ "test/optee-client-test.cc" ]
   include_dirs = [ "." ]
+  output_name = "optee-client-test"
   deps = [
     ":optee_lib",
     "//sdk/banjo/ddk.protocol.composite",
@@ -108,21 +110,25 @@ test("optee-client-test") {
   ]
 }
 
-unittest_package("optee-unittest") {
-  deps = [
+fuchsia_unittest_component("optee-client-test") {
+  executable_path = "test/optee-client-test"
+  deps = [ ":optee-client-test-bin" ]
+}
+
+fuchsia_unittest_component("optee-controller-test") {
+  executable_path = "test/optee-controller-test"
+  deps = [ ":optee-controller-test-bin" ]
+}
+
+fuchsia_unittest_component("optee-message-test") {
+  executable_path = "test/optee-message-test"
+  deps = [ ":optee-message-test-bin" ]
+}
+
+fuchsia_test_package("optee-unittest") {
+  test_components = [
     ":optee-client-test",
     ":optee-controller-test",
     ":optee-message-test",
-  ]
-  tests = [
-    {
-      name = "optee-message-test"
-    },
-    {
-      name = "optee-controller-test"
-    },
-    {
-      name = "optee-client-test"
-    },
   ]
 }

@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":fake-mmio-reg" ]
+  deps = [ ":fake-mmio-reg-test-bin" ]
 }
 
-test("fake-mmio-reg") {
+test("fake-mmio-reg-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -20,6 +20,7 @@ test("fake-mmio-reg") {
       configs -= fdio_config
     }
   }
+  output_name = "fake-mmio-reg-test"
   sources = [ "fake-mmio-reg-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -32,14 +33,7 @@ test("fake-mmio-reg") {
   ]
 }
 
-unittest_package("fake-mmio-reg-package") {
-  package_name = "fake-mmio-reg"
-  deps = [ ":fake-mmio-reg" ]
-
-  tests = [
-    {
-      name = "fake-mmio-reg"
-      dest = "fake-mmio-reg-test"
-    },
-  ]
+fuchsia_unittest_package("fake-mmio-reg-test") {
+  executable_path = "test/fake-mmio-reg-test"
+  deps = [ ":fake-mmio-reg-test-bin" ]
 }

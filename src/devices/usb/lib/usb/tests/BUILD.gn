@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":usb-lib-tests-package" ]
+  deps = [ ":usb-lib-tests" ]
 }
 
-test("usb-request-test") {
+test("usb-request-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -34,7 +34,7 @@ test("usb-request-test") {
   ]
 }
 
-test("usb-wrapper-test") {
+test("usb-wrapper-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -55,7 +55,7 @@ test("usb-wrapper-test") {
   ]
 }
 
-test("usb-desc-lib-test") {
+test("usb-desc-lib-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -70,22 +70,25 @@ test("usb-desc-lib-test") {
   ]
 }
 
-unittest_package("usb-lib-tests-package") {
-  package_name = "usb-lib-tests"
-  deps = [
+fuchsia_unittest_component("usb-request-test") {
+  executable_path = "test/usb-request-test"
+  deps = [ ":usb-request-test-bin" ]
+}
+
+fuchsia_unittest_component("usb-wrapper-test") {
+  executable_path = "test/usb-wrapper-test"
+  deps = [ ":usb-wrapper-test-bin" ]
+}
+
+fuchsia_unittest_component("usb-desc-lib-test") {
+  executable_path = "test/usb-desc-lib-test"
+  deps = [ ":usb-desc-lib-test-bin" ]
+}
+
+fuchsia_test_package("usb-lib-tests") {
+  test_components = [
     ":usb-desc-lib-test",
     ":usb-request-test",
     ":usb-wrapper-test",
-  ]
-  tests = [
-    {
-      name = "usb-desc-lib-test"
-    },
-    {
-      name = "usb-request-test"
-    },
-    {
-      name = "usb-wrapper-test"
-    },
   ]
 }

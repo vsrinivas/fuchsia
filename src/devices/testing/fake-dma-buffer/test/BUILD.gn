@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test("fake-dma-buffer") {
+test("fake-dma-buffer-test-bin") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -15,6 +15,7 @@ test("fake-dma-buffer") {
       configs -= fdio_config
     }
   }
+  output_name = "fake-dma-buffer-test"
   sources = [ "fake-dma-buffer-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -27,14 +28,10 @@ test("fake-dma-buffer") {
   ]
 }
 
-unittest_package("fake-dma-buffer-package") {
-  package_name = "fake-dma-buffer"
-  deps = [ ":fake-dma-buffer" ]
-
-  tests = [
-    {
-      name = "fake-dma-buffer"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("fake-dma-buffer-test") {
+  executable_path = "test/fake-dma-buffer-test"
+  deps = [ ":fake-dma-buffer-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }

@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("mt_musb_host_bind") {
   rules = "mt_musb_host.bind"
@@ -60,7 +60,7 @@ source_set("common") {
   ]
 }
 
-test("mt-hci-test") {
+test("mt-hci-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mt-hci-test"
   sources = [ "usb-hci-test.cc" ]
@@ -71,12 +71,13 @@ test("mt-hci-test") {
   ]
 }
 
-test("mt-hci-transaction-test") {
+test("mt-hci-transaction-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-transaction-test.cc",
     "usb-transaction.cc",
   ]
+  output_name = "mt-hci-transaction-test"
   deps = [
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/mmio",
@@ -92,7 +93,7 @@ test("mt-hci-transaction-test") {
   ]
 }
 
-test("mt-hci-request-queue-test") {
+test("mt-hci-request-queue-test-bin") {
   configs += [
     "//build/unification/config:zircon-migrated",
     "//build/config:all_source",
@@ -102,6 +103,7 @@ test("mt-hci-request-queue-test") {
     "usb-request-queue.cc",
     "usb-transaction.cc",
   ]
+  output_name = "mt-hci-request-queue-test"
   deps = [
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.request",
@@ -120,31 +122,33 @@ test("mt-hci-request-queue-test") {
   ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":mt-hci-tests-package",
-    ":mt_musb_host_bind_test",
+fuchsia_unittest_component("mt-hci-test") {
+  executable_path = "test/mt-hci-test"
+  deps = [ ":mt-hci-test-bin" ]
+}
+
+fuchsia_unittest_component("mt-hci-transaction-test") {
+  executable_path = "test/mt-hci-transaction-test"
+  deps = [ ":mt-hci-transaction-test-bin" ]
+}
+
+fuchsia_unittest_component("mt-hci-request-queue-test") {
+  executable_path = "test/mt-hci-request-queue-test"
+  deps = [ ":mt-hci-request-queue-test-bin" ]
+}
+
+fuchsia_test_package("mt-hci-tests") {
+  test_components = [
+    ":mt-hci-test",
+    ":mt-hci-transaction-test",
+    ":mt-hci-request-queue-test",
   ]
 }
 
-unittest_package("mt-hci-tests-package") {
-  package_name = "mt-hci-tests"
+group("tests") {
+  testonly = true
   deps = [
-    ":mt-hci-request-queue-test",
-    ":mt-hci-test",
-    ":mt-hci-transaction-test",
-  ]
-
-  tests = [
-    {
-      name = "mt-hci-test"
-    },
-    {
-      name = "mt-hci-transaction-test"
-    },
-    {
-      name = "mt-hci-request-queue-test"
-    },
+    ":mt-hci-tests",
+    ":mt_musb_host_bind_test",
   ]
 }

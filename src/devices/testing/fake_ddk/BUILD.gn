@@ -6,7 +6,7 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "test:fake-ddk-package" ]
+  deps = [ "test:fake-ddk-test" ]
 }
 
 zx_library("fake_ddk") {

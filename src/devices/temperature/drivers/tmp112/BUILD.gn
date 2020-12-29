@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("tmp112-bind") {
   rules = "tmp112.bind"
@@ -35,7 +35,7 @@ driver_module("tmp112") {
   ]
 }
 
-test("tmp112-test") {
+test("tmp112-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "tmp112-test"
   sources = [
@@ -53,22 +53,18 @@ test("tmp112-test") {
   ]
 }
 
-unittest_package("tmp112-test-package") {
-  package_name = "tmp112-test"
-  deps = [ ":tmp112-test" ]
-
-  tests = [
-    {
-      name = "tmp112-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("tmp112-test") {
+  executable_path = "test/tmp112-test"
+  deps = [ ":tmp112-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":tmp112-bind_test",
-    ":tmp112-test-package",
+    ":tmp112-test",
   ]
 }

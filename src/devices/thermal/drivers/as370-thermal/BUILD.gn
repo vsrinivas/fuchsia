@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("as370-thermal-bind") {
   rules = "as370-thermal.bind"
@@ -45,7 +45,7 @@ driver_module("as370-thermal") {
   ]
 }
 
-test("as370-thermal-test") {
+test("as370-thermal-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "as370-thermal-test"
   sources = [
@@ -80,22 +80,18 @@ test("as370-thermal-test") {
   ]
 }
 
-unittest_package("as370-thermal-test-package") {
-  package_name = "as370-thermal-test"
-  deps = [ ":as370-thermal-test" ]
-
-  tests = [
-    {
-      name = "as370-thermal-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("as370-thermal-test") {
+  executable_path = "test/as370-thermal-test"
+  deps = [ ":as370-thermal-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":as370-thermal-bind_test",
-    ":as370-thermal-test-package",
+    ":as370-thermal-test",
   ]
 }

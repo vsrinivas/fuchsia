@@ -6,7 +6,7 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [ "test:fake-bti-package" ]
+  deps = [ "test:fake-bti-test" ]
 }
 
 zx_library("fake-bti") {
