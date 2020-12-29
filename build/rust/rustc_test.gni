@@ -221,6 +221,13 @@ template("rustc_test") {
       deps += [ "//build/test:rust_test_metadata" ]
       metadata = {
         cmx_patches_walk = [ "//build/test:rust_test_metadata" ]
+
+        # Used by the fuchsia_test_component_manifest() template.
+        test_component_manifest_cml = [
+          {
+            include = [ "src/sys/test_runners/rust/default.shard.cml" ]
+          },
+        ]
       }
     }
 

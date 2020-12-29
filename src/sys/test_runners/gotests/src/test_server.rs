@@ -472,7 +472,7 @@ mod tests {
         let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         Ok(Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/sample-go-test.cm".to_owned(),
             name: "test/sample_go_test".to_owned(),
             binary: "test/sample_go_test".to_owned(),
             args: vec!["-my_custom_flag".to_string()],
@@ -540,7 +540,7 @@ mod tests {
         let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         let component = Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/empty-go-test.cm".to_owned(),
             name: "test/empty_go_test".to_owned(),
             binary: "test/empty_go_test".to_owned(),
             args: vec![],
@@ -559,7 +559,7 @@ mod tests {
         let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         let component = Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/invalid-test.cm".to_owned(),
             name: "test/invalid".to_owned(),
             binary: "test/invalid".to_owned(),
             args: vec![],

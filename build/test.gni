@@ -78,6 +78,16 @@ template("test") {
                 get_label_info(":$original_target_name", "label_with_toolchain")
           },
         ]
+
+        # Used by the fuchsia_test_component_manifest() template.
+        test_component_manifest_program = [
+          {
+            program = {
+              binary = "test/$_output_name"
+            }
+          },
+        ]
+        test_component_manifest_program_barrier = []
       }
     } else {
       not_needed([ "original_target_name" ])

@@ -26,9 +26,11 @@ rustc_library("fuchsia-watch") {
 }
 
 fuchsia_unittest_package("fuchsia-watch-tests") {
-  executable_path = "bin/fuchsia_watch_lib_test"
-  v2_test_runner = "rust_test_runner"
-  deps = [ ":fuchsia-watch_test" ]
+  v2 = true
+  deps = [
+    ":fuchsia-watch_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 group("tests") {

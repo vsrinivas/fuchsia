@@ -62,6 +62,14 @@ zx_library("zxtest") {
       "$zx/system/ulib/zx",
     ]
   }
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/elf/elf_test_runner.shard.cml" ]
+      },
+    ]
+  }
 }
 
 group("tests") {

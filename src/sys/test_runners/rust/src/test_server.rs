@@ -576,7 +576,8 @@ mod tests {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         Ok(Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/simple_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner-test#meta/sample-rust-tests.cm"
+                .to_owned(),
             name: "bin/sample_rust_tests".to_owned(),
             binary: "bin/sample_rust_tests".to_owned(),
             args: vec!["--my_custom_arg".to_string()],
@@ -620,7 +621,7 @@ mod tests {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         let component = Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner-test#meta/no-rust-tests.cm".to_owned(),
             name: "bin/no_rust_tests".to_owned(),
             binary: "bin/no_rust_tests".to_owned(),
             args: vec![],
@@ -639,7 +640,8 @@ mod tests {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         let component = Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/simple_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner-test#meta/huge-rust-tests.cm"
+                .to_owned(),
             name: "bin/huge_rust_tests".to_owned(),
             binary: "bin/huge_rust_tests".to_owned(),
             args: vec![],
@@ -671,7 +673,7 @@ mod tests {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
         let component = Arc::new(Component {
-            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner-test#meta/invalid-test.cm".to_owned(),
             name: "bin/invalid".to_owned(),
             binary: "bin/invalid".to_owned(),
             args: vec![],

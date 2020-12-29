@@ -435,6 +435,28 @@ template("go_build") {
             label = get_label_info(":$target_name", "label_with_toolchain")
           },
         ]
+
+        # Used by the fuchsia_test_component_manifest() template.
+        test_component_manifest_program = [
+          {
+            program = {
+              binary = "bin/$output_name"
+              if (is_test) {
+                binary = "test/$output_name"
+              }
+            }
+          },
+        ]
+        test_component_manifest_program_barrier = []
+
+        if (is_test) {
+          # Used by the fuchsia_test_component_manifest() template.
+          test_component_manifest_cml = [
+            {
+              include = [ "src/sys/test_runners/gotests/default.shard.cml" ]
+            },
+          ]
+        }
       }
     }
   }

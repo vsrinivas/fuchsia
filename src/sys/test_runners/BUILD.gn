@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 rustc_library("lib") {
   name = "test_runners_lib"
@@ -102,6 +103,10 @@ fuchsia_unittest_package("test-runner-unit-tests") {
 fuchsia_unittest_package("test-runner-test-lib-unit-tests") {
   deps = [ ":test_lib_test" ]
   executable_path = "bin/test_runners_test_lib_lib_test"
+}
+
+expect_includes("tmp_storage") {
+  includes = [ "tmp_storage.shard.cml" ]
 }
 
 group("test_runners") {

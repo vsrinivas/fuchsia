@@ -114,8 +114,7 @@ rustc_library("vfs") {
 }
 
 fuchsia_unittest_package("vfs-tests") {
-  executable_path = "bin/vfs_lib_test"
-  v2_test_runner = "rust_test_runner"
+  v2 = true
   deps = [ ":vfs_test" ]
 }
 

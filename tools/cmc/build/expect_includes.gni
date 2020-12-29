@@ -48,6 +48,18 @@ template("expect_includes") {
     metadata = {
       cmc_expected_includes_cmx = includes_cmx
       cmc_expected_includes_cml = includes_cml
+
+      # Used by the fuchsia_test_component_manifest() template.
+      test_component_manifest_cmx = [
+        {
+          include = includes_cmx
+        },
+      ]
+      test_component_manifest_cml = [
+        {
+          include = includes_cml
+        },
+      ]
     }
   }
 }

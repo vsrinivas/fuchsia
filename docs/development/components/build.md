@@ -522,7 +522,6 @@ for us.
    }
 
    fuchsia_unittest_package("rot13-test") {
-     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -536,7 +535,6 @@ for us.
    rustc_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13-test") {
-     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -550,7 +548,6 @@ for us.
    go_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13-test") {
-     executable_path = "bin/rot13_test"
      deps = [ ":rot13_test" ]
    }
    ```
@@ -570,21 +567,16 @@ To print it directly:
 Note that `fx gn outputs` prints an output path, but the file at the path
 may not exist or may be stale if you haven't built.
 
-The launch URL for the test will be
-`fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx`. It can be launched
-using `fx test` followed by the launch URL, or followed by the GN target name.
+To launch the test:
 
-Finally, if `executable_path` references a file that is not present in the
-package then a helpful error message will be printed at build time. For
-example:
-
+```bash
+# By launch URL
+fx test fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx
+# By GN target name
+fx test rot13-test
 ```
-Error found in obj/src/path/to/your/target/target-unittest.cmx
-program.binary="bin/target-unittest-bin" but bin/target-unittest-bin is not in
-the package!
 
-Did you mean "test/target-unittest-bin"?
-```
+See also: [`fx test`][fx-test]
 
 #### Multiple unit tests in a single package
 
@@ -609,12 +601,10 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    executable("rot13_encoder_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     executable_path = "bin/rot13_decoder_test"
      deps = [ ":rot13_decoder_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     executable_path = "bin/rot13_encoder_test"
      deps = [ ":rot13_encoder_test" ]
    }
 
@@ -637,12 +627,10 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    rustc_test("rot13_encoder_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     executable_path = "bin/rot13_decoder_test"
      deps = [ ":rot13_decoder_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     executable_path = "bin/rot13_encoder_test"
      deps = [ ":rot13_encoder_test" ]
    }
 
@@ -665,12 +653,10 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    go_test("rot13_encoder_test") {}
 
    fuchsia_unittest_component("rot13-decoder-test") {
-     executable_path = "bin/rot13_decoder_test"
      deps = [ ":rot13_decoder_test" ]
    }
 
    fuchsia_unittest_component("rot13-encoder-test") {
-     executable_path = "bin/rot13_encoder_test"
      deps = [ ":rot13_encoder_test" ]
    }
 

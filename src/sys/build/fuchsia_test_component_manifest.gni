@@ -1,0 +1,67 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/cmc/build/cmc.gni")
+
+# Generates a component manifest for a test.
+#
+# Good enough for simple unit tests and not a whole lot more.
+# For use only by other templates in this directory.
+#
+# Parameters
+#
+#   v2 (optional)
+#     If specified and set to true, will generate a CFv2 (.cml) manifest.
+#     Type: boolean
+#
+#   deps
+#   visibility
+template("fuchsia_test_component_manifest") {
+  # Collect `program` part with its own barrier,
+  # since executables may depend on other executables.
+  program_target = "${target_name}_program"
+  generated_file(program_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    data_keys = [ "test_component_manifest_program" ]
+    walk_keys = [ "test_component_manifest_program_barrier" ]
+    outputs = [ "$target_out_dir/${target_name}.json" ]
+    output_conversion = "json"
+    testonly = true
+    visibility = [ ":*" ]
+  }
+
+  # Collect any other manifest elements
+  other_target = "${target_name}_other"
+  generated_file(other_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    if (defined(invoker.v2) && invoker.v2) {
+      data_keys = [ "test_component_manifest_cml" ]
+    } else {
+      data_keys = [ "test_component_manifest_cmx" ]
+    }
+    outputs = [ "$target_out_dir/${target_name}.json" ]
+    output_conversion = "json"
+    testonly = true
+    visibility = [ ":*" ]
+  }
+
+  cmc_merge(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    output_name = invoker.target_name
+    if (defined(invoker.v2) && invoker.v2) {
+      output_name += ".cml"
+    } else {
+      output_name += ".cmx"
+    }
+    deps = [
+      ":$other_target",
+      ":$program_target",
+    ]
+    sources = []
+    foreach(dep, deps) {
+      sources += get_target_outputs(dep)
+    }
+    testonly = true
+  }
+}

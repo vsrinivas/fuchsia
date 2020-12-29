@@ -25,4 +25,13 @@ source_set("gtest_main") {
   ]
 
   public_deps = [ "//third_party/googletest:gtest" ]
+
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/gtest/default.shard.cml" ]
+      },
+    ]
+  }
 }

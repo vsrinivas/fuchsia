@@ -48,7 +48,7 @@ template("go_test") {
   assert(
       _is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
                        !defined(invoker.timeout)),
-      "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
+      "args, environments, and timeout are only supported for host tests")
 
   _go_build_target_name = target_name
 

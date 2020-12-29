@@ -31,13 +31,22 @@ zx_library("unittest") {
     libs = [ "pthread" ]
   }
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx" ]
-    deps += [ "//zircon/system/ulib/test-exceptions" ]
+    deps += [
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/test-exceptions",
+    ]
   }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
+      },
+    ]
+  }
 }
 
 # This static version is used for host binaries in the GN build.
@@ -58,6 +67,14 @@ zx_library("unittest-static") {
   }
   if (is_fuchsia) {
     deps += [ "//zircon/system/ulib/test-exceptions" ]
+  }
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
+      },
+    ]
   }
 }
 

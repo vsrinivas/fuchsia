@@ -29,9 +29,11 @@ rustc_library("fuchsia-vfs-watcher") {
 }
 
 fuchsia_unittest_package("fuchsia-vfs-watcher-tests") {
-  executable_path = "bin/fuchsia_vfs_watcher_lib_test"
-  v2_test_runner = "rust_test_runner"
-  deps = [ ":fuchsia-vfs-watcher_test" ]
+  v2 = true
+  deps = [
+    ":fuchsia-vfs-watcher_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 group("tests") {

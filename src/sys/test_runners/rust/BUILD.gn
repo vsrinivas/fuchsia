@@ -73,18 +73,23 @@ group("rust") {
   deps = [ ":rust-test-runner" ]
 }
 
-fuchsia_unittest_package("rust-test-runner-unit-test") {
+fuchsia_unittest_component("test-component") {
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("rust-test-runner-test") {
+  test_components = [ ":test-component" ]
   deps = [
-    ":bin_test",
-    "test_data",
+    "test_data/huge-rust-tests",
+    "test_data/no-rust-tests",
+    "test_data/sample-rust-tests",
   ]
-  executable_path = "bin/rust_test_runner_bin_test"
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":rust-test-runner-unit-test",
+    ":rust-test-runner-test",
     "tests",
   ]
 }

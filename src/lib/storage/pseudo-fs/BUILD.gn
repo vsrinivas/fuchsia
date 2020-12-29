@@ -58,8 +58,7 @@ rustc_library("pseudo-fs") {
 }
 
 fuchsia_unittest_package("pseudo-fs-tests") {
-  executable_path = "bin/fuchsia_vfs_pseudo_fs_lib_test"
-  v2_test_runner = "rust_test_runner"
+  v2 = true
   deps = [ ":pseudo-fs_test" ]
 }
 

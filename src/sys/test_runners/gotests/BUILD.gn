@@ -74,18 +74,22 @@ group("gotests") {
   deps = [ ":go-test-runner" ]
 }
 
-fuchsia_unittest_package("go-test-runner-unit-test") {
+fuchsia_unittest_component("test-component") {
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("go-test-runner-test") {
+  test_components = [ ":test-component" ]
   deps = [
-    ":bin_test",
-    "test_data",
+    "test_data/empty_go_test:empty-go-test",
+    "test_data/sample_go_test:sample-go-test",
   ]
-  executable_path = "bin/go_test_runner_bin_test"
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":go-test-runner-unit-test",
+    ":go-test-runner-test",
     "test_data",
     "tests",
   ]
