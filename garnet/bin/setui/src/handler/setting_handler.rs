@@ -43,6 +43,8 @@ pub enum ControllerError {
     UnexpectedError(Cow<'static, str>),
     #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
     UndeliverableError(SettingType, SettingRequest),
+    #[error("Unsupported request for setting type: {0:?}")]
+    UnsupportedError(SettingType),
     #[error("Delivery error for type: {0:?} received by: {1:?}")]
     DeliveryError(SettingType, SettingType),
     #[error("Irrecoverable error")]

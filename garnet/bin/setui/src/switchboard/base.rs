@@ -61,6 +61,9 @@ pub enum SwitchboardError {
     #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
     UndeliverableError(SettingType, SettingRequest),
 
+    #[error("Unsupported request for setting type: {0:?}")]
+    UnsupportedError(SettingType),
+
     #[error("Communication error")]
     CommunicationError,
 
@@ -96,6 +99,9 @@ impl From<ControllerError> for SwitchboardError {
             ControllerError::UnexpectedError(error) => SwitchboardError::UnexpectedError(error),
             ControllerError::UndeliverableError(setting_type, request) => {
                 SwitchboardError::UndeliverableError(setting_type, request)
+            }
+            ControllerError::UnsupportedError(setting_type) => {
+                SwitchboardError::UnsupportedError(setting_type)
             }
             ControllerError::DeliveryError(setting_type, setting_type_2) => {
                 SwitchboardError::DeliveryError(setting_type, setting_type_2)
