@@ -30,7 +30,6 @@ test("fpu") {
 
 fuchsia_unittest_package("fpu-test-pkg") {
   package_name = "fpu-test"
-  executable_path = "test/fpu-test"
   deps = [ ":fpu" ]
 }
 

@@ -36,7 +36,6 @@ test("range") {
 
 fuchsia_unittest_package("range-test-pkg") {
   package_name = "range"
-  executable_path = "test/range"
   deps = [ ":range" ]
 }
 

@@ -44,7 +44,6 @@ bootfs_test("watchdog-unit-bootfs-test") {
 }
 
 fuchsia_unittest_package("watchdog-unittest") {
-  executable_path = "test/watchdog_unittest"
   deps = [ ":watchdog_unittest" ]
 }
 

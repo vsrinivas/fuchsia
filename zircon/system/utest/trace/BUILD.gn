@@ -100,7 +100,6 @@ bootfs_test("trace-bootfs-test") {
 
 fuchsia_unittest_package("trace-static-engine-test-pkg") {
   package_name = "trace-static-engine"
-  executable_path = "test/trace-static-engine"
   deps = [ ":trace-static-engine" ]
 }
 

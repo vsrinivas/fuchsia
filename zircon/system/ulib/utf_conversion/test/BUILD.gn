@@ -55,6 +55,5 @@ fuzzers_package("utf-conversion-fuzzers") {
 
 fuchsia_unittest_package("utf-conversion-test-pkg") {
   package_name = "utf_conversion-test"
-  executable_path = "test/utf_conversion-test"
   deps = [ ":utf_conversion-test" ]
 }

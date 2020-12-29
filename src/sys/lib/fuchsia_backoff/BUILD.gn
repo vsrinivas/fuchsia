@@ -22,7 +22,6 @@ rustc_library("fuchsia_backoff") {
 }
 
 fuchsia_unittest_package("fuchsia_backoff_tests") {
-  executable_path = "bin/fuchsia_backoff_lib_test"
   deps = [ ":fuchsia_backoff_test" ]
   test_specs = {
     environments = basic_envs

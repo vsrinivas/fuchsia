@@ -60,7 +60,6 @@ rustc_library("bt-a2dp") {
 }
 
 fuchsia_unittest_package("bt-a2dp-lib-tests") {
-  executable_path = "bin/bt_a2dp_lib_test"
   deps = [ ":bt-a2dp_test" ]
 }
 

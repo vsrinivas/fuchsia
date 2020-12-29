@@ -75,6 +75,5 @@ executable("unittests") {
 
 # Run with `fx test my-component-v1-cpp-unittests`.
 fuchsia_unittest_package("my-component-v1-cpp-unittests") {
-  executable_path = "bin/my-component-v1-cpp_test"
   deps = [ ":unittests" ]
 }

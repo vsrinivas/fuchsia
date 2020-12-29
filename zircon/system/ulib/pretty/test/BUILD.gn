@@ -41,7 +41,6 @@ test("pretty-test") {
 
 fuchsia_unittest_package("pretty-test-pkg") {
   package_name = "pretty-test-test"
-  executable_path = "test/pretty-test-test"
   deps = [ ":pretty-test" ]
 }
 

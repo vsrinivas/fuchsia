@@ -48,7 +48,6 @@ test("uart-unittests") {
 
 fuchsia_unittest_package("uart-unittests-test-pkg") {
   package_name = "uart-unittests"
-  executable_path = "test/uart-unittests"
   deps = [ ":uart-unittests" ]
 }
 

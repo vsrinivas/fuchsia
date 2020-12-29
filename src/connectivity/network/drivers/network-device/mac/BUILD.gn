@@ -48,5 +48,4 @@ executable("test_bin") {
 
 fuchsia_unittest_package("network-device-mac-lib-test") {
   deps = [ ":test_bin" ]
-  executable_path = "bin/network-device-mac-lib-test"
 }

@@ -30,7 +30,6 @@ rustc_test("component-time-test") {
 
 # Run with `fx test component-v1-time-unittests`.
 fuchsia_unittest_package("component-v1-time-unittests") {
-  executable_path = "bin/component_time_test"
   deps = [ ":component-time-test" ]
 }
 

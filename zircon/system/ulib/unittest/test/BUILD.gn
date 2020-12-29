@@ -32,7 +32,6 @@ test("unittest") {
 
 fuchsia_unittest_package("unittest-pkg") {
   package_name = "unittest"
-  executable_path = "test/unittest"
   deps = [ ":unittest" ]
 }
 

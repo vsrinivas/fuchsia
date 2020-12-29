@@ -57,7 +57,6 @@ bootfs_test("ps-bootfs-test") {
 
 fuchsia_unittest_package("handles-test-pkg") {
   package_name = "handles-test"
-  executable_path = "test/handles-test"
   deps = [ ":handles" ]
 }
 

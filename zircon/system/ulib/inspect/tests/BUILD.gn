@@ -7,7 +7,6 @@ import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 fuchsia_unittest_package("inspect-unittest-package") {
-  executable_path = "test/inspect"
   deps = [ ":inspect" ]
 }
 

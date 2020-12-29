@@ -17,7 +17,6 @@ test("register-state") {
 
 fuchsia_unittest_package("register-state-test-pkg") {
   package_name = "register-state-test"
-  executable_path = "test/register-state-test"
   deps = [ ":register-state" ]
 }
 

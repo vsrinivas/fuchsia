@@ -33,7 +33,6 @@ rustc_library("net-declare") {
 
 fuchsia_unittest_package("net-declare-tests") {
   deps = [ ":net-declare_test" ]
-  executable_path = "bin/net_declare_lib_test"
 }
 
 group("tests") {

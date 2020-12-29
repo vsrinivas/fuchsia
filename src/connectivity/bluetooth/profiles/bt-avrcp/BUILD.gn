@@ -88,7 +88,6 @@ fuchsia_package("bt-avrcp") {
 }
 
 fuchsia_unittest_package("bt-avrcp-tests") {
-  executable_path = "bin/bt_avrcp_bin_test"
   deps = [ ":bin_test" ]
 }
 

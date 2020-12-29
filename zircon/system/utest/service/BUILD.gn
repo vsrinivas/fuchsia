@@ -17,7 +17,6 @@ import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 fuchsia_unittest_package("service-llcpp-unittest-package") {
-  executable_path = "test/service-llcpp-test"
   deps = [ ":service-llcpp-test" ]
 }
 

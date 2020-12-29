@@ -70,7 +70,6 @@ test("tas5720-test-bin") {
 
 fuchsia_unittest_package("tas5720-test-package") {
   package_name = "tas5720-test"
-  executable_path = "test/tas5720-test"
   deps = [ ":tas5720-test-bin" ]
   test_specs = {
     environments = basic_envs

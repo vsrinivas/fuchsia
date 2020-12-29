@@ -16,12 +16,10 @@ import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 fuchsia_unittest_package("fzl-zxtest-unittest-package") {
-  executable_path = "test/fzl-zxtest-test"
   deps = [ ":fzl-zxtest" ]
 }
 
 fuchsia_unittest_package("fzl-unittest-package") {
-  executable_path = "test/fzl-test"
   deps = [ ":fzl" ]
 }
 

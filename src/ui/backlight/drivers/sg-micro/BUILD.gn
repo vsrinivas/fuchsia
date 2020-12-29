@@ -74,7 +74,6 @@ test("sgm37603a-test-bin") {
 }
 
 fuchsia_unittest_package("sgm37603a-test") {
-  executable_path = "test/sgm37603a-test-bin"
   deps = [ ":sgm37603a-test-bin" ]
 }
 

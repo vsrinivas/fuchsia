@@ -17,7 +17,6 @@ test("processor") {
 
 fuchsia_unittest_package("processor-test-pkg") {
   package_name = "processor-test"
-  executable_path = "test/processor-test"
   deps = [ ":processor" ]
 }
 

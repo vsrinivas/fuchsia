@@ -35,6 +35,5 @@ test("input-report-test") {
 
 fuchsia_unittest_package("test_package") {
   package_name = "lib-input-report-reader-test"
-  executable_path = "test/input-report-test"
   deps = [ ":input-report-test" ]
 }

@@ -33,7 +33,6 @@ test("inspector") {
 
 fuchsia_unittest_package("inspector-test-pkg") {
   package_name = "inspector-test"
-  executable_path = "test/inspector-test"
   deps = [ ":inspector" ]
 }
 

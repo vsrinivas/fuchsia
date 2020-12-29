@@ -17,7 +17,6 @@ test("noop-test") {
 }
 
 fuchsia_unittest_package("noop-test-package") {
-  executable_path = "test/noop-test"
   package_name = "noop-test"
   deps = [ ":noop-test" ]
 }

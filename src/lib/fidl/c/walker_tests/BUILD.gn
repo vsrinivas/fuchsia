@@ -58,7 +58,6 @@ if (is_fuchsia) {
   }
 
   fuchsia_unittest_package("fidl-walker-tests") {
-    executable_path = "bin/walker-tests"
     deps = [ ":walker_tests_bin" ]
   }
 

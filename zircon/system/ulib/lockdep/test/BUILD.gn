@@ -47,7 +47,6 @@ group("test") {
 
 fuchsia_unittest_package("lockdep-test-pkg") {
   package_name = "lockdep-test-test"
-  executable_path = "test/lockdep-test-test"
   deps = [ ":lockdep-test" ]
 }
 

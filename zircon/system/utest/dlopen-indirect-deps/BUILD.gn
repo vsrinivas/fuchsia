@@ -62,7 +62,6 @@ shared_library("dlopen-indirect-deps-test-libb") {
 
 fuchsia_unittest_package("dlopen-indirect-deps-test-pkg") {
   package_name = "dlopen-indirect-deps-test"
-  executable_path = "test/dlopen-indirect-deps-test"
   deps = [ ":dlopen-indirect-deps" ]
 }
 

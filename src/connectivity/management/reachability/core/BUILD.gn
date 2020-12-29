@@ -57,7 +57,6 @@ static_library("ext_ping") {
 
 fuchsia_unittest_package("reachability-core-lib-test") {
   deps = [ ":lib_test" ]
-  executable_path = "bin/reachability_core_lib_test"
 }
 
 group("tests") {

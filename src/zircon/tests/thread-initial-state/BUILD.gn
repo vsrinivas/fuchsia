@@ -21,7 +21,6 @@ test("thread-initial-state") {
 
 fuchsia_unittest_package("thread-initial-state-test-pkg") {
   package_name = "thread-initial-state-test"
-  executable_path = "test/thread-initial-state-test"
   deps = [ ":thread-initial-state" ]
 }
 

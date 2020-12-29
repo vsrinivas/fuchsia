@@ -17,7 +17,6 @@ test("syscall-generation") {
 
 fuchsia_unittest_package("syscall-generation-test-pkg") {
   package_name = "syscall-generation-test"
-  executable_path = "test/syscall-generation-test"
   deps = [ ":syscall-generation" ]
 }
 

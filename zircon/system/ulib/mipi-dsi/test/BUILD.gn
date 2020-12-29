@@ -45,7 +45,6 @@ test("mipidsi") {
 
 fuchsia_unittest_package("mipidsi-test-pkg") {
   package_name = "mipidsi-test"
-  executable_path = "test/mipidsi-test"
   deps = [ ":mipidsi" ]
 }
 

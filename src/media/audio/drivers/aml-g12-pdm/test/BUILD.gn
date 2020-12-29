@@ -39,7 +39,6 @@ executable("aml-g12-pdm-test-bin") {
 
 fuchsia_unittest_package("test-package") {
   package_name = "aml-g12-pdm-test"
-  executable_path = "bin/aml-g12-pdm-test-bin"
   deps = [ ":aml-g12-pdm-test-bin" ]
   test_specs = {
     environments = basic_envs

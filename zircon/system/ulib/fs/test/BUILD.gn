@@ -120,12 +120,10 @@ fuzzers_package("fs-fuzzers") {
 
 fuchsia_unittest_package("fs-connection-test-pkg") {
   package_name = "fs-connection-test"
-  executable_path = "test/fs-connection-test"
   deps = [ ":fs-connection" ]
 }
 
 fuchsia_unittest_package("fs-vnode-test-pkg") {
   package_name = "fs-vnode-test"
-  executable_path = "test/fs-vnode-test"
   deps = [ ":fs-vnode" ]
 }

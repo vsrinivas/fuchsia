@@ -33,7 +33,6 @@ fidl("fidl.types.test") {
 
 fuchsia_unittest_package("sysmem-make-tracking-test-pkg") {
   package_name = "sysmem-make-tracking-test"
-  executable_path = "test/sysmem-make-tracking-test"
   deps = [ ":sysmem-make-tracking-test" ]
 }
 

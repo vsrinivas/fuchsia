@@ -53,7 +53,6 @@ test("affine") {
 }
 
 fuchsia_unittest_package("affine-test-pkg") {
-  executable_path = "test/affine-test"
   deps = [ ":affine" ]
 }
 

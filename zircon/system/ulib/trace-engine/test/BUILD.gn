@@ -44,7 +44,6 @@ test("hash-table-test") {
 
 fuchsia_unittest_package("hash-table-test-pkg") {
   package_name = "trace-engine-hash-table-test"
-  executable_path = "test/trace-engine-hash-table-test"
   deps = [ ":hash-table-test" ]
 }
 

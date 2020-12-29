@@ -33,6 +33,5 @@ test("unittest") {
 }
 
 fuchsia_unittest_package("mmio-ptr-unittest") {
-  executable_path = "test/mmio-ptr-unittest"
   deps = [ ":unittest" ]
 }

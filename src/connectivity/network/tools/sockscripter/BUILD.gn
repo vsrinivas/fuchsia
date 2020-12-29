@@ -63,7 +63,6 @@ group("tests") {
 
 fuchsia_unittest_package("sockscripter-unittest") {
   deps = [ ":sockscripter_test" ]
-  executable_path = "bin/sockscripter_test"
 }
 
 fuchsia_shell_package("package") {

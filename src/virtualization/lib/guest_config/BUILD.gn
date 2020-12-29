@@ -42,7 +42,6 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("guest-config-tests") {
-  executable_path = "bin/guest_config_unittest"
   deps = [ ":unittests" ]
 
   test_specs = {

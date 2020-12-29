@@ -17,7 +17,6 @@ rustc_library("packet-encoding") {
 }
 
 fuchsia_unittest_package("packet-encoding-tests") {
-  executable_path = "bin/packet_encoding_lib_test"
   deps = [ ":packet-encoding_test" ]
 }
 

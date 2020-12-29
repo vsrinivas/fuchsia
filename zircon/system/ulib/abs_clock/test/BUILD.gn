@@ -42,6 +42,5 @@ test("abs_clock_test") {
 }
 
 fuchsia_unittest_package("abs-clock-test-pkg") {
-  executable_path = "test/abs_clock_test"
   deps = [ ":abs_clock_test" ]
 }

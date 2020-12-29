@@ -31,7 +31,6 @@ test("thread-safe-deleter") {
 
 fuchsia_unittest_package("thread-safe-deleter-test-pkg") {
   package_name = "thread-safe-deleter-test"
-  executable_path = "test/thread-safe-deleter-test"
   deps = [ ":thread-safe-deleter" ]
 }
 

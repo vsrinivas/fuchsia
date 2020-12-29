@@ -34,7 +34,6 @@ test("sa-unittest-bin") {
 
 fuchsia_unittest_package("test-package") {
   package_name = "sa-unittest"
-  executable_path = "test/sa-unittest-bin"
   deps = [ ":sa-unittest-bin" ]
   test_specs = {
     environments = basic_envs

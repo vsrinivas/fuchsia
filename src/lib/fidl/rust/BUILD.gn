@@ -35,22 +35,18 @@ rustc_test("fidl_rust_conformance_tests_bin") {
 }
 
 fuchsia_unittest_component("fidl_rust_conformance_tests") {
-  executable_path = "bin/fidl_rust_conformance_tests"
   deps = [ ":fidl_rust_conformance_tests_bin" ]
 }
 
 fuchsia_unittest_component("fidl_rust_external_tests") {
-  executable_path = "bin/fidl_rust_external_tests"
   deps = [ "external_tests:fidl_rust_external_tests" ]
 }
 
 fuchsia_unittest_component("fidl_rust_lib_tests") {
-  executable_path = "bin/fidl_rust_lib_tests"
   deps = [ "fidl:fidl_rust_lib_tests" ]
 }
 
 fuchsia_unittest_component("fidl_rust_handle_tests") {
-  executable_path = "bin/fidl_rust_handle_tests"
   deps = [ "handle_tests:fidl_rust_handle_tests" ]
 }
 

@@ -18,6 +18,5 @@ rustc_library("fidl_fuchsia_net_neighbor_ext") {
 }
 
 fuchsia_unittest_package("fidl-fuchsia-net-neighbor-ext-test") {
-  executable_path = "bin/fidl_fuchsia_net_neighbor_ext_test"
   deps = [ ":fidl_fuchsia_net_neighbor_ext_test" ]
 }

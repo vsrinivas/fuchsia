@@ -17,7 +17,6 @@ test("status") {
 
 fuchsia_unittest_package("status-test-pkg") {
   package_name = "status-test"
-  executable_path = "test/status-test"
   deps = [ ":status" ]
 }
 

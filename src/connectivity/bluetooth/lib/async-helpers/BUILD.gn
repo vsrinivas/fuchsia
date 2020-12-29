@@ -38,7 +38,6 @@ rustc_library("async-helpers") {
 }
 
 fuchsia_unittest_package("async-helpers-tests") {
-  executable_path = "bin/async_helpers_lib_test"
   deps = [ ":async-helpers_test" ]
 }
 

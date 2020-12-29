@@ -47,7 +47,6 @@ test("io-scheduler-test") {
 
 fuchsia_unittest_package("io-scheduler-test-pkg") {
   package_name = "iosched"
-  executable_path = "test/iosched"
   deps = [ ":io-scheduler-test" ]
 }
 

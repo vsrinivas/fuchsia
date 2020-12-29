@@ -112,7 +112,6 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
 
 cts_fuchsia_unittest_component("fidl_hlcpp_conformance_tests") {
   visibility = [ ":*" ]
-  executable_path = "bin/fidl_hlcpp_conformance_tests"
   deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
 
@@ -136,7 +135,6 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
 
 cts_fuchsia_unittest_component("fidl_hlcpp_unit_tests") {
   visibility = [ ":*" ]
-  executable_path = "bin/fidl_hlcpp_unit_tests"
   deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
 

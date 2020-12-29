@@ -27,7 +27,6 @@ test("cprng") {
 
 fuchsia_unittest_package("cprng-test-pkg") {
   package_name = "cprng-test"
-  executable_path = "test/cprng-test"
   deps = [ ":cprng" ]
 }
 

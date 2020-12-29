@@ -35,7 +35,6 @@ rustc_library("bt-fidl-mocks") {
 }
 
 fuchsia_unittest_package("bt-fidl-mocks-tests") {
-  executable_path = "bin/bt_fidl_mocks_lib_test"
   deps = [ ":bt-fidl-mocks_test" ]
 }
 

@@ -22,6 +22,5 @@ test("kernel-clocks") {
 }
 
 fuchsia_unittest_package("kernel-clocks-test-package") {
-  executable_path = "test/kernel-clocks-test"
   deps = [ ":kernel-clocks" ]
 }

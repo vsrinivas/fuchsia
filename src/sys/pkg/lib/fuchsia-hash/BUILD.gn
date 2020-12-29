@@ -26,7 +26,6 @@ rustc_library("fuchsia-hash") {
 
 fuchsia_unittest_package("fuchsia-hash-tests") {
   deps = [ ":fuchsia-hash_test" ]
-  executable_path = "bin/fuchsia_hash_lib_test"
 }
 
 group("tests") {

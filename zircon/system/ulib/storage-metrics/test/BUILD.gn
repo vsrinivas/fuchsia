@@ -39,7 +39,6 @@ test("storage-metrics") {
 
 fuchsia_unittest_package("storage-metrics-test-pkg") {
   package_name = "storage-metrics"
-  executable_path = "test/storage-metrics"
   deps = [ ":storage-metrics" ]
 }
 

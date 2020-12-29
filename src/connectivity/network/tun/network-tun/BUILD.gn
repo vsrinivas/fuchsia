@@ -77,7 +77,6 @@ executable("network_tun_unittest") {
 }
 
 fuchsia_unittest_package("network-tun-test") {
-  executable_path = "bin/network_tun_unittest"
   deps = [ ":network_tun_unittest" ]
 }
 

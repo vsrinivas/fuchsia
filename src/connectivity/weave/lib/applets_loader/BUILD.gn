@@ -36,7 +36,6 @@ test("weave_applets_loader_unittests") {
 }
 
 fuchsia_unittest_package("weave-applets-loader-unittests") {
-  executable_path = "test/weave_applets_loader_unittests"
   deps = [
     ":weave_applets_loader_unittests",
     "//src/connectivity/weave/applets/test_applets",

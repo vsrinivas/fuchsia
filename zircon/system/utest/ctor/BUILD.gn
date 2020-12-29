@@ -36,7 +36,6 @@ shared_library("dso-ctor") {
 
 fuchsia_unittest_package("ctor-test-pkg") {
   package_name = "ctor-test"
-  executable_path = "test/ctor-test"
   deps = [ ":ctor" ]
 }
 

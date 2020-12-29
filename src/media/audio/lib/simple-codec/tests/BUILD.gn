@@ -22,7 +22,6 @@ test("simple-codec-unittest-bin") {
 
 fuchsia_unittest_package("test-package") {
   package_name = "simple-codec-unittest"
-  executable_path = "test/simple-codec-unittest-bin"
   deps = [ ":simple-codec-unittest-bin" ]
   test_specs = {
     environments = basic_envs

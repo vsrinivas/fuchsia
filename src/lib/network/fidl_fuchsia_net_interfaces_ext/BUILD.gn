@@ -34,6 +34,5 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
 }
 
 fuchsia_unittest_package("fidl-fuchsia-net-interfaces-ext-tests") {
-  executable_path = "bin/fidl_fuchsia_net_interfaces_ext_lib_test"
   deps = [ ":fidl_fuchsia_net_interfaces_ext_test" ]
 }

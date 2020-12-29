@@ -52,7 +52,6 @@ test("simplehid") {
 
 fuchsia_unittest_package("simplehid-test-pkg") {
   package_name = "simplehid-test"
-  executable_path = "test/simplehid-test"
   deps = [ ":simplehid" ]
 }
 

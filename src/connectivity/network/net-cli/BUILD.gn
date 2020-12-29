@@ -60,7 +60,6 @@ fuchsia_shell_package("net-cli") {
 
 fuchsia_unittest_package("net-cli-tests") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/net_bin_test"
 }
 
 group("tests") {

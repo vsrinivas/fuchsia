@@ -25,7 +25,6 @@ test("test") {
 
 # [START package]
 fuchsia_unittest_package("fidl-example-llcpp-test") {
-  executable_path = "test/fidl_example_llcpp_test"
   deps = [ ":test" ]
 }
 

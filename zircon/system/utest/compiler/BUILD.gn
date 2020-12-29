@@ -39,7 +39,6 @@ test("compiler") {
 
 fuchsia_unittest_package("compiler-test-pkg") {
   package_name = "compiler-test"
-  executable_path = "test/compiler-test"
   deps = [ ":compiler" ]
 }
 

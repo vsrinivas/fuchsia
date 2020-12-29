@@ -27,7 +27,6 @@ rustc_library("system-image") {
 }
 
 fuchsia_unittest_package("system-image-tests") {
-  executable_path = "bin/system_image_lib_test"
   deps = [ ":system-image_test" ]
 }
 

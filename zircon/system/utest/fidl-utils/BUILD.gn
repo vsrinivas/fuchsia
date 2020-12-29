@@ -43,7 +43,6 @@ fidl("fidl.test.fidlutils") {
 
 fuchsia_unittest_package("fidl-utils-test-pkg") {
   package_name = "fidl-utils-test"
-  executable_path = "test/fidl-utils-test"
   deps = [ ":fidl-utils" ]
 }
 

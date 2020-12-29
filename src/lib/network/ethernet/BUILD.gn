@@ -33,5 +33,4 @@ rustc_library("ethernet") {
 
 fuchsia_unittest_package("ethernet-tests") {
   deps = [ ":ethernet_test" ]
-  executable_path = "bin/ethernet_lib_test"
 }

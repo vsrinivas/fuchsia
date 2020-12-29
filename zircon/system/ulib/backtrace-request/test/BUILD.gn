@@ -36,7 +36,6 @@ test("backtrace-request-test") {
 
 fuchsia_unittest_package("backtrace-request-test-pkg") {
   package_name = "backtrace-request-test"
-  executable_path = "test/backtrace-request-test"
   deps = [ ":backtrace-request-test" ]
 }
 
@@ -56,6 +55,5 @@ test("backtrace-request-integration-test") {
 
 fuchsia_unittest_package("backtrace-request-integration-test-pkg") {
   package_name = "backtrace-request-integration-test"
-  executable_path = "test/backtrace-request-integration-test"
   deps = [ ":backtrace-request-integration-test" ]
 }

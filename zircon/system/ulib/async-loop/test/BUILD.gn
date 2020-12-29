@@ -36,6 +36,5 @@ test("async-loop") {
 }
 
 fuchsia_unittest_package("async-loop-test-pkg") {
-  executable_path = "test/async-loop-test"
   deps = [ ":async-loop" ]
 }

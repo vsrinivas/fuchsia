@@ -57,7 +57,6 @@ test("lazy_init-test") {
 
 fuchsia_unittest_package("lazy-init-test-pkg") {
   package_name = "lazy_init-test"
-  executable_path = "test/lazy_init-test"
   deps = [ ":lazy_init-test" ]
 }
 

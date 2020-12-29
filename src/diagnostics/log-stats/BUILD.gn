@@ -67,7 +67,6 @@ rustc_library("lib") {
 }
 
 fuchsia_unittest_component("log-stats-unit-tests") {
-  executable_path = "bin/log_stats_lib_test"
   deps = [ ":lib_test" ]
 }
 

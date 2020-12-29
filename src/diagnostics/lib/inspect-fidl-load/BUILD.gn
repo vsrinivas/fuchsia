@@ -30,7 +30,6 @@ rustc_library("inspect-fidl-load") {
 }
 
 fuchsia_unittest_package("inspect-fidl-load-test") {
-  executable_path = "bin/inspect_fidl_load_lib_test"
   deps = [ ":inspect-fidl-load_test" ]
 }
 

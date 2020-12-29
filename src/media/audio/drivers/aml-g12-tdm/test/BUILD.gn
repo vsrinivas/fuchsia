@@ -84,7 +84,6 @@ executable("aml-g12-tdm-dai-test-bin") {
 
 fuchsia_unittest_package("stream-test-package") {
   package_name = "aml-g12-tdm-test"
-  executable_path = "bin/aml-g12-tdm-test-bin"
   deps = [ ":aml-g12-tdm-test-bin" ]
   test_specs = {
     environments = basic_envs
@@ -93,7 +92,6 @@ fuchsia_unittest_package("stream-test-package") {
 
 fuchsia_unittest_package("dai-test-package") {
   package_name = "aml-g12-tdm-dai-test"
-  executable_path = "bin/aml-g12-tdm-dai-test-bin"
   deps = [ ":aml-g12-tdm-dai-test-bin" ]
   test_specs = {
     environments = basic_envs

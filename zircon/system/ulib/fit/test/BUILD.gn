@@ -113,12 +113,10 @@ config("shadow") {
 
 fuchsia_unittest_package("fit-test-pkg") {
   package_name = "fit"
-  executable_path = "test/fit"
   deps = [ ":fit" ]
 }
 
 fuchsia_unittest_package("fit-unittest-pkg") {
   package_name = "fit-unittest-test"
-  executable_path = "test/fit-unittest-test"
   deps = [ ":fit-unittest" ]
 }

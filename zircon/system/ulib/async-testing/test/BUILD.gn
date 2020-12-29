@@ -39,6 +39,5 @@ test("async-testing") {
 }
 
 fuchsia_unittest_package("async-testing-pkg") {
-  executable_path = "test/async-testing-test"
   deps = [ ":async-testing" ]
 }

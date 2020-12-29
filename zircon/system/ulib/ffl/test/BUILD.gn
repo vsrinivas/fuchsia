@@ -47,6 +47,5 @@ test("ffl") {
 
 fuchsia_unittest_package("ffl-test-pkg") {
   package_name = "ffl-test"
-  executable_path = "test/ffl-test"
   deps = [ ":ffl" ]
 }

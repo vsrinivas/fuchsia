@@ -37,7 +37,6 @@ test("logger-unit") {
 
 fuchsia_unittest_package("logger-unit-test-pkg") {
   package_name = "logger-unit-test"
-  executable_path = "test/logger-unit-test"
   deps = [ ":logger-unit" ]
 }
 

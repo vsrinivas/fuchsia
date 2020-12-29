@@ -49,6 +49,5 @@ fuchsia_package("package") {
 
 # Run with `fx test ansi-junk-unittests`.
 fuchsia_unittest_package("ansi-junk-unittests") {
-  executable_path = "bin/ansi_junk_bin_test"
   deps = [ ":bin_test" ]
 }

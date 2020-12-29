@@ -64,6 +64,5 @@ fuzzers_package("tftp-fuzzers") {
 
 fuchsia_unittest_package("tftp-test-pkg") {
   package_name = "tftp-test"
-  executable_path = "test/tftp-test"
   deps = [ ":tftp-test" ]
 }

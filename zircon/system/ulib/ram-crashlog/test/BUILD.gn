@@ -37,7 +37,6 @@ test("ram-crashlog") {
 
 fuchsia_unittest_package("ram-crashlog-test-pkg") {
   package_name = "ram-crashlog-test"
-  executable_path = "test/ram-crashlog-test"
   deps = [ ":ram-crashlog" ]
 }
 

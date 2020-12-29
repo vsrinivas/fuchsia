@@ -39,14 +39,12 @@ rustc_test("reject-invalid-fars-test") {
 
 fuchsia_unittest_component("unit-test-component") {
   component_name = "fuchsia-archive-lib-test"
-  executable_path = "bin/fuchsia_archive_lib_test"
   visibility = [ ":*" ]
   deps = [ ":fuchsia-archive_test" ]
 }
 
 fuchsia_unittest_component("invalid-fars-test-component") {
   component_name = "reject-invalid-fars-test"
-  executable_path = "bin/reject_invalid_fars_test"
   visibility = [ ":*" ]
   deps = [ ":reject-invalid-fars-test" ]
 }

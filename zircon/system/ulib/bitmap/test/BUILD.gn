@@ -50,7 +50,6 @@ test("bitmap") {
 
 fuchsia_unittest_package("bitmap-test-pkg") {
   package_name = "bitmap-test"
-  executable_path = "test/bitmap-test"
   deps = [ ":bitmap" ]
 }
 

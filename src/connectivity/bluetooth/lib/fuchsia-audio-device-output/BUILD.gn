@@ -40,7 +40,6 @@ rustc_library("fuchsia-audio-device-output") {
 }
 
 fuchsia_unittest_package("fuchsia-audio-device-output-tests") {
-  executable_path = "bin/fuchsia_audio_device_output_lib_test"
   deps = [ ":fuchsia-audio-device-output_test" ]
 }
 

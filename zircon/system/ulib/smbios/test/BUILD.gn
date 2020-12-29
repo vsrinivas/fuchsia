@@ -41,7 +41,6 @@ test("smbios-test") {
 
 fuchsia_unittest_package("smbios-test-pkg") {
   package_name = "smbios-test-test"
-  executable_path = "test/smbios-test-test"
   deps = [ ":smbios-test" ]
 }
 

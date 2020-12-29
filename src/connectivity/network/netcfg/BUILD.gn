@@ -96,7 +96,6 @@ config_data("config-no-ssh-over-wlan") {
 }
 
 fuchsia_unittest_package("netcfg-tests") {
-  executable_path = "bin/netcfg_bin_test"
   deps = [ ":bin_test" ]
 }
 

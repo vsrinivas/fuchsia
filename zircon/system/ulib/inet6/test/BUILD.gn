@@ -30,7 +30,6 @@ test("inet6-test") {
 
 fuchsia_unittest_package("inet6-test-pkg") {
   package_name = "inet6-test-test"
-  executable_path = "test/inet6-test-test"
   deps = [ ":inet6-test" ]
 }
 

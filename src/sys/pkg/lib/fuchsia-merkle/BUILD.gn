@@ -28,7 +28,6 @@ rustc_library("fuchsia-merkle") {
 }
 
 fuchsia_unittest_package("fuchsia-merkle-tests") {
-  executable_path = "bin/fuchsia_merkle_lib_test"
   deps = [ ":fuchsia-merkle_test" ]
 }
 

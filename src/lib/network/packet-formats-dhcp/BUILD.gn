@@ -29,7 +29,6 @@ rustc_library("packet-formats-dhcp") {
 }
 
 fuchsia_unittest_package("packet-formats-dhcp-test") {
-  executable_path = "bin/packet_formats_dhcp_lib_test"
   deps = [ ":packet-formats-dhcp_test" ]
 }
 

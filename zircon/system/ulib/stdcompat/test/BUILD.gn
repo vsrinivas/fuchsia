@@ -14,7 +14,6 @@ group("tests") {
 }
 
 fuchsia_unittest_package("stdcompat-test") {
-  executable_path = "test/stdcompat-unit-test"
   deps = [ ":stdcompat-unit-test" ]
 }
 

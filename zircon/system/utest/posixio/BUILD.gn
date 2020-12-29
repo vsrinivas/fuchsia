@@ -27,7 +27,6 @@ test("posixio") {
 
 fuchsia_unittest_package("posixio-test-pkg") {
   package_name = "posixio-test"
-  executable_path = "test/posixio-test"
   deps = [ ":posixio" ]
 }
 

@@ -59,6 +59,5 @@ test("zxtest-integration") {
 
 fuchsia_unittest_package("zxtest-integration-test-pkg") {
   package_name = "zxtest-integration-test"
-  executable_path = "test/zxtest-integration-test"
   deps = [ ":zxtest-integration" ]
 }

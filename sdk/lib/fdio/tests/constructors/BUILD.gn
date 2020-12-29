@@ -18,7 +18,6 @@ import("//src/sys/build/fuchsia_unittest_package.gni")
 import("//zircon/public/gn/toolchain/c_utils.gni")
 
 fuchsia_unittest_package("fdio-constructor-unittest-package") {
-  executable_path = "test/fdio-constructor-test"
   deps = [ ":fdio-constructor" ]
 }
 

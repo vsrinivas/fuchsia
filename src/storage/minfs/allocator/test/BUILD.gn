@@ -34,7 +34,6 @@ test("minfs-allocator-unit") {
 }
 
 fuchsia_unittest_component("minfs-allocator-test") {
-  executable_path = "test/minfs-allocator-unit"
   deps = [ ":minfs-allocator-unit" ]
 }
 

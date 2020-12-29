@@ -72,7 +72,6 @@ package("run_test_suite_pkg") {
 
 fuchsia_unittest_package("run-test-suite-unit-tests") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/run_test_suite_bin_bin_test"
 }
 
 # fxbug.dev/44251: Packages cannot include other packages, so making a group here for dependency.

@@ -92,7 +92,6 @@ executable("unittests") {
 
 # Run with `fx test console-launcher-unittests`.
 fuchsia_unittest_package("console-launcher-unittests") {
-  executable_path = "bin/console-launcher_test"
   deps = [ ":unittests" ]
 }
 
@@ -123,6 +122,5 @@ test("virtcon-setup-unittests") {
 }
 
 fuchsia_unittest_package("virtcon-setup-test") {
-  executable_path = "test/virtcon-setup-unittests"
   deps = [ ":virtcon-setup-unittests" ]
 }

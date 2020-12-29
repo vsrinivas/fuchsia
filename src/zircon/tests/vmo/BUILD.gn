@@ -24,7 +24,6 @@ test("vmo") {
 
 fuchsia_unittest_package("vmo-test-pkg") {
   package_name = "vmo-test"
-  executable_path = "test/vmo-test"
   deps = [ ":vmo" ]
 }
 

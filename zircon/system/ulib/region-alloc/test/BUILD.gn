@@ -34,7 +34,6 @@ test("region-alloc") {
 
 fuchsia_unittest_package("region-alloc-test-pkg") {
   package_name = "region-alloc-test"
-  executable_path = "test/region-alloc-test"
   deps = [ ":region-alloc" ]
 }
 

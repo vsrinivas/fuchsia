@@ -20,7 +20,6 @@ executable("bin") {
 # [END bin]
 
 fuchsia_unittest_package("fostr-example-test") {
-  executable_path = "bin/fostr_example_test"
   deps = [ ":bin" ]
 }
 

@@ -30,6 +30,5 @@ rustc_library("moniker") {
 }
 
 fuchsia_unittest_package("moniker-tests") {
-  executable_path = "bin/moniker_lib_test"
   deps = [ ":moniker_test" ]
 }

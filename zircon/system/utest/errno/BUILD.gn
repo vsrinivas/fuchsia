@@ -28,7 +28,6 @@ test("errno") {
 
 fuchsia_unittest_package("errno-test-pkg") {
   package_name = "errno-test"
-  executable_path = "test/errno-test"
   deps = [ ":errno" ]
 }
 

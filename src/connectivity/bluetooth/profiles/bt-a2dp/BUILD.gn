@@ -96,7 +96,6 @@ fuchsia_package("bt-a2dp") {
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {
-  executable_path = "bin/bt_a2dp_bin_test"
   deps = [ ":bin_test" ]
 }
 

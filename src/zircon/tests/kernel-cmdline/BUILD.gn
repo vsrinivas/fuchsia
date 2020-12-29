@@ -48,6 +48,5 @@ fuzzers_package("kernel-cmdline-fuzzers") {
 
 fuchsia_unittest_package("kernel-cmdline-test-pkg") {
   package_name = "kernel-cmdline-test"
-  executable_path = "test/kernel-cmdline-test"
   deps = [ ":kernel-cmdline" ]
 }

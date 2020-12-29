@@ -40,7 +40,6 @@ rustc_library("diagnostics-hierarchy") {
 }
 
 fuchsia_unittest_package("diagnostics-hierarchy-test") {
-  executable_path = "bin/diagnostics_hierarchy_lib_test"
   deps = [ ":diagnostics-hierarchy_test" ]
 }
 

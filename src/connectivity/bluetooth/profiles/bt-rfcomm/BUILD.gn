@@ -72,7 +72,6 @@ fuchsia_package("bt-rfcomm") {
 }
 
 fuchsia_unittest_package("bt-rfcomm-tests") {
-  executable_path = "bin/bt_rfcomm_bin_test"
   deps = [ ":bin_test" ]
 }
 

@@ -69,5 +69,4 @@ executable("driver-test") {
 
 fuchsia_unittest_package("network-device-test") {
   deps = [ ":driver-test" ]
-  executable_path = "bin/network-device-test"
 }

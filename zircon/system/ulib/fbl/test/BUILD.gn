@@ -125,6 +125,5 @@ test("fbl-gmock-test") {
 
 fuchsia_unittest_package("fbl-test-pkg") {
   package_name = "fbl-test"
-  executable_path = "test/fbl-test"
   deps = [ ":fbl" ]
 }

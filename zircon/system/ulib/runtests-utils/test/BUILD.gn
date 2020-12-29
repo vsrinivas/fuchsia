@@ -54,7 +54,6 @@ fidl("fidl.test.echo") {
 
 fuchsia_unittest_package("service-proxy-dir-test-pkg") {
   package_name = "service-proxy-dir-test"
-  executable_path = "test/service-proxy-dir-test"
   deps = [ ":service-proxy-dir" ]
 }
 

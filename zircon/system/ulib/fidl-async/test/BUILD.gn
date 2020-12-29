@@ -46,7 +46,6 @@ fidl("fidl.test.simple") {
 
 fuchsia_unittest_package("fidl-async-test-pkg") {
   package_name = "fidl-async-test"
-  executable_path = "test/fidl-async-test"
   deps = [ ":fidl-async-test" ]
 }
 

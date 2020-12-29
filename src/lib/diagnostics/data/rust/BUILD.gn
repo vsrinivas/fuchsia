@@ -34,6 +34,5 @@ rustc_library("lib") {
 }
 
 fuchsia_unittest_package("diagnostics-data-tests") {
-  executable_path = "bin/diagnostics_data_lib_test"
   deps = [ ":lib_test" ]
 }

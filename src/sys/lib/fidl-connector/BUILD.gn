@@ -31,7 +31,6 @@ rustc_library("fidl-connector") {
 }
 
 fuchsia_unittest_package("fidl-connector-tests") {
-  executable_path = "bin/fidl_connector_lib_test"
   deps = [ ":fidl-connector_test" ]
   test_specs = {
     environments = basic_envs

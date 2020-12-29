@@ -31,7 +31,6 @@ test("perftest") {
 
 fuchsia_unittest_package("perftest-pkg") {
   package_name = "perf-test"
-  executable_path = "test/perf-test"
   deps = [ ":perftest" ]
 }
 

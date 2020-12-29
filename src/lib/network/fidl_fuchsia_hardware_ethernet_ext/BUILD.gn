@@ -22,5 +22,4 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
 
 fuchsia_unittest_package("fidl-fuchsia-hardware-ethernet-ext-tests") {
   deps = [ ":fidl_fuchsia_hardware_ethernet_ext_test" ]
-  executable_path = "bin/fidl_fuchsia_hardware_ethernet_ext_lib_test"
 }

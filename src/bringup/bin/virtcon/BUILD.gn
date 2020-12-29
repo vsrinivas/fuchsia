@@ -119,7 +119,6 @@ test("vc-text-test") {
 
 fuchsia_unittest_component("virtual-console-text-test") {
   deps = [ ":vc-text-test" ]
-  executable_path = "test/vc-text-test"
 }
 
 test("vc-session-manager-test") {
@@ -158,7 +157,6 @@ test("vc-integration-test") {
 
 fuchsia_unittest_component("virtual-console-integration-test") {
   deps = [ ":vc-integration-test" ]
-  executable_path = "test/vc-integration-test"
 }
 
 test("vc-args-test") {
@@ -182,7 +180,6 @@ test("vc-args-test") {
 
 fuchsia_unittest_component("virtual-console-args-test") {
   deps = [ ":vc-args-test" ]
-  executable_path = "test/vc-args-test"
 }
 
 fuchsia_test_package("virtcon-tests") {

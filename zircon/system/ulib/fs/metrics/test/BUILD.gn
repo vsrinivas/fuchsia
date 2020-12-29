@@ -95,7 +95,6 @@ group("test") {
 
 fuchsia_unittest_package("metrics-cobalt-test-pkg") {
   package_name = "metrics-cobalt"
-  executable_path = "test/metrics-cobalt"
   deps = [ ":metrics-cobalt" ]
 }
 
@@ -110,12 +109,10 @@ group("tests") {
 
 fuchsia_unittest_package("metrics-composite-latency-event-test-pkg") {
   package_name = "metrics-composite-latency-event"
-  executable_path = "test/metrics-composite-latency-event"
   deps = [ ":metrics-composite-latency-event" ]
 }
 
 fuchsia_unittest_package("metrics-inspect-test-pkg") {
   package_name = "metrics-inspect"
-  executable_path = "test/metrics-inspect"
   deps = [ ":metrics-inspect" ]
 }

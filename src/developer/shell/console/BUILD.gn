@@ -63,6 +63,5 @@ executable("console_unittests_bin") {
 }
 
 fuchsia_unittest_package("shell-console-unittests") {
-  executable_path = "bin/console_unittests_bin"
   deps = [ ":console_unittests_bin" ]
 }

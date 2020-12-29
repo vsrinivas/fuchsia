@@ -53,7 +53,6 @@ foreach(case, default_stack_size_cases) {
   }
 
   fuchsia_unittest_package("default-stack-size-${case.name}-pkg") {
-    executable_path = "test/default-stack-size-${case.name}"
     deps = [ ":default-stack-size-${case.name}" ]
   }
 }
@@ -176,7 +175,6 @@ group("test") {
 }
 
 fuchsia_unittest_package("atexit-test-pkg") {
-  executable_path = "test/atexit-test"
   deps = [ ":atexit-test" ]
 }
 
@@ -187,11 +185,9 @@ bootfs_test("cdebugdata-test-bootfs-test") {
 }
 
 fuchsia_unittest_package("posix-clocks-test-pkg") {
-  executable_path = "test/posix-clocks-test"
   deps = [ ":posix-clocks-test" ]
 }
 
 fuchsia_unittest_package("pthread-detach-idempotent-test-pkg") {
-  executable_path = "test/pthread-detach-idempotent-test"
   deps = [ ":pthread-detach-idempotent-test" ]
 }

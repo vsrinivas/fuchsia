@@ -44,6 +44,5 @@ test("ftl-test") {
 }
 
 fuchsia_unittest_package("ftl-library-test") {
-  executable_path = "test/ftl-library-test"
   deps = [ ":ftl-test" ]
 }

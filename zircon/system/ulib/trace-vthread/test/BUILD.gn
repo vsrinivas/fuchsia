@@ -85,7 +85,6 @@ test("trace-vthread-with-static-engine-test") {
 
 fuchsia_unittest_package("trace-vthread-test-pkg") {
   package_name = "trace-vthread-test-test"
-  executable_path = "test/trace-vthread-test-test"
   deps = [ ":trace-vthread-test" ]
 }
 
@@ -99,6 +98,5 @@ group("tests") {
 
 fuchsia_unittest_package("trace-vthread-with-static-engine-test-pkg") {
   package_name = "trace-vthread-with-static-engine-test-test"
-  executable_path = "test/trace-vthread-with-static-engine-test-test"
   deps = [ ":trace-vthread-with-static-engine-test" ]
 }

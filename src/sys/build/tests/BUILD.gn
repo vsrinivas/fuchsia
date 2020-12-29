@@ -45,7 +45,6 @@ executable("twoplustwo_cpp") {
 }
 
 fuchsia_unittest_package("twoplustwo-cpp-unittest") {
-  executable_path = "bin/twoplustwo_cpp"
   deps = [ ":twoplustwo_cpp" ]
 }
 
@@ -56,7 +55,6 @@ rustc_test("twoplustwo_rust") {
 }
 
 fuchsia_unittest_package("twoplustwo-rust-unittest") {
-  executable_path = "bin/twoplustwo_rust"
   deps = [ ":twoplustwo_rust" ]
 }
 
@@ -72,7 +70,6 @@ resource("hello_world.txt") {
 }
 
 fuchsia_unittest_package("readfile-unittest") {
-  executable_path = "bin/read_file_test"
   deps = [
     ":hello_world.txt",
     ":read_file_test",

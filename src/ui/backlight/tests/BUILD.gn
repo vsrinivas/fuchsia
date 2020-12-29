@@ -23,6 +23,5 @@ test("backlight-test") {
 
 fuchsia_unittest_package("backlight-test-pkg") {
   package_name = "backlight-test"
-  executable_path = "test/backlight-test"
   deps = [ ":backlight-test" ]
 }

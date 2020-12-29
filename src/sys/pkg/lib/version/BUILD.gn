@@ -22,7 +22,6 @@ rustc_library("version") {
 }
 
 fuchsia_unittest_package("version-tests") {
-  executable_path = "bin/version_lib_test"
   deps = [ ":version_test" ]
 }
 

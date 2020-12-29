@@ -28,7 +28,6 @@ test("cleanup") {
 
 fuchsia_unittest_package("cleanup-test-pkg") {
   package_name = "cleanup-test"
-  executable_path = "test/cleanup-test"
   deps = [ ":cleanup" ]
 }
 

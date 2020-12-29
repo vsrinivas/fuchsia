@@ -86,7 +86,6 @@ component_manifest_resources("bootfs") {
 
 fuchsia_unittest_package("console-test-pkg") {
   package_name = "console-test"
-  executable_path = "test/console-test"
   deps = [ ":console-test" ]
 }
 

@@ -91,7 +91,6 @@ component_manifest_resources("bootfs") {
 
 fuchsia_unittest_package("ptysvc-test-pkg") {
   package_name = "ptysvc-test"
-  executable_path = "test/ptysvc-test"
   deps = [ ":ptysvc-test" ]
 }
 

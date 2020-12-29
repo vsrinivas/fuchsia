@@ -28,5 +28,4 @@ rustc_library("net-types") {
 fuchsia_unittest_package("tests") {
   package_name = "net-types-tests"
   deps = [ ":net-types_test" ]
-  executable_path = "bin/net_types_lib_test"
 }

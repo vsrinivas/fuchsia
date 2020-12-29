@@ -47,6 +47,5 @@ test("zbi") {
 
 fuchsia_unittest_package("zbi-test-pkg") {
   package_name = "libzbi-test"
-  executable_path = "test/libzbi-test"
   deps = [ ":zbi" ]
 }

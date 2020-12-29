@@ -94,7 +94,6 @@ test("cobalt-client-unit") {
 
 fuchsia_unittest_package("cobalt-client-unit-test-pkg") {
   package_name = "cobalt-client-unit-test"
-  executable_path = "test/cobalt-client-unit-test"
   deps = [ ":cobalt-client-unit" ]
 }
 

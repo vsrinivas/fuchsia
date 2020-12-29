@@ -76,12 +76,10 @@ group("tests") {
 
 fuchsia_unittest_package("libhwreg-test-pkg") {
   package_name = "libhwreg-test"
-  executable_path = "test/libhwreg-test"
   deps = [ ":libhwreg" ]
 }
 
 fuchsia_unittest_package("libhwreg-i2c-test-pkg") {
   package_name = "libhwreg-i2c-test"
-  executable_path = "test/libhwreg-i2c-test"
   deps = [ ":libhwreg-i2c" ]
 }

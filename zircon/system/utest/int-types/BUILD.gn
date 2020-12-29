@@ -43,7 +43,6 @@ config("config") {
 
 fuchsia_unittest_package("int-types-test-pkg") {
   package_name = "int-types-test"
-  executable_path = "test/int-types-test"
   deps = [ ":int-types" ]
 }
 

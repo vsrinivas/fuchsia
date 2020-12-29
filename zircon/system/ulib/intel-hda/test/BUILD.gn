@@ -48,7 +48,6 @@ test("intel-hda-utils-test") {
 
 fuchsia_unittest_package("intel-hda-utils-test-pkg") {
   package_name = "intel-hda-utils-test-test"
-  executable_path = "test/intel-hda-utils-test-test"
   deps = [ ":intel-hda-utils-test" ]
 }
 

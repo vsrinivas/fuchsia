@@ -29,5 +29,4 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
 
 fuchsia_unittest_package("fidl-fuchsia-net-stack-ext-tests") {
   deps = [ ":fidl_fuchsia_net_stack_ext_test" ]
-  executable_path = "bin/fidl_fuchsia_net_stack_ext_lib_test"
 }

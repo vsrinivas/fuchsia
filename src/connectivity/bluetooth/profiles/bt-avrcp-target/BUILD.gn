@@ -55,7 +55,6 @@ fuchsia_package("bt-avrcp-target") {
 }
 
 fuchsia_unittest_package("bt-avrcp-target-tests") {
-  executable_path = "bin/bt_avrcp_target_bin_test"
   deps = [ ":bin_test" ]
 }
 

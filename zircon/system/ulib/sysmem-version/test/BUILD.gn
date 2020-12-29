@@ -28,7 +28,6 @@ test("sysmem-version-test") {
 
 fuchsia_unittest_package("sysmem-version-test-pkg") {
   package_name = "sysmem-version-test"
-  executable_path = "test/sysmem-version-test"
   deps = [ ":sysmem-version-test" ]
 }
 

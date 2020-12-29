@@ -32,7 +32,6 @@ rustc_library("dns_server_watcher") {
 
 fuchsia_unittest_package("dns-server-watcher-test") {
   deps = [ ":dns_server_watcher_test" ]
-  executable_path = "bin/dns_server_watcher_lib_test"
 }
 
 group("tests") {

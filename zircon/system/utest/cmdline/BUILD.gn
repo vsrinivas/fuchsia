@@ -31,7 +31,6 @@ test("cmdline") {
 
 fuchsia_unittest_package("cmdline-test-pkg") {
   package_name = "cmdline-test"
-  executable_path = "test/cmdline-test"
   deps = [ ":cmdline" ]
 }
 

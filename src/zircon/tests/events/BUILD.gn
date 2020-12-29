@@ -21,7 +21,6 @@ test("events") {
 
 fuchsia_unittest_package("events-test-pkg") {
   package_name = "events-test"
-  executable_path = "test/events-test"
   deps = [ ":events" ]
 }
 

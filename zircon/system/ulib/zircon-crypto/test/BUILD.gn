@@ -66,6 +66,5 @@ fuzzers_package("zircon-crypto-fuzzers") {
 
 fuchsia_unittest_package("zircon-crypto-test-pkg") {
   package_name = "zircon-crypto-test"
-  executable_path = "test/zircon-crypto-test"
   deps = [ ":zircon-crypto" ]
 }

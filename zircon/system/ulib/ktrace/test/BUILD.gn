@@ -46,7 +46,6 @@ test("ktrace-test") {
 
 fuchsia_unittest_package("ktrace-test-pkg") {
   package_name = "ktrace-test"
-  executable_path = "test/ktrace-test"
   deps = [ ":ktrace-test" ]
 }
 

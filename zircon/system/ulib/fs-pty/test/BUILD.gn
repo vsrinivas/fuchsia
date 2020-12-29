@@ -47,7 +47,6 @@ test("libfs-pty-test") {
 
 fuchsia_unittest_package("libfs-pty-test-pkg") {
   package_name = "libfs-pty-test-test"
-  executable_path = "test/libfs-pty-test-test"
   deps = [ ":libfs-pty-test" ]
 }
 

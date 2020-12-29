@@ -35,7 +35,6 @@ test("bootfs_test") {
 }
 
 fuchsia_unittest_package("bootfs-test") {
-  executable_path = "test/bootfs_test"
   deps = [ ":bootfs_test" ]
 }
 

@@ -35,7 +35,6 @@ test("mock-function-test") {
 
 fuchsia_unittest_package("mock-function-test-pkg") {
   package_name = "mock-function-test"
-  executable_path = "test/mock-function-test"
   deps = [ ":mock-function-test" ]
 }
 

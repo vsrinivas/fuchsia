@@ -71,6 +71,5 @@ executable("unittests") {
 
 # Run with `fx test {{PROJECT_NAME}}-unittests`.
 fuchsia_unittest_package("{{PROJECT_NAME}}-unittests") {
-  executable_path = "bin/{{PROJECT_NAME}}_test"
   deps = [ ":unittests" ]
 }

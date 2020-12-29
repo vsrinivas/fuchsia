@@ -20,6 +20,5 @@ executable("extend_bits_tests") {
 }
 
 fuchsia_unittest_package("extend-bits-tests") {
-  executable_path = "bin/extend_bits_tests"
   deps = [ ":extend_bits_tests" ]
 }

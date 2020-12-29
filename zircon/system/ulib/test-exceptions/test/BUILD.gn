@@ -34,7 +34,6 @@ test("test-exceptions") {
 
 fuchsia_unittest_package("test-exceptions-test-pkg") {
   package_name = "test-exceptions-test"
-  executable_path = "test/test-exceptions-test"
   deps = [ ":test-exceptions" ]
 }
 

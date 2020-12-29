@@ -46,6 +46,5 @@ test("parser_tests_bin") {
 }
 
 fuchsia_unittest_package("shell-parser-unittests") {
-  executable_path = "test/parser_tests_bin"
   deps = [ ":parser_tests_bin" ]
 }

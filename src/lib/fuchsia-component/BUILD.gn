@@ -49,7 +49,6 @@ rustc_library("fuchsia-component") {
 }
 
 fuchsia_unittest_package("fuchsia-component-unittests") {
-  executable_path = "bin/fuchsia_component_lib_test"
   deps = [ ":fuchsia-component_test" ]
 }
 

@@ -43,7 +43,6 @@ test("refcount-test") {
 
 fuchsia_unittest_package("refcount-test-pkg") {
   package_name = "refcount-test-test"
-  executable_path = "test/refcount-test-test"
   deps = [ ":refcount-test" ]
 }
 

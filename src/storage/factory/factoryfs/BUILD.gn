@@ -71,7 +71,6 @@ test("factoryfs_unit") {
 }
 
 fuchsia_unittest_component("factoryfs-unit") {
-  executable_path = "test/factoryfs_unit"
   deps = [ ":factoryfs_unit" ]
 }
 

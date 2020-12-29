@@ -108,7 +108,6 @@ executable("fidl_codec_test_bin") {
 
 fuchsia_unittest_package("fidl-codec-tests") {
   deps = [ ":fidl_codec_test_bin" ]
-  executable_path = "bin/fidl_codec_test_bin"
 }
 
 group("tests") {

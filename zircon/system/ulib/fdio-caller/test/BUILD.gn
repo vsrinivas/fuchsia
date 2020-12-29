@@ -47,7 +47,6 @@ test("fdio-caller") {
 
 fuchsia_unittest_package("fdio-caller-test-pkg") {
   package_name = "fdio-caller-test"
-  executable_path = "test/fdio-caller-test"
   deps = [ ":fdio-caller" ]
 }
 

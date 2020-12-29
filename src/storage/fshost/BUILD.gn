@@ -248,7 +248,6 @@ generated_resource("allow-authoring-factory") {
 }
 
 fuchsia_unittest_component("fshost-test") {
-  executable_path = "test/fshost_test"
   deps = [ ":fshost_test" ]
 }
 
@@ -285,7 +284,6 @@ test("fshost_inspect_test") {
 }
 
 fuchsia_unittest_component("fshost-inspect-test") {
-  executable_path = "test/fshost_inspect_test"
   deps = [ ":fshost_inspect_test" ]
 }
 
@@ -304,7 +302,6 @@ test("fshost_metrics_test") {
 }
 
 fuchsia_unittest_component("fshost-metrics-test") {
-  executable_path = "test/fshost_metrics_test"
   deps = [ ":fshost_metrics_test" ]
 }
 

@@ -34,7 +34,6 @@ rustc_binary("bin") {
 
 fuchsia_unittest_package("sink-validator-tests") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/sink_validator_bin_test"
 }
 
 ### C++ ###

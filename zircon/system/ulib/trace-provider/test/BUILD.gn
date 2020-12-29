@@ -57,7 +57,6 @@ test("provider-test") {
 
 fuchsia_unittest_package("provider-test-pkg") {
   package_name = "trace-provider-test"
-  executable_path = "test/trace-provider-test"
   deps = [ ":provider-test" ]
 }
 

@@ -27,7 +27,6 @@ test("qsort") {
 
 fuchsia_unittest_package("qsort-test-pkg") {
   package_name = "qsort-test"
-  executable_path = "test/qsort-test"
   deps = [ ":qsort" ]
 }
 

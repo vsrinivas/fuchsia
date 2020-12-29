@@ -31,7 +31,6 @@ test("exit") {
 
 fuchsia_unittest_package("exit-test-pkg") {
   package_name = "exit-test"
-  executable_path = "test/exit-test"
   deps = [ ":exit" ]
 }
 

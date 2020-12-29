@@ -55,6 +55,5 @@ fuchsia_package("package") {
 
 # Run with `fx test my-component-v1-rust-unittests`.
 fuchsia_unittest_package("my-component-v1-rust-unittests") {
-  executable_path = "bin/my_component_v1_rust_bin_test"
   deps = [ ":bin_test" ]
 }

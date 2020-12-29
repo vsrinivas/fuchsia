@@ -119,7 +119,6 @@ test("util_test") {
 }
 
 fuchsia_unittest_component("util-test") {
-  executable_path = "test/bootsvc_util_test"
   deps = [ ":util_test" ]
 }
 

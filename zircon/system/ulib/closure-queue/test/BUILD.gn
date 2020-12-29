@@ -30,7 +30,6 @@ test("closure-queue") {
 
 fuchsia_unittest_package("closure-queue-test-pkg") {
   package_name = "closure-queue-test"
-  executable_path = "test/closure-queue-test"
   deps = [ ":closure-queue" ]
 }
 

@@ -84,12 +84,10 @@ fuchsia_shell_package("network-manager-cli") {
 
 fuchsia_unittest_component("network-manager-cli-bin-test") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/network_manager_cli_bin_test"
 }
 
 fuchsia_unittest_component("network-manager-cli-lib-test") {
   deps = [ ":lib_test" ]
-  executable_path = "bin/network_manager_cli_lib_test"
 }
 
 fuchsia_test_package("network-manager-cli-tests") {

@@ -27,7 +27,6 @@ test("sysconf") {
 
 fuchsia_unittest_package("sysconf-test-pkg") {
   package_name = "sysconf-test"
-  executable_path = "test/sysconf-test"
   deps = [ ":sysconf" ]
 }
 

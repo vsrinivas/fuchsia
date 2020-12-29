@@ -22,5 +22,4 @@ rustc_library("internet-checksum") {
 fuchsia_unittest_package("tests") {
   package_name = "internet-checksum-tests"
   deps = [ ":internet-checksum_test" ]
-  executable_path = "bin/internet_checksum_lib_test"
 }

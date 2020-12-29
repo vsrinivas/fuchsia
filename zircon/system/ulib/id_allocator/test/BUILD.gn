@@ -33,7 +33,6 @@ test("id_allocator-test") {
 
 fuchsia_unittest_package("id-allocator-test-pkg") {
   package_name = "id_allocator-test"
-  executable_path = "test/id_allocator-test"
   deps = [ ":id_allocator-test" ]
 }
 

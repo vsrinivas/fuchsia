@@ -44,7 +44,6 @@ rustc_library("bt-avdtp") {
 }
 
 fuchsia_unittest_package("bt-avdtp-tests") {
-  executable_path = "bin/bt_avdtp_lib_test"
   deps = [ ":bt-avdtp_test" ]
 }
 

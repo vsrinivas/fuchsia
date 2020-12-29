@@ -53,6 +53,5 @@ test("block-client-unit-test") {
 
 fuchsia_unittest_package("block-client-unit-test-pkg") {
   package_name = "block-client-unit-test"
-  executable_path = "test/block-client-unit-test"
   deps = [ ":block-client-unit-test" ]
 }

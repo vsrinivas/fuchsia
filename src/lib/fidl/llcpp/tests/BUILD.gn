@@ -46,7 +46,6 @@ executable("fidl_llcpp_conformance_tests_bin") {
 }
 
 fuchsia_unittest_component("fidl_llcpp_conformance_tests") {
-  executable_path = "bin/fidl_llcpp_conformance_tests"
   deps = [ ":fidl_llcpp_conformance_tests_bin" ]
 }
 

@@ -45,7 +45,6 @@ test("bt-transport-usb-test") {
 }
 
 fuchsia_unittest_package("bt-transport-usb-package") {
-  executable_path = "test/bt-transport-usb-test"
   deps = [ ":bt-transport-usb-test" ]
 }
 

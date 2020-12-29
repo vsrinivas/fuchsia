@@ -27,7 +27,6 @@ test("getentropy") {
 
 fuchsia_unittest_package("getentropy-test-pkg") {
   package_name = "getentropy-test"
-  executable_path = "test/getentropy-test"
   deps = [ ":getentropy" ]
 }
 

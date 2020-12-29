@@ -39,7 +39,6 @@ test("chromeos-disk-setup") {
 
 fuchsia_unittest_package("chromeos-disk-setup-test-pkg") {
   package_name = "chromeos-disk-setup-test"
-  executable_path = "test/chromeos-disk-setup-test"
   deps = [ ":chromeos-disk-setup" ]
 }
 

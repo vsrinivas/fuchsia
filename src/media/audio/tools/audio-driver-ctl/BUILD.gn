@@ -71,7 +71,6 @@ test("audio-driver-ctl-test") {
 }
 
 fuchsia_unittest_package("audio-driver-ctl-test-pkg") {
-  executable_path = "test/audio-driver-ctl-test"
   deps = [ ":audio-driver-ctl-test" ]
 }
 

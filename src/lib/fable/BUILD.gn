@@ -21,7 +21,6 @@ rustc_library("fable-lib") {
 }
 
 fuchsia_unittest_package("fable-lib-unit-tests") {
-  executable_path = "bin/fable_lib_lib_test"
   deps = [ ":fable-lib_test" ]
 }
 
