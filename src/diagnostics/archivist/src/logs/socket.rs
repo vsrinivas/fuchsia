@@ -44,7 +44,6 @@ pub struct LogMessageSocket<E> {
     source: Arc<SourceIdentity>,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
-    forwarder: Forwarder<E>,
     _encoder: PhantomData<E>,
 }
 
@@ -57,16 +56,11 @@ impl<E> LogMessageSocket<E> {
 
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
-    pub fn new(
-        socket: zx::Socket,
-        source: Arc<SourceIdentity>,
-        forwarder: Forwarder<LegacyEncoding>,
-    ) -> Result<Self, io::Error> {
+    pub fn new(socket: zx::Socket, source: Arc<SourceIdentity>) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
             source,
-            forwarder,
             _encoder: PhantomData,
         })
     }
@@ -78,13 +72,11 @@ impl LogMessageSocket<StructuredEncoding> {
     pub fn new_structured(
         socket: zx::Socket,
         source: Arc<SourceIdentity>,
-        forwarder: Forwarder<StructuredEncoding>,
     ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
             source,
-            forwarder,
             _encoder: PhantomData,
         })
     }
@@ -103,34 +95,7 @@ where
 
         let msg_bytes = &self.buffer[..len];
         let message = E::parse_message(&self.source, msg_bytes)?;
-        self.forwarder.maybe_send(msg_bytes);
         Ok(message)
-    }
-}
-
-/// Optionally forwards all log messages to another socket.
-#[derive(Clone, Debug)]
-pub struct Forwarder<E> {
-    target: Option<Arc<zx::Socket>>,
-    _encoding: PhantomData<E>,
-}
-
-impl<E> Forwarder<E> {
-    /// Creates a nop forwarder.
-    pub fn new() -> Self {
-        Self { target: None, _encoding: PhantomData }
-    }
-
-    /// Start forwarding messages to the `target` socket.
-    pub fn init(&mut self, target: zx::Socket) {
-        self.target = Some(Arc::new(target));
-    }
-
-    /// Forward the message bytes if we've been initialized.
-    pub fn maybe_send(&self, bytes: &[u8]) {
-        if let Some(target) = self.target.as_ref() {
-            target.write(bytes).ok();
-        }
     }
 }
 
@@ -156,7 +121,7 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let mut ls = LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Forwarder::new()).unwrap();
+        let mut ls = LogMessageSocket::new(sout, TEST_IDENTITY.clone()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let expected_p = Message::new(
             zx::Time::from_nanos(packet.metadata.time),
@@ -219,9 +184,7 @@ mod tests {
             ),
         );
 
-        let mut stream =
-            LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone(), Forwarder::new())
-                .unwrap();
+        let mut stream = LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone()).unwrap();
 
         sin.write(encoded).unwrap();
         let result_message = stream.next().await.unwrap();

@@ -23,12 +23,6 @@ pub enum LogsError {
         source: EventError,
     },
 
-    #[error("couldn't forward messages: {source}")]
-    Forwarding {
-        #[from]
-        source: ForwardError,
-    },
-
     #[error("error while handling {protocol} requests: {source}")]
     HandlingRequests { protocol: &'static str, source: fidl::Error },
 
@@ -55,15 +49,6 @@ pub enum EventError {
 
     #[error("received an invalid event type")]
     InvalidEventType,
-}
-
-#[derive(Debug, Error)]
-pub enum ForwardError {
-    #[error("couldn't create socket for forwarding: {source}")]
-    Create { source: fuchsia_zircon::Status },
-
-    #[error("couldn't send socket to logsink: {source}")]
-    Connect { source: fidl::Error },
 }
 
 #[derive(Debug, Error)]

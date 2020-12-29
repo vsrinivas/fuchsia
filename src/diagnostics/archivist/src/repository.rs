@@ -11,11 +11,11 @@ use {
         logs::{
             buffer::{LazyItem, MemoryBoundedBuffer},
             debuglog::{DebugLog, DebugLogBridge},
-            error::{ForwardError, LogsError, StreamError},
+            error::{LogsError, StreamError},
             interest::InterestDispatcher,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
             log_sink_request_stream_from_event,
-            socket::{Encoding, Forwarder, LegacyEncoding, LogMessageSocket, StructuredEncoding},
+            socket::{Encoding, LogMessageSocket},
             source_identity_from_event,
             stats::{LogManagerStats, LogSource},
             Message,
@@ -27,8 +27,8 @@ use {
     fidl_fuchsia_diagnostics::{self, Interest, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{
-        LogMarker, LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkMarker,
-        LogSinkRequest, LogSinkRequestStream,
+        LogMarker, LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest,
+        LogSinkRequestStream,
     },
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_sys_internal::{
@@ -124,12 +124,11 @@ impl DataRepo {
 
     /// Drain log sink for messages sent by the archivist itself.
     pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
-        let forwarder = self.read().logs.legacy_forwarder.clone();
         // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
         let mut source = SourceIdentity::EMPTY;
         source.component_name = Some(name.to_owned());
         let source = Arc::new(source);
-        let log_stream = LogMessageSocket::new(socket, source, forwarder)
+        let log_stream = LogMessageSocket::new(socket, source)
             .expect("failed to create internal LogMessageSocket");
         self.drain_messages(log_stream).await;
         unreachable!();
@@ -189,8 +188,7 @@ impl DataRepo {
         while let Some(next) = stream.next().await {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
-                    let forwarder = { self.read().logs.legacy_forwarder.clone() };
-                    match LogMessageSocket::new(socket, source.clone(), forwarder) {
+                    match LogMessageSocket::new(socket, source.clone()) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle);
                             let task = Task::spawn(self.clone().drain_messages(log_stream));
@@ -203,8 +201,7 @@ impl DataRepo {
                     };
                 }
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
-                    let forwarder = { self.read().logs.structured_forwarder.clone() };
-                    match LogMessageSocket::new_structured(socket, source.clone(), forwarder) {
+                    match LogMessageSocket::new_structured(socket, source.clone()) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle);
                             let task = Task::spawn(self.clone().drain_messages(log_stream));
@@ -390,35 +387,6 @@ impl DataRepo {
     pub fn terminate_logs(&self) {
         self.write().logs.log_msg_buffer.terminate();
     }
-
-    /// Initializes internal log forwarders.
-    pub fn forward_logs(self) {
-        if let Err(e) = self.init_forwarders() {
-            error!(%e, "couldn't forward logs");
-        } else {
-            debug!("Log forwarding initialized.");
-        }
-    }
-
-    fn init_forwarders(&self) -> Result<(), LogsError> {
-        let sink =
-            fuchsia_component::client::connect_to_service::<LogSinkMarker>().map_err(|source| {
-                LogsError::ConnectingToService { protocol: LogSinkMarker::NAME, source }
-            })?;
-        let mut state = self.write();
-
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(|source| ForwardError::Create { source })?;
-        sink.connect(recv).map_err(|source| ForwardError::Connect { source })?;
-        state.logs.legacy_forwarder.init(send);
-
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(|source| ForwardError::Create { source })?;
-        sink.connect_structured(recv).map_err(|source| ForwardError::Connect { source })?;
-        state.logs.structured_forwarder.init(send);
-
-        Ok(())
-    }
 }
 
 pub struct DataRepoState {
@@ -430,10 +398,6 @@ pub struct DataRepoState {
 struct LogState {
     #[inspect(skip)]
     interest_dispatcher: InterestDispatcher,
-    #[inspect(skip)]
-    legacy_forwarder: Forwarder<LegacyEncoding>,
-    #[inspect(skip)]
-    structured_forwarder: Forwarder<StructuredEncoding>,
     #[inspect(rename = "buffer_stats")]
     log_msg_buffer: MemoryBoundedBuffer<Message>,
     stats: LogManagerStats,
@@ -447,8 +411,6 @@ impl Default for LogState {
             log_msg_buffer: MemoryBoundedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES),
             stats: LogManagerStats::new_detached(),
             inspect_node: inspect::Node::default(),
-            legacy_forwarder: Forwarder::new(),
-            structured_forwarder: Forwarder::new(),
         }
     }
 }

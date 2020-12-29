@@ -95,13 +95,8 @@ impl EnvWithDiagnostics {
             options
         };
 
-        let archivist = launch_with_options(
-            &launcher,
-            ARCHIVIST_URL.to_string(),
-            Some(vec!["--forward-logs".into()]),
-            options,
-        )
-        .unwrap();
+        let archivist =
+            launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
         let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
         let mut archivist_events = archivist.controller().take_event_stream();

@@ -43,10 +43,6 @@ pub struct Args {
     #[argh(switch)]
     consume_own_logs: bool,
 
-    /// send all logs to environment's LogSink
-    #[argh(switch)]
-    forward_logs: bool,
-
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
     install_controller: bool,
@@ -117,10 +113,6 @@ fn main() -> Result<(), Error> {
             archivist.data_repo().clone().drain_internal_log_sink(log_server, log_name),
         )
         .detach();
-    }
-
-    if opt.forward_logs {
-        archivist.data_repo().clone().forward_logs();
     }
 
     assert!(
