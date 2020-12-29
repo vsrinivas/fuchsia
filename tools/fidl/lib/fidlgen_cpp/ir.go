@@ -197,10 +197,7 @@ func (um UnionMember) UpperCamelCaseName() string {
 	return fidl.ToUpperCamelCase(um.Name)
 }
 
-type TableFrameItem struct {
-	LLDecl string // "void" if reserved
-	Name   string
-}
+type TableFrameItem *TableMember
 
 type Table struct {
 	fidl.Table
@@ -214,7 +211,8 @@ type Table struct {
 	MaxOutOfLine   int
 	MaxSentSize    int
 	HasPointer     bool
-	// Types of the members in ordinal order, "void" for reserved.
+
+	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
 
 	// Kind should be default initialized.
@@ -1452,17 +1450,8 @@ func (c *compiler) compileTable(val fidl.Table, appendNamespace string) Table {
 	}
 
 	r.FrameItems = make([]TableFrameItem, r.BiggestOrdinal)
-	for i := 0; i < len(r.FrameItems); i++ {
-		r.FrameItems[i] = TableFrameItem{
-			LLDecl: "void",
-			Name:   fmt.Sprintf("reserved_%d", i),
-		}
-	}
-	for _, member := range r.Members {
-		r.FrameItems[member.Ordinal-1] = TableFrameItem{
-			LLDecl: member.Type.LLDecl,
-			Name:   member.Name,
-		}
+	for index, member := range r.Members {
+		r.FrameItems[member.Ordinal-1] = &r.Members[index]
 	}
 
 	return r

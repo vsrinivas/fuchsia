@@ -207,8 +207,12 @@ public:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
 
-    {{- range .FrameItems }}
-    ::fidl::Envelope<{{ .LLDecl }}> {{ .Name }}_;
+    {{- range $index, $item := .FrameItems }}
+      {{- if $item }}
+    ::fidl::Envelope<{{ $item.Type.LLDecl }}> {{ $item.Name }}_;
+      {{- else }}
+    ::fidl::Envelope<void> reserved_{{ $index }}_;
+      {{- end }}
     {{- end }}
 
     friend class {{ .Name }};
