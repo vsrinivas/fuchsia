@@ -306,6 +306,7 @@ Remaining arguments are passed to emu wrapper and emulator:
   --host-gpu run with host GPU acceleration
   --software-gpu run without host GPU acceleration
   --debugger pause on launch and wait for a debugger process to attach before resuming
+  --no-build do not attempt to build the fvm and zbi tools and the zbi image
 
 Invalid argument names are not flagged as errors, and are passed on to emulator"
 

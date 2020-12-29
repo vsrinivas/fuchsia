@@ -115,7 +115,11 @@ btf::_make_fx_host_tool_mock() {
   btf::make_mock "${tool}"
   cat > "${tool}.mock_side_effects" <<EOF
     # remove host-tool args (like --check-firewall)
+    print=false
     while [[ \$# -gt 0 && \$1 =~ ^- ]]; do
+      if [[ \$1 == "--print" ]]; then
+        print=true
+      fi
       shift
     done
     if [[ \$# == 0 ]]; then
@@ -133,7 +137,11 @@ btf::_make_fx_host_tool_mock() {
       echo >&2 "Invalid state, \$p is not executable."
       return 1
     fi
-    "\$p" "\$@"
+    if \$print; then
+      echo "\$p"
+    else
+      "\$p" "\$@"
+    fi
 EOF
 }
 

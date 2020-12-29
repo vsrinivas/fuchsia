@@ -36,6 +36,7 @@
 ##   --host-gpu run with host GPU acceleration
 ##   --software-gpu run without host GPU acceleration
 ##   --debugger pause on launch and wait for a debugger process to attach before resuming
+##   --no-build do not attempt to build the fvm and zbi tools and the zbi image
 
 set -e
 
@@ -79,6 +80,7 @@ ZBI_IMAGE=""
 ZBI_TOOL=""
 FVM_TOOL=""
 POINTING_DEVICE="mouse"
+BUILD=1
 
 # Propagate our TERM environment variable as a kernel command line
 # argument.  This is first so that an explicit -c TERM=foo argument
@@ -202,6 +204,9 @@ while [[ $# -ge 1 ]]; do
   --software-gpu)
     GPU="swiftshader_indirect"
     ;;
+  --no-build)
+    BUILD=0
+    ;;
   --experiment-arm64)
     EXPERIMENT_ARM64=true
     ;;
@@ -212,11 +217,13 @@ while [[ $# -ge 1 ]]; do
 done
 
 if [[ -z "${KERNEL_IMAGE}" ]] ; then
-  KERNEL_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
+  (( BUILD )) && build_flag="--build" || build_flag=""
+  KERNEL_IMAGE="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts ${build_flag} --type kernel --name qemu-kernel images)"
 fi
 
 if [[ -z "${ZBI_IMAGE}" ]] ; then
-  ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}"
+  (( BUILD )) && build_flag="--build" || build_flag=""
+  ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts ${build_flag} --type zbi --name zircon-a images)"
 fi
 
 if [[ -z "${FVM_IMAGE}" ]] ; then
@@ -225,11 +232,13 @@ if [[ -z "${FVM_IMAGE}" ]] ; then
 fi
 
 if [[ -z "${ZBI_TOOL}" ]] ; then
-  ZBI_TOOL="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name zbi --expect-one tools)"
+  (( BUILD )) && build_flag="" || build_flag="--no-build"
+  ZBI_TOOL="$(fx-command-run host-tool ${build_flag} --print zbi)"
 fi
 
 if [[ -z "${FVM_TOOL}" ]] ; then
-  FVM_TOOL="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name fvm --expect-one tools)"
+  (( BUILD )) && build_flag="" || build_flag="--no-build"
+  FVM_TOOL="$(fx-command-run host-tool ${build_flag} --print fvm)"
 fi
 
 # TODO(fxbug.dev/62631): femu.sh relies on "-a auto", which makes use of

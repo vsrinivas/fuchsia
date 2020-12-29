@@ -13,6 +13,9 @@
 ##    --no-build       does not attempt to build the tool if it does not exist
 ##    --check-firewall print a warning if the tool isn't included in firewall
 ##                     rules. This is a no-op outside of macOS.
+##    --print          print the tool path instead of executing it. TOOL_ARGS
+##                     is ignored, but check-firewall and build behaves the
+##                     same.
 ##
 ## If the tool is not known to the build system, for example if it is not in
 ## the GN build graph, a proper message will be printed and the script fails.
@@ -28,6 +31,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-config-read
 
 build=true
+print_only=false
 check_firewall=false
 
 function is_macos {
@@ -60,6 +64,9 @@ function check_firewall_func {
 while [[ $1 == --* ]]; do
   if [[ $1 == '--no-build' ]]; then
     build=false
+    shift
+  elif [[ $1 == '--print' ]]; then
+    print_only=true
     shift
   elif [[ $1 == '--check-firewall' ]]; then
     check_firewall=true
@@ -114,4 +121,8 @@ if $check_firewall; then
   check_firewall_func "${FUCHSIA_BUILD_DIR}/${toolpath}"
 fi
 
-"${FUCHSIA_BUILD_DIR}/${toolpath}" "$@"
+if $print_only; then
+  echo "${FUCHSIA_BUILD_DIR}/${toolpath}"
+else
+  "${FUCHSIA_BUILD_DIR}/${toolpath}" "$@"
+fi

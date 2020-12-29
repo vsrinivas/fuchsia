@@ -27,17 +27,8 @@ BT_SET_UP() {
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
 
   btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
-  btf::make_mock "${BT_TEMP_DIR}/out/default/host/zbi"
-  fvm=${BT_TEMP_DIR}/out/default/host/fvm
-  btf::make_mock "${fvm}"
-
-  cat >> "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
-if [[ "$@" == "--name zbi --expect-one tools" ]] ; then
-  echo "host/zbi"
-elif [[ "$@" == "--name fvm --expect-one tools" ]] ; then
-  echo "host/fvm"
-fi
-EOF
+  btf::make_hosttools_mock zbi
+  fvm="$(btf::make_hosttools_mock fvm)"
 }
 
 # Test that -c arguments are added to the end of the kernel command line.
