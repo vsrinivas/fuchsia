@@ -6,20 +6,29 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "logging_component"
-  source_root = "logging_component.rs"
+  name = "stdio_puppet"
   edition = "2018"
 
   deps = [
+    "//src/diagnostics/archivist/tests/logs-basic-integration:stdio-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
 
-  sources = [ "logging_component.rs" ]
+  sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("logging_component") {
+fuchsia_component("stdio_puppet") {
   testonly = true
-  manifest = "logging_component.cmx"
+  manifest = "meta/stdio_puppet.cmx"
   deps = [ ":bin" ]
+}
+
+group("puppet") {
+  testonly = true
+  deps = [ ":stdio_puppet" ]
 }

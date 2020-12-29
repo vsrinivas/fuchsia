@@ -15,7 +15,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/logs_integration_rust_tests"
+        "binary": "bin/test_logs_basic_integration"
     },
     "sandbox": {
         "services": [

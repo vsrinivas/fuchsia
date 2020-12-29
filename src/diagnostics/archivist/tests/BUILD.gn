@@ -12,10 +12,14 @@ group("tests") {
     ":archivist-integration-tests",
     "archive_path:test-spec",
     "feedback_reader:test-spec",
+    "logs-basic-integration",
+    "logs-connector",
     "logs-from-crash",
     "logs-redaction",
+    "logs-sorting",
+    "logs-stop",
+    "logs-unattributed-sinks",
     "logs/cpp:test-spec",
-    "logs/rust:test-spec",
     "unified_reader:test-spec",
     "v2:tests",
   ]
@@ -28,7 +32,6 @@ fuchsia_package("archivist-integration-tests") {
     "archive_path",
     "feedback_reader",
     "logs/cpp",
-    "logs/rust",
     "unified_reader",
   ]
 }
