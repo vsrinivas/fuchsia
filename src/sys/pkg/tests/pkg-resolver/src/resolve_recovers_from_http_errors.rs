@@ -275,8 +275,10 @@ async fn blob_timeout_causes_new_tcp_connection() {
     assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
     assert_eq!(server.connection_attempts(), 2);
 
-    let result = env.resolve_package("fuchsia-pkg://test/test").await;
-    assert!(result.is_ok());
+    // The resolve may fail because of the zero second timeout on the blob body future,
+    // but that happens after the header is downloaded and therefore after the new TCP
+    // connection is established.
+    let _ = env.resolve_package("fuchsia-pkg://test/test").await;
     assert_eq!(server.connection_attempts(), 3);
 
     env.stop().await;
