@@ -581,6 +581,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
 
         new_cursor->SkipEntry(level);
         DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
+        continue;
       }
       pt_val = *e;
     }
