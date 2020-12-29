@@ -9,6 +9,8 @@
 ##   -l host:port       host and port that "pm serve" will listen on
 ##   --no-auto-config   do not configure this host as a package server on the device
 ##   -v                 verbose mode, shows info and debug messages from "pm"
+##   -C|--clean         clean the package repository first. This flag is only
+##                      valid if the incremental package publishing is enabled.
 ##
 ## This command supports incremental package publishing. If enabled, it will
 ## auto-publish packages as they are created or modified.
@@ -30,6 +32,7 @@ port="8083"
 serve_flags=()
 verbose=false
 auto_config=true
+clean_first=false
 while (($#)); do
   case "$1" in
     -l)
@@ -42,6 +45,9 @@ while (($#)); do
       ;;
     -v|--verbose)
       verbose=true
+      ;;
+    -C|--clean)
+      clean_first=true
       ;;
     *)
       echo "Unrecognized option: $1"
@@ -116,21 +122,35 @@ with-pinned-target() {
   )
 }
 
+repo_dir="${FUCHSIA_BUILD_DIR}/amber-files"
+
 if is_feature_enabled "incremental"; then
   fx-info "Incremental package auto-publishing is enabled."
   serve_flags+=( -p "all_package_manifests.list" )
 
+  if $clean_first; then
+    $verbose && echo -n >&2 "Cleaning the package repository..."
+    if [[ -d "${repo_dir}" ]]; then
+      rm -Rf "${repo_dir}"
+    fi
+    $verbose && echo >&2 "done"
+  fi
   $verbose && echo -n >&2 "Preparing the package repository..."
   # only show output of prepare_publish if it fails
   out="$(fx-command-run build --no-zircon build/images:prepare_publish 2>&1)"
   if [[ $? -ne 0 ]]; then
     echo >&2 "$out"
-    return $?
+    exit $?
   fi
   $verbose && echo >&2 "done"
+else
+  if $clean_first; then
+    fx-error "Flag '-C' or '--clean' can only be used if the incremental feature is enabled"
+    exit 1
+  fi
 fi
 
-pm_serve_args=( serve -vt -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}" )
+pm_serve_args=( serve -vt -repo "${repo_dir}" "${serve_flags[@]}" )
 
 # the manifest list file has relative paths and "pm serve" looks for them
 # from PWD, so pm command needs to be executed in "$FUCHSIA_BUILD_DIR"
