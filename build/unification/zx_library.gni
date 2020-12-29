@@ -149,17 +149,6 @@ template("zx_library") {
       kernel_library_target_type = "static_library"
     }
 
-    target(kernel_library_target_type, _library_name) {
-      if (kernel_library_target_type == "static_library") {
-        complete_static_lib = true
-      }
-      forward_variables_from(invoker, "*", template_params)
-      if (!defined(public_deps)) {
-        public_deps = []
-      }
-      public_deps += [ ":headers" ]
-    }
-
     # If the library has the same name as its directory, just create
     # :headers and :headers.config sub-targets. Otherwise, create
     # :foo.headers and :foo.headers.config
@@ -170,6 +159,17 @@ template("zx_library") {
     } else {
       _headers_target = "$_library_name.headers"
       _headers_config_target = "$_library_name.headers.config"
+    }
+
+    target(kernel_library_target_type, _library_name) {
+      if (kernel_library_target_type == "static_library") {
+        complete_static_lib = true
+      }
+      forward_variables_from(invoker, "*", template_params)
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += [ ":$_headers_target" ]
     }
 
     group(_headers_target) {
@@ -204,7 +204,7 @@ template("zx_library") {
 
     assert(
         defined(invoker.sdk),
-        "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain")
+        "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain ($current_toolchain)")
     shape = invoker.sdk
 
     sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
