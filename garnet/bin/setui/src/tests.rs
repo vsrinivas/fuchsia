@@ -16,6 +16,7 @@ mod factory_reset_tests;
 pub mod fakes;
 mod fidl_processor_tests;
 mod hanging_get_tests;
+mod input_test_environment;
 mod input_tests;
 mod intl_tests;
 mod light_sensor_tests;

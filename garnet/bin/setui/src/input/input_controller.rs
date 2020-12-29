@@ -113,10 +113,28 @@ impl InputControllerInner {
     }
 }
 
-// TODO(fxbug.dev/60682): Add static create method that takes in a config.
 pub struct InputController {
     /// Handle so that a lock can be used in the Handle trait implementation.
     inner: InputControllerInnerHandle,
+}
+
+impl InputController {
+    /// Alternate constructor that allows specifying a configuration.
+    #[allow(dead_code)]
+    pub(crate) async fn create_with_config(
+        client: ClientProxy<InputInfoSources>,
+        _input_device_config: InputConfiguration,
+    ) -> Result<Self, ControllerError> {
+        // TODO(fxbug.dev/60682): Change to use input_device_config
+        Ok(Self {
+            inner: Arc::new(Mutex::new(InputControllerInner {
+                client: client.clone(),
+                hardware_mic_muted: false,
+                software_mic_muted: false,
+                hardware_camera_disabled: false,
+            })),
+        })
+    }
 }
 
 #[async_trait]
