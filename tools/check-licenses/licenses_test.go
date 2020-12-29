@@ -6,25 +6,20 @@ package checklicenses
 
 import (
 	"context"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 )
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
-	configPath := filepath.Join(*testDataDir, "filetree", "simple", "config.json")
-	config, err := NewConfig(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	root := filepath.Join(*testDataDir, "licenses", "simple")
+	config := setupConfig("simple", t)
 
-	folder := mkLicenseDir(t)
-	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
+	l, err := NewLicenses(context.Background(), config)
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
 	metrics := NewMetrics()
-	ft, err := NewFileTree(context.Background(), folder, nil, config, metrics)
+	ft, err := NewFileTree(context.Background(), root, nil, config, metrics)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,8 +33,9 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 }
 
 func TestLicensesMatchFile(t *testing.T) {
-	folder := mkLicenseDir(t)
-	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
+	config := setupConfig("simple", t)
+
+	l, err := NewLicenses(context.Background(), config)
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
@@ -60,8 +56,9 @@ func TestLicensesMatchFile(t *testing.T) {
 }
 
 func TestNewLicenses(t *testing.T) {
-	folder := mkLicenseDir(t)
-	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
+	config := setupConfig("simple", t)
+
+	l, err := NewLicenses(context.Background(), config)
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
 	}
@@ -77,15 +74,12 @@ func TestNewLicenses(t *testing.T) {
 	}
 }
 
-// mkLicenseDir returns a new temporary directory that will be cleaned up
-// automatically containing license pattern files.
-func mkLicenseDir(t *testing.T) string {
-	name := t.TempDir()
-	if err := ioutil.WriteFile(filepath.Join(name, "apache.lic"), []byte("Apache"), 0o600); err != nil {
+func setupConfig(name string, t *testing.T) *Config {
+	configPath := filepath.Join(*testDataDir, "licenses", "simple", "config.json")
+	config, err := NewConfig(configPath)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(name, "bsd.lic"), []byte("BSD"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return name
+	config.LicensePatternDir = filepath.Join(*testDataDir, config.LicensePatternDir)
+	return config
 }

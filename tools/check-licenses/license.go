@@ -5,6 +5,9 @@
 package checklicenses
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -24,6 +27,32 @@ type License struct {
 	mu           sync.Mutex
 	matches      map[string]*Match
 	matchChannel chan *Match
+}
+
+func NewLicense(path string, config *Config) (*License, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	regex := string(bytes)
+	// Update regex to ignore multiple white spaces, newlines, comments.
+	// But first, trim whitespace away so we don't include unnecessary
+	// comment syntax.
+	regex = strings.Trim(regex, "\n ")
+	regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
+	regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
+
+	re, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return &License{
+		pattern:      re,
+		Category:     filepath.Base(path),
+		ValidType:    contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
+		matches:      map[string]*Match{},
+		matchChannel: make(chan *Match, 10),
+	}, nil
 }
 
 // Match is used to store a single match result alongside the License along

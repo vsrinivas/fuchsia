@@ -35,7 +35,7 @@ func Walk(ctx context.Context, config *Config) error {
 	if err != nil {
 		return err
 	}
-	licenses, err := NewLicenses(ctx, config.LicensePatternDir, config.ProhibitedLicenseTypes)
+	licenses, err := NewLicenses(ctx, config)
 	if err != nil {
 		return err
 	}

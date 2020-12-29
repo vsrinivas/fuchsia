@@ -7,11 +7,8 @@ package checklicenses
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime/trace"
 	"sort"
 	"strings"
@@ -24,50 +21,25 @@ type Licenses struct {
 
 // NewLicenses returns a Licenses object with each license pattern loaded from
 // the .lic folder location specified in Config
-func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []string) (*Licenses, error) {
+func NewLicenses(ctx context.Context, config *Config) (*Licenses, error) {
 	defer trace.StartRegion(ctx, "NewLicenses").End()
-	licensesPath := []string{}
-	err := filepath.Walk(root,
+	l := &Licenses{}
+	err := filepath.Walk(config.LicensePatternDir,
 		func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
 			}
-			licensesPath = append(licensesPath, path)
+			license, err := NewLicense(path, config)
+			if err != nil {
+				return err
+			}
+			l.licenses = append(l.licenses, license)
 			return nil
 		})
 	if err != nil {
 		return nil, err
 	}
 
-	l := &Licenses{}
-	for _, path := range licensesPath {
-		bytes, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		regex := string(bytes)
-		// Update regex to ignore multiple white spaces, newlines, comments.
-		// But first, trim whitespace away so we don't include unnecessary
-		// comment syntax.
-		regex = strings.Trim(regex, "\n ")
-		regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
-		regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
-
-		re, err := regexp.Compile(regex)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		base := filepath.Base(path)
-		l.licenses = append(
-			l.licenses,
-			&License{
-				pattern:      re,
-				Category:     base,
-				ValidType:    contains(prohibitedLicenseTypes, filepath.Base(base)),
-				matches:      map[string]*Match{},
-				matchChannel: make(chan *Match, 10),
-			})
-	}
 	if len(l.licenses) == 0 {
 		return nil, errors.New("no licenses")
 	}
