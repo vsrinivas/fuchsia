@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 rustc_library("trace") {
@@ -19,11 +21,62 @@ rustc_library("trace") {
   sources = [ "src/lib.rs" ]
 }
 
+rustc_staticlib("rust-cpp-test-lib") {
+  name = "rust_cpp_test_lib"
+  version = "0.1.0"
+  edition = "2018"
+  testonly = true
+
+  deps = [ ":trace" ]
+
+  public = [ "test/lib.h" ]
+
+  source_root = "test/lib.rs"
+  sources = [ "test/lib.rs" ]
+}
+
+source_set("cpp-test-runner") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [ "test/test_runner.cc" ]
+  deps = [
+    ":rust-cpp-test-lib",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
+    "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/trace-test-utils",
+  ]
+}
+
+test("rust_cpp_test") {
+  deps = [
+    ":cpp-test-runner",
+    "//zircon/system/ulib/trace-engine",
+  ]
+}
+
 unittest_package("rust-trace-test") {
-  deps = [ ":trace_test" ]
+  deps = [
+    ":rust_cpp_test",
+    ":trace_test",
+  ]
   tests = [
     {
       name = "fuchsia_trace_lib_test"
+      environments = [ emu_env ]
+    },
+    {
+      name = "rust_cpp_test"
       environments = [ emu_env ]
     },
   ]

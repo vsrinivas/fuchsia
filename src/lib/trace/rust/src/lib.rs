@@ -1127,7 +1127,7 @@ mod sys {
 
 #[cfg(test)]
 mod test {
-    use crate::{trim_to_last_char_boundary, Scope};
+    use crate::trim_to_last_char_boundary;
 
     #[test]
     fn trim_to_last_char_boundary_trims_to_last_character_boundary() {
@@ -1141,41 +1141,5 @@ mod test {
         assert_eq!("💩".as_bytes(), trim_to_last_char_boundary("💩", 5));
         assert_eq!("💩".as_bytes(), trim_to_last_char_boundary("💩", 4));
         assert_eq!(b"", trim_to_last_char_boundary("💩", 3));
-    }
-
-    #[test]
-    fn instant() {
-        instant!("foo", "bar", Scope::Process, "x" => 5, "y" => "boo");
-    }
-
-    #[test]
-    fn alert() {
-        alert!("foo", "bar");
-    }
-
-    #[test]
-    fn counter() {
-        let id = 24601;
-        counter!("foo", "bar", id, "x" => 5, "y" => 10);
-    }
-
-    #[test]
-    fn duration() {
-        duration!("foo", "bar", "x" => 5, "y" => 10);
-        println!("Between duration creation and duration ending");
-    }
-
-    #[test]
-    fn duration_begin_end() {
-        duration_begin!("foo", "bar", "x" => 5);
-        println!("Between duration creation and duration ending");
-        duration_end!("foo", "bar", "y" => 10);
-    }
-
-    #[test]
-    fn trace_enabled() {
-        if crate::is_enabled() {
-            println!("Tracing enabled");
-        }
     }
 }
