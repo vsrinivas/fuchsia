@@ -29,6 +29,14 @@ type License struct {
 	matchChannel chan *Match
 }
 
+// Match is used to store a single match result alongside the License along
+// with a list of all matching files
+type Match struct {
+	authors string
+	value   string
+	files   []string
+}
+
 func NewLicense(path string, config *Config) (*License, error) {
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -53,23 +61,6 @@ func NewLicense(path string, config *Config) (*License, error) {
 		matches:      map[string]*Match{},
 		matchChannel: make(chan *Match, 10),
 	}, nil
-}
-
-// Match is used to store a single match result alongside the License along
-// with a list of all matching files
-type Match struct {
-	authors string
-	value   string
-	files   []string
-}
-
-func (l *License) appendFile(path string) {
-	p := l.pattern.String()
-	a := parseAuthor(p)
-	// Replace < and > so that it doesn't cause special character highlights.
-	a = strings.ReplaceAll(a, "<", "&lt")
-	a = strings.ReplaceAll(a, ">", "&gt")
-	l.AddMatch(&Match{authors: a, value: p, files: []string{path}})
 }
 
 func (l *License) AddMatch(m *Match) {
