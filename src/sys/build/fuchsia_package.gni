@@ -92,51 +92,19 @@ template("fuchsia_package") {
     outputs = [ package_manifest_file ]
   }
 
-  # Validate component manifests against package manifest
-  component_manifests_target = "${target_name}_component_manifests"
-  component_manifests_rspfile =
-      "$target_out_dir/${target_name}_component_manifests"
-  generated_file(component_manifests_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    data_keys = [ "component_manifests" ]
-    walk_keys = [ "component_manifests_barrier" ]
-    outputs = [ component_manifests_rspfile ]
-  }
-
-  validate_target = "${target_name}_validate_manifests"
-  validate_component_manifest_references(validate_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":$component_manifests_target",
-      ":$package_manifest_target",
-    ]
-    visibility = [ ":*" ]
-    package_manifest = package_manifest_file
-    component_manifests_rspfile = component_manifests_rspfile
-  }
-
   # Build package
   pm_build(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])
     manifest = ":$package_manifest_target"
-    deps = [ ":$validate_target" ]
     metadata = {
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
-
-      # Add barriers so that the contents of this package do not get
-      # accidentally picked up by other packages via improper dependencies.
-      component_manifests_barrier = []
       if (!bootfs_only) {
         # If the bringup configuration is being built, the contents need to be
         # exposed to other containers.

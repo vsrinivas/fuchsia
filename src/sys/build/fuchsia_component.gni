@@ -5,6 +5,7 @@
 import("//build/dist/resource.gni")
 import("//tools/cmc/build/cml.gni")
 import("//tools/cmc/build/cmx.gni")
+import("//tools/cmc/build/validate_component_manifest_references.gni")
 
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -98,6 +99,7 @@ template("fuchsia_component") {
   }
 
   manifest_resource_target = "${target_name}_manifest_resource"
+  validate_target = "${target_name}_validate_component_manifest_references"
 
   # Process the manifest
   target(manifest_processor, target_name) {
@@ -112,7 +114,10 @@ template("fuchsia_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$manifest_resource_target" ]
+    deps += [
+      ":$manifest_resource_target",
+      ":$validate_target",
+    ]
   }
 
   # Add the manifest
@@ -120,8 +125,17 @@ template("fuchsia_component") {
     sources = get_target_outputs(":${invoker.target_name}")
     outputs = [ "meta/$manifest_name" ]
     visibility = [ ":*" ]
-    metadata = {
-      component_manifests = [ rebase_path(sources[0], root_build_dir) ]
-    }
+  }
+
+  # Validate the manifest against packaged files
+  validate_component_manifest_references(validate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    component_manifest = invoker.manifest
+    label = get_label_info(":$target_name", "label_with_toolchain")
   }
 }

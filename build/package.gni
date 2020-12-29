@@ -650,6 +650,7 @@ template("package") {
         deps += [ ":$manifest" ]
         package_manifest = manifest_file
         component_manifest = meta.path
+        label = get_label_info(":$pkg_target_name", "label_with_toolchain")
       }
       pkg.deps += [ ":$validate_target" ]
     }

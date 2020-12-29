@@ -2,72 +2,87 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/fini_manifest.gni")
+
 # Validates a component manifest against a package manifest.
 # Checks that the component manifest doesn't reference files that are not
 # present in the package.
 #
 # Parameters
 #
-#   component_manifest (optional)
+#   component_manifest (required)
 #     A component manifest to validate.
-#     If not specified, then must specify component_manifests_rspfile.
-#     Must specify exactly one of component_manifest, component_manifests_rspfile.
 #     Type: path
 #
-#   component_manifests_rspfile (optional)
-#     A file containing paths to component manifests to validate.
-#     Must specify exactly one of component_manifest, component_manifests_rspfile.
-#     Type: path
-#
-#   package_manifest (required)
+#   package_manifest (optional)
 #     A package manifest to validate against.
+#     If not provided, a package manifest will be generated out of deps.
 #     Type: path
 #
+#   label (required)
+#     A GN label to use in error messages, to make troubleshooting easier.
+#     Type: label
+#
+#   data_deps
 #   deps
+#   public_deps
 #   testonly
 #   visibility
 template("validate_component_manifest_references") {
   assert(
-      defined(invoker.component_manifest) ||
-          defined(invoker.component_manifests_rspfile),
+      defined(invoker.component_manifest),
       "Must specify exactly one of component_manifest, component_manifests_rspfile")
-  assert(
-      !defined(invoker.component_manifest) ||
-          !defined(invoker.component_manifests_rspfile),
-      "Must specify exactly one of component_manifest, component_manifests_rspfile")
-  assert(defined(invoker.package_manifest), "Must specify package_manifest")
+
+  if (defined(invoker.package_manifest)) {
+    package_manifest = invoker.package_manifest
+  } else {
+    fini_target = "${target_name}_fini"
+    package_manifest = "$target_gen_dir/${fini_target}_file"
+    fini_manifest(fini_target) {
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "deps",
+                               "public_deps",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+      outputs = [ package_manifest ]
+    }
+  }
 
   stamp_file = "$target_gen_dir/$target_name.action.stamp"
   action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
+                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
     script = "//tools/cmc/build/validate_component_manifest_references.py"
-    inputs = [ invoker.package_manifest ]
+    inputs = [
+      package_manifest,
+      invoker.component_manifest,
+    ]
     outputs = [ stamp_file ]
     args = [
+      "--component_manifest",
+      rebase_path(invoker.component_manifest, root_build_dir),
       "--package_manifest",
-      rebase_path(invoker.package_manifest, root_build_dir),
+      rebase_path(package_manifest, root_build_dir),
+      "--gn-label",
+      invoker.label,
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
     ]
 
-    if (defined(invoker.component_manifest)) {
-      inputs += [ invoker.component_manifest ]
-      args += [
-        "--component_manifests",
-        rebase_path(invoker.component_manifest, root_build_dir),
-      ]
+    if (!defined(deps)) {
+      deps = []
     }
-    if (defined(invoker.component_manifests_rspfile)) {
-      inputs += [ invoker.component_manifests_rspfile ]
-      args += [
-        "--component_manifests",
-        "@" + rebase_path(invoker.component_manifests_rspfile, root_build_dir),
-      ]
+    if (defined(fini_target)) {
+      deps += [ ":$fini_target" ]
     }
   }
 }
