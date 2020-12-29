@@ -602,8 +602,9 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
       LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", level, (uintptr_t)next_table,
               ptable_phys);
 
-      UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
       vm_page_t* page = paddr_to_vm_page(ptable_phys);
+      DEBUG_ASSERT(page == paddr_to_vm_page(X86_VIRT_TO_PHYS(get_next_table_from_entry(*e))));
+      UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
 
       DEBUG_ASSERT(page);
       DEBUG_ASSERT_MSG(page->state() == VM_PAGE_STATE_MMU,
@@ -1061,8 +1062,9 @@ bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageT
       LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", level, (uintptr_t)next_table,
               ptable_phys);
 
-      UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
       vm_page_t* page = paddr_to_vm_page(ptable_phys);
+      DEBUG_ASSERT(page == paddr_to_vm_page(X86_VIRT_TO_PHYS(get_next_table_from_entry(*e))));
+      UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/false);
 
       DEBUG_ASSERT(page);
       DEBUG_ASSERT_MSG(page->state() == VM_PAGE_STATE_MMU,
