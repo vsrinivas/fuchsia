@@ -471,7 +471,8 @@ TEST_F(CrashReporterTest, NoQuota) {
              },
              /*daily_per_product_quota=*/std::nullopt,
              /*houry_snapshot=*/true},
-      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
+      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota + 1 /*first hourly snapshot*/,
+                                             kUploadSuccessful));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -866,11 +867,19 @@ TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
 }
 
 TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful, kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  RunLoopFor(zx::min(5));
+  EXPECT_THAT(crash_server_->latest_annotations(),
+              IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
+                  {"ptime", Not(IsEmpty())},
+                  {"signature", kHourlySnapshotSignature},
+              }))));
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
   RunLoopFor(zx::hour(1));
   EXPECT_THAT(crash_server_->latest_annotations(),

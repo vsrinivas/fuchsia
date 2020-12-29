@@ -142,7 +142,9 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   info_.ExposeReportingPolicy(reporting_policy_watcher_.get());
 
   if (config.hourly_snapshot) {
-    ScheduleHourlySnapshot();
+    // We schedule the first hourly snapshot in 5 minutes and then it will auto-schedule itself 
+    // every hour after that.
+    ScheduleHourlySnapshot(zx::min(5));
   }
 }
 
@@ -249,7 +251,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   executor_.schedule_task(std::move(promise));
 }
 
-void CrashReporter::ScheduleHourlySnapshot() {
+void CrashReporter::ScheduleHourlySnapshot(const zx::duration delay) {
   async::PostDelayedTask(
       dispatcher_,
       [this]() {
@@ -264,9 +266,9 @@ void CrashReporter::ScheduleHourlySnapshot() {
 
         File(std::move(report), /*is_hourly_snapshot=*/true);
 
-        ScheduleHourlySnapshot();
+        ScheduleHourlySnapshot(zx::hour(1));
       },
-      zx::hour(1));
+      delay);
 }
 
 }  // namespace crash_reports

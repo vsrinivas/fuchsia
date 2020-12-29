@@ -56,7 +56,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
 
  private:
   void File(fuchsia::feedback::CrashReport report, bool is_hourly_snapshot);
-  void ScheduleHourlySnapshot();
+  void ScheduleHourlySnapshot(zx::duration delay);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
