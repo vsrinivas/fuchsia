@@ -15,7 +15,6 @@ zx_library("cpuid") {
     "$zx/kernel/lib/ktl:headers",
   ]
 
-  # TODO: testonly
   deps = [
     ":test",
     "$zx/system/ulib/fbl",
@@ -23,10 +22,8 @@ zx_library("cpuid") {
 }
 
 source_set("test") {
-  # TODO: testonly = true
+  # TODO(fxbug.dev/67010): testonly = true
   sources = [ "cpuid_test.cc" ]
-  deps = [
-    ":cpuid.headers",
-    "$zx/kernel/lib/unittest",
-  ]
+  deps = [ "$zx/kernel/lib/unittest" ]
+  public_deps = [ ":headers" ]
 }

@@ -58,4 +58,9 @@ all_variant_tags = [
 
   # The `lto` tag is used for LTO and ThinLTO.
   "lto",
+
+  # The 'breaks-gc-sections' tag is used for variants that cannot build
+  # linkable binaries properly with --gc-sections, which instructs the
+  # linker to remove unused sections from the output.
+  "breaks-gc-sections",
 ]

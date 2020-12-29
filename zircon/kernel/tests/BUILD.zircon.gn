@@ -10,17 +10,15 @@ group("tests") {
   deps = [ ":phys" ]
   if (toolchain.environment == "kernel") {
     deps += [ ":kernel" ]
-  } else {  # TODO: testonly in kernel proper too
+  } else {  # TODO(fxbug.dev/67010): testonly in kernel proper
     testonly = true
   }
 }
 
 # This is the subset that's compatible with the kernel.phys environment.
 source_set("phys") {
-  # TODO: testonly = true
-  testonly = toolchain.environment == "kernel.phys" ||
-             toolchain.environment == "kernel.phys32"
-
+  # TODO(fxbug.dev/67010): testonly = true
+  testonly = toolchain.environment != "kernel"
   cflags = [ "-fno-builtin" ]
   sources = [
     "ktl_type_traits_tests.cc",
@@ -32,7 +30,7 @@ source_set("phys") {
   ]
   deps = [
     ":zbitl",
-    "$zx/kernel/lib/boot-options/tests",
+    "$zx/kernel/lib/boot-options/tests:kernel-tests",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/libc",
     "$zx/kernel/lib/unittest",
@@ -45,9 +43,8 @@ source_set("phys") {
 }
 
 source_set("zbitl") {
-  # TODO: testonly = true
-  testonly = toolchain.environment == "kernel.phys"
-
+  # TODO(fxbug.dev/67010): testonly = true
+  testonly = toolchain.environment != "kernel"
   sources = [ "zbitl_tests.cc" ]
 
   deps = [
@@ -65,7 +62,7 @@ source_set("zbitl") {
 if (toolchain.environment == "kernel") {
   # These are only for the kernel proper.
   source_set("kernel") {
-    # TODO: testonly = true
+    # TODO(fxbug.dev/67010): testonly = true
     cflags = [ "-fno-builtin" ]
     sources = [
       "alloc_checker_tests.cc",
@@ -117,7 +114,7 @@ if (toolchain.environment == "kernel") {
       "$zx/kernel/object",
       "$zx/system/ulib/affine",
       "$zx/system/ulib/pretty",
-      "$zx/system/ulib/zx",
     ]
+    public_deps = [ "$zx/system/ulib/zx:headers" ]
   }
 }

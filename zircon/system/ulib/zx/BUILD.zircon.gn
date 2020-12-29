@@ -4,9 +4,12 @@
 
 import("$zx_build/public/gn/migrated_targets.gni")
 
-assert(is_fuchsia)
-
 zx_library("zx") {
+  if (zx != "/") {
+    # Required by the Fuchsia build, but the Zircon build does not
+    # support 'kernel = true' && 'sdk = "source"'.
+    kernel = true
+  }
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [

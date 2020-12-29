@@ -273,6 +273,9 @@ config("linker_gc") {
   }
 }
 
+group("linker_gc_deps") {
+}
+
 config("assert_level") {
   assert(zx_assert_level >= 0)
   defines = [ "ZX_ASSERT_LEVEL=$zx_assert_level" ]
@@ -423,11 +426,6 @@ config("werror") {
   }
 }
 
-# TODO(fxbug.dev/58162): clean up usages of this config
-config("Wno-conversion") {
-  cflags = [ "-Wno-conversion" ]
-}
-
 config("default_warnings") {
   cflags = [
     "-Wall",
@@ -459,6 +457,11 @@ config("default_warnings") {
       # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
       # once the bug is fixed.
       "-Wno-format-overflow",
+
+      # TODO(fxbug.dev/64272): Disable "-Wmissing-field-initializers" which
+      # warns when designated initializers are used on some (but not all)
+      # fields in C++, contrary to its documentation (and Clang).
+      "-Wno-missing-field-initializers",
     ]
   } else {
     cflags += [
@@ -488,6 +491,55 @@ config("default_warnings") {
 
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
+
+  visibility = [
+    "$zx/third_party/ulib/musl/ldso",
+    "$zx/third_party/ulib/musl/src/network",
+    "$zx/third_party/ulib/musl/src/time",
+  ]
+}
+
+# TODO(fxbug.dev/58162): clean up usages of this config
+config("Wno-conversion") {
+  # NOTE: Use individual cflags_cc and cflags_c here because these
+  # need to appear _after_ the -Wconversion in default_warnings above.
+  cflags_cc = [ "-Wno-conversion" ]
+  cflags_c = cflags_cc
+  visibility = [
+    "$zx/kernel/arch/x86/*",
+    "$zx/kernel/arch/x86/cpuid/*",
+    "$zx/kernel/debugcommands/*",
+    "$zx/kernel/dev/iommu/dummy/*",
+    "$zx/kernel/dev/pcie/*",
+    "$zx/kernel/lib/cmdline/*",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/heap/cmpctmalloc/*",
+    "$zx/kernel/object/*",
+    "$zx/kernel/phys/*",
+    "$zx/kernel/platform/*",
+    "$zx/kernel/tests/*",
+    "$zx/kernel/vm/*",
+    "$zx/system/ulib/cmdline/*",
+    "$zx/system/ulib/elf-psabi/*",
+    "$zx/system/ulib/elfload/*",
+    "$zx/system/ulib/fidl/*",
+    "$zx/system/ulib/fit/*",
+    "$zx/system/ulib/gfx/*",
+    "$zx/system/ulib/hwreg/*",
+    "$zx/system/ulib/ldmsg/*",
+    "$zx/system/ulib/pretty/*",
+    "$zx/system/ulib/tftp/*",
+    "$zx/system/ulib/zbi/*",
+    "$zx/system/ulib/zxc/*",
+    "$zx/system/ulib/zxtest/*",
+    "$zx/third_party/*",
+    "$zx/third_party/lz4/*",
+    "$zx/third_party/ulib/cksum/*",
+    "$zx/third_party/ulib/usbhost/*",
+    "$zx/tools/fidl/*",
+    "$zx/tools/kazoo/*",
+    "$zx/tools/zbi/*",
+  ]
 }
 
 config("warn-implicit-fallthrough") {
@@ -545,6 +597,9 @@ config("default_frame_pointers") {
 config("frame_pointers") {
   defines = [ "WITH_FRAME_POINTERS=1" ]
   cflags = [ "-fno-omit-frame-pointer" ]
+}
+
+group("frame_pointers_deps") {
 }
 
 # NOTE: //build/config:no_frame_pointers exists but is different!
@@ -806,7 +861,7 @@ config("temporarily_disable_ubsan_do_not_use") {
 
     # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/third_party/ulib/boringssl:*",
+    "$zx/third_party/ulib/boringssl:*",
   ]
 
   if (!is_gcc) {

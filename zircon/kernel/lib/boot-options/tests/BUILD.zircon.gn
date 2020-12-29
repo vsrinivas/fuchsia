@@ -4,16 +4,53 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-assert(is_kernel, "this only should only be evaluated in a kernel environment")
+if (zx != "/") {
+  import("//build/unification/global_variables.gni")
+}
 
-source_set("tests") {
-  testonly = toolchain.environment == "kernel.phys"  # TODO: testonly = true
+if (is_kernel) {
+  # NOTE: This cannot be called 'tests' due to the target with the same name
+  # below that is used in the Fuchsia build to add boot-option-test-package.
+  source_set("kernel-tests") {
+    # TODO(fxbug.dev/67010): testonly = true
+    sources = [ "kernel-tests.cc" ]
 
-  sources = [ "kernel-tests.cc" ]
+    deps = [
+      "$zx/kernel/lib/boot-options",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/unittest",
+    ]
+  }
+}
 
-  deps = [
-    "$zx/kernel/lib/boot-options",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/unittest",
-  ]
+if (zx != "/") {
+  import("//build/test.gni")
+  import("//build/test/test_package.gni")
+
+  group("tests") {
+    testonly = true
+    deps = [
+      ":boot-option-test-package",
+      ":boot-option-tests($host_toolchain)",
+    ]
+  }
+
+  test("boot-option-tests") {
+    sources = [ "user-tests.cc" ]
+    deps = [
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+
+  test_package("boot-option-test-package") {
+    package_name = "boot-option-tests"
+    tests = [
+      {
+        name = "boot-option-tests"
+      },
+    ]
+    deps = [ ":boot-option-tests" ]
+  }
 }

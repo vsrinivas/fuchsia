@@ -112,14 +112,61 @@ if (current_toolchain == default_toolchain) {
         os = "fuchsia"
         environment = "kernel"
 
-        # IMPORTANT: This definition currently lacks the appropriate
-        # `remove_common_configs` and `configs` to really build anything
-        # for the Zircon kernel per se. This will be addressed in the
-        # near future.
         toolchain_tags = [
           "kernel",
           "standalone",
         ]
+
+        prefix_configs = [
+          "$zx/kernel:headers",
+
+          # TODO(fxbug.dev/44971): Many include/ headers use <ktl/*.h> headers.
+          "$zx/kernel/lib/ktl:headers.config",
+          "$zx/kernel/lib/ktl:ktl.config",
+
+          # <stdio.h> has #include <lib/io.h>.
+          "$zx/kernel/lib/io:headers.config",
+
+          # <stdlib.h> has #include <lib/heap.h>.
+          "$zx/kernel/lib/heap:headers.config",
+
+          # <lib/lockup_detector.h> is included by some "low-level" headers.
+          "$zx/kernel/lib/lockup_detector:headers.config",
+
+          # <kernel/percpu.h> has #include <lib/lazy_init/lazy_init.h>.
+          "$zx/system/ulib/lazy_init:headers.config",
+
+          # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
+          "$zx/system/ulib/lockdep:headers.config",
+
+          # <kernel/{scheduler.h,scheduler_state.h> has #include <ffl/fixed.h>.
+          "$zx/system/ulib/ffl:headers.config",
+
+          # <kernel/thread.h> has #include <vm/kstack.h>.
+          "$zx/kernel/vm:headers.config",
+
+          # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
+          "$zx/kernel/lib/user_copy:headers.config",
+
+          # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
+          "$zx/system/ulib/zircon-internal:headers.config",
+
+          # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
+          "$zx/kernel/lib/ktrace:headers.config",
+          "$zx/kernel/lib/ktrace:suppress-warning.config",
+
+          # <kernel/thread.h> has #include <fbl/macros.h>
+          "$zx/system/ulib/fbl:headers.config",
+
+          # <dev/iommu.h> has #include <fbl/name.h>
+          # <mexec.h> has #include <fbl/span.h>
+          "$zx/kernel/lib/fbl:headers.config",
+
+          # Everywhere has #include <zx/status.h>
+          "$zx/system/ulib/zxc:headers.config",
+        ]
+
+        configs = [ "//zircon/kernel:kernel_config" ]
 
         # NOTE: kernel artifacts currently do not build under fuzzer
         # variants. This was also true with the Zircon build, but
@@ -127,6 +174,23 @@ if (current_toolchain == default_toolchain) {
         # variant selectors. Using an exclude_variant_tag is
         # enough to fix the issue.
         exclude_variant_tags = [ "fuzzer" ]
+
+        # Always enable frame pointers in the kernel so there are panic
+        # backtraces and such.
+        # TODO(mcgrathr): Consider either removing this so there's a
+        # no-frame-pointers option, or removing the kernel's support for
+        # !WITH_FRAME_POINTERS if it will never be used.
+        remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+        configs += [ "$zx_build_config:frame_pointers" ]
+
+        if (cpu == "x64") {
+          # TODO(fxbug.dev/27321): x86 kernel can't be built without --gc-sections
+          # because of crufty acpica code, and some compiler instrumentation
+          # is broken wrt --gc-sections semantics.
+          exclude_variant_tags += [ "breaks-gc-sections" ]
+          remove_common_configs += [ "$zx_build_config:default_linker_gc" ]
+          configs += [ "$zx_build_config:linker_gc" ]
+        }
       }
     }
   }
@@ -179,6 +243,9 @@ if (is_kernel) {
     }
 
     cflags = [ "-fpie" ]
+  }
+
+  group("kernel_config_deps") {
   }
 
   config("headers") {
@@ -568,6 +635,10 @@ if (is_kernel) {
     deps = [ ":kernel" ]
   }
 } else if (zx != "/" && !is_kernel) {
+  group("kernel") {
+    public_deps = [ ":kernel(//zircon/kernel:kernel_$target_cpu)" ]
+  }
+
   group("tests") {
     testonly = true
     deps = [
