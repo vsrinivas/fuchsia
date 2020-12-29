@@ -18,13 +18,12 @@ Entry = collections.namedtuple('Entry', ['source', 'destination', 'label'])
 # List of destination paths for which conflicting entries are acceptable as long
 # as the source files are identical.
 # This is mostly use to soft-transition zbi contents.
-DUPLICATION_EXCEPTIONS = [
-]
+DUPLICATION_EXCEPTIONS = []
 
 
 def expand(items):
-    '''Reads metadata produced by GN and expands file references found within
-       that metadata.
+    '''Reads metadata produced by GN.
+       Expands and flattens file references found within that metadata.
        See distribution_manifest.gni for a description of the metadata format.
        '''
     entries = []
@@ -36,7 +35,7 @@ def expand(items):
                 data = json.load(data_file)
             for entry in data:
                 entry['label'] = item['label']
-                entries.append(entry)
+                items.append(entry)
     return [Entry(**e) for e in entries]
 
 

@@ -20,7 +20,7 @@ group("connectivity") {
 
 group("tools") {
   testonly = true
-  public_deps = [
+  deps = [
     "lowpan/tools",
     "management/network-manager-cli",
     "network/dhcpd-cli",

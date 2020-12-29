@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
@@ -62,15 +61,9 @@ fuchsia_component("dhcpd-cli-test-component") {
   manifest = "meta/dhcpd_cli_test.cmx"
 }
 
-package("dhcpd-cli") {
+fuchsia_shell_package("dhcpd-cli") {
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "dhcpd_cli"
-      dest = "dhcpd-cli"
-      shell = true
-    },
-  ]
+  manifest = "meta/dhcpd-cli.cmx"
 }
 
 fuchsia_test_package("dhcpd-cli-tests") {

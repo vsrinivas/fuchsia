@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
@@ -51,25 +50,12 @@ rustc_binary("bin") {
   ]
 }
 
-package("net-cli") {
+fuchsia_shell_package("net-cli") {
   deps = [
     ":bin",
     "//build/validate:non_production_tag",
   ]
-
-  binaries = [
-    {
-      name = "net"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/net.cmx"
-      dest = "net.cmx"
-    },
-  ]
+  manifest = "meta/net.cmx"
 }
 
 fuchsia_unittest_package("net-cli-tests") {

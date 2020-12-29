@@ -1205,6 +1205,8 @@ Both template families support test specifications, such as restricting to speci
 The syntax is slightly different. Where before you might specify:
 
 ```gn
+import("//build/package.gni")
+
 test_package("foo-tests") {
   ...
   tests = [
@@ -1221,6 +1223,8 @@ test_package("foo-tests") {
 You would now specify:
 
 ```gn
+import("//src/sys/build/components.gni")
+
 fuchsia_test_package("foo-tests") {
   ...
   test_specs = {
@@ -1291,6 +1295,8 @@ built and then renamed before it's packaged so that it's packaged under the path
 `bin/foo-bin`.
 
 ```gn
+import("//build/package.gni")
+
 executable("bin") {
   ...
 }
@@ -1321,6 +1327,8 @@ packaged files, developers should work with the templates for the targets
 that produce those files. For instance:
 
 ```gn
+import("//src/sys/build/components.gni")
+
 executable("bin") {
   output_name = "foo-bin"
   ...
@@ -1336,13 +1344,64 @@ fuchsia_package("foo-pkg") {
 }
 ```
 
+### Shell binaries
+
+The legacy `package()` template allowed developers to make a particular binary
+in the package available to `fx shell`.
+
+```gn
+import("//build/package.gni")
+
+# `fx shell echo Hello World` will print "Hello World"
+executable("bin") {
+  output_name = "echo"
+  ...
+}
+
+package("echo") {
+  binaries = [
+    {
+      name = "echo"
+      dest = "echo"
+      shell = true
+    }
+  ]
+  deps = [ ":bin" ]
+}
+```
+
+The new templates support this feature as follows:
+
+```gn
+import("//src/sys/build/components.gni")
+
+# `fx shell echo Hello World` will print "Hello World"
+executable("bin") {
+  output_name = "echo"
+  ...
+}
+
+fuchsia_shell_package("echo") {
+  deps = [ ":bin" ]
+}
+```
+
+Note that in the `package()` example the binary is explicitly named "echo",
+which is the same name that's used for its intrinsic name
+(`output_name = "echo"`). The new templates don't have this renaming behavior,
+and instead let the target that produces the binary (`executable()` in this
+case) decide the file name, as determined by the `output_name` specified (or the
+executable target's name if `output_name` isn't specified).
+
+This feature was left out intentionally.
+Moving forward the use of legacy shell tools is discouraged.
+
 ### Unsupported features
 
 Note that some features of `package()` are unsupported moving forward. If your
 package depends on them then at this time it cannot be migrated to the new
 templates. These unsupported features include:
 
-*   Legacy `shell` binaries (deprecated global `/bin` directory).
 *   Marking a test as disabled. Instead, change the test source code to mark it
     as disabled, or comment out the disabled test component from the build file.
 *   The [Component Index][component-index]. Components using the new templates

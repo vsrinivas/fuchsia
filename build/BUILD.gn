@@ -41,15 +41,7 @@ group("deprecated_package") {
   driver_package_users = [ "//src/connectivity/ethernet/drivers/rndis-host" ]
 
   shell_true_users = [
-    "//src/connectivity/management/network-manager-cli",
-    "//src/connectivity/network/dhcpd-cli",
-    "//src/connectivity/network/mdns/util:mdns-util",
-    "//src/connectivity/network/net-cli",
-    "//src/connectivity/network/netdump",
     "//src/connectivity/network/netstack:tools",
-    "//src/connectivity/network/netstack/tests/manual:netstack-manual-tests",
-    "//src/connectivity/network/tools/nc",
-    "//src/connectivity/network/tools/sockscripter:package",
     "//third_party/network-conformance/vendor/MNTCPApp:mntcpapp",
     "//third_party/network-conformance/vendor/UDPStub:udpstub",
   ]
@@ -313,7 +305,6 @@ group("deprecated_package") {
     "//src/connectivity/wlan/wlancfg/tool/*",
     "//src/connectivity/wlan/wlanstack/*",
     "//src/developer/debug/debug_agent/*",
-    "//src/developer/forensics/snapshot/*",
     "//src/developer/fuchsia-criterion/*",
     "//src/developer/kcounter_inspect/*",
     "//src/developer/kcounter_inspect/tests/*",

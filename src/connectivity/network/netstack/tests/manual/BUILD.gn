@@ -2,64 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-executable("selecttest") {
-  testonly = true
+names = [
+  "selecttest",
+  "sockopttest",
+  "gethostbyname_test",
+]
 
-  sources = [ "selecttest.c" ]
-
-  deps = [
-    "//sdk/lib/fdio",
-    "//src/zircon/lib/zircon",
-  ]
+foreach(name, names) {
+  executable(name) {
+    testonly = true
+    sources = [ "$name.c" ]
+    deps = [
+      "//sdk/lib/fdio",
+      "//src/zircon/lib/zircon",
+    ]
+  }
 }
 
-executable("sockopttest") {
+fuchsia_shell_package("netstack-manual-tests") {
   testonly = true
 
-  sources = [ "sockopttest.c" ]
-
-  deps = [
-    "//sdk/lib/fdio",
-    "//src/zircon/lib/zircon",
-  ]
-}
-
-executable("gethostbyname_test") {
-  testonly = true
-
-  sources = [ "gethostbyname_test.c" ]
-
-  deps = [
-    "//sdk/lib/fdio",
-    "//src/zircon/lib/zircon",
-  ]
-}
-
-package("netstack-manual-tests") {
-  testonly = true
-
-  deps = [
-    ":gethostbyname_test",
-    ":selecttest",
-    ":sockopttest",
-  ]
-
-  binaries = [
-    {
-      name = "gethostbyname_test"
-      shell = true
-    },
-    {
-      name = "selecttest"
-      shell = true
-    },
-    {
-      name = "sockopttest"
-      shell = true
-    },
-  ]
+  deps = []
+  foreach(name, names) {
+    deps += [ ":$name" ]
+  }
 }
 
 group("manual") {

@@ -3,28 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 group("util") {
   testonly = true
   deps = [ ":mdns-util" ]
 }
 
-package("mdns-util") {
+fuchsia_shell_package("mdns-util") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "mdns-util"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mdns-util.cmx")
-      dest = "mdns-util.cmx"
-    },
-  ]
+  manifest = "meta/mdns-util.cmx"
 }
 
 executable("bin") {
