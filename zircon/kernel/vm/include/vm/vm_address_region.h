@@ -481,8 +481,13 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // returns nullptr.  This is a non-recursive search.
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
+  enum class RangeOpType {
+    Decommit,
+    MapRange,
+  };
+
   // Apply |op| to VMO mappings in the specified range of pages.
-  zx_status_t RangeOp(uint32_t op, size_t offset, size_t len, user_inout_ptr<void> buffer,
+  zx_status_t RangeOp(RangeOpType op, size_t offset, size_t len, user_inout_ptr<void> buffer,
                       size_t buffer_size);
 
   // Unmap a subset of the region of memory in the containing address space,

@@ -563,7 +563,7 @@ void VmAddressRegion::Activate() {
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
-zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
+zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
                                      user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
 
@@ -629,7 +629,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     ASSERT(!overflowed);
 
     switch (op) {
-      case ZX_VMAR_OP_DECOMMIT: {
+      case RangeOpType::Decommit: {
         // Decommit zeroes pages of the VMO, equivalent to writing to it.
         // the mapping is currently writable, or could be made writable.
         if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
@@ -641,7 +641,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
         }
         break;
       }
-      case ZX_VMAR_OP_MAP_RANGE: {
+      case RangeOpType::MapRange: {
         LTRACEF_LEVEL(2, "MapRange: op_offset=0x%zx op_size=0x%zx\n", op_offset, op_size);
         const auto result = mapping->MapRangeLocked(op_offset, op_size, false);
         if (result != ZX_OK) {

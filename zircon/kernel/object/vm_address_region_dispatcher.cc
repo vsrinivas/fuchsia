@@ -232,7 +232,12 @@ zx_status_t VmAddressRegionDispatcher::RangeOp(uint32_t op, vaddr_t base, size_t
                                                user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
 
-  return vmar_->RangeOp(op, base, len, buffer, buffer_size);
+  if (op == ZX_VMAR_OP_DECOMMIT) {
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Decommit, base, len, buffer, buffer_size);
+  } else if (op == ZX_VMAR_OP_MAP_RANGE) {
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::MapRange, base, len, buffer, buffer_size);
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
 zx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
