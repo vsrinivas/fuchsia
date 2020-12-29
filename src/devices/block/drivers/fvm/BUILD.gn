@@ -1,9 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# This code has moved but some out-of-tree code still refers to this location.
-# TODO(bug 66607): update all code and remove this file.
-group("fvm") {
-  public_deps = [ "//src/storage/fvm/driver" ]
-}

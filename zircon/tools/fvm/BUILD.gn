@@ -1,9 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# This target provides a forward for legacy out-of-tree builds that refer to it.
-# TODO(bug 66607): Update users and delete.
-group("fvm") {
-  public_deps = [ "//src/storage/bin/fvm" ]
-}
