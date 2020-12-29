@@ -66,8 +66,6 @@ test("ethernet-unittest") {
 fuchsia_unittest_package("ethernet-unittest-package") {
   package_name = "ethernet-unittest"
   deps = [ ":ethernet-unittest" ]
-
-  executable_path = "test/ethernet-unittest"
 }
 
 test("ethernet-integration") {

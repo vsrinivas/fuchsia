@@ -44,7 +44,6 @@ test("ahci-unittest-bin") {
 }
 
 fuchsia_unittest_package("ahci-unittest") {
-  executable_path = "test/ahci-unittest"
   deps = [ ":ahci-unittest-bin" ]
 }
 

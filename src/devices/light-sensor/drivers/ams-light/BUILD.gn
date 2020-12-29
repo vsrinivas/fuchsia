@@ -78,7 +78,6 @@ test("ams-light-test-bin") {
 }
 
 fuchsia_unittest_package("ams-light-test") {
-  executable_path = "test/ams-light-test"
   deps = [ ":ams-light-test-bin" ]
   test_specs = {
     environments = basic_envs

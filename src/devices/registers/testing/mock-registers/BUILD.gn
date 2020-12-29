@@ -29,7 +29,6 @@ test("mock-registers-test") {
 
 fuchsia_unittest_package("mock-registers-test-package") {
   package_name = "mock-registers-test"
-  executable_path = "test/mock-registers-test"
   deps = [ ":mock-registers-test" ]
 }
 

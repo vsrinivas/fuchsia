@@ -90,7 +90,6 @@ test("syn-dhub-test-bin") {
 }
 
 fuchsia_unittest_package("syn-dhub-test") {
-  executable_path = "test/syn-dhub-test"
   deps = [ ":syn-dhub-test-bin" ]
   test_specs = {
     environments = basic_envs

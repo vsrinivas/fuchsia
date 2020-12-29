@@ -72,7 +72,6 @@ test("mtk-gpio-bin") {
 }
 
 fuchsia_unittest_package("mtk-gpio") {
-  executable_path = "test/mtk-gpio"
   deps = [ ":mtk-gpio-bin" ]
   test_specs = {
     environments = basic_envs

@@ -63,7 +63,6 @@ group("common") {
 }
 
 fuchsia_unittest_package("aml-pwm-test") {
-  executable_path = "test/aml-pwm-test"
   deps = [ ":aml-pwm-test-bin" ]
   test_specs = {
     environments = basic_envs

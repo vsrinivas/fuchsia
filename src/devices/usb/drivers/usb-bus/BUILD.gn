@@ -76,6 +76,5 @@ test("usb-device") {
 
 fuchsia_unittest_package("usb-device-test-pkg") {
   package_name = "usb-device"
-  executable_path = "test/usb-device"
   deps = [ ":usb-device" ]
 }

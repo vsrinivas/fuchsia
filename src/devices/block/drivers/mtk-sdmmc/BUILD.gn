@@ -82,7 +82,6 @@ test("mtk-sdmmc-test-bin") {
 }
 
 fuchsia_unittest_package("mtk-sdmmc-test") {
-  executable_path = "test/mtk-sdmmc-test"
   deps = [ ":mtk-sdmmc-test-bin" ]
   test_specs = {
     environments = basic_envs

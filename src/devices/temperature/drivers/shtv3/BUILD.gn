@@ -52,7 +52,6 @@ test("shtv3-test-bin") {
 }
 
 fuchsia_unittest_package("shtv3-test") {
-  executable_path = "test/shtv3-test"
   deps = [ ":shtv3-test-bin" ]
   test_specs = {
     environments = basic_envs

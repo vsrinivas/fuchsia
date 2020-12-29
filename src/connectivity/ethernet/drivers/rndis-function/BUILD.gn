@@ -70,6 +70,4 @@ test("rndis-function-test") {
 fuchsia_unittest_package("rndis-function-test-package") {
   package_name = "rndis-function-test"
   deps = [ ":rndis-function-test" ]
-
-  executable_path = "test/rndis-function-test"
 }

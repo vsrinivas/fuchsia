@@ -87,7 +87,6 @@ test("mtk-thermal-test-bin") {
 }
 
 fuchsia_unittest_package("mtk-thermal-test") {
-  executable_path = "test/mtk-thermal-test"
   deps = [ ":mtk-thermal-test-bin" ]
   test_specs = {
     environments = basic_envs

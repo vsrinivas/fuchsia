@@ -25,6 +25,5 @@ test("fake-resource-test-bin") {
 }
 
 fuchsia_unittest_package("fake-resource-test") {
-  executable_path = "test/fake-resource-test"
   deps = [ ":fake-resource-test-bin" ]
 }

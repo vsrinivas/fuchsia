@@ -71,9 +71,6 @@ import("fuchsia_test_component_manifest.gni")
 #   deps
 #   visibility
 template("fuchsia_unittest_component") {
-  # TODO(shayba): delete all remaining uses of `executable_path`
-  not_needed(invoker, [ "executable_path" ])
-
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
     fuchsia_test_component_manifest(generated_target) {

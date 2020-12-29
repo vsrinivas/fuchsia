@@ -81,7 +81,6 @@ test("cadence-hpnfc-test-bin") {
 }
 
 fuchsia_unittest_package("cadence-hpnfc-test") {
-  executable_path = "test/cadence-hpnfc-test"
   deps = [ ":cadence-hpnfc-test-bin" ]
   test_specs = {
     environments = basic_envs

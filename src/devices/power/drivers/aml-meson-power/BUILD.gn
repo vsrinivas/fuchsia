@@ -88,7 +88,6 @@ test("aml-meson-power-test-bin") {
 }
 
 fuchsia_unittest_package("aml-meson-power-test") {
-  executable_path = "test/aml-meson-power-test"
   deps = [ ":aml-meson-power-test-bin" ]
   test_specs = {
     environments = basic_envs

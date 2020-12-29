@@ -80,6 +80,5 @@ test("msm8x53-power-test-bin") {
 }
 
 fuchsia_unittest_package("msm8x53-power-test") {
-  executable_path = "test/msm8x53-power-test"
   deps = [ ":msm8x53-power-test-bin" ]
 }

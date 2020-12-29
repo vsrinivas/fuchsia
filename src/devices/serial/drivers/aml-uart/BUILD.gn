@@ -76,7 +76,6 @@ test("aml-uart-test-bin") {
 }
 
 fuchsia_unittest_package("aml-uart-test") {
-  executable_path = "test/aml-uart-test"
   deps = [ ":aml-uart-test-bin" ]
   test_specs = {
     environments = basic_envs

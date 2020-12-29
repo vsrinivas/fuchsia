@@ -79,7 +79,6 @@ test("aml-sdmmc-test-bin") {
 }
 
 fuchsia_unittest_package("aml-sdmmc-test") {
-  executable_path = "test/aml-sdmmc-test"
   deps = [ ":aml-sdmmc-test-bin" ]
   test_specs = {
     environments = basic_envs

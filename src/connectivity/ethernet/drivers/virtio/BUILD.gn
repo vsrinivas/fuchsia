@@ -66,8 +66,6 @@ test("virtio-ethernet-test") {
 fuchsia_unittest_package("virtio-ethernet-test-package") {
   package_name = "virtio-ethernet-test"
   deps = [ ":virtio-ethernet-test" ]
-
-  executable_path = "test/virtio-ethernet-test"
 }
 
 group("tests") {

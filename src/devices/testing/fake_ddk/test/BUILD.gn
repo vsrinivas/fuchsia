@@ -21,6 +21,5 @@ test("fake-ddk-test-bin") {
 }
 
 fuchsia_unittest_package("fake-ddk-test") {
-  executable_path = "test/fake-ddk-test"
   deps = [ ":fake-ddk-test-bin" ]
 }

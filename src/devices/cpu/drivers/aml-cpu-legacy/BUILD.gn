@@ -76,7 +76,6 @@ test("aml-cpu-legacy-test-bin") {
 }
 
 fuchsia_unittest_package("aml-cpu-legacy-test") {
-  executable_path = "test/aml-cpu-legacy-test"
   deps = [ ":aml-cpu-legacy-test-bin" ]
   test_specs = {
     environments = basic_envs

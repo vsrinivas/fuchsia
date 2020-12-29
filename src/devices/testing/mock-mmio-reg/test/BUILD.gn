@@ -33,6 +33,5 @@ test("mock-mmio-reg-test-bin") {
 }
 
 fuchsia_unittest_package("mock-mmio-reg-test") {
-  executable_path = "test/mock-mmio-reg-test"
   deps = [ ":mock-mmio-reg-test-bin" ]
 }

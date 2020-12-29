@@ -63,9 +63,6 @@ import("fuchsia_unittest_component.gni")
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
-  # TODO(shayba): delete all remaining uses of `executable_path`
-  not_needed(invoker, [ "executable_path" ])
-
   component_target = "${target_name}_component"
   fuchsia_unittest_component(component_target) {
     forward_variables_from(invoker,

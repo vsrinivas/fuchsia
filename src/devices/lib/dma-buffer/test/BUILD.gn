@@ -19,6 +19,5 @@ test("dma-buffer-test-bin") {
 }
 
 fuchsia_unittest_package("dma-buffer-test") {
-  executable_path = "test/dma-buffer-test"
   deps = [ ":dma-buffer-test-bin" ]
 }

@@ -74,7 +74,6 @@ test("mtk-power-test-bin") {
 }
 
 fuchsia_unittest_package("mtk-power-test") {
-  executable_path = "test/mtk-power-test"
   deps = [ ":mtk-power-test-bin" ]
   test_specs = {
     environments = basic_envs

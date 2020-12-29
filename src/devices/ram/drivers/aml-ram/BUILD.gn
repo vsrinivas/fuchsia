@@ -62,7 +62,6 @@ group("common") {
 }
 
 fuchsia_unittest_package("aml-ram-test") {
-  executable_path = "test/aml-ram-test"
   deps = [ ":aml-ram-test-bin" ]
   test_specs = {
     environments = basic_envs

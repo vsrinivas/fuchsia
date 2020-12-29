@@ -24,7 +24,6 @@ test("aml-rawnand-unittest-bin") {
 }
 
 fuchsia_unittest_package("aml-rawnand-unittest") {
-  executable_path = "test/aml-rawnand-unittest"
   deps = [ ":aml-rawnand-unittest-bin" ]
   test_specs = {
     environments = basic_envs

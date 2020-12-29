@@ -67,7 +67,6 @@ test("qcom-gpio-test-bin") {
 }
 
 fuchsia_unittest_package("qcom-gpio-test") {
-  executable_path = "test/qcom-gpio-test"
   deps = [ ":qcom-gpio-test-bin" ]
   test_specs = {
     environments = basic_envs

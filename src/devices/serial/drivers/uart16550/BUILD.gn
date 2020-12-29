@@ -89,6 +89,5 @@ test("uart16550-test-bin") {
 }
 
 fuchsia_unittest_package("uart16550-test") {
-  executable_path = "test/uart16550-test"
   deps = [ ":uart16550-test-bin" ]
 }

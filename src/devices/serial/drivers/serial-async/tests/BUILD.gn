@@ -25,7 +25,6 @@ test("serial-async-unittest-bin") {
 }
 
 fuchsia_unittest_package("serial-async-unittest") {
-  executable_path = "test/serial-async-unittest"
   deps = [ ":serial-async-unittest-bin" ]
   test_specs = {
     environments = basic_envs

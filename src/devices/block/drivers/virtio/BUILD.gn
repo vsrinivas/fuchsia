@@ -120,11 +120,9 @@ group("tests") {
 }
 
 fuchsia_unittest_package("virtio-block-test") {
-  executable_path = "test/virtio-block-test"
   deps = [ ":virtio-block-test-bin" ]
 }
 
 fuchsia_unittest_package("virtio-scsi-test") {
-  executable_path = "test/virtio-scsi-test"
   deps = [ ":virtio-scsi-test-bin" ]
 }

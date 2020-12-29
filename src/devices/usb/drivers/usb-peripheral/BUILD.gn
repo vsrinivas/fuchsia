@@ -94,7 +94,6 @@ test("usb-peripheral-unittest-bin") {
 }
 
 fuchsia_unittest_package("usb-peripheral-unittest") {
-  executable_path = "test/usb-peripheral-unittest"
   deps = [ ":usb-peripheral-unittest-bin" ]
   test_specs = {
     environments = basic_envs

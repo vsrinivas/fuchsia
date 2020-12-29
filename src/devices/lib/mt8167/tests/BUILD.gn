@@ -40,6 +40,5 @@ test("mt8167-audio-lib-test-bin") {
 }
 
 fuchsia_unittest_package("mt8167-audio-lib-test") {
-  executable_path = "test/mt8167-audio-lib-test"
   deps = [ ":mt8167-audio-lib-test-bin" ]
 }

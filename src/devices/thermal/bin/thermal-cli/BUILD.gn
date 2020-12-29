@@ -48,7 +48,6 @@ test("thermal-cli-test-bin") {
 }
 
 fuchsia_unittest_package("thermal-cli-test") {
-  executable_path = "test/thermal-cli-test"
   deps = [ ":thermal-cli-test-bin" ]
   test_specs = {
     environments = basic_envs

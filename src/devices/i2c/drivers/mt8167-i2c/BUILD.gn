@@ -73,7 +73,6 @@ test("mt8167-i2c-test-bin") {
 }
 
 fuchsia_unittest_package("mt8167-i2c-test") {
-  executable_path = "test/mt8167-i2c-test"
   deps = [ ":mt8167-i2c-test-bin" ]
   test_specs = {
     environments = basic_envs

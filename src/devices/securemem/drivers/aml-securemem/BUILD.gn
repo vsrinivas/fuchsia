@@ -107,6 +107,5 @@ test("aml-securemem-test-bin") {
 }
 
 fuchsia_unittest_package("aml-securemem-test") {
-  executable_path = "test/aml-securemem-test"
   deps = [ ":aml-securemem-test-bin" ]
 }

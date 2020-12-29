@@ -39,7 +39,6 @@ template("audio_core_config_test") {
   }
 
   fuchsia_unittest_package(target_name) {
-    executable_path = "bin/config_validator"
     deps = [
       ":${test_config_resource}",
       "//src/media/audio/audio_core/test/config_validator",

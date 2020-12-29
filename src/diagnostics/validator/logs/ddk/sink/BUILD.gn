@@ -46,7 +46,6 @@ isolated_devmgr_component("log-test-devmgr") {
 
 fuchsia_unittest_package("accessor-validator-tests") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/accessor_validator_bin_test"
 }
 
 ### C++ ###

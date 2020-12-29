@@ -70,6 +70,5 @@ test("mbr-test-bin") {
 }
 
 fuchsia_unittest_package("mbr-test") {
-  executable_path = "test/mbr-test"
   deps = [ ":mbr-test-bin" ]
 }

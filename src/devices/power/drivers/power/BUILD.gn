@@ -58,6 +58,5 @@ test("power-test-bin") {
 }
 
 fuchsia_unittest_package("power-test") {
-  executable_path = "test/generic-power-driver-test"
   deps = [ ":power-test-bin" ]
 }

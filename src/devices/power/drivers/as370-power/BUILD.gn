@@ -80,6 +80,5 @@ test("as370-power-test-bin") {
 }
 
 fuchsia_unittest_package("as370-power-test") {
-  executable_path = "test/as370-power-test"
   deps = [ ":as370-power-test-bin" ]
 }

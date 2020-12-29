@@ -72,7 +72,6 @@ if (!is_kernel) {
   }
 
   fuchsia_unittest_package("acpi-lite-test") {
-    executable_path = "bin/acpi_lite_test"
     deps = [ ":acpi_lite_test" ]
   }
 

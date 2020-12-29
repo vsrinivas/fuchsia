@@ -66,7 +66,6 @@ test("as370-gpio-test-bin") {
 }
 
 fuchsia_unittest_package("as370-gpio-test") {
-  executable_path = "test/as370-gpio-test"
   deps = [ ":as370-gpio-test-bin" ]
   test_specs = {
     environments = basic_envs

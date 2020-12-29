@@ -77,7 +77,6 @@ test("aml-thermal-s912-test-bin") {
 }
 
 fuchsia_unittest_package("aml-thermal-s912-test") {
-  executable_path = "test/aml-thermal-s912-test"
   deps = [ ":aml-thermal-s912-test-bin" ]
   test_specs = {
     environments = basic_envs

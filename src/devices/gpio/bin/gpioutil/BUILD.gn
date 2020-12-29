@@ -46,7 +46,6 @@ test("gpioutil-test-bin") {
 }
 
 fuchsia_unittest_package("gpioutil-test") {
-  executable_path = "test/gpioutil-test"
   deps = [ ":gpioutil-test-bin" ]
   test_specs = {
     environments = basic_envs

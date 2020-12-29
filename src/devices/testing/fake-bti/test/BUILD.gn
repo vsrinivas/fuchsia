@@ -25,6 +25,5 @@ test("fake-bti-test-bin") {
 }
 
 fuchsia_unittest_package("fake-bti-test") {
-  executable_path = "test/fake-bti-test"
   deps = [ ":fake-bti-test-bin" ]
 }

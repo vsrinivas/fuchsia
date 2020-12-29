@@ -66,8 +66,6 @@ test("ethertap-unittest") {
 fuchsia_unittest_package("ethertap-unittest-package") {
   package_name = "ethertap-unittest"
   deps = [ ":ethertap-unittest" ]
-
-  executable_path = "test/ethertap-unittest"
 }
 
 group("tests") {

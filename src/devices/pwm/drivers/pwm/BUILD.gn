@@ -55,7 +55,6 @@ group("common") {
 }
 
 fuchsia_unittest_package("pwm-test") {
-  executable_path = "test/pwm-test"
   deps = [ ":pwm-test-bin" ]
   test_specs = {
     environments = basic_envs

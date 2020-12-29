@@ -71,7 +71,6 @@ test("usb-hub-test") {
 }
 
 fuchsia_unittest_package("usb-hub-package") {
-  executable_path = "test/usb-hub-test"
   deps = [ ":usb-hub-test" ]
 }
 

@@ -135,7 +135,6 @@ executable("ft8201-test-bin") {
 }
 
 fuchsia_unittest_package("ft8201-test") {
-  executable_path = "bin/ft8201-test"
   deps = [ ":ft8201-test-bin" ]
   if (internal_access) {
     deps += [

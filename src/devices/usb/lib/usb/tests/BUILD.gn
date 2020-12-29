@@ -71,17 +71,14 @@ test("usb-desc-lib-test-bin") {
 }
 
 fuchsia_unittest_component("usb-request-test") {
-  executable_path = "test/usb-request-test"
   deps = [ ":usb-request-test-bin" ]
 }
 
 fuchsia_unittest_component("usb-wrapper-test") {
-  executable_path = "test/usb-wrapper-test"
   deps = [ ":usb-wrapper-test-bin" ]
 }
 
 fuchsia_unittest_component("usb-desc-lib-test") {
-  executable_path = "test/usb-desc-lib-test"
   deps = [ ":usb-desc-lib-test-bin" ]
 }
 

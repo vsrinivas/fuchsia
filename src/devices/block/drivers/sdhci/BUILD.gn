@@ -67,7 +67,6 @@ test("sdhci-test-bin") {
 }
 
 fuchsia_unittest_package("sdhci-test") {
-  executable_path = "test/sdhci-test"
   deps = [ ":sdhci-test-bin" ]
   test_specs = {
     environments = basic_envs

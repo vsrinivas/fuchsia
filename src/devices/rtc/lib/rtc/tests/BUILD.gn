@@ -28,7 +28,6 @@ test("rtc-lib-test-bin") {
 }
 
 fuchsia_unittest_package("rtc-lib-test") {
-  executable_path = "test/rtc-lib-test"
   deps = [ ":rtc-lib-test-bin" ]
 }
 
@@ -44,6 +43,5 @@ test("rtc-lib-llcpp-test-bin") {
 }
 
 fuchsia_unittest_package("rtc-lib-llcpp-test") {
-  executable_path = "test/rtc-lib-llcpp-test"
   deps = [ ":rtc-lib-llcpp-test-bin" ]
 }

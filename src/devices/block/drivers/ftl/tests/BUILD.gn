@@ -55,7 +55,6 @@ test("ftl-test-bin") {
 }
 
 fuchsia_unittest_package("ftl-test") {
-  executable_path = "test/ftl-test"
   deps = [ ":ftl-test-bin" ]
 }
 

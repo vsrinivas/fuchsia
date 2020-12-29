@@ -57,7 +57,6 @@ test("usb-cdc-ecm-unittest") {
 
 fuchsia_unittest_package("usb-cdc-ecm-unittest-package") {
   package_name = "usb-cdc-ecm-unittest"
-  executable_path = "test/usb-cdc-ecm-unittest"
   deps = [ ":usb-cdc-ecm-unittest" ]
 }
 

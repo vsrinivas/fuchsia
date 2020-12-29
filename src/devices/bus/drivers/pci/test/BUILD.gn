@@ -116,6 +116,5 @@ driver_module("pci_protocol_test_driver") {
 }
 
 fuchsia_unittest_package("pci-unit-test") {
-  executable_path = "test/pci-unit-test"
   deps = [ ":pci-unit" ]
 }

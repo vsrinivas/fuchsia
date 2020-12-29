@@ -41,6 +41,5 @@ test("operation-test-bin") {
 }
 
 fuchsia_unittest_package("operation-test") {
-  executable_path = "test/operation-test"
   deps = [ ":operation-test-bin" ]
 }

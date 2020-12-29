@@ -52,7 +52,6 @@ test("vim3-mcu-test-bin") {
 }
 
 fuchsia_unittest_package("vim3-mcu-test") {
-  executable_path = "test/vim3-mcu-test"
   deps = [ ":vim3-mcu-test-bin" ]
   test_specs = {
     environments = basic_envs

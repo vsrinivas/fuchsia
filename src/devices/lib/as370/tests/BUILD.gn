@@ -75,12 +75,10 @@ test("audio-dsp-test-bin") {
 }
 
 fuchsia_unittest_component("audio-dsp-test") {
-  executable_path = "test/audio-dsp-test"
   deps = [ ":audio-dsp-test-bin" ]
 }
 
 fuchsia_unittest_component("syn-audio-in-test") {
-  executable_path = "test/syn-audio-in-test"
   deps = [ ":syn-audio-in-test-bin" ]
 }
 

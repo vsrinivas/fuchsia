@@ -200,7 +200,6 @@ isolated_devmgr_unittest_v2_component("minfs-power-test") {
 }
 
 fuchsia_unittest_component("minfs-unit-test") {
-  executable_path = "test/minfs_unit"
   deps = [ ":minfs_unit" ]
 }
 

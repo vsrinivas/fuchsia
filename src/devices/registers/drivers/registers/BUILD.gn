@@ -70,7 +70,6 @@ group("common") {
 
 fuchsia_unittest_package("registers-test-package") {
   package_name = "registers-test"
-  executable_path = "test/registers-test"
   deps = [ ":registers-test" ]
 }
 

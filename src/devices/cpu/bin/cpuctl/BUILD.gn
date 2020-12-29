@@ -49,7 +49,6 @@ test("cpuctl-test-bin") {
 }
 
 fuchsia_unittest_package("cpuctl-test") {
-  executable_path = "test/cpuctl-test"
   deps = [ ":cpuctl-test-bin" ]
   test_specs = {
     environments = basic_envs

@@ -19,6 +19,5 @@ test("device-protocol-pci") {
 }
 
 fuchsia_unittest_package("device-protocol-pci-test") {
-  executable_path = "test/device-protocol-pci"
   deps = [ ":device-protocol-pci" ]
 }

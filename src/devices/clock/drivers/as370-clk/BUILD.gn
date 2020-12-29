@@ -70,7 +70,6 @@ test("as370-clk-test-bin") {
 }
 
 fuchsia_unittest_package("as370-clk-test") {
-  executable_path = "test/as370-clk-test"
   deps = [ ":as370-clk-test-bin" ]
   test_specs = {
     environments = basic_envs

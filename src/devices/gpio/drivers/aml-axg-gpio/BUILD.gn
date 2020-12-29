@@ -83,6 +83,5 @@ test("aml-axg-gpio-test-bin") {
 }
 
 fuchsia_unittest_package("aml-axg-gpio-test") {
-  executable_path = "test/aml-axg-gpio-test"
   deps = [ ":aml-axg-gpio-test-bin" ]
 }

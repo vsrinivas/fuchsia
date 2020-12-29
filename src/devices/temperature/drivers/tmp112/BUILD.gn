@@ -54,7 +54,6 @@ test("tmp112-test-bin") {
 }
 
 fuchsia_unittest_package("tmp112-test") {
-  executable_path = "test/tmp112-test"
   deps = [ ":tmp112-test-bin" ]
   test_specs = {
     environments = basic_envs

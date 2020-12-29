@@ -75,7 +75,6 @@ test("sy-buck-test-bin") {
 }
 
 fuchsia_unittest_package("sy-buck-test") {
-  executable_path = "test/sy-buck-test"
   deps = [ ":sy-buck-test-bin" ]
   test_specs = {
     environments = basic_envs

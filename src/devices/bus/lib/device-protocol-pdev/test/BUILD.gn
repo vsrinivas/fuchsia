@@ -45,7 +45,6 @@ test("device-protocol-pdev-test") {
 
 fuchsia_unittest_package("device-protocol-pdev-test-pkg") {
   package_name = "device-protocol-pdev-test"
-  executable_path = "test/device-protocol-pdev-test"
   deps = [ ":device-protocol-pdev-test" ]
 }
 

@@ -80,7 +80,6 @@ test("vs680-thermal-test-bin") {
 }
 
 fuchsia_unittest_package("vs680-thermal-test") {
-  executable_path = "test/vs680-thermal-test"
   deps = [ ":vs680-thermal-test-bin" ]
   test_specs = {
     environments = basic_envs

@@ -136,7 +136,6 @@ test("gt6853-test") {
 
 fuchsia_unittest_package("gt6853-test-package") {
   package_name = "gt6853-test"
-  executable_path = "test/gt6853-test"
   deps = [ ":gt6853-test" ]
 }
 

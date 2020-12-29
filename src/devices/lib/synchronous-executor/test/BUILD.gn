@@ -21,6 +21,5 @@ test("synchronous-executor-test") {
 }
 
 fuchsia_unittest_package("synchronous-executor-test-package") {
-  executable_path = "test/synchronous-executor-test"
   deps = [ ":synchronous-executor-test" ]
 }

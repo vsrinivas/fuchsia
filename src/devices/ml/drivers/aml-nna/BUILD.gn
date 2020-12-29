@@ -61,7 +61,6 @@ test("aml-nna-test-bin") {
 }
 
 fuchsia_unittest_package("aml-nna-test") {
-  executable_path = "test/aml-nna-test"
   deps = [ ":aml-nna-test-bin" ]
   test_specs = {
     environments = basic_envs

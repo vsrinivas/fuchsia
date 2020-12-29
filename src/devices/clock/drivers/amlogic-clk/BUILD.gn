@@ -81,6 +81,5 @@ test("amlogic-clk-test-bin") {
 }
 
 fuchsia_unittest_package("amlogic-clk-test") {
-  executable_path = "test/amlogic-clk-test"
   deps = [ ":amlogic-clk-test-bin" ]
 }

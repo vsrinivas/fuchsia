@@ -72,7 +72,6 @@ test("nand-util-test-bin") {
 }
 
 fuchsia_unittest_package("nand-util-test") {
-  executable_path = "test/nand-util-test"
   deps = [ ":nand-util-test-bin" ]
   test_specs = {
     environments = basic_envs

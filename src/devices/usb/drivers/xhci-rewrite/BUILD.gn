@@ -187,7 +187,6 @@ test("xhci-transfer-ring-unittest-bin") {
 }
 
 fuchsia_unittest_package("xhci-unittest") {
-  executable_path = "test/xhci-unittest"
   deps = [ ":xhci-unittest-bin" ]
   test_specs = {
     environments = basic_envs
@@ -195,7 +194,6 @@ fuchsia_unittest_package("xhci-unittest") {
 }
 
 fuchsia_unittest_package("xhci-core-unittest") {
-  executable_path = "test/xhci-core-unittest"
   deps = [ ":xhci-core-unittest-bin" ]
   test_specs = {
     environments = basic_envs
@@ -203,7 +201,6 @@ fuchsia_unittest_package("xhci-core-unittest") {
 }
 
 fuchsia_unittest_package("xhci-event-ring-unittest") {
-  executable_path = "test/xhci-event-ring-unittest"
   deps = [ ":xhci-event-ring-unittest-bin" ]
   test_specs = {
     environments = basic_envs
@@ -211,7 +208,6 @@ fuchsia_unittest_package("xhci-event-ring-unittest") {
 }
 
 fuchsia_unittest_package("xhci-transfer-ring-unittest") {
-  executable_path = "test/xhci-transfer-ring-unittest"
   deps = [ ":xhci-transfer-ring-unittest-bin" ]
   test_specs = {
     environments = basic_envs

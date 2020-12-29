@@ -63,6 +63,5 @@ test("gpt-device-test-bin") {
 }
 
 fuchsia_unittest_package("gpt-device-test") {
-  executable_path = "test/gpt-device-test"
   deps = [ ":gpt-device-test-bin" ]
 }

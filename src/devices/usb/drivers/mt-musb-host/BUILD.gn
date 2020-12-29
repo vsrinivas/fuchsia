@@ -123,17 +123,14 @@ test("mt-hci-request-queue-test-bin") {
 }
 
 fuchsia_unittest_component("mt-hci-test") {
-  executable_path = "test/mt-hci-test"
   deps = [ ":mt-hci-test-bin" ]
 }
 
 fuchsia_unittest_component("mt-hci-transaction-test") {
-  executable_path = "test/mt-hci-transaction-test"
   deps = [ ":mt-hci-transaction-test-bin" ]
 }
 
 fuchsia_unittest_component("mt-hci-request-queue-test") {
-  executable_path = "test/mt-hci-request-queue-test"
   deps = [ ":mt-hci-request-queue-test-bin" ]
 }
 

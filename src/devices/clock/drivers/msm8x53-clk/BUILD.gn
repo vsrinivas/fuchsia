@@ -81,6 +81,5 @@ test("msm8x53-clk-test-bin") {
 }
 
 fuchsia_unittest_package("msm8x53-clk-test") {
-  executable_path = "test/msm8x53-clk-test"
   deps = [ ":msm8x53-clk-test-bin" ]
 }

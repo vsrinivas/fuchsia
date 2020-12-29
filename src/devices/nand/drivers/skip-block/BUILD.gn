@@ -69,7 +69,6 @@ test("skip-block-test-bin") {
 }
 
 fuchsia_unittest_package("skip-block-test") {
-  executable_path = "test/skip-block-test"
   deps = [ ":skip-block-test-bin" ]
   test_specs = {
     environments = basic_envs

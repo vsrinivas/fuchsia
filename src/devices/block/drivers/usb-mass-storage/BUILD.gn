@@ -58,7 +58,6 @@ test("ums-block") {
 }
 
 fuchsia_unittest_package("ums-block-test") {
-  executable_path = "test/ums-block-test"
   deps = [ ":ums-block" ]
 }
 
@@ -80,7 +79,6 @@ test("ums") {
 }
 
 fuchsia_unittest_package("ums-test") {
-  executable_path = "test/ums-test"
   deps = [ ":ums" ]
 }
 

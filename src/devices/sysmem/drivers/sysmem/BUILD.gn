@@ -138,6 +138,5 @@ test("sysmem-unittest-bin") {
 }
 
 fuchsia_unittest_package("sysmem-unittest") {
-  executable_path = "test/sysmem-unittest"
   deps = [ ":sysmem-unittest-bin" ]
 }

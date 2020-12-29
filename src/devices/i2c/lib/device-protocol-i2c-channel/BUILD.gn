@@ -40,7 +40,6 @@ executable("i2c-channel-test-bin") {
 }
 
 fuchsia_unittest_package("i2c-channel-test") {
-  executable_path = "bin/i2c-channel-test"
   deps = [ ":i2c-channel-test-bin" ]
 }
 

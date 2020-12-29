@@ -49,7 +49,6 @@ test("core-unittest-bin") {
 }
 
 fuchsia_unittest_package("core-unittest") {
-  executable_path = "test/blockcore"
   deps = [ ":core-unittest-bin" ]
 }
 

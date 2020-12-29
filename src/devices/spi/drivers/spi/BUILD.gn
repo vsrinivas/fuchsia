@@ -74,6 +74,5 @@ test("spi-test-bin") {
 }
 
 fuchsia_unittest_package("spi-test") {
-  executable_path = "test/spi-test"
   deps = [ ":spi-test-bin" ]
 }

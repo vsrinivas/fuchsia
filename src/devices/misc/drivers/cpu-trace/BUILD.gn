@@ -85,6 +85,5 @@ test("perf-mon-tests-bin") {
 }
 
 fuchsia_unittest_package("perf-mon-tests") {
-  executable_path = "test/perf-mon-tests"
   deps = [ ":perf-mon-tests-bin" ]
 }

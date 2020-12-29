@@ -40,7 +40,6 @@ executable("astro-thermistor-test-bin") {
 
 fuchsia_unittest_package("test-package") {
   package_name = "astro-thermistor-test"
-  executable_path = "bin/astro-thermistor-test-bin"
   deps = [ ":astro-thermistor-test-bin" ]
   test_specs = {
     environments = basic_envs

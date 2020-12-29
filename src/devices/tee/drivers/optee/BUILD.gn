@@ -111,17 +111,14 @@ test("optee-client-test-bin") {
 }
 
 fuchsia_unittest_component("optee-client-test") {
-  executable_path = "test/optee-client-test"
   deps = [ ":optee-client-test-bin" ]
 }
 
 fuchsia_unittest_component("optee-controller-test") {
-  executable_path = "test/optee-controller-test"
   deps = [ ":optee-controller-test-bin" ]
 }
 
 fuchsia_unittest_component("optee-message-test") {
-  executable_path = "test/optee-message-test"
   deps = [ ":optee-message-test-bin" ]
 }
 

@@ -67,7 +67,6 @@ test("dw-i2c-test-bin") {
 }
 
 fuchsia_unittest_package("dw-i2c-test") {
-  executable_path = "test/dw-i2c-test"
   deps = [ ":dw-i2c-test-bin" ]
   test_specs = {
     environments = basic_envs

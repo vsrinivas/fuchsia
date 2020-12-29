@@ -45,7 +45,6 @@ test("ram-info-test-bin") {
 }
 
 fuchsia_unittest_package("ram-info-test") {
-  executable_path = "test/ram-info-test"
   deps = [ ":ram-info-test-bin" ]
   test_specs = {
     environments = basic_envs

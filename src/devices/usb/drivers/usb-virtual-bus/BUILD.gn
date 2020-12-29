@@ -160,7 +160,6 @@ test("usb-virtual-bus-unit-test-bin") {
 }
 
 fuchsia_unittest_package("usb-virtual-bus-unit-test") {
-  executable_path = "test/usb-virtual-bus-unit-test"
   deps = [ ":usb-virtual-bus-unit-test-bin" ]
   test_specs = {
     environments = basic_envs

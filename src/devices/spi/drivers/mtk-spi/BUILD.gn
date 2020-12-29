@@ -64,6 +64,5 @@ test("mtk-spi-test-bin") {
 }
 
 fuchsia_unittest_package("mtk-spi-test") {
-  executable_path = "test/mtk-spi-test"
   deps = [ ":mtk-spi-test-bin" ]
 }

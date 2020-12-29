@@ -389,7 +389,6 @@ test("x86-cros-ec-test") {
 
 fuchsia_unittest_package("x86-battery-test-pkg") {
   package_name = "x86-battery-test"
-  executable_path = "test/x86-battery-test"
   deps = [ ":x86-battery-test" ]
 }
 
@@ -405,6 +404,5 @@ group("tests") {
 
 fuchsia_unittest_package("x86-cros-ec-test-pkg") {
   package_name = "x86-cros-ec-test"
-  executable_path = "test/x86-cros-ec-test"
   deps = [ ":x86-cros-ec-test" ]
 }

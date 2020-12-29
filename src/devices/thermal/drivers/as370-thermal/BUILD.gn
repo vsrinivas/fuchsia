@@ -81,7 +81,6 @@ test("as370-thermal-test-bin") {
 }
 
 fuchsia_unittest_package("as370-thermal-test") {
-  executable_path = "test/as370-thermal-test"
   deps = [ ":as370-thermal-test-bin" ]
   test_specs = {
     environments = basic_envs

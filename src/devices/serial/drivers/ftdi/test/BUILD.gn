@@ -53,7 +53,6 @@ source_set("common") {
 
 fuchsia_unittest_package("ftdi-i2c-test-package") {
   package_name = "ftdi-i2c-test"
-  executable_path = "test/ftdi-i2c-test"
   deps = [ ":ftdi-i2c-test" ]
 }
 

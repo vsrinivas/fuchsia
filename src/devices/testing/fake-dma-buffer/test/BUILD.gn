@@ -29,7 +29,6 @@ test("fake-dma-buffer-test-bin") {
 }
 
 fuchsia_unittest_package("fake-dma-buffer-test") {
-  executable_path = "test/fake-dma-buffer-test"
   deps = [ ":fake-dma-buffer-test-bin" ]
   test_specs = {
     environments = basic_envs

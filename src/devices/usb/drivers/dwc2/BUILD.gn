@@ -74,7 +74,6 @@ test("dwc2-test-bin") {
 }
 
 fuchsia_unittest_package("dwc2-test") {
-  executable_path = "test/dwc2-test"
   deps = [ ":dwc2-test-bin" ]
   test_specs = {
     environments = basic_envs

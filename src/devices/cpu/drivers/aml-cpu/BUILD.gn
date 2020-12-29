@@ -76,7 +76,6 @@ test("aml-cpu-test-bin") {
 }
 
 fuchsia_unittest_package("aml-cpu-test") {
-  executable_path = "test/aml-cpu-test"
   deps = [ ":aml-cpu-test-bin" ]
   test_specs = {
     environments = basic_envs

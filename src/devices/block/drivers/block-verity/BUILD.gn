@@ -177,22 +177,18 @@ test("block-verity-test") {
 }
 
 fuchsia_unittest_package("block-verity-geometry-test") {
-  executable_path = "test/geometry-test"
   deps = [ ":geometry-test" ]
 }
 
 fuchsia_unittest_package("block-verity-sealer-test") {
-  executable_path = "test/sealer-test"
   deps = [ ":sealer-test" ]
 }
 
 fuchsia_unittest_package("block-verity-block-verifier-test") {
-  executable_path = "test/block-verifier-test"
   deps = [ ":block-verifier-test" ]
 }
 
 fuchsia_unittest_package("block-verity-config-test") {
-  executable_path = "test/config-test"
   deps = [ ":config-test" ]
 }
 

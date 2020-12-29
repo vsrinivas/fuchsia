@@ -34,6 +34,5 @@ test("fake-mmio-reg-test-bin") {
 }
 
 fuchsia_unittest_package("fake-mmio-reg-test") {
-  executable_path = "test/fake-mmio-reg-test"
   deps = [ ":fake-mmio-reg-test-bin" ]
 }

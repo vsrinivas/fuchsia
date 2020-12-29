@@ -54,7 +54,6 @@ if (zx != "/") {
   }
 
   fuchsia_unittest_package("static-pie-test") {
-    executable_path = "test/static_pie_test"
     deps = [ ":static_pie_test" ]
   }
 

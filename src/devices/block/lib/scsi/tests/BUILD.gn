@@ -42,6 +42,5 @@ test("scsilib-disk-test-bin") {
 }
 
 fuchsia_unittest_package("scsilib-disk-test") {
-  executable_path = "test/scsilib-disk-test"
   deps = [ ":scsilib-disk-test-bin" ]
 }

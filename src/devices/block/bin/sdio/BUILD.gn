@@ -38,7 +38,6 @@ test("sdio-test-bin") {
 }
 
 fuchsia_unittest_package("sdio-test") {
-  executable_path = "test/sdio-test"
   deps = [ ":sdio-test-bin" ]
   test_specs = {
     environments = basic_envs

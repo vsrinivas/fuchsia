@@ -135,6 +135,5 @@ test("mt8167s-ref-test-bin") {
 }
 
 fuchsia_unittest_package("mt8167s-ref-test") {
-  executable_path = "test/mt8167s-ref-test"
   deps = [ ":mt8167s-ref-test-bin" ]
 }

@@ -49,7 +49,6 @@ test("pci-roothost") {
 }
 
 fuchsia_unittest_package("pci-roothost-test") {
-  executable_path = "test/pci-roothost"
   deps = [ ":pci-roothost" ]
 }
 
