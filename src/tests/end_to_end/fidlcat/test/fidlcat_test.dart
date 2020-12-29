@@ -44,9 +44,12 @@ class RunFidlcat {
   String target;
   int port;
   Future<ProcessResult> agentResult;
+  StringBuffer stdoutBuffer;
+  StringBuffer stderrBuffer;
   String stdout;
   String stderr;
   String additionalResult;
+  Process fidlcatProcess;
 
   Future<void> run(Logger log, sl4f.Sl4f sl4fDriver, String path,
       RunMode runMode, List<String> extraArguments) async {
@@ -89,13 +92,21 @@ class RunFidlcat {
       arguments =
           ['--connect=$target:$port', '--quit-agent-on-exit'] + arguments;
     }
-    ProcessResult processResult;
     do {
-      processResult = await Process.run(path, arguments);
-    } while (processResult.exitCode == 2); // 2 means can't connect (yet).
+      stdoutBuffer = StringBuffer();
+      stderrBuffer = StringBuffer();
+      fidlcatProcess = await Process.start(path, arguments);
+      fidlcatProcess.stdout.listen(
+        (s) => stdoutBuffer.write(String.fromCharCodes(s)),
+      );
+      fidlcatProcess.stderr.listen(
+        (s) => stderrBuffer.write(String.fromCharCodes(s)),
+      );
+    } while (
+        await fidlcatProcess.exitCode == 2); // 2 means can't connect (yet).
 
-    stdout = processResult.stdout.toString();
-    stderr = processResult.stderr.toString();
+    stdout = stdoutBuffer.toString();
+    stderr = stderrBuffer.toString();
     additionalResult = 'stderr ===\n$stderr\nstdout ===\n$stdout';
   }
 }
@@ -764,6 +775,37 @@ void main(List<String> arguments) {
       expect(instance.stdout,
           contains('Stop monitoring exceptions.cmx koid=19884\n'),
           reason: instance.additionalResult);
+    });
+
+    test('Test --stay-alive', () async {
+      var instance = RunFidlcat();
+      var fidlcat = instance.run(log, sl4fDriver, fidlcatPath,
+          RunMode.withAgent, ['--remote-name=echo_client', '--stay-alive']);
+
+      /// fuchsia-pkg URL for the echo client.
+      const String echoClientUrl =
+          'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx';
+
+      /// Launch three instances of echo client one after the other.
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+      await sl4fDriver.ssh.run('run $echoClientUrl');
+
+      /// Because, with the --stay-alive version, fidlcat never ends, we need to kill it to end the
+      /// test.
+      instance.fidlcatProcess.kill();
+
+      /// Wait for fidlcat to be killed.
+      await fidlcat;
+
+      /// Check that fidlcat stayed alive.
+      expect(
+          instance.stderr,
+          contains(
+              'Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.'),
+          reason: instance.additionalResult);
+
+      await instance.agentResult;
     });
   }, timeout: _timeout);
 }

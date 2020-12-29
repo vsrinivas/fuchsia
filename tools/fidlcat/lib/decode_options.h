@@ -32,6 +32,8 @@ class Regex {
 };
 
 struct DecodeOptions {
+  // True if fidlcat doesn't automatically quit.
+  bool stay_alive = false;
   // Level of stack we want to decode/display.
   int stack_level = kNoStack;
   // If a syscall satisfies one of these filters, it can be displayed.

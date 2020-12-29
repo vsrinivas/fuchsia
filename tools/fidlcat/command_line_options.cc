@@ -141,6 +141,11 @@ const char* const kCompareHelp = R"(  --compare=<path>
 const char* const kWithProcessInfoHelp = R"(  --with-process-info
       Display the process name, process id and thread id on each line.)";
 
+const char* const kStayAlive = R"(  --stay-alive
+      Don't quit fidlcat when all the monitored processes have ended. This allows to keep monitoring
+      upcoming process. At the end you have to use control-c to quit fidlcat. This is useful when
+      you monitor a process and restart this process.)";
+
 const char* const kStackHelp = R"(  --stack=<value>
       The amount of stack frame to display:
       - 0: no stack (default value)
@@ -311,6 +316,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   // Display options:
   parser.AddSwitch("with-process-info", 0, kWithProcessInfoHelp,
                    &CommandLineOptions::with_process_info);
+  parser.AddSwitch("stay-alive", 0, kStayAlive, &CommandLineOptions::stay_alive);
   parser.AddSwitch("stack", 0, kStackHelp, &CommandLineOptions::stack_level);
   parser.AddSwitch("syscalls", 0, kSyscallFilterHelp, &CommandLineOptions::syscall_filters);
   parser.AddSwitch("exclude-syscalls", 0, kExcludeSyscallFilterHelp,
@@ -359,6 +365,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     return kHelpIntro + parser.GetHelp();
   }
 
+  decode_options->stay_alive = options->stay_alive;
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
     regex_t r;

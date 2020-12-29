@@ -38,6 +38,7 @@ struct CommandLineOptions {
   std::optional<std::string> compare_file;
   // Display options:
   bool with_process_info = false;
+  bool stay_alive = false;
   int stack_level = 0;
   std::vector<std::string> syscall_filters;
   std::vector<std::string> exclude_syscall_filters;

@@ -337,6 +337,10 @@ void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
 }
 
 void InterceptionWorkflow::Detach() {
+  if (syscall_decoder_dispatcher()->decode_options().stay_alive) {
+    FX_LOGS(INFO) << "Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.";
+    return;
+  }
   for (const auto& configured_process : configured_processes_) {
     if (configured_process.second.main_process) {
       // One main process is still running => don't shutdown fidlcat.

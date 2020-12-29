@@ -30,7 +30,7 @@
 ##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
 ##                   [--messages=<regexp>] [--exclude-messages=<regexp>] [--trigger=<regexp>]
 ##                   [--dump-messages]
-##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
+##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>] [--stay-alive]
 ##                   [--remote-pid=<pid>] [--remote-name=<name>] [--extra-name=<name>]
 ##                   [run <component specification>]
 ##
@@ -130,6 +130,10 @@
 ##    --quiet=<value>   The log verbosity.  Legal values are "info", "warning", "error", "fatal",
 ##                      or a number, starting from 0. Extra verbosity comes with lower levels.
 ##    --log-file=<path> The log file destination.
+##    --stay-alive      Don't quit fidlcat when all the monitored processes have ended. This allows
+##                      to keep monitoring upcoming process. At the end you have to use control-c
+##                      to quit fidlcat. This is useful when you monitor a process and restart this
+##                      process.
 ##
 ## Monitoring options:
 ##    --remote-pid=<pid>    The koid of the remote process to trace.
@@ -279,6 +283,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --log-file=*)
       arguments+=("$1")
+      ;;
+    --stay-alive)
+      arguments+=("--stay-alive")
       ;;
     --remote-pid=*)
       arguments+=("$1")

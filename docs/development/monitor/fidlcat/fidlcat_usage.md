@@ -371,6 +371,18 @@ Finally fidlcat displays how the handle was closed:
 If fidlcat doesn't display that a handle is closed, that probably means that the program forgot to
 close it.
 
+## Continuous monitoring
+
+By default, fidlcat ends when all the monitored processes are ended.
+
+With the option `--stay-alive`, fidlcat doesn't automatically end (which means a control-c to end
+it).
+
+This is useful to monitor a service you want to restart. When launched, fidlcat will monitor the
+current version of the service. When the service is restarted, fidlcat stops monitoring the old
+process and then automatically monitors the new process. This way you can have all the messages
+exchanged when the service is restarted.
+
 ## Top protocols
 
 The options `--with=top` and `--with=top&lt;path&gt;` generate a view that groups the output by
