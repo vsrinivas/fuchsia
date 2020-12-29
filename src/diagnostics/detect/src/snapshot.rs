@@ -196,12 +196,7 @@ impl CrashReportHandler {
         warn!("Filing crash report, signature '{}'", payload.signature);
         let report = fidl_feedback::CrashReport {
             program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-            specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
-                fidl_feedback::GenericCrashReport {
-                    crash_signature: Some(payload.signature),
-                    ..fidl_feedback::GenericCrashReport::EMPTY
-                },
-            )),
+            crash_signature: Some(payload.signature),
             ..fidl_feedback::CrashReport::EMPTY
         };
 
@@ -243,12 +238,7 @@ mod tests {
                 report,
                 fidl_feedback::CrashReport {
                     program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-                    specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
-                        fidl_feedback::GenericCrashReport {
-                            crash_signature: Some(crash_report_signature.to_string()),
-                            ..fidl_feedback::GenericCrashReport::EMPTY
-                        },
-                    )),
+                    crash_signature: Some(crash_report_signature.to_string()),
                     ..fidl_feedback::CrashReport::EMPTY
                 }
             );
@@ -312,12 +302,7 @@ mod tests {
                     report,
                     fidl_feedback::CrashReport {
                         program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-                        specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
-                            fidl_feedback::GenericCrashReport {
-                                crash_signature: Some("TestCrash1".to_string()),
-                                ..fidl_feedback::GenericCrashReport::EMPTY
-                            },
-                        )),
+                        crash_signature: Some("TestCrash1".to_string()),
                         ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
@@ -335,12 +320,7 @@ mod tests {
                     report,
                     fidl_feedback::CrashReport {
                         program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-                        specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
-                            fidl_feedback::GenericCrashReport {
-                                crash_signature: Some("TestCrash2".to_string()),
-                                ..fidl_feedback::GenericCrashReport::EMPTY
-                            },
-                        )),
+                        crash_signature: Some("TestCrash2".to_string()),
                         ..fidl_feedback::CrashReport::EMPTY
                     }
                 );

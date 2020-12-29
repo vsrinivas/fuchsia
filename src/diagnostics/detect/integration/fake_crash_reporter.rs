@@ -31,7 +31,7 @@ impl FakeCrashReporter {
 }
 
 fn evaluate_report(report: &fcrash::CrashReport) -> Result<String, Error> {
-    let fcrash::CrashReport { program_name, specific_report, .. } = report;
+    let fcrash::CrashReport { program_name, crash_signature, .. } = report;
     if program_name != &Some(REPORT_PROGRAM_NAME.to_string()) {
         bail!(
             "Crash report program name should be {} but it was {:?}",
@@ -39,18 +39,9 @@ fn evaluate_report(report: &fcrash::CrashReport) -> Result<String, Error> {
             program_name
         );
     }
-    if let Some(specific_report) = specific_report {
-        match specific_report {
-            fcrash::SpecificCrashReport::Generic(generic_report) => {
-                match &generic_report.crash_signature {
-                    Some(signature) => return Ok(signature.to_string()),
-                    None => bail!("Signature was None"),
-                }
-            }
-            _ => bail!("Crash report should have been Generic but was {:?}", specific_report),
-        }
-    } else {
-        bail!("Crash report contained no specific_report");
+    match crash_signature {
+        Some(signature) => return Ok(signature.to_string()),
+        None => bail!("Crash report crash signature was None"),
     }
 }
 

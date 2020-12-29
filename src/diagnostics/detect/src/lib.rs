@@ -123,7 +123,7 @@ fn appropriate_check_interval(
 
 fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
     // Character and length restrictions are documented in
-    // https://fuchsia.dev/reference/fidl/fuchsia.feedback#GenericCrashReport
+    // https://fuchsia.dev/reference/fidl/fuchsia.feedback#CrashReport
     let sanitized: String = snapshot
         .signature
         .chars()
