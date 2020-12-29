@@ -5,6 +5,11 @@
 import("$zx_build/public/gn/migrated_targets.gni")
 
 zx_library("gfx") {
+  if (zx != "/") {
+    # Required by the Fuchsia build, but the Zircon build doesn't support
+    # libraries with 'kernel = true' && 'sdk = "source"'.
+    kernel = true
+  }
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
   sdk_migrated = true

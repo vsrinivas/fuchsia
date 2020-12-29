@@ -4,7 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("ktrace") {
+import("$zx_build/public/gn/migrated_targets.gni")
+
+zx_library("ktrace") {
   kernel = true
   sources = [
     "ktrace.cc",
@@ -38,6 +40,8 @@ config("suppress-warning.config") {
     "$zx/system/ulib/*",
     "$zx/third_party/lib/*",
     "$zx/third_party/ulib/*",
+    "//build/config/fuchsia:*",
+    "//build/config/sanitizers:*",
   ]
   if (!is_gcc) {
     # Silence warning in Clang about GNU extension used in string_ref.h.

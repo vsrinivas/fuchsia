@@ -20,9 +20,14 @@ asan_mapping_offset = "0xdffffff000000000"
 
 _asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
 _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
-is_asan = toolchain.configs + _asan_config - _asan_config != toolchain.configs
+if (zx == "/") {
+  _toolchain_configs = toolchain.configs
+} else {
+  _toolchain_configs = toolchain_variant.configs
+}
+is_asan = _toolchain_configs + _asan_config - _asan_config != _toolchain_configs
 is_sancov =
-    toolchain.configs + _sancov_config - _sancov_config != toolchain.configs
+    _toolchain_configs + _sancov_config - _sancov_config != _toolchain_configs
 
 source_set("asan") {
   if (is_asan) {

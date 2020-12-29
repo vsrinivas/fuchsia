@@ -12,5 +12,6 @@ source_set("nxp-imx") {
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/debuglog",
+    "$zx/system/ulib/zxc:zx",
   ]
 }

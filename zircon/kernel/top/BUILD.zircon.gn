@@ -4,6 +4,11 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+if (zx != "/") {
+  # For zircon_cpu definition.
+  import("//build/unification/global_variables.gni")
+}
+
 source_set("top") {
   sources = [
     "debug.cc",

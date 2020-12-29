@@ -2117,7 +2117,12 @@ template("loadable_module") {
       output_file_name += ".$output_extension"
     }
     output_file = "$output_dir/$output_file_name"
-    link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+    if (zircon_toolchain != false) {
+      link_output_file =
+          "$output_dir/$output_file_name" + zircon_toolchain.link_output_suffix
+    } else {
+      link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+    }
 
     rebased_output_file = rebase_path(output_file, root_build_dir)
     rebased_link_output_file = rebase_path(link_output_file, root_build_dir)

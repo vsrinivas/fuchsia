@@ -27,6 +27,8 @@ config("ktl.config") {
     "$zx/system/ulib/*",
     "$zx/third_party/lib/*",
     "$zx/third_party/ulib/*",
+    "//build/config/fuchsia:*",
+    "//build/config/sanitizers:*",
   ]
 
   defines = [
