@@ -49,28 +49,9 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
         // Packet filter rules have various optional fields that can not be provided and the overall
         // filter rule is still valid. For example, missing a source IP address is not an error. We
         // have to distinguish between empty fields and invalid values.
-        let src_address = src_address
-            .as_ref()
-            .map(|s| {
-                s.try_into().map_err(|e| {
-                    error::NetworkManager::Config(error::Config::Malformed {
-                        msg: format!("Failed to convert ip filter rule: {:?}", e),
-                    })
-                })
-            })
-            .transpose()?;
+        let src_address = src_address.as_ref().map(Into::into);
 
-        let dst_address = dst_address
-            .as_ref()
-            .map(|s| {
-                Some(s.try_into().map_err(|e| {
-                    error::NetworkManager::Config(error::Config::Malformed {
-                        msg: format!("Failed to convert ip filter rule: {:?}", e),
-                    })
-                }))
-            })
-            .flatten()
-            .transpose()?;
+        let dst_address = dst_address.as_ref().map(Into::into);
 
         // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
         let src_ports = src_ports.as_ref().map(|range| vec![range.into()]);
