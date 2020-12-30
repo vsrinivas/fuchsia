@@ -172,7 +172,7 @@ void Dump(const GptDevice* gpt, int* count) {
     return;
   }
   const gpt_partition_t* p;
-  char name[gpt::kGuidStrLength];
+  char name[gpt::kGuidCNameLength];
   char guid[gpt::kGuidStrLength];
   char id[gpt::kGuidStrLength];
   char flags_str[256];
@@ -183,12 +183,12 @@ void Dump(const GptDevice* gpt, int* count) {
     p = gpt->GetPartition(i);
     if (p == nullptr)
       break;
-    memset(name, 0, gpt::kGuidStrLength);
+    memset(name, 0, gpt::kGuidCNameLength);
     unsigned diff;
     ZX_ASSERT(gpt->GetDiffs(i, &diff) == ZX_OK);
     SetXY(diff & gpt::kGptDiffName, &X, &Y);
     printf("Partition %d: %s%s%s\n", i, X,
-           utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1), Y);
+           utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidCNameLength - 1), Y);
     SetXY(diff & (gpt::kGptDiffFirst | gpt::kGptDiffLast), &X, &Y);
     printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n", X, p->first,
            Y, X, p->last, Y, p->last - p->first + 1);
@@ -332,8 +332,9 @@ zx_status_t RemovePartition(const char* dev, uint32_t n) {
     fprintf(stderr, "Failed to get partition at index %u\n", n);
     return ZX_ERR_INVALID_ARGS;
   }
-  char name[gpt::kGuidStrLength];
-  utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(p->name), gpt::kGuidStrLength - 1);
+  char name[gpt::kGuidCNameLength];
+  memset(name, 0, gpt::kGuidCNameLength);
+  utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(p->name), gpt::kGuidCNameLength - 1);
   zx_status_t status;
   if ((status = gpt->RemovePartition(p->guid)) != ZX_OK) {
     fprintf(stderr, "Failed to remove partiton: %s\n", zx_status_get_string(status));
