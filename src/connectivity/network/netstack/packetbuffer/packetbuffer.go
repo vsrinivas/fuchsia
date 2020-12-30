@@ -9,7 +9,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-// OutboundToInbound coverts a PacketBuffer that conforms to the
+// OutboundToInbound converts a PacketBuffer that conforms to the
 // contract of WritePacket to one that conforms to the contract of
 // DeliverNetworkPacket/InjectInbound/etc.
 //
@@ -23,7 +23,7 @@ func OutboundToInbound(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 	}
 }
 
-// Convert pkt to a single View.
+// ToView converts pkt to a single View.
 func ToView(pkt *stack.PacketBuffer) buffer.View {
 	vv := buffer.NewVectorisedView(pkt.Size(), pkt.Views())
 	return vv.ToView()
