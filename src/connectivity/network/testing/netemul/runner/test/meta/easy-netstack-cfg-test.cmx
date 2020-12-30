@@ -74,7 +74,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/easy_netstack_cfg_test"
+        "binary": "TODO(https://fxbug.dev/66956): properly support manifest-only tests"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx"
 }

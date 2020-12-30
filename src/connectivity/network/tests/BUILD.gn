@@ -117,25 +117,21 @@ fuchsia_component("connect") {
   deps = [ "connect" ]
 }
 
-fuchsia_component("netstack_external_network_test_client_component") {
-  component_name = "netstack_external_network_test_client"
-  testonly = true
-  manifest = "meta/netstack_external_network_test_client.cmx"
-  deps = [ ":netstack_external_network_test_client" ]
+fuchsia_unittest_component("connect_test") {
+  deps = [ ":connect" ]
+  manifest = "meta/connect_test.cmx"
 }
 
-manifest_only_tests = [
-  "connect",
-  "netstack_external_network",
-]
+fuchsia_component("netstack_external_network_test_client_component") {
+  testonly = true
+  component_name = "netstack_external_network_test_client"
+  deps = [ ":netstack_external_network_test_client" ]
+  manifest = "meta/netstack_external_network_test_client.cmx"
+}
 
-foreach(test, manifest_only_tests) {
-  name = "${test}_test"
-  fuchsia_component("${name}_component") {
-    component_name = name
-    testonly = true
-    manifest = "meta/${name}.cmx"
-  }
+fuchsia_unittest_component("netstack_external_network_test") {
+  deps = [ ":netstack_external_network_test_client_component" ]
+  manifest = "meta/netstack_external_network_test.cmx"
 }
 
 tests = [
@@ -148,29 +144,25 @@ tests = [
 
 foreach(test, tests) {
   name = "${test}_test"
-  fuchsia_component("${name}_component") {
+  fuchsia_unittest_component("${name}_component") {
     component_name = name
-    testonly = true
-    manifest = "meta/${name}.cmx"
     deps = [ ":${name}" ]
+    manifest = "meta/${name}.cmx"
   }
 }
 
 fuchsia_test_package("netstack-c-api-tests-inner") {
   package_name = "netstack-c-api-tests"
 
-  test_components = []
-  foreach(test, manifest_only_tests) {
-    test_components += [ ":${test}_test_component" ]
-  }
+  test_components = [
+    ":connect_test",
+    ":netstack_external_network_test",
+  ]
   foreach(test, tests) {
     test_components += [ ":${test}_test_component" ]
   }
 
   deps = [
-    ":connect",
-    ":netstack_external_network_test_client_component",
-
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
 

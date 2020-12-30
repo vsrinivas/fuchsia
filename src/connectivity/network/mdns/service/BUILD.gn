@@ -222,19 +222,19 @@ executable("mdns_netemul_test_agent") {
 }
 
 fuchsia_component("mdns_netemul_test_agent_component") {
-  component_name = "mdns_netemul_test_agent"
   testonly = true
+  component_name = "mdns_netemul_test_agent"
   deps = [ ":mdns_netemul_test_agent" ]
   manifest = "meta/mdns_netemul_test_agent.cmx"
 }
 
-fuchsia_component("mdns_netemul_test") {
-  testonly = true
+fuchsia_unittest_component("mdns_netemul_test") {
+  deps = [ ":mdns_netemul_test_agent_component" ]
   manifest = "meta/mdns_netemul_test.cmx"
 }
 
-fuchsia_component("mdns_netemul_v6_test") {
-  testonly = true
+fuchsia_unittest_component("mdns_netemul_v6_test") {
+  deps = [ ":mdns_netemul_test_agent_component" ]
   manifest = "meta/mdns_netemul_v6_test.cmx"
 }
 
@@ -255,14 +255,14 @@ executable("mdns_netemul_multi_network_test_agent") {
 }
 
 fuchsia_component("mdns_netemul_multi_network_test_agent_component") {
-  component_name = "mdns_netemul_multi_network_test_agent"
   testonly = true
+  component_name = "mdns_netemul_multi_network_test_agent"
   deps = [ ":mdns_netemul_multi_network_test_agent" ]
   manifest = "meta/mdns_netemul_multi_network_test_agent.cmx"
 }
 
-fuchsia_component("mdns_netemul_multi_network_test") {
-  testonly = true
+fuchsia_unittest_component("mdns_netemul_multi_network_test") {
+  deps = [ ":mdns_netemul_multi_network_test_agent_component" ]
   manifest = "meta/mdns_netemul_multi_network_test.cmx"
 }
 
@@ -274,8 +274,6 @@ fuchsia_test_package("mdns-netemul-tests") {
   ]
   deps = [
     ":component",
-    ":mdns_netemul_multi_network_test_agent_component",
-    ":mdns_netemul_test_agent_component",
     "//src/connectivity/network/netstack:component-debug",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",

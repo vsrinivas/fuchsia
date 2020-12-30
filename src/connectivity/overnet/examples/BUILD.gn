@@ -14,14 +14,17 @@ group("examples") {
 }
 
 fuchsia_unittest_component("overnet_echo_test") {
+  deps = [ "echo:component" ]
   manifest = "meta/overnet_echo_test.cmx"
 }
 
 fuchsia_unittest_component("overnet_interface_passing_test") {
+  deps = [ "interface_passing:component" ]
   manifest = "meta/overnet_interface_passing_test.cmx"
 }
 
 fuchsia_unittest_component("overnet_socket_passing_test") {
+  deps = [ "socket_passing:component" ]
   manifest = "meta/overnet_socket_passing_test.cmx"
 }
 
@@ -32,9 +35,6 @@ fuchsia_test_package("overnet-examples-tests") {
     ":overnet_socket_passing_test",
   ]
   deps = [
-    "echo:component",
-    "interface_passing:component",
-    "socket_passing:component",
     "//src/connectivity/network/mdns/service:component",
     "//src/connectivity/network/netstack:component-debug",
     "//src/connectivity/network/testing/netemul/runner:mock-device-settings",

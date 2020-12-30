@@ -56,7 +56,7 @@ run it:
 ```json
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "TODO(shayba): properly support manifest-only tests"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
     "facets" : {
@@ -95,7 +95,7 @@ by injecting it into your test component's environment. Your component's cmx man
         }
     },
     "program": {
-        "binary": "test/my_test"
+        "binary": "path/to/test/binary"
     },
     "sandbox": {
         "services": [
