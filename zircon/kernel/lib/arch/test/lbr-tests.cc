@@ -487,12 +487,8 @@ void TestEnabling() {
 
   arch::testing::FakeCpuidIo cpuid;
   // Intel as the vendor.
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEax, TestCase::kCpuidVersionValue)
-      // Has the PDCM feature flag.
-      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
+  cpuid.Populate(0x0, 0x0, 0x0, 0x756e'6547, 0x6c65'746e, 0x4965'6e69)
+      .Populate(0x1, 0x0, TestCase::kCpuidVersionValue, 0x0, /* has PDCM */ uint32_t{1} << 15, 0x0);
 
   arch::LbrStack stack(cpuid);
 
@@ -543,12 +539,8 @@ void TestIteration(uint32_t top_of_stack) {
 
   arch::testing::FakeCpuidIo cpuid;
   // Intel as the vendor.
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEax, TestCase::kCpuidVersionValue)
-      // Has the PDCM feature flag.
-      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
+  cpuid.Populate(0x0, 0x0, 0x0, 0x756e'6547, 0x6c65'746e, 0x4965'6e69)
+      .Populate(0x1, 0x0, TestCase::kCpuidVersionValue, 0x0, /* has PDCM */ uint32_t{1} << 15, 0x0);
 
   arch::LbrStack stack(cpuid);
 
@@ -664,12 +656,8 @@ TEST(LbrStackTests, UnknownSystem) {
   auto& msrIo = *msrMock.io();
 
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111)
-      // Has the PDCM feature flag.
-      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
+  cpuid.Populate(0x0, 0x0, 0x0, 0x1234'4321, 0xabcd'dcba, 0x5678'8765)
+      .Populate(0x1, 0x0, 0x11111111, 0x0, /* has PDCM */ uint32_t{1} << 15, 0x0);
 
   arch::LbrStack stack(cpuid);
 
@@ -691,11 +679,8 @@ TEST(LbrStackTests, PdcmUnsupported) {
   // A Haswell S, but with PDCM no longer a feature... from, say, a microcode
   // update?
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x000306d0)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, 0);
+  cpuid.Populate(0x0, 0x0, 0x0, 0x756e'6547, 0x6c65'746e, 0x4965'6e69)
+      .Populate(0x1, 0x0, 0x000306d0, 0x0, 0x0, 0x0);
 
   arch::LbrStack stack(cpuid);
 

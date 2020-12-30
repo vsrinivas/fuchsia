@@ -13,12 +13,8 @@ namespace {
 
 TEST(FakeCpuidIoTests, Get) {
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0014)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, 0x7ffe'fbff)
-      .Populate(0x1, 0x0, arch::CpuidIo::kEdx, 0xbfeb'fbff);
+  cpuid.Populate(0x0, 0x0, 0x0000'0014, 0x756e'6547, 0x6c65'746e, 0x4965'6e69)
+      .Populate(0x1, 0x0, 0x0, 0x0, 0x7ffe'fbff, 0xbfeb'fbff);
 
   // Access by various types corresponding to leaf 0x0 should all yield the
   // same CpuidIo* - and its values should coincide with those provided above.
@@ -44,15 +40,15 @@ TEST(FakeCpuidIoTests, Get) {
 
   auto* io1 = io1C;
   ASSERT_NOT_NULL(io1);
-  EXPECT_EQ(0, io1->values_[arch::CpuidIo::kEax]);  // Unpopulated.
-  EXPECT_EQ(0, io1->values_[arch::CpuidIo::kEbx]);  // Unpopulated.
+  EXPECT_EQ(0x0, io1->values_[arch::CpuidIo::kEax]);
+  EXPECT_EQ(0x0, io1->values_[arch::CpuidIo::kEbx]);
   EXPECT_EQ(0x7ffe'fbff, io1->values_[arch::CpuidIo::kEcx]);
   EXPECT_EQ(0xbfeb'fbff, io1->values_[arch::CpuidIo::kEdx]);
 }
 
 TEST(FakeCpuidIoTests, Read) {
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0014);
+  cpuid.Populate(0x0, 0x0, 0x0000'0014, 0x0, 0x0, 0x0);
 
   auto* io = cpuid.Get<arch::CpuidMaximumLeaf>();
   ASSERT_NOT_NULL(io);
@@ -64,13 +60,13 @@ TEST(FakeCpuidIoTests, Read) {
 
 TEST(FakeCpuidIoTests, PopulateOverwrites) {
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0014);
+  cpuid.Populate(0x0, 0x0, 0x0000'0014, 0x0, 0x0, 0x0);
 
   auto* io = cpuid.Get<arch::CpuidMaximumLeaf>();
   ASSERT_NOT_NULL(io);
 
   EXPECT_EQ(0x0000'0014, io->values_[arch::CpuidIo::kEax]);
-  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0020);
+  cpuid.Populate(0x0, 0x0, 0x0000'0020, 0x0, 0x0, 0x0);
   EXPECT_EQ(0x0000'0020, io->values_[arch::CpuidIo::kEax]);
 }
 

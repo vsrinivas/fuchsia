@@ -42,10 +42,10 @@ class FakeCpuidIo {
     return CpuidValue::Get().ReadFrom(Get<CpuidValue>());
   }
 
-  // Provides dummy data for a given return register of a particular
-  // (leaf, subleaf), where `reg` must be one of the `arch::CpuidIo::Register`
-  // values. Subsequent calls can overwrite previously populated data.
-  FakeCpuidIo& Populate(uint32_t leaf, uint32_t subleaf, uint32_t reg, uint32_t value);
+  // Provides dummy data for a given leaf. Subsequent calls can overwrite
+  // previously populated data.
+  FakeCpuidIo& Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax, uint32_t ebx, uint32_t ecx,
+                        uint32_t edx);
 
  private:
   // An intrusive data structure wrapping a CpuidIo object, required to store

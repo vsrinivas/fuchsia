@@ -80,12 +80,9 @@ void PopulateFromFile(std::string_view filename, arch::testing::FakeCpuidIo* cpu
     ASSERT_TRUE(entry["ebx"].IsUint());
     ASSERT_TRUE(entry["ecx"].IsUint());
     ASSERT_TRUE(entry["edx"].IsUint());
-    uint32_t leaf = entry["leaf"].GetUint();
-    uint32_t subleaf = entry["subleaf"].GetUint();
-    cpuid->Populate(leaf, subleaf, arch::CpuidIo::kEax, entry["eax"].GetUint())
-        .Populate(leaf, subleaf, arch::CpuidIo::kEbx, entry["ebx"].GetUint())
-        .Populate(leaf, subleaf, arch::CpuidIo::kEcx, entry["ecx"].GetUint())
-        .Populate(leaf, subleaf, arch::CpuidIo::kEdx, entry["edx"].GetUint());
+    const uint32_t leaf = entry["leaf"].GetUint();
+    cpuid->Populate(leaf, entry["subleaf"].GetUint(), entry["eax"].GetUint(),
+                    entry["ebx"].GetUint(), entry["ecx"].GetUint(), entry["edx"].GetUint());
 
     hypervisor_leaves = hypervisor_leaves || (0x4000'0000 <= leaf && leaf < 0x8000'0000);
   }
@@ -95,10 +92,7 @@ void PopulateFromFile(std::string_view filename, arch::testing::FakeCpuidIo* cpu
   // we stub in one with garbage values, which ensures that we are doing
   // proper feature testing, e.g., in creating an arch::HypervisorName.
   if (!hypervisor_leaves) {
-    cpuid->Populate(0x4000'0000, 0x0, arch::CpuidIo::kEax, 0xaaaa'aaaa)
-        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEbx, 0xbbbb'bbbb)
-        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEcx, 0xcccc'cccc)
-        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEdx, 0xdddd'dddd);
+    cpuid->Populate(0x4000'0000, 0x0, 0xaaaa'aaaa, 0xbbbb'bbbb, 0xcccc'cccc, 0xdddd'dddd);
   }
 }
 

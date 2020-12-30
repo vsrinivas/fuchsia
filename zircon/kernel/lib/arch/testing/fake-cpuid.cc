@@ -16,19 +16,25 @@ const CpuidIo* FakeCpuidIo::Get(uint32_t leaf, uint32_t subleaf) const {
   return it == map_.end() ? &empty_ : &(it->cpuid_);
 }
 
-FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, uint32_t reg, uint32_t value) {
-  ZX_ASSERT((reg == CpuidIo::kEax) || (reg == CpuidIo::kEbx) || (reg == CpuidIo::kEcx) ||
-            (reg == CpuidIo::kEdx));
-  auto key = Key(leaf, subleaf);
+FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax, uint32_t ebx,
+                                   uint32_t ecx, uint32_t edx) {
+  auto populate = [&eax, &ebx, &ecx, &edx](CpuidIo& io) {
+    io.values_[CpuidIo::kEax] = eax;
+    io.values_[CpuidIo::kEbx] = ebx;
+    io.values_[CpuidIo::kEcx] = ecx;
+    io.values_[CpuidIo::kEdx] = edx;
+  };
+
+  const auto key = Key(leaf, subleaf);
   if (auto it = map_.find(key); it == map_.end()) {
     fbl::AllocChecker ac;
     std::unique_ptr<Hashable> hashable(new (&ac) Hashable{});
     ZX_DEBUG_ASSERT(ac.check());
     hashable->key_ = key;
-    hashable->cpuid_.values_[reg] = value;
+    populate(hashable->cpuid_);
     map_.insert(std::move(hashable));
   } else {
-    it->cpuid_.values_[reg] = value;
+    populate(it->cpuid_);
   }
   return *this;
 }
