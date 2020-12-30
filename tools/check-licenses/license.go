@@ -121,6 +121,19 @@ func (l *License) Search(data []byte, path string) bool {
 	return false
 }
 
+func (l *License) Equal(other *License) bool {
+	if l.pattern.String() != other.pattern.String() {
+		return false
+	}
+	if l.Category != other.Category {
+		return false
+	}
+	if l.ValidType != other.ValidType {
+		return false
+	}
+	return true
+}
+
 // getAuthorMatches returns contributors and authors.
 func getAuthorMatches(data []byte) map[string]struct{} {
 	set := map[string]struct{}{}

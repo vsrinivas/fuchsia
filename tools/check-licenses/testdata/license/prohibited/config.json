@@ -1,0 +1,28 @@
+{
+   "skipFiles":[
+      ".gitignore"
+   ],
+   "skipDirs":[
+      ".git"
+   ],
+   "textExtensionList":[],
+   "maxReadSize":6144,
+   "outputFilePrefix":"NOTICE",
+   "outputFileExtension":"txt",
+   "singleLicenseFiles":[
+      "LICENSE"
+   ],
+   "licensePatternDir":"licenses/simple/patterns",
+   "baseDir":".",
+   "target":"all",
+   "logLevel":"verbose",
+   "customProjectLicenses":[
+      {
+         "projectRoot":"test",
+         "licenseLocation":"test"
+      }
+   ],
+   "prohibitedLicenseTypes" :[
+    "example"
+  ]
+}
