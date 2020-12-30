@@ -40,8 +40,8 @@ class LinuxPlatformConnectionClient : public PlatformConnectionClient {
 
   uint32_t GetNotificationChannelHandle() override { return 0; }
 
-  magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
-                                         size_t* buffer_size_out) override;
+  magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size, size_t* buffer_size_out,
+                                         magma_bool_t* more_data_out) override;
 
   void ExecuteCommandBufferWithResources(uint32_t context_id,
                                          magma_system_command_buffer* command_buffer,

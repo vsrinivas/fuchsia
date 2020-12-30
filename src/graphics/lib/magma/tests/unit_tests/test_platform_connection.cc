@@ -26,6 +26,8 @@ constexpr uint32_t kImmediateCommandCount = 128;
 // The total size of all commands should not be a multiple of the receive buffer size.
 constexpr uint32_t kImmediateCommandSize = 2048 * 3 / 2 / kImmediateCommandCount;
 
+constexpr uint32_t kNotificationData = 5;
+
 static inline int page_size() { return sysconf(_SC_PAGESIZE); }
 
 }  // namespace
@@ -258,7 +260,7 @@ class TestPlatformConnection {
   void TestNotificationChannel() {
     FlowControlSkip();
 
-    // A notification is written when the Ipc thread starts up (SetNotificationCallback),
+    // Notification messages are written when the Ipc thread starts up (SetNotificationCallback),
     // so wait for it.
     {
       // Handle ownership isn't transferred, so we release it below.
@@ -283,23 +285,32 @@ class TestPlatformConnection {
     {
       uint8_t buffer_too_small;
       uint64_t out_data_size;
+      magma_bool_t more_data;
       magma_status_t status = client_connection_->ReadNotificationChannel(
-          &buffer_too_small, sizeof(buffer_too_small), &out_data_size);
+          &buffer_too_small, sizeof(buffer_too_small), &out_data_size, &more_data);
       EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, status);
-      EXPECT_EQ(sizeof(uint32_t), out_data_size);
     }
 
     uint32_t out_data;
     uint64_t out_data_size;
-    magma_status_t status =
-        client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+    magma_bool_t more_data = false;
+    magma_status_t status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                                        &out_data_size, &more_data);
     EXPECT_EQ(MAGMA_STATUS_OK, status);
     EXPECT_EQ(sizeof(out_data), out_data_size);
-    EXPECT_EQ(5u, out_data);
+    EXPECT_EQ(kNotificationData, out_data);
+    EXPECT_EQ(true, more_data);
+
+    status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                         &out_data_size, &more_data);
+    EXPECT_EQ(MAGMA_STATUS_OK, status);
+    EXPECT_EQ(sizeof(out_data), out_data_size);
+    EXPECT_EQ(kNotificationData + 1, out_data);
+    EXPECT_EQ(false, more_data);
 
     // No more data to read.
-    status =
-        client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+    status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                         &out_data_size, &more_data);
     EXPECT_EQ(MAGMA_STATUS_OK, status);
     EXPECT_EQ(0u, out_data_size);
 
@@ -309,8 +320,8 @@ class TestPlatformConnection {
     ipc_thread_.join();
     EXPECT_TRUE(shared_data.got_null_notification);
 
-    status =
-        client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
+    status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                         &out_data_size, &more_data);
     EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
     shared_data.test_complete = true;
   }
@@ -534,10 +545,13 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
       // server shuts down.
       shared_data.got_null_notification = true;
     } else {
-      uint32_t data = 5;
       msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
-      *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = data;
-      n.u.channel_send.size = sizeof(data);
+      *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = kNotificationData;
+      n.u.channel_send.size = sizeof(uint32_t);
+      callback(token, &n);
+
+      // Change data and send another message
+      *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = kNotificationData + 1;
       callback(token, &n);
     }
   }

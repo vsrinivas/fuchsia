@@ -144,8 +144,16 @@ uint32_t magma_get_notification_channel_handle(magma_connection_t connection) {
 
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out) {
+  magma_bool_t more_data_dummy;
   return magma::PlatformConnectionClient::cast(connection)
-      ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out);
+      ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out, &more_data_dummy);
+}
+
+magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer,
+                                                uint64_t buffer_size, uint64_t* buffer_size_out,
+                                                magma_bool_t* more_data_out) {
+  return magma::PlatformConnectionClient::cast(connection)
+      ->ReadNotificationChannel(buffer, buffer_size, buffer_size_out, more_data_out);
 }
 
 magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
@@ -270,6 +278,7 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
                                                  struct magma_system_command_buffer* command_buffer,
                                                  struct magma_system_exec_resource* resources,
                                                  uint64_t* semaphore_ids) {
+  // printf("magma_execute_command_buffer_with_resources\n");
   if (command_buffer->resource_count > 0) {
     DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->resource_count);
 

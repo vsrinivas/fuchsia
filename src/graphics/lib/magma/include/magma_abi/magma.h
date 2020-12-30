@@ -298,8 +298,8 @@ magma_handle_t magma_get_notification_channel_handle(
     magma_connection_t connection);
 
 ///
-/// \brief Reads a notification from the channel into the given buffer.  Message sizes may vary
-///        depending on the MSD.  If the buffer provided is too small for the message,
+/// \brief Deprecated. Reads a notification from the channel into the given buffer.  Message sizes
+///        may vary depending on the MSD.  If the buffer provided is too small for the message,
 ///        MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in
 ///        the buffer_size_out parameter.
 /// \param connection An open connection.
@@ -571,6 +571,25 @@ magma_status_t magma_get_buffer_handle(
     magma_connection_t connection,
     magma_buffer_t buffer,
     magma_handle_t* handle_out);
+
+///
+/// \brief Reads a notification from the channel into the given buffer.  Message sizes may vary
+///        depending on the MSD.  If the buffer provided is too small for the message,
+///        MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in
+///        the buffer_size_out parameter.
+/// \param connection An open connection.
+/// \param buffer Buffer into which to read notification data.
+/// \param buffer_size Size of the given buffer.
+/// \param buffer_size_out Returned size of the notification data written to the buffer, or 0 if
+///        there are no messages pending.
+/// \param more_data_out True if there is more notification data waiting.
+///
+magma_status_t magma_read_notification_channel2(
+    magma_connection_t connection,
+    void* buffer,
+    uint64_t buffer_size,
+    uint64_t* buffer_size_out,
+    magma_bool_t* more_data_out);
 
 #if defined(__cplusplus)
 }
