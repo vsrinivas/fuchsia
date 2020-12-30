@@ -1336,7 +1336,7 @@ using bar as baz;
 
 TEST(LintFindingsTests, invalid_copyright_for_platform_source_library) {
   TemplateString copyright_template(
-      R"FIDL(// Copyright ${YYYY} The Fuchsia Authors. All rights reserved.
+      R"FIDL(// Copyright ${YYYY} The Fuchsia Authors.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.)FIDL");
   auto copyright_2019 = copyright_template.Substitute({{"YYYY", "2019"}});
@@ -1348,6 +1348,17 @@ TEST(LintFindingsTests, invalid_copyright_for_platform_source_library) {
       .message(
           "FIDL files defined in the Platform Source Tree (i.e., defined in "
           "fuchsia.googlesource.com) must begin with the standard copyright notice");
+
+  test.source_template(copyright_2019 + R"FIDL(
+
+library fidl.a;
+)FIDL");
+  ASSERT_NO_FINDINGS(test);
+
+  TemplateString copyright_with_all_rights_reserved(
+      R"FIDL(// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.)FIDL");
 
   test.source_template(copyright_2019 + R"FIDL(
 

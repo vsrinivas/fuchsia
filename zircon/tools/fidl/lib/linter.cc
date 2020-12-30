@@ -309,7 +309,9 @@ void Linter::AddInvalidCopyrightFinding(SourceSpan span) {
 
 void Linter::CheckInvalidCopyright(SourceSpan span, std::string line_comment,
                                    std::string line_to_match) {
-  if (line_comment == line_to_match) {
+  if (line_comment == line_to_match ||
+      // TODO(66908): Remove this branch once all platform FIDL files are updated.
+      line_comment == line_to_match + " All rights reserved.") {
     good_copyright_lines_found_++;
     return;
   }
@@ -393,7 +395,8 @@ Linter::Linter()
                       "FIDL files defined in the Platform Source Tree (i.e., defined in "
                       "fuchsia.googlesource.com) must begin with the standard copyright notice")),
       kCopyrightLines({
-          "// Copyright ${YYYY} The Fuchsia Authors. All rights reserved.",
+          // First line may also contain " All rights reserved."
+          "// Copyright ${YYYY} The Fuchsia Authors.",
           "// Use of this source code is governed by a BSD-style license that can be",
           "// found in the LICENSE file.",
       }),
