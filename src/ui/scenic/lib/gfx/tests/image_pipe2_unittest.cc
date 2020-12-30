@@ -329,6 +329,16 @@ TEST_F(ImagePipe2Test, BufferCollectionIndexMustBeValid) {
   ExpectLastReportedError("AddImage: buffer_collection_index out of bounds");
 }
 
+// Remove image where image_id is not registered.
+TEST_F(ImagePipe2Test, RemoveImageIdMustBeValid) {
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
+
+  const uint32_t kImageId = 2;
+  image_pipe_->RemoveImage(kImageId);
+
+  ExpectLastReportedError("RemoveImage: Could not find image with id=2.");
+}
+
 // Removing buffer collection removes associated images.
 TEST_F(ImagePipe2Test, RemoveBufferCollectionRemovesImages) {
   auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);

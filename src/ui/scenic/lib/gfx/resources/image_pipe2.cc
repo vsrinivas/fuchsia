@@ -230,6 +230,7 @@ void ImagePipe2::RemoveImage(uint32_t image_id) {
   auto image_it = images_.find(image_id);
   if (image_it == images_.end()) {
     error_reporter_->ERROR() << __func__ << ": Could not find image with id=" << image_id << ".";
+    return;
   }
 
   if (image_it->second->use_protected_memory()) {
