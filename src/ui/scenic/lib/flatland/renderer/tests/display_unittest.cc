@@ -103,7 +103,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   flatland::VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
   zx_status_t status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
@@ -200,7 +200,7 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
   const uint32_t kNumVmos = 2;
 
   // First create the pair of sysmem tokens, one for the client, one for the display.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Set the display constraints on the display controller.
   fuchsia::hardware::display::ImageConfig image_config = {

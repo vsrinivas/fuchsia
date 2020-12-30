@@ -28,6 +28,18 @@ bool ImportBufferCollection(sysmem_util::GlobalBufferCollectionId identifier,
 DisplayEventId ImportEvent(const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
                            const zx::event& event);
 
+// Returns true if the display controller backend is capable of image capture (i.e.
+// screenshotting).
+bool IsCaptureSupported(const fuchsia::hardware::display::ControllerSyncPtr& display_controller);
+
+// Imports an image to be used for capture (i.e. screenshotting) of the display controller. This
+// function returns the internal image id used by the display controller for the image. On failure,
+// this function returns a value of 0 for the image id.
+uint64_t ImportImageForCapture(
+    const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+    const fuchsia::hardware::display::ImageConfig& image_config,
+    sysmem_util::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx);
+
 }  // namespace scenic_impl
 
 #endif  // SRC_UI_SCENIC_LIB_DISPLAY_UTIL_H_

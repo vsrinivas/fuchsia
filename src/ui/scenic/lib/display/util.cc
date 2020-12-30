@@ -62,4 +62,50 @@ DisplayEventId ImportEvent(const fuchsia::hardware::display::ControllerSyncPtr& 
   return event_id;
 }
 
+bool IsCaptureSupported(const fuchsia::hardware::display::ControllerSyncPtr& display_controller) {
+  fuchsia::hardware::display::Controller_IsCaptureSupported_Result capture_supported_result;
+  auto status = display_controller->IsCaptureSupported(&capture_supported_result);
+
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "IsCaptureSupported status failure: " << status;
+    return false;
+  }
+
+  if (!capture_supported_result.is_response()) {
+    FX_LOGS(ERROR) << "IsCaptureSupported did not return a valid response.";
+    return false;
+  }
+
+  return capture_supported_result.response().supported;
+}
+
+uint64_t ImportImageForCapture(
+    const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+    const fuchsia::hardware::display::ImageConfig& image_config,
+    sysmem_util::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx) {
+  if (buffer_collection_id == 0) {
+    FX_LOGS(ERROR) << "Buffer collection id is 0.";
+    return 0;
+  }
+
+  if (image_config.type != fuchsia::hardware::display::TYPE_CAPTURE) {
+    FX_LOGS(ERROR) << "Image config type must be TYPE_CAPTURE.";
+    return 0;
+  }
+
+  fuchsia::hardware::display::Controller_ImportImageForCapture_Result import_result;
+  auto status = display_controller->ImportImageForCapture(image_config, buffer_collection_id,
+                                                          vmo_idx, &import_result);
+
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "FIDL transport error, status: " << status;
+    return 0;
+  } else if (import_result.is_err()) {
+    FX_LOGS(ERROR) << "FIDL server error response: " << import_result.err();
+    return 0;
+  } else {
+    return import_result.response().image_id;
+  }
+}
+
 }  // namespace scenic_impl

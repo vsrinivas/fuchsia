@@ -92,6 +92,8 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] =
       fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+
+  // Compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888.
   image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
@@ -108,6 +110,31 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
   FX_DCHECK(status == ZX_OK);
 
   return buffer_collection;
+}
+
+void MapHostPointer(const fuchsia::sysmem::BufferCollectionInfo_2& collection_info,
+                    uint32_t vmo_idx, std::function<void(uint8_t*, uint32_t)> callback) {
+  // If the vmo idx is out of bounds pass in a nullptr and 0 bytes back to the caller.
+  if (vmo_idx >= collection_info.buffer_count) {
+    callback(nullptr, 0);
+    return;
+  }
+
+  const zx::vmo& vmo = collection_info.buffers[vmo_idx].vmo;
+  auto vmo_bytes = collection_info.settings.buffer_settings.size_bytes;
+  FX_DCHECK(vmo_bytes > 0);
+
+  uint8_t* vmo_host = nullptr;
+  auto status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, /*vmar_offset*/ 0,
+                                           vmo, /*vmo_offset*/ 0, vmo_bytes,
+                                           reinterpret_cast<uintptr_t*>(&vmo_host));
+  FX_DCHECK(status == ZX_OK);
+  callback(vmo_host, vmo_bytes);
+
+  // Unmap the pointer.
+  uintptr_t address = reinterpret_cast<uintptr_t>(vmo_host);
+  status = zx::vmar::root_self()->unmap(address, vmo_bytes);
+  FX_DCHECK(status == ZX_OK);
 }
 
 }  // namespace flatland

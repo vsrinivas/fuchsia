@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/ui/scenic/lib/flatland/buffers/util.h"
+
 namespace flatland {
 namespace test {
 
@@ -28,31 +30,13 @@ class BufferCollectionTest : public ::testing::Test {
     ::testing::Test::TearDown();
   }
 
-  struct SysmemTokens {
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-  };
-
-  SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-    zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
-    EXPECT_EQ(status, ZX_OK);
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-    status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
-    EXPECT_EQ(status, ZX_OK);
-    status = local_token->Sync();
-    EXPECT_EQ(status, ZX_OK);
-
-    return {std::move(local_token), std::move(dup_token)};
-  }
-
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 // Test the creation of a buffer collection that doesn't have any additional vulkan
 // constraints to show that it doesn't need vulkan to be valid.
 TEST_F(BufferCollectionTest, CreateCollectionTest) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = SysmemTokens::Create(sysmem_allocator_.get());
   auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 }
@@ -65,7 +49,7 @@ TEST_F(BufferCollectionTest, CreateCollectionTest) {
 // out the dummy token inside the call to WaitUntilAllocated() that this is enough to ensure
 // that we can still allocate the buffer collection.
 TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = SysmemTokens::Create(sysmem_allocator_.get());
   auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 
@@ -157,7 +141,7 @@ TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
 // with the constraints set on the server-side by the renderer, then waiting on
 // the buffers to be allocated should fail.
 TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = SysmemTokens::Create(sysmem_allocator_.get());
   auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 

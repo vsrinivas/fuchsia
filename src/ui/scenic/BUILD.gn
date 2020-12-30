@@ -61,6 +61,7 @@ test_package("scenic_tests") {
     "lib/display/tests",
     "lib/flatland/buffers/tests",
     "lib/flatland/engine/tests",
+    "lib/flatland/engine/tests/pixeltests",
     "lib/flatland/renderer/tests",
     "lib/flatland/tests",
     "lib/gfx/tests",
@@ -82,6 +83,17 @@ test_package("scenic_tests") {
         max_severity = "ERROR"
       }
       name = "flatland_buffers_unittests"
+    },
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+
+      # Ensures that only devices that have access
+      # to display controller image capture features
+      # can run this test suite.
+      name = "flatland_engine_pixeltests"
+      environments = [ astro_env ]
     },
     {
       log_settings = {

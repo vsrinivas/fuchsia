@@ -11,6 +11,26 @@ namespace flatland {
 
 extern const fuchsia::sysmem::BufferUsage kNoneUsage;
 
+struct SysmemTokens {
+  // Token for setting client side constraints.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+
+  // Token for setting server side constraints.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+
+  static SysmemTokens Create(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+    zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+    status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+    status = local_token->Sync();
+    FX_DCHECK(status == ZX_OK);
+    return {std::move(local_token), std::move(dup_token)};
+  }
+};
+
 // TODO(fxbug.dev/55193): The default memory constraints set by Sysmem only allows using
 // CPU domain for buffers with CPU usage, while Mali driver asks for only
 // RAM and Inaccessible domains for buffer allocation, which caused failure in
@@ -36,6 +56,15 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
     uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,
     std::optional<fuchsia::sysmem::BufferMemoryConstraints> memory_constraints = std::nullopt);
+
+// Maps a sysmem vmo's bytes into host memory that can be accessed via a callback function. The
+// callback provides the caller with a raw pointer to the vmo memory as well as an int for the
+// number of bytes. If an out of bounds vmo_idx is provided, the callback function will call the
+// user callback with mapped_ptr equal to nullptr. Once the callback function returns, the host
+// pointer is unmapped and so cannot continue to be used outside of the scope of the callback.
+void MapHostPointer(const fuchsia::sysmem::BufferCollectionInfo_2& collection_info,
+                    uint32_t vmo_idx,
+                    std::function<void(uint8_t* mapped_ptr, uint32_t num_bytes)> callback);
 
 }  // namespace flatland
 

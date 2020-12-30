@@ -47,7 +47,7 @@ VK_TEST_F(MemoryTest, SimpleTest) {
   auto image_create_info =
       escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
@@ -98,7 +98,7 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
   auto image_create_info =
       escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
@@ -147,7 +147,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
       escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
   // First create the pair of sysmem tokens, one for the client, one for the server.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Create the buffer collection struct and set the server-side vulkan constraints.
   flatland::BufferCollectionInfo server_collection;
@@ -224,9 +224,9 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     const zx::vmo& image_vmo = client_collection_info.buffers[0].vmo;
     auto image_vmo_bytes = client_collection_info.settings.buffer_settings.size_bytes;
     ASSERT_TRUE(image_vmo_bytes > 0);
-    auto status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                             0, image_vmo, 0, image_vmo_bytes,
-                                             reinterpret_cast<uintptr_t*>(&vmo_host));
+    auto status =
+        zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                   image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_host));
     EXPECT_EQ(status, ZX_OK);
     memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
   }

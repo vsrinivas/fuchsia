@@ -2,37 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/engine/engine.h"
-
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async-testing/test_loop.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/async/default.h>
-#include <lib/fdio/directory.h>
-#include <lib/syslog/cpp/macros.h>
-#include <lib/zx/eventpair.h>
-
-#include <limits>
-#include <thread>
-
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
-#include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
+#include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/mock_display_controller.h"
-#include "src/ui/scenic/lib/flatland/flatland.h"
-#include "src/ui/scenic/lib/flatland/global_image_data.h"
-#include "src/ui/scenic/lib/flatland/global_matrix_data.h"
-#include "src/ui/scenic/lib/flatland/global_topology_data.h"
-#include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
-
-#include <glm/gtx/matrix_transform_2d.hpp>
 
 using ::testing::_;
 using ::testing::Return;
@@ -53,22 +25,13 @@ using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
 
-namespace {
+namespace flatland {
+namespace test {
 
-class EngineTest : public gtest::RealLoopFixture {
+class EngineTest : public EngineTestBase {
  public:
-  EngineTest()
-      : uber_struct_system_(std::make_shared<UberStructSystem>()),
-        link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
-
   void SetUp() override {
-    gtest::RealLoopFixture::SetUp();
-
-    // Create the SysmemAllocator.
-    zx_status_t status = fdio_service_connect(
-        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
-
-    async_set_default_dispatcher(dispatcher());
+    EngineTestBase::SetUp();
 
     renderer_ = std::make_shared<flatland::NullRenderer>();
 
@@ -84,178 +47,27 @@ class EngineTest : public gtest::RealLoopFixture {
     mock_display_controller_->Bind(std::move(device_channel_server),
                                    std::move(controller_channel_server));
 
-    auto unique_display_controller =
-        std::make_unique<fuchsia::hardware::display::ControllerSyncPtr>();
-    unique_display_controller->Bind(std::move(controller_channel_client));
+    auto shared_display_controller =
+        std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
+    shared_display_controller->Bind(std::move(controller_channel_client));
 
-    engine_ = std::make_unique<flatland::Engine>(std::move(unique_display_controller), renderer_,
-                                                 link_system_, uber_struct_system_);
+    engine_ = std::make_unique<flatland::Engine>(std::move(shared_display_controller), renderer_,
+                                                 link_system(), uber_struct_system());
   }
 
   void TearDown() override {
-    sysmem_allocator_ = nullptr;
     renderer_.reset();
     engine_.reset();
     mock_display_controller_.reset();
 
-    // Move the channel to a local variable which will go out of scope
-    // and close when this function returns.
-    auto local = local_.release();
-
-    gtest::RealLoopFixture::TearDown();
-  }
-
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
-    zx::channel remote;
-    zx::channel::create(0, &local_, &remote);
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token{std::move(remote)};
-    return token;
-  }
-
-  class FakeFlatlandSession {
-   public:
-    FakeFlatlandSession(const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                        const std::shared_ptr<LinkSystem>& link_system, EngineTest* harness)
-        : uber_struct_system_(uber_struct_system),
-          link_system_(link_system),
-          harness_(harness),
-          id_(uber_struct_system_->GetNextInstanceId()),
-          graph_(id_),
-          queue_(uber_struct_system_->AllocateQueueForSession(id_)) {}
-
-    // Use the TransformGraph API to create and manage transforms and their children.
-    TransformGraph& graph() { return graph_; }
-
-    // Returns the link_origin for this session.
-    TransformHandle GetLinkOrigin() {
-      EXPECT_TRUE(parent_link_.has_value());
-      return parent_link_.value().parent_link.link_origin;
-    }
-
-    // Clears the ParentLink for this session, if one exists.
-    void ClearParentLink() { parent_link_.reset(); }
-
-    // Holds the ContentLink and LinkSystem::ChildLink objects since if they fall out of scope,
-    // the LinkSystem will delete the link. Tests should add |child_link.link_handle| to their
-    // TransformGraphs to use the ChildLink in a topology.
-    struct ChildLink {
-      fidl::InterfacePtr<ContentLink> content_link;
-      LinkSystem::ChildLink child_link;
-
-      // Returns the handle the parent should add as a child in its local topology to include the
-      // link in the topology.
-      TransformHandle GetLinkHandle() const { return child_link.link_handle; }
-    };
-
-    // Links this session to |parent_session| and returns the ChildLink, which should be used with
-    // the parent session. If the return value drops out of scope, tests should call
-    // ClearParentLink() on this session.
-    ChildLink LinkToParent(FakeFlatlandSession& parent_session) {
-      // Create the tokens.
-      ContentLinkToken parent_token;
-      GraphLinkToken child_token;
-      EXPECT_EQ(zx::eventpair::create(0, &parent_token.value, &child_token.value), ZX_OK);
-
-      // Create the parent link.
-      fidl::InterfacePtr<GraphLink> graph_link;
-      LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
-          std::move(child_token), graph_link.NewRequest(), graph_.CreateTransform());
-
-      // Create the child link.
-      fidl::InterfacePtr<ContentLink> content_link;
-      LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
-          std::move(parent_token), LinkProperties(), content_link.NewRequest(),
-          parent_session.graph_.CreateTransform());
-
-      // Run the loop to establish the link.
-      harness_->RunLoopUntilIdle();
-
-      parent_link_ = ParentLink({
-          .graph_link = std::move(graph_link),
-          .parent_link = std::move(parent_link),
-      });
-
-      return ChildLink({
-          .content_link = std::move(content_link),
-          .child_link = std::move(child_link),
-      });
-    }
-
-    // Allocates a new UberStruct with a local_topology rooted at |local_root|. If this session has
-    // a ParentLink, the link_origin of that ParentLink will be used instead.
-    std::unique_ptr<UberStruct> CreateUberStructWithCurrentTopology(TransformHandle local_root) {
-      auto uber_struct = std::make_unique<UberStruct>();
-
-      // Only use the supplied |local_root| if no there is no ParentLink, otherwise use the
-      // |link_origin| from the ParentLink.
-      const TransformHandle root =
-          parent_link_.has_value() ? parent_link_.value().parent_link.link_origin : local_root;
-
-      // Compute the local topology and place it in the UberStruct.
-      auto local_topology_data =
-          graph_.ComputeAndCleanup(root, std::numeric_limits<uint64_t>::max());
-      EXPECT_NE(local_topology_data.iterations, std::numeric_limits<uint64_t>::max());
-      EXPECT_TRUE(local_topology_data.cyclical_edges.empty());
-
-      uber_struct->local_topology = local_topology_data.sorted_transforms;
-
-      return uber_struct;
-    }
-
-    // Pushes |uber_struct| to the UberStructSystem and updates the system so that it represents
-    // this session in the InstanceMap.
-    void PushUberStruct(std::unique_ptr<UberStruct> uber_struct) {
-      EXPECT_FALSE(uber_struct->local_topology.empty());
-      EXPECT_EQ(uber_struct->local_topology[0].handle.GetInstanceId(), id_);
-
-      queue_->Push(/*present_id=*/0, std::move(uber_struct));
-      uber_struct_system_->UpdateSessions({{id_, 0}});
-    }
-
-   private:
-    // Shared systems for all sessions.
-    std::shared_ptr<UberStructSystem> uber_struct_system_;
-    std::shared_ptr<LinkSystem> link_system_;
-
-    // The test harness to give access to RunLoopUntilIdle().
-    EngineTest* harness_;
-
-    // Data specific this session.
-    scheduling::SessionId id_;
-    TransformGraph graph_;
-    std::shared_ptr<UberStructSystem::UberStructQueue> queue_;
-
-    // Holds the GraphLink and LinkSystem::ParentLink objects since if they fall out of scope,
-    // the LinkSystem will delete the link. When |parent_link_| has a value, the
-    // |parent_link.link_origin| from this object is used as the root TransformHandle.
-    struct ParentLink {
-      fidl::InterfacePtr<GraphLink> graph_link;
-      LinkSystem::ParentLink parent_link;
-    };
-    std::optional<ParentLink> parent_link_;
-  };
-
-  FakeFlatlandSession CreateSession() {
-    return FakeFlatlandSession(uber_struct_system_, link_system_, this);
+    EngineTestBase::TearDown();
   }
 
  protected:
-  // Systems that are populated with data from Flatland instances.
-  const std::shared_ptr<UberStructSystem> uber_struct_system_;
-  const std::shared_ptr<LinkSystem> link_system_;
-  std::shared_ptr<flatland::NullRenderer> renderer_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
-  std::unique_ptr<flatland::Engine> engine_;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
-
- private:
-  zx::channel local_;
+  std::shared_ptr<flatland::NullRenderer> renderer_;
+  std::unique_ptr<flatland::Engine> engine_;
 };
-
-}  // namespace
-
-namespace flatland {
-namespace test {
 
 TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
   auto mock = mock_display_controller_.get();
@@ -447,7 +259,6 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   };
   parent_struct->images[parent_image_handle] = parent_image_metadata;
 
-  parent_struct->local_matrices[parent_image_handle] = glm::mat3(1);
   parent_struct->local_matrices[parent_image_handle] =
       glm::scale(glm::translate(glm::mat3(1.0), glm::vec2(9, 13)), glm::vec2(10, 20));
 
@@ -496,11 +307,12 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
     // - 2 calls to initialize layers
     // - 1 call to set the layers on the display
     // - 2 calls to set each layer image
+    // - 2 calls to set the layer primary config
+    // - 2 calls to set the layer primary alpha.
     // - 2 calls to set the layer primary positions
     // - 1 call to check the config
     // - 1 call to apply the config
-    // - 2 calls to cleanup the layers.
-    for (uint32_t i = 0; i < 15; i++) {
+    for (uint32_t i = 0; i < 17; i++) {
       mock->WaitForMessage();
     }
   });
@@ -544,29 +356,22 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   std::vector<uint64_t> layers = {1u, 2u};
   EXPECT_CALL(*mock, SetDisplayLayers(display_id, layers)).Times(1);
 
-  // Unfortunately, |fuchsia::hardware::display::Frame| doesn't have an equality operator, so
-  // we can't just pass in the values we're expecting into the function as parameters. We can
-  // still use fidl::Equals inside the function body, however.
-  EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[0], _, _, _))
-      .WillOnce(
-          testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
-                              fuchsia::hardware::display::Frame src_frame,
-                              fuchsia::hardware::display::Frame dest_frame) {
-            EXPECT_TRUE(fidl::Equals(src_frame, sources[0]));
-            EXPECT_TRUE(fidl::Equals(dest_frame, destinations[0]));
-          }));
-
-  EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[1], _, _, _))
-      .WillOnce(
-          testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
-                              fuchsia::hardware::display::Frame src_frame,
-                              fuchsia::hardware::display::Frame dest_frame) {
-            EXPECT_TRUE(fidl::Equals(src_frame, sources[1]));
-            EXPECT_TRUE(fidl::Equals(dest_frame, destinations[1]));
-          }));
-
-  EXPECT_CALL(*mock, SetLayerImage(layers[0], kChildDisplayImageId, _, _)).Times(1);
-  EXPECT_CALL(*mock, SetLayerImage(layers[1], kParentDisplayImageId, _, _)).Times(1);
+  // Make sure each layer has all of its components set properly.
+  uint64_t collection_ids[] = {kChildDisplayImageId, kParentDisplayImageId};
+  for (uint32_t i = 0; i < 2; i++) {
+    EXPECT_CALL(*mock, SetLayerPrimaryConfig(layers[i], _)).Times(1);
+    EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[i], _, _, _))
+        .WillOnce(
+            testing::Invoke([sources, destinations, index = i](
+                                uint64_t layer_id, fuchsia::hardware::display::Transform transform,
+                                fuchsia::hardware::display::Frame src_frame,
+                                fuchsia::hardware::display::Frame dest_frame) {
+              EXPECT_TRUE(fidl::Equals(src_frame, sources[index]));
+              EXPECT_TRUE(fidl::Equals(dest_frame, destinations[index]));
+            }));
+    EXPECT_CALL(*mock, SetLayerPrimaryAlpha(layers[i], _, _)).Times(1);
+    EXPECT_CALL(*mock, SetLayerImage(layers[i], collection_ids[i], _, _)).Times(1);
+  }
 
   EXPECT_CALL(*mock, CheckConfig(false, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
@@ -577,9 +382,6 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
       }));
 
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
-
-  EXPECT_CALL(*mock, DestroyLayer(layers[0])).Times(1);
-  EXPECT_CALL(*mock, DestroyLayer(layers[1])).Times(1);
 
   engine_->AddDisplay(display_id, parent_root_handle, resolution);
   engine_->RenderFrame();

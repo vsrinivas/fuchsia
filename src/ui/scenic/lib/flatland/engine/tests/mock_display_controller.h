@@ -46,9 +46,13 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   MOCK_METHOD1(ReleaseImage, void(uint64_t));
 
+  MOCK_METHOD2(SetLayerPrimaryConfig, void(uint64_t, fuchsia::hardware::display::ImageConfig));
+
   MOCK_METHOD4(SetLayerPrimaryPosition,
                void(uint64_t, fuchsia::hardware::display::Transform,
                     fuchsia::hardware::display::Frame, fuchsia::hardware::display::Frame));
+
+  MOCK_METHOD3(SetLayerPrimaryAlpha, void(uint64_t, fuchsia::hardware::display::AlphaMode, float));
 
   MOCK_METHOD1(CreateLayer, void(CreateLayerCallback));
 

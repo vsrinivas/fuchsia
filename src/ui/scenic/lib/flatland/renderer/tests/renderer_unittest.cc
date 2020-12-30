@@ -46,8 +46,8 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
 
 // Make sure a valid token can be used to register a buffer collection.
 void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator);
-  auto tokens2 = CreateSysmemTokens(sysmem_allocator);
+  auto tokens = SysmemTokens::Create(sysmem_allocator);
+  auto tokens2 = SysmemTokens::Create(sysmem_allocator);
 
   // First id should be valid.
   auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
@@ -64,7 +64,7 @@ void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync*
 // registered collections should be allocated (since they are just pointers that refer
 // to the same collection).
 void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator);
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator);
 
   // Create a client token to represent a single client.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr client_token;
@@ -124,7 +124,7 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
 // constraints, which should return std::nullopt, and then set the client constraints which
 // should cause Validate() to return a valid BufferCollectionMetadata struct.
 void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator);
+  auto tokens = SysmemTokens::Create(sysmem_allocator);
 
   auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
   auto result =
@@ -148,7 +148,7 @@ void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_
 // any zx::events just to make sure that the method's functionality itself is
 // working as intented.
 void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-  auto tokens = CreateSysmemTokens(sysmem_allocator);
+  auto tokens = SysmemTokens::Create(sysmem_allocator);
 
   auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
   auto result =
@@ -192,7 +192,7 @@ void MultithreadingTest(Renderer* renderer) {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
 
-    auto tokens = CreateSysmemTokens(sysmem_allocator.get());
+    auto tokens = SysmemTokens::Create(sysmem_allocator.get());
     auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
     bool result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator.get(),
                                                            std::move(tokens.local_token));
@@ -248,7 +248,7 @@ void MultithreadingTest(Renderer* renderer) {
 void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           bool use_vulkan) {
   // First create a pairs of sysmem tokens for the render target.
-  auto target_tokens = CreateSysmemTokens(sysmem_allocator);
+  auto target_tokens = SysmemTokens::Create(sysmem_allocator);
 
   // Register the render target with the renderer.
   fuchsia::sysmem::BufferCollectionInfo_2 target_info = {};
@@ -426,9 +426,9 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
-  auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register and validate the collection with the renderer.
   auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
@@ -579,9 +579,9 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
-  auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register and validate the collection with the renderer.
   auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();

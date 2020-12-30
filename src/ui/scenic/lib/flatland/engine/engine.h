@@ -16,9 +16,19 @@ namespace flatland {
 
 class Engine final : public BufferCollectionImporter {
  public:
-  Engine(std::unique_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
+  // TODO(fxbug.dev/66807): The engine has multiple parts of its code where usage of the display
+  // controller is protected by locks, because of the multithreaded environment of flatland.
+  // Ideally, we'd want the engine to have sole ownership of the display controller - meaning that
+  // it would require a unique_ptr instead of a shared_ptr. But since access to the real
+  // display controller is provided to clients via a shared_ptr, we take in a shared_ptr as
+  // a parameter here. However, this could cause problems with our locking mechanisms, as
+  // other display-controller clients could be accessing the same functions and/or state at
+  // the same time as the engine without making use of locks.
+  Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
          const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
          const std::shared_ptr<UberStructSystem>& uber_struct_system);
+
+  ~Engine() override;
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
@@ -73,10 +83,28 @@ class Engine final : public BufferCollectionImporter {
     glm::uvec2 pixel_scale;
   };
 
+  // Struct containing the data returned from the display controller upon calling CheckConfig().
+  struct DisplayConfigResponse {
+    fuchsia::hardware::display::ConfigResult result;
+    std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+  };
+
   // Gathers all of the flatland data and converts it all into a format that can be
   // directly converted into the data required by the display and the 2D renderer.
   // This is done per-display, so the result is a vector of per-display render data.
   std::vector<RenderData> ComputeRenderData();
+
+  // Sets the required number of layers on the display, depending on how many images
+  // are in the RenderData struct. Returns false if there are not enough layers for
+  // the amount of images provided.
+  bool SetLayers(const RenderData& data);
+
+  // Takes an image and directly composites it to a hardware layer on the display.
+  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image);
+
+  DisplayConfigResponse CheckConfig(bool discard);
+
+  void ApplyConfig();
 
   // Returns the image id used by the display controller.
   uint64_t InternalImageId(GlobalImageId image_id) const;
@@ -90,7 +118,7 @@ class Engine final : public BufferCollectionImporter {
   mutable std::mutex lock_;
 
   // Handle to the display controller interface.
-  std::unique_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
+  std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
 
   // Maps the flatland global image id to the image id used by the display controller.
   std::unordered_map<GlobalImageId, uint64_t> image_id_map_;
@@ -104,6 +132,9 @@ class Engine final : public BufferCollectionImporter {
 
   // Maps display unique ids to the displays' flatland specific data.
   std::unordered_map<uint64_t, DisplayInfo> display_map_;
+
+  // Maps a display to a vector of layers for that display.
+  std::unordered_map<uint64_t, std::vector<uint64_t>> display_layer_map_;
 };
 
 }  // namespace flatland

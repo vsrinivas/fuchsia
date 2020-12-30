@@ -14,23 +14,6 @@
 
 namespace flatland {
 
-struct SysmemTokens {
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-};
-
-static inline SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
-  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
-  EXPECT_EQ(status, ZX_OK);
-  status = local_token->Sync();
-  EXPECT_EQ(status, ZX_OK);
-  return {std::move(local_token), std::move(dup_token)};
-}
-
 // Common testing base class to be used across different unittests that
 // require Vulkan and a SysmemAllocator.
 class RendererTest : public escher::test::TestWithVkValidationLayer {
