@@ -1506,6 +1506,33 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 From //zircon/kernel/params.gni:62
 
+### kernel_version_git_checkout
+By default the kernel version string is generated based on the full git
+revision found by `git rev-parse HEAD` in this checkout directory.
+
+**Current value (from the default):** `"//zircon/.."`
+
+From //zircon/kernel/lib/version/BUILD.gn:20
+
+### kernel_version_git_dirty_check
+If this is true, then the kernel version string generated based on
+`kernel_version_git_checkout` also adds a "-dirty" suffix if any files in
+the checkout are modified from what's committed in git.
+
+**Current value (from the default):** `true`
+
+From //zircon/kernel/lib/version/BUILD.gn:25
+
+### kernel_version_string
+Version string embedded in the kernel for `zx_system_get_version_string`.
+If set to the default "", a string is generated based on the
+`kernel_version_git_checkout` and `kernel_version_git_dirty_check`
+settings, which see.
+
+**Current value (from the default):** `""`
+
+From //zircon/kernel/lib/version/BUILD.gn:16
+
 ### known_variants
 List of variants that will form the basis for variant toolchains.
 To make use of a variant, set [`select_variant`](#select_variant).
