@@ -62,7 +62,12 @@ env_vk_instance::SetUp()
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
   };
 
-  uint32_t const instance_enabled_layer_count     = ARRAY_LENGTH_MACRO(instance_enabled_layers);
+  // Previously, we tried to say:
+  //   instance_enabled_layer_count = ARRAY_LENGTH_MACRO(instance_enabled_layers);
+  // ... but this made the false assumption that vk_find_validation_layer() always
+  // returned non-null.  For now, limit the max # of layers to 1; revisit if necessary.
+  static_assert(ARRAY_LENGTH_MACRO(instance_enabled_layers) == 1, "only one layer is handled");
+  uint32_t const instance_enabled_layer_count     = instance_enabled_layers[0] ? 1 : 0;
   uint32_t const instance_enabled_extension_count = ARRAY_LENGTH_MACRO(instance_enabled_extensions);
 
   VkInstanceCreateInfo const instance_info = {

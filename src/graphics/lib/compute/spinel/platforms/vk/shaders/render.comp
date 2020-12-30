@@ -41,8 +41,6 @@
 #define SPN_RENDER_COLOR_UNPACK(rg32,ba32)                              \
   SPN_RENDER_TILE_COLOR(unpackHalf2x16(rg32),unpackHalf2x16(ba32));
 
-#define SPN_RENDER_COLOR_ACC_RGBA                   vec4
-
 //
 // HALF PRECISION FLOAT (FP16)
 //
@@ -62,8 +60,6 @@
 
 #define SPN_RENDER_COLOR_UNPACK(rg32,ba32)                              \
   SPN_RENDER_TILE_COLOR(unpackFloat2x16(rg32),unpackFloat2x16(ba32));
-
-#define SPN_RENDER_COLOR_ACC_RGBA                   f16vec4
 
 #else
 
@@ -1460,6 +1456,24 @@ spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg32,
 }
 
 //
+//
+//
+
+void
+spn_tile_cover_acc_linear_to_srgb() {
+  //
+  // acc.r = pow(acc.r, 1.0/2.2);
+  // acc.g = pow(acc.b, 1.0/2.2);
+  // acc.b = pow(acc.b, 1.0/2.2);
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) \
+  color_acc##I.rgb = pow(color_acc##I.rgb, SPN_RENDER_TILE_COLOR(1.0/2.2).rgb);
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+}
+
+//
 // Map accumulator register rows to surface coordinates
 //
 
@@ -2178,6 +2192,10 @@ main()
                       SPN_SUBGROUP_UNIFORM const uint ba = SPN_STYLING_CMDS_LOAD(++ii);
                       spn_tile_color_acc_over_background(rg, ba);
                     }
+                    break;
+
+                  case SPN_STYLING_OPCODE_COLOR_ACC_LINEAR_TO_SRGB:
+                    spn_tile_cover_acc_linear_to_srgb();
                     break;
 
                   case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE:

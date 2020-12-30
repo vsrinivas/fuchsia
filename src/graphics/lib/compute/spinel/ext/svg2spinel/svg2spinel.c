@@ -549,8 +549,8 @@ spn_svg_layers_decode(struct svg const * const   svg,
   //
   {
     spn_styling_cmd_t * cmds_leave;
-
-    spn(styling_group_leave(styling, group_id, 4, &cmds_leave));
+    const uint32_t ncmds_leave = is_srgb ? 5 : 4;
+    spn(styling_group_leave(styling, group_id, ncmds_leave, &cmds_leave));
 
     // white for now
     float const background[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -558,7 +558,12 @@ spn_svg_layers_decode(struct svg const * const   svg,
     // cmds[0-2]
     spn_styling_background_over_encoder(cmds_leave, background);
 
-    cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+    if (is_srgb) {
+      cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_LINEAR_TO_SRGB;
+      cmds_leave[4] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+    } else {
+      cmds_leave[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+    }
   }
 
   // this is the root group

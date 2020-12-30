@@ -607,6 +607,12 @@ void ::spinel::vk::test::PrintTo(const param_spinel_vk_render & render, std::ost
       << ")"
       << std::endl;
 
+  if (render.is_srgb) {
+    *os << "is_srgb:          "
+        << "true"
+        << std::endl;
+  }
+
   *os << "loops:            "
       << render.loops
       << std::endl;

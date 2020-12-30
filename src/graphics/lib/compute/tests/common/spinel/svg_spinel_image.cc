@@ -219,10 +219,14 @@ SvgSpinelImage::setupLayers()
 
   {
     spn_styling_cmd_t * cmds;
-    spn(styling_group_leave(styling, group_id, 4, &cmds));
+    const uint32_t ncmds = is_srgb ? 5 : 4;
+    spn(styling_group_leave(styling, group_id, ncmds, &cmds));
     const float background[4] = { 1., 1., 1., 1. };
     spn_styling_background_over_encoder(cmds, background);
-    cmds[3] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
+    if (is_srgb) {
+      cmds[ncmds - 2] = SPN_STYLING_OPCODE_COLOR_ACC_LINEAR_TO_SRGB;
+    }
+    cmds[ncmds - 1] = SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE;
   }
 
   uint32_t count    = 0;

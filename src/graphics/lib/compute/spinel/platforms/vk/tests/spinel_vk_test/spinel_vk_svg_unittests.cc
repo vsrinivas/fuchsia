@@ -535,7 +535,11 @@ param const params[] = {
         }
       },
       { 0xC2E4C3A9, {
-          { param::INTEL,  {}                    }  // all intel
+          { param::INTEL,  {}                    }  // intel non- kaby lake
+        }
+      },
+      { 0xC2E4C2A9, {
+          { param::INTEL,  {}                    }  // intel kaby lake
         }
       },
       { 0xC26C3E22, {
@@ -615,6 +619,24 @@ param const params[] = {
         "          />\n"
         "  </g>\n"
         "</svg>\n")
+  },
+  {
+    .name        = "srgb",
+    .surface     = { 600, 1024 },
+    .is_srgb     = true,
+    .checksums = {
+      { 0x434DF583, {} }
+    },
+    .test = std::make_shared<test>(R"SVG(
+      <svg version="1.1" xmlns="http://www.w3.org/2000/svg">
+        <rect width="600" height="1024" fill="gray"/>
+        <circle cx="16"  cy="512" r="16" fill="rgb(30, 30, 50)"/>
+        <circle cx="64"  cy="512" r="32" fill="rgb(30, 30, 50)"/>
+        <circle cx="160" cy="512" r="64" fill="rgb(30, 30, 50)"/>
+        <circle cx="352" cy="512" r="128" fill="rgb(30, 30, 50)"/>
+        <circle cx="736" cy="512" r="256" fill="rgb(30, 30, 50)"/>
+      </svg>
+    )SVG")
   },
 };
 
