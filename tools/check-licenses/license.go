@@ -15,18 +15,37 @@ import (
 	"unicode"
 )
 
-// License contains a searchable regex pattern for finding file matches in
-// tree.
-//
-// The Category field is the .lic name
+const (
+	cp     = `(?: ©| \(C\))`
+	date   = `[\d]{4}(?:\s|,|-|[\d]{4})*`
+	rights = `All Rights Reserved`
+)
+
+var (
+	reAuthor = regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)?`)
+
+	reCopyright = [...]*regexp.Regexp{
+		regexp.MustCompile(strings.ReplaceAll(
+			`(?i)Copyright`+cp+`? `+date+`[\s\\#\*\/]*(.*)(?: -)? `+rights, " ", `[\s\\#\*\/]*`)),
+		regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?: -)? ` + rights),
+		regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?:` + rights + `)?`),
+		regexp.MustCompile(`(?i)` + cp + ` ` + date + `[\s\\#\*\/]*(.*)(?:-)?`),
+		regexp.MustCompile(`(?i)Copyright` + cp + `? (.*?) ` + date),
+		regexp.MustCompile(`(?i)Copyright` + cp + `? by (.*) `),
+	}
+
+	reAuthors = regexp.MustCompile(`(?i)(?:Contributed|Written|Authored) by (.*) ` + date)
+)
+
+// License contains a searchable regex pattern for finding license text
+// in source files and LICENSE files across the repository.
 type License struct {
 	pattern   *regexp.Regexp
 	Category  string `json:"category"`
 	ValidType bool   `json:"valid license"`
 
-	mu           sync.Mutex
-	matches      map[string]*Match
-	matchChannel chan *Match
+	sync.Mutex
+	matches map[string]*Match
 }
 
 // Match is used to store a single match result alongside the License along
@@ -55,86 +74,51 @@ func NewLicense(path string, config *Config) (*License, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return &License{
-		pattern:      re,
-		Category:     filepath.Base(path),
-		ValidType:    contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
-		matches:      map[string]*Match{},
-		matchChannel: make(chan *Match, 10),
+		pattern:   re,
+		Category:  filepath.Base(path),
+		ValidType: contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
+		matches:   map[string]*Match{},
 	}, nil
 }
 
-func (l *License) AddMatch(m *Match) {
-	l.matchChannel <- m
-}
+func (l *License) Search(data []byte, path string) bool {
+	if m := l.pattern.Find(data); m != nil {
 
-func (l *License) MatchChannelWorker() {
-	for m := range l.matchChannel {
-		if m == nil {
-			break
+		// Extract the copyright author information from the text.
+		set := getAuthorMatches(data)
+		output := make([]string, 0, len(set))
+		for key := range set {
+			output = append(output, key)
 		}
-		l.mu.Lock()
-		if _, ok := l.matches[m.authors]; !ok {
+
+		// Sort the authors alphabetically and join them as one string.
+		sort.Strings(output)
+		authors := strings.Join(output, ", ")
+
+		// Replace < and > so that it doesn't cause special character highlights.
+		authors = strings.ReplaceAll(authors, "<", "&lt")
+		authors = strings.ReplaceAll(authors, ">", "&gt")
+
+		newMatch := &Match{
+			authors: authors,
+			value:   string(m),
+			files:   []string{path},
+		}
+
+		l.Lock()
+		if _, ok := l.matches[newMatch.authors]; !ok {
 			// Replace < and > so that it doesn't cause special character highlights.
-			p := strings.ReplaceAll(m.value, "<", "&lt")
+			p := strings.ReplaceAll(newMatch.value, "<", "&lt")
 			p = strings.ReplaceAll(p, ">", "&gt")
-			l.matches[m.authors] = &Match{authors: m.authors, value: p, files: m.files}
+			l.matches[newMatch.authors] = &Match{authors: newMatch.authors, value: p, files: newMatch.files}
 		} else {
-			l.matches[m.authors].files = append(l.matches[m.authors].files, m.files...)
+			l.matches[newMatch.authors].files = append(l.matches[newMatch.authors].files, newMatch.files...)
 		}
-		l.mu.Unlock()
+		l.Unlock()
+
+		return true
 	}
-}
-
-func (l *License) matchAuthors(matched string, data []byte, path string) {
-	set := getAuthorMatches(data)
-	output := make([]string, 0, len(set))
-	for key := range set {
-		output = append(output, key)
-	}
-	// Sort the authors alphabetically and join them as one string.
-	sort.Strings(output)
-	authors := strings.Join(output, ", ")
-	// Replace < and > so that it doesn't cause special character highlights.
-	authors = strings.ReplaceAll(authors, "<", "&lt")
-	authors = strings.ReplaceAll(authors, ">", "&gt")
-
-	newMatch := &Match{
-		authors: authors,
-		value:   matched,
-		files:   []string{path},
-	}
-	l.AddMatch(newMatch)
-}
-
-const cp = `(?: ©| \(C\))`
-const date = `[\d]{4}(?:\s|,|-|[\d]{4})*`
-const rights = `All Rights Reserved`
-
-var reAuthor = regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)?`)
-
-var reCopyright = [...]*regexp.Regexp{
-	regexp.MustCompile(strings.ReplaceAll(
-		`(?i)Copyright`+cp+`? `+date+`[\s\\#\*\/]*(.*)(?: -)? `+rights, " ", `[\s\\#\*\/]*`)),
-	regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?: -)? ` + rights),
-	regexp.MustCompile(`(?i)Copyright` + cp + `? ` + date + `(.*)(?:` + rights + `)?`),
-	regexp.MustCompile(`(?i)` + cp + ` ` + date + `[\s\\#\*\/]*(.*)(?:-)?`),
-	regexp.MustCompile(`(?i)Copyright` + cp + `? (.*?) ` + date),
-	regexp.MustCompile(`(?i)Copyright` + cp + `? by (.*) `),
-}
-
-var reAuthors = regexp.MustCompile(`(?i)(?:Contributed|Written|Authored) by (.*) ` + date)
-
-func parseAuthor(l string) string {
-	m := reAuthor.FindStringSubmatch(l)
-	if m == nil {
-		return ""
-	}
-	a := strings.TrimSpace(m[1])
-	const rights = " All rights reserved"
-	if strings.HasSuffix(a, rights) {
-		a = a[:len(a)-len(rights)]
-	}
-	return a
+	return false
 }
 
 // getAuthorMatches returns contributors and authors.

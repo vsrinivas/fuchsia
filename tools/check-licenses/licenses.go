@@ -63,10 +63,10 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 			continue
 		}
 		for _, match := range license.matches {
-			for _, file_path := range match.files {
-				if _, found := set[file_path]; !found {
-					set[file_path] = true
-					filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, file_path)
+			for _, path := range match.files {
+				if _, found := set[path]; !found {
+					set[path] = true
+					filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, path)
 				}
 			}
 		}
@@ -74,15 +74,13 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 	return filesWithProhibitedLicenses
 }
 
-func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, file_tree *FileTree) {
-	// TODO(solomonokinard) deduplicate Match*File()
+func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
 	for _, license := range l.licenses {
-		if m := license.pattern.Find(data); m != nil {
+		if license.Search(data, path) {
 			metrics.increment("num_single_license_file_match")
-			license.matchAuthors(string(m), data, path)
-			file_tree.Lock()
-			file_tree.SingleLicenseFiles[path] = append(file_tree.SingleLicenseFiles[path], license)
-			file_tree.Unlock()
+			ft.Lock()
+			ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], license)
+			ft.Unlock()
 		}
 	}
 }
@@ -92,9 +90,8 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Met
 // if there were no matches.
 func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, *License) {
 	for _, license := range l.licenses {
-		if m := license.pattern.Find(data); m != nil {
+		if license.Search(data, path) {
 			metrics.increment("num_licensed")
-			license.matchAuthors(string(m), data, path)
 			return true, license
 		}
 	}

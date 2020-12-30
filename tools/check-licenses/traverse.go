@@ -13,7 +13,6 @@ import (
 	"os"
 	"runtime/trace"
 	"strings"
-	"sync"
 	"time"
 
 	noticetxt "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt"
@@ -29,7 +28,6 @@ const exampleHeader = "# Copyright %d The Fuchsia Authors. All rights reserved.\
 // Walk gathers all Licenses then checks for a match within each filtered file
 func Walk(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
-	var wg sync.WaitGroup
 	metrics := NewMetrics()
 	file_tree, err := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
 	if err != nil {
@@ -40,14 +38,6 @@ func Walk(ctx context.Context, config *Config) error {
 		return err
 	}
 	unlicensedFiles := &UnlicensedFiles{}
-	for _, l := range licenses.licenses {
-		l := l
-		wg.Add(1)
-		go func() {
-			l.MatchChannelWorker()
-			wg.Done()
-		}()
-	}
 
 	r := trace.StartRegion(ctx, "singleLicenseFile walk")
 	for tree := range file_tree.getSingleLicenseFileIterator() {
@@ -93,12 +83,6 @@ func Walk(ctx context.Context, config *Config) error {
 		})
 	}
 	eg.Wait()
-
-	// Close each licenses's matchChannel goroutine by sending a nil object.
-	for _, l := range licenses.licenses {
-		l.AddMatch(nil)
-	}
-	wg.Wait()
 	r.End()
 
 	defer trace.StartRegion(ctx, "finalization").End()
@@ -182,11 +166,11 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 				for _, arr_license := range file_tree.SingleLicenseFiles {
 
 					for i, license := range arr_license {
-						license.mu.Lock()
+						license.Lock()
 						for author := range license.matches {
 							license.matches[author].files = append(license.matches[author].files, path)
 						}
-						license.mu.Unlock()
+						license.Unlock()
 						if i == 0 {
 							metrics.increment("num_one_file_matched_to_one_single_license")
 						}
