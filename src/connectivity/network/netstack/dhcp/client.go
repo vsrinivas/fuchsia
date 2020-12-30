@@ -704,31 +704,35 @@ func (c *Client) send(
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
+	attemptedResolution := false
 	for {
-		linkAddress, resCh, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
-		if resCh != nil {
-			if err != tcpip.ErrWouldBlock {
-				panic(fmt.Sprintf("err=%s inconsistent with presence of resCh", err))
+		linkAddress, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
+		switch err {
+		case nil:
+			if err := c.stack.WritePacketToRemote(
+				writeTo.NIC,
+				linkAddress,
+				header.IPv4ProtocolNumber,
+				b.View().ToVectorisedView(),
+			); err != nil {
+				return fmt.Errorf("failed to write packet: %s", err)
 			}
-			select {
-			case <-resCh:
-				continue
-			case <-ctx.Done():
-				return fmt.Errorf("client address resolution: %w", ctx.Err())
+			return nil
+		case tcpip.ErrWouldBlock:
+			if !attemptedResolution {
+				attemptedResolution = true
+				select {
+				case <-ch:
+					continue
+				case <-ctx.Done():
+					return fmt.Errorf("client address resolution: %w", ctx.Err())
+				}
 			}
-		}
-		if err != nil {
+			err = tcpip.ErrNoLinkAddress
+			fallthrough
+		default:
 			return fmt.Errorf("failed to resolve link address: %s", err)
 		}
-		if err := c.stack.WritePacketToRemote(
-			writeTo.NIC,
-			linkAddress,
-			header.IPv4ProtocolNumber,
-			b.View().ToVectorisedView(),
-		); err != nil {
-			return fmt.Errorf("failed to write packet: %s", err)
-		}
-		return nil
 	}
 }
 

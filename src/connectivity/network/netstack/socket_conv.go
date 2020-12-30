@@ -185,16 +185,13 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_BINDTODEVICE:
-		var v tcpip.BindToDeviceOption
-		if err := ep.GetSockOpt(&v); err != nil {
-			return nil, err
-		}
-		if v == tcpip.BindToDeviceOption(0) {
+		v := ep.SocketOptions().GetBindToDevice()
+		if v == 0 {
 			return []byte(nil), nil
 		}
 		nicInfos := ns.stack.NICInfo()
 		for id, info := range nicInfos {
-			if tcpip.BindToDeviceOption(id) == v {
+			if id == tcpip.NICID(v) {
 				return append([]byte(info.Name), 0), nil
 			}
 		}
@@ -547,15 +544,13 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 			n = len(optVal)
 		}
 		if n == 0 {
-			var opt tcpip.BindToDeviceOption
-			return ep.SetSockOpt(&opt)
+			return ep.SocketOptions().SetBindToDevice(0)
 		}
 		name := string(optVal[:n])
 		nicInfos := ns.stack.NICInfo()
 		for id, info := range nicInfos {
 			if name == info.Name {
-				opt := tcpip.BindToDeviceOption(id)
-				return ep.SetSockOpt(&opt)
+				return ep.SocketOptions().SetBindToDevice(int32(id))
 			}
 		}
 		return tcpip.ErrUnknownDevice

@@ -234,7 +234,9 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// underlying LinkEndpoint like MTU() will panic, but it would be
 	// extremely strange for the LinkEndpoint we're calling WritePacket on to
 	// access itself so indirectly.
-	r := stack.Route{LocalLinkAddress: srcLinkAddr, NetProto: protocol}
+	var r stack.Route
+	r.LocalLinkAddress = srcLinkAddr
+	r.NetProto = protocol
 	r.ResolveWith(dstLinkAddr)
 
 	// TODO(fxbug.dev/20778): Learn which destinations are on which links and restrict transmission, like a bridge.

@@ -334,9 +334,8 @@ func TestEndpoint(t *testing.T) {
 			// Test that we don't accidentally put unused bytes on the wire.
 			const packetHeader = "foo"
 			const body = "bar"
-			route := stack.Route{
-				LocalLinkAddress: localLinkAddress,
-			}
+			var route stack.Route
+			route.LocalLinkAddress = localLinkAddress
 			route.ResolveWith(remoteLinkAddress)
 			want := DeliverNetworkPacketArgs{
 				SrcLinkAddr: localLinkAddress,

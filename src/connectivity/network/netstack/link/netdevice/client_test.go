@@ -318,9 +318,8 @@ func TestWritePacket(t *testing.T) {
 	otherMac := getOtherMac()
 	const protocol = tcpip.NetworkProtocolNumber(45)
 	const pktBody = "bar"
-	route := stack.Route{
-		LocalLinkAddress: tcpip.LinkAddress(tunMac.Octets[:]),
-	}
+	var route stack.Route
+	route.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
 	route.ResolveWith(tcpip.LinkAddress(otherMac.Octets[:]))
 	if err := linkEndpoint.WritePacket(
 		&route,

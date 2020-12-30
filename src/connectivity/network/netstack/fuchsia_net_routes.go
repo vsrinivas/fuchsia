@@ -7,6 +7,7 @@
 package netstack
 
 import (
+	"context"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -28,7 +29,7 @@ type routesImpl struct {
 	stack *stack.Stack
 }
 
-func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.StateResolveResult, error) {
+func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (routes.StateResolveResult, error) {
 	const unspecifiedNIC = tcpip.NICID(0)
 	const unspecifiedLocalAddress = tcpip.Address("")
 
@@ -45,16 +46,31 @@ func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.
 		)
 		return routes.StateResolveResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
+	defer route.Release()
 	// Check if we need to resolve the link address for this route.
 	if route.IsResolutionRequired() {
+		attemptedResolution := false
 		for {
 			ch, err := route.Resolve(nil)
 			switch err {
 			case nil:
 			case tcpip.ErrWouldBlock:
-				// Wait for resolution.
-				<-ch
-				continue
+				if !attemptedResolution {
+					attemptedResolution = true
+					select {
+					case <-ch:
+						continue
+					case <-ctx.Done():
+						switch ctx.Err() {
+						case context.Canceled:
+							return routes.StateResolveResultWithErr(int32(zx.ErrCanceled)), nil
+						case context.DeadlineExceeded:
+							return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut)), nil
+						}
+					}
+				}
+				err = tcpip.ErrNoLinkAddress
+				fallthrough
 			default:
 				_ = syslog.InfoTf(
 					"fuchsia.net.routes", "route.Resolve(nil) returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
@@ -68,8 +84,8 @@ func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.
 			}
 			break
 		}
-
 	}
+
 	// Build our response with the resolved route.
 	var response routes.StateResolveResponse
 	var node routes.Destination
