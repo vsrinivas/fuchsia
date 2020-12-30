@@ -606,7 +606,7 @@ bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
   if (!ve->OnVmAddressRegion(root_vmar_.get(), 0)) {
     return false;
   }
-  return root_vmar_->EnumerateChildrenLocked(ve, 1);
+  return root_vmar_->EnumerateChildrenLocked(ve);
 }
 
 void DumpAllAspaces(bool verbose) {

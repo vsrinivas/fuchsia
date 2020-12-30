@@ -483,13 +483,13 @@ not_found:
 
 template <typename ON_VMAR, typename ON_MAPPING>
 bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr,
-                                                      uint depth, ON_VMAR on_vmar,
-                                                      ON_MAPPING on_mapping) {
+                                                      ON_VMAR on_vmar, ON_MAPPING on_mapping) {
   canary_.Assert();
   // TODO: Add annotations to remove this.
   AssertHeld(lock_ref());
 
-  const uint min_depth = depth;
+  constexpr uint kStartDepth = 1;
+  uint depth = kStartDepth;
   for (auto itr = subregions_.IncludeOrHigher(min_addr), end = subregions_.end();
        itr != end && itr->base() < max_addr;) {
     DEBUG_ASSERT(itr->IsAliveLocked());
@@ -519,7 +519,7 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
         continue;
       }
     }
-    if (depth > min_depth && itr == end) {
+    if (depth > kStartDepth && itr == end) {
       // If we are at a depth greater than the minimum, and have reached
       // the end of a sub-VMAR range, we ascend and continue iteration.
       do {
@@ -528,7 +528,7 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
           break;
         }
         up = up->parent_;
-      } while (depth-- != min_depth);
+      } while (depth-- != kStartDepth);
       if (!itr.IsValid()) {
         // If we have reached the end after ascending all the way up,
         // break out of the loop.
@@ -540,14 +540,14 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
   return true;
 }
 
-bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
+bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
   // TODO: Add annotations to remove this.
   AssertHeld(lock_ref());
 
   return EnumerateChildrenInternalLocked(
-      0, UINT64_MAX, depth,
+      0, UINT64_MAX,
       [ve](const VmAddressRegion* vmar, uint depth) {
         AssertHeld(vmar->lock_ref());
         return ve->OnVmAddressRegion(vmar, depth);
@@ -624,7 +624,7 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
     vaddr_t expected = base;
     zx_status_t result = ZX_OK;
     EnumerateChildrenInternalLocked(
-        base, last_addr, 1, [](VmAddressRegion* vmar, uint depth) { return true; },
+        base, last_addr, [](VmAddressRegion* vmar, uint depth) { return true; },
         [&expected, &result, &mapping_callback, last_addr](VmMapping* map, VmAddressRegion* vmar,
                                                            uint depth) {
           // It's possible base is less than expected if the first mapping is not precisely aligned

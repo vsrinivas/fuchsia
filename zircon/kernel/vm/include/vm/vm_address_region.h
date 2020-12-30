@@ -529,7 +529,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
-  bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
+  bool EnumerateChildrenLocked(VmEnumerator* ve);
 
   friend class VmMapping;
 
@@ -581,8 +581,8 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
                               vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max());
 
   template <typename ON_VMAR, typename ON_MAPPING>
-  bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, uint depth,
-                                       ON_VMAR on_vmar, ON_MAPPING on_mapping);
+  bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, ON_VMAR on_vmar,
+                                       ON_MAPPING on_mapping);
 
   RegionList<VmAddressRegionOrMapping> subregions_;
 
