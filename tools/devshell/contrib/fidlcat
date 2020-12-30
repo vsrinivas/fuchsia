@@ -360,6 +360,7 @@ if [[ ${launch_agent} -eq 1 ]]; then
   if launch_debug_agent "${port}" "" "${agent_out}"; then
     arguments+=("--connect" "$(get-device-addr-resource):${port}")
     arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
+    arguments+=("--quit-agent-on-exit")
     arguments+=("$@")
 
     if [[ ${use_gdb} -eq 1 ]]; then
@@ -370,14 +371,8 @@ if [[ ${launch_agent} -eq 1 ]]; then
       "${FUCHSIA_BUILD_DIR}/host-tools/fidlcat" ${arguments[@]}
     fi
 
-    # launch_debug_agent starts an agent in the background. Note: killing
-    # the ssh session as below generally won't terminate the agent, but
-    # it prevents us ending up with a zobmie on the host.
-    pids=$(jobs -p)
-    if [[ -n "${pids}" ]]; then
-      kill "${pids}" > /dev/null >&2
-      wait
-    fi
+    # --quit-agent-on-exit should quit the debug_agent so we just need to wait for ssh to terminate.
+    wait
   else
     fx-error "Could not launch debug agent. Exiting. Make sure you're running 'fx serve'."
     exit 1
