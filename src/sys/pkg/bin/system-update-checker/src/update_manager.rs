@@ -12,16 +12,20 @@ use crate::update_service::RealStateNotifier;
 use anyhow::{anyhow, Context as _, Error};
 use async_generator::GeneratorState;
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
-use fidl_fuchsia_update::CheckNotStartedReason;
+use fidl_fuchsia_update::{
+    CheckNotStartedReason, CommitStatusProviderMarker, CommitStatusProviderProxy,
+    InstallationDeferralReason,
+};
 use fidl_fuchsia_update_ext::{
-    CheckOptions, Initiator, InstallationErrorData, InstallationProgress, InstallingData, State,
-    UpdateInfo,
+    CheckOptions, Initiator, InstallationDeferredData, InstallationErrorData, InstallationProgress,
+    InstallingData, State, UpdateInfo,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_hash::Hash;
 use fuchsia_inspect as finspect;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     channel::{mpsc, oneshot},
     future::BoxFuture,
@@ -90,24 +94,32 @@ enum StatusEvent {
     VersionAvailableKnown(String),
 }
 
-pub struct UpdateManager<T, Ch, C, A, N>
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum CommitStatus {
+    Pending,
+    Committed,
+}
+
+pub struct UpdateManager<T, Ch, C, A, N, Cq>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
+    Cq: CommitQuerier,
 {
     monitor: UpdateMonitor<N>,
-    updater: SystemInterface<T, Ch, C, A>,
+    updater: SystemInterface<T, Ch, C, A, Cq>,
 }
 
-struct SystemInterface<T, Ch, C, A>
+struct SystemInterface<T, Ch, C, A, Cq>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
+    Cq: CommitQuerier,
 {
     target_channel_updater: Arc<T>,
     current_channel_updater: Arc<Ch>,
@@ -115,9 +127,12 @@ where
     update_applier: A,
     last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
     last_known_update_package: Option<Hash>,
+    commit_status: Option<CommitStatus>,
+    commit_querier: Cq,
 }
 
-impl<T, Ch> UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, RealStateNotifier>
+impl<T, Ch>
+    UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, RealStateNotifier, RealCommitQuerier>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
@@ -137,19 +152,21 @@ where
                 RealUpdateChecker,
                 RealUpdateApplier,
                 Arc::new(LastUpdateStorageFile { data_dir: "/data".into() }),
+                RealCommitQuerier,
             )
             .await,
         }
     }
 }
 
-impl<T, Ch, C, A, N> UpdateManager<T, Ch, C, A, N>
+impl<T, Ch, C, A, N, Cq> UpdateManager<T, Ch, C, A, N, Cq>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
+    Cq: CommitQuerier,
 {
     #[cfg(test)]
     pub async fn from_checker_and_applier(
@@ -158,6 +175,7 @@ where
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
+        commit_querier: Cq,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::new();
         fasync::Task::spawn(fut).detach();
@@ -170,6 +188,36 @@ where
                 update_applier,
                 last_update_storage,
                 None,
+                commit_querier,
+                None,
+            ),
+        }
+    }
+
+    #[cfg(test)]
+    async fn from_checker_and_applier_with_commit_status(
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
+        update_checker: C,
+        update_applier: A,
+        last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
+        commit_querier: Cq,
+        commit_status: Option<CommitStatus>,
+    ) -> Self {
+        let last_known_update_package = None;
+        let (fut, update_monitor) = UpdateMonitor::new();
+        fasync::Task::spawn(fut).detach();
+        Self {
+            monitor: update_monitor,
+            updater: SystemInterface::new(
+                target_channel_updater,
+                current_channel_updater,
+                update_checker,
+                update_applier,
+                last_update_storage,
+                last_known_update_package,
+                commit_querier,
+                commit_status,
             ),
         }
     }
@@ -182,6 +230,7 @@ where
         update_applier: A,
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
         last_known_update_package: Option<Hash>,
+        commit_querier: Cq,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::new();
         fasync::Task::spawn(fut).detach();
@@ -194,6 +243,8 @@ where
                 update_applier,
                 last_update_storage,
                 last_known_update_package,
+                commit_querier,
+                None,
             ),
         }
     }
@@ -354,12 +405,13 @@ async fn discover_last_update_package(
     None
 }
 
-impl<T, Ch, C, A> SystemInterface<T, Ch, C, A>
+impl<T, Ch, C, A, Cq> SystemInterface<T, Ch, C, A, Cq>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
+    Cq: CommitQuerier,
 {
     fn new(
         target_channel_updater: Arc<T>,
@@ -368,6 +420,8 @@ where
         update_applier: A,
         last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
         last_known_update_package: Option<Hash>,
+        commit_querier: Cq,
+        commit_status: Option<CommitStatus>,
     ) -> Self {
         Self {
             target_channel_updater,
@@ -376,6 +430,8 @@ where
             update_applier,
             last_known_update_package,
             last_update_storage,
+            commit_querier,
+            commit_status,
         }
     }
 
@@ -385,6 +441,7 @@ where
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
+        commit_querier: Cq,
     ) -> Self {
         let package_resolver = connect_to_service::<PackageResolverMarker>();
 
@@ -401,6 +458,8 @@ where
             update_applier,
             last_update_storage,
             last_known_update_package,
+            commit_querier,
+            None,
         )
     }
 
@@ -438,7 +497,6 @@ where
                     self.last_known_update_package = Some(update_package);
                     self.last_update_storage.store(&update_package);
                 }
-
                 self.current_channel_updater.update().await;
                 co.yield_(StatusEvent::State(State::NoUpdateAvailable)).await;
 
@@ -452,6 +510,39 @@ where
                 fx_log_info!("current system_image merkle: {}", current_system_image);
                 fx_log_info!("new system_image available: {}", latest_system_image);
                 let version_available = latest_system_image.to_string();
+
+                let status = match self.commit_status {
+                    Some(CommitStatus::Committed) => Ok(CommitStatus::Committed),
+                    Some(CommitStatus::Pending) | None => self
+                        .commit_querier
+                        .query_commit_status()
+                        .await
+                        .context("while querying commit status"),
+                };
+
+                match status {
+                    Ok(CommitStatus::Committed) => {
+                        self.commit_status = Some(CommitStatus::Committed);
+                    }
+                    Ok(CommitStatus::Pending) => {
+                        self.commit_status = Some(CommitStatus::Pending);
+                        co.yield_(StatusEvent::State(State::InstallationDeferredByPolicy(
+                            InstallationDeferredData {
+                                update: Some(UpdateInfo {
+                                    version_available: Some(version_available.clone()),
+                                    download_size: None,
+                                }),
+                                deferral_reason: Some(
+                                    InstallationDeferralReason::CurrentSystemNotCommitted,
+                                ),
+                            },
+                        )))
+                        .await;
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+
                 {
                     co.yield_(StatusEvent::VersionAvailableKnown(version_available.clone())).await;
                     co.yield_(StatusEvent::State(State::InstallingUpdate(InstallingData {
@@ -622,14 +713,48 @@ impl UpdateApplier for RealUpdateApplier {
     }
 }
 
+// For mocking.
+pub trait CommitQuerier: Send + Sync + 'static {
+    fn query_commit_status<'a>(&self) -> BoxFuture<'a, Result<CommitStatus, anyhow::Error>>;
+}
+
+pub struct RealCommitQuerier;
+
+impl CommitQuerier for RealCommitQuerier {
+    fn query_commit_status<'a>(&self) -> BoxFuture<'a, Result<CommitStatus, anyhow::Error>> {
+        async {
+            let provider = connect_to_service::<CommitStatusProviderMarker>()
+                .context("while connecting to commit status provider")?;
+            query_commit_status(&provider).await
+        }
+        .boxed()
+    }
+}
+
+async fn query_commit_status(
+    provider: &CommitStatusProviderProxy,
+) -> Result<CommitStatus, anyhow::Error> {
+    let event_pair = provider
+        .is_current_system_committed()
+        .await
+        .context("while calling is_current_system_committed")?;
+    match event_pair.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+        Ok(_) => Ok(CommitStatus::Committed),
+        Err(zx::Status::TIMED_OUT) => Ok(CommitStatus::Pending),
+        Err(status) => Err(anyhow!("unexpected status while asserting signal: {:?}", status)),
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
     use crate::errors;
     use event_queue::{ClosedClient, Notify};
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest};
     use fuchsia_async::{DurationExt, TimeoutExt};
-    use fuchsia_zircon as zx;
     use fuchsia_zircon::prelude::*;
+    use fuchsia_zircon::{self as zx};
     use futures::channel::mpsc::{channel, Receiver, Sender};
     use futures::channel::oneshot;
     use futures::future::BoxFuture;
@@ -840,6 +965,33 @@ pub(crate) mod tests {
     }
 
     #[derive(Clone)]
+    pub struct FakeCommitQuerier {
+        call_count: Arc<AtomicU64>,
+        committed: bool,
+    }
+
+    impl FakeCommitQuerier {
+        pub fn new() -> Self {
+            Self { call_count: Arc::new(AtomicU64::new(0)), committed: true }
+        }
+
+        pub fn new_pending() -> Self {
+            Self { call_count: Arc::new(AtomicU64::new(0)), committed: false }
+        }
+    }
+
+    impl CommitQuerier for FakeCommitQuerier {
+        fn query_commit_status<'a>(&self) -> BoxFuture<'a, Result<CommitStatus, anyhow::Error>> {
+            self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if self.committed {
+                future::ready(Ok(CommitStatus::Committed)).boxed()
+            } else {
+                future::ready(Ok(CommitStatus::Pending)).boxed()
+            }
+        }
+    }
+
+    #[derive(Clone)]
     pub struct UnreachableNotifier;
     impl Notify for UnreachableNotifier {
         type Event = State;
@@ -913,6 +1065,7 @@ pub(crate) mod tests {
         FakeUpdateChecker,
         FakeUpdateApplier,
         FakeStateNotifier,
+        FakeCommitQuerier,
     >;
 
     type BlockingManagerManager = UpdateManager<
@@ -921,6 +1074,7 @@ pub(crate) mod tests {
         BlockingUpdateChecker,
         FakeUpdateApplier,
         FakeStateNotifier,
+        FakeCommitQuerier,
     >;
 
     async fn next_n_states(receiver: &mut Receiver<State>, n: usize) -> Vec<State> {
@@ -939,11 +1093,81 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
 
         assert_eq!(manager.get_state().await, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_is_current_status_committed_called_when_none() {
+        let fake_commit_querier = FakeCommitQuerier::new();
+        let fidl_call_count = Arc::clone(&fake_commit_querier.call_count);
+
+        let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
+            fake_commit_querier,
+            None,
+        )
+        .await
+        .spawn();
+
+        let options = CheckOptions::builder().initiator(Initiator::User).build();
+        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_is_current_status_committed_called_when_pending() {
+        let fake_commit_querier = FakeCommitQuerier::new();
+        let fidl_call_count = Arc::clone(&fake_commit_querier.call_count);
+
+        let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
+            fake_commit_querier,
+            Some(CommitStatus::Pending),
+        )
+        .await
+        .spawn();
+
+        let options = CheckOptions::builder().initiator(Initiator::User).build();
+        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_is_current_status_committed_not_called_when_committed() {
+        let fake_commit_querier = FakeCommitQuerier::new();
+        let fidl_call_count = Arc::clone(&fake_commit_querier.call_count);
+
+        let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
+            fake_commit_querier,
+            Some(CommitStatus::Committed),
+        )
+        .await
+        .spawn();
+
+        let options = CheckOptions::builder().initiator(Initiator::User).build();
+        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 0);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -954,6 +1178,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -970,6 +1195,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -983,7 +1209,7 @@ pub(crate) mod tests {
         // dropped after the update attempt.
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
-            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable]
         );
     }
 
@@ -995,6 +1221,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1005,7 +1232,7 @@ pub(crate) mod tests {
 
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
-            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable]
         );
     }
 
@@ -1017,6 +1244,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1053,6 +1281,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1101,6 +1330,63 @@ pub(crate) mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_check_start_update_callback_when_update_available_and_pending() {
+        let mut manager = FakeUpdateManager::from_checker_and_applier(
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new_pending(),
+        )
+        .await
+        .spawn();
+        let (callback, mut receiver) = FakeStateNotifier::new_callback_and_receiver();
+
+        let options = CheckOptions::builder().initiator(Initiator::User).build();
+        manager.try_start_update(options, Some(callback)).await.unwrap();
+
+        assert_eq!(
+            next_n_states(&mut receiver, 2).await,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallationDeferredByPolicy(InstallationDeferredData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None
+                    }),
+                    deferral_reason: Some(InstallationDeferralReason::CurrentSystemNotCommitted)
+                }),
+            ]
+        );
+    }
+
+    // Verifies that query_commit_status returns the expected CommitStatus on various conditions.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_commit_status() {
+        let (proxy, mut stream) = create_proxy_and_stream::<CommitStatusProviderMarker>().unwrap();
+        let (p0, p1) = zx::EventPair::create().unwrap();
+
+        let fidl_server = fasync::Task::local(async move {
+            while let Some(Ok(req)) = stream.next().await {
+                let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
+                let () = responder.send(p1.duplicate_handle(zx::Rights::BASIC).unwrap()).unwrap();
+            }
+        });
+
+        // When no signals are asserted, we should report Pending.
+        assert_eq!(query_commit_status(&proxy).await.unwrap(), CommitStatus::Pending);
+
+        // When USER_0 is asserted, we should report Committed.
+        let () = p0.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+        assert_eq!(query_commit_status(&proxy).await.unwrap(), CommitStatus::Committed,);
+
+        // When there's an error with the FIDL server, we should return error.
+        drop(fidl_server);
+        assert_matches!(query_commit_status(&proxy).await, Err(_));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_channel_updater_called() {
         let channel_updater = Arc::new(FakeTargetChannelUpdater::new());
         let mut manager = UpdateManager::from_checker_and_applier(
@@ -1109,6 +1395,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1130,6 +1417,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1145,7 +1433,6 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_last_update_channel_stored_when_update_applied() {
         let last_update_storage = FakeLastUpdateStorage::new();
-
         let mut manager =
             FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
                 Arc::new(FakeTargetChannelUpdater::new()),
@@ -1154,6 +1441,7 @@ pub(crate) mod tests {
                 FakeUpdateApplier::new_error(),
                 last_update_storage.clone(),
                 Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
+                FakeCommitQuerier::new(),
             )
             .await
             .spawn();
@@ -1179,6 +1467,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1204,6 +1493,7 @@ pub(crate) mod tests {
                 FakeUpdateApplier::new_error(),
                 last_update_storage.clone(),
                 None,
+                FakeCommitQuerier::new(),
             )
             .await
             .spawn();
@@ -1231,6 +1521,7 @@ pub(crate) mod tests {
                 FakeUpdateApplier::new_error(),
                 last_update_storage.clone(),
                 Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
+                FakeCommitQuerier::new(),
             )
             .await
             .spawn();
@@ -1251,6 +1542,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1271,6 +1563,7 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1321,6 +1614,7 @@ pub(crate) mod tests {
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1352,6 +1646,7 @@ pub(crate) mod tests {
             blocking_update_checker,
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();
@@ -1378,6 +1673,7 @@ pub(crate) mod tests {
             blocking_update_checker,
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
+            FakeCommitQuerier::new(),
         )
         .await
         .spawn();

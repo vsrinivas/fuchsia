@@ -5,7 +5,8 @@
 use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::connect::ServiceConnector;
 use crate::update_manager::{
-    RealUpdateApplier, RealUpdateChecker, UpdateManager, UpdateManagerControlHandle,
+    RealCommitQuerier, RealUpdateApplier, RealUpdateChecker, UpdateManager,
+    UpdateManagerControlHandle,
 };
 use anyhow::{Context as _, Error};
 use event_queue::{ClosedClient, Notify};
@@ -22,6 +23,7 @@ pub type RealUpdateManager = UpdateManager<
     RealUpdateChecker,
     RealUpdateApplier,
     RealStateNotifier,
+    RealCommitQuerier,
 >;
 
 #[derive(Clone)]
@@ -106,11 +108,11 @@ impl Notify for RealStateNotifier {
 mod tests {
     use super::*;
     use crate::update_manager::tests::{
-        BlockingUpdateChecker, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
+        BlockingUpdateChecker, FakeCommitQuerier, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
         FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker, LATEST_SYSTEM_IMAGE,
     };
     use crate::update_manager::{
-        CurrentChannelUpdater, TargetChannelUpdater, UpdateApplier, UpdateChecker,
+        CommitQuerier, CurrentChannelUpdater, TargetChannelUpdater, UpdateApplier, UpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream};
@@ -119,26 +121,29 @@ mod tests {
     use matches::assert_matches;
     use std::sync::Arc;
 
-    async fn spawn_update_service<T, Ch, C, A>(
+    async fn spawn_update_service<T, Ch, C, A, Cq>(
         channel_updater: T,
         current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
+        commit_status_provider: Cq,
     ) -> (ManagerProxy, UpdateService)
     where
         T: TargetChannelUpdater,
         Ch: CurrentChannelUpdater,
         C: UpdateChecker,
         A: UpdateApplier,
+        Cq: CommitQuerier,
     {
         let mut update_service = UpdateService {
             update_manager:
-                UpdateManager::<T, Ch, C, A, RealStateNotifier>::from_checker_and_applier(
+                UpdateManager::<T, Ch, C, A, RealStateNotifier, Cq>::from_checker_and_applier(
                     Arc::new(channel_updater),
                     Arc::new(current_channel_updater),
                     update_checker,
                     update_applier,
                     FakeLastUpdateStorage::new(),
+                    commit_status_provider,
                 )
                 .await
                 .spawn(),
@@ -185,6 +190,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await
         .0;
@@ -222,6 +228,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await;
         let expected_update_info = Some(UpdateInfo {
@@ -295,6 +302,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await
         .0;
@@ -350,6 +358,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await
         .0;
@@ -378,6 +387,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await
         .0;
@@ -430,6 +440,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             fake_update_applier.clone(),
+            FakeCommitQuerier::new(),
         )
         .await;
         let expected_update_info = Some(UpdateInfo {
@@ -494,6 +505,7 @@ mod tests {
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
         )
         .await
         .0;

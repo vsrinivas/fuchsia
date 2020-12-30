@@ -53,9 +53,9 @@ mod tests {
     use crate::config::ConfigBuilder;
     use crate::update_manager::{
         tests::{
-            FakeCurrentChannelUpdater, FakeLastUpdateStorage, FakeTargetChannelUpdater,
-            FakeUpdateChecker, FakeUpdateManagerControlHandle, StateChangeCollector,
-            UnreachableUpdateApplier,
+            FakeCommitQuerier, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
+            FakeTargetChannelUpdater, FakeUpdateChecker, FakeUpdateManagerControlHandle,
+            StateChangeCollector, UnreachableUpdateApplier,
         },
         UpdateManager, UpdateManagerRequest,
     };
@@ -106,11 +106,10 @@ mod tests {
         assert_matches!(
             requests.next(),
             Some(UpdateManagerRequest::TryStartUpdate {
-                options:
-                    CheckOptions {
-                        initiator: Initiator::Service,
-                        allow_attaching_to_existing_update_check: false,
-                    },
+                options: CheckOptions {
+                    initiator: Initiator::Service,
+                    allow_attaching_to_existing_update_check: false,
+                },
                 callback: None,
                 responder: _,
             })
@@ -125,11 +124,10 @@ mod tests {
         assert_matches!(
             requests.next(),
             Some(UpdateManagerRequest::TryStartUpdate {
-                options:
-                    CheckOptions {
-                        initiator: Initiator::Service,
-                        allow_attaching_to_existing_update_check: false,
-                    },
+                options: CheckOptions {
+                    initiator: Initiator::Service,
+                    allow_attaching_to_existing_update_check: false,
+                },
                 callback: None,
                 responder: _,
             })
@@ -145,14 +143,16 @@ mod tests {
         let checker = FakeUpdateChecker::new_up_to_date();
         let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
-        let mut fut = UpdateManager::<_, _, _, _, StateChangeCollector>::from_checker_and_applier(
-            Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
-            checker.clone(),
-            UnreachableUpdateApplier,
-            FakeLastUpdateStorage::new(),
-        )
-        .boxed();
+        let mut fut =
+            UpdateManager::<_, _, _, _, StateChangeCollector, _>::from_checker_and_applier(
+                Arc::new(FakeTargetChannelUpdater::new()),
+                Arc::new(FakeCurrentChannelUpdater::new()),
+                checker.clone(),
+                UnreachableUpdateApplier,
+                FakeLastUpdateStorage::new(),
+                FakeCommitQuerier::new(),
+            )
+            .boxed();
         let mut manager = match executor.run_until_stalled(&mut fut) {
             Poll::Ready(manager) => manager,
             Poll::Pending => panic!("manager not ready"),
@@ -181,7 +181,7 @@ mod tests {
         assert_eq!(checker.call_count(), 1);
         assert_eq!(
             callback.take_states(),
-            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable]
         );
     }
 }

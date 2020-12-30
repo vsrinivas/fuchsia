@@ -4,10 +4,13 @@
 
 #![cfg(test)]
 use {
+    anyhow::anyhow,
+    fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_update::{
-        CheckOptions, CheckingForUpdatesData, Initiator, InstallationProgress, InstallingData,
-        ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream, State,
-        UpdateInfo,
+        CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
+        CommitStatusProviderProxy, Initiator, InstallationDeferralReason, InstallationDeferredData,
+        InstallationProgress, InstallingData, ManagerMarker, ManagerProxy, MonitorMarker,
+        MonitorRequest, MonitorRequestStream, State, UpdateInfo,
     },
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
@@ -16,14 +19,21 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_pkg_testing::make_packages_json,
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, prelude::*},
+    matches::assert_matches,
     mock_installer::MockUpdateInstallerService,
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
+    parking_lot::Mutex,
     std::{fs::File, sync::Arc},
     tempfile::TempDir,
 };
 
-const SYSTEM_UPDATE_CHECKER_CMX: &str = "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx";
+const SYSTEM_UPDATE_CHECKER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx";
+const SYSTEM_UPDATE_COMMITTER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cmx";
 
 struct Mounts {
     misc_ota: TempDir,
@@ -34,6 +44,7 @@ struct Proxies {
     resolver: Arc<MockResolverService>,
     channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
+    commit_status_provider: CommitStatusProviderProxy,
 }
 
 impl Mounts {
@@ -47,15 +58,20 @@ impl Mounts {
 
 struct TestEnvBuilder {
     installer: MockUpdateInstallerService,
+    paver: Option<MockPaverService>,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        Self { installer: MockUpdateInstallerService::builder().build() }
+        Self { installer: MockUpdateInstallerService::builder().build(), paver: None }
     }
 
     fn installer(self, installer: MockUpdateInstallerService) -> Self {
         Self { installer, ..self }
+    }
+
+    fn paver(self, paver: MockPaverService) -> Self {
+        Self { paver: Some(paver), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -66,8 +82,13 @@ impl TestEnvBuilder {
         )
         .expect("write pkgfs/system/meta");
 
+        let mut system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned());
+
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service_to::<fidl_fuchsia_update::CommitStatusProviderMarker, _>(
+            system_update_committer.directory_request().unwrap().clone(),
+        );
 
         let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = Arc::clone(&resolver);
@@ -86,10 +107,24 @@ impl TestEnvBuilder {
             fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
         });
 
+        let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
+        fs.add_fidl_service(move |stream: PaverRequestStream| {
+            fasync::Task::spawn(
+                Arc::clone(&paver)
+                    .run_paver_service(stream)
+                    .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e))),
+            )
+            .detach();
+        });
+
         let env = fs
             .create_salted_nested_environment("system-update-checker_integration_test_env")
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
+
+        let system_update_committer = system_update_committer
+            .spawn(env.launcher())
+            .expect("system-update-committer to launch");
 
         let system_update_checker = AppBuilder::new(SYSTEM_UPDATE_CHECKER_CMX)
             .add_dir_to_namespace(
@@ -116,8 +151,12 @@ impl TestEnvBuilder {
                 update_manager: system_update_checker
                     .connect_to_service::<ManagerMarker>()
                     .expect("connect to update manager"),
+                commit_status_provider: system_update_committer
+                    .connect_to_service::<CommitStatusProviderMarker>()
+                    .expect("connect to commit status provider"),
             },
             _system_update_checker: system_update_checker,
+            _system_update_committer: system_update_committer,
         }
     }
 }
@@ -127,6 +166,7 @@ struct TestEnv {
     _mounts: Mounts,
     proxies: Proxies,
     _system_update_checker: App,
+    _system_update_committer: App,
 }
 
 impl TestEnv {
@@ -221,6 +261,7 @@ async fn test_update_manager_check_now_error_checking_for_update() {
 async fn test_update_manager_progress() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
+
     let env = TestEnvBuilder::new().installer(installer).build();
 
     env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
@@ -320,6 +361,90 @@ async fn test_update_manager_progress() {
             installation_progress: progress(Some(1.0)),
             ..InstallingData::EMPTY
         })],
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_installation_deferred() {
+    let (throttle_hook, throttler) = mphooks::throttle();
+    let config_status_response = Arc::new(Mutex::new(Some(paver::ConfigurationStatus::Pending)));
+    let config_status_response_clone = Arc::clone(&config_status_response);
+    let env = TestEnvBuilder::new()
+        .paver(
+            MockPaverServiceBuilder::new()
+                .insert_hook(mphooks::config_status(move |_| {
+                    Ok(config_status_response_clone.lock().as_ref().unwrap().clone())
+                }))
+                .insert_hook(throttle_hook)
+                .build(),
+        )
+        .build();
+
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
+            &env.proxies
+                .resolver
+                .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+                .add_file(
+                    "packages.json",
+                    make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+                )
+                .add_file("zbi", "fake zbi"),
+        );
+
+    // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
+    // few enough to guarantee the commit is still pending.
+    let () = throttler.emit_next_paver_events(&[
+        PaverEvent::QueryCurrentConfiguration,
+        PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A },
+    ]);
+
+    // The update attempt should start, but the install should be deferred b/c we're pending commit.
+    let mut stream = env.check_now().await;
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallationDeferredByPolicy(InstallationDeferredData {
+                update: update_info(None),
+                deferral_reason: Some(InstallationDeferralReason::CurrentSystemNotCommitted),
+                ..InstallationDeferredData::EMPTY
+            }),
+        ],
+    )
+    .await;
+    assert_matches!(stream.next().await, None);
+
+    // Unblock any subsequent paver requests so that the system can commit.
+    drop(throttler);
+
+    // Wait for system to commit.
+    let event_pair =
+        env.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
+    assert_eq!(
+        fasync::OnSignals::new(&event_pair, zx::Signals::USER_0).await,
+        Ok(zx::Signals::USER_0)
+    );
+
+    // Now that the system is committed, we should be able to perform an update. Before we do the
+    // update, make sure QueryConfigurationStatus returns Healthy. Otherwise, the update will fail
+    // because the system-updater enforces the current slot is Healthy before applying an update.
+    assert_eq!(
+        config_status_response.lock().replace(paver::ConfigurationStatus::Healthy).unwrap(),
+        paver::ConfigurationStatus::Pending
+    );
+
+    stream = env.check_now().await;
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(None),
+                installation_progress: None,
+                ..InstallingData::EMPTY
+            }),
+        ],
     )
     .await;
 }
