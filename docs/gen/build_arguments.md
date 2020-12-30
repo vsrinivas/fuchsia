@@ -78,7 +78,7 @@ a different persistent data location for every session.
 
 **Current value (from the default):** `false`
 
-From //src/modular/bin/basemgr/BUILD.gn:14
+From //src/modular/bin/basemgr/BUILD.gn:13
 
 ### auto_update_packages
 Whether the component loader should automatically update packages.
@@ -1731,7 +1731,7 @@ From //src/developer/fuchsia-criterion/BUILD.gn:14
 
 **Current value (from the default):** `"30000"`
 
-From //garnet/bin/log_listener/BUILD.gn:15
+From //garnet/bin/log_listener/BUILD.gn:14
 
 ### lsan_default_options
 Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
@@ -1863,7 +1863,7 @@ Should be a string value that only contains digits.
 
 **Current value (from the default):** `"0"`
 
-From //garnet/bin/log_listener/BUILD.gn:14
+From //garnet/bin/log_listener/BUILD.gn:13
 
 ### max_zedboot_zbi_size
 Maximum allowable size for zedboot.zbi
@@ -2016,7 +2016,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:15
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
 
 ### openthread_config_assert_enable
 Enable assertions.
@@ -2695,7 +2695,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/BUILD.gn:151
+From //src/ui/scenic/BUILD.gn:154
 
 ### scenic_ignore_vsync
 
