@@ -5,9 +5,8 @@
 #include <lib/virtio/driver_utils.h>
 #include <zircon/types.h>
 
-#include <ddk/driver.h>
-
 #include "gpu.h"
+#include "src/graphics/drivers/virtio/virtio_gpu_bind.h"
 
 static zx_status_t virtio_gpu_bind(void* ctx, zx_device_t* bus_device) {
   const char* flag = getenv("driver.virtio-gpu.disable");
@@ -26,7 +25,4 @@ static const zx_driver_ops_t gpu_block_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(gpu_block, gpu_block_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU), ZIRCON_DRIVER_END(gpu_block)
+ZIRCON_DRIVER(gpu_block, gpu_block_driver_ops, "zircon", "0.1");
