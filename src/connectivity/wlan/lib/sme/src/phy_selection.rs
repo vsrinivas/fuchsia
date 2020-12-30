@@ -130,16 +130,15 @@ pub fn derive_phy_cbw(
         fidl_common::Phy::Ht => derive_cbw_ht(
             &parse_ht_capabilities(&band_cap.ht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs ht_cap"),
-            &parse_ht_operation(&bss.ht_op().unwrap().bytes[..])
-                .expect("bss is expected to have ht_op"),
+            &bss.ht_op().expect("bss is expected to have ht_op"),
         ),
         fidl_common::Phy::Vht | fidl_common::Phy::Hew => derive_cbw_vht(
             &parse_ht_capabilities(&band_cap.ht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs ht_cap"),
             &parse_vht_capabilities(&band_cap.vht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs vht_cap"),
-            &parse_ht_operation(&bss.ht_op().unwrap().bytes[..]).expect("bss needs ht_op"),
-            &parse_vht_operation(&bss.vht_op().unwrap().bytes[..]).expect("bss needs vht_op"),
+            &bss.ht_op().expect("bss needs ht_op"),
+            &bss.vht_op().expect("bss needs vht_op"),
         ),
     };
 

@@ -6,14 +6,14 @@ use {
     crate::{
         format::MacFmt as _,
         hasher::WlanHasher,
-        ie::{self, rsn::suite_filter},
+        ie::{self, rsn::suite_filter, IeType},
         mac::CapabilityInfo,
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     static_assertions::assert_eq_size,
-    std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash},
-    zerocopy::AsBytes,
+    std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash, ops::Range},
+    zerocopy::{AsBytes, LayoutVerified},
 };
 
 // TODO(fxbug.dev/29885): Represent this as bitfield instead.
@@ -97,22 +97,24 @@ pub struct BssDescription {
     pub ies: Vec<u8>,
 
     // *** Fields parsed out of fidl_internal::BssDescription IEs
-    ssid: Vec<u8>,
+    ssid_range: Range<usize>,
     // IEEE Std 802.11-2016 9.4.2.3
     // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
+    // The rates here may include both the basic rates and extended rates, which are not
+    // continuous slices, hence we cannot use `Range`.
     rates: Vec<u8>,
-    dtim_period: u8,
-    country: Option<Vec<u8>>,
-    rsne: Option<Vec<u8>>,
-    ht_cap: Option<fidl_internal::HtCapabilities>,
-    ht_op: Option<fidl_internal::HtOperation>,
-    vht_cap: Option<fidl_internal::VhtCapabilities>,
-    vht_op: Option<fidl_internal::VhtOperation>,
+    tim_range: Option<Range<usize>>,
+    country_range: Option<Range<usize>>,
+    rsne_range: Option<Range<usize>>,
+    ht_cap_range: Option<Range<usize>>,
+    ht_op_range: Option<Range<usize>>,
+    vht_cap_range: Option<Range<usize>>,
+    vht_op_range: Option<Range<usize>>,
 }
 
 impl BssDescription {
     pub fn ssid(&self) -> &[u8] {
-        &self.ssid[..]
+        &self.ies[self.ssid_range.clone()]
     }
 
     pub fn rates(&self) -> &[u8] {
@@ -120,31 +122,84 @@ impl BssDescription {
     }
 
     pub fn dtim_period(&self) -> u8 {
-        self.dtim_period
+        self.tim_range
+            .as_ref()
+            .map(|range|
+            // Safe to unwrap because we made sure TIM is parseable in `from_fidl`
+            ie::parse_tim(&self.ies[range.clone()]).unwrap().header.dtim_period)
+            .unwrap_or(0)
     }
 
     pub fn country(&self) -> Option<&[u8]> {
-        self.country.as_deref()
+        self.country_range.as_ref().map(|range| &self.ies[range.clone()])
     }
 
     pub fn rsne(&self) -> Option<&[u8]> {
-        self.rsne.as_deref()
+        self.rsne_range.as_ref().map(|range| &self.ies[range.clone()])
     }
 
-    pub fn ht_cap(&self) -> Option<&fidl_internal::HtCapabilities> {
-        self.ht_cap.as_ref()
+    pub fn ht_cap(&self) -> Option<LayoutVerified<&[u8], ie::HtCapabilities>> {
+        self.ht_cap_range.clone().map(|range| {
+            // Safe to unwrap because we already verified HT caps is parseable in `from_fidl`
+            ie::parse_ht_capabilities(&self.ies[range]).unwrap()
+        })
     }
 
-    pub fn ht_op(&self) -> Option<&fidl_internal::HtOperation> {
-        self.ht_op.as_ref()
+    pub fn raw_ht_cap(&self) -> Option<fidl_internal::HtCapabilities> {
+        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        self.ht_cap().map(|ht_cap| {
+            assert_eq_size!(ie::HtCapabilities, HtCapArray);
+            let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
+            fidl_internal::HtCapabilities { bytes }
+        })
     }
 
-    pub fn vht_cap(&self) -> Option<&fidl_internal::VhtCapabilities> {
-        self.vht_cap.as_ref()
+    pub fn ht_op(&self) -> Option<LayoutVerified<&[u8], ie::HtOperation>> {
+        self.ht_op_range.clone().map(|range| {
+            // Safe to unwrap because we already verified HT op is parseable in `from_fidl`
+            ie::parse_ht_operation(&self.ies[range]).unwrap()
+        })
     }
 
-    pub fn vht_op(&self) -> Option<&fidl_internal::VhtOperation> {
-        self.vht_op.as_ref()
+    pub fn raw_ht_op(&self) -> Option<fidl_internal::HtOperation> {
+        type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
+        self.ht_op().map(|ht_op| {
+            assert_eq_size!(ie::HtOperation, HtOpArray);
+            let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
+            fidl_internal::HtOperation { bytes }
+        })
+    }
+
+    pub fn vht_cap(&self) -> Option<LayoutVerified<&[u8], ie::VhtCapabilities>> {
+        self.vht_cap_range.clone().map(|range| {
+            // Safe to unwrap because we already verified VHT caps is parseable in `from_fidl`
+            ie::parse_vht_capabilities(&self.ies[range]).unwrap()
+        })
+    }
+
+    pub fn raw_vht_cap(&self) -> Option<fidl_internal::VhtCapabilities> {
+        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
+        self.vht_cap().map(|vht_cap| {
+            assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+            let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
+            fidl_internal::VhtCapabilities { bytes }
+        })
+    }
+
+    pub fn vht_op(&self) -> Option<LayoutVerified<&[u8], ie::VhtOperation>> {
+        self.vht_op_range.clone().map(|range| {
+            // Safe to unwrap because we already verified VHT op is parseable in `from_fidl`
+            ie::parse_vht_operation(&self.ies[range]).unwrap()
+        })
+    }
+
+    pub fn raw_vht_op(&self) -> Option<fidl_internal::VhtOperation> {
+        type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
+        self.vht_op().map(|vht_op| {
+            assert_eq_size!(ie::VhtOperation, VhtOpArray);
+            let bytes: VhtOpArray = vht_op.as_bytes().try_into().unwrap();
+            fidl_internal::VhtOperation { bytes }
+        })
     }
 
     /// Return bool on whether BSS is protected.
@@ -175,7 +230,7 @@ impl BssDescription {
             })
             .unwrap_or(false);
 
-        let rsne = match self.rsne.as_ref() {
+        let rsne = match self.rsne() {
             Some(rsne) => match ie::rsn::rsne::from_bytes(rsne) {
                 Ok((_, rsne)) => rsne,
                 Err(_e) => {
@@ -227,9 +282,9 @@ impl BssDescription {
 
     /// Get the latest WLAN standard that the BSS supports.
     pub fn latest_standard(&self) -> Standard {
-        if self.vht_cap.is_some() && self.vht_op.is_some() {
+        if self.vht_cap().is_some() && self.vht_op().is_some() {
             Standard::Dot11Ac
-        } else if self.ht_cap.is_some() && self.ht_op.is_some() {
+        } else if self.ht_cap().is_some() && self.ht_op().is_some() {
             Standard::Dot11N
         } else if self.chan.primary <= 14 {
             if self.rates.iter().any(|r| match ie::SupportedRate(*r).rate() {
@@ -294,7 +349,7 @@ impl BssDescription {
     pub fn to_string(&self, hasher: &WlanHasher) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            hasher.hash_ssid(&self.ssid),
+            hasher.hash_ssid(self.ssid()),
             hasher.hash_mac_addr(&self.bssid),
             self.protection(),
             self.chan.primary,
@@ -307,7 +362,7 @@ impl BssDescription {
     pub fn to_non_obfuscated_string(&self) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            String::from_utf8(self.ssid.clone()).unwrap_or_else(|_| hex::encode(self.ssid.clone())),
+            String::from_utf8(self.ssid().to_vec()).unwrap_or_else(|_| hex::encode(self.ssid())),
             self.bssid.to_mac_str(),
             self.protection(),
             self.chan.primary,
@@ -316,63 +371,54 @@ impl BssDescription {
     }
 
     pub fn from_fidl(bss: fidl_internal::BssDescription) -> Result<Self, anyhow::Error> {
-        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
-        type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
-        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
-        type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
-
-        let mut ssid = None;
+        let mut ssid_range = None;
         let mut rates = None;
-        let mut dtim_period = None;
-        let mut country = None;
-        let mut rsne = None;
-        let mut ht_cap = None;
-        let mut ht_op = None;
-        let mut vht_cap = None;
-        let mut vht_op = None;
+        let mut tim_range = None;
+        let mut country_range = None;
+        let mut rsne_range = None;
+        let mut ht_cap_range = None;
+        let mut ht_op_range = None;
+        let mut vht_cap_range = None;
+        let mut vht_op_range = None;
 
-        for (id, body) in ie::Reader::new(&bss.ies[..]) {
-            match id {
-                ie::Id::SSID => ssid = Some(ie::parse_ssid(body)?.to_vec()),
-                ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
-                    rates.get_or_insert_with(|| vec![]).extend_from_slice(body);
+        for (ie_type, range) in ie::IeSummaryIter::new(&bss.ies[..]) {
+            let body = &bss.ies[range.clone()];
+            match ie_type {
+                IeType::SSID => {
+                    ie::parse_ssid(body)?;
+                    ssid_range = Some(range);
                 }
-                ie::Id::TIM => dtim_period = Some(ie::parse_tim(body)?.header.dtim_period),
-                ie::Id::COUNTRY => country = Some(body.to_vec()),
-                ie::Id::RSNE => {
-                    let mut rsne_bytes = vec![id.0, body.len() as u8];
-                    rsne_bytes.extend_from_slice(body);
-                    rsne = Some(rsne_bytes);
+                IeType::SUPPORTED_RATES | IeType::EXT_SUPPORTED_RATES => {
+                    rates.get_or_insert(vec![]).extend_from_slice(body);
                 }
-                ie::Id::HT_CAPABILITIES => {
-                    let parsed_ht_cap = ie::parse_ht_capabilities(body)?;
-                    assert_eq_size!(ie::HtCapabilities, HtCapArray);
-                    let bytes: HtCapArray = parsed_ht_cap.as_bytes().try_into().unwrap();
-                    ht_cap = Some(fidl_internal::HtCapabilities { bytes })
+                IeType::TIM => {
+                    ie::parse_tim(body)?;
+                    tim_range = Some(range);
                 }
-                ie::Id::HT_OPERATION => {
-                    let parsed_ht_op = ie::parse_ht_operation(body)?;
-                    assert_eq_size!(ie::HtOperation, HtOpArray);
-                    let bytes: HtOpArray = parsed_ht_op.as_bytes().try_into().unwrap();
-                    ht_op = Some(fidl_internal::HtOperation { bytes });
+                IeType::COUNTRY => country_range = Some(range),
+                // Decrement start of range by two to include the IE header.
+                IeType::RSNE => rsne_range = Some(range.start - 2..range.end),
+                IeType::HT_CAPABILITIES => {
+                    ie::parse_ht_capabilities(body)?;
+                    ht_cap_range = Some(range);
                 }
-                ie::Id::VHT_CAPABILITIES => {
-                    let parsed_vht_cap = ie::parse_vht_capabilities(body)?;
-                    assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
-                    let bytes: VhtCapArray = parsed_vht_cap.as_bytes().try_into().unwrap();
-                    vht_cap = Some(fidl_internal::VhtCapabilities { bytes });
+                IeType::HT_OPERATION => {
+                    ie::parse_ht_operation(body)?;
+                    ht_op_range = Some(range);
                 }
-                ie::Id::VHT_OPERATION => {
-                    let parsed_ht_op = ie::parse_vht_operation(body)?;
-                    assert_eq_size!(ie::VhtOperation, VhtOpArray);
-                    let bytes: VhtOpArray = parsed_ht_op.as_bytes().try_into().unwrap();
-                    vht_op = Some(fidl_internal::VhtOperation { bytes });
+                IeType::VHT_CAPABILITIES => {
+                    ie::parse_vht_capabilities(body)?;
+                    vht_cap_range = Some(range);
+                }
+                IeType::VHT_OPERATION => {
+                    ie::parse_vht_operation(body)?;
+                    vht_op_range = Some(range);
                 }
                 _ => (),
             }
         }
 
-        let ssid = ssid.ok_or_else(|| format_err!("Missing SSID IE"))?;
+        let ssid_range = ssid_range.ok_or_else(|| format_err!("Missing SSID IE"))?;
         let rates = rates.ok_or_else(|| format_err!("Missing rates IE"))?;
 
         Ok(Self {
@@ -387,15 +433,15 @@ impl BssDescription {
             snr_db: bss.snr_db,
             ies: bss.ies,
 
-            ssid,
+            ssid_range,
             rates,
-            dtim_period: dtim_period.unwrap_or(0),
-            country,
-            rsne,
-            ht_cap,
-            ht_op,
-            vht_cap,
-            vht_op,
+            tim_range,
+            country_range,
+            rsne_range,
+            ht_cap_range,
+            ht_op_range,
+            vht_cap_range,
+            vht_op_range,
         })
     }
 
@@ -464,11 +510,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            fake_bss,
+            assert_variant, fake_bss,
             ie::IeType,
             test_utils::{
                 fake_frames::{
-                    fake_unknown_rsne, fake_wpa1_ie_body, invalid_wpa2_wpa3_rsne,
+                    fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_rsne, invalid_wpa2_wpa3_rsne,
                     invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
                 },
                 fake_stas::IesOverrides,
@@ -495,17 +541,28 @@ mod tests {
 
     #[test]
     fn test_unknown_protection() {
-        let mut bss = fake_bss!(Wpa2);
-        bss.rsne = Some(fake_unknown_rsne());
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, fake_unknown_rsne()[2..].to_vec())
+        );
         assert_eq!(Protection::Unknown, bss.protection());
 
-        bss.rsne = Some(invalid_wpa2_wpa3_rsne());
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, invalid_wpa2_wpa3_rsne()[2..].to_vec())
+        );
         assert_eq!(Protection::Unknown, bss.protection());
 
-        bss.rsne = Some(invalid_wpa3_rsne());
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, invalid_wpa3_rsne()[2..].to_vec())
+        );
         assert_eq!(Protection::Unknown, bss.protection());
 
-        bss.rsne = Some(invalid_wpa3_enterprise_192_bit_rsne());
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, invalid_wpa3_enterprise_192_bit_rsne()[2..].to_vec())
+        );
         assert_eq!(Protection::Unknown, bss.protection());
     }
 
@@ -670,5 +727,63 @@ mod tests {
         assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: -50), &fake_bss!(Wpa2, rssi_dbm: -10));
         // Having an RSSI measurement is always better than not having any measurement
         assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: 0), &fake_bss!(Wpa2, rssi_dbm: -100));
+    }
+
+    #[test]
+    fn test_bss_ie_fields() {
+        #[rustfmt::skip]
+        let ht_cap = vec![
+            0xef, 0x09, // HT Capabilities Info
+            0x1b, // A-MPDU Parameters: 0x1b
+            0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // MCS Set
+            0x00, 0x00, // HT Extended Capabilities
+            0x00, 0x00, 0x00, 0x00, // Transmit Beamforming Capabilities
+            0x00
+        ];
+        #[rustfmt::skip]
+        let ht_op = vec![
+            0x9d, // Primary Channel: 157
+            0x0d, // HT Info Subset - secondary channel above, any channel width, RIFS permitted
+            0x00, 0x00, 0x00, 0x00, // HT Info Subsets
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Basic MCS Set
+        ];
+        #[rustfmt::skip]
+        let vht_cap = vec![
+            0xb2, 0x01, 0x80, 0x33, // VHT Capabilities Info
+            0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT Supported MCS Set
+        ];
+        let vht_op = vec![0x01, 0x9b, 0x00, 0xfc, 0xff];
+
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::SSID, b"ssidie".to_vec())
+                .set(IeType::SUPPORTED_RATES, vec![0x81, 0x82, 0x83])
+                .set(IeType::EXT_SUPPORTED_RATES, vec![4, 5, 6])
+                .set(IeType::COUNTRY, vec![1, 2, 3])
+                .set(IeType::HT_CAPABILITIES, ht_cap.clone())
+                .set(IeType::HT_OPERATION, ht_op.clone())
+                .set(IeType::VHT_CAPABILITIES, vht_cap.clone())
+                .set(IeType::VHT_OPERATION, vht_op.clone())
+        );
+        assert_eq!(bss.ssid(), b"ssidie");
+        assert_eq!(bss.rates(), &[0x81, 0x82, 0x83, 4, 5, 6]);
+        assert_eq!(bss.country(), Some(&[1, 2, 3][..]));
+        assert_eq!(bss.rsne(), Some(&fake_wpa2_rsne()[..]));
+        assert_variant!(bss.ht_cap(), Some(cap) => {
+            assert_eq!(cap.bytes(), &ht_cap[..]);
+        });
+        assert_eq!(bss.raw_ht_cap().map(|cap| cap.bytes.to_vec()), Some(ht_cap));
+        assert_variant!(bss.ht_op(), Some(op) => {
+            assert_eq!(op.bytes(), &ht_op[..]);
+        });
+        assert_eq!(bss.raw_ht_op().map(|op| op.bytes.to_vec()), Some(ht_op));
+        assert_variant!(bss.vht_cap(), Some(cap) => {
+            assert_eq!(cap.bytes(), &vht_cap[..]);
+        });
+        assert_eq!(bss.raw_vht_cap().map(|cap| cap.bytes.to_vec()), Some(vht_cap));
+        assert_variant!(bss.vht_op(), Some(op) => {
+            assert_eq!(op.bytes(), &vht_op[..]);
+        });
+        assert_eq!(bss.raw_vht_op().map(|op| op.bytes.to_vec()), Some(vht_op));
     }
 }

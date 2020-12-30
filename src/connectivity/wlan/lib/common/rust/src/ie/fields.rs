@@ -500,7 +500,7 @@ pub struct AselCapability(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.57
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
 pub struct HtOperation {
     pub primary_chan: u8, // Primary 20 MHz channel.
     // HT Operation Information is 40-bit field so it has to be split
@@ -1032,7 +1032,7 @@ impl VhtMcsSet {
 
 // IEEE Std 802.11-2016, 9.4.2.159
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
 // TODO(fxbug.dev/29669): Derive phy parameters based on Table 9-250 and 9-253.
 pub struct VhtOperation {
     pub vht_cbw: VhtChannelBandwidth, // u8

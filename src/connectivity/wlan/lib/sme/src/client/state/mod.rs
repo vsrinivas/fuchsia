@@ -2315,8 +2315,8 @@ mod tests {
             association_id: 1,
             cap_info: 0,
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-            ht_cap: cmd.bss.ht_cap().map(|cap| Box::new(*cap)),
-            vht_cap: cmd.bss.vht_cap().map(|cap| Box::new(*cap)),
+            ht_cap: cmd.bss.raw_ht_cap().map(Box::new),
+            vht_cap: cmd.bss.raw_vht_cap().map(Box::new),
             wmm_param: Some(Box::new(fake_wmm_param())),
         };
 
