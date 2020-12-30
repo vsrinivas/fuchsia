@@ -18,3 +18,5 @@ toc:
     path: /docs/development/build/toolchain.md
   - title: "Run Clang static analysis"
     path: /docs/development/build/static_analysis.md
+  - title: "Ninja no-op check"
+    path: /docs/development/build/ninja_no_op.md
