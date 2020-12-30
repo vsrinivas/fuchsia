@@ -59,16 +59,20 @@ pub struct ClockDetails {
     /// The current symmetric error estimate (if any) for the clock, measured in nanoseconds.
     pub error_bounds: u64,
 
-    /// An observation of the system tick counter which was taken during the observation of the clock.
+    /// An observation of the system tick counter which was taken during the observation of the
+    /// clock.
     pub query_ticks: sys::zx_ticks_t,
 
-    /// The last time the clock's value was updated as defined by the clock monotonic reference timeline.
+    /// The last time the clock's value was updated as defined by the clock monotonic reference
+    /// timeline.
     pub last_value_update_ticks: sys::zx_ticks_t,
 
-    /// The last time the clock's rate adjustment was updated as defined by the clock monotonic reference timeline.
+    /// The last time the clock's rate adjustment was updated as defined by the clock monotonic
+    /// reference timeline.
     pub last_rate_adjust_update_ticks: sys::zx_ticks_t,
 
-    /// The last time the clock's error bounds were updated as defined by the clock monotonic reference timeline.
+    /// The last time the clock's error bounds were updated as defined by the clock monotonic
+    /// reference timeline.
     pub last_error_bounds_update_ticks: sys::zx_ticks_t,
 
     /// The generation nonce.
@@ -99,7 +103,8 @@ impl From<sys::zx_clock_details_v1_t> for ClockDetails {
 pub struct ClockTransformation {
     /// The offset on the reference timeline, measured in reference clock ticks.
     pub reference_offset: i64,
-    /// The offset on the clock timeline, measured in clock ticks (typically normalized to nanoseconds).
+    /// The offset on the clock timeline, measured in clock ticks (typically normalized to
+    /// nanoseconds).
     pub synthetic_offset: i64,
     /// The ratio of the reference to clock rate.
     pub rate: sys::zx_clock_rate_t,
@@ -184,6 +189,7 @@ impl Clock {
 }
 
 /// Specifies which properties of a clock to update. See [`Clock::update`]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ClockUpdate {
     value: Option<Time>,
     rate_adjust: Option<i32>,
