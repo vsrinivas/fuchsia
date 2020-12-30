@@ -199,12 +199,6 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_read_notification_channel2(magma_connection_t connection, void* buffer,
-                                                uint64_t buffer_size, uint64_t* buffer_size_out,
-                                                magma_bool_t* more_data_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
                                               magma_buffer_collection_t* collection_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;

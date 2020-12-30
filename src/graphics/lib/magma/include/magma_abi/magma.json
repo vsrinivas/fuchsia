@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 71,
+    "next-free-ordinal": 70,
     "exports": [
       {
         "ordinal": 4,
@@ -547,7 +547,7 @@
         "ordinal": 44,
         "name": "magma_read_notification_channel",
         "type": "magma_status_t",
-        "description": "Deprecated. Reads a notification from the channel into the given buffer.  Message sizes may vary depending on the MSD.  If the buffer provided is too small for the message, MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in the buffer_size_out parameter.",
+        "description": "Reads a notification from the channel into the given buffer.  Message sizes may vary depending on the MSD.  If the buffer provided is too small for the message, MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in the buffer_size_out parameter.",
         "arguments": [
           {
             "name": "connection",
@@ -1036,39 +1036,6 @@
             "name": "handle_out",
             "type": "magma_handle_t*",
             "description": "Pointer to the returned handle."
-          }
-        ]
-      },
-      {
-        "ordinal": 70,
-        "name": "magma_read_notification_channel2",
-        "type": "magma_status_t",
-        "description": "Reads a notification from the channel into the given buffer.  Message sizes may vary depending on the MSD.  If the buffer provided is too small for the message, MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in the buffer_size_out parameter.",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection."
-          },
-          {
-            "name": "buffer",
-            "type": "void*",
-            "description": "Buffer into which to read notification data."
-          },
-          {
-            "name": "buffer_size",
-            "type": "uint64_t",
-            "description": "Size of the given buffer."
-          },
-          {
-            "name": "buffer_size_out",
-            "type": "uint64_t*",
-            "description": "Returned size of the notification data written to the buffer, or 0 if there are no messages pending."
-          },
-          {
-            "name": "more_data_out",
-            "type": "magma_bool_t*",
-            "description": "True if there is more notification data waiting."
           }
         ]
       }

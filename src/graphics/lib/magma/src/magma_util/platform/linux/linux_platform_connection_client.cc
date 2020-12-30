@@ -96,8 +96,7 @@ magma_status_t LinuxPlatformConnectionClient::CommitBuffer(uint64_t buffer_id, u
 
 magma_status_t LinuxPlatformConnectionClient::ReadNotificationChannel(void* buffer,
                                                                       size_t buffer_size,
-                                                                      size_t* buffer_size_out,
-                                                                      magma_bool_t* more_data_out) {
+                                                                      size_t* buffer_size_out) {
   return DRET(MAGMA_STATUS_UNIMPLEMENTED);
 }
 
