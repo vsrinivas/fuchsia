@@ -580,6 +580,10 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot,
                               vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max());
 
+  template <typename ON_VMAR, typename ON_MAPPING>
+  bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, uint depth,
+                                       ON_VMAR on_vmar, ON_MAPPING on_mapping);
+
   RegionList<VmAddressRegionOrMapping> subregions_;
 
   const char name_[32] = {};

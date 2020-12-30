@@ -481,14 +481,17 @@ not_found:
   return true;  // not_found: stop search
 }
 
-bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
+template <typename ON_VMAR, typename ON_MAPPING>
+bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr,
+                                                      uint depth, ON_VMAR on_vmar,
+                                                      ON_MAPPING on_mapping) {
   canary_.Assert();
-  DEBUG_ASSERT(ve != nullptr);
   // TODO: Add annotations to remove this.
   AssertHeld(lock_ref());
 
   const uint min_depth = depth;
-  for (auto itr = subregions_.begin(), end = subregions_.end(); itr != end;) {
+  for (auto itr = subregions_.IncludeOrHigher(min_addr), end = subregions_.end();
+       itr != end && itr->base() < max_addr;) {
     DEBUG_ASSERT(itr->IsAliveLocked());
     auto curr = itr++;
     VmAddressRegion* up = curr->parent_;
@@ -498,14 +501,14 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
 
       DEBUG_ASSERT(mapping != nullptr);
       AssertHeld(mapping->lock_ref());
-      if (!ve->OnVmMapping(mapping, this, depth)) {
+      if (!on_mapping(mapping, this, depth)) {
         return false;
       }
     } else {
       VmAddressRegion* vmar = curr->as_vm_address_region().get();
       DEBUG_ASSERT(vmar != nullptr);
       AssertHeld(vmar->lock_ref());
-      if (!ve->OnVmAddressRegion(vmar, depth)) {
+      if (!on_vmar(vmar, depth)) {
         return false;
       }
       if (!vmar->subregions_.IsEmpty()) {
@@ -535,6 +538,25 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
     }
   }
   return true;
+}
+
+bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
+  canary_.Assert();
+  DEBUG_ASSERT(ve != nullptr);
+  // TODO: Add annotations to remove this.
+  AssertHeld(lock_ref());
+
+  return EnumerateChildrenInternalLocked(
+      0, UINT64_MAX, depth,
+      [ve](const VmAddressRegion* vmar, uint depth) {
+        AssertHeld(vmar->lock_ref());
+        return ve->OnVmAddressRegion(vmar, depth);
+      },
+      [ve](const VmMapping* map, const VmAddressRegion* vmar, uint depth) {
+        AssertHeld(vmar->lock_ref());
+        AssertHeld(map->lock_ref());
+        return ve->OnVmMapping(map, vmar, depth);
+      });
 }
 
 bool VmAddressRegion::has_parent() const {
@@ -584,6 +606,7 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
   if (!is_in_range(base, size)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+  const vaddr_t last_addr = base + size;
 
   if (subregions_.IsEmpty()) {
     return ZX_ERR_BAD_STATE;
@@ -594,82 +617,79 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  // Last byte of the range.
-  vaddr_t end_addr_byte;
-  DEBUG_ASSERT(size > 0);
-  bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
-  ASSERT(!overflowed);
-  auto end = subregions_.UpperBound(end_addr_byte);
-  auto begin = subregions_.IncludeOrHigher(base);
-  vaddr_t op_end_byte = 0;
+  // Helper that wraps EnumerateChildren and will automatically fail if a gap is found in the range.
+  // Also determines the potential subset of the mapping that our range is for and passes it to the
+  // callback.
+  auto process_range = [base, last_addr, this](auto mapping_callback) -> zx_status_t {
+    vaddr_t expected = base;
+    zx_status_t result = ZX_OK;
+    EnumerateChildrenInternalLocked(
+        base, last_addr, 1, [](VmAddressRegion* vmar, uint depth) { return true; },
+        [&expected, &result, &mapping_callback, last_addr](VmMapping* map, VmAddressRegion* vmar,
+                                                           uint depth) {
+          // It's possible base is less than expected if the first mapping is not precisely aligned
+          // to the start of our range. After that base should always be expected, and if it's
+          // greater then there is a gap and this is considered an error.
+          if (map->base() > expected) {
+            result = ZX_ERR_BAD_STATE;
+            return false;
+          }
+          // We should only have been called if we were at least partially in range.
+          DEBUG_ASSERT(map->is_in_range(expected, 1));
+          const size_t mapping_offset = expected - map->base();
 
-  for (auto curr = begin; curr != end; curr++) {
-    // TODO(fxbug.dev/39861): Allow the |op| range to include child VMARs.
-    if (!curr->is_mapping()) {
+          // Should only have been called for a non-zero range.
+          DEBUG_ASSERT(last_addr > expected);
+
+          const size_t total_remain = last_addr - expected;
+          DEBUG_ASSERT(map->size() > mapping_offset);
+          const size_t max_in_mapping = map->size() - mapping_offset;
+
+          const size_t size = ktl::min(total_remain, max_in_mapping);
+
+          result = mapping_callback(map, mapping_offset, size);
+          if (result != ZX_OK) {
+            return false;
+          }
+
+          expected += size;
+          return true;
+        });
+    // Unless we are already returning an error, check if there was a gap right at the end of the
+    // range.
+    if (result == ZX_OK && expected < last_addr) {
       return ZX_ERR_BAD_STATE;
     }
+    return result;
+  };
 
-    auto mapping = curr->as_vm_mapping();
-    AssertHeld(mapping->lock_ref());
-    fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
-    uint64_t vmo_offset = mapping->object_offset_locked();
-
-    // The |op| range must not include unmapped regions.
-    if (base < curr->base()) {
-      return ZX_ERR_BAD_STATE;
-    }
-    // Last byte of the current region.
-    vaddr_t curr_end_byte = 0;
-    DEBUG_ASSERT(curr->size() > 0);
-    overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
-    op_end_byte = ktl::min(curr_end_byte, end_addr_byte);
-    const uint64_t op_offset = (base - curr->base()) + vmo_offset;
-    size_t op_size = 0;
-    overflowed = add_overflow(op_end_byte - base, 1, &op_size);
-    ASSERT(!overflowed);
-
-    switch (op) {
-      case RangeOpType::Decommit: {
+  switch (op) {
+    case RangeOpType::Decommit:
+      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
+        AssertHeld(mapping->lock_ref());
         // Decommit zeroes pages of the VMO, equivalent to writing to it.
         // the mapping is currently writable, or could be made writable.
         if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
           return ZX_ERR_ACCESS_DENIED;
         }
-        zx_status_t result = vmo->DecommitRange(op_offset, op_size);
-        if (result != ZX_OK) {
-          return result;
-        }
-        break;
-      }
-      case RangeOpType::MapRange: {
-        LTRACEF_LEVEL(2, "MapRange: op_offset=0x%zx op_size=0x%zx\n", op_offset, op_size);
-        const auto result = mapping->MapRangeLocked(op_offset, op_size, false);
+        // Convert the mapping offset into a vmo offset.
+        const size_t vmo_offset = mapping->object_offset_locked() + mapping_offset;
+        return mapping->vmo_locked()->DecommitRange(vmo_offset, size);
+      });
+    case RangeOpType::MapRange:
+      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
+        AssertHeld(mapping->lock_ref());
+        const auto result = mapping->MapRangeLocked(mapping_offset, size, false);
         if (result != ZX_OK) {
           // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
           // For now, translate to ZX_ERR_NOT_FOUND.
           return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
         }
-        break;
-      }
-      default:
-        return ZX_ERR_NOT_SUPPORTED;
-    };
-    vaddr_t next_base = 0;
-    if (!add_overflow(op_end_byte, 1, &next_base)) {
-      base = next_base;
-    } else {
-      // If this happens, there must not be a next sub region but we break anyway to make sure
-      // we would not infinite loop.
-      break;
-    }
+        return ZX_OK;
+      });
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
   }
-
-  // The |op| range must not have an unmapped region at the end.
-  if (op_end_byte != end_addr_byte) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  return ZX_OK;
 }
 
 zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
