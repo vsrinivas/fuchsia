@@ -7,7 +7,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("lib") {
   name = "sl4f_lib"
@@ -437,7 +436,6 @@ test_package("sl4f-service-tests") {
   tests = [
     {
       name = "sl4f_lib_lib_test"
-      environments = basic_envs
     },
   ]
 }
@@ -461,7 +459,6 @@ unittest_package("sl4f-tests") {
     {
       name = "sl4f_bin_test"
       dest = "sl4f_bin_test"
-      environments = basic_envs
     },
   ]
 }

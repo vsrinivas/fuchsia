@@ -5,7 +5,6 @@
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("rust") {
   deps = [ ":syslog" ]
@@ -89,7 +88,6 @@ test_package("fuchsia-syslog-tests") {
   tests = [
     {
       name = "fuchsia_syslog_lib_test"
-      environments = basic_envs
     },
   ]
 }

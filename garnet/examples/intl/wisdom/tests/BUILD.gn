@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("intl_wisdom_test_bin") {
   testonly = true
@@ -30,7 +29,6 @@ test_package("intl_wisdom_test") {
   tests = [
     {
       name = "intl_wisdom_test"
-      environments = basic_envs
     },
   ]
 

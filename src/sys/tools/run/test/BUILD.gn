@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -88,11 +87,9 @@ test_package("run_tests") {
   tests = [
     {
       name = "run_return_value_test"
-      environments = basic_envs
     },
     {
       name = "run_tests"
-      environments = basic_envs
     },
   ]
 }

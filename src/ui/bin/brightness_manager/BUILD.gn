@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "brightness_manager"
@@ -71,7 +70,6 @@ test_package("brightness_manager_tests") {
     {
       name = "brightness_manager_bin_test"
       dest = "brightness_manager_test"
-      environments = basic_envs
     },
   ]
 }

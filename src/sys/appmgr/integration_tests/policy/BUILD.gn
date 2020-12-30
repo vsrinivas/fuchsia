@@ -5,7 +5,6 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("policy") {
@@ -81,7 +80,4 @@ fuchsia_component("policy_integration_test") {
 fuchsia_test_package("policy-integration-tests") {
   test_components = [ ":policy_integration_test" ]
   deps = components
-  test_specs = {
-    environments = basic_envs
-  }
 }

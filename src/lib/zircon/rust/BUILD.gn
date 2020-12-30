@@ -8,7 +8,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 common_sources = [
   "src/channel.rs",
@@ -171,17 +170,14 @@ test_package("fuchsia-zircon-tests") {
   tests = [
     {
       name = "fuchsia_cprng_lib_test"
-      environments = basic_envs
     },
     {
       name = "fuchsia_zircon_unittest"
       dest = "fuchsia_zircon_tests"
-      environments = basic_envs
     },
     {
       name = "fuchsia_zircon_status_tests"
       dest = "fuchsia_zircon_status_tests"
-      environments = basic_envs
     },
   ]
 

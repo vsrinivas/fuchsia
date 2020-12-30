@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 test("stream_cpp_unittests") {
   sources = [ "log_message_unittest.cc" ]
@@ -28,7 +27,6 @@ test_package("stream-cpp-tests") {
         max_severity = "ERROR"
       }
       name = "stream_cpp_unittests"
-      environments = basic_envs
     },
   ]
 }

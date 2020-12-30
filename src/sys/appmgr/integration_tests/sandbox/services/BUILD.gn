@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("services") {
@@ -21,6 +20,4 @@ sandbox_test_package("some_services") {
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
   ]
-
-  environments = basic_envs
 }

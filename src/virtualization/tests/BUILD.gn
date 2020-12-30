@@ -180,7 +180,6 @@ unittest_package("guest_unit_tests") {
   tests = [
     {
       name = "guest_unit_tests"
-      environments = basic_envs
     },
   ]
 }

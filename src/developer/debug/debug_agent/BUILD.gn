@@ -270,7 +270,6 @@ test_package("debug_agent_tests") {
   tests = [
     {
       name = "debug_agent_unit_tests"
-      environments = basic_envs
     },
   ]
 

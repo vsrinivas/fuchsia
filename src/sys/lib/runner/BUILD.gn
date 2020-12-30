@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("runner") {
@@ -45,7 +44,6 @@ fuchsia_unittest_package("runner_tests") {
   manifest = "meta/runner_tests.cmx"
   deps = [ ":runner_test" ]
   test_specs = {
-    environments = basic_envs
   }
 }
 

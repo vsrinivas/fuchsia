@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 config("wlan_common_config") {
   include_dirs = [ "include" ]
@@ -96,7 +95,6 @@ unittest_package("mcs_rate_lookup_tests") {
   tests = [
     {
       name = "mcs_rate_lookup_test"
-      environments = basic_envs
     },
   ]
 }

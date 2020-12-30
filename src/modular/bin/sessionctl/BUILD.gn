@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/modular/build/executable_package.gni")
 import("//src/modular/build/tests_package.gni")
 
@@ -87,5 +86,4 @@ executable("sessionctl_unittest") {
 
 hermetic_tests_package("sessionctl_unittests") {
   deps = [ ":sessionctl_unittest" ]
-  environments = basic_envs
 }

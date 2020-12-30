@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("async-generator") {
   with_unit_tests = true
@@ -24,7 +23,6 @@ unittest_package("async-generator-tests") {
     {
       name = "async_generator_lib_test"
       dest = "async-generator-test"
-      environments = basic_envs
     },
   ]
 }

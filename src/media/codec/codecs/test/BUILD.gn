@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -32,7 +31,6 @@ test_package("codec_adapter_sw_test") {
   tests = [
     {
       name = "codec_adapter_sw_test"
-      environments = basic_envs
     },
   ]
 
@@ -58,7 +56,6 @@ test_package("timestamp_extrapolator_tests") {
   tests = [
     {
       name = "timestamp_extrapolator_tests"
-      environments = basic_envs
     },
   ]
 }
@@ -96,7 +93,6 @@ test_package("chunk_input_stream_tests") {
   tests = [
     {
       name = "chunk_input_stream_tests"
-      environments = basic_envs
     },
   ]
 }
@@ -124,7 +120,6 @@ test_package("output_sink_tests") {
   tests = [
     {
       name = "output_sink_tests"
-      environments = basic_envs
     },
   ]
 }

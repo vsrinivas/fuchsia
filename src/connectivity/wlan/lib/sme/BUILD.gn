@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("wlan-sme") {
   name = "wlan_sme"
@@ -83,7 +82,6 @@ test_package("wlan-sme-tests") {
   tests = [
     {
       name = "wlan_sme_lib_test"
-      environments = basic_envs
     },
   ]
 }

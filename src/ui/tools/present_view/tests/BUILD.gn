@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -21,11 +20,9 @@ test_package("present_view_tests") {
   tests = [
     {
       name = "present_view_apptests"
-      environments = basic_envs
     },
     {
       name = "present_view_unittests"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

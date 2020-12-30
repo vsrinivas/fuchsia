@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 test("component_cpp_unittests") {
   sources = [
@@ -127,15 +126,12 @@ test_package("component_cpp_tests") {
   tests = [
     {
       name = "component_cpp_unittests"
-      environments = basic_envs
     },
     {
       name = "component_cpp_testing_unittests"
-      environments = basic_envs
     },
     {
       name = "component_cpp_testing_tests"
-      environments = basic_envs
     },
   ]
 }

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("lifecycle") {
@@ -80,6 +79,5 @@ fuchsia_unittest_package("appmgr-lifecycle-tests") {
     ":test-sysmgr",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }

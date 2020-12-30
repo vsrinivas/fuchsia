@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 config("wlan_config") {
   include_dirs = [ "." ]
@@ -70,7 +69,6 @@ test_package("wlan_drivers_tests") {
   tests = [
     {
       name = "wlan_minstrel_unittest"
-      environments = basic_envs
     },
   ]
 }

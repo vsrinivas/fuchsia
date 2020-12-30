@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -20,7 +19,6 @@ test_package("threadstack-unittests") {
   tests = [
     {
       name = "threadstack-unittests"
-      environments = basic_envs
     },
 
     # Create separate test for threadstack-bootstrap-unittests
@@ -34,7 +32,6 @@ test_package("threadstack-unittests") {
         max_severity = "ERROR"
       }
       name = "threadstack-bootstrap-unittests"
-      environments = basic_envs
     },
   ]
 }

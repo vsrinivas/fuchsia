@@ -8,7 +8,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//build/zbi/zbi.gni")
 
 rustc_binary("bin") {
@@ -203,7 +202,6 @@ test_package("factory_store_providers_ext4_tests") {
     {
       name = "factory_store_providers_test"
       dest = "factory_store_providers_ext4_test"
-      environments = basic_envs
     },
   ]
 }
@@ -288,11 +286,9 @@ test_package("factory_store_providers_tests") {
   tests = [
     {
       name = "factory_store_providers_test"
-      environments = basic_envs
     },
     {
       name = "factory_store_providers_bin_test"
-      environments = basic_envs
     },
   ]
 }

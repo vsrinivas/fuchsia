@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("wayland") {
   testonly = true
@@ -22,15 +21,12 @@ test_package("wayland_tests") {
   tests = [
     {
       name = "wayland_scanner_front_end_test"
-      environments = basic_envs
     },
     {
       name = "wayland_scanner_back_end_test"
-      environments = basic_envs
     },
     {
       name = "fuchsia_wayland_core_lib_test"
-      environments = basic_envs
     },
   ]
 }

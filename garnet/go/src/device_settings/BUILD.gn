@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 go_library("device_settings") {
   name = "device_settings"
@@ -30,7 +29,6 @@ test_package("device_settings_gotests") {
   tests = [
     {
       name = "device_settings_integration_test"
-      environments = basic_envs
     },
   ]
 }

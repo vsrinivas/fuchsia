@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("system-temp") {
@@ -17,5 +16,4 @@ sandbox_test_package("no_system_temp") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }

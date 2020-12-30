@@ -6,7 +6,6 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 rustc_binary("bin") {
@@ -108,7 +107,6 @@ test_package("tests") {
     {
       name = "bt_a2dp_sink_bin_test"
       dest = "bt-a2dp-sink-unittests"
-      environments = basic_envs
     },
   ]
 }

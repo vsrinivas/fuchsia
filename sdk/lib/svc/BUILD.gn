@@ -5,7 +5,6 @@
 import("//build/cpp/sdk_shared_library.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 sdk_shared_library("svc") {
   category = "partner"
@@ -52,7 +51,6 @@ test_package("svc_tests") {
   tests = [
     {
       name = "svc_unittests"
-      environments = basic_envs
     },
   ]
 }

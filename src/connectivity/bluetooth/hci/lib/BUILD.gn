@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_staticlib.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_staticlib("bt-hci") {
   name = "bt_hci"
@@ -63,7 +62,6 @@ unittest_package("bt-hci-lib-tests") {
   tests = [
     {
       name = "bt_hci_staticlib_test"
-      environments = basic_envs
     },
   ]
 }

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("callback") {
   sources = [
@@ -57,7 +56,6 @@ unittest_package("callback_tests") {
   tests = [
     {
       name = "callback_unittests"
-      environments = basic_envs
     },
   ]
 }

@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
@@ -64,7 +63,6 @@ test_package("tests") {
     {
       name = "mock_cobalt_bin_test"
       dest = "mock-cobalt-unittests"
-      environments = basic_envs
     },
   ]
 }

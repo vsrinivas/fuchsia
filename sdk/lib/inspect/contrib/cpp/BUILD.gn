@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("cpp") {
   testonly = true
@@ -72,11 +71,9 @@ unittest_package("inspect_contrib_cpp_tests") {
   tests = [
     {
       name = "read_visitor_test"
-      environments = basic_envs
     },
     {
       name = "archive_reader_test"
-      environments = basic_envs
     },
   ]
 

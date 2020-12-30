@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("component_context_provider_example_bin") {
   testonly = true
@@ -25,7 +24,6 @@ test_package("component_context_provider_example_test") {
   tests = [
     {
       name = "component_context_provider_example_test"
-      environments = basic_envs
     },
   ]
 }

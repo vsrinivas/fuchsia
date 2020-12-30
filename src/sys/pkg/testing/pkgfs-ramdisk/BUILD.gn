@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("pkgfs-ramdisk") {
   version = "0.1.0"
@@ -59,7 +58,6 @@ test_package("pkgfs-ramdisk-tests") {
     {
       name = "pkgfs_ramdisk_lib_test"
       dest = "pkgfs-ramdisk-lib-test"
-      environments = basic_envs
     },
   ]
 }

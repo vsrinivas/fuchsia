@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("integration_tests") {
   testonly = true
@@ -73,7 +72,6 @@ test_package("chrealm_integrationtests") {
   tests = [
     {
       name = "chrealm_integration_test"
-      environments = basic_envs
     },
   ]
 }

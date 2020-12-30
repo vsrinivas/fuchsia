@@ -13,7 +13,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("bcmdhd_crossdriver_test") {
   output_name = "bcmdhd_crossdriver_test"
@@ -200,7 +199,6 @@ unittest_package("brcmfmac_test") {
     tests += [
       {
         name = "$test_name"
-        environments = basic_envs
       },
     ]
   }

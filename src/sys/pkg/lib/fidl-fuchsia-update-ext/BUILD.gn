@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("fidl-fuchsia-update-ext") {
   version = "0.0.1"
@@ -32,7 +31,6 @@ test_package("fidl-fuchsia-update-ext-tests") {
     {
       name = "fidl_fuchsia_update_ext_lib_test"
       dest = "fidl-fuchsia-update-ext-tests"
-      environments = basic_envs
     },
   ]
 }

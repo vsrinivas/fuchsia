@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("test_utils") {
   testonly = true
@@ -71,7 +70,6 @@ test_package("tracing_test_utils_tests") {
   tests = [
     {
       name = "tracing_test_utils_tests"
-      environments = basic_envs
     },
   ]
 }

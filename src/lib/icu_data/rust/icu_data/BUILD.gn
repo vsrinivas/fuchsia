@@ -5,7 +5,6 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
 rustc_library("icu_data") {
@@ -49,7 +48,6 @@ test_package("icu_data_rust_tests") {
     {
       name = "icu_data_lib_test"
       dest = "icu_data_lib_test"
-      environments = basic_envs
     },
   ]
   resources = [

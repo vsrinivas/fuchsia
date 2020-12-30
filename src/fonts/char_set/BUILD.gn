@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 # Library for working with collections of Unicode code points.
 rustc_library("char_set") {
@@ -26,7 +25,6 @@ test_package("char_set_tests") {
   tests = [
     {
       name = "char_set_lib_test"
-      environments = basic_envs
     },
   ]
 }

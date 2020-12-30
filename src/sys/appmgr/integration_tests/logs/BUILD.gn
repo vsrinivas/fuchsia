@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("logs") {
@@ -23,7 +22,6 @@ fuchsia_unittest_package("appmgr_log_integration_tests") {
     ":log_tests_bin",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }
 

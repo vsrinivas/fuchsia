@@ -7,7 +7,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("lib") {
   name = "lib"
@@ -641,32 +640,26 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "dynamic_repositories_disabled"
       dest = "dynamic-repositories-disabled"
-      environments = basic_envs
     },
     {
       name = "dynamic_rewrite_disabled"
       dest = "dynamic-rewrite-disabled"
-      environments = basic_envs
     },
     {
       name = "get_hash"
       dest = "get-hash"
-      environments = basic_envs
     },
     {
       name = "pkg_resolve_inspect"
       dest = "pkg-resolve-inspect"
-      environments = basic_envs
     },
     {
       name = "resolve_propagates_pkgfs_failure"
       dest = "resolve-propagates-pkgfs-failure"
-      environments = basic_envs
     },
     {
       name = "resolve_recovers_from_http_errors"
       dest = "resolve-recovers-from-http-errors"
-      environments = basic_envs
     },
     {
       log_settings = {
@@ -674,32 +667,26 @@ test_package("pkg-resolver-integration-tests") {
       }
       name = "resolve_fails"
       dest = "resolve-fails"
-      environments = basic_envs
     },
     {
       name = "resolve_succeeds"
       dest = "resolve-succeeds"
-      environments = basic_envs
     },
     {
       name = "resolve_succeeds_with_broken_minfs"
       dest = "resolve-succeeds-with-broken-minfs"
-      environments = basic_envs
     },
     {
       name = "system_cache_fallback"
       dest = "system-cache-fallback"
-      environments = basic_envs
     },
     {
       name = "base_pinning"
       dest = "base-pinning"
-      environments = basic_envs
     },
     {
       name = "metrics"
       dest = "metrics"
-      environments = basic_envs
     },
   ]
 }

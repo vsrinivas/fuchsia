@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("wlan-span") {
   name = "wlan_span"
@@ -21,7 +20,6 @@ unittest_package("wlan-span-tests") {
   tests = [
     {
       name = "wlan_span_lib_test"
-      environments = basic_envs
     },
   ]
 }

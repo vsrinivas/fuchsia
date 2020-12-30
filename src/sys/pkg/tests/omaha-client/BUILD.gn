@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_test("driver") {
   name = "omaha_client_integration_test"
@@ -89,7 +88,6 @@ test_package("omaha-client-integration-tests") {
     {
       name = "omaha_client_integration_test"
       dest = "omaha-client-integration-test"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

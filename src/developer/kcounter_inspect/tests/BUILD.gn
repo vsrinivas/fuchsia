@@ -3,17 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 test_package("kcounter_inspect_tests") {
   tests = [
     {
       name = "kcounter_inspect_unittest"
-      environments = basic_envs
     },
     {
       name = "kcounter_inspect_integration_test"
-      environments = basic_envs
     },
   ]
 

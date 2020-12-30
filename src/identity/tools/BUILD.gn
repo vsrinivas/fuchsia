@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tools") {
   testonly = true
@@ -24,7 +23,6 @@ test_package("identity_tools_unittests") {
   tests = [
     {
       name = "sktool_bin_test"
-      environments = basic_envs
     },
   ]
 }

@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "debug_serial"
@@ -51,7 +50,6 @@ test_package("debug-serial-tests") {
   tests = [
     {
       name = "debug_serial_bin_test"
-      environments = basic_envs
     },
   ]
 }

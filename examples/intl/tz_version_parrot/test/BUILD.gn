@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -35,7 +34,6 @@ test_package("tz_version_parrot_test") {
   tests = [
     {
       name = "tz_version_parrot_test"
-      environments = basic_envs
     },
   ]
 }

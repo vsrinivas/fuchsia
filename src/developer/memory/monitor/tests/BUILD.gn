@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -48,7 +47,6 @@ test_package("memory_monitor_tests") {
   tests = [
     {
       name = "memory_monitor_unittests"
-      environments = basic_envs
     },
   ]
 }
@@ -111,7 +109,6 @@ test_package("memory_monitor_inspect_integration_tests") {
   tests = [
     {
       name = "memory_monitor_inspect_integration_tests"
-      environments = basic_envs
     },
   ]
 }

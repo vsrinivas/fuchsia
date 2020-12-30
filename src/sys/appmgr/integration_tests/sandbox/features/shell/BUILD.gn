@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("shell") {
@@ -20,7 +19,6 @@ sandbox_test_package("has_deprecated_shell") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("no_shell") {
@@ -30,5 +28,4 @@ sandbox_test_package("no_shell") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }

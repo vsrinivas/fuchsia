@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("bin") {
   testonly = true
@@ -35,23 +34,18 @@ test_package("identity_bin_unittests") {
   tests = [
     {
       name = "account_handler_bin_test"
-      environments = basic_envs
     },
     {
       name = "account_manager_bin_test"
-      environments = basic_envs
     },
     {
       name = "dev_auth_provider_bin_test"
-      environments = basic_envs
     },
     {
       name = "dev_authenticator_bin_test"
-      environments = basic_envs
     },
     {
       name = "google_auth_provider_bin_test"
-      environments = basic_envs
     },
   ]
 }

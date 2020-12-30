@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 import("//src/sys/build/components.gni")
 
@@ -23,7 +22,6 @@ sandbox_test_package("no_persistent_storage") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("has_isolated_persistent_storage") {
@@ -33,7 +31,6 @@ sandbox_test_package("has_isolated_persistent_storage") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("has_isolated_cache_storage") {
@@ -45,8 +42,6 @@ sandbox_test_package("has_isolated_cache_storage") {
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
   ]
-
-  environments = basic_envs
 }
 
 executable("isolated_persistent_storage_bin") {
@@ -73,6 +68,5 @@ fuchsia_unittest_package("isolated_persistent_storage") {
     "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("component_id_index") {
@@ -35,7 +34,6 @@ fuchsia_unittest_package("component-id-index-tests") {
   manifest = "meta/component-id-index-tests.cmx"
   deps = [ ":component_id_index_test" ]
   test_specs = {
-    environments = basic_envs
   }
 }
 

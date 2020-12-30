@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("blobfs-corrupt") {
   sources = [ "main.cc" ]
@@ -55,7 +54,6 @@ unittest_package("blobfs-corrupt-tests") {
   tests = [
     {
       name = "blobfs-corrupt-test"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

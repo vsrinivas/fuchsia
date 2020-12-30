@@ -4,7 +4,6 @@
 
 import("//build/go/go_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 go_test("go_tuf_repo_test") {
   gopackages = [ "github.com/flynn/go-tuf" ]
@@ -77,7 +76,6 @@ test_package("go_tuf_tests") {
     tests += [
       {
         name = test
-        environments = basic_envs
       },
     ]
   }

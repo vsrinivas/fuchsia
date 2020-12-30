@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("options") {
   sources = [ "options.cc" ]
@@ -78,11 +77,9 @@ test_package("storage-volume-image-tests") {
   tests = [
     {
       name = "storage-volume-image-test"
-      environments = basic_envs
     },
     {
       name = "storage-volume-image-integration-test"
-      environments = basic_envs
     },
   ]
 

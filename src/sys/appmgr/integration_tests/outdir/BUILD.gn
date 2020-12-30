@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("outdir") {
@@ -47,6 +46,5 @@ fuchsia_unittest_package("appmgr_out_dir_integration_test") {
     "//src/sys/sysmgr:sysmgr_component",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }

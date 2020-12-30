@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 # This is the main target in this BUILD file.  It implicitly contains everything
 # in the src/ directory, and implicitly looks for src/main.rs as entry point.
@@ -69,7 +68,6 @@ test_package("intl_wisdom_server_rust_tests") {
       # to be present under this directory.
       name = "intl_wisdom_server_rust_bin_test"
       dest = "intl_wisdom_server_rust_bin_test"
-      environments = basic_envs
     },
   ]
 

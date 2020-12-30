@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("base_view") {
   sources = [
@@ -69,11 +68,9 @@ unittest_package("base_view_unittests") {
   tests = [
     {
       name = "base_view_unittest"
-      environments = basic_envs
     },
     {
       name = "math_unittest"
-      environments = basic_envs
     },
   ]
 }

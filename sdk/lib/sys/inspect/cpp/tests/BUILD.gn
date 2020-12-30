@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "sys_inspect_cpp_bin"
@@ -62,7 +61,6 @@ test_package("sys_inspect_cpp_tests") {
   tests = [
     {
       name = "sys_inspect_cpp_tests"
-      environments = basic_envs
     },
   ]
 }

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/modular/build/tests_package.gni")
 
 hermetic_tests_package("storage_unittests") {
@@ -12,7 +11,6 @@ hermetic_tests_package("storage_unittests") {
     ":story_storage_unittest",
     ":watcher_list_unittest",
   ]
-  environments = basic_envs
 }
 
 group("storage") {

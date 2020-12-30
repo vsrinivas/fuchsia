@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("effects") {
   testonly = true
@@ -84,7 +83,6 @@ unittest_package("audio_effects_example_tests") {
   tests = [
     {
       name = "audio_effects_example_tests"
-      environments = basic_envs
     },
   ]
 }

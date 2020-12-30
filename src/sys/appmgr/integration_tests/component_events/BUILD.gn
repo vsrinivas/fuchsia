@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("component_events") {
@@ -48,7 +47,6 @@ fuchsia_test_package("component_events_integration_tests") {
   ]
 
   test_specs = {
-    environments = basic_envs
   }
 }
 

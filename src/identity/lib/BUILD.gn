@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("lib") {
   testonly = true
@@ -29,31 +28,24 @@ test_package("identity_lib_unittests") {
   tests = [
     {
       name = "account_common_lib_test"
-      environments = basic_envs
     },
     {
       name = "identity_common_lib_test"
-      environments = basic_envs
     },
     {
       name = "identity_key_manager_lib_test"
-      environments = basic_envs
     },
     {
       name = "storage_manager_lib_test"
-      environments = basic_envs
     },
     {
       name = "token_cache_lib_test"
-      environments = basic_envs
     },
     {
       name = "token_store_lib_test"
-      environments = basic_envs
     },
     {
       name = "token_manager_lib_test"
-      environments = basic_envs
     },
   ]
 }

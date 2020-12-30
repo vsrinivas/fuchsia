@@ -5,7 +5,6 @@
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -132,7 +131,6 @@ test_package("run_test_component_test") {
   tests = [
     {
       name = "run_test_component_test"
-      environments = basic_envs
     },
   ]
 }

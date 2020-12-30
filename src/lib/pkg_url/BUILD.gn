@@ -5,7 +5,6 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("pkg_url") {
   sources = [
@@ -39,7 +38,6 @@ test_package("pkg_url_unittests") {
   tests = [
     {
       name = "pkg_url_unittests"
-      environments = basic_envs
     },
   ]
 }

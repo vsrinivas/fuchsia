@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("fake_msgbuf_interfaces") {
   output_name = "fake_msgbuf_interfaces"
@@ -100,7 +99,6 @@ unittest_package("brcmfmac_msgbuf_test") {
     tests += [
       {
         name = "$test_name"
-        environments = basic_envs
       },
     ]
   }

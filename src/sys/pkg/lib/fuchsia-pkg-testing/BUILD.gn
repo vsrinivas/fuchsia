@@ -6,7 +6,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-pkg-testing") {
   version = "0.1.0"
@@ -133,12 +132,10 @@ test_package("fuchsia-pkg-testing-tests") {
     {
       name = "fuchsia_pkg_testing_lib_test"
       dest = "fuchsia-pkg-testing-tests"
-      environments = basic_envs
     },
     {
       name = "pkgfs_test"
       dest = "pkgfs-test"
-      environments = basic_envs
     },
   ]
 }

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/modular/build/tests_package.gni")
 
 group("puppet_master") {
@@ -28,7 +27,6 @@ hermetic_tests_package("puppet_master_unittests") {
     "command_runners:add_mod_command_runner_unittest",
     "command_runners:remove_mod_command_runner_unittest",
   ]
-  environments = basic_envs
 }
 
 source_set("puppet_master_impl") {

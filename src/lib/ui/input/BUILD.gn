@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("input") {
   sources = [
@@ -62,7 +61,6 @@ test_package("input_unit_tests") {
   tests = [
     {
       name = "gesture_tests"
-      environments = basic_envs
     },
   ]
 

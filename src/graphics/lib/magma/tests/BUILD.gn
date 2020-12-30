@@ -94,7 +94,6 @@ test_package("magma_nonhardware_tests") {
   tests = [
     {
       name = "magma_unit_tests"
-      environments = basic_envs
     },
   ]
 }

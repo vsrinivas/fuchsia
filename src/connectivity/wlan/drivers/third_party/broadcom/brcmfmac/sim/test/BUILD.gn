@@ -12,7 +12,6 @@
 # OF THIS SOFTWARE.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("sim_test") {
   output_name = "sim_test"
@@ -510,123 +509,93 @@ unittest_package("brcmfmac_sim_test") {
   tests = [
     {
       name = "active_scan_test"
-      environments = basic_envs
     },
     {
       name = "arp_test"
-      environments = basic_envs
     },
     {
       name = "assoc_test"
-      environments = basic_envs
     },
     {
       name = "auth_test"
-      environments = basic_envs
     },
     {
       name = "bad_entropy_test"
-      environments = basic_envs
     },
     {
       name = "beacon_lost_test"
-      environments = basic_envs
     },
     {
       name = "bootloader_mac_addr_test"
-      environments = basic_envs
     },
     {
       name = "call_after_del_iface_test"
-      environments = basic_envs
     },
     {
       name = "cc_test"
-      environments = basic_envs
     },
     {
       name = "channel_switch_test"
-      environments = basic_envs
     },
     {
       name = "create_softap_test"
-      environments = basic_envs
     },
     {
       name = "data_frame_test"
-      environments = basic_envs
     },
     {
       name = "disassoc_test"
-      environments = basic_envs
     },
     {
       name = "dynamic_if_test"
-      environments = basic_envs
     },
     {
       name = "err_inject_test"
-      environments = basic_envs
     },
     {
       name = "escan_params_test"
-      environments = basic_envs
     },
     {
       name = "firmware_config_test"
-      environments = basic_envs
     },
     {
       name = "ifc_query_test"
-      environments = basic_envs
     },
     {
       name = "iovar_test"
-      environments = basic_envs
     },
     {
       name = "lifecycle_test"
-      environments = basic_envs
     },
     {
       name = "mfg_test"
-      environments = basic_envs
     },
     {
       name = "no_random_mac_test"
-      environments = basic_envs
     },
     {
       name = "passive_scan_test"
-      environments = basic_envs
     },
     {
       name = "phy_query_test"
-      environments = basic_envs
     },
     {
       name = "scan_dwell_time_test"
-      environments = basic_envs
     },
     {
       name = "scan_while_scanning_test"
-      environments = basic_envs
     },
     {
       name = "set_keys_test"
-      environments = basic_envs
     },
     {
       name = "set_multicast_test"
-      environments = basic_envs
     },
     {
       name = "start_ap_while_scanning_test"
-      environments = basic_envs
     },
     {
       name = "timeout_test"
-      environments = basic_envs
     },
   ]
 }

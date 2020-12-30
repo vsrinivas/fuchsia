@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("event-queue") {
   version = "0.0.1"
@@ -42,7 +41,6 @@ unittest_package("event-queue-tests") {
   tests = [
     {
       name = "event_queue_lib_test"
-      environments = basic_envs
     },
   ]
 }

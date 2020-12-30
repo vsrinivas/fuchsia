@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-url") {
   version = "0.1.0"
@@ -38,7 +37,6 @@ test_package("fuchsia-url-tests") {
     {
       name = "fuchsia_url_lib_test"
       dest = "fuchsia-url-tests"
-      environments = basic_envs
     },
   ]
 }

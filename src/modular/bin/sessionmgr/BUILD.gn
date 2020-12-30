@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/modular/build/executable_package.gni")
 import("//src/modular/build/tests_package.gni")
 
@@ -215,7 +214,6 @@ hermetic_tests_package("sessionmgr_unittests") {
     ":element_controller_impl_unittest",
     ":element_manager_impl_unittest",
   ]
-  environments = basic_envs
 }
 
 executable("element_manager_impl_unittest") {

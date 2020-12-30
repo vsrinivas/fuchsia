@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -17,7 +16,6 @@ unittest_package("input-report-reader-test") {
   tests = [
     {
       name = "integration_tests"
-      environments = basic_envs
     },
   ]
 }

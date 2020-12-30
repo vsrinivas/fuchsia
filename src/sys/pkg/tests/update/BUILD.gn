@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_test("driver") {
   name = "update_integration_test"
@@ -57,7 +56,6 @@ test_package("update-integration-tests") {
     {
       name = "update_integration_test"
       dest = "update-integration-test"
-      environments = basic_envs
     },
   ]
 }

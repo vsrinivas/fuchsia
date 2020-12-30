@@ -73,25 +73,21 @@ test_package("scenic_tests") {
   tests = [
     {
       name = "display_unittests"
-      environments = basic_envs
     },
     {
       name = "flatland_unittests"
-      environments = basic_envs
     },
     {
       log_settings = {
         max_severity = "ERROR"
       }
       name = "flatland_buffers_unittests"
-      environments = basic_envs
     },
     {
       log_settings = {
         max_severity = "ERROR"
       }
       name = "flatland_engine_unittests"
-      environments = basic_envs
     },
     {
       name = "flatland_renderer_unittests"
@@ -99,7 +95,6 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_apptests"
-      environments = basic_envs
     },
     {
       name = "gfx_pixeltests"
@@ -115,7 +110,6 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_util_unittests"
-      environments = basic_envs
     },
     {
       name = "gfx_viewstate_apptests"
@@ -123,15 +117,12 @@ test_package("scenic_tests") {
     },
     {
       name = "input_unittests"
-      environments = basic_envs
     },
     {
       name = "scenic_unittests"
-      environments = basic_envs
     },
     {
       name = "scheduling_unittests"
-      environments = basic_envs
     },
   ]
 

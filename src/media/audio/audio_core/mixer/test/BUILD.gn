@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -53,7 +52,6 @@ test_package("audio_fidelity_tests") {
   tests = [
     {
       name = "audio_fidelity_tests"
-      environments = basic_envs
     },
   ]
 }

@@ -6,7 +6,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "factoryctl"
@@ -76,7 +75,6 @@ test_package("factoryctl_tests") {
   tests = [
     {
       name = "factoryctl_bin_test"
-      environments = basic_envs
     },
   ]
 }

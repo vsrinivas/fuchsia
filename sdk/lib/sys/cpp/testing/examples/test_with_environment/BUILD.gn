@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("fake_echo_app") {
   testonly = true
@@ -61,7 +60,6 @@ test_package("test_with_environment_example_test") {
   tests = [
     {
       name = "test_with_environment_example_test"
-      environments = basic_envs
     },
   ]
 }

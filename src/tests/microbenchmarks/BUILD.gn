@@ -4,7 +4,6 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "fuchsia_microbenchmarks"
@@ -152,7 +151,6 @@ test_package("fuchsia_microbenchmarks_unittestmode") {
   tests = [
     {
       name = "fuchsia_microbenchmarks"
-      environments = basic_envs
     },
   ]
 }

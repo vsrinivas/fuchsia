@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("wlan-service-util") {
   with_unit_tests = true
@@ -41,7 +40,6 @@ unittest_package("wlan-service-util-tests") {
   tests = [
     {
       name = "wlan_service_util_lib_test"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

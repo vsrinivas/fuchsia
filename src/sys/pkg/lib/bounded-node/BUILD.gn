@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("bounded-node") {
   version = "0.0.1"
@@ -31,7 +30,6 @@ unittest_package("bounded-node-tests") {
   tests = [
     {
       name = "bounded_node_lib_test"
-      environments = basic_envs
     },
   ]
 }

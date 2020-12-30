@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("ambient-executable-policy") {
@@ -22,7 +21,6 @@ sandbox_test_package("has_ambient_executable") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("no_ambient_executable") {
@@ -32,7 +30,6 @@ sandbox_test_package("no_ambient_executable") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("no_ambient_executable_with_features") {
@@ -42,7 +39,6 @@ sandbox_test_package("no_ambient_executable_with_features") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }
 
 sandbox_test_package("no_ambient_executable_with_sandbox") {
@@ -52,5 +48,4 @@ sandbox_test_package("no_ambient_executable_with_sandbox") {
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
-  environments = basic_envs
 }

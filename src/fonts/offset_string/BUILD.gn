@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("offset_string") {
   edition = "2018"
@@ -32,7 +31,6 @@ test_package("offset_string_tests") {
   tests = [
     {
       name = "offset_string_lib_test"
-      environments = basic_envs
     },
   ]
 }

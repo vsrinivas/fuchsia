@@ -4,7 +4,6 @@
 
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("library_loader") {
@@ -52,7 +51,6 @@ fuchsia_unittest_package("library_loader_tests") {
   ]
   manifest = "meta/library_loader_tests.cmx"
   test_specs = {
-    environments = basic_envs
   }
 }
 

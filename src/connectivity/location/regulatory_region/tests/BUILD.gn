@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_test("test") {
   name = "regulatory_region_integration_test"
@@ -33,7 +32,6 @@ test_package("regulatory_region_integration_test") {
   tests = [
     {
       name = "regulatory_region_integration_test"
-      environments = basic_envs
     },
   ]
 }

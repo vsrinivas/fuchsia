@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("inspect") {
@@ -106,6 +105,5 @@ fuchsia_test_package("appmgr_inspect_integration_tests") {
     ":inspect_vmo_test_app",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }

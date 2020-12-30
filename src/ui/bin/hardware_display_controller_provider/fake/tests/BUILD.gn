@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -34,7 +33,6 @@ test_package("fake_hdcp_tests") {
   tests = [
     {
       name = "fake_hdcp_unittests"
-      environments = basic_envs
     },
   ]
 }

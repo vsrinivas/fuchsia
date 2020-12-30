@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 # Compile flags
 testing_defines = [
@@ -218,55 +217,42 @@ unittest_package("iwlwifi_test") {
   tests = [
     {
       name = "dummy_test"
-      environments = basic_envs
     },
     {
       name = "fuchsia_porting_test"
-      environments = basic_envs
     },
     {
       name = "iwl-phy-db_test"
-      environments = basic_envs
     },
     {
       name = "mac80211_test"
-      environments = basic_envs
     },
     {
       name = "mac-ctxt_test"
-      environments = basic_envs
     },
     {
       name = "mvm_test"
-      environments = basic_envs
     },
     {
       name = "notif-wait_test"
-      environments = basic_envs
     },
     {
       name = "nvm_test"
-      environments = basic_envs
     },
     {
       name = "pcie_test"
-      environments = basic_envs
     },
     {
       name = "phy-ctxt_test"
-      environments = basic_envs
     },
     {
       name = "sta_test"
-      environments = basic_envs
     },
     {
       name = "utils_test"
-      environments = basic_envs
     },
     {
       name = "wlan-device_test"
-      environments = basic_envs
     },
   ]
 }

@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("wep_deprecated") {
   name = "wep_deprecated"
@@ -30,7 +29,6 @@ unittest_package("wep-deprecated-tests") {
   tests = [
     {
       name = "wep_deprecated_lib_test"
-      environments = basic_envs
     },
   ]
 }

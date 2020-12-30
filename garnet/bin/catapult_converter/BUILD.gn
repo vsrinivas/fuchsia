@@ -6,7 +6,6 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("converter") {
   sources = [ "converter.cc" ]
@@ -79,7 +78,6 @@ test_package("catapult_converter_tests") {
     {
       name = "catapult_converter_unittest"
       dest = "catapult_converter_tests"
-      environments = basic_envs
     },
   ]
 }

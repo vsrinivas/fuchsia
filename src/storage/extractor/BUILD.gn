@@ -6,7 +6,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("disk_extractor_lib") {
   name = "disk_extractor_lib"
@@ -43,7 +42,6 @@ test_package("disk-extractor-lib-tests") {
     {
       name = "disk_extractor_lib_lib_test"
       dest = "disk-extractor-lib-unit-tests"
-      environments = basic_envs
     },
   ]
 }

@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_test("driver") {
   name = "usb_system_update_checker_integration_test"
@@ -104,7 +103,6 @@ test_package("usb-system-update-checker-integration-tests") {
       }
       name = "usb_system_update_checker_integration_test"
       dest = "usb-system-update-checker-integration-test"
-      environments = basic_envs
     },
   ]
 }

@@ -69,7 +69,6 @@ test_package("stream_processor_lib_test") {
   tests = [
     {
       name = "stream_processor_test_lib_test"
-      environments = basic_envs
     },
   ]
 }
@@ -151,7 +150,6 @@ test_package("audio_decoder_test") {
   tests = [
     {
       name = "audio_decoder_test"
-      environments = basic_envs
     },
   ]
 
@@ -201,7 +199,6 @@ test_package("audio_encoder_test") {
   tests = [
     {
       name = "audio_encoder_test"
-      environments = basic_envs
     },
   ]
 }
@@ -236,7 +233,6 @@ test_package("video_frame_hasher_test") {
   tests = [
     {
       name = "video_frame_hasher_lib_test"
-      environments = basic_envs
     },
   ]
 }
@@ -268,7 +264,6 @@ test_package("video-frame-stream-test") {
   tests = [
     {
       name = "video_frame_stream_lib_test"
-      environments = basic_envs
     },
   ]
 }
@@ -298,7 +293,6 @@ test_package("h264-stream-test") {
   tests = [
     {
       name = "h264_stream_lib_test"
-      environments = basic_envs
     },
   ]
 }

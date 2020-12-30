@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -87,7 +86,6 @@ test_package("guest_manager_tests") {
   tests = [
     {
       name = "guest_manager_unittests"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

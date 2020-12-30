@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_binary("battery_cli_bin") {
   name = "battery_cli"
@@ -57,7 +56,6 @@ test_package("tests") {
     {
       name = "battery_cli_bin_test"
       dest = "battery_cli_tests"
-      environments = basic_envs
     },
   ]
 }

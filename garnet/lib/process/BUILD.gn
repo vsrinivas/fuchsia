@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 source_set("process") {
   sources = [
@@ -44,7 +43,6 @@ test_package("process_unittests") {
   tests = [
     {
       name = "process_unittests"
-      environments = basic_envs
     },
   ]
 }

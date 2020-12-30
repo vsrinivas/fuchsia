@@ -6,7 +6,6 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
@@ -123,7 +122,6 @@ test_package("omaha-client-service-bin-tests") {
     {
       name = "omaha_client_service_bin_test"
       dest = "omaha-client-service-bin-test"
-      environments = basic_envs
     },
   ]
 }

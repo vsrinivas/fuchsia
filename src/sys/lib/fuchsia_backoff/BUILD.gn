@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia_backoff") {
@@ -24,6 +23,5 @@ rustc_library("fuchsia_backoff") {
 fuchsia_unittest_package("fuchsia_backoff_tests") {
   deps = [ ":fuchsia_backoff_test" ]
   test_specs = {
-    environments = basic_envs
   }
 }

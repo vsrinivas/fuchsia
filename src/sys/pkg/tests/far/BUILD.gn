@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_test("driver") {
   name = "far_integration_test"
@@ -43,7 +42,6 @@ test_package("far-integration-tests") {
     {
       name = "far_integration_test"
       dest = "far-integration-test"
-      environments = basic_envs
     },
   ]
 }

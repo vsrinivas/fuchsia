@@ -5,7 +5,6 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("account_manager_integration") {
   testonly = true
@@ -56,7 +55,6 @@ test_package("account_manager_integration_test_pkg") {
   tests = [
     {
       name = "account_manager_integration_test"
-      environments = basic_envs
     },
   ]
 }

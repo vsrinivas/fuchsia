@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/modular/build/executable_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
@@ -81,11 +80,9 @@ test_package("basemgr_unittests") {
   tests = [
     {
       name = "basemgr_impl_unittest"
-      environments = basic_envs
     },
     {
       name = "session_context_impl_unittest"
-      environments = basic_envs
 
       # This test exercises crash handling that logs an ERROR.
       log_settings = {

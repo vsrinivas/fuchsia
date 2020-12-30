@@ -6,7 +6,6 @@ import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 group("integration_tests") {
@@ -224,6 +223,5 @@ fuchsia_test_package("appmgr_integration_tests") {
     ":sysmgr_config",
   ]
   test_specs = {
-    environments = basic_envs
   }
 }

@@ -12,7 +12,6 @@
 # OF THIS SOFTWARE.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 executable("sdio_test") {
   output_name = "sdio_test"
@@ -42,7 +41,6 @@ unittest_package("brcmfmac_sdio_test") {
   tests = [
     {
       name = "sdio_test"
-      environments = basic_envs
     },
   ]
 }

@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 # Library for working with Font Provider font manifests.
 rustc_library("manifest") {
@@ -50,7 +49,6 @@ test_package("manifest_tests") {
   tests = [
     {
       name = "manifest_lib_test"
-      environments = basic_envs
     },
   ]
 }

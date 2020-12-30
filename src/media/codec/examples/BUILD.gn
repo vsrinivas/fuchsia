@@ -483,7 +483,6 @@ package("use_aac_decoder_test") {
   tests = [
     {
       name = "use_aac_decoder_test"
-      environments = basic_envs
     },
   ]
 

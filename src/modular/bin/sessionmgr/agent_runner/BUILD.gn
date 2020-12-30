@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
 import("//src/modular/build/tests_package.gni")
 
 source_set("agent_runner") {
@@ -65,7 +64,6 @@ executable("agent_runner_unittest") {
 
 hermetic_tests_package("agent_runner_unittests") {
   deps = [ ":agent_runner_unittest" ]
-  environments = basic_envs
 }
 
 # Broken out for component to depend on w/o creating circles.

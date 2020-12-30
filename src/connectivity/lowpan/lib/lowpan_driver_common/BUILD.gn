@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("lowpan_driver_common") {
   edition = "2018"
@@ -41,7 +40,6 @@ unittest_package("lowpan-driver-common-tests") {
   tests = [
     {
       name = "lowpan_driver_common_lib_test"
-      environments = basic_envs
     },
   ]
 }

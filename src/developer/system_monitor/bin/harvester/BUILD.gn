@@ -4,7 +4,6 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("harvester") {
   testonly = true
@@ -180,7 +179,6 @@ test_package("system_monitor_harvester_tests") {
         max_severity = "ERROR"
       }
       name = "system_monitor_harvester_test"
-      environments = basic_envs
     },
   ]
 }

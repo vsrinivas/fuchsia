@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("rust") {
   testonly = true
@@ -40,15 +39,12 @@ test_package("garnet-rust-examples") {
   tests = [
     {
       name = "testing_lib_test"
-      environments = basic_envs
     },
     {
       name = "testing_integration_test"
-      environments = basic_envs
     },
     {
       name = "testing_integration_test_two"
-      environments = basic_envs
     },
   ]
 }

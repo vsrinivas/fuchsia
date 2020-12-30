@@ -7,7 +7,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
@@ -128,7 +127,6 @@ test_package("terminal_tests") {
     {
       name = "terminal_lib_lib_test"
       dest = "terminal_tests"
-      environments = basic_envs
     },
   ]
 }
@@ -138,7 +136,6 @@ test_package("term_model_tests") {
   tests = [
     {
       name = "term_model_lib_test"
-      environments = basic_envs
     },
   ]
 }

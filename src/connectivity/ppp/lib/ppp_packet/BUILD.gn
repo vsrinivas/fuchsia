@@ -5,7 +5,6 @@
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 # Build the library.
 rustc_library("ppp_packet") {
@@ -57,7 +56,6 @@ unittest_package("ppp-packet-tests") {
     {
       name = "ppp_packet_test_bin"
       dest = "ppp-packet-tests"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

@@ -20,7 +20,6 @@ test_package("root_presenter_tests") {
   tests = [
     {
       name = "root_presenter_apptests"
-      environments = basic_envs
     },
     {
       name = "root_presenter_unittests"

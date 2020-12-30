@@ -89,7 +89,6 @@ test_package("cpuperf_tests") {
     },
     {
       name = "cpuperf_tests"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }

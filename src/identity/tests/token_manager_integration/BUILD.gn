@@ -4,7 +4,6 @@
 #
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("token_manager_integration") {
   testonly = true
@@ -42,7 +41,6 @@ test_package("token_manager_integration_test_pkg") {
   tests = [
     {
       name = "token_manager_integration_test"
-      environments = basic_envs
     },
   ]
 }

@@ -80,7 +80,6 @@ test_package("tee-manager-tests") {
   tests = [
     {
       name = "tee_manager_bin_test"
-      environments = basic_envs
     },
   ]
 }

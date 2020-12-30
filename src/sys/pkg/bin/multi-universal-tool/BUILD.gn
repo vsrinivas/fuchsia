@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 rustc_binary("multi-universal-tool") {
   with_unit_tests = true
@@ -26,7 +25,6 @@ unittest_package("multi-universal-tool-tests") {
   tests = [
     {
       name = "multi_universal_tool_bin_test"
-      environments = basic_envs
     },
   ]
 }

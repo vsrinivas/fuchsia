@@ -6,7 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 wlanphy_sources = [
   "device.cc",
@@ -75,7 +74,6 @@ unittest_package("wlanphy-unittests") {
   tests = [
     {
       name = "wlanphy_convert_unittest"
-      environments = basic_envs
     },
   ]
 }

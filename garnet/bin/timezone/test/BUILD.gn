@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
@@ -41,7 +40,6 @@ test_package("timezone_tests") {
   tests = [
     {
       name = "deprecated_timezone_unit_tests"
-      environments = basic_envs
       log_settings = {
         max_severity = "ERROR"
       }
