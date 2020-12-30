@@ -8,6 +8,7 @@ use anyhow::{anyhow, Context, Error};
 use bind_debugger::instruction::{Condition, Instruction, InstructionInfo};
 use bind_debugger::test;
 use bind_debugger::{bind_library, compiler, offline_debugger};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::Write;
 use std::fs::File;
@@ -274,6 +275,48 @@ fn handle_compile(
     Ok(())
 }
 
+fn generate_declaration_name(name: &String, value: &bind_library::Value) -> String {
+    match value {
+        bind_library::Value::Number(value_name, _) => {
+            format!("{}_{}", name, value_name)
+        }
+        bind_library::Value::Str(value_name, _) => {
+            format!("{}_{}", name, value_name)
+        }
+        bind_library::Value::Bool(value_name, _) => {
+            format!("{}_{}", name, value_name)
+        }
+        bind_library::Value::Enum(value_name) => {
+            format!("{}_{}", name, value_name)
+        }
+    }
+    .to_uppercase()
+}
+
+/// The generated identifiers for each value must be unique. Since the key and value identifiers
+/// are joined using underscores which are also valid to use in the identifiers themselves,
+/// duplicate keys may be produced. I.e. the key-value pair "A_B" and "C", and the key-value pair
+/// "A" and "B_C", will both produce the identifier "A_B_C". This function hence ensures none of the
+/// generated names are duplicates.
+fn check_names(declarations: &Vec<bind_library::Declaration>) -> Result<(), Error> {
+    let mut names: HashSet<String> = HashSet::new();
+
+    for declaration in declarations.into_iter() {
+        for value in &declaration.values {
+            let name = generate_declaration_name(&declaration.identifier.name, value);
+
+            // Return an error if there is a duplicate name.
+            if names.contains(&name) {
+                return Err(anyhow!("Name \"{}\" generated for more than one key", name));
+            }
+
+            names.insert(name);
+        }
+    }
+
+    Ok(())
+}
+
 /// Converts a declaration to the FIDL constant format.
 fn convert_to_fidl_constant(
     declaration: bind_library::Declaration,
@@ -293,23 +336,20 @@ fn convert_to_fidl_constant(
         )?;
     }
 
-    for value in declaration.values {
+    for value in &declaration.values {
+        let name = generate_declaration_name(&identifier_name, value);
         let property_output = match &value {
-            bind_library::Value::Number(name, val) => {
-                let name = name.to_string().to_uppercase();
-                format!("const NodePropertyValueUint {}_{} = {};", identifier_name, name, val)
+            bind_library::Value::Number(_, val) => {
+                format!("const NodePropertyValueUint {} = {};", name, val)
             }
-            bind_library::Value::Str(name, val) => {
-                let name = name.to_string().to_uppercase();
-                format!("const NodePropertyValueString {}_{} = \"{}\";", identifier_name, name, val)
+            bind_library::Value::Str(_, val) => {
+                format!("const NodePropertyValueString {} = \"{}\";", name, val)
             }
-            bind_library::Value::Bool(name, val) => {
-                let name = name.to_string().to_uppercase();
-                format!("const NodePropertyValueBool {}_{} = {};", identifier_name, name, val)
+            bind_library::Value::Bool(_, val) => {
+                format!("const NodePropertyValueBool {} = {};", name, val)
             }
-            bind_library::Value::Enum(name) => {
-                let name = name.to_string().to_uppercase();
-                format!("const NodePropertyValueEnum {}_{};", identifier_name, name)
+            bind_library::Value::Enum(_) => {
+                format!("const NodePropertyValueEnum {};", name)
             }
         };
         writeln!(&mut result, "{}", property_output)?;
@@ -321,6 +361,8 @@ fn convert_to_fidl_constant(
 fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> {
     // Get library path.
     let path = &syntax_tree.name.to_string();
+
+    check_names(&syntax_tree.declarations)?;
 
     // Convert all key value pairs to their equivalent constants.
     let definition = syntax_tree
@@ -478,9 +520,6 @@ mod tests {
             "const NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
         ];
 
-        println!("{:#?}\n\n", template);
-        println!("{:#?}", expected);
-
         assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 
@@ -517,5 +556,41 @@ mod tests {
         ];
 
         assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+    }
+
+    #[test]
+    fn duplicate_key_value() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n};
+            \nstring A_KEY_A {\nVALUE = \"a string value\",\n};",
+        )
+        .unwrap();
+        let template = write_fidl_template(ast);
+
+        assert!(template.is_err());
+    }
+
+    #[test]
+    fn duplicate_values_one_key() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n
+            A_VALUE = \"a string value\",\n};",
+        )
+        .unwrap();
+        let template = write_fidl_template(ast);
+
+        assert!(template.is_err());
+    }
+
+    #[test]
+    fn duplicate_values_two_keys() {
+        let ast = bind_library::Ast::try_from(
+            "library fuchsia.platform;\nstring KEY {\nA_VALUE = \"a string value\",\n};\n
+            string KEY_A {\nVALUE = \"a string value\",\n};\n",
+        )
+        .unwrap();
+        let template = write_fidl_template(ast);
+
+        assert!(template.is_err());
     }
 }
