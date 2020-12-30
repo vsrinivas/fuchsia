@@ -66,7 +66,7 @@ impl Stash {
         }
         let invalid_chars: HashSet<char> =
             prefix.matches(&['-', ':'][..]).filter_map(|s| char::from_str(s).ok()).collect();
-        if invalid_chars.len() > 0 {
+        if !invalid_chars.is_empty() {
             return Err(StashError::InvalidPrefix { prefix: prefix.to_string(), invalid_chars });
         }
         let store_client = fuchsia_component::client::connect_to_service::<
@@ -247,7 +247,6 @@ mod tests {
     use crate::configuration::{LeaseLength, ManagedAddresses};
     use anyhow::{Context as _, Error};
     use net_declare::std::ip_v4;
-    use std::collections::HashMap;
     use std::convert::TryFrom as _;
 
     /// Creates a new stash instance with a randomized identifier to prevent test flakes.
