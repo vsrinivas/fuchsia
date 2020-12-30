@@ -131,18 +131,20 @@ type GCEConfig struct {
 	SwarmingServer string `json:"swarming_server"`
 	// MachineShape is the shape of the instance we want to create.
 	MachineShape string `json:"machine_shape"`
+	// InstanceName is the name of the instance.
+	InstanceName string `json:"instance_name"`
+	// Zone is the cloud zone in which the instance lives.
+	Zone string `json:"zone"`
 }
 
 // GCETarget represents a GCE VM running Fuchsia.
 type GCETarget struct {
-	config       GCEConfig
-	currentUser  string
-	instanceName string
-	loggerCtx    context.Context
-	opts         Options
-	pubkeyPath   string
-	serial       io.ReadWriteCloser
-	zone         string
+	config      GCEConfig
+	currentUser string
+	loggerCtx   context.Context
+	opts        Options
+	pubkeyPath  string
+	serial      io.ReadWriteCloser
 }
 
 // createInstanceRes is returned by the gcem_client's create-instance
@@ -181,17 +183,27 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 		pubkeyPath:  pubkeyPath,
 	}
 
-	// Set up and execute the command to create the instance.
-	logger.Infof(ctx, "creating the GCE instance")
-	expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
-	if err := retry.Retry(ctx, expBackoff, g.createInstance, nil); err != nil {
-		return nil, err
+	if config.InstanceName == "" && config.Zone == "" {
+		// If the instance has not been created, create it now.
+		logger.Infof(ctx, "creating the GCE instance")
+		expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
+		if err := retry.Retry(ctx, expBackoff, g.createInstance, nil); err != nil {
+			return nil, err
+		}
+		logger.Infof(ctx, "successfully created the GCE instance")
+	} else {
+		// The instance has already been created, so add the SSH key to it.
+		logger.Infof(ctx, "adding the SSH public key to GCE instance %s", g.config.InstanceName)
+		expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
+		if err := retry.Retry(ctx, expBackoff, g.addSSHKey, nil); err != nil {
+			return nil, err
+		}
+		logger.Infof(ctx, "successfully added SSH key")
 	}
-	logger.Infof(ctx, "successfully created the GCE instance")
 
 	// Connect to the serial line.
 	logger.Infof(ctx, "setting up the serial connection to the GCE instance")
-	expBackoff = retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
+	expBackoff := retry.NewExponentialBackoff(15*time.Second, 2*time.Minute, 2)
 	connectSerialErrs := make(chan error)
 	defer close(connectSerialErrs)
 	go logErrors(ctx, "connectToSerial()", connectSerialErrs)
@@ -218,14 +230,32 @@ func (g *GCETarget) connectToSerial() error {
 	username := fmt.Sprintf(
 		"%s.%s.%s.%s.%s",
 		g.config.CloudProject,
-		g.zone,
-		g.instanceName,
+		g.config.Zone,
+		g.config.InstanceName,
 		g.currentUser,
 		"replay-from=0",
 	)
 	serial, err := newGCESerial(g.opts.SSHKey, username, gceSerialEndpoint)
 	g.serial = serial
 	return err
+}
+
+func (g *GCETarget) addSSHKey() error {
+	invocation := []string{
+		gcemClientBinary,
+		"add-ssh-key",
+		"-host", g.config.MediatorURL,
+		"-project", g.config.CloudProject,
+		"-instance-name", g.config.InstanceName,
+		"-zone", g.config.Zone,
+		"-user", g.currentUser,
+		"-pubkey", g.pubkeyPath,
+	}
+	logger.Infof(g.loggerCtx, "GCE Mediator client command: %v", invocation)
+	cmd := exec.Command(invocation[0], invocation[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func (g *GCETarget) createInstance() error {
@@ -265,8 +295,8 @@ func (g *GCETarget) createInstance() error {
 	if err := cmd.Wait(); err != nil {
 		return err
 	}
-	g.instanceName = res.InstanceName
-	g.zone = res.Zone
+	g.config.InstanceName = res.InstanceName
+	g.config.Zone = res.Zone
 	return nil
 }
 
