@@ -1,15 +1,14 @@
 //! Definition of the TryMaybeDone combinator
 
-use core::mem;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future, TryFuture};
 use futures_core::task::{Context, Poll};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 
 /// A future that may have completed with an error.
 ///
 /// This is created by the [`try_maybe_done()`] function.
-#[pin_project]
+#[pin_project(project = TryMaybeDoneProj, project_replace = TryMaybeDoneProjOwn)]
 #[derive(Debug)]
 pub enum TryMaybeDone<Fut: TryFuture> {
     /// A not-yet-completed future
@@ -32,12 +31,10 @@ impl<Fut: TryFuture> TryMaybeDone<Fut> {
     /// The output of this method will be [`Some`] if and only if the inner
     /// future has completed successfully and [`take_output`](TryMaybeDone::take_output)
     /// has not yet been called.
-    #[project]
     #[inline]
     pub fn output_mut(self: Pin<&mut Self>) -> Option<&mut Fut::Ok> {
-        #[project]
         match self.project() {
-            TryMaybeDone::Done(res) => Some(res),
+            TryMaybeDoneProj::Done(res) => Some(res),
             _ => None,
         }
     }
@@ -46,22 +43,13 @@ impl<Fut: TryFuture> TryMaybeDone<Fut> {
     /// towards completion.
     #[inline]
     pub fn take_output(self: Pin<&mut Self>) -> Option<Fut::Ok> {
-        // Safety: we return immediately unless we are in the `Done`
-        // state, which does not have any pinning guarantees to uphold.
-        //
-        // Hopefully `pin_project` will support this safely soon:
-        // https://github.com/taiki-e/pin-project/issues/184
-        unsafe {
-            let this = self.get_unchecked_mut();
-            match this {
-                TryMaybeDone::Done(_) => {},
-                TryMaybeDone::Future(_) | TryMaybeDone::Gone => return None,
-            };
-            if let TryMaybeDone::Done(output) = mem::replace(this, TryMaybeDone::Gone) {
-                Some(output)
-            } else {
-                unreachable!()
-            }
+        match &*self {
+            TryMaybeDone::Done(_) => {},
+            TryMaybeDone::Future(_) | TryMaybeDone::Gone => return None,
+        }
+        match self.project_replace(TryMaybeDone::Gone) {
+            TryMaybeDoneProjOwn::Done(output) => Some(output),
+            _ => unreachable!()
         }
     }
 }
@@ -78,11 +66,9 @@ impl<Fut: TryFuture> FusedFuture for TryMaybeDone<Fut> {
 impl<Fut: TryFuture> Future for TryMaybeDone<Fut> {
     type Output = Result<(), Fut::Error>;
 
-    #[project]
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        #[project]
         match self.as_mut().project() {
-            TryMaybeDone::Future(f) => {
+            TryMaybeDoneProj::Future(f) => {
                 match ready!(f.try_poll(cx)) {
                     Ok(res) => self.set(TryMaybeDone::Done(res)),
                     Err(e) => {
@@ -91,8 +77,8 @@ impl<Fut: TryFuture> Future for TryMaybeDone<Fut> {
                     }
                 }
             },
-            TryMaybeDone::Done(_) => {},
-            TryMaybeDone::Gone => panic!("TryMaybeDone polled after value taken"),
+            TryMaybeDoneProj::Done(_) => {},
+            TryMaybeDoneProj::Gone => panic!("TryMaybeDone polled after value taken"),
         }
         Poll::Ready(Ok(()))
     }

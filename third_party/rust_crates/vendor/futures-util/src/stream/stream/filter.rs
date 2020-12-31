@@ -5,7 +5,7 @@ use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use crate::fns::FnMut1;
 
 /// Stream for the [`filter`](super::StreamExt::filter) method.
@@ -37,6 +37,7 @@ where
     }
 }
 
+#[allow(single_use_lifetimes)] // https://github.com/rust-lang/rust/issues/55058
 impl<St, Fut, F> Filter<St, Fut, F>
 where St: Stream,
       F: for<'a> FnMut1<&'a St::Item, Output=Fut>,
@@ -64,6 +65,7 @@ impl<St, Fut, F> FusedStream for Filter<St, Fut, F>
     }
 }
 
+#[allow(single_use_lifetimes)] // https://github.com/rust-lang/rust/issues/55058
 impl<St, Fut, F> Stream for Filter<St, Fut, F>
     where St: Stream,
           F: for<'a> FnMut1<&'a St::Item, Output=Fut>,
@@ -71,24 +73,22 @@ impl<St, Fut, F> Stream for Filter<St, Fut, F>
 {
     type Item = St::Item;
 
-    #[project]
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<St::Item>> {
-        #[project]
-        let Filter { mut stream, f, mut pending_fut, pending_item } = self.project();
+        let mut this = self.project();
         Poll::Ready(loop {
-            if let Some(fut) = pending_fut.as_mut().as_pin_mut() {
+            if let Some(fut) = this.pending_fut.as_mut().as_pin_mut() {
                 let res = ready!(fut.poll(cx));
-                pending_fut.set(None);
+                this.pending_fut.set(None);
                 if res {
-                    break pending_item.take();
+                    break this.pending_item.take();
                 }
-                *pending_item = None;
-            } else if let Some(item) = ready!(stream.as_mut().poll_next(cx)) {
-                pending_fut.set(Some(f.call_mut(&item)));
-                *pending_item = Some(item);
+                *this.pending_item = None;
+            } else if let Some(item) = ready!(this.stream.as_mut().poll_next(cx)) {
+                this.pending_fut.set(Some(this.f.call_mut(&item)));
+                *this.pending_item = Some(item);
             } else {
                 break None;
             }

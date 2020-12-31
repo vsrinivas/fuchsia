@@ -28,6 +28,7 @@ pub use self::stream::Chunks;
 pub use self::stream::ReadyChunks;
 
 #[cfg(feature = "sink")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sink")))]
 pub use self::stream::Forward;
 
 #[cfg_attr(feature = "cfg-target-has-atomic", cfg(target_has_atomic = "ptr"))]
@@ -36,6 +37,7 @@ pub use self::stream::{BufferUnordered, Buffered, ForEachConcurrent};
 
 #[cfg_attr(feature = "cfg-target-has-atomic", cfg(target_has_atomic = "ptr"))]
 #[cfg(feature = "sink")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sink")))]
 #[cfg(feature = "alloc")]
 pub use self::stream::{ReuniteError, SplitSink, SplitStream};
 
@@ -43,10 +45,11 @@ mod try_stream;
 pub use self::try_stream::{
     try_unfold, AndThen, ErrInto, InspectErr, InspectOk, IntoStream, MapErr, MapOk, OrElse,
     TryCollect, TryConcat, TryFilter, TryFilterMap, TryFlatten, TryFold, TryForEach, TryNext,
-    TrySkipWhile, TryStreamExt, TryUnfold,
+    TrySkipWhile, TryStreamExt, TryTakeWhile, TryUnfold,
 };
 
 #[cfg(feature = "io")]
+#[cfg_attr(docsrs, doc(cfg(feature = "io")))]
 #[cfg(feature = "std")]
 pub use self::try_stream::IntoAsyncRead;
 
@@ -96,4 +99,13 @@ cfg_target_has_atomic! {
     mod select_all;
     #[cfg(feature = "alloc")]
     pub use self::select_all::{select_all, SelectAll};
+}
+
+// Just a helper function to ensure the futures we're returning all have the
+// right implementations.
+pub(crate) fn assert_stream<T, S>(stream: S) -> S
+    where
+        S: Stream<Item = T>,
+{
+    stream
 }

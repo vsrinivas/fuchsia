@@ -43,29 +43,26 @@ fn map_err() {
 }
 
 mod channelled {
-    use pin_utils::unsafe_pinned;
     use futures::future::Future;
-    use std::pin::Pin;
     use futures::task::{Context,Poll};
+    use pin_project::pin_project;
+    use std::pin::Pin;
 
+    #[pin_project]
     struct FutureData<F, T> {
         _data: T,
+        #[pin]
         future: F,
-    }
-
-    impl<F, T> FutureData<F, T> {
-        unsafe_pinned!(future: F);
     }
 
     impl<F: Future, T: Send + 'static> Future for FutureData<F, T> {
         type Output = F::Output;
 
         fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<F::Output> {
-            self.future().poll(cx)
+            self.project().future.poll(cx)
         }
     }
 
-    #[cfg(feature = "alloc")]
     #[test]
     fn then_drops_eagerly() {
         use futures::channel::oneshot;
@@ -90,7 +87,6 @@ mod channelled {
         rx2.recv().unwrap();
     }
 
-    #[cfg(feature = "alloc")]
     #[test]
     fn and_then_drops_eagerly() {
         use futures::channel::oneshot;
@@ -115,7 +111,6 @@ mod channelled {
         rx2.recv().unwrap();
     }
 
-    #[cfg(feature = "alloc")]
     #[test]
     fn or_else_drops_eagerly() {
         use futures::channel::oneshot;

@@ -23,6 +23,7 @@ pub use self::future::FlattenStream;
 pub use self::future::CatchUnwind;
 
 #[cfg(feature = "channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "channel")))]
 #[cfg(feature = "std")]
 pub use self::future::{Remote, RemoteHandle};
 
@@ -36,6 +37,7 @@ pub use self::try_future::{
 };
 
 #[cfg(feature = "sink")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sink")))]
 pub use self::try_future::FlattenSink;
 
 // Primitive futures
@@ -107,7 +109,7 @@ cfg_target_has_atomic! {
 
 // Just a helper function to ensure the futures we're returning all have the
 // right implementations.
-fn assert_future<T, F>(future: F) -> F
+pub(crate) fn assert_future<T, F>(future: F) -> F
 where
     F: Future<Output = T>,
 {

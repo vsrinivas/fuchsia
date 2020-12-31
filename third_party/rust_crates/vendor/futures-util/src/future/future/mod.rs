@@ -3,11 +3,14 @@
 //! This module contains a number of functions for working with `Future`s,
 //! including the `FutureExt` trait which adds methods to `Future` types.
 
-use super::{assert_future, Either};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 use core::pin::Pin;
 
+use crate::future::{assert_future, Either};
+use crate::stream::assert_stream;
+use crate::fns::{inspect_fn, into_fn, ok_fn, InspectFn, IntoFn, OkFn};
+use crate::never::Never;
 #[cfg(feature = "alloc")]
 use futures_core::future::{BoxFuture, LocalBoxFuture};
 use futures_core::{
@@ -15,8 +18,7 @@ use futures_core::{
     stream::Stream,
     task::{Context, Poll},
 };
-use crate::never::Never;
-use crate::fns::{OkFn, ok_fn, IntoFn, into_fn, InspectFn, inspect_fn};
+use pin_utils::pin_mut;
 
 // Combinators
 
@@ -44,7 +46,7 @@ delegate_all!(
 pub use fuse::Fuse;
 
 delegate_all!(
-    /// Future for the [`flatten`](super::FutureExt::flatten) method.
+    /// Future for the [`map`](super::FutureExt::map) method.
     Map<Fut, F>(
         map::Map<Fut, F>
     ): Debug + Future + FusedFuture + New[|x: Fut, f: F| map::Map::new(x, f)]
@@ -99,9 +101,11 @@ mod catch_unwind;
 pub use self::catch_unwind::CatchUnwind;
 
 #[cfg(feature = "channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "channel")))]
 #[cfg(feature = "std")]
 mod remote_handle;
 #[cfg(feature = "channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "channel")))]
 #[cfg(feature = "std")]
 #[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
 pub use self::remote_handle::{Remote, RemoteHandle};
@@ -220,7 +224,7 @@ pub trait FutureExt: Future {
         B: Future<Output = Self::Output>,
         Self: Sized,
     {
-        Either::Left(self)
+        assert_future::<Self::Output, _>(Either::Left(self))
     }
 
     /// Wrap this future in an `Either` future, making it the right-hand variant
@@ -250,7 +254,7 @@ pub trait FutureExt: Future {
         A: Future<Output = Self::Output>,
         Self: Sized,
     {
-        Either::Right(self)
+        assert_future::<Self::Output, _>(Either::Right(self))
     }
 
     /// Convert this future into a single element stream.
@@ -275,7 +279,7 @@ pub trait FutureExt: Future {
     where
         Self: Sized,
     {
-        IntoStream::new(self)
+        assert_stream::<Self::Output, _>(IntoStream::new(self))
     }
 
     /// Flatten the execution of this future when the output of this
@@ -339,7 +343,7 @@ pub trait FutureExt: Future {
         Self::Output: Stream,
         Self: Sized,
     {
-        FlattenStream::new(self)
+        assert_stream::<<Self::Output as Stream>::Item, _>(FlattenStream::new(self))
     }
 
     /// Fuse a future such that `poll` will never again be called once it has
@@ -428,7 +432,9 @@ pub trait FutureExt: Future {
     where
         Self: Sized + ::std::panic::UnwindSafe,
     {
-        CatchUnwind::new(self)
+        assert_future::<Result<Self::Output, Box<dyn std::any::Any + Send>>, _>(CatchUnwind::new(
+            self,
+        ))
     }
 
     /// Create a cloneable handle to this future where all handles will resolve
@@ -482,7 +488,7 @@ pub trait FutureExt: Future {
         Self: Sized,
         Self::Output: Clone,
     {
-        Shared::new(self)
+        assert_future::<Self::Output, _>(Shared::new(self))
     }
 
     /// Turn this future into a future that yields `()` on completion and sends
@@ -494,6 +500,7 @@ pub trait FutureExt: Future {
     /// This method is only available when the `std` feature of this
     /// library is activated, and it is activated by default.
     #[cfg(feature = "channel")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "channel")))]
     #[cfg(feature = "std")]
     fn remote_handle(self) -> (Remote<Self>, RemoteHandle<Self::Output>)
     where
@@ -511,7 +518,7 @@ pub trait FutureExt: Future {
     where
         Self: Sized + Send + 'a,
     {
-        Box::pin(self)
+        assert_future::<Self::Output, _>(Box::pin(self))
     }
 
     /// Wrap the future in a Box, pinning it.
@@ -525,7 +532,7 @@ pub trait FutureExt: Future {
     where
         Self: Sized + 'a,
     {
-        Box::pin(self)
+        assert_future::<Self::Output, _>(Box::pin(self))
     }
 
     /// Turns a [`Future<Output = T>`](Future) into a
@@ -534,7 +541,7 @@ pub trait FutureExt: Future {
     where
         Self: Sized,
     {
-        UnitError::new(self)
+        assert_future::<Result<Self::Output, ()>, _>(UnitError::new(self))
     }
 
     /// Turns a [`Future<Output = T>`](Future) into a
@@ -543,7 +550,7 @@ pub trait FutureExt: Future {
     where
         Self: Sized,
     {
-        NeverError::new(self)
+        assert_future::<Result<Self::Output, Never>, _>(NeverError::new(self))
     }
 
     /// A convenience for calling `Future::poll` on `Unpin` future types.
@@ -585,19 +592,16 @@ pub trait FutureExt: Future {
     ///
     /// assert_eq!(future_ready.now_or_never().expect("Future not ready"), "foobar");
     /// ```
-    fn now_or_never(mut self) -> Option<Self::Output>
+    fn now_or_never(self) -> Option<Self::Output>
     where
         Self: Sized,
     {
         let noop_waker = crate::task::noop_waker();
         let mut cx = Context::from_waker(&noop_waker);
 
-        // SAFETY: This is safe because this method consumes the future, so `poll` is
-        //         only going to be called once. Thus it doesn't matter to us if the
-        //         future is `Unpin` or not.
-        let pinned = unsafe { Pin::new_unchecked(&mut self) };
-
-        match pinned.poll(&mut cx) {
+        let this = self;
+        pin_mut!(this);
+        match this.poll(&mut cx) {
             Poll::Ready(x) => Some(x),
             _ => None,
         }

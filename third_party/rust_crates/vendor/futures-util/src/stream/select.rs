@@ -2,7 +2,7 @@ use crate::stream::{StreamExt, Fuse};
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 
 /// Stream for the [`select()`] function.
 #[pin_project]
@@ -58,11 +58,9 @@ impl<St1, St2> Select<St1, St2> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    #[project]
     pub fn get_pin_mut(self: Pin<&mut Self>) -> (Pin<&mut St1>, Pin<&mut St2>) {
-        #[project]
-        let Select { stream1, stream2, .. } = self.project();
-        (stream1.get_pin_mut(), stream2.get_pin_mut())
+        let this = self.project();
+        (this.stream1.get_pin_mut(), this.stream2.get_pin_mut())
     }
 
     /// Consumes this combinator, returning the underlying streams.
@@ -89,18 +87,15 @@ impl<St1, St2> Stream for Select<St1, St2>
 {
     type Item = St1::Item;
 
-    #[project]
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<St1::Item>> {
-        #[project]
-        let Select { flag, stream1, stream2 } = self.project();
-
-        if !*flag {
-            poll_inner(flag, stream1, stream2, cx)
+        let this = self.project();
+        if !*this.flag {
+            poll_inner(this.flag, this.stream1, this.stream2, cx)
         } else {
-            poll_inner(flag, stream2, stream1, cx)
+            poll_inner(this.flag, this.stream2, this.stream1, cx)
         }
     }
 }
