@@ -1304,7 +1304,7 @@ If you add labels to this variable, these will be included in the 'host'
 artifact set, which represents an additional set of host-only software that
 is produced by the build.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
 From //products/bringup.gni:48
 
@@ -1312,7 +1312,7 @@ From //products/bringup.gni:48
 
 From //BUILD.gn:60
 
-**Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx"]`
+**Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
 From //products/bringup.gni:48
 
