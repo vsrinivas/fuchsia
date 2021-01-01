@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"time"
 
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
@@ -154,7 +153,7 @@ func (p *Printer) newTmplParams(targetMt *measurer.MeasuringTape) tmplParams {
 	headerTag := strings.Join(headerTagParts, "_")
 
 	return tmplParams{
-		Year:                   time.Now().Format("2006"),
+		Year:                   "2020",
 		HeaderTag:              headerTag,
 		HIncludePath:           p.hIncludePath,
 		LibraryNameWithSlashes: strings.Join(targetMt.Name().LibraryName().Parts(), "/"),

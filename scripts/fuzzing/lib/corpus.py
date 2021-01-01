@@ -208,7 +208,7 @@ class Corpus(object):
                     lines_out.append('')
 
         else:
-            year = datetime.datetime.now().year
+            year = 2020
             lines_out = [
                 '# Copyright {} The Fuchsia Authors. All rights reserved.'.
                 format(year),
