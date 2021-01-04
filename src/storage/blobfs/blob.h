@@ -149,6 +149,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // called multiple times on a given vnode.  This is public only for testing.
   zx_status_t PrepareWrite(uint64_t size_data, bool compress);
 
+  // If this is part of a migration and involves writing a new blob to replace an old blob, this can
+  // be called so that the blob is deleted in the transaction that writes the new blob.  The blob
+  // *must* not be currently in use.  It is designed to be used for mount time migrations.
+  void SetOldBlob(Blob& blob);
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
@@ -355,6 +360,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     // The merkle tree creator stores the rest of the tree here.  The buffer includes space for
     // padding.  See the comment for merkle_tree() above.
     std::unique_ptr<uint8_t[]> merkle_tree_buffer;
+
+    // The old blob that this write is replacing.
+    fbl::RefPtr<Blob> old_blob;
   };
 
   std::unique_ptr<WriteInfo> write_info_ = {};
@@ -362,6 +370,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Reads in the blob's pages on demand.
   std::unique_ptr<pager::PageWatcher> page_watcher_ = nullptr;
 };
+
+// Returns true if the given inode supports paging.
+bool SupportsPaging(const Inode& inode);
 
 }  // namespace blobfs
 

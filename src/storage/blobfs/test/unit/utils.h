@@ -128,6 +128,8 @@ void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_o
 // Expects |size| and |dev_offset| to be multiple of |device| block size.
 void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset);
 
+std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm);
+
 }  // namespace blobfs
 
 #endif  // SRC_STORAGE_BLOBFS_TEST_UNIT_UTILS_H_

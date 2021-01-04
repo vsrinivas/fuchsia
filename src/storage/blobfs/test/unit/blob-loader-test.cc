@@ -36,6 +36,7 @@ namespace {
 using ::testing::Combine;
 using ::testing::TestParamInfo;
 using ::testing::TestWithParam;
+using ::testing::Values;
 using ::testing::ValuesIn;
 
 using block_client::FakeBlockDevice;
@@ -54,11 +55,20 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
-    ASSERT_EQ(FormatFilesystem(device.get(),
-                               FilesystemOptions{
-                                   .blob_layout_format = blob_layout_format_,
-                               }),
-              ZX_OK);
+    FilesystemOptions options{
+        .blob_layout_format = blob_layout_format_,
+    };
+    switch (compression_algorithm) {
+      case CompressionAlgorithm::UNCOMPRESSED:
+      case CompressionAlgorithm::CHUNKED:
+        break;
+      case CompressionAlgorithm::ZSTD:
+      case CompressionAlgorithm::ZSTD_SEEKABLE:
+      case CompressionAlgorithm::LZ4:
+        options.oldest_revision = kBlobfsRevisionBackupSuperblock;
+        break;
+    }
+    ASSERT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
     loop_.StartThread();
 
     options_ = {.compression_settings = {
@@ -382,23 +392,6 @@ TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
             ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {
-  // CompressionAlgorithmToString can't be used because it contains underscores which aren't
-  // allowed in test names.
-  switch (compression_algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
-      return "Uncompressed";
-    case CompressionAlgorithm::LZ4:
-      return "Lz4";
-    case CompressionAlgorithm::ZSTD:
-      return "Zstd";
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      return "ZstdSeekable";
-    case CompressionAlgorithm::CHUNKED:
-      return "Chunked";
-  }
-}
-
 std::string GetTestParamName(const TestParamInfo<TestParamType>& param) {
   auto [compression_algorithm, blob_layout_format] = param.param;
   return GetBlobLayoutFormatNameForTests(blob_layout_format) +
@@ -422,8 +415,14 @@ constexpr std::array<BlobLayoutFormat, 2> kBlobLayoutFormats = {
     BlobLayoutFormat::kCompactMerkleTreeAtEnd,
 };
 
+INSTANTIATE_TEST_SUITE_P(OldFormat, BlobLoaderTest,
+                         Combine(ValuesIn(kCompressionAlgorithms),
+                                 Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart)),
+                         GetTestParamName);
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest,
-                         Combine(ValuesIn(kCompressionAlgorithms), ValuesIn(kBlobLayoutFormats)),
+                         Combine(ValuesIn(kPagingCompressionAlgorithms),
+                                 Values(BlobLayoutFormat::kCompactMerkleTreeAtEnd)),
                          GetTestParamName);
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest,

@@ -267,6 +267,9 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
     options.sandbox_decompression = true;
     set_mount_options(options);
   }
+
+  // The ZSTD algorithm requires an older revision.
+  uint64_t GetOldestRevision() const override { return kBlobfsRevisionBackupSuperblock; }
 };
 
 TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {

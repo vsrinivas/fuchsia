@@ -58,6 +58,8 @@ class FdioTest : public testing::Test {
   // single value from a fresh snapshot.
   void GetUintMetric(std::vector<std::string> path, std::string property, uint64_t* value);
 
+  virtual uint64_t GetOldestRevision() const { return kBlobfsCurrentRevision; }
+
  private:
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.
 

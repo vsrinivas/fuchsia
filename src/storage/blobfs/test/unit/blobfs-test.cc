@@ -71,7 +71,8 @@ template <uint64_t oldest_revision, uint64_t num_blocks = kNumBlocks,
 class BlobfsTestAtRevision : public testing::Test {
  public:
   void SetUp() final {
-    FilesystemOptions options{.oldest_revision = oldest_revision};
+    FilesystemOptions options{.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+                              .oldest_revision = oldest_revision};
     auto device = Device::CreateAndFormat(options, num_blocks);
     ASSERT_TRUE(device);
     device_ = device.get();
@@ -247,6 +248,15 @@ TEST_F(BlobfsTest, BlockIteratorByNodeIndexWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
   auto block_iterator = fs_->BlockIteratorByNodeIndex(invalid_node_index);
   EXPECT_EQ(block_iterator.status_value(), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
+  MountOptions options = {.compression_settings = {
+                              .compression_algorithm = CompressionAlgorithm::LZ4,
+                          }};
+  EXPECT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
+                           zx::resource(), &fs_),
+            ZX_ERR_INVALID_ARGS);
 }
 
 class MockFvmDevice : public block_client::FakeFVMBlockDevice {

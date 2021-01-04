@@ -49,7 +49,7 @@ std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
 
 uint32_t GetBlobfsFormatVersionFromOptions(const FilesystemOptions& options) {
   if (options.blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
-    return 0x9;
+    return kBlobfsCompactMerkleTreeVersion;
   }
   return 0x8;
 }

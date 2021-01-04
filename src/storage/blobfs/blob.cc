@@ -85,15 +85,6 @@ namespace {
 using ::digest::Digest;
 using ::digest::MerkleTreeCreator;
 
-bool SupportsPaging(const Inode& inode) {
-  zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
-  if (status.is_ok() && (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
-                         status.value() == CompressionAlgorithm::CHUNKED)) {
-    return true;
-  }
-  return false;
-}
-
 // Merges two producers together with optional padding between them.  If there is padding, we
 // require the second producer to be able to accomodate padding at the beginning up to
 // kBlobfsBlockSize i.e. the first span it returns must point to a buffer that can be prepended with
@@ -277,6 +268,15 @@ class DecompressProducer : public Producer {
 
 }  // namespace
 
+bool SupportsPaging(const Inode& inode) {
+  zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
+  if (status.is_ok() && (status.value() == CompressionAlgorithm::UNCOMPRESSED ||
+                         status.value() == CompressionAlgorithm::CHUNKED)) {
+    return true;
+  }
+  return false;
+}
+
 zx_status_t Blob::Verify() const {
   if (inode_.blob_size > 0) {
     ZX_ASSERT(IsDataLoaded());
@@ -410,6 +410,8 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   // Special case for the null blob: We skip the write phase.
   return inode_.blob_size == 0 ? WriteNullBlob() : ZX_OK;
 }
+
+void Blob::SetOldBlob(Blob& blob) { write_info_->old_blob = fbl::RefPtr(&blob); }
 
 zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
@@ -725,6 +727,12 @@ zx_status_t Blob::Commit() {
   BlobTransaction transaction;
   if (zx_status_t status = WriteMetadata(transaction); status != ZX_OK) {
     return status;
+  }
+  if (write_info_->old_blob) {
+    ZX_ASSERT(blobfs_->FreeInode(write_info_->old_blob->Ino(), transaction) == ZX_OK);
+    auto& cache = Cache();
+    ZX_ASSERT(cache.Evict(write_info_->old_blob) == ZX_OK);
+    ZX_ASSERT(cache.Add(fbl::RefPtr(this)) == ZX_OK);
   }
   transaction.Commit(*blobfs_->journal(), std::move(write_all_data),
                      [self = fbl::RefPtr(this)]() {});

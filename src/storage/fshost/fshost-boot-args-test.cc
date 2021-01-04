@@ -90,10 +90,11 @@ TEST_F(FshostBootArgsTest, GetPkgfsCmd) {
 }
 
 TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
-  std::map<std::string, std::string> config = {{"blobfs.write-compression-algorithm", "ZSTD"}};
+  std::map<std::string, std::string> config = {
+      {"blobfs.write-compression-algorithm", "ZSTD_CHUNKED"}};
   ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
 
-  EXPECT_EQ("ZSTD", boot_args().blobfs_write_compression_algorithm());
+  EXPECT_EQ("ZSTD_CHUNKED", boot_args().blobfs_write_compression_algorithm());
 }
 
 TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {

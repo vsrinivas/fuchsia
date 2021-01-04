@@ -4,8 +4,8 @@
 
 // This file describes the on-disk structure of Blobfs.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FORMAT_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FORMAT_H_
+#ifndef SRC_STORAGE_BLOBFS_FORMAT_H_
+#define SRC_STORAGE_BLOBFS_FORMAT_H_
 
 #include <assert.h>
 #include <stdbool.h>
@@ -54,11 +54,16 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 
 constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000009;
 
+// Version 9 introduced a compact merkle tree version.
+constexpr uint32_t kBlobfsCompactMerkleTreeVersion = 0x00000009;
+
 // Revision 2: introduced a backup superblock.
 constexpr uint64_t kBlobfsRevisionBackupSuperblock = 0x00000002;
+// Revision 3: migrated away from old compression formats.
+constexpr uint64_t kBlobfsRevisionNoOldCompressionFormats = 0x00000003;
 
 // When this next changes, consider enabling the OldestRevisionNotUpdated test.
-constexpr uint64_t kBlobfsCurrentRevision = 0x00000002;
+constexpr uint64_t kBlobfsCurrentRevision = 0x00000003;
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
@@ -366,4 +371,4 @@ static_assert(kBlobfsBlockSize % kBlobfsInodeSize == 0,
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FORMAT_H_
+#endif  // SRC_STORAGE_BLOBFS_FORMAT_H_

@@ -56,8 +56,6 @@ If unset, an internally defined system default is used.
 
 The following values are supported:
 
-*   `ZSTD`
-*   `ZSTD_SEEKABLE`
 *   `ZSTD_CHUNKED`
 *   `UNCOMPRESSED`
 

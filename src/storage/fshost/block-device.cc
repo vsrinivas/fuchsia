@@ -505,6 +505,11 @@ zx_status_t BlockDevice::MountFilesystem() {
       std::optional<std::string> eviction_policy = std::nullopt;
       if (mounter_->boot_args()) {
         algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
+        if (algorithm == "ZSTD" || algorithm == "ZSTD_SEEKABLE") {
+          // These two algorithms are deprecated.
+          FX_LOGS(INFO) << "Ignoring " << *algorithm << " algorithm";
+          algorithm = std::nullopt;
+        }
         eviction_policy = mounter_->boot_args()->blobfs_eviction_policy();
       }
       options.write_compression_algorithm = algorithm ? algorithm->c_str() : nullptr;

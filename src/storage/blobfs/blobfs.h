@@ -282,6 +282,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // to be sure that all transactions leave the file system in a good state.
   void FsckAtEndOfTransaction();
 
+  // Migrate blobs to a later format.
+  zx_status_t Migrate();
+
   static std::shared_ptr<BlobfsMetrics> CreateMetrics();
 
   std::unique_ptr<fs::Journal> journal_;

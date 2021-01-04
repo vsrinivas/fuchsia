@@ -179,4 +179,21 @@ void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_
   ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 }
 
+std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {
+  // CompressionAlgorithmToString can't be used because it contains underscores which aren't
+  // allowed in test names.
+  switch (compression_algorithm) {
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return "Uncompressed";
+    case CompressionAlgorithm::LZ4:
+      return "Lz4";
+    case CompressionAlgorithm::ZSTD:
+      return "Zstd";
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      return "ZstdSeekable";
+    case CompressionAlgorithm::CHUNKED:
+      return "Chunked";
+  }
+}
+
 }  // namespace blobfs

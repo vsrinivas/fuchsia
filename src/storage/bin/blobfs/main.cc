@@ -132,10 +132,6 @@ const struct {
 std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   if (!strcmp(str, "UNCOMPRESSED")) {
     return blobfs::CompressionAlgorithm::UNCOMPRESSED;
-  } else if (!strcmp(str, "ZSTD")) {
-    return blobfs::CompressionAlgorithm::ZSTD;
-  } else if (!strcmp(str, "ZSTD_SEEKABLE")) {
-    return blobfs::CompressionAlgorithm::ZSTD_SEEKABLE;
   } else if (!strcmp(str, "ZSTD_CHUNKED")) {
     return blobfs::CompressionAlgorithm::CHUNKED;
   }
@@ -172,8 +168,7 @@ int usage() {
       "         -m|--metrics               Collect filesystem metrics\n"
       "         -c|--compression [alg]     compression algorithm to apply to newly stored blobs.\n"
       "                                    Does not affect any blobs already stored on-disk.\n"
-      "                                    'alg' can be one of ZSTD, ZSTD_SEEKABLE, ZSTD_CHUNKED,\n"
-      "                                    or UNCOMPRESSED.\n"
+      "                                    'alg' can be one of ZSTD_CHUNKED or UNCOMPRESSED.\n"
       "         -l|--compression_level n   Aggressiveness of compression to apply to newly stored\n"
       "                                    blobs. Only used if -c is one of ZSTD*, in which case\n"
       "                                    the level is the zstd compression level.\n"
