@@ -3,31 +3,6 @@
 namespace wlan {
 namespace brcmfmac {
 
-TestNetbuf::TestNetbuf() = default;
-
-TestNetbuf::TestNetbuf(const void* data, size_t size, zx_status_t expected_status)
-    : allocation_(size), expected_status_(expected_status) {
-  data_ = allocation_.data();
-  size_ = allocation_.size();
-  std::memcpy(allocation_.data(), data, size);
-}
-
-TestNetbuf::~TestNetbuf() {
-  if (!allocation_.empty()) {
-    Return(ZX_ERR_INTERNAL);
-  }
-}
-
-void TestNetbuf::Return(zx_status_t status) {
-  Netbuf::Return(status);
-
-  if (allocation_.empty()) {
-    return;
-  }
-  EXPECT_EQ(expected_status_, status);
-  allocation_.clear();
-}
-
 bool ConcatenatedEquals(const std::initializer_list<std::string_view>& lhs,
                         const std::initializer_list<std::string_view>& rhs) {
   size_t lhs_size = 0;

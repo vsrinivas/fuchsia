@@ -24,6 +24,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/fake_msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/test_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/stub_netbuf.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -114,7 +115,7 @@ TEST(FlowRingTest, NetbufTransmission) {
         });
 
     EXPECT_EQ(ZX_OK, flow_ring.Queue(
-                         std::make_unique<TestNetbuf>(test_data.data(), test_data.size(), ZX_OK)));
+                         std::make_unique<StubNetbuf>(test_data.data(), test_data.size(), ZX_OK)));
   }
 
   // Signal the flow ring open.
@@ -153,7 +154,7 @@ TEST(FlowRingTest, NetbufTransmission) {
         });
 
     EXPECT_EQ(ZX_OK, flow_ring.Queue(
-                         std::make_unique<TestNetbuf>(test_data.data(), test_data.size(), ZX_OK)));
+                         std::make_unique<StubNetbuf>(test_data.data(), test_data.size(), ZX_OK)));
   }
 
   // Now submit all the buffers.
@@ -198,7 +199,7 @@ TEST(FlowRingTest, NetbufStateMachine) {
     EXPECT_EQ(ZX_ERR_BAD_STATE, flow_ring.NotifyClosed());
 
     // Allowed operations.
-    auto netbuf = std::make_unique<TestNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
+    auto netbuf = std::make_unique<StubNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
     EXPECT_EQ(ZX_OK, flow_ring.Queue(std::move(netbuf)));
     EXPECT_EQ(ZX_OK, flow_ring.NotifyOpened());
 
@@ -219,7 +220,7 @@ TEST(FlowRingTest, NetbufStateMachine) {
     EXPECT_EQ(ZX_ERR_BAD_STATE, flow_ring.NotifyClosed());
 
     // Allowed operations.
-    auto netbuf = std::make_unique<TestNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
+    auto netbuf = std::make_unique<StubNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
     EXPECT_EQ(ZX_OK, flow_ring.Queue(std::move(netbuf)));
     size_t submit_count = 0;
     EXPECT_EQ(ZX_OK, flow_ring.Submit(ring_and_deps.tx_buffer_pool.get(), 0, &submit_count));
@@ -238,7 +239,7 @@ TEST(FlowRingTest, NetbufStateMachine) {
     EXPECT_EQ(ZX_OK, flow_ring.Close());
 
     // Disallowed operations.
-    auto netbuf = std::make_unique<TestNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
+    auto netbuf = std::make_unique<StubNetbuf>(nullptr, 0, ZX_ERR_CONNECTION_ABORTED);
     EXPECT_EQ(ZX_ERR_CONNECTION_ABORTED, flow_ring.Queue(std::move(netbuf)));
     size_t submit_count = 0;
     EXPECT_EQ(ZX_ERR_BAD_STATE,
@@ -261,7 +262,7 @@ TEST(FlowRingTest, NetbufStateMachine) {
     EXPECT_EQ(ZX_OK, flow_ring.NotifyClosed());
 
     // Disallowed operations.
-    auto netbuf = std::make_unique<TestNetbuf>(nullptr, 0, ZX_ERR_BAD_STATE);
+    auto netbuf = std::make_unique<StubNetbuf>(nullptr, 0, ZX_ERR_BAD_STATE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, flow_ring.Queue(std::move(netbuf)));
     size_t submit_count = 0;
     EXPECT_EQ(ZX_ERR_BAD_STATE,

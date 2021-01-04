@@ -15,6 +15,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/fake_msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/test_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/stub_netbuf.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -231,7 +232,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
   // Submitting a Netbuf right after adding a flow ring has no effect yet.
   constexpr char kBeforeCreatedData[] = "This packet is before NotifyFlowRingCreated() was called.";
   EXPECT_EQ(ZX_OK,
-            handler->Queue(ring_index, std::make_unique<TestNetbuf>(
+            handler->Queue(ring_index, std::make_unique<StubNetbuf>(
                                            kBeforeCreatedData, sizeof(kBeforeCreatedData), ZX_OK)));
   handler->SubmitToFlowRings();
 
@@ -246,7 +247,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
   // Submitting another Netbuf now happens immediately.
   constexpr char kAfterCreatedData[] = "This packet is after NotifyFlowRingCreated() was called.";
   EXPECT_EQ(ZX_OK,
-            handler->Queue(ring_index, std::make_unique<TestNetbuf>(
+            handler->Queue(ring_index, std::make_unique<StubNetbuf>(
                                            kAfterCreatedData, sizeof(kAfterCreatedData), ZX_OK)));
   sync_completion_t after_created_data_complete;
   add_flow_ring_callback(kAfterCreatedData, sizeof(kAfterCreatedData),
@@ -257,7 +258,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
   // Queue another Netbuf, but remove the interface before submitting it; it should be returned with
   // ZX_ERR_CONNECTION_ABORTED.
   constexpr char kAfterRemovedData[] = "This packet is after the interface was removed.";
-  EXPECT_EQ(ZX_OK, handler->Queue(ring_index, std::make_unique<TestNetbuf>(
+  EXPECT_EQ(ZX_OK, handler->Queue(ring_index, std::make_unique<StubNetbuf>(
                                                   kAfterRemovedData, sizeof(kAfterRemovedData),
                                                   ZX_ERR_CONNECTION_ABORTED)));
   handler->RemoveInterface(kInterfaceIndex);

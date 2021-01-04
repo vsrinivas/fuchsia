@@ -6,35 +6,15 @@
 
 // This file contains various test utilities and classes for MSGBUF tests.
 
-#include <zircon/errors.h>
-#include <zircon/types.h>
-
-#include <algorithm>
 #include <initializer_list>
-#include <string>
-#include <vector>
+#include <string_view>
 
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 
 namespace wlan {
 namespace brcmfmac {
-
-// A Netbuf implementation for testing.
-class TestNetbuf : public Netbuf {
- public:
-  TestNetbuf();
-  explicit TestNetbuf(const void* data, size_t size, zx_status_t expected_status);
-  ~TestNetbuf() override;
-
-  void Return(zx_status_t status) override;
-
- private:
-  std::vector<char> allocation_;
-  zx_status_t expected_status_ = ZX_OK;
-};
 
 // Get a MSGBUF struct pointer for the given data buffer, checking size and type.  If the buffer is
 // too small, a test expectation is failed and nullptr is returned.

@@ -14,6 +14,27 @@
 
 import("//build/test/test_package.gni")
 
+source_set("stub_netbuf") {
+  testonly = true
+  sources = [ "stub_netbuf.cc" ]
+  public = [ "stub_netbuf.h" ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
+    "//zircon/system/public",
+  ]
+  deps = [ "//zircon/public/lib/zxtest" ]
+}
+
+source_set("stub_device") {
+  testonly = true
+  sources = [ "stub_device.cc" ]
+  public = [ "stub_device.h" ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//zircon/system/public",
+  ]
+}
+
 executable("bcmdhd_crossdriver_test") {
   output_name = "bcmdhd_crossdriver_test"
   testonly = true
