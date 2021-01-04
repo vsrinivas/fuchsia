@@ -13,5 +13,6 @@ group("tests") {
     "fake-resource:tests",
     "fake_ddk:tests",
     "mock-mmio-reg:tests",
+    "syslog:tests",
   ]
 }
