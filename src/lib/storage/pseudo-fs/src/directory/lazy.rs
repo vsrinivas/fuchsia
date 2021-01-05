@@ -97,9 +97,9 @@ pub fn lazy<'entries, TraversalPosition, GetEntryNames, GetEntry>(
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
 {
@@ -124,9 +124,9 @@ pub fn lazy_with_watchers<'entries, TraversalPosition, GetEntryNames, GetEntry, 
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -152,9 +152,9 @@ pub fn lazy_attr<'entries, TraversalPosition, GetEntryNames, GetEntry>(
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
 {
@@ -185,9 +185,9 @@ pub fn lazy_attr_with_watchers<
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -296,9 +296,9 @@ pub struct Lazy<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEve
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -362,9 +362,9 @@ impl<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEvents>
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -759,9 +759,9 @@ impl<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEvents> Direct
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -830,9 +830,9 @@ impl<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEvents> Unpin
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -844,9 +844,9 @@ impl<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEvents> Future
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -874,9 +874,9 @@ impl<'entries, TraversalPosition, GetEntryNames, GetEntry, WatcherEvents> FusedF
 where
     TraversalPosition: Default + Send,
     GetEntryNames: FnMut(
-            TraversalPosition,
-            &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
-        ) -> (TraversalPosition, Result<(), Status>)
+        TraversalPosition,
+        &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>,
+    ) -> (TraversalPosition, Result<(), Status>)
         + Send,
     GetEntry: FnMut(&str) -> Result<Box<dyn DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
@@ -1216,7 +1216,7 @@ mod tests {
             enum Stage {
                 One,
                 Two,
-            };
+            }
             let mut stage = Stage::One;
             move |p, sink: &mut dyn FnMut(&EntryInfo, &str) -> Result<bool, GetEntryNameSinkError>| {
                 match stage {

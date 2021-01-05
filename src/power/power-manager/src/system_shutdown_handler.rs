@@ -81,7 +81,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         struct Config {
             component_manager_path: String,
             shutdown_timeout_s: Option<f64>,
-        };
+        }
 
         #[derive(Deserialize)]
         struct Dependencies {
@@ -93,7 +93,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         struct JsonData {
             config: Config,
             dependencies: Dependencies,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         let mut builder = Self::new(nodes[&data.dependencies.driver_manager_handler_node].clone())

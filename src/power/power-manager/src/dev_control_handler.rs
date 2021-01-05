@@ -55,12 +55,12 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
         #[derive(Deserialize)]
         struct Config {
             driver_path: String,
-        };
+        }
 
         #[derive(Deserialize)]
         struct JsonData {
             config: Config,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self::new_with_driver_path(data.config.driver_path)

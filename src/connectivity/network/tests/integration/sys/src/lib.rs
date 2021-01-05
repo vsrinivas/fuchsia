@@ -12,7 +12,7 @@ async fn start_with_cache_no_space() {
 
     struct NoSpaceEntryConstructor {
         paths: std::sync::Mutex<Vec<String>>,
-    };
+    }
 
     impl vfs::directory::mutable::entry_constructor::EntryConstructor for NoSpaceEntryConstructor {
         fn create_entry(

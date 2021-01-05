@@ -250,7 +250,7 @@ pub async fn run_test<'a, W: Write>(
         test_params: TestParams,
         run_options: TestRunOptions,
         writer: &'a mut W,
-    };
+    }
 
     let args = FoldArgs {
         current_count: 0,

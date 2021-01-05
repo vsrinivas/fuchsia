@@ -108,7 +108,7 @@ impl std::fmt::Debug for OutputQueue {
         struct OutputFrameView {
             target: RoutingTarget,
             length: usize,
-        };
+        }
         let mut frames = Vec::new();
         for i in self.first_frame..self.first_frame + self.num_frames {
             let frame = &self.frames[i % MAX_QUEUED_FRAMES];

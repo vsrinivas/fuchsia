@@ -85,7 +85,7 @@ mod tests {
             target: parser::Dictionary,
             expected_num_messages: usize,
             expected: Vec<(u64, String)>,
-        };
+        }
         let tests = vec![
             TestCase {
                 name: "basic pseudo-French",
@@ -179,7 +179,7 @@ mod tests {
             name: &'static str,
             source: parser::Dictionary,
             target: parser::Dictionary,
-        };
+        }
         let tests = vec![TestCase {
             name: "untranslated messages are disallowed",
             source: parser::Dictionary::from_init(&vec![

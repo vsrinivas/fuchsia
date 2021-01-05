@@ -485,7 +485,7 @@ async fn serve_write_blob(
         ExpectTruncate(Blob<NeedsTruncate>),
         ExpectData(Blob<NeedsData>),
         ExpectClose,
-    };
+    }
 
     impl State {
         fn expectation(&self) -> &'static str {

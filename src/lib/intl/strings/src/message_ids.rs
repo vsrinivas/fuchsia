@@ -210,7 +210,7 @@ enum MessageIds : uint64 {
             name: &'static str,
             content: &'static str,
             expected: &'static str,
-        };
+        }
         let tests = vec![
             TestCase {
                 name: "basic",
@@ -377,7 +377,7 @@ enum MessageIds : uint64 {
         struct TestCase {
             name: &'static str,
             content: &'static str,
-        };
+        }
         let tests = vec![TestCase {
             name: "conflicting uppercase is not allowed",
             content: r#"

@@ -538,7 +538,7 @@ impl<'a> ValidationContext<'a> {
             decl: &'a str,
             dir: &'a Path,
             use_: &'a fsys::UseDecl,
-        };
+        }
         let mut used_paths = HashMap::new();
         for use_ in uses.iter() {
             match use_ {

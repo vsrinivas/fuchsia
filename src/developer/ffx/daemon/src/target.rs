@@ -1765,7 +1765,7 @@ mod test {
         struct SshFormatTest {
             addr: TargetAddr,
             expect: &'static str,
-        };
+        }
         let tests_pre = vec![
             (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)), "127.0.0.1"),
             (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)), "129.0.0.1"),

@@ -125,7 +125,7 @@ mod tests {
             profile: fintl::Profile,
             timestamp_ms: i64,
             result: String,
-        };
+        }
         let tests = vec![
             Test {
                 profile: fintl::Profile {

@@ -87,12 +87,12 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
         #[derive(Deserialize)]
         struct Config {
             registration_timeout_s: Option<f64>,
-        };
+        }
 
         #[derive(Deserialize)]
         struct JsonData {
             config: Config,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         let mut builder = Self::new().with_service_fs(service_fs);

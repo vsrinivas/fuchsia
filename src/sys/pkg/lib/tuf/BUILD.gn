@@ -36,6 +36,9 @@ rustc_library("tuf") {
 
   configs -= [ "//build/config:rust_2018_idioms" ]
 
+  # TODO(fxbug.dev/67118) resolve and remove
+  configs += [ "//build/config:rust_allow_redundant_semicolons" ]
+
   deps = [
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:data-encoding",

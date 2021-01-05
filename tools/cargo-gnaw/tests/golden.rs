@@ -132,7 +132,7 @@ fn build_file_generation_test() {
         golden_expected_filename: Vec<&'static str>,
         /// If set, the flag `--skip-root` is added to `cargo_gnaw` invocation.
         skip_root: bool,
-    };
+    }
 
     let tests = vec![
         TestCase {

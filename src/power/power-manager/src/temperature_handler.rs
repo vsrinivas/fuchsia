@@ -66,12 +66,12 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         struct Config {
             driver_path: String,
             cache_duration_ms: u32,
-        };
+        }
 
         #[derive(Deserialize)]
         struct JsonData {
             config: Config,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self::new(

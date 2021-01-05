@@ -65,14 +65,14 @@ impl<'a> ThermalPolicyBuilder<'a> {
             sustainable_power: f64,
             proportional_gain: f64,
             integral_gain: f64,
-        };
+        }
 
         #[derive(Deserialize)]
         struct NodeConfig {
             thermal_shutdown_temperature: f64,
             controller_params: ControllerConfig,
             throttle_end_delay: f64,
-        };
+        }
 
         #[derive(Deserialize)]
         struct Dependencies {
@@ -87,7 +87,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
         struct JsonData {
             config: NodeConfig,
             dependencies: Dependencies,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         let thermal_config = ThermalConfig {

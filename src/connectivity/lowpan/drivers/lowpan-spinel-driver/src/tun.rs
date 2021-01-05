@@ -215,7 +215,7 @@ impl NetworkInterface for TunNetworkInterface {
             prev_prop: Properties,
             watcher: Option<WatcherProxy>,
             next_events: Vec<NetworkInterfaceEvent>,
-        };
+        }
         let init_state =
             EventState { prev_prop: Properties::EMPTY, watcher: None, next_events: Vec::default() };
 

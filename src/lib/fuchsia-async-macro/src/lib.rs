@@ -134,7 +134,7 @@ fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStre
     }
 
     let adapt_func = if test && sig.inputs.is_empty() {
-        quote! {let func = move |_| func()}
+        quote! {let func = move |_| func();}
     } else {
         quote! {}
     };
@@ -155,7 +155,7 @@ fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStre
             async fn func(#inputs) #ret_type {
                 #block
             }
-            #adapt_func;
+            #adapt_func
 
             #run_executor
           }

@@ -928,7 +928,7 @@ mod tests {
             }
             tree_assertion.add_child_assertion(request_assertion);
             tree_assertion
-        };
+        }
 
         assert_inspect_tree!(inspector, root: {
             switchboard: {

@@ -102,7 +102,7 @@ async fn run<N, U, E>(
             enum Op<N: Notify> {
                 Request(ControlRequest<N>),
                 Status(Option<State>),
-            };
+            }
             let op = select! {
                 req = recv.select_next_some() => Op::Request(req),
                 state = attempt_stream.next() => Op::Status(state)

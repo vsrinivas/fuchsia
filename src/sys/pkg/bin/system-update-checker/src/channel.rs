@@ -499,7 +499,7 @@ mod tests {
         #[derive(Clone, Debug)]
         struct FlakeyServiceConnector {
             state: Arc<Mutex<State>>,
-        };
+        }
 
         impl FlakeyServiceConnector {
             fn new() -> Self {

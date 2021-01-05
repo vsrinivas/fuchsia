@@ -208,7 +208,7 @@ async fn link_to_quic(mut link: LinkSender, quic: Arc<Mutex<Quic>>) -> Result<()
     ) -> Poll<Result<(), Error>> {
         log::info!("Drop frame of length {}b: {}", p.bytes().len(), make_reason());
         Poll::Ready(Ok(()))
-    };
+    }
 
     while let Some(mut p) = link.next_send().await {
         poll_quic(&quic, move |q, ctx| match q.connection.dgram_send(p.bytes()) {

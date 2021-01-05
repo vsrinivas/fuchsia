@@ -1594,7 +1594,7 @@ mod tests {
                 .await
                 .context("error handling netstack event")
                 .map_err(Into::into)
-        };
+        }
 
         /// Make sure that a new DHCPv6 client was requested, and verify its parameters.
         async fn check_new_client(

@@ -380,7 +380,7 @@ mod tests {
             name: &'static str,
             content: &'static str,
             expected: Dictionary,
-        };
+        }
         let tests = vec![
             TestCase {
                 name: "basic",
@@ -475,7 +475,7 @@ with intervening newlines
         struct TestCase {
             name: &'static str,
             content: &'static str,
-        };
+        }
         let tests = vec![
             TestCase {
                 name: "duplicate_elements",

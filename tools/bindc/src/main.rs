@@ -114,7 +114,7 @@ fn write_depfile(
 ) -> Result<String, Error> {
     fn path_to_str(path: &PathBuf) -> Result<&str, Error> {
         path.as_os_str().to_str().context("failed to convert path to string")
-    };
+    }
 
     let mut deps = includes.iter().map(|s| path_to_str(s)).collect::<Result<Vec<&str>, Error>>()?;
 

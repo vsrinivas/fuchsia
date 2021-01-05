@@ -60,7 +60,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             ),
             Running(futures::lock::MutexGuard<'a, ()>, BoxStream<'a, ZxResult<R>>),
             Done,
-        };
+        }
 
         let init_task = init_task
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))

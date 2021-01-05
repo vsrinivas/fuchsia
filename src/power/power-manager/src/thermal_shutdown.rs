@@ -67,7 +67,7 @@ impl ThermalShutdownBuilder {
             thermal_shutdown_temperature_c: f64,
             poll_interval_s: f64,
             filter_time_constant_s: f64,
-        };
+        }
 
         #[derive(Deserialize)]
         struct Dependencies {
@@ -79,7 +79,7 @@ impl ThermalShutdownBuilder {
         struct JsonData {
             config: Config,
             dependencies: Dependencies,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self {

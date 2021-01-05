@@ -152,19 +152,19 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             driver_path: String,
             capacitance: f64,
             min_cpu_clock_speed: f64,
-        };
+        }
 
         #[derive(Deserialize)]
         struct Dependencies {
             cpu_stats_handler_node: String,
             cpu_dev_handler_node: String,
-        };
+        }
 
         #[derive(Deserialize)]
         struct JsonData {
             config: Config,
             dependencies: Dependencies,
-        };
+        }
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self::new_with_driver_path(

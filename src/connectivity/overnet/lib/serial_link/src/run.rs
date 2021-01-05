@@ -185,7 +185,7 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
     enum DrainError {
         FromRead(Error),
         Timeout,
-    };
+    }
     loop {
         match fragment_reader
             .read()

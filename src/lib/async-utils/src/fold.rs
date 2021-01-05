@@ -188,7 +188,7 @@ mod tests {
         #[derive(Debug)]
         struct StreamErr {
             item: u32,
-        };
+        }
         const ERROR_ITEM: u32 = 1234;
         let (sender, stream) = mpsc::unbounded::<Result<u32, StreamErr>>();
         let () = sender.unbounded_send(Ok(ERROR_ITEM)).expect("failed to send item");

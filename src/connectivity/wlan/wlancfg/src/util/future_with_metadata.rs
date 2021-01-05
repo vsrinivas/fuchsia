@@ -54,7 +54,7 @@ mod tests {
         #[derive(Debug, Clone)]
         struct TestMetadata {
             has_been_written: bool,
-        };
+        }
 
         // Create a future
         let test_future = FutureWithMetadata::new(
