@@ -106,7 +106,7 @@ async fn run_ascendd(
     let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!("starting ascendd on {}", sockpath);
+    log::info!("starting ascendd on {} with node id {:?}", sockpath, node.node_id());
 
     let incoming = loop {
         match async_std::os::unix::net::UnixListener::bind(sockpath).await {
