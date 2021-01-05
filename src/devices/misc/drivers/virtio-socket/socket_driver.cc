@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 
 #include "socket.h"
+#include "src/devices/misc/drivers/virtio-socket/virtio_socket_bind.h"
 
 static const zx_driver_ops_t virtio_socket_driver_ops = []() {
   zx_driver_ops_t ops = {};
@@ -16,7 +17,4 @@ static const zx_driver_ops_t virtio_socket_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(virtio_socket, virtio_socket_driver_ops, "zircon", "0.1", 5)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET), ZIRCON_DRIVER_END(virtio_socket)
+ZIRCON_DRIVER(virtio_socket, virtio_socket_driver_ops, "zircon", "0.1");
