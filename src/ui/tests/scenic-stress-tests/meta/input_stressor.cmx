@@ -1,14 +1,7 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/input_stressor"
@@ -18,16 +11,13 @@
             "class/display-controller"
         ],
         "features": [
-            "hub",
-            "vulkan"
+            "hub"
         ],
         "services": [
             "fuchsia.ldsvc.Loader",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.sys.Launcher"
         ]
     }
 }
