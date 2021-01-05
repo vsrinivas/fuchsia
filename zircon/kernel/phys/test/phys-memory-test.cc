@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/memalloc.h>
 #include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/view.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <string.h>
@@ -109,9 +110,10 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
     printf("No ZBI found. Skipping test...\n");
     return 0;
   }
-  zbitl::View<zbitl::ByteView> view({static_cast<ktl::byte*>(zbi_ptr), SIZE_MAX});
 
   // Print memory information.
+  auto* zbi = reinterpret_cast<const zbi_header_t*>(zbi_ptr);
+  zbitl::View<zbitl::ByteView> view{zbitl::StorageFromRawHeader(zbi)};
   zbitl::MemRangeTable container{view};
   printf("Memory ranges detected:\n");
   size_t count = 0;
