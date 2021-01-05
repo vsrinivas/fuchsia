@@ -124,6 +124,7 @@ impl CutexState {
     // Returns true if the cutex was unlocked, false if not.
     #[must_use]
     fn unlock_if_no_waiters(&self) -> bool {
+        #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
         let old_state =
             self.state.compare_and_swap(SENTINEL | IS_LOCKED, SENTINEL, Ordering::AcqRel);
         old_state == SENTINEL | IS_LOCKED

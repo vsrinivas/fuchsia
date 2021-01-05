@@ -96,11 +96,13 @@ impl CobaltSender {
 
     fn log_event_value(&mut self, event: CobaltEvent) {
         if self.sender.try_send(event).is_err() {
+            #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
             let was_blocked = self.is_blocked.compare_and_swap(false, true, Ordering::SeqCst);
             if !was_blocked {
                 error!("cobalt sender drops a event/events: either buffer is full or no receiver is waiting");
             }
         } else {
+            #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
             let was_blocked = self.is_blocked.compare_and_swap(true, false, Ordering::SeqCst);
             if was_blocked {
                 info!("cobalt sender recovers and resumes sending")

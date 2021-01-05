@@ -1144,6 +1144,7 @@ impl Notifier {
     /// Prepare for notification and enqueuing the task. If true, the caller should proceed with
     /// scheduling the task. If false, another worker will ensure that this happens.
     fn prepare_notify(&self) -> bool {
+        #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
         !self.notified.compare_and_swap(false, true, Ordering::AcqRel)
     }
 

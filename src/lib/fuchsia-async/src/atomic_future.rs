@@ -97,6 +97,7 @@ impl AtomicFuture {
         // be observable by the reading thread.
         loop {
             // Attempt to acquire sole responsibility for polling the future
+            #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
             match self.state.compare_and_swap(INACTIVE, ACTIVE, AcqRel) {
                 INACTIVE => {
                     // we are now the (only) active worker. proceed to poll!
@@ -131,6 +132,7 @@ impl AtomicFuture {
                             }
                         }
 
+                        #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
                         match self.state.compare_and_swap(ACTIVE, INACTIVE, AcqRel) {
                             ACTIVE => {
                                 return AttemptPollResult::Pending;
@@ -157,6 +159,7 @@ impl AtomicFuture {
                     //
                     // We're not acquiring access to memory or releasing any writes,
                     // so we can use `Relaxed` memory ordering.
+                    #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
                     match self.state.compare_and_swap(ACTIVE, NOTIFIED, Relaxed) {
                         INACTIVE => {
                             // Ooh, the worker finished before we could notify.

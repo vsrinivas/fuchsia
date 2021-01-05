@@ -60,6 +60,7 @@ pub fn init_config(
 ) -> Result<()> {
     // If it's already been initialize, just fail silently. This will allow a setup method to be
     // called by unit tests over and over again without issue.
+    #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
     if INIT.compare_and_swap(false, true, Ordering::Release) {
         Ok(())
     } else {
