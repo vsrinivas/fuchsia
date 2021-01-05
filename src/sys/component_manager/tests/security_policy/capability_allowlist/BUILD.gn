@@ -1,0 +1,130 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/component/config.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":security-policy-capability-allowlist-integration-test" ]
+}
+
+rustc_test("security_policy_capability_allowlist_integration_test_bin") {
+  name = "security_policy_capability_allowlist_integration_test"
+  edition = "2018"
+  source_root = "security_policy_capability_allowlist_integration_test.rs"
+  deps = [
+    ":test.policy-rustc",
+    "../util:security_policy_test_util",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "security_policy_capability_allowlist_integration_test.rs" ]
+}
+
+fidl("test.policy") {
+  name = "test.policy"
+  sources = [ "policy.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+rustc_binary("policy_service_bin") {
+  edition = "2018"
+  source_root = "policy_service.rs"
+  deps = [
+    ":test.policy-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "policy_service.rs" ]
+}
+
+executable("dir_service_bin") {
+  sources = [ "dir_service.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/svc",
+  ]
+}
+
+rustc_binary("cap_getter_bin") {
+  edition = "2018"
+  source_root = "cap_getter.rs"
+  deps = [
+    ":test.policy-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "cap_getter.rs" ]
+}
+
+component_config("cm_config") {
+  sources = [ "cm_config.json" ]
+}
+
+fuchsia_component("cm_for_test") {
+  testonly = true
+  deps = [ "//src/sys/component_manager:bin" ]
+  manifest = "meta/cm_for_test.cmx"
+}
+
+fuchsia_component("test_root") {
+  testonly = true
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_component("policy_service") {
+  testonly = true
+  manifest = "meta/policy_service.cml"
+  deps = [ ":policy_service_bin" ]
+}
+
+fuchsia_component("dir_service") {
+  testonly = true
+  manifest = "meta/dir_service.cml"
+  deps = [ ":dir_service_bin" ]
+}
+
+fuchsia_component("cap_getter") {
+  testonly = true
+  manifest = "meta/cap_getter.cml"
+  deps = [ ":cap_getter_bin" ]
+}
+
+fuchsia_unittest_package(
+    "security-policy-capability-allowlist-integration-test") {
+  manifest = "meta/security-policy-capability-allowlist-integration-test.cmx"
+  deps = [
+    ":cap_getter",
+    ":cm_config",
+    ":cm_for_test",
+    ":dir_service",
+    ":policy_service",
+    ":security_policy_capability_allowlist_integration_test_bin",
+    ":test_root",
+  ]
+}

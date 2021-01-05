@@ -1,0 +1,23 @@
+{
+    debug: true,
+    security_policy: {
+        capability_policy: [
+            {
+                source_moniker: "/policy_service",
+                source: "component",
+                source_name: "test.policy.Restricted",
+                capability: "protocol",
+                target_monikers: ["/policy_allowed"]
+            },
+            {
+                source_moniker: "/dir_service",
+                source: "component",
+                source_name: "restricted",
+                capability: "directory",
+                target_monikers: ["/policy_allowed"]
+            }
+        ]
+    },
+    builtin_pkg_resolver: "appmgr_bridge",
+    out_dir_contents: "hub"
+}
