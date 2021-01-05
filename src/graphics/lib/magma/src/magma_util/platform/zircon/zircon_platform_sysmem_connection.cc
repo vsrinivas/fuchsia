@@ -379,10 +379,6 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     collection_ =
         std::make_unique<llcpp::fuchsia::sysmem::BufferCollection::SyncClient>(std::move(h1));
 
-    collection_->SetDebugClientInfo(
-        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
-        magma::PlatformProcessHelper::GetCurrentProcessId());
-
     return MAGMA_STATUS_OK;
   }
 
@@ -465,7 +461,11 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
   ZirconPlatformSysmemConnection(llcpp::fuchsia::sysmem::Allocator::SyncClient allocator)
-      : sysmem_allocator_(std::move(allocator)) {}
+      : sysmem_allocator_(std::move(allocator)) {
+    sysmem_allocator_.SetDebugClientInfo(
+        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
+        magma::PlatformProcessHelper::GetCurrentProcessId());
+  }
 
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
                                 std::unique_ptr<magma::PlatformBuffer>* buffer_out) override {
@@ -582,10 +582,6 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer: %d", status);
 
     llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(h1));
-
-    collection.SetDebugClientInfo(
-        fidl::unowned_str(magma::PlatformProcessHelper::GetCurrentProcessName()),
-        magma::PlatformProcessHelper::GetCurrentProcessId());
 
     if (!name.empty()) {
       collection.SetName(10, fidl::unowned_str(name));
