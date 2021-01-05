@@ -6,7 +6,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/alloc_checker.h>
