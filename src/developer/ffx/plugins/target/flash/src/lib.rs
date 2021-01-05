@@ -41,45 +41,63 @@ async fn flash_impl<W: Write + Send, R: Read>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use ffx_flash_args::OemFile;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use regex::Regex;
+    use std::default::Default;
     use std::io::BufWriter;
+    use std::sync::{Arc, Mutex};
+    use tempfile::NamedTempFile;
 
-    fn setup_fake_fastboot_service() -> FastbootProxy {
-        setup_fake_fastboot_proxy(|req| match req {
-            FastbootRequest::Flash { partition_name: _, path: _, responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::Erase { partition_name: _, responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::Reboot { responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::RebootBootloader { listener, responder } => {
-                listener.into_proxy().unwrap().on_reboot().unwrap();
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::ContinueBoot { responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::SetActive { slot: _, responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::Stage { path: _, responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-            FastbootRequest::Oem { command: _, responder } => {
-                responder.send(&mut Ok(())).unwrap();
-            }
-        })
+    #[derive(Default)]
+    struct FakeServiceCommands {
+        staged_files: Vec<String>,
+        oem_commands: Vec<String>,
+    }
+
+    fn setup() -> (Arc<Mutex<FakeServiceCommands>>, FastbootProxy) {
+        let state = Arc::new(Mutex::new(FakeServiceCommands { ..Default::default() }));
+        (
+            state.clone(),
+            setup_fake_fastboot_proxy(move |req| match req {
+                FastbootRequest::Flash { partition_name: _, path: _, responder } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::Erase { partition_name: _, responder } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::Reboot { responder } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::RebootBootloader { listener, responder } => {
+                    listener.into_proxy().unwrap().on_reboot().unwrap();
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::ContinueBoot { responder } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::SetActive { slot: _, responder } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::Stage { path, responder } => {
+                    let mut state = state.lock().unwrap();
+                    state.staged_files.push(path);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::Oem { command, responder } => {
+                    let mut state = state.lock().unwrap();
+                    state.oem_commands.push(command);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+            }),
+        )
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_nonexistent_file_throws_err() {
         assert!(flash(
-            setup_fake_fastboot_service(),
-            FlashCommand { manifest: "ffx_test_does_not_exist".to_string(), product: None }
+            setup().1,
+            FlashCommand { manifest: "ffx_test_does_not_exist".to_string(), ..Default::default() }
         )
         .await
         .is_err())
@@ -130,9 +148,9 @@ mod test {
 
     const V1_SIMPLE_MANIFEST: &'static str = r#"{
         "version": 1,
-        "manifest": [ 
+        "manifest": [
             {
-                "name": "zedboot", 
+                "name": "zedboot",
                 "bootloader_partitions": [],
                 "partitions": [
                     ["test1", "path1"],
@@ -154,8 +172,8 @@ mod test {
         flash_impl(
             writer,
             manifest_contents.as_bytes(),
-            setup_fake_fastboot_service(),
-            FlashCommand { manifest: "whatever".to_string(), product: None },
+            setup().1,
+            FlashCommand { manifest: "whatever".to_string(), ..Default::default() },
         )
         .await?;
         let FlashManifest::V1(manifest) = FlashManifest::load(manifest_contents.as_bytes())?;
@@ -176,8 +194,8 @@ mod test {
         assert!(flash_impl(
             writer,
             manifest_contents.as_bytes(),
-            setup_fake_fastboot_service(),
-            FlashCommand { manifest: "whatever".to_string(), product: None }
+            setup().1,
+            FlashCommand { manifest: "whatever".to_string(), ..Default::default() },
         )
         .await
         .is_err());
@@ -192,8 +210,12 @@ mod test {
         assert!(flash_impl(
             writer,
             manifest_contents.as_bytes(),
-            setup_fake_fastboot_service(),
-            FlashCommand { manifest: "whatever".to_string(), product: Some("Unknown".to_string()) }
+            setup().1,
+            FlashCommand {
+                manifest: "whatever".to_string(),
+                product: Some("Unknown".to_string()),
+                ..Default::default()
+            }
         )
         .await
         .is_err());
@@ -208,8 +230,12 @@ mod test {
         flash_impl(
             writer,
             manifest_contents.as_bytes(),
-            setup_fake_fastboot_service(),
-            FlashCommand { manifest: "whatever".to_string(), product: Some("product".to_string()) },
+            setup().1,
+            FlashCommand {
+                manifest: "whatever".to_string(),
+                product: Some("product".to_string()),
+                ..Default::default()
+            },
         )
         .await?;
         let FlashManifest::V1(manifest) = FlashManifest::load(manifest_contents.as_bytes())?;
@@ -219,6 +245,35 @@ mod test {
             assert_eq!(1, name_listing.find_iter(&output).count());
             assert_eq!(1, path_listing.find_iter(&output).count());
         }
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_oem_file_should_be_staged_from_command() -> Result<()> {
+        let mut output = String::new();
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let manifest_contents = V1_SIMPLE_MANIFEST.to_string();
+        let (state, proxy) = setup();
+
+        let test_oem_cmd = "test-oem-cmd";
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let test_staged_file = format!("{},{}", test_oem_cmd, tmp_file_name).parse::<OemFile>()?;
+
+        flash_impl(
+            writer,
+            manifest_contents.as_bytes(),
+            proxy,
+            FlashCommand {
+                manifest: "whatever".to_string(),
+                oem_stage: vec![test_staged_file],
+                ..Default::default()
+            },
+        )
+        .await?;
+        let state = state.lock().unwrap();
+        assert_eq!(1, state.staged_files.len());
+        assert_eq!(1, state.oem_commands.len());
         Ok(())
     }
 }

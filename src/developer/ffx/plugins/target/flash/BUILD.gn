@@ -8,6 +8,9 @@ ffx_plugin("ffx_flash") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
+  args_with_unit_tests = true
+  args_deps = [ "//third_party/rust_crates:serde" ]
+
   deps = [
     "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:async-trait",
@@ -15,6 +18,8 @@ ffx_plugin("ffx_flash") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   sources = [
     "src/args.rs",

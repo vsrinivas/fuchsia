@@ -81,7 +81,7 @@ pub enum Command {
     ////////////// OEM Commands ////////////////////////////////////////////
     //
     // Support for OEM commands not specifically defined in the Fastboot specification.
-    Oem(String, Vec<String>),
+    Oem(String),
 }
 
 const MAX_COMMAND_LENGTH: usize = 64;
@@ -147,18 +147,7 @@ impl TryFrom<Command> for Vec<u8> {
             }
             Command::IsLogical(s) => concat_message(b"is-logical:", s),
             Command::SetActive(s) => concat_message(b"set_active:", s),
-            Command::Oem(s, params) => {
-                if params.len() > 0 {
-                    concat_message(&format!("{}:", s).into_bytes()[..], params.join(" "))
-                } else {
-                    let bytes = s.into_bytes();
-                    if bytes.len() > MAX_COMMAND_LENGTH {
-                        Err(anyhow!("OEM command is too long, must be less than 64 bytes"))
-                    } else {
-                        Ok(bytes.to_vec())
-                    }
-                }
-            }
+            Command::Oem(s) => concat_message(b"oem ", s),
         }
     }
 }
@@ -432,32 +421,17 @@ mod test {
     }
 
     #[test]
-    fn test_oem_command_with_no_parameters() {
-        let byte_vector = Vec::<u8>::try_from(Command::Oem("test".to_string(), vec![]));
+    fn test_oem_command() {
+        let byte_vector = Vec::<u8>::try_from(Command::Oem("test".to_string()));
         assert!(!byte_vector.is_err());
         assert_eq!(byte_vector.unwrap(), b"test".to_vec());
 
         let max_command_name = String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH]).unwrap();
-        let max_command = Vec::<u8>::try_from(Command::Oem(max_command_name, vec![]));
+        let max_command = Vec::<u8>::try_from(Command::Oem(max_command_name));
         assert!(!max_command.is_err());
 
         let over_command_name = String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH + 1]).unwrap();
-        let over_command = Vec::<u8>::try_from(Command::Oem(over_command_name, vec![]));
+        let over_command = Vec::<u8>::try_from(Command::Oem(over_command_name));
         assert!(over_command.is_err());
-    }
-
-    #[test]
-    fn test_oem_command_with_parameters() {
-        let byte_vector =
-            Vec::<u8>::try_from(Command::Oem("test".to_string(), vec!["test".to_string()]));
-        assert!(!byte_vector.is_err());
-        assert_eq!(byte_vector.unwrap(), b"test:test".to_vec());
-
-        let multi_vector = Vec::<u8>::try_from(Command::Oem(
-            "test".to_string(),
-            vec!["test".to_string(), "test".to_string()],
-        ));
-        assert!(!multi_vector.is_err());
-        assert_eq!(multi_vector.unwrap(), b"test:test test".to_vec());
     }
 }

@@ -196,8 +196,8 @@ pub fn set_active<T: Read + Write>(interface: &mut T, slot: &String) -> Result<(
     }
 }
 
-pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String, params: Vec<String>) -> Result<()> {
-    match send(Command::Oem(cmd.to_string(), params), interface).context("sending oem")? {
+pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String) -> Result<()> {
+    match send(Command::Oem(cmd.to_string()), interface).context("sending oem")? {
         Reply::Okay(_) => {
             log::debug!("Successfully sent oem command \"{}\"", cmd);
             Ok(())

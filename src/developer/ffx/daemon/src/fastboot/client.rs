@@ -184,7 +184,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                         .context("sending error response")?;
                 }
             },
-            FastbootRequest::Oem { command, responder } => match oem(usb, &command, vec![]) {
+            FastbootRequest::Oem { command, responder } => match oem(usb, &command) {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error sending oem \"{}\": {:?}", command, e);

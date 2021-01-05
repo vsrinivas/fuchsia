@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
     ffx_core::ffx_bail,
-    ffx_flash_args::FlashCommand,
+    ffx_flash_args::{FlashCommand, OemFile},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_developer_bridge::{FastbootProxy, RebootListenerMarker, RebootListenerRequest},
     futures::prelude::*,
@@ -59,19 +59,6 @@ pub(crate) struct Partition(String, String);
 
 impl Partition {
     pub(crate) fn name(&self) -> &str {
-        self.0.as_str()
-    }
-
-    pub(crate) fn file(&self) -> &str {
-        self.1.as_str()
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct OemFile(String, String);
-
-impl OemFile {
-    pub(crate) fn command(&self) -> &str {
         self.0.as_str()
     }
 
@@ -188,14 +175,24 @@ impl Flash for FlashManifestV1 {
         }
         for oem_file in &product.oem_files {
             writeln!(writer, "Writing {}", oem_file.file())?;
-            //TODO: better error handling when errors are well defined.
             fastboot_proxy
                 .stage(oem_file.file())
                 .await?
                 .map_err(|_| anyhow!("There was an error staging {}", oem_file.file()))?;
             writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
             fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
-                anyhow!("There was an error sending oem command \"{}\"", oem_file.command(),)
+                anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
+            })?;
+        }
+        for oem_file in &cmd.oem_stage {
+            writeln!(writer, "Writing {}", oem_file.file())?;
+            fastboot_proxy
+                .stage(oem_file.file())
+                .await?
+                .map_err(|_| anyhow!("There was an error staging {}", oem_file.file()))?;
+            writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
+            fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
+                anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
             })?;
         }
         fastboot_proxy
