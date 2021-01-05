@@ -130,7 +130,7 @@ impl ReaderServer {
                     let result =
                         unpopulated.populate(timeout, move || global_stats.add_timeout()).await;
                     global_stats_2.record_component_duration(
-                        &result.relative_moniker.join("/"),
+                        &result.identity.relative_moniker.join("/"),
                         zx::Time::get_monotonic() - start_time,
                     );
                     result
@@ -258,6 +258,7 @@ impl ReaderServer {
         // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
         // into a JSON string and returned.
         let sanitized_moniker = pumped_inspect_data
+            .identity
             .relative_moniker
             .iter()
             .map(|s| selectors::sanitize_string_for_selectors(s))
@@ -267,12 +268,12 @@ impl ReaderServer {
         if let Some(configured_selectors) = &self.selectors {
             client_selectors = {
                 let matching_selectors = selectors::match_component_moniker_against_selectors(
-                    &pumped_inspect_data.relative_moniker,
+                    &pumped_inspect_data.identity.relative_moniker,
                     configured_selectors,
                 )
                 .unwrap_or_else(|err| {
                     error!(
-                        moniker = ?pumped_inspect_data.relative_moniker, ?err,
+                        moniker = ?pumped_inspect_data.identity.relative_moniker, ?err,
                         "Failed to evaluate client selectors",
                     );
                     Vec::new()
@@ -299,7 +300,8 @@ impl ReaderServer {
             }
         }
 
-        let component_url = pumped_inspect_data.component_url;
+        let identity = pumped_inspect_data.identity.clone();
+
         ReaderServer::filter_single_components_snapshots(
             pumped_inspect_data.snapshots,
             pumped_inspect_data.inspect_matcher,
@@ -311,7 +313,7 @@ impl ReaderServer {
                 sanitized_moniker.clone(),
                 hierarchy_data.hierarchy,
                 hierarchy_data.timestamp.into_nanos(),
-                component_url.clone(),
+                identity.url.clone(),
                 hierarchy_data.filename,
                 hierarchy_data.errors,
             )

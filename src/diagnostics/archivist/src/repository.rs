@@ -4,7 +4,7 @@
 use {
     crate::{
         constants::MAXIMUM_CACHED_LOGS_BYTES,
-        container::ComponentDiagnostics,
+        container::{ComponentDiagnostics, ComponentIdentity},
         events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
@@ -427,8 +427,6 @@ impl DataRepoState {
         event_timestamp: zx::Time,
         component_start_time: Option<zx::Time>,
     ) -> Result<(), Error> {
-        let relative_moniker = identifier.relative_moniker_for_selectors();
-
         let lifecycle_artifact_container = LifecycleArtifactsContainer {
             event_timestamp: event_timestamp,
             component_start_time: component_start_time,
@@ -451,8 +449,10 @@ impl DataRepoState {
                         self.data_directories.insert(
                             key,
                             ComponentDiagnostics::new_with_lifecycle(
-                                relative_moniker,
-                                component_url.into(),
+                                Arc::new(ComponentIdentity::from_identifier_and_url(
+                                    &identifier,
+                                    component_url,
+                                )),
                                 lifecycle_artifact_container,
                             ),
                         )
@@ -482,8 +482,10 @@ impl DataRepoState {
             None => self.data_directories.insert(
                 key,
                 ComponentDiagnostics::new_with_lifecycle(
-                    relative_moniker,
-                    component_url.into(),
+                    Arc::new(ComponentIdentity::from_identifier_and_url(
+                        &identifier,
+                        component_url,
+                    )),
                     lifecycle_artifact_container,
                 ),
             ),
@@ -498,31 +500,25 @@ impl DataRepoState {
         directory_proxy: DirectoryProxy,
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
-        let relative_moniker = identifier.relative_moniker_for_selectors();
-        let key = identifier.unique_key();
-
         let inspect_container = InspectArtifactsContainer {
             component_diagnostics_proxy: Arc::new(directory_proxy),
             event_timestamp,
         };
 
-        self.insert_inspect_artifact_container(
-            inspect_container,
-            key,
-            relative_moniker,
-            component_url.into(),
-        )
+        self.insert_inspect_artifact_container(inspect_container, identifier, component_url.into())
     }
 
     // Inserts an InspectArtifactsContainer into the data repository.
     fn insert_inspect_artifact_container(
         &mut self,
         inspect_container: InspectArtifactsContainer,
-        key: Vec<String>,
-        relative_moniker: Vec<String>,
+        identifier: ComponentIdentifier,
         component_url: String,
     ) -> Result<(), Error> {
+        let key = identifier.unique_key();
+
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
+
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
@@ -537,8 +533,10 @@ impl DataRepoState {
                         self.data_directories.insert(
                             key,
                             ComponentDiagnostics::new_with_inspect(
-                                relative_moniker,
-                                component_url,
+                                Arc::new(ComponentIdentity::from_identifier_and_url(
+                                    &identifier,
+                                    component_url,
+                                )),
                                 inspect_container,
                             ),
                         )
@@ -573,8 +571,10 @@ impl DataRepoState {
             None => self.data_directories.insert(
                 key,
                 ComponentDiagnostics::new_with_inspect(
-                    relative_moniker,
-                    component_url,
+                    Arc::new(ComponentIdentity::from_identifier_and_url(
+                        &identifier,
+                        component_url,
+                    )),
                     inspect_container,
                 ),
             ),
@@ -594,16 +594,14 @@ impl DataRepoState {
                         {
                             acc.push(LifecycleDataContainer::from_lifecycle_artifact(
                                 lifecycle_artifacts,
-                                diagnostics_artifacts_container.relative_moniker.clone(),
-                                diagnostics_artifacts_container.component_url.clone(),
+                                diagnostics_artifacts_container.identity.clone(),
                             ));
                         }
 
                         if let Some(inspect_artifacts) = &diagnostics_artifacts_container.inspect {
                             acc.push(LifecycleDataContainer::from_inspect_artifact(
                                 inspect_artifacts,
-                                diagnostics_artifacts_container.relative_moniker.clone(),
-                                diagnostics_artifacts_container.component_url.clone(),
+                                diagnostics_artifacts_container.identity.clone(),
                             ));
                         }
 
@@ -640,7 +638,9 @@ impl DataRepoState {
 
                 let optional_hierarchy_matcher = match moniker_to_static_matcher_map {
                     Some(map) => {
-                        match map.get(&diagnostics_artifacts_container.relative_moniker.join("/")) {
+                        match map.get(
+                            &diagnostics_artifacts_container.identity.relative_moniker.join("/"),
+                        ) {
                             Some(inspect_matcher) => Some(inspect_matcher),
                             // Return early if there were static selectors, and none were for this
                             // moniker.
@@ -655,7 +655,7 @@ impl DataRepoState {
                 if !match component_selectors {
                     Some(component_selectors) => component_selectors.iter().any(|s| {
                         selectors::match_component_moniker_against_selector(
-                            &diagnostics_artifacts_container.relative_moniker,
+                            &diagnostics_artifacts_container.identity.relative_moniker,
                             s,
                         )
                         .ok()
@@ -673,8 +673,7 @@ impl DataRepoState {
                 )
                 .ok()
                 .map(|directory| UnpopulatedInspectDataContainer {
-                    relative_moniker: diagnostics_artifacts_container.relative_moniker.clone(),
-                    component_url: diagnostics_artifacts_container.component_url.clone(),
+                    identity: diagnostics_artifacts_container.identity.clone(),
                     component_diagnostics_proxy: directory,
                     inspect_matcher: optional_hierarchy_matcher.cloned(),
                 })
@@ -753,7 +752,7 @@ mod tests {
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert!(entry.inspect.is_some());
-        assert_eq!(entry.component_url, TEST_URL);
+        assert_eq!(entry.identity.url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -789,8 +788,8 @@ mod tests {
         assert!(entry.lifecycle.is_some());
         let lifecycle_container = entry.lifecycle.as_ref().unwrap();
         assert!(lifecycle_container.component_start_time.is_none());
-        assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
-        assert_eq!(entry.component_url, TEST_URL);
+        assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.identity.url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -823,8 +822,8 @@ mod tests {
         let lifecycle_container = entry.lifecycle.as_ref().unwrap();
         assert!(lifecycle_container.component_start_time.is_some());
         assert_eq!(lifecycle_container.component_start_time.unwrap().into_nanos(), 0);
-        assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
-        assert_eq!(entry.component_url, TEST_URL);
+        assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
+        assert_eq!(entry.identity.url, TEST_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -860,7 +859,7 @@ mod tests {
         let key = component_id.unique_key();
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
-        assert_eq!(entry.component_url, TEST_URL);
+        assert_eq!(entry.identity.url, TEST_URL);
         assert!(entry.inspect.is_some());
         assert!(entry.lifecycle.is_some());
     }
@@ -887,10 +886,10 @@ mod tests {
 
         let mutable_values =
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
-        mutable_values.push(ComponentDiagnostics::empty(
-            component_id.relative_moniker_for_selectors(),
-            TEST_URL.to_string(),
-        ));
+
+        mutable_values.push(ComponentDiagnostics::empty(Arc::new(
+            ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL.to_string()),
+        )));
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");

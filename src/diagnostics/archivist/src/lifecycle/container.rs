@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect::container::InspectArtifactsContainer,
+    crate::{container::ComponentIdentity, inspect::container::InspectArtifactsContainer},
     diagnostics_data::{self as schema, LifecycleType},
     diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
+    std::sync::Arc,
 };
 
 pub struct LifecycleArtifactsContainer {
@@ -24,9 +25,8 @@ pub struct LifecycleArtifactsContainer {
 /// both metadata and payload, needed to populate a
 /// snapshotted Lifecycle schema.
 pub struct LifecycleDataContainer {
-    pub relative_moniker: Vec<String>,
+    pub identity: Arc<ComponentIdentity>,
     pub payload: Option<DiagnosticsHierarchy>,
-    pub component_url: String,
     pub event_timestamp: zx::Time,
     pub lifecycle_type: schema::LifecycleType,
 }
@@ -34,12 +34,10 @@ pub struct LifecycleDataContainer {
 impl LifecycleDataContainer {
     pub fn from_inspect_artifact(
         artifact: &InspectArtifactsContainer,
-        relative_moniker: Vec<String>,
-        component_url: String,
+        identity: Arc<ComponentIdentity>,
     ) -> Self {
         LifecycleDataContainer {
-            relative_moniker,
-            component_url,
+            identity,
             payload: None,
             event_timestamp: artifact.event_timestamp,
             lifecycle_type: LifecycleType::DiagnosticsReady,
@@ -48,8 +46,7 @@ impl LifecycleDataContainer {
 
     pub fn from_lifecycle_artifact(
         artifact: &LifecycleArtifactsContainer,
-        relative_moniker: Vec<String>,
-        component_url: String,
+        identity: Arc<ComponentIdentity>,
     ) -> Self {
         if let Some(component_start_time) = artifact.component_start_time {
             let payload = DiagnosticsHierarchy::new(
@@ -62,16 +59,14 @@ impl LifecycleDataContainer {
             );
 
             LifecycleDataContainer {
-                relative_moniker,
-                component_url,
+                identity,
                 payload: Some(payload),
                 event_timestamp: artifact.event_timestamp,
                 lifecycle_type: LifecycleType::Running,
             }
         } else {
             LifecycleDataContainer {
-                relative_moniker,
-                component_url,
+                identity,
                 payload: None,
                 event_timestamp: artifact.event_timestamp,
                 lifecycle_type: LifecycleType::Started,

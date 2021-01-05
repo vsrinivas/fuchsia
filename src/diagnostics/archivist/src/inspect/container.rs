@@ -5,10 +5,10 @@
 use {
     super::collector::InspectDataCollector,
     crate::{
-        container::{ReadSnapshot, SnapshotData},
+        container::{ComponentIdentity, ReadSnapshot, SnapshotData},
         events::types::InspectData,
     },
-    diagnostics_data::{self as schema},
+    diagnostics_data as schema,
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async::{DurationExt, TimeoutExt},
@@ -34,11 +34,7 @@ pub struct InspectArtifactsContainer {
 /// along with all information needed to transform that data
 /// to be returned to the client.
 pub struct PopulatedInspectDataContainer {
-    /// Relative moniker of the component that this populated
-    /// data packet has gathered data for.
-    pub relative_moniker: Vec<String>,
-    /// The url with which the associated component was launched.
-    pub component_url: String,
+    pub identity: Arc<ComponentIdentity>,
     /// Vector of all the snapshots of inspect hierarchies under
     /// the diagnostics directory of the component identified by
     /// relative_moniker, along with the metadata needed to populate
@@ -128,8 +124,7 @@ impl PopulatedInspectDataContainer {
                 }
                 match snapshots_data_opt {
                     Some(snapshots) => PopulatedInspectDataContainer {
-                        relative_moniker: unpopulated.relative_moniker.clone(),
-                        component_url: unpopulated.component_url.clone(),
+                        identity: unpopulated.identity.clone(),
                         inspect_matcher: unpopulated.inspect_matcher.clone(),
                         snapshots,
                     },
@@ -138,14 +133,13 @@ impl PopulatedInspectDataContainer {
                             schema::Error {
                                 message: format!(
                                     "Failed to extract any inspect data for {:?}",
-                                    unpopulated.relative_moniker
+                                    unpopulated.identity.relative_moniker
                                 ),
                             },
                             "NO_FILE_SUCCEEDED".to_string(),
                         )];
                         PopulatedInspectDataContainer {
-                            relative_moniker: unpopulated.relative_moniker.clone(),
-                            component_url: unpopulated.component_url.clone(),
+                            identity: unpopulated.identity.clone(),
                             snapshots: no_success_snapshot_data,
                             inspect_matcher: unpopulated.inspect_matcher.clone(),
                         }
@@ -157,14 +151,13 @@ impl PopulatedInspectDataContainer {
                     schema::Error {
                         message: format!(
                             "Encountered error traversing diagnostics dir for {:?}: {:?}",
-                            &unpopulated.relative_moniker, e
+                            &unpopulated.identity.relative_moniker, e
                         ),
                     },
                     "NO_FILE_SUCCEEDED".to_string(),
                 )];
                 PopulatedInspectDataContainer {
-                    relative_moniker: unpopulated.relative_moniker.clone(),
-                    component_url: unpopulated.component_url.clone(),
+                    identity: unpopulated.identity.clone(),
                     snapshots: no_success_snapshot_data,
                     inspect_matcher: unpopulated.inspect_matcher.clone(),
                 }
@@ -177,11 +170,7 @@ impl PopulatedInspectDataContainer {
 /// all information needed to retrieve Inspect data
 /// for a given component, when requested.
 pub struct UnpopulatedInspectDataContainer {
-    /// Relative moniker of the component that this data container
-    /// is representing.
-    pub relative_moniker: Vec<String>,
-    /// The url with which the associated component was launched.
-    pub component_url: String,
+    pub identity: Arc<ComponentIdentity>,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
     pub component_diagnostics_proxy: DirectoryProxy,
@@ -204,13 +193,12 @@ impl UnpopulatedInspectDataContainer {
                 on_timeout();
                 let error_string = format!(
                     "Exceeded per-component time limit for fetching diagnostics data: {:?}",
-                    &this.relative_moniker
+                    &this.identity.relative_moniker
                 );
                 error!("{}", error_string);
                 PopulatedInspectDataContainer {
-                    component_url: this.component_url.clone(),
+                    identity: this.identity.clone(),
                     inspect_matcher: this.inspect_matcher.clone(),
-                    relative_moniker: this.relative_moniker.clone(),
                     snapshots: vec![SnapshotData::failed(
                         schema::Error { message: error_string },
                         "NO_FILE_SUCCEEDED".to_string(),

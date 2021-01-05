@@ -274,5 +274,6 @@ async fn unified_reader() -> Result<(), Error> {
         panic!("failed to get meaningful results from reader service.")
     })
     .await;
+
     Ok(())
 }

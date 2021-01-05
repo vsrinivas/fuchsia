@@ -3,14 +3,15 @@
 
 use {
     crate::{
-        inspect::container::InspectArtifactsContainer,
+        events::types::ComponentIdentifier, inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
     },
-    diagnostics_data::{self as schema},
+    diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
-    fuchsia_async::{self as fasync},
+    fuchsia_async as fasync,
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
+    std::sync::Arc,
 };
 
 pub enum ReadSnapshot {
@@ -19,17 +20,43 @@ pub enum ReadSnapshot {
     Finished(DiagnosticsHierarchy),
 }
 
+pub struct ComponentIdentity {
+    /// Relative moniker of the component that this artifacts container
+    /// is representing.
+    pub relative_moniker: Vec<String>,
+
+    /// The url with which the associated component was launched.
+    pub url: String,
+
+    /// In V1, a component topology is able to produce two components with
+    /// the same relative moniker. Because of this, we must, in some cases,
+    /// differentiate these components using instance ids. The unique key
+    /// is conceptually a relative moniker which preserves instance ids.
+    pub unique_key: Vec<String>,
+}
+
+impl ComponentIdentity {
+    pub fn from_identifier_and_url(
+        identifier: &ComponentIdentifier,
+        url: impl Into<String>,
+    ) -> Self {
+        ComponentIdentity {
+            relative_moniker: identifier.relative_moniker_for_selectors(),
+            unique_key: identifier.unique_key(),
+            url: url.into(),
+        }
+    }
+}
+
 /// Holds all diagnostics data artifacts for a given component.
 ///
 /// While all members are public for convenience, other data types may be added in the future and
 /// so this is marked with `#[non_exhaustive]`.
 #[non_exhaustive]
 pub struct ComponentDiagnostics {
-    /// Relative moniker of the component that this artifacts container
-    /// is representing.
-    pub relative_moniker: Vec<String>,
-    /// The url with which the associated component was launched.
-    pub component_url: String,
+    /// Container holding the artifacts needed to uniquely identify
+    /// a component on the system.
+    pub identity: Arc<ComponentIdentity>,
     /// Container holding the artifacts needed to serve inspect data.
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
@@ -40,34 +67,22 @@ pub struct ComponentDiagnostics {
 
 impl ComponentDiagnostics {
     #[cfg(test)]
-    pub fn empty(moniker: Vec<String>, url: String) -> Self {
-        Self { relative_moniker: moniker, component_url: url, inspect: None, lifecycle: None }
+    pub fn empty(identity: Arc<ComponentIdentity>) -> Self {
+        Self { identity, inspect: None, lifecycle: None }
     }
 
     pub fn new_with_lifecycle(
-        moniker: Vec<String>,
-        url: String,
+        identity: Arc<ComponentIdentity>,
         lifecycle: LifecycleArtifactsContainer,
     ) -> Self {
-        Self {
-            relative_moniker: moniker,
-            component_url: url,
-            inspect: None,
-            lifecycle: Some(lifecycle),
-        }
+        Self { identity, inspect: None, lifecycle: Some(lifecycle) }
     }
 
     pub fn new_with_inspect(
-        moniker: Vec<String>,
-        url: String,
+        identity: Arc<ComponentIdentity>,
         inspect: InspectArtifactsContainer,
     ) -> Self {
-        Self {
-            relative_moniker: moniker,
-            component_url: url,
-            inspect: Some(inspect),
-            lifecycle: None,
-        }
+        Self { identity, inspect: Some(inspect), lifecycle: None }
     }
 }
 

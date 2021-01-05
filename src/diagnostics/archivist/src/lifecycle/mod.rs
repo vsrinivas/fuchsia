@@ -38,6 +38,7 @@ impl LifecycleServer {
     fn next_event(&mut self) -> Option<LifecycleData> {
         self.data.next().map(|lifecycle_container| {
             let sanitized_moniker = lifecycle_container
+                .identity
                 .relative_moniker
                 .iter()
                 .map(|s| selectors::sanitize_string_for_selectors(s))
@@ -48,7 +49,7 @@ impl LifecycleServer {
                 sanitized_moniker,
                 lifecycle_container.lifecycle_type,
                 lifecycle_container.payload,
-                lifecycle_container.component_url,
+                lifecycle_container.identity.url.clone(),
                 lifecycle_container.event_timestamp.into_nanos(),
                 Vec::new(),
             )
