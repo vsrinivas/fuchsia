@@ -232,6 +232,7 @@ source_set("tests") {
     "commands/verb_display_unittest.cc",
     "commands/verb_new_rm_unittest.cc",
     "commands/verb_print_unittest.cc",
+    "commands/verb_ps_unittest.cc",
     "commands/verb_quit_unittest.cc",
     "commands/verb_status_unittest.cc",
     "commands/verb_steps_unittest.cc",
