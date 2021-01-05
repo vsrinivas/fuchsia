@@ -13,6 +13,10 @@ protocol Keyboard {
     /// Add a key event listener for the specified View.
     /// If multiple listeners are added, each will receive key events independently and
     /// should respond with a `Status`.
+    ///
+    /// The client calling `AddListener` should keep the connection to `Keyboard` alive
+    /// for as long as the events from `KeyboardListener` need to be received.  Dropping the
+    /// connection to the `Keyboard` protocol will terminate `KeyboardListener` as well.
     AddListener(fuchsia.ui.views.ViewRef view_ref, KeyboardListener listener) -> ();
 };
 
