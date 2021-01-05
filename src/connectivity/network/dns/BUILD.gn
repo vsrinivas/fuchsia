@@ -69,6 +69,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]

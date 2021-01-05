@@ -392,7 +392,7 @@ async fn sort_preferred_addresses(
     )
     .await
     .map_err(|e: fidl::Error| {
-        error!("fuchsia.net.routes/State.resolve FIDL error {:?}", e);
+        warn!("fuchsia.net.routes/State.resolve FIDL error {:?}", e);
         fnet::LookupError::InternalError
     })?;
     let () = addrs_info.sort_by(|(_laddr, left), (_raddr, right)| left.cmp(right));
@@ -636,12 +636,21 @@ async fn run_name_lookup<T: ResolverLookup>(
         .await
 }
 
+/// The error variants returned by [`run_lookup_admin`].
+#[derive(Debug, thiserror::Error)]
+enum LookupAdminError {
+    #[error("FIDL error: {}.", _0)]
+    Fidl(#[from] fidl::Error),
+    #[error("Sink send error: {}.", _0)]
+    Sink(#[from] futures::channel::mpsc::SendError),
+}
+
 /// Serves `stream` and forwards received configurations to `sink`.
 async fn run_lookup_admin(
     sink: mpsc::Sender<dns::policy::ServerList>,
     policy_state: Arc<dns::policy::ServerConfigState>,
     stream: LookupAdminRequestStream,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), LookupAdminError> {
     stream
         .try_filter_map(|req| async {
             match req {
@@ -665,8 +674,8 @@ async fn run_lookup_admin(
                 }
             }
         })
-        .map_err(anyhow::Error::from)
-        .forward(sink.sink_map_err(anyhow::Error::from))
+        .map_err(LookupAdminError::Fidl)
+        .forward(sink.sink_map_err(LookupAdminError::Sink))
         .await
 }
 
@@ -764,11 +773,25 @@ async fn main() -> Result<(), Error> {
                 IncomingRequest::LookupAdmin(stream) => {
                     run_lookup_admin(servers_config_sink.clone(), config_state.clone(), stream)
                         .await
-                        .unwrap_or_else(|e| error!("run_lookup_admin finished with error: {:?}", e))
+                        .unwrap_or_else(|e| match e {
+                            LookupAdminError::Fidl(e) => {
+                                warn!("run_lookup_admin finished with FIDL error: {}", e)
+                            }
+                            LookupAdminError::Sink(e) => {
+                                error!("run_lookup_admin finished with Sink error: {}", e)
+                            }
+                        })
                 }
-                IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, &routes, stream)
-                    .await
-                    .unwrap_or_else(|e| error!("run_name_lookup finished with error: {:?}", e)),
+                IncomingRequest::NameLookup(stream) => {
+                    run_name_lookup(&resolver, &routes, stream).await.unwrap_or_else(|e| match e {
+                        // Some clients will drop the channel when timing out
+                        // requests. Mute those errors to prevent log spamming.
+                        fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED) => {}
+                        e => {
+                            warn!("run_name_lookup finished with error: {}", e)
+                        }
+                    })
+                }
             }
         })
         .map(Ok);
@@ -1111,7 +1134,8 @@ mod tests {
                 create_policy_fut(&self.shared_resolver, self.config_state.clone());
 
             let ((), (), ()) = futures::future::try_join3(
-                run_lookup_admin(sink, self.config_state.clone(), lookup_admin_stream),
+                run_lookup_admin(sink, self.config_state.clone(), lookup_admin_stream)
+                    .map_err(anyhow::Error::from),
                 policy_fut,
                 f(lookup_admin_proxy).map(Ok),
             )
