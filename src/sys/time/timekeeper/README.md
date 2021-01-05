@@ -1,59 +1,57 @@
-# timekeeper
+# Timekeeper
 
-Because timekeeper is implemented in Rust, we recommend that you have consulted the [Fuchsia docs on
-developing with Rust](fuchsia-rust-docs).
+## Overview
 
-[fuchsia-rust-docs]: ../../../docs/development/languages/rust/README.md
+Timekeeper is responsible for starting and maintaining the UTC clock. For more
+information on the design of UTC on Fuchsia please
+refer to [UTC architecture](/docs/concepts/time/utc/architecture.md). To
+understand the observable behavior of UTC on Fuchsia please refer to
+[UTC behavior](/docs/concepts/time/utc/behavior.md)
 
-## Getting Started
+Timekeeper connects to the `fuchsia.time.Maintenance` service to acquire a
+writable handle to the UTC clock on launch. It launches and connects to a time
+source component (or components) and connects to
+`fuchsia.time.external.PushSource` to receive time synchronization information.
 
-Generate a Cargo.toml for your editor to use:
+Timekeeper also connects to the Real Time Clock (RTC) driver using
+`fuchsia.hardware.rtc` if one is found in `/dev/class/rtc`, reading the RTC at
+initialization and updating it each time a new time sample is received from a
+time source.
 
-```
-fx build //src/sys/timekeeper:bin_cargo
-fx gen-cargo //src/sys/timekeeper:bin
-```
+The algorithms used in Timekeeper are documented and explained at
+[UTC algorithms](/docs/concepts/time/utc/algorithms.md).
 
-### Documentation
 
-`fx rustdoc src/sys/timekeeper:bin --open`
+## Design
 
-### Building
+Timekeeper is composed of the following Rust modules:
 
-`timekeeper` itself is included in the `core` product configuration, no specific `fx set` is needed
-to ensure it is included in an image. You may wish to build *only* a small image like core's while
-working on this service. Our tests must be included explicitly in your device's package universe:
+Module | Description
+-------|------------
+`main` | Entry point for the component that handles initialization and delegation to the other modules.
+`enums` | A collection of simple enumerations that are used across the other modules and in particular are used to bridge the operational and diagnostics modules.
+`util` | A collection of utility methods that are used across the other modules.
+`rtc` | Abstracts discovery of and interaction with the real time clock driver away from other modules.
+`time_source` | Abstracts the launching and interaction with time sources away from other modules. Produces a stream of time source events.
+`time_source_manager` | Maintains a functional connection to a time source by using `time_source` to launch and relaunch the component as needed. `time_source_manager` validates the time samples received from `time_source` and produces a stream of validated time samples.
+`estimator` | Abstracts the details of the Kalman filter and frequency correction algorithms away from other modules. `estimator` maintains a best estimate of the current UTC and frequency given a sequence of valid time samples.
+`clock_manager` | Maintains a kernel clock object using `time_source_manager` to supply valid time samples and `estimator` to maintain the best estimate of UTC given these samples. `clock_manager` determines the most appropriate clock updates to converge the reported time with the estimated time.
+`diagnostics` | Provides a common trait to supply timekeeping events of note to diagnostics systems and implements this trait for Cobalt and Inspect.
 
-`fx set PRODUCT.ARCH --with //src/sys/timekeeper:tests`
 
-After this, `fx build` will include the test package as well.
+## Development and testing
 
-### Running tests
+Because timekeeper is implemented in Rust, we recommend that you consult the
+[Fuchsia Rust documentation](/docs/development/languages/rust/README.md).
 
-Once you have your build working:
+`timekeeper` itself is included in the `core` product configuration, no specific
+`fx set` is needed to ensure it is included in an image.
 
-`fx shell killall timekeeper_bin_test.cmx ; fx run-test timekeeper_bin_test`
+Timekeeper is covered by both unit tests and integration tests. These are not
+included by default so should be added to the available packages using `fx set`
+or `fx args`:
 
-This command ensures that any previous instances of the test have been exited before running again.
-Because deadlocks (and the need to exit them with ctrl+c) are common when writing event
-notification tests, dead test instances can stack up quickly during a development session.
-
-### Formatting
-
-Minimum before submitting a CL: `fx rustfmt //src/sys/timekeeper:bin`. Prefer `fx format-code`.
-
-## Concepts
-
-### Minimum UTC ("backstop" time)
-
-Devices store a minimum UTC value at `/config/build-info/minimum-utc-stamp`, which is generated at
-build time and included in the system image. It is stored as a Unix epoch (seconds since 1970,
-excluding leap seconds) and can be quickly observed on your current device. An example from the
-time of writing:
-
-```
-$ [fx shell --] cat /config/build-info/minimum-utc-stamp | date
-Wed 17 Jul 2019 03:56:35 PM PDT
-```
-
-All reads of the UTC clock on a device must return a value at or after the time stored in the file.
+* Unit tests are at `//src/sys/time/timekeeper:tests` and may be executed with
+  `fx test timekeeper-tests`.
+* Integration tests are at `//src/sys/time/timekeeper_integration` and may be
+  executed with `fx test timekeeper-integration`
