@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -24,6 +23,7 @@
 #include "ddk/protocol/power.h"
 #include "ddktl/protocol/power.h"
 #include "fbl/auto_lock.h"
+#include "src/devices/power/drivers/power/power-bind.h"
 
 void GetUniqueId(uint64_t* id) {
   static std::atomic<size_t> unique_id = 0;
@@ -372,8 +372,5 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace power
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(generic-power, power::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN_COMPOSITE, PDEV_DID_POWER_DOMAIN_COMPOSITE),
-ZIRCON_DRIVER_END(gerneric-power)
+ZIRCON_DRIVER(generic-power, power::driver_ops, "zircon", "0.1");
 //clang-format on
