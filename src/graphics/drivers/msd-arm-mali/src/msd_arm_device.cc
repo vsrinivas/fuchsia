@@ -201,6 +201,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
   gpu_features_.ReadFrom(register_io_.get());
+  gpu_features_.InitializeInspect(&inspect_);
   MAGMA_LOG(INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
 
 #if defined(MSD_ARM_ENABLE_CACHE_COHERENCY)

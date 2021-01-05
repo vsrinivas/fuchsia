@@ -5,6 +5,10 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_GPU_FEATURES_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_GPU_FEATURES_H_
 
+#include <lib/inspect/cpp/inspect.h>
+
+#include <fbl/string_printf.h>
+
 #include "magma_util/register_bitfields.h"
 #include "magma_util/register_io.h"
 #include "registers.h"
@@ -99,12 +103,52 @@ struct GpuFeatures {
     DASSERT((1 << address_space_count) - 1 == address_space_present);
   }
 
+  void InitializeInspect(inspect::Node* parent) {
+    node = parent->CreateChild("features");
+#define INIT_INT_PROPERTY(name) node.CreateUint(#name, (name), &properties)
+#define INIT_REG_PROPERTY(name) node.CreateUint(#name, (name).reg_value(), &properties)
+    INIT_REG_PROPERTY(gpu_id);
+    INIT_REG_PROPERTY(l2_features);
+    INIT_REG_PROPERTY(tiler_features);
+    INIT_INT_PROPERTY(suspend_size);
+    INIT_REG_PROPERTY(mem_features);
+    INIT_REG_PROPERTY(mmu_features);
+    INIT_INT_PROPERTY(address_space_present);
+    INIT_INT_PROPERTY(job_slot_present);
+    INIT_INT_PROPERTY(thread_tls_alloc);
+    INIT_INT_PROPERTY(thread_max_threads);
+    INIT_INT_PROPERTY(thread_max_workgroup_size);
+    INIT_INT_PROPERTY(thread_max_barrier_size);
+    INIT_REG_PROPERTY(thread_features);
+    INIT_REG_PROPERTY(coherency_features);
+
+    for (uint32_t i = 0; i < kMaxJobSlots; i++) {
+      node.CreateUint(fbl::StringPrintf("job_slot_features_%d", i).c_str(), job_slot_features[i],
+                      &properties);
+    }
+    for (uint32_t i = 0; i < kNumTextureFeaturesRegisters; i++) {
+      node.CreateUint(fbl::StringPrintf("texture_features_%d", i).c_str(), texture_features[i],
+                      &properties);
+    }
+
+    INIT_INT_PROPERTY(shader_present);
+    INIT_INT_PROPERTY(tiler_present);
+    INIT_INT_PROPERTY(l2_present);
+    INIT_INT_PROPERTY(stack_present);
+
+#undef INIT_INT_PROPERTY
+#undef INIT_REG_PROPERTY
+  }
+
  private:
   uint64_t ReadPair(magma::RegisterIo* io, uint32_t low_offset) {
     uint64_t low_word = io->Read32(low_offset);
     uint64_t high_word = io->Read32(low_offset + 4);
     return (high_word << 32) | low_word;
   }
+
+  inspect::Node node;
+  inspect::ValueList properties;
 };
 
 #endif  // SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_GPU_FEATURES_H_
