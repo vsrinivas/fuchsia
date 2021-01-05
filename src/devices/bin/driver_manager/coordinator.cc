@@ -1703,23 +1703,12 @@ zx_status_t Coordinator::ScanSystemDrivers() {
     return ZX_ERR_BAD_STATE;
   }
   system_loaded_ = true;
-  // Fire up a thread to scan/load system drivers.
+  // Scan/load system drivers are in a standalone thread created by ServiceStarter.
   // This avoids deadlocks between the driver_hosts hosting the block devices that
   // these drivers may be served from and the devcoordinator loading them.
-  thrd_t t;
-  auto callback = [](void* arg) {
-    auto coordinator = static_cast<Coordinator*>(arg);
-    find_loadable_drivers("/system/driver",
-                          fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
-    async::PostTask(coordinator->dispatcher_, [coordinator] { coordinator->BindSystemDrivers(); });
-    return 0;
-  };
-  int ret = thrd_create_with_name(&t, callback, this, "system-driver-loader");
-  if (ret != thrd_success) {
-    LOGF(ERROR, "Failed to create system driver scanning thread: %d", ret);
-    return ZX_ERR_NO_RESOURCES;
-  }
-  thrd_detach(t);
+  find_loadable_drivers("/system/driver",
+                        fit::bind_member(this, &Coordinator::DriverAddedSys));
+  async::PostTask(dispatcher_, [this] { this->BindSystemDrivers(); });
   return ZX_OK;
 }
 
