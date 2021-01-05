@@ -51,6 +51,8 @@ copy("runtime_deps") {
 
 group("test") {
   testonly = true
-
-  deps = [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
+  if (is_host && is_linux) {
+    # Chromedriver prebuilt is only available for linux-x64
+    deps = [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
+  }
 }
