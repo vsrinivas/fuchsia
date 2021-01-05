@@ -204,7 +204,7 @@ definitions for full documentation.
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
-[runners]: ./runners.md
+[capabilities/runners]: ./capabilities/runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: ./component_manifests.md#use
 [lifecycle]: /docs/concepts/components/v2/lifecycle.md

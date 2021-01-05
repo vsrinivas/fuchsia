@@ -35,9 +35,9 @@ the transition to the new architecture is complete.
 
 ## Extending the component framework
 
-- [Runners](runners.md): Instantiate components; add support for more
+- [Runners](capabilities/runners.md): Instantiate components; add support for more
   runtimes.
-- [Resolvers](resolvers.md): Find components from URLs; add support for
+- [Resolvers](capabilities/resolvers.md): Find components from URLs; add support for
   methods of software packaging and distribution.
 
 ## Debugging and troubleshooting

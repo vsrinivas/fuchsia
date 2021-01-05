@@ -33,7 +33,7 @@ following information:
 [doc-component-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
 [doc-component-manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [doc-component-manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[doc-resolvers]: /docs/concepts/components/v2/resolvers.md
-[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-storage-capability]: /docs/concepts/components/v2/capabilities/storage.md
 [glossary-package]: /docs/glossary.md#package

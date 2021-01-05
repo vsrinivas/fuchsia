@@ -78,11 +78,11 @@ https://en.wikipedia.org/wiki/Hippos
 [doc-manifests-children]: v2/component_manifests.md#children
 [doc-manifests-declaration]: v2/component_manifests.md#component-declaration
 [doc-monikers]: v2/monikers.md
-[doc-resolvers]: v2/resolvers.md
+[doc-resolvers]: v2/capabilities/resolvers.md
 [doc-package]: /docs/concepts/packages/package.md
 [doc-package-url]: /docs/concepts/packages/package_url.md
 [doc-package-url-resource-path]: /docs/concepts/packages/package_url.md#resource-paths
 [glossary-components-v2]: /docs/glossary.md#components-v2
-[doc-runners]: v2/runners.md
+[doc-runners]: v2/capabilities/runners.md
 [wiki-url]: https://en.wikipedia.org/wiki/URL
 [rfc-uri-scheme]: https://tools.ietf.org/html/rfc3986#section-3.1

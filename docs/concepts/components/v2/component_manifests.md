@@ -62,14 +62,15 @@ component can use any runner available in its [environment][doc-environments].
 The [`program`](#program) section of a component manifest declares to the runner
 how the component is run, such as the program location and any arguments.
 Components using the ELF runner should specify the binary name and arguments, as
-[documented in the ELF runner page](elf_runner.md). [Other runners](runners.md)
+[documented in the ELF runner page](elf_runner.md). [Other
+runners][doc-runners]
 may have other runner-specific details, documented by that runner.
 
 A component may also have no runtime at all by omitting the `program` section.
 In this case, the component may still route capabilities and host children, but
 no code will be executed for the component.
 
-See also: [ELF Runner](elf_runner.md), [Component Runners](runners.md).
+See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
 
 ### Capability routing {#capability-routing}
 
@@ -672,8 +673,8 @@ This section may be omitted.
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-eager]: lifecycle.md#eager-binding
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
-[doc-runners]: /docs/concepts/components/v2/runners.md
-[doc-resolver]: /docs/concepts/components/v2/runners.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
+[doc-resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-legacy-manifest]: /docs/concepts/components/v1/component_manifests.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory

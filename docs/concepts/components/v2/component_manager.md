@@ -55,7 +55,7 @@ components can implement to integrate new functionality with their environment.
 [doc-hub]: /docs/concepts/components/v2/hub.md
 [doc-lifecycle]: lifecycle.md
 [doc-realms]: /docs/concepts/components/v2/realms.md
-[doc-resolvers]: /docs/concepts/components/v2/resolvers.md
-[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
 [doc-services]: /docs/concepts/components/v2/services.md

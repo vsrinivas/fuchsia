@@ -32,10 +32,6 @@ toc:
     path: /docs/concepts/components/v2/realms.md
   - title: "Environments"
     path: /docs/concepts/components/v2/environments.md
-  - title: "Resolvers"
-    path: /docs/concepts/components/v2/resolvers.md
-  - title: "Runners"
-    path: /docs/concepts/components/v2/runners.md
   - title: "Services"
     path: /docs/concepts/components/v2/services.md
   - title: "Capabilities"

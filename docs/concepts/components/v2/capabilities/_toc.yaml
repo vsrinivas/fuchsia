@@ -8,13 +8,17 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/components/v2/capabilities
-- title: "Service capabilities"
-  path: /docs/concepts/components/v2/capabilities/service.md
-- title: "Protocol capabilities"
-  path: /docs/concepts/components/v2/capabilities/protocol.md
 - title: "Directory capabilities"
   path: /docs/concepts/components/v2/capabilities/directory.md
-- title: "Storage capabilities"
-  path: /docs/concepts/components/v2/capabilities/storage.md
 - title: "Event capabilities"
   path: /docs/concepts/components/v2/capabilities/event.md
+- title: "Protocol capabilities"
+  path: /docs/concepts/components/v2/capabilities/protocol.md
+- title: "Resolver capabilities"
+  path: /docs/concepts/components/v2/capabilities/resolvers.md
+- title: "Runner capabilities"
+  path: /docs/concepts/components/v2/capabilities/runners.md
+- title: "Service capabilities"
+  path: /docs/concepts/components/v2/capabilities/service.md
+- title: "Storage capabilities"
+  path: /docs/concepts/components/v2/capabilities/storage.md

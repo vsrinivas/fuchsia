@@ -126,7 +126,7 @@ There are only a few exceptions, notably:
 [doc-design-principles]: /docs/concepts/components/v2/design_principles.md
 [doc-instances]: /docs/concepts/components/v2/topology.md#component-instances
 [doc-lifecycle]: /docs/concepts/components/v2/lifecycle.md
-[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-capability]: /docs/glossary.md#capability

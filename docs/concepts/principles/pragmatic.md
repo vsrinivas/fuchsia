@@ -31,7 +31,7 @@ about security, privacy, and performance.
 
 **[A POSIX-lite API](https://fuchsia.dev/reference/fidl/fuchsia.posix)
  eases porting costs;
- [the component framework](/docs/concepts/components/v2/runners.md)
+ [the component framework](/docs/concepts/components/v2/capabilities/runners.md)
  encourages developers to bring their existing application runtimes**
 
 There is a large ecosystem of software for existing platforms;

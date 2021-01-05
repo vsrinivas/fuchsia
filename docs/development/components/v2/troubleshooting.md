@@ -347,7 +347,7 @@ offer: [
 [doc-packages]: /docs/concepts/packages/package.md
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-routing]: /docs/concepts/components/v2/component_manifests.md#routing
-[doc-runners]: /docs/concepts/components/v2/runners.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [example-routing-failed]: /examples/components/routing_failed/README.md
 [glossary-components-v2]: /docs/glossary.md#components-v2

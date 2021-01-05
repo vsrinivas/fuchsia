@@ -11,7 +11,7 @@ with Zircon task abstractions, but not always.
 ## Examples
 
 The relationship between components and Zircon tasks differs, often as defined
-by [component runners][runners.md] which implement strategies for launching
+by [component runners][capabilities/runners.md] which implement strategies for launching
 component instances.
 
 -   [ELF Runner][elf_runner.md] launches components by creating a new

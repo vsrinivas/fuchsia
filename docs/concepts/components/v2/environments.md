@@ -88,7 +88,7 @@ sub-realm decides to set a new environment with the runner absent).
 [doc-expose]: ./component_manifests.md#expose
 [doc-offer]: ./component_manifests.md#offer
 [doc-realms]: ./realms.md
-[doc-runners]: ./runners.md
+[doc-runners]: ./capabilities/runners.md
 [doc-use]: ./component_manifests.md#use
 [fidl-extends]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege

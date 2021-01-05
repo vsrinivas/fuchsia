@@ -1,6 +1,6 @@
 # Component Runners (Components v2)
 
-<<../_v2_banner.md>>
+<<../../_v2_banner.md>>
 
 A runner is a protocol that provides a runtime environment for components; in
 other words, a runner actually *runs* a component. Some example runners are:
@@ -184,15 +184,15 @@ like follows:
 See [Making a runner available](#available) for instructions on how to make the
 runner available to components.
 
-[elf-runner]: elf_runner.md
-[environments-runners]: environments.md#runners
-[routing]: component_manifests.md#capability-routing
-[expose]: component_manifests.md#expose
+[elf-runner]: ../elf_runner.md
+[environments-runners]: ../environments.md#runners
+[routing]: ../component_manifests.md#capability-routing
+[expose]: ../component_manifests.md#expose
 [glossary-capability]: /docs/glossary.md#capability
-[hub]: hub.md
-[intro]: introduction.md#a-component-is-a-hermetic-composable-isolated-program
-[offer]: component_manifests.md#offer
+[hub]: ../hub.md
+[intro]: ../introduction.md#a-component-is-a-hermetic-composable-isolated-program
+[offer]: ../component_manifests.md#offer
 [sdk-component-controller]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-directory]: /sdk/fidl/fuchsia.io/io.fidl
-[use]: component_manifests.md#use
+[use]: ../component_manifests.md#use
