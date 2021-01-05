@@ -50,9 +50,10 @@ class InflightList {
   void ServiceCompletions(magma_connection_t connection) {
     uint64_t buffer_ids[8];
     uint64_t bytes_available = 0;
+    magma_bool_t more_data = false;
     while (true) {
-      magma_status_t status = magma_read_notification_channel(connection, buffer_ids,
-                                                              sizeof(buffer_ids), &bytes_available);
+      magma_status_t status = magma_read_notification_channel2(
+          connection, buffer_ids, sizeof(buffer_ids), &bytes_available, &more_data);
       if (status != MAGMA_STATUS_OK) {
         DLOG("magma_read_notification_channel returned %d", status);
         return;
@@ -64,6 +65,8 @@ class InflightList {
         DASSERT(is_inflight(buffer_ids[i]));
         release(buffer_ids[i]);
       }
+      if (!more_data)
+        return;
     }
   }
 

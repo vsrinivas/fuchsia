@@ -204,10 +204,12 @@ class TestConnection {
 
     std::array<unsigned char, 1024> buffer;
     uint64_t buffer_size = ~0;
-    magma_status_t status =
-        magma_read_notification_channel(connection_, buffer.data(), buffer.size(), &buffer_size);
+    magma_bool_t more_data = true;
+    magma_status_t status = magma_read_notification_channel2(
+        connection_, buffer.data(), buffer.size(), &buffer_size, &more_data);
     EXPECT_EQ(MAGMA_STATUS_OK, status);
     EXPECT_EQ(0u, buffer_size);
+    EXPECT_EQ(false, more_data);
   }
 
   void Buffer() {

@@ -799,19 +799,25 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
 
   uint32_t GetNotificationChannelHandle() override { return notification_channel_.get(); }
 
-  magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
-                                         size_t* buffer_size_out) override {
+  magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size, size_t* buffer_size_out,
+                                         magma_bool_t* more_data_out) override {
     uint32_t buffer_actual_size;
 
     zx_status_t status = notification_channel_.read(
         0, buffer, nullptr, magma::to_uint32(buffer_size), 0, &buffer_actual_size, nullptr);
-    *buffer_size_out = buffer_actual_size;
     switch (status) {
       case ZX_ERR_SHOULD_WAIT:
         *buffer_size_out = 0;
+        *more_data_out = false;
         return MAGMA_STATUS_OK;
-      case ZX_OK:
+      case ZX_OK: {
+        *buffer_size_out = buffer_actual_size;
+        uint32_t null_buffer_size = 0;
+        status = notification_channel_.read(0, buffer, nullptr, null_buffer_size, 0,
+                                            &null_buffer_size, nullptr);
+        *more_data_out = (status == ZX_ERR_BUFFER_TOO_SMALL);
         return MAGMA_STATUS_OK;
+      }
       case ZX_ERR_PEER_CLOSED:
         return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "notification channel, closed");
       case ZX_ERR_BUFFER_TOO_SMALL:

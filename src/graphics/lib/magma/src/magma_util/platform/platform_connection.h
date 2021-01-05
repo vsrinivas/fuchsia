@@ -123,16 +123,20 @@ class PlatformConnection {
       magma::PlatformThreadHelper::SetProfile(connection->thread_profile_.get());
     }
 
-    while (connection->HandleRequest())
-      ;
+    while (connection->HandleRequest()) {
+      connection->request_count_ += 1;
+    }
     // the runloop terminates when the remote closes, or an error is experienced
     // so this is the appropriate time to let the connection go out of scope and be destroyed
   }
+
+  uint64_t get_request_count() { return request_count_; }
 
  private:
   msd_client_id_t client_id_;
   std::shared_ptr<magma::PlatformEvent> shutdown_event_;
   std::unique_ptr<magma::PlatformHandle> thread_profile_;
+  std::atomic_uint request_count_{};
 };
 
 }  // namespace magma

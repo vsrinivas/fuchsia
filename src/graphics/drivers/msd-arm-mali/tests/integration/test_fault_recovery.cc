@@ -93,8 +93,9 @@ class TestConnection : public magma::TestDeviceBase {
 
     magma_arm_mali_status status;
     uint64_t status_size;
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_read_notification_channel(connection_, &status, sizeof(status), &status_size));
+    magma_bool_t more_data;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_read_notification_channel2(
+                                   connection_, &status, sizeof(status), &status_size, &more_data));
     EXPECT_EQ(status_size, sizeof(status));
     EXPECT_EQ(atom_number, status.atom_number);
 

@@ -69,7 +69,8 @@ class PlatformConnectionClient : public magma_connection {
 
   virtual uint32_t GetNotificationChannelHandle() = 0;
   virtual magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
-                                                 size_t* buffer_size_out) = 0;
+                                                 size_t* buffer_size_out,
+                                                 magma_bool_t* more_data_out) = 0;
   virtual void ExecuteCommandBufferWithResources(uint32_t context_id,
                                                  magma_system_command_buffer* command_buffer,
                                                  magma_system_exec_resource* resources,
