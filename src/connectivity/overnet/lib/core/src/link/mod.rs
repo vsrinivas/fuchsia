@@ -24,7 +24,13 @@ use fidl_fuchsia_overnet_protocol::{
     Route, SetRoute,
 };
 use fuchsia_async::{Task, TimeoutExt, Timer};
-use futures::{channel::mpsc, future::Either, lock::Mutex, pin_mut, prelude::*};
+use futures::{
+    channel::{mpsc, oneshot},
+    future::Either,
+    lock::Mutex,
+    pin_mut,
+    prelude::*,
+};
 use rand::Rng;
 use std::{
     convert::TryInto,
@@ -301,6 +307,8 @@ pub struct LinkSender {
     output: Arc<LinkOutput>,
     router: Arc<Router>,
     force_send_source_node_id: bool,
+    _tx_send_closed: oneshot::Sender<()>,
+    _task: Arc<Task<()>>,
 }
 
 /// Receiver for a link
@@ -311,6 +319,8 @@ pub struct LinkReceiver {
     received_seq: Option<NonZeroU64>,
     tx_control: mpsc::Sender<LinkControlPayload>,
     peer_node_id: Option<NodeId>,
+    tx_recv_closed: Option<oneshot::Sender<()>>,
+    _task: Arc<Task<()>>,
 }
 
 pub(crate) fn new_link(
@@ -322,6 +332,8 @@ pub(crate) fn new_link(
     let forwarding_table = Arc::new(Mutex::new(ForwardingTable::empty()));
     let (tx_control, rx_control) = mpsc::channel(0);
     let first_seq = rand::thread_rng().gen_range(1u64, 0xff00_0000_0000_0000);
+    let (tx_send_closed, rx_send_closed) = oneshot::channel();
+    let (tx_recv_closed, rx_recv_closed) = oneshot::channel();
     let output = Arc::new(LinkOutput {
         queue: Cutex::new(OutputQueue {
             control_acked_seq: first_seq,
@@ -344,7 +356,6 @@ pub(crate) fn new_link(
         },
         own_node_id: router.node_id(),
         node_link_id,
-        task: Mutex::new(None),
         config,
     });
     let run_link = futures::future::try_join(
@@ -355,17 +366,23 @@ pub(crate) fn new_link(
             router.new_forwarding_table_observer(),
             forwarding_table.clone(),
             connecting_link_token,
+            rx_send_closed,
+            rx_recv_closed,
         ),
         check_ping_timeouts(output.clone()),
     )
     .map_ok(drop);
-    *output.task.lock().now_or_never().unwrap() =
-        Some(Task::spawn(log_errors(run_link, format!("link {:?} run_loop failed", node_link_id))));
+    let task = Arc::new(Task::spawn(log_errors(
+        run_link,
+        format!("link {:?} run_loop failed", node_link_id),
+    )));
     (
         LinkSender {
             output: output.clone(),
             router: router.clone(),
             force_send_source_node_id: true,
+            _tx_send_closed: tx_send_closed,
+            _task: task.clone(),
         },
         LinkReceiver {
             output,
@@ -374,11 +391,47 @@ pub(crate) fn new_link(
             forwarding_table,
             received_seq: None,
             tx_control,
+            tx_recv_closed: Some(tx_recv_closed),
+            _task: task,
         },
     )
 }
 
 async fn run_link(
+    router: Weak<Router>,
+    output: Arc<LinkOutput>,
+    input: mpsc::Receiver<LinkControlPayload>,
+    forwarding_table: Observer<ForwardingTable>,
+    forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
+    connecting_link_token: ConnectingLinkToken,
+    rx_send_closed: oneshot::Receiver<()>,
+    rx_recv_closed: oneshot::Receiver<()>,
+) -> Result<(), Error> {
+    let inner = run_link_inner(
+        router,
+        output.clone(),
+        input,
+        forwarding_table,
+        forwarding_forwarding_table,
+        connecting_link_token,
+    );
+    pin_mut!(inner);
+    let r = match futures::future::select(
+        inner,
+        futures::future::select(rx_send_closed, rx_recv_closed),
+    )
+    .await
+    {
+        Either::Left((r, _)) => r,
+        Either::Right(_) => Err(format_err!("link closed")),
+    };
+
+    output.queue.lock().await.open = false;
+
+    r
+}
+
+async fn run_link_inner(
     router: Weak<Router>,
     output: Arc<LinkOutput>,
     mut input: mpsc::Receiver<LinkControlPayload>,
@@ -600,7 +653,6 @@ async fn send_state(
 /// IO for a link
 struct LinkOutput {
     queue: Cutex<OutputQueue>,
-    task: Mutex<Option<Task<()>>>,
     stats: LinkStats,
     own_node_id: NodeId,
     node_link_id: NodeLinkId,
@@ -614,15 +666,6 @@ impl LinkOutput {
 
     pub(crate) async fn is_closed(&self) -> bool {
         !self.queue.lock().await.open
-    }
-
-    async fn close(&self) {
-        self.queue.lock().await.open = false;
-        *self.task.lock().await = None;
-    }
-
-    fn close_in_background(self: Arc<Self>) {
-        Task::spawn(async move { self.close().await }).detach()
     }
 
     /// Send a control message to our peer with some payload.
@@ -755,12 +798,6 @@ impl LinkRouting {
     /// Produce a ticket to acquire a cutex once it becomes sendable for a message.
     pub(crate) fn new_message_send_ticket<'a>(&'a self) -> CutexTicket<'a, 'static, OutputQueue> {
         CutexTicket::new_when_pinned(&self.output.queue, Pin::new(&READY_TO_SEND_MESSAGE))
-    }
-}
-
-impl Drop for LinkReceiver {
-    fn drop(&mut self) {
-        self.output.clone().close_in_background()
     }
 }
 
@@ -977,7 +1014,7 @@ impl LinkReceiver {
             }
             Err(RecvError::Fatal(err)) => {
                 log::warn!("[{:?}] Link-fatal error receiving frame: {:?}", self.debug_id(), err);
-                self.output.close().await;
+                self.tx_recv_closed.take();
             }
         }
     }
@@ -996,12 +1033,6 @@ enum RecvError {
 impl From<Error> for RecvError {
     fn from(err: Error) -> Self {
         Self::Warning(err)
-    }
-}
-
-impl Drop for LinkSender {
-    fn drop(&mut self) {
-        self.output.clone().close_in_background()
     }
 }
 
