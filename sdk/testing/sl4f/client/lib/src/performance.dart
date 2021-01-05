@@ -386,6 +386,42 @@ class Performance {
     _log.info('Conversion to catapult results format completed.'
         ' Output file: $outputFileName');
   }
+
+  /// Starts logging temperature data into the temperature_logger trace
+  /// category.
+  ///
+  /// The temperature sensors will be polled and a trace event produced after
+  /// each [interval] amount of time. If [duration] is specified, then logging
+  /// will automatically stop after that amount of time has elapsed. If
+  /// [duration] is not specified, then logging will continue until explicitly
+  /// stopped.
+  ///
+  /// This function will fail if logging is already started.
+  Future<void> startTemperatureLogging({
+    @required Duration interval,
+    Duration duration,
+  }) async {
+    _log.info(
+        'Start temperature logging: interval $interval duration $duration');
+    if (duration == null) {
+      await _sl4f.request('temperature_facade.StartLoggingForever', {
+        'interval_ms': interval.inMilliseconds,
+      });
+    } else {
+      await _sl4f.request('temperature_facade.StartLogging', {
+        'interval_ms': interval.inMilliseconds,
+        'duration_ms': duration.inMilliseconds,
+      });
+    }
+  }
+
+  /// Stops logging temperature data in temperature_logger trace category.
+  ///
+  /// This function will still succeed if logging is already stopped.
+  Future<void> stopTemperatureLogging() async {
+    _log.info('Stop temperature logging');
+    await _sl4f.request('temperature_facade.StopLogging', {});
+  }
 }
 
 /// Handle a tracing session.

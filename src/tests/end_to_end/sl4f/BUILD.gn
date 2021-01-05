@@ -45,6 +45,32 @@ dart_test("sl4f_test") {
   ]
 }
 
+dart_test("sl4f_astro_test") {
+  sources = [ "performance_astro_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+  environments = [
+    astro_env,
+
+    # The astro environment has tags as it is still to be run on an FYI builder.
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
 if (is_host) {
   host_test_data("runtime_deps") {
     sources = [ "$root_out_dir/trace2json" ]
@@ -58,5 +84,8 @@ if (is_host) {
 group("test") {
   testonly = true
 
-  deps = [ ":sl4f_test($host_toolchain)" ]
+  deps = [
+    ":sl4f_astro_test($host_toolchain)",
+    ":sl4f_test($host_toolchain)",
+  ]
 }
