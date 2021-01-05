@@ -17,7 +17,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -30,6 +29,8 @@
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
+
+#include "src/devices/serial/drivers/ftdi/ftdi_function_bind.h"
 
 #define BULK_MAX_PACKET 512
 #define FTDI_STATUS_SIZE 2
@@ -127,7 +128,8 @@ void FakeFtdiFunction::DataOutComplete() {
   }
   std::vector<uint8_t> data(data_out_req_->request()->response.actual);
   // std::vector should zero-initialize
-  __UNUSED size_t copied = usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
+  __UNUSED size_t copied =
+      usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
 
   usb_request_complete_t complete = {
       .callback =
@@ -347,11 +349,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace fake_ftdi_function
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ftdi_function, fake_ftdi_function::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_VENDOR),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_VENDOR),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_TEST_FTDI),
-ZIRCON_DRIVER_END(ftdi_function)
-    // clang-format on
+ZIRCON_DRIVER(ftdi_function, fake_ftdi_function::driver_ops, "zircon", "0.1");

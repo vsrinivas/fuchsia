@@ -15,7 +15,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
@@ -29,6 +28,7 @@
 #include <usb/usb.h>
 
 #include "ftdi-i2c.h"
+#include "src/devices/serial/drivers/ftdi/ftdi_bind.h"
 
 #define FTDI_STATUS_SIZE 2
 #define FTDI_RX_HEADER_SIZE 4
@@ -499,11 +499,4 @@ static constexpr zx_driver_ops_t ftdi_driver_ops = []() {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ftdi, ftdi_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_MATCH_IF(EQ, BIND_USB_VID, ftdi_serial::kFtdiUsbVid),
-    BI_MATCH_IF(EQ, BIND_USB_PID, ftdi_serial::kFtdiUsb232rPid),
-    BI_MATCH_IF(EQ, BIND_USB_PID, ftdi_serial::kFtdiUsb232hPid),
-ZIRCON_DRIVER_END(ftdi)
-    // clang-format on
+ZIRCON_DRIVER(ftdi, ftdi_driver_ops, "zircon", "0.1");

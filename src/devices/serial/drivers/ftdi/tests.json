@@ -1,0 +1,27 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.FTDI232R",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.FTDI"
+        },
+        "expected": "match",
+        "name": "FTDI 232R"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.FTDI232H",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.FTDI"
+        },
+        "expected": "match",
+        "name": "FTDI 232H"
+    }
+]

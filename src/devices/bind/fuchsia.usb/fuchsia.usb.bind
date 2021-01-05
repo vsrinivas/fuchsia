@@ -35,6 +35,9 @@ extend uint fuchsia.BIND_USB_VID {
 extend uint fuchsia.BIND_USB_PID {
   ASIX = 0x772B,
   AX88179 = 0x1790,
+  FTDI232R = 0x6001,
+  FTDI2232 = 0x6010,
+  FTDI232H = 0x6014,
 };
 
 // See https://www.usb.org/defined-class-codes
@@ -70,10 +73,12 @@ extend uint fuchsia.BIND_USB_SUBCLASS {
   MISC_RNDIS = 0x04,
 
   ETHERNET = 0x06,
+  VENDOR_SPECIFIC = 0xff,
 };
 
 extend uint fuchsia.BIND_USB_PROTOCOL {
   UNDEFINED = 0x00,
 
   MISC_RNDIS_ETHERNET = 0x01,
+  TEST_FTDI = 0x01,
 };

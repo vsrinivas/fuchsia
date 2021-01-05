@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("ftdi_bind") {
+  rules = "ftdi.bind"
+  output = "ftdi_bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
+}
 
 driver_module("ftdi") {
   configs += [
@@ -16,6 +24,7 @@ driver_module("ftdi") {
     "ftdi.cc",
   ]
   deps = [
+    ":ftdi_bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.serial",
@@ -28,14 +37,18 @@ driver_module("ftdi") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("ftdi_function_bind") {
+  rules = "ftdi_function.bind"
+  output = "ftdi_function_bind.h"
+  tests = "ftdi_function_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
 driver_module("ftdi-fake-usb") {
@@ -46,6 +59,7 @@ driver_module("ftdi-fake-usb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-function.cc" ]
   deps = [
+    ":ftdi_function_bind",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
     "//sdk/banjo/ddk.protocol.usb.request",
@@ -53,9 +67,6 @@ driver_module("ftdi-fake-usb") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -66,6 +77,8 @@ driver_module("ftdi-fake-usb") {
 group("tests") {
   testonly = true
   deps = [
+    ":ftdi_bind_test",
+    ":ftdi_function_bind_test",
     "test:ftdi-i2c-test-package",
     "test:ftdi-integration-test",
   ]
