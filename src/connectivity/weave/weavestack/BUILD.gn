@@ -4,8 +4,7 @@
 
 import("//build/config.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//build/dist/resource.gni")
 
 import("//src/connectivity/weave/weavestack/weavestack_package.gni")
 
@@ -41,6 +40,11 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [ ":lib" ]
+}
+
+resource("default_environment_schema") {
+  sources = [ "data/default_environment_schema.json" ]
+  outputs = [ "data/default_environment_schema.json" ]
 }
 
 # The default weavestack package contains no applets.
