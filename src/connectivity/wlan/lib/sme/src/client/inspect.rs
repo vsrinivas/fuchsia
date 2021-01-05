@@ -51,6 +51,10 @@ pub struct SmeTree {
     /// Number of FIDL BSS we discard in scan because we fail to convert them.
     pub scan_discard_fidl_bss: UintProperty,
 
+    /// Number of time we decide to merge an IE during scan but it fails.
+    /// This should never occur, but we log the count in case the assumption is violated.
+    pub scan_merge_ie_failures: UintProperty,
+
     /// Hasher used to hash sensitive information, preserving user privacy.
     pub hasher: WlanHasher,
 }
@@ -64,12 +68,14 @@ impl SmeTree {
             BoundedListNode::new(node.create_child("join_scan_events"), JOIN_SCAN_EVENTS_LIMIT);
         let pulse = PulseNode::new(node.create_child("last_pulse"));
         let scan_discard_fidl_bss = node.create_uint("scan_discard_fidl_bss", 0);
+        let scan_merge_ie_failures = node.create_uint("scan_merge_ie_failures", 0);
         Self {
             state_events: Mutex::new(state_events),
             rsn_events: Mutex::new(rsn_events),
             join_scan_events: Mutex::new(join_scan_events),
             last_pulse: Mutex::new(pulse),
             scan_discard_fidl_bss,
+            scan_merge_ie_failures,
             hasher,
         }
     }

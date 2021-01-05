@@ -323,6 +323,8 @@ fn convert_bss_map(
     bss_map
         .into_iter()
         .filter_map(|(_bssid, (mut bss, mut ies_merger))| {
+            sme_inspect.scan_merge_ie_failures.add(ies_merger.merge_ie_failures() as u64);
+
             let mut ies = ies_merger.finalize();
             std::mem::swap(&mut ies, &mut bss.ies);
             let bss = BssDescription::from_fidl(bss).ok();
