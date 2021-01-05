@@ -77,7 +77,7 @@ symmetrical_enums!(OutDirContents, component_internal::OutDirContents, None, Hub
 
 impl std::default::Default for OutDirContents {
     fn default() -> Self {
-        OutDirContents::None
+        OutDirContents::Hub
     }
 }
 

@@ -801,13 +801,18 @@ impl BuiltinEnvironment {
 
     pub async fn run_root(&self) -> Result<(), Error> {
         match self.out_dir_contents {
-            OutDirContents::None => Ok(()),
+            OutDirContents::None => {
+                info!("Field `out_dir_contents` is set to None.");
+                Ok(())
+            }
             OutDirContents::Hub => {
+                info!("Field `out_dir_contents` is set to Hub.");
                 self.bind_service_fs_to_out().await?;
                 self.model.start().await;
                 Ok(self.wait_for_root_realm_stop().await)
             }
             OutDirContents::Svc => {
+                info!("Field `out_dir_contents` is set to Svc.");
                 let hub_proxy = self.bind_service_fs_for_hub().await?;
                 let root_moniker = AbsoluteMoniker::root();
                 match self.model.bind(&root_moniker, &BindReason::Root).await {
