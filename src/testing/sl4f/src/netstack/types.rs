@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//use fidl_fuchsia_hardware_ethernet::MacAddress;
+use fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet};
+use fidl_fuchsia_net_interfaces::Address;
 use fidl_fuchsia_net_stack::{AdministrativeStatus, InterfaceInfo, PhysicalStatus};
-use serde::Serialize;
-//use std::net::IpAddr;
-use fidl_fuchsia_net::IpAddress;
-
+use serde::{Deserialize, Serialize};
 /// Enum for supported FIDL commands.
 pub enum NetstackMethod {
     DisableInterface,
     EnableInterface,
     GetInterfaceInfo,
+    GetIpv6Addresses,
     InitNetstack,
     ListInterfaces,
     NetstackUndefined,
@@ -24,6 +23,7 @@ impl NetstackMethod {
             "DisableInterface" => NetstackMethod::DisableInterface,
             "EnableInterface" => NetstackMethod::EnableInterface,
             "GetInterfaceInfo" => NetstackMethod::GetInterfaceInfo,
+            "GetIpv6Addresses" => NetstackMethod::GetIpv6Addresses,
             "ListInterfaces" => NetstackMethod::ListInterfaces,
             "InitNetstack" => NetstackMethod::InitNetstack,
             _ => NetstackMethod::NetstackUndefined,
@@ -82,6 +82,86 @@ impl CustomInterfaceInfo {
             is_physical_status_up: is_physical_status_up,
             ipv4_addresses: ipv4_addresses,
             ipv6_addresses: ipv6_addresses,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AddressDto {
+    pub addr: Option<SubnetDto>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SubnetDto {
+    pub addr: IpAddressDto,
+    pub prefix_len: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum IpAddressDto {
+    Ipv4(Ipv4AddressDto),
+    Ipv6(Ipv6AddressDto),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Ipv4AddressDto {
+    pub addr: [u8; 4],
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Ipv6AddressDto {
+    pub addr: [u8; 16],
+}
+
+impl Into<AddressDto> for Address {
+    fn into(self) -> AddressDto {
+        AddressDto {
+            addr: match self.addr {
+                Some(subnet) => Some(subnet.into()),
+                None => None,
+            },
+        }
+    }
+}
+
+impl Into<SubnetDto> for Subnet {
+    fn into(self) -> SubnetDto {
+        SubnetDto { addr: self.addr.into(), prefix_len: self.prefix_len }
+    }
+}
+
+impl Into<IpAddressDto> for IpAddress {
+    fn into(self) -> IpAddressDto {
+        match self {
+            IpAddress::Ipv4(ipv4) => IpAddressDto::Ipv4(Ipv4AddressDto { addr: ipv4.addr }),
+            IpAddress::Ipv6(ipv6) => IpAddressDto::Ipv6(Ipv6AddressDto { addr: ipv6.addr }),
+        }
+    }
+}
+
+impl Into<Address> for AddressDto {
+    fn into(self) -> Address {
+        Address {
+            addr: match self.addr {
+                Some(subnet) => Some(subnet.into()),
+                None => None,
+            },
+            ..Address::EMPTY
+        }
+    }
+}
+
+impl Into<Subnet> for SubnetDto {
+    fn into(self) -> Subnet {
+        Subnet { addr: self.addr.into(), prefix_len: self.prefix_len }
+    }
+}
+
+impl Into<IpAddress> for IpAddressDto {
+    fn into(self) -> IpAddress {
+        match self {
+            IpAddressDto::Ipv4(ipv4) => IpAddress::Ipv4(Ipv4Address { addr: ipv4.addr }),
+            IpAddressDto::Ipv6(ipv6) => IpAddress::Ipv6(Ipv6Address { addr: ipv6.addr }),
         }
     }
 }

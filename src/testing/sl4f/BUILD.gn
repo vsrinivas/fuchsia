@@ -60,6 +60,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
