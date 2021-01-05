@@ -26,9 +26,6 @@ loadable_module("swapchain") {
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("display") {
@@ -52,9 +49,6 @@ source_set("display") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 loadable_module("fb") {
@@ -71,9 +65,6 @@ loadable_module("fb") {
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 loadable_module("fb_skip_present") {
@@ -91,7 +82,4 @@ loadable_module("fb_skip_present") {
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

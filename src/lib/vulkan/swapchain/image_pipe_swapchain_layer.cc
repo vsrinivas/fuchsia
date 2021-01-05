@@ -10,12 +10,14 @@
 #include "image_pipe_surface_async.h"  // nogncheck
 #endif
 
+#include <assert.h>
 #include <lib/trace/event.h>
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
 #include <vk_layer_utils_minimal.h>
 
+#include <limits>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -23,6 +25,11 @@
 #include <vulkan/vk_layer.h>
 
 #define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION)
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 namespace image_pipe_swapchain {
 
@@ -221,7 +228,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR v
 
 VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages) {
   if (pSwapchainImages == NULL) {
-    *pCount = images_.size();
+    *pCount = to_uint32(images_.size());
     return VK_SUCCESS;
   }
 
@@ -230,7 +237,7 @@ VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount, VkImage* pSwap
   for (uint32_t i = 0; i < images_.size(); i++)
     pSwapchainImages[i] = images_[i].image;
 
-  *pCount = images_.size();
+  *pCount = to_uint32(images_.size());
   return VK_SUCCESS;
 }
 
@@ -532,14 +539,14 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, const VkSurf
   SupportedImageProperties& supported_properties =
       reinterpret_cast<ImagePipeSurface*>(surface)->GetSupportedImageProperties();
   if (pSurfaceFormats == nullptr) {
-    *pCount = supported_properties.formats.size();
+    *pCount = to_uint32(supported_properties.formats.size());
     return VK_SUCCESS;
   }
 
   assert(*pCount >= supported_properties.formats.size());
   memcpy(pSurfaceFormats, supported_properties.formats.data(),
          supported_properties.formats.size() * sizeof(VkSurfaceFormatKHR));
-  *pCount = supported_properties.formats.size();
+  *pCount = to_uint32(supported_properties.formats.size());
   return VK_SUCCESS;
 }
 
@@ -661,7 +668,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
-  create_info.enabledExtensionCount = enabled_extensions.size();
+  create_info.enabledExtensionCount = to_uint32(enabled_extensions.size());
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
   VkLayerDeviceCreateInfo* chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
