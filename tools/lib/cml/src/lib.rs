@@ -803,6 +803,7 @@ pub struct Environment {
     pub extends: Option<EnvironmentExtends>,
     pub runners: Option<Vec<RunnerRegistration>>,
     pub resolvers: Option<Vec<ResolverRegistration>>,
+    pub debug: Option<Vec<DebugRegistration>>,
     #[serde(rename(deserialize = "__stop_timeout_ms"))]
     pub stop_timeout_ms: Option<StopTimeoutMs>,
 }
@@ -837,6 +838,15 @@ pub struct Capability {
     pub rights: Option<Rights>,
     pub backing_dir: Option<Name>,
     pub subdir: Option<RelativePath>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DebugRegistration {
+    pub protocol: Option<OneOrMany<Name>>,
+    pub from: OfferFromRef,
+    pub r#as: Option<Name>,
+    pub path: Option<Path>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -1058,6 +1068,67 @@ impl FilterClause for Capability {
 impl RightsClause for Capability {
     fn rights(&self) -> Option<&Rights> {
         self.rights.as_ref()
+    }
+}
+
+impl CapabilityClause for DebugRegistration {
+    fn service(&self) -> &Option<Name> {
+        &None
+    }
+    fn protocol(&self) -> Option<OneOrMany<Name>> {
+        self.protocol.as_ref().map(|o| match o {
+            OneOrMany::One(n) => OneOrMany::One(n.clone()),
+            OneOrMany::Many(v) => OneOrMany::Many(v.iter().map(|n| n.clone()).collect()),
+        })
+    }
+    fn directory(&self) -> Option<Name> {
+        None
+    }
+    fn storage(&self) -> &Option<Name> {
+        &None
+    }
+    fn runner(&self) -> &Option<Name> {
+        &None
+    }
+    fn resolver(&self) -> &Option<Name> {
+        &None
+    }
+    fn event(&self) -> &Option<OneOrMany<Name>> {
+        &None
+    }
+    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+        &None
+    }
+    fn capability_name(&self) -> &'static str {
+        if self.protocol.is_some() {
+            "protocol"
+        } else {
+            panic!("Missing capability name")
+        }
+    }
+    fn decl_type(&self) -> &'static str {
+        "debug"
+    }
+    fn supported(&self) -> &[&'static str] {
+        &["service", "protocol"]
+    }
+}
+
+impl AsClause for DebugRegistration {
+    fn r#as(&self) -> Option<&Name> {
+        self.r#as.as_ref()
+    }
+}
+
+impl PathClause for DebugRegistration {
+    fn path(&self) -> Option<&Path> {
+        self.path.as_ref()
+    }
+}
+
+impl FromClause for DebugRegistration {
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        OneOrMany::One(AnyRef::from(&self.from))
     }
 }
 

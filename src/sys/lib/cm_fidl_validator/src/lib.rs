@@ -768,6 +768,12 @@ impl<'a> ValidationContext<'a> {
             }
             None | Some(fsys::EnvironmentExtends::Realm) => {}
         }
+
+        if let Some(debugs) = environment.debug_capabilities.as_ref() {
+            for debug in debugs {
+                self.validate_environment_debug_registration(debug);
+            }
+        }
     }
 
     fn validate_runner_registration(
@@ -1455,6 +1461,49 @@ impl<'a> ValidationContext<'a> {
         }
 
         check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
+    }
+
+    fn validate_environment_debug_registration(&mut self, debug: &'a fsys::DebugRegistration) {
+        match debug {
+            fsys::DebugRegistration::Protocol(o) => {
+                let decl = "DebugProtocolRegistration";
+                self.validate_environment_debug_fields(
+                    decl,
+                    o.source.as_ref(),
+                    o.source_name.as_ref(),
+                    o.target_name.as_ref(),
+                );
+
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_protocols.contains(&name as &str) {
+                        self.errors.push(Error::invalid_field(decl, "source"));
+                    }
+                }
+            }
+            fsys::DebugRegistrationUnknown!() => {
+                self.errors.push(Error::invalid_field("EnvironmentDecl", "debug"));
+            }
+        }
+    }
+
+    fn validate_environment_debug_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::Ref>,
+        source_name: Option<&String>,
+        target_name: Option<&'a String>,
+    ) {
+        // We don't support "source" from "capability" for now.
+        match source {
+            Some(fsys::Ref::Parent(_)) => {}
+            Some(fsys::Ref::Self_(_)) => {}
+            Some(fsys::Ref::Framework(_)) => {}
+            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
+            None => self.errors.push(Error::missing_field(decl, "source")),
+        }
+        check_name(source_name, decl, "source_name", &mut self.errors);
+        check_name(target_name, decl, "target_name", &mut self.errors);
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -4475,6 +4524,7 @@ mod tests {
                     runners: None,
                     resolvers: None,
                     stop_timeout_ms: None,
+                    debug_capabilities: None,
                     ..EnvironmentDecl::EMPTY
                 }]);
                 decl
@@ -4859,6 +4909,188 @@ mod tests {
                 ),
             ])),
         },
+        test_validate_environment_debug_empty => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: None,
+                                source_name: None,
+                                target_name: None,
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("DebugProtocolRegistration", "source"),
+                Error::missing_field("DebugProtocolRegistration", "source_name"),
+                Error::missing_field("DebugProtocolRegistration", "target_name"),
+            ])),
+        },
+        test_validate_environment_debug_log_identifier => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Child(ChildRef {
+                                    name: "a".repeat(101),
+                                    collection: None,
+                                })),
+                                source_name: Some(format!("{}", "a".repeat(101))),
+                                target_name: Some(format!("{}", "b".repeat(101))),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Parent(ParentRef {})),
+                                source_name: Some("a".to_string()),
+                                target_name: Some(format!("{}", "b".repeat(101))),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("DebugProtocolRegistration", "source.child.name"),
+                Error::field_too_long("DebugProtocolRegistration", "source_name"),
+                Error::field_too_long("DebugProtocolRegistration", "target_name"),
+                Error::field_too_long("DebugProtocolRegistration", "target_name"),
+            ])),
+        },
+        test_validate_environment_debug_log_extraneous => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Child(ChildRef {
+                                    name: "logger".to_string(),
+                                    collection: Some("modular".to_string()),
+                                })),
+                                source_name: Some("fuchsia.logger.Log".to_string()),
+                                target_name: Some("fuchsia.logger.Log".to_string()),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::extraneous_field("DebugProtocolRegistration", "source.child.collection"),
+            ])),
+        },
+        test_validate_environment_debug_log_invalid_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Child(ChildRef {
+                                    name: "^bad".to_string(),
+                                    collection: None,
+                                })),
+                                source_name: Some("foo/".to_string()),
+                                target_name: Some("/".to_string()),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("DebugProtocolRegistration", "source.child.name"),
+                Error::invalid_field("DebugProtocolRegistration", "source_name"),
+                Error::invalid_field("DebugProtocolRegistration", "target_name"),
+            ])),
+        },
+        test_validate_environment_debug_log_invalid_child => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Child(ChildRef {
+                                    name: "logger".to_string(),
+                                    collection: None,
+                                })),
+                                source_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                                target_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl.children = Some(vec![
+                    ChildDecl {
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                        environment: None,
+                        ..ChildDecl::EMPTY
+                    },
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_child("DebugProtocolRegistration", "source", "logger"),
+
+            ])),
+        },
+        test_validate_environment_debug_source_capability => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![
+                    EnvironmentDecl {
+                        name: Some("a".to_string()),
+                        extends: Some(EnvironmentExtends::None),
+                        stop_timeout_ms: Some(2),
+                        debug_capabilities:Some(vec![
+                            DebugRegistration::Protocol(DebugProtocolRegistration {
+                                source: Some(Ref::Capability(CapabilityRef {
+                                    name: "storage".to_string(),
+                                })),
+                                source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                                target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                                ..DebugProtocolRegistration::EMPTY
+                            }),
+                    ]),
+                    ..EnvironmentDecl::EMPTY
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("DebugProtocolRegistration", "source"),
+            ])),
+        },
+
 
         // children
         test_validate_children_empty => {

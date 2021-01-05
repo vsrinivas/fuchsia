@@ -125,6 +125,7 @@ pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
                     "extends",
                     "runners",
                     "resolvers",
+                    "debug",
                 ])
             },
         },

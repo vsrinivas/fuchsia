@@ -26,9 +26,16 @@ table EnvironmentDecl {
     /// is delegated to the parent environment, if this environment `extends` from `REALM`.
     4: vector<ResolverRegistration>:MAX resolvers;
 
+    /// Expose capabilties to debug section when component manager allows it.
+    ///
+    /// These capabilities are accessible to any component in the environment with a `use` declaration with `source == debug`.
+    /// Only capabilities intended to support development should be declared here, and they are only allowed if explicitly
+    /// included in the component manager allowlist.
+    5: vector<DebugRegistration>:MAX debug_capabilities;
+
     /// The duration in milliseconds that the component will have to stop before
     /// it is killed.
-    5: uint32 stop_timeout_ms;
+    6: uint32 stop_timeout_ms;
 };
 
 /// Specifies how a declared environment's initial set of properties are assigned.
@@ -68,4 +75,27 @@ table ResolverRegistration {
     /// The URL scheme must start with a lowercase ASCII letter (a-z), and may contain
     /// lowercase ASCII letters, digits, `+`, `-`, and `.`.
     3: fuchsia.component.url_scheme scheme;
+};
+
+/// Declares a capability registered in the debug section of an environment.
+flexible union DebugRegistration {
+    1: DebugProtocolRegistration protocol;
+};
+
+/// Registers a protocol in the environment as a debug capability. This makes
+/// it available to any component in the environment that uses it with
+/// `source == debug`.
+///
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
+table DebugProtocolRegistration {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: Ref source;
+
+    /// Name identifying the protocol being offered.
+    2: fuchsia.component.name source_name;
+
+    /// The name by which the capability is being offered.
+    3: fuchsia.component.name target_name;
 };

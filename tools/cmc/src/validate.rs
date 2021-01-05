@@ -1075,6 +1075,24 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
+
+        if let Some(debug_capabilities) = &environment.debug {
+            for debug in debug_capabilities {
+                if let Some(protocol) = debug.protocol.as_ref() {
+                    for protocol in protocol.iter() {
+                        if debug.from == cml::OfferFromRef::Self_
+                            && !self.all_protocols.contains(protocol)
+                        {
+                            return Err(Error::validate(format!(
+                                   "Protocol \"{}\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\"",
+                                   protocol
+                               )));
+                        }
+                    }
+                }
+                self.validate_from_clause("debug", debug)?;
+            }
+        }
         Ok(())
     }
 }
@@ -2936,6 +2954,110 @@ mod tests {
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: integer `-3`, expected an unsigned 32-bit integer"
         ),
+        test_cml_environment_debug(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": "fuchsia.logger.Log2",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "foo_env",
+                        "extends": "realm",
+                        "debug": [
+                            {
+                                "protocol": "fuchsia.module.Module",
+                                "from": "#modular",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.OtherLog",
+                                "from": "parent",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.Log2",
+                                "from": "self",
+                            },
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+           Ok(())
+        ),
+        test_cml_environment_debug_missing_capability(
+            json!({
+                "environments": [
+                    {
+                        "name": "foo_env",
+                        "extends": "realm",
+                        "debug": [
+                            {
+                                "protocol": "fuchsia.module.Module",
+                                "from": "#modular",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.OtherLog",
+                                "from": "parent",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.Log2",
+                                "from": "self",
+                            },
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { err, .. }) if &err == "Protocol \"fuchsia.logger.Log2\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\""
+        ),
+        test_cml_environment_invalid_from_child(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": "fuchsia.logger.Log2",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "foo_env",
+                        "extends": "realm",
+                        "debug": [
+                            {
+                                "protocol": "fuchsia.module.Module",
+                                "from": "#missing",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.OtherLog",
+                                "from": "parent",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.Log2",
+                                "from": "self",
+                            },
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"debug\" source \"#missing\" does not appear in \"children\" or \"capabilities\""
+        ),
+
 
         // collections
         test_cml_collections(

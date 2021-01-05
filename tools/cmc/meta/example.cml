@@ -128,6 +128,20 @@
         {
             name: "env_two",
             extends: "realm",
+            debug: [
+                {
+                    protocol: "fuchsia.logger.LegacyLog",
+                    from: "#logger",
+                },
+                {
+                    protocol: "fuchsia.logger.OtherLog",
+                    from: "parent",
+                },
+                {
+                    protocol: "fuchsia.logger.Log2",
+                    from: "self",
+                },
+            ],
         },
     ],
     facets: {

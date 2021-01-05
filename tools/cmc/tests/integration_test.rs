@@ -223,6 +223,7 @@ fn main() {
                 stop_timeout_ms: Some(1337),
                 runners: None,
                 resolvers: None,
+                debug_capabilities: None,
                 ..EnvironmentDecl::EMPTY
             },
             EnvironmentDecl {
@@ -231,6 +232,29 @@ fn main() {
                 stop_timeout_ms: None,
                 runners: None,
                 resolvers: None,
+                debug_capabilities: Some(vec![
+                    DebugRegistration::Protocol(DebugProtocolRegistration {
+                        source_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                        ..DebugProtocolRegistration::EMPTY
+                    }),
+                    DebugRegistration::Protocol(DebugProtocolRegistration {
+                        source_name: Some("fuchsia.logger.OtherLog".to_string()),
+                        source: Some(Ref::Parent(ParentRef {})),
+                        target_name: Some("fuchsia.logger.OtherLog".to_string()),
+                        ..DebugProtocolRegistration::EMPTY
+                    }),
+                    DebugRegistration::Protocol(DebugProtocolRegistration {
+                        source_name: Some("fuchsia.logger.Log2".to_string()),
+                        source: Some(Ref::Self_(SelfRef {})),
+                        target_name: Some("fuchsia.logger.Log2".to_string()),
+                        ..DebugProtocolRegistration::EMPTY
+                    }),
+                ]),
                 ..EnvironmentDecl::EMPTY
             },
         ];

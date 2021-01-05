@@ -87,7 +87,11 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
             .transpose()?,
         children: document.children.as_ref().map(translate_children).transpose()?,
         collections: document.collections.as_ref().map(translate_collections).transpose()?,
-        environments: document.environments.as_ref().map(translate_environments).transpose()?,
+        environments: document
+            .environments
+            .as_ref()
+            .map(|env| translate_environments(env, &all_capability_names))
+            .transpose()?,
         facets: document.facets.clone().map(fsys_object_from_map).transpose()?,
         ..fsys::ComponentDecl::EMPTY
     })
@@ -535,6 +539,7 @@ fn translate_collections(
 
 fn translate_environments(
     envs_in: &Vec<cml::Environment>,
+    all_capability_names: &HashSet<cml::Name>,
 ) -> Result<Vec<fsys::EnvironmentDecl>, Error> {
     envs_in
         .iter()
@@ -564,6 +569,13 @@ fn translate_environments(
                             .iter()
                             .map(translate_resolver_registration)
                             .collect::<Result<Vec<_>, Error>>()
+                    })
+                    .transpose()?,
+                debug_capabilities: env
+                    .debug
+                    .as_ref()
+                    .map(|debug_capabiltities| {
+                        translate_debug_capabilities(debug_capabiltities, all_capability_names)
                     })
                     .transpose()?,
                 stop_timeout_ms: env.stop_timeout_ms.map(|s| s.0),
@@ -599,6 +611,45 @@ fn translate_resolver_registration(
         ),
         ..fsys::ResolverRegistration::EMPTY
     })
+}
+
+fn translate_debug_capabilities(
+    capabilities: &Vec<cml::DebugRegistration>,
+    all_capability_names: &HashSet<cml::Name>,
+) -> Result<Vec<fsys::DebugRegistration>, Error> {
+    let mut out_capabilities = vec![];
+    for capability in capabilities {
+        if let Some(n) = capability.protocol() {
+            let source = extract_single_offer_source(capability, Some(all_capability_names))?;
+            let targets = all_target_capability_names(capability, capability)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            let source_names = n.to_vec();
+            for target_name in targets {
+                // When multiple source names are provided, there is no way to alias each one, so
+                // source_name == target_name.
+                // When one source name is provided, source_name may be aliased to a different
+                // target_name, so we source_names[0] to derive the source_name.
+                //
+                // TODO: This logic could be simplified to use iter::zip() if
+                // extract_all_targets_for_each_child returned separate vectors for targets and
+                // target_names instead of the cross product of them.
+                let source_name = if source_names.len() == 1 {
+                    source_names[0].clone()
+                } else {
+                    target_name.clone()
+                };
+                out_capabilities.push(fsys::DebugRegistration::Protocol(
+                    fsys::DebugProtocolRegistration {
+                        source: Some(clone_fsys_ref(&source)?),
+                        source_name: Some(source_name.into()),
+                        target_name: Some(target_name.into()),
+                        ..fsys::DebugProtocolRegistration::EMPTY
+                    },
+                ));
+            }
+        }
+    }
+    Ok(out_capabilities)
 }
 
 fn extract_use_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
@@ -765,12 +816,12 @@ where
     }
 }
 
-fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<fsys::Ref>, Error> {
+fn extract_all_offer_sources<T: cml::FromClause>(in_obj: &T) -> Result<Vec<fsys::Ref>, Error> {
     in_obj
-        .from
+        .from_()
         .to_vec()
         .into_iter()
-        .map(|r| translate::offer_source_from_ref(r.into(), None))
+        .map(|r| translate::offer_source_from_ref(r.clone(), None))
         .collect()
 }
 
@@ -2446,6 +2497,58 @@ mod tests {
             },
         },
 
+        test_compile_environment_with_debug => {
+            input = json!({
+                "capabilities": [
+                    {
+                        "protocol": "fuchsia.serve.service",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "debug": [
+                            {
+                                "protocol": "fuchsia.serve.service",
+                                "from": "self",
+                                "as": "my-service",
+                            }
+                        ],
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Protocol(
+                        fsys::ProtocolDecl {
+                            name : Some("fuchsia.serve.service".to_owned()),
+                            source_path: Some("/svc/fuchsia.serve.service".to_owned()),
+                            ..fsys::ProtocolDecl::EMPTY
+                        }
+                    )
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                        debug_capabilities: Some(vec![
+                            fsys::DebugRegistration::Protocol( fsys::DebugProtocolRegistration {
+                                source_name: Some("fuchsia.serve.service".to_string()),
+                                source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                target_name: Some("my-service".to_string()),
+                                ..fsys::DebugProtocolRegistration::EMPTY
+                            }),
+                        ]),
+                        resolvers: None,
+                        runners: None,
+                        stop_timeout_ms: None,
+                        ..fsys::EnvironmentDecl::EMPTY
+                    },
+                ]),
+                ..default_component_decl()
+            },
+        },
+
         test_compile_all_sections => {
             input = json!({
                 "program": {
@@ -2500,6 +2603,9 @@ mod tests {
                         "path": "/runner",
                         "from": "self",
                     },
+                    {
+                        "protocol": "fuchsia.serve.service",
+                    }
                 ],
                 "facets": {
                     "author": "Fuchsia",
@@ -2508,7 +2614,18 @@ mod tests {
                 "environments": [
                     {
                         "name": "myenv",
-                        "extends": "realm"
+                        "extends": "realm",
+                        "debug": [
+                            {
+                                "protocol": "fuchsia.serve.service",
+                                "from": "self",
+                                "as": "my-service",
+                            },
+                            {
+                                "protocol": "fuchsia.logger.LegacyLog",
+                                "from": "#logger",
+                            }
+                        ]
                     }
                 ],
             }),
@@ -2659,6 +2776,13 @@ mod tests {
                             ..fsys::RunnerDecl::EMPTY
                         }
                     ),
+                    fsys::CapabilityDecl::Protocol(
+                        fsys::ProtocolDecl {
+                            name : Some("fuchsia.serve.service".to_owned()),
+                            source_path: Some("/svc/fuchsia.serve.service".to_owned()),
+                            ..fsys::ProtocolDecl::EMPTY
+                        }
+                    )
                 ]),
                 children: Some(vec![
                     fsys::ChildDecl {
@@ -2691,6 +2815,23 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
+                        debug_capabilities: Some(vec![
+                            fsys::DebugRegistration::Protocol( fsys::DebugProtocolRegistration {
+                                source_name: Some("fuchsia.serve.service".to_string()),
+                                source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                target_name: Some("my-service".to_string()),
+                                ..fsys::DebugProtocolRegistration::EMPTY
+                            }),
+                            fsys::DebugRegistration::Protocol( fsys::DebugProtocolRegistration {
+                                source_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                    name: "logger".to_string(),
+                                    collection: None,
+                                })),
+                                target_name: Some("fuchsia.logger.LegacyLog".to_string()),
+                                ..fsys::DebugProtocolRegistration::EMPTY
+                            }),
+                        ]),
                         ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
