@@ -16,7 +16,7 @@ namespace nl::Weave::DeviceLayer {
  * A concrete implementation of the delegate used by ConnectivityManagerImpl to
  * make the required platform calls needed to manage connectivity state in Weave.
  */
-class ConnectivityManagerDelegateImpl : public ConnectivityManagerImpl::Delegate {
+class NL_DLL_EXPORT ConnectivityManagerDelegateImpl : public ConnectivityManagerImpl::Delegate {
  public:
   // ConnectivityManagerImpl::Delegate APIs
   WEAVE_ERROR Init() override;

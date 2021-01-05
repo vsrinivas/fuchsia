@@ -19,12 +19,6 @@
 #include <Weave/Support/FlagUtils.hpp>
 
 namespace nl {
-namespace Inet {
-// class IPAddress;
-}  // namespace Inet
-}  // namespace nl
-
-namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
@@ -41,7 +35,7 @@ class GenericNetworkProvisioningServerImpl;
 /**
  * Concrete implementation of the ConnectivityManager singleton object for the Fuchsia platform.
  */
-class ConnectivityManagerImpl final
+class NL_DLL_EXPORT ConnectivityManagerImpl final
     : public ConnectivityManager,
       public Internal::GenericConnectivityManagerImpl<ConnectivityManagerImpl>,
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE

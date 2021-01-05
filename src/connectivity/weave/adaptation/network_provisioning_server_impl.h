@@ -16,7 +16,7 @@ namespace Internal {
  * Concrete implementation of the NetworkProvisioningServer singleton object for the Fuchsia
  * platform.
  */
-class NetworkProvisioningServerImpl final
+class NL_DLL_EXPORT NetworkProvisioningServerImpl final
     : public NetworkProvisioningServer,
       public GenericNetworkProvisioningServerImpl<NetworkProvisioningServerImpl> {
  private:

@@ -16,7 +16,7 @@ namespace DeviceLayer {
 /**
  * Concrete implementation of the PlatformManager singleton object for the Fuchsia platform.
  */
-class PlatformManagerImpl final
+class NL_DLL_EXPORT PlatformManagerImpl final
     : public PlatformManager,
       public Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl> {
   // Allow the PlatformManager interface class to delegate method calls to

@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <Weave/Support/NLDLLUtil.h>
+
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -19,7 +21,8 @@ namespace Weave {
 namespace DeviceLayer {
 namespace Internal {
 
-const char WeaveConfigManager::kEnvironmentStorePath[] = "/data/environment.json";
+NL_DLL_EXPORT
+const char kEnvironmentStorePath[] = "/data/environment.json";
 
 WeaveConfigManager& WeaveConfigManager::GetInstance() {
   static WeaveConfigManager manager;

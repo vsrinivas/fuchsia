@@ -15,11 +15,11 @@ namespace Profiles {
 namespace WeaveMakeManagedNamespaceIdentifier(DataManagement,
                                               kWeaveManagedNamespaceDesignation_Current) {
   namespace Platform {
-  // for unit tests, the dummy critical section is sufficient.
-  void CriticalSectionEnter() { return; }
-
-  void CriticalSectionExit() { return; }
-
+  // Only used in unit tests, the critical section is empty.
+  NL_DLL_EXPORT
+  void CriticalSectionEnter() {}
+  NL_DLL_EXPORT
+  void CriticalSectionExit() {}
   }  // namespace Platform
 }  // namespace )
 }  // namespace Profiles

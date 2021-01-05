@@ -7,8 +7,8 @@
 #include <mutex>
 
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.h>
-#include <Weave/Profiles/service-directory/ServiceDirectory.h>
 #include <Weave/Profiles/device-control/DeviceControl.h>
+#include <Weave/Profiles/service-directory/ServiceDirectory.h>
 
 namespace nl {
 namespace Weave {
@@ -24,7 +24,8 @@ namespace Internal {
  * ImplClass parameter.
  */
 template <class ImplClass>
-class GenericPlatformManagerImpl_Fuchsia : public GenericPlatformManagerImpl<ImplClass> {
+class NL_DLL_EXPORT GenericPlatformManagerImpl_Fuchsia
+    : public GenericPlatformManagerImpl<ImplClass> {
  protected:
   // ===== Methods that implement the PlatformManager abstract interface.
 

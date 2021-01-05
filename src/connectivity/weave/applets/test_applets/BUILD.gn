@@ -1,11 +1,9 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//src/connectivity/weave/lib/applets/applets.gni")
 
-loadable_module("test_applets") {
+weave_applet("test_applets") {
   sources = [ "test_applets.cc" ]
-  deps = [
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/connectivity/weave/lib/applets",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp:backend_legacy" ]
 }

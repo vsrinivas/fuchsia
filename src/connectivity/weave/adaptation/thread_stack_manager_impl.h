@@ -10,7 +10,7 @@ namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
-class ThreadStackManagerImpl final : public ThreadStackManager {
+class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
   // Allow the ThreadStackManager interface class to delegate method calls to
   // the implementation methods provided by this class.
   friend class ThreadStackManager;
@@ -32,6 +32,7 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
    public:
     friend class ThreadStackManagerImpl;
     virtual ~Delegate() = default;
+
    private:
     // Initialize the implementation.
     virtual WEAVE_ERROR InitThreadStack() = 0;
@@ -49,7 +50,8 @@ class ThreadStackManagerImpl final : public ThreadStackManager {
     // Determine if the Thread device is attached to the network.
     virtual bool IsThreadAttached() = 0;
     // Retrieve the Thread provision.
-    virtual WEAVE_ERROR GetThreadProvision(Internal::DeviceNetworkInfo& netInfo, bool includeCredentials) = 0;
+    virtual WEAVE_ERROR GetThreadProvision(Internal::DeviceNetworkInfo& netInfo,
+                                           bool includeCredentials) = 0;
     // Set the Thread provision.
     virtual WEAVE_ERROR SetThreadProvision(const Internal::DeviceNetworkInfo& netInfo) = 0;
     // Clear/remove the Thread provision.

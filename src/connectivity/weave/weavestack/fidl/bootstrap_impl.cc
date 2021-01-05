@@ -17,7 +17,7 @@ namespace {
 using fuchsia::weave::Bootstrap_ImportWeaveConfig_Response;
 using fuchsia::weave::Bootstrap_ImportWeaveConfig_Result;
 
-using nl::Weave::DeviceLayer::Internal::WeaveConfigManager;
+using nl::Weave::DeviceLayer::Internal::kEnvironmentStorePath;
 
 constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 }  // namespace
@@ -86,6 +86,6 @@ void BootstrapImpl::ImportWeaveConfig(fuchsia::mem::Buffer config_json,
 
 bool BootstrapImpl::ShouldServe() { return files::IsFile(kMigrationConfigPath); }
 
-std::string BootstrapImpl::GetConfigPath() { return WeaveConfigManager::kEnvironmentStorePath; }
+std::string BootstrapImpl::GetConfigPath() { return kEnvironmentStorePath; }
 
 }  // namespace weavestack

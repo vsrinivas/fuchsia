@@ -8,38 +8,54 @@ import("//build/dist/resource.gni")
 
 import("//src/connectivity/weave/weavestack/weavestack_package.gni")
 
-source_set("lib") {
-  sources = [
-    "app.cc",
-    "app.h",
-    "fidl/bootstrap_impl.cc",
-    "fidl/bootstrap_impl.h",
-    "fidl/stack_impl.cc",
-    "fidl/stack_impl.h",
-    "fidl/stack_provider_impl.cc",
-    "fidl/stack_provider_impl.h",
-    "fidl/stack_utils.cc",
-    "fidl/stack_utils.h",
-  ]
+template("weavestack_lib") {
+  source_set(target_name) {
+    sources = [
+      "app.cc",
+      "app.h",
+      "fidl/bootstrap_impl.cc",
+      "fidl/bootstrap_impl.h",
+      "fidl/stack_impl.cc",
+      "fidl/stack_impl.h",
+      "fidl/stack_provider_impl.cc",
+      "fidl/stack_provider_impl.h",
+      "fidl/stack_utils.cc",
+      "fidl/stack_utils.h",
+    ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/connectivity/weave/adaptation",
-    "//src/lib/files",
-    "//src/lib/fsl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+    public_deps = [
+      "//sdk/fidl/fuchsia.net.interfaces",
+      "//sdk/fidl/fuchsia.weave",
+      "//sdk/lib/sys/cpp",
+      "//sdk/lib/syslog/cpp",
+      "//src/lib/files",
+      "//src/lib/fsl",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+
+    if (invoker.is_shared) {
+      public_deps += [ "//src/connectivity/weave/adaptation:adaptation.shared" ]
+    } else {
+      public_deps +=
+          [ "//src/connectivity/weave/adaptation:adaptation.sources" ]
+    }
+  }
+}
+
+weavestack_lib("lib.static") {
+  is_shared = false
+}
+
+weavestack_lib("lib.shared") {
+  is_shared = true
 }
 
 executable("bin") {
   output_name = "weavestack"
-
   sources = [ "main.cc" ]
-
-  deps = [ ":lib" ]
+  deps = [ ":lib.shared" ]
 }
 
 resource("default_environment_schema") {

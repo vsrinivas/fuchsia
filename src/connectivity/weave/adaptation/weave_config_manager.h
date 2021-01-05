@@ -17,6 +17,8 @@ namespace Weave {
 namespace DeviceLayer {
 namespace Internal {
 
+extern const char kEnvironmentStorePath[];
+
 // Abstract class that defines the reader interface for the config store.
 class WeaveConfigReader {
  public:
@@ -58,9 +60,6 @@ class WeaveConfigWriter {
 //
 class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
  public:
-  // The path that WeaveConfigManager uses by default.
-  static const char kEnvironmentStorePath[];
-
   explicit WeaveConfigManager(const std::string& path);
 
   ~WeaveConfigManager() = default;

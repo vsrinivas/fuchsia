@@ -23,7 +23,7 @@ namespace DeviceLayer {
  * A concrete implementation of the delegate used by ConfigurationManagerImpl to
  * make the required platform calls needed to serve configuration data to Weave.
  */
-class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delegate {
+class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delegate {
  public:
   ConfigurationManagerDelegateImpl();
 

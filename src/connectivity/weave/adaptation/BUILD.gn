@@ -55,6 +55,7 @@ openweave_adaptation_layer("adaptation") {
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.weave",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/json_parser",

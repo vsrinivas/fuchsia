@@ -5,9 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_NETWORK_PROVISIONING_SERVER_DELEGATE_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_NETWORK_PROVISIONING_SERVER_DELEGATE_IMPL_H_
 
-#include <fuchsia/weave/cpp/fidl.h>
+// clang-format off
+#include <Weave/DeviceLayer/internal/NetworkProvisioningServer.h>
+// clang-format on
 
-#include <Weave/DeviceLayer/internal/GenericNetworkProvisioningServerImpl.h>
+#include <fuchsia/weave/cpp/fidl.h>
 
 namespace nl::Weave::DeviceLayer::Internal {
 
@@ -15,7 +17,8 @@ namespace nl::Weave::DeviceLayer::Internal {
  * A concrete implementation of the delegate used by NetworkProvisioningServerImpl to
  * make the required platform calls needed to manage connectivity state in Weave.
  */
-class NetworkProvisioningServerDelegateImpl : public NetworkProvisioningServerImpl::Delegate {
+class NL_DLL_EXPORT NetworkProvisioningServerDelegateImpl
+    : public NetworkProvisioningServerImpl::Delegate {
  public:
   // NetworkProvisioningServerImpl::Delegate APIs
   WEAVE_ERROR Init();

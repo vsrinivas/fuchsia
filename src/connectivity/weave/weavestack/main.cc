@@ -6,7 +6,6 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 
-#include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
 #include "network_provisioning_server_delegate_impl.h"

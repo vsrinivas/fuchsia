@@ -29,7 +29,7 @@ namespace DeviceLayer {
  *
  * This class and its name scheme is enforced by the adaptation layer.
  */
-class ConfigurationManagerImpl final
+class NL_DLL_EXPORT ConfigurationManagerImpl final
     : public ConfigurationManager,
       public Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>,
       private Internal::EnvironmentConfig {
@@ -134,8 +134,8 @@ class ConfigurationManagerImpl final
     virtual WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
                                                size_t& encoded_len) = 0;
 
-   // Retrieves test private key for signing test cert in |signing_key|,
-   // returns ZX_OK on success.
+    // Retrieves test private key for signing test cert in |signing_key|,
+    // returns ZX_OK on success.
     virtual zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) = 0;
 
    protected:

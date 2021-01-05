@@ -7,6 +7,6 @@ source_set("applets") {
   public_configs = [ "//sdk/config" ]
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/connectivity/weave/adaptation",
+    "//src/connectivity/weave/adaptation:adaptation.headers",
   ]
 }

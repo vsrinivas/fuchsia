@@ -17,7 +17,7 @@ namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
-class ThreadStackManagerDelegateImpl : public ThreadStackManagerImpl::Delegate {
+class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerImpl::Delegate {
  public:
   ThreadStackManagerDelegateImpl() = default;
 
@@ -30,7 +30,8 @@ class ThreadStackManagerDelegateImpl : public ThreadStackManagerImpl::Delegate {
   WEAVE_ERROR SetThreadEnabled(bool val) override;
   bool IsThreadProvisioned() override;
   bool IsThreadAttached() override;
-  WEAVE_ERROR GetThreadProvision(Internal::DeviceNetworkInfo& netInfo, bool includeCredentials) override;
+  WEAVE_ERROR GetThreadProvision(Internal::DeviceNetworkInfo& netInfo,
+                                 bool includeCredentials) override;
   WEAVE_ERROR SetThreadProvision(const Internal::DeviceNetworkInfo& netInfo) override;
   void ClearThreadProvision() override;
   ConnectivityManager::ThreadDeviceType GetThreadDeviceType() override;

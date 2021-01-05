@@ -80,10 +80,13 @@ zx_status_t GetInterface(fuchsia::net::stack::StackSyncPtr &stack_sync_ptr,
 
 WEAVE_ERROR Init(WarmFabricStateDelegate *inFabricStateDelegate) { return WEAVE_NO_ERROR; }
 
+NL_DLL_EXPORT
 void CriticalSectionEnter(void) {}
 
+NL_DLL_EXPORT
 void CriticalSectionExit(void) {}
 
+NL_DLL_EXPORT
 void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
 
 // Add or remove address on tunnel interface.
