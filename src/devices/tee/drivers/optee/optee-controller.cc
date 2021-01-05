@@ -12,7 +12,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -25,6 +24,7 @@
 #include "optee-client.h"
 #include "optee-device-info.h"
 #include "optee-util.h"
+#include "src/devices/tee/drivers/optee/optee-bind.h"
 
 namespace optee {
 
@@ -502,11 +502,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace optee
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(optee, optee::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_OPTEE),
-ZIRCON_DRIVER_END(optee)
-    // clang-format on
+ZIRCON_DRIVER(optee, optee::driver_ops, "zircon", "0.1");

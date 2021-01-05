@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("optee-bind") {
+  rules = "optee.bind"
+  output = "optee-bind.h"
+  tests = "optee-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 source_set("optee_lib") {
   sources = [
@@ -25,9 +36,6 @@ source_set("optee_lib") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -38,6 +46,7 @@ source_set("optee_lib") {
   ]
 
   deps = [
+    ":optee-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/banjo/ddk.protocol.tee",
@@ -62,7 +71,10 @@ driver_module("optee") {
 
 group("tests") {
   testonly = true
-  deps = [ ":optee-unittest" ]
+  deps = [
+    ":optee-bind_test",
+    ":optee-unittest",
+  ]
 }
 
 test("optee-message-test-bin") {

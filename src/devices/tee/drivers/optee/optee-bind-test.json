@@ -1,0 +1,22 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.OPTEE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "OP-TEE"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.OPTEE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Bad Protocol"
+    }
+]
