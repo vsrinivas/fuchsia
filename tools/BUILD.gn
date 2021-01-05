@@ -113,7 +113,7 @@ group("tests") {
     "//tools/build:tests($host_toolchain)",
     "//tools/cargo-gnaw:tests",
     "//tools/check-licenses:tests",
-    "//tools/cmc:tests($host_toolchain)",
+    "//tools/cmc:tests",
     "//tools/component_id_index:tests($host_toolchain)",
     "//tools/component_manager_config:tests($host_toolchain)",
     "//tools/create:tests",

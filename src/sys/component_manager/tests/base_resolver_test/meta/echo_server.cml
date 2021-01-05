@@ -3,7 +3,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/echo_server",
+        binary: "bin/echo_server_rust",
     },
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },

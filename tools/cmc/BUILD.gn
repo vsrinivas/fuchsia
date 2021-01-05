@@ -5,7 +5,7 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/sdk/sdk_host_tool.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("cmc") {
   name = "cmc"
@@ -86,32 +86,22 @@ rustc_binary("cmc_integration_test_bin") {
   sources = [ "tests/integration_test.rs" ]
 }
 
-rustc_binary("example_bin") {
-  name = "example"
-  edition = "2018"
-  source_root = "tests/example.rs"
-
-  sources = [ "tests/example.rs" ]
+fuchsia_component("example_component") {
+  testonly = true
+  component_name = "example"
+  manifest = "meta/example.cml"
 }
 
-test_package("cmc_integration_test") {
-  deps = [
-    ":cmc_integration_test_bin",
-    ":example_bin",
-  ]
+fuchsia_component("cmc_integration_test_component") {
+  testonly = true
+  component_name = "cmc_integration_test"
+  manifest = "meta/cmc_integration_test.cmx"
+  deps = [ ":cmc_integration_test_bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/example.cml")
-      dest = "example.cm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "cmc_integration_test"
-    },
-  ]
+fuchsia_test_package("cmc_integration_test") {
+  test_components = [ ":cmc_integration_test_component" ]
+  deps = [ ":example_component" ]
 }
 
 install_host_tools("install") {

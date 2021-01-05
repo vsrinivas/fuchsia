@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cmc_integration_test"
+        "binary": "bin/cmc_integration_test"
     }
 }

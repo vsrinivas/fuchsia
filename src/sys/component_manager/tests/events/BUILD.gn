@@ -149,6 +149,7 @@ fuchsia_component("chained_interpose_echo_realm") {
 
 fuchsia_component("event_dispatch_order_root") {
   testonly = true
+  deps = [ "components:stub_component_bin" ]
   manifest = "components/event_dispatch_order/meta/root.cml"
 }
 

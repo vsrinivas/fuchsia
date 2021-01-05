@@ -8,6 +8,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         // Wrong binary name.
+        // #[allow(invalid_program_binary)]
         binary: "bin/routing_failed_echo_server_oops",
     },
     capabilities: [

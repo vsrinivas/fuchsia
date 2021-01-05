@@ -47,14 +47,29 @@ def main():
             line.partition('=') for line in args.package_manifest.readlines())
     ]
 
+    # Suppression marker
+    allow_invalid_program_binary = "#[allow(invalid_program_binary)]"
+
+    # These runners don't respect program.binary
+    runners_to_avoid = [
+        "appmgr_mock_runner.cmx",
+        "dart_aot_runner.cmx",
+        "dart_jit_runner.cmx",
+        "flutter_aot_runner.cmx",
+        "flutter_jit_runner.cmx",
+        "guest_runner.cmx",
+        "netemul-runner.cmx",
+    ]
+
     # Matches program.binary in any formatted cmx or cml file
     binary_re = re.compile('        "?binary"?: "([^"]*)",?')
     binary_value = None
     for line in args.component_manifest.readlines():
-        if "runner" in line:
-            # Runners can modify the component's incoming namespace,
-            # so don't bother trying to validate.
+        if allow_invalid_program_binary in line:
             return stamp(args)
+        for runner in runners_to_avoid:
+            if runner in line:
+                return stamp(args)
         m = binary_re.match(line)
         if m:
             binary_value = m.group(1)
