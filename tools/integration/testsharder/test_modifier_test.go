@@ -75,7 +75,10 @@ func TestAffectedModifiers(t *testing.T) {
 	affectedTests := []string{
 		"affected-arm64", "affected-linux", "affected-mac", "affected-host+target", "affected-AEMU", "affected-other-device",
 	}
-	name := mkTempFile(t, strings.Join(affectedTests, "\n"))
+	// Add a newline to the end of the file to test that it still calculates the
+	// correct number of affected tests even with extra whitespace.
+	affectedTestsFileContents := strings.Join(affectedTests, "\n") + "\n"
+	name := mkTempFile(t, affectedTestsFileContents)
 	const maxAttempts = 2
 	t.Run("not multiplied if over threshold", func(t *testing.T) {
 		mods, err := AffectedModifiers(nil, name, maxAttempts, len(affectedTests)-1)

@@ -72,7 +72,7 @@ func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, max
 	if err != nil {
 		return nil, fmt.Errorf("failed to read affectedTestsPath (%s): %w", affectedTestsPath, err)
 	}
-	affectedTestNames := strings.Split(string(affectedTestBytes), "\n")
+	affectedTestNames := strings.Split(strings.TrimSpace(string(affectedTestBytes)), "\n")
 
 	ret := []TestModifier{}
 	// Names of tests to which we'll apply maxAttempts (i.e. we didn't multiply them).
