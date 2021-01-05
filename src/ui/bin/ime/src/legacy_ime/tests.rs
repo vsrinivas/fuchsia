@@ -6,7 +6,6 @@
 
 use super::handler::*;
 use super::*;
-use crate::fidl_helpers::clone_state;
 use crate::fidl_helpers::default_state;
 use crate::ime_service::ImeService;
 use fidl;
@@ -89,7 +88,7 @@ impl uii::InputMethodEditorClientProxyInterface for MockImeClient {
         state: &mut uii::TextInputState,
         mut _event: Option<&mut uii::InputEvent>,
     ) -> Result<(), fidl::Error> {
-        let state2 = clone_state(state);
+        let state2 = state.clone();
         self.state
             .lock()
             .send(state2)

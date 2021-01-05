@@ -5,7 +5,6 @@
 //! This module contains an implementation of `ImeState`, the internal state object of `LegacyIme`.
 
 use super::position;
-use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
 use crate::index_convert as idx;
 use fidl_fuchsia_ui_input as uii;
@@ -94,7 +93,7 @@ impl ImeState {
     /// Forwards a keyboard event to any listening clients without changing the actual state of the
     /// IME at all.
     pub fn forward_event(&mut self, ev: uii::KeyboardEvent) {
-        let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
+        let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
         self.client
             .did_update_state(&mut state, Some(&mut uii::InputEvent::Keyboard(ev)))
             .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
@@ -115,7 +114,7 @@ impl ImeState {
         }
 
         if call_did_update_state {
-            let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
+            let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
             self.client.did_update_state(&mut state, None).unwrap_or_else(|e| {
                 fx_log_warn!("error sending state update to ImeClient: {:?}", e)
             });
@@ -195,7 +194,7 @@ impl ImeState {
     /// Return bool indicates if transaction was successful and valid
     pub fn apply_transaction(&mut self) -> bool {
         let mut moved_points = self.text_points.clone();
-        let mut new_state = clone_state(&self.text_state);
+        let mut new_state = self.text_state.clone();
         for edit in &self.transaction_changes {
             match edit {
                 txt::TextFieldRequest::Replace { range, new_text, .. } => {

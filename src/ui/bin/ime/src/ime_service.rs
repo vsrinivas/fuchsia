@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::fidl_helpers::clone_keyboard_event;
 use crate::legacy_ime::ImeState;
 use crate::legacy_ime::LegacyIme;
 use crate::multiplex::TextFieldMultiplexer;
@@ -132,7 +131,7 @@ impl ImeService {
     /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
     pub(crate) async fn inject_input(&mut self, mut event: uii::InputEvent) {
         let keyboard_event = match &event {
-            uii::InputEvent::Keyboard(e) => clone_keyboard_event(e),
+            uii::InputEvent::Keyboard(e) => e.clone(),
             _ => return,
         };
         let mut state = self.state.lock().await;
@@ -150,7 +149,7 @@ impl ImeService {
         // Send the legacy ime a keystroke event to forward to connected clients. Even if a v2 input
         // method is connected, this ensures legacy text fields are able to still see key events;
         // something not yet provided by the new `TextField` API.
-        ime.forward_event(clone_keyboard_event(&keyboard_event)).await;
+        ime.forward_event(keyboard_event.clone()).await;
 
         // Send the key event to any listening `TextInputContext` clients. If at least one still
         // exists, we assume it handled it and converted it into an edit sent via its handle to the
