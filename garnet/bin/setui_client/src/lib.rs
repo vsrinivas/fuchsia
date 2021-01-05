@@ -6,6 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme},
     fuchsia_component::client::connect_to_service,
+    futures::TryStreamExt,
     structopt::StructOpt,
 };
 
@@ -373,14 +374,16 @@ impl Into<Vec<LightState>> for LightGroup {
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     match command {
         SettingClient::Device { build_tag } => {
-            let _build_tag = build_tag.clone();
             if let Some(_build_tag_val) = build_tag {
                 panic!("Cannot set device settings");
             }
             let device_service = connect_to_service::<fidl_fuchsia_settings::DeviceMarker>()
                 .context("Failed to connect to device service")?;
-            let output = device::command(device_service).await?;
-            println!("Device: {}", output);
+            let mut device_watch_stream = device::command(device_service);
+            println!("This command is watching devices in a loop. Press Ctrl+C to stop.");
+            while let Some(output) = device_watch_stream.try_next().await? {
+                println!("Device: {}", output);
+            }
         }
         SettingClient::Display {
             brightness,

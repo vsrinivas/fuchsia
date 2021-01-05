@@ -5,16 +5,16 @@
 use {
     anyhow::Error,
     fidl_fuchsia_settings::{DeviceProxy, DeviceSettings},
+    futures::{TryFutureExt, TryStream},
 };
 
-pub async fn command(proxy: DeviceProxy) -> Result<String, Error> {
-    let mut output = String::new();
-
-    let settings = proxy.watch().await?;
-    let settings_string = describe_device(&settings);
-    output.push_str(&settings_string);
-
-    Ok(output)
+pub fn command(proxy: DeviceProxy) -> impl TryStream<Ok = String, Error = Error> {
+    futures::stream::try_unfold(proxy, |proxy| {
+        proxy
+            .watch()
+            .map_ok(move |settings| Some((describe_device(&settings), proxy)))
+            .map_err(Into::into)
+    })
 }
 
 fn describe_device(device_settings: &DeviceSettings) -> String {

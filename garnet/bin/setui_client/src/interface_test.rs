@@ -420,8 +420,7 @@ async fn validate_device() -> Result<(), Error> {
     let device_service =
         env.connect_to_service::<DeviceMarker>().context("Failed to connect to device service")?;
 
-    device::command(device_service).await?;
-
+    device::command(device_service).try_next().await?;
     Ok(())
 }
 
