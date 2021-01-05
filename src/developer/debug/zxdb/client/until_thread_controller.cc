@@ -52,6 +52,8 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
     // For "until" this is not good because if the user does "until SomethingNonexistant" they would
     // like to see the error rather than have the thread transparently continue without stopping.
     cb(Err("Destination to run until matched no location."));
+  } else {
+    cb(Err());
   }
 }
 

@@ -286,6 +286,7 @@ source_set("tests") {
     "thread_controller_test.h",
     "thread_controller_unittest.cc",
     "thread_impl_unittest.cc",
+    "until_thread_controller_unittest.cc",
   ]
 
   data_deps = [
