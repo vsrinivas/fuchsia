@@ -26,6 +26,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
