@@ -12,13 +12,13 @@ use {
     fidl_fuchsia_update_installer_ext::{
         FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
     },
-    fuchsia_async::Task,
+    fuchsia_async::{Task, TimeoutExt as _},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
-    std::{pin::Pin, sync::Arc},
+    std::{pin::Pin, sync::Arc, time::Duration},
     thiserror::Error,
     update_package::{Image, ImageType, UpdateMode, UpdatePackage},
 };
@@ -51,6 +51,8 @@ pub(super) use {
     config::ConfigBuilder,
     environment::{NamespaceBuildInfo, NamespaceCobaltConnector},
 };
+
+const COBALT_FLUSH_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Error encountered in the Prepare state.
 #[derive(Debug, Error)]
@@ -236,7 +238,7 @@ async fn update(
 
         // wait for all cobalt events to be flushed to the service.
         fx_log_info!("flushing cobalt events");
-        let () = cobalt_forwarder_task.await;
+        let () = flush_cobalt(cobalt_forwarder_task, COBALT_FLUSH_TIMEOUT).await;
 
         let (state, mode, _packages) = match attempt_res {
             Ok(ok) => ok,
@@ -276,7 +278,7 @@ async fn update(
     .when_done(move |last_state: Option<State>, target_version| async move {
         let last_state = last_state.unwrap_or(State::Prepare);
 
-        let should_reboot = matches!(last_state, State::Reboot{ .. });
+        let should_reboot = matches!(last_state, State::Reboot { .. });
 
         let attempt = attempt.finish(target_version, last_state);
         history.lock().record_update_attempt(attempt);
@@ -288,6 +290,15 @@ async fn update(
         }
     });
     (attempt_id, stream)
+}
+
+async fn flush_cobalt(cobalt_forwarder_task: impl Future<Output = ()>, flush_timeout: Duration) {
+    cobalt_forwarder_task.on_timeout(flush_timeout, || {
+        fx_log_err!(
+            "Couldn't flush cobalt events within the timeout. Proceeding, but may have dropped metrics."
+        );
+    })
+    .await;
 }
 
 struct Attempt<'a> {
@@ -582,4 +593,17 @@ async fn update_mode(
             mode
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, fuchsia_async as fasync};
+
+    // Simulate the cobalt test hanging indefinitely, and ensure we time out correctly.
+    // This test deliberately logs an error.
+    #[fasync::run_singlethreaded(test)]
+    async fn flush_cobalt_succeeds_when_cobalt_hangs() {
+        let hung_task = futures::future::pending();
+        flush_cobalt(hung_task, Duration::from_secs(2)).await;
+    }
 }
