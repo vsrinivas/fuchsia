@@ -210,9 +210,12 @@ TEST(ElfLib, GetSymbolValue) {
 
   ASSERT_NE(elf.get(), nullptr);
 
+  // TODO(sadmac): GetSymbol should return properly aligned data.
   auto data = elf->GetSymbol("zx_frob_handle");
   ASSERT_TRUE(data);
-  EXPECT_EQ(kSymbolPoison, data->st_value);
+  Elf64_Sym aligned_data;
+  memcpy(&aligned_data, data, sizeof(aligned_data));
+  EXPECT_EQ(kSymbolPoison, aligned_data.st_value);
 }
 
 TEST(ElfLib, GetSymbolValueFromDebug) {
@@ -226,7 +229,9 @@ TEST(ElfLib, GetSymbolValueFromDebug) {
 
   auto data = elf->GetSymbol("zx_frob_handle");
   ASSERT_TRUE(data);
-  EXPECT_EQ(kSymbolPoison, data->st_value);
+  Elf64_Sym aligned_data;
+  memcpy(&aligned_data, data, sizeof(aligned_data));
+  EXPECT_EQ(kSymbolPoison, aligned_data.st_value);
 }
 
 TEST(ElfLib, GetAllSymbols) {
