@@ -11,11 +11,11 @@
 #include <memory>
 #include <string>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "ramdisk.h"
+#include "src/devices/block/drivers/ramdisk/ramdisk_bind.h"
 
 namespace ramdisk {
 namespace {
@@ -178,5 +178,4 @@ zx_driver_ops_t ramdisk_driver_ops = []() {
 }  // namespace
 }  // namespace ramdisk
 
-ZIRCON_DRIVER_BEGIN(ramdisk, ramdisk::ramdisk_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT), ZIRCON_DRIVER_END(ramdisk)
+ZIRCON_DRIVER(ramdisk, ramdisk::ramdisk_driver_ops, "zircon", "0.1");
