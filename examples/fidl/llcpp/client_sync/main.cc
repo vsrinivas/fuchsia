@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
     // Check that the request was sent succesfully
     ZX_ASSERT(result.ok());
 
-    class EventHandler : public llcpp::fuchsia::examples::Echo::EventHandler {
+    class EventHandler : public llcpp::fuchsia::examples::Echo::SyncEventHandler {
      public:
       EventHandler() = default;
 

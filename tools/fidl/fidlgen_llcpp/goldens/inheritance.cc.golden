@@ -114,15 +114,9 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> super::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
-  }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
 namespace methods {
@@ -293,15 +287,9 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> sub::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
-  }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
 namespace methods {

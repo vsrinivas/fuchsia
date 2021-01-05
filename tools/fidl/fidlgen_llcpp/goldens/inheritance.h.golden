@@ -329,6 +329,12 @@ class super final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -468,7 +474,7 @@ class super final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class fooResponseContext;
   class ClientImpl;
 
@@ -826,6 +832,12 @@ class sub final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -965,7 +977,7 @@ class sub final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class fooResponseContext;
   class ClientImpl;
 
@@ -1096,7 +1108,12 @@ namespace fidl {
 namespace test {
 namespace inheritance {
 
-struct super::AsyncEventHandlers {};
+class super::AsyncEventHandler : public super::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class super::fooResponseContext : public ::fidl::internal::ResponseContext {
  public:
@@ -1129,16 +1146,18 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
                                 ::fidl::StringView s,
                                 ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<super>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -1175,7 +1194,12 @@ class super::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<super>> binding_;
 };
 
-struct sub::AsyncEventHandlers {};
+class sub::AsyncEventHandler : public sub::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class sub::fooResponseContext : public ::fidl::internal::ResponseContext {
  public:
@@ -1208,16 +1232,18 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
                                 ::fidl::StringView s,
                                 ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<sub>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

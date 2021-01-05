@@ -193,6 +193,12 @@ class SecondProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -268,7 +274,7 @@ class SecondProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -466,6 +472,12 @@ class FirstProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -541,7 +553,7 @@ class FirstProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -968,7 +980,13 @@ namespace fidl {
 namespace test {
 namespace service {
 
-struct SecondProtocol::AsyncEventHandlers {};
+class SecondProtocol::AsyncEventHandler
+    : public SecondProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
@@ -976,16 +994,18 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result MethodOnSecond();
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<SecondProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -1023,7 +1043,13 @@ class SecondProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<SecondProtocol>> binding_;
 };
 
-struct FirstProtocol::AsyncEventHandlers {};
+class FirstProtocol::AsyncEventHandler
+    : public FirstProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
@@ -1031,16 +1057,18 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result MethodOnFirst();
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<FirstProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

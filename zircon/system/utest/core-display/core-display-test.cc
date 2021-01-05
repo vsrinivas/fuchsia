@@ -105,7 +105,7 @@ void CoreDisplayTest::SetUp() {
 
   dc_client_ = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel_));
 
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     EventHandler() = default;
 

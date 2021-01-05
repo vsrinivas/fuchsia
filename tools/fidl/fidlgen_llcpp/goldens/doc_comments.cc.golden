@@ -48,33 +48,31 @@ Interface::ResultOf::Method::Method(zx_handle_t _client) {
 
 std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kInterface_OnEvent_Ordinal: {
-      const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(OnEventResponse::Type, msg->bytes, msg->num_bytes,
-                          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case kInterface_OnEvent_Ordinal: {
+        const char* error_message;
+        zx_status_t status =
+            fidl_decode_etc(OnEventResponse::Type, msg->bytes, msg->num_bytes,
+                            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->OnEvent(reinterpret_cast<OnEventResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.on_event) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.on_event();
-      break;
+      default:
+        break;
     }
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
-::fidl::Result Interface::EventHandler::HandleOneEvent(
+::fidl::Result Interface::SyncEventHandler::HandleOneEvent(
     ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,

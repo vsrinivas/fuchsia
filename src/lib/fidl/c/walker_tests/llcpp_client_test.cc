@@ -29,8 +29,14 @@ class TestProtocol {
   TestProtocol() = delete;
 
  public:
-  // Generated code will define an AsyncEventHandlers type.
-  struct AsyncEventHandlers {};
+  // Generated code will define an AsyncEventHandler class.
+  class AsyncEventHandler {
+   public:
+    AsyncEventHandler() = default;
+    virtual ~AsyncEventHandler() = default;
+
+    virtual void Unbound(::fidl::UnbindInfo info) {}
+  };
 
   class ClientImpl final : private internal::ClientBase {
    public:
@@ -76,10 +82,13 @@ class TestProtocol {
       return txids_.size();
     }
 
+    AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
    private:
     friend class Client<TestProtocol>;
 
-    explicit ClientImpl(AsyncEventHandlers handlers) {}
+    explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+        : event_handler_(event_handler) {}
 
     // For each event, increment the event count.
     std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) {
@@ -87,6 +96,7 @@ class TestProtocol {
       return {};
     }
 
+    std::shared_ptr<AsyncEventHandler> event_handler_;
     std::mutex lock_;
     std::unordered_set<zx_txid_t> txids_;
     uint32_t event_count_ = 0;
@@ -114,13 +124,26 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(0, client->GetTxidCount());
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
+        : unbound_(unbound), client_(client) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(0, client_->GetTxidCount());
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
+    Client<TestProtocol>& client_;
   };
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
+
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
+                        std::make_shared<EventHandler>(unbound, client)));
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
@@ -145,13 +168,26 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(0, client->GetTxidCount());
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
+        : unbound_(unbound), client_(client) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(0, client_->GetTxidCount());
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
+    Client<TestProtocol>& client_;
   };
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
+
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
+                        std::make_shared<EventHandler>(unbound, client)));
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
@@ -203,13 +239,26 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
-    EXPECT_EQ(0, client->GetTxidCount());
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
+        : unbound_(unbound), client_(client) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
+      EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
+      EXPECT_EQ(0, client_->GetTxidCount());
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
+    Client<TestProtocol>& client_;
   };
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
+
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
+                        std::make_shared<EventHandler>(unbound, client)));
 
   // Send a "response" message for which there was no outgoing request.
   ASSERT_EQ(0, client->GetTxidCount());
@@ -230,13 +279,26 @@ TEST(ClientBindingTestCase, Events) {
 
   sync_completion_t unbound;
   Client<TestProtocol> client;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    EventHandler(sync_completion_t& unbound, Client<TestProtocol>& client)
+        : unbound_(unbound), client_(client) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(10, client_->GetEventCount());  // Expect 10 events.
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
+    Client<TestProtocol>& client_;
   };
-  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
+
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(),
+                        std::make_shared<EventHandler>(unbound, client)));
 
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];
@@ -263,12 +325,23 @@ TEST(ClientBindingTestCase, Unbind) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+      EXPECT_OK(info.status);
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
   };
-  Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  Client<TestProtocol> client(std::move(local), loop.dispatcher(),
+                              std::make_shared<EventHandler>(unbound));
 
   // Unbind the client and wait for on_unbound to run.
   client.Unbind();
@@ -283,13 +356,23 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+      EXPECT_OK(info.status);
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
   };
-  auto* client =
-      new Client<TestProtocol>(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  auto* client = new Client<TestProtocol>(std::move(local), loop.dispatcher(),
+                                          std::make_shared<EventHandler>(unbound));
 
   // Delete the client and wait for on_unbound to run.
   delete client;
@@ -304,12 +387,23 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+      EXPECT_OK(info.status);
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
   };
-  Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  Client<TestProtocol> client(std::move(local), loop.dispatcher(),
+                              std::make_shared<EventHandler>(unbound));
 
   // Create a strong reference to the channel.
   auto channel = client->GetChannel();
@@ -379,12 +473,23 @@ TEST(ClientBindingTestCase, Epitaph) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
   };
-  Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  Client<TestProtocol> client(std::move(local), loop.dispatcher(),
+                              std::make_shared<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
   ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
@@ -399,13 +504,24 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public TestProtocol::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
   };
-  Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  Client<TestProtocol> client(std::move(local), loop.dispatcher(),
+                              std::make_shared<EventHandler>(unbound));
 
   // Close the server end and wait for on_unbound to run.
   remote.reset();

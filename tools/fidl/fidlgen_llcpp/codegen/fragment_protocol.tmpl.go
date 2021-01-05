@@ -545,25 +545,23 @@ class {{ .Name }} final {
 
   {{- end }}
 
-  {{- if .Events }}
-{{ "" }}
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
     {{- range .Events -}}
 
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-      {{- if .Transitional }}
-    virtual void {{ .Name }}({{ .Name }}Response* event) {
-      ZX_PANIC("Got event {{ .Name }} which is marked as [Transitional].");
-    }
-      {{- else }}
-    virtual void {{ .Name }}({{ .Name }}Response* event) = 0;
-      {{- end }}
+    virtual void {{ .Name }}({{ .Name }}Response* event) {}
     {{- end }}
+  };
+  {{- if .Events }}
+{{ "" }}
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the status which, in this
     // case, is returned by HandleOneEvent.
@@ -778,9 +776,9 @@ class {{ .Name }} final {
     {{- if .Events }}
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-    // method defined in |EventHandler|. The return status of the handler function is folded with
+    // method defined in |SyncEventHandler|. The return status of the handler function is folded with
     // any transport-level errors and returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
     {{- end }}

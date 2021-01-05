@@ -180,33 +180,31 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kEmptyProtocol_Receive_Ordinal: {
-      const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(ReceiveResponse::Type, msg->bytes, msg->num_bytes,
-                          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case kEmptyProtocol_Receive_Ordinal: {
+        const char* error_message;
+        zx_status_t status =
+            fidl_decode_etc(ReceiveResponse::Type, msg->bytes, msg->num_bytes,
+                            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->Receive(reinterpret_cast<ReceiveResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.receive) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.receive(reinterpret_cast<ReceiveResponse*>(msg->bytes));
-      break;
+      default:
+        break;
     }
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
-::fidl::Result EmptyProtocol::EventHandler::HandleOneEvent(
+::fidl::Result EmptyProtocol::SyncEventHandler::HandleOneEvent(
     ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,

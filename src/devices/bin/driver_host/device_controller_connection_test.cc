@@ -115,11 +115,25 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  bool unbound = false;
-  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(), [&](fidl::UnbindInfo) {
-    unbound = true;
-    conn_ref->UnboundDone();
-  }));
+  class EventHandler
+      : public ::llcpp::fuchsia::device::manager::DeviceController::AsyncEventHandler {
+   public:
+    explicit EventHandler(DeviceControllerConnectionTest* connection) : connection_(connection) {}
+
+    bool unbound() const { return unbound_; }
+
+    void Unbound(fidl::UnbindInfo info) override {
+      unbound_ = true;
+      connection_->UnboundDone();
+    }
+
+   private:
+    DeviceControllerConnectionTest* const connection_;
+    bool unbound_ = false;
+  };
+
+  auto event_handler = std::make_shared<EventHandler>(conn_ref);
+  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(), event_handler));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
@@ -129,7 +143,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(result.status());
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
-  ASSERT_TRUE(unbound);
+  ASSERT_TRUE(event_handler->unbound());
 }
 
 // Verify we do not abort when an expected PEER_CLOSED comes in.

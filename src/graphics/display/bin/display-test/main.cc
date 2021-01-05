@@ -126,7 +126,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   dc = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
   device_handle = device_client.release();
 
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     EventHandler(fbl::Vector<Display>* displays, bool& has_ownership)
         : displays_(displays), has_ownership_(has_ownership) {}
@@ -249,7 +249,7 @@ bool apply_config() {
 }
 
 zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     explicit EventHandler(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers)
         : layers_(layers) {}

@@ -44,7 +44,7 @@ typedef enum {
   kOutbound,
 } packet_direction_e;
 
-class OtStackApp : public fidl_spinel::Device::EventHandler {
+class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
  public:
   OtStackApp(){};
 

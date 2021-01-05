@@ -55,7 +55,7 @@ Err Executor::Execute(std::unique_ptr<Command> command,
     return Err(execute_result.status(), execute_result.error());
   }
 
-  class EventHandler : public llcpp::fuchsia::shell::Shell::EventHandler {
+  class EventHandler : public llcpp::fuchsia::shell::Shell::SyncEventHandler {
    public:
     EventHandler(fit::function<void(const std::string&)>& out_callback,
                  fit::function<void(const std::string&)>& err_callback)

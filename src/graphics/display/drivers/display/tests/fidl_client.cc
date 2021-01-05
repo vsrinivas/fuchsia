@@ -77,7 +77,7 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
   while (displays_.is_empty() || !has_ownership_) {
     fbl::AutoLock lock(mtx());
-    class EventHandler : public fhd::Controller::EventHandler {
+    class EventHandler : public fhd::Controller::SyncEventHandler {
      public:
       explicit EventHandler(TestFidlClient* client) : client_(client) {}
 
@@ -145,7 +145,7 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
   }
 
   fbl::AutoLock lock(mtx());
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     explicit EventHandler(TestFidlClient* client) : client_(client) {}
 

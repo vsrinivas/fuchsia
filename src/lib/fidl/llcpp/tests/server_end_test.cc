@@ -57,11 +57,20 @@ TEST(ServerEnd, Close) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  fidl::UnbindInfo recorded_unbind_info;
-  fidl::Client<llcpp_test::Frobinator> client(
-      std::move(h1), loop.dispatcher(), [&recorded_unbind_info](fidl::UnbindInfo unbind_info) {
-        recorded_unbind_info = unbind_info;
-      });
+  class EventHandler : public llcpp_test::Frobinator::AsyncEventHandler {
+   public:
+    EventHandler() = default;
+
+    fidl::UnbindInfo recorded_unbind_info() const { return recorded_unbind_info_; }
+
+    void Unbound(fidl::UnbindInfo unbind_info) override { recorded_unbind_info_ = unbind_info; }
+
+   private:
+    fidl::UnbindInfo recorded_unbind_info_;
+  };
+
+  auto event_handler = std::make_shared<EventHandler>();
+  fidl::Client<llcpp_test::Frobinator> client(std::move(h1), loop.dispatcher(), event_handler);
 
   fidl::ServerEnd<llcpp_test::Frobinator> server_end(std::move(h2));
   EXPECT_TRUE(server_end.is_valid());
@@ -71,8 +80,8 @@ TEST(ServerEnd, Close) {
   EXPECT_FALSE(server_end.is_valid());
 
   loop.RunUntilIdle();
-  EXPECT_EQ(fidl::UnbindInfo::Reason::kPeerClosed, recorded_unbind_info.reason);
-  EXPECT_EQ(kSysError, recorded_unbind_info.status);
+  EXPECT_EQ(fidl::UnbindInfo::Reason::kPeerClosed, event_handler->recorded_unbind_info().reason);
+  EXPECT_EQ(kSysError, event_handler->recorded_unbind_info().status);
 }
 
 TEST(ServerEnd, CloseTwice) {

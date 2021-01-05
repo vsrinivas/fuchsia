@@ -45,7 +45,7 @@ class EchoClientApp {
   }
 
   zx_status_t EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
-                                 Echo::EventHandler& event_handler) {
+                                 Echo::SyncEventHandler& event_handler) {
     auto result = client_.EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
     if (result.status() != ZX_OK) {
       return result.status();
@@ -177,7 +177,7 @@ class EchoConnection final : public Echo::Interface {
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
     } else {
-      class EventHandler : public Echo::EventHandler {
+      class EventHandler : public Echo::SyncEventHandler {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 

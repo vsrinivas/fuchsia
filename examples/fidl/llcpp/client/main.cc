@@ -38,16 +38,24 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(fdio_service_connect_at(svc.get(), "fuchsia.examples.Echo", server_end.release()) ==
             ZX_OK);
 
-  // Define the event handlers for the client. The OnString event handler prints the event
-  llcpp::fuchsia::examples::Echo::AsyncEventHandlers handlers = {
-      .on_string = [&](llcpp::fuchsia::examples::Echo::OnStringResponse* message) {
-        std::string event(message->response.data(), message->response.size());
-        std::cout << "Got event: " << event << std::endl;
-        loop.Quit();
-      }};
+  // Define the event handler for the client. The OnString event handler prints the event
+  class EventHandler : public llcpp::fuchsia::examples::Echo::AsyncEventHandler {
+   public:
+    EventHandler(async::Loop& loop) : loop_(loop) {}
+
+    void OnString(llcpp::fuchsia::examples::Echo::OnStringResponse* event) override {
+      std::string response(event->response.data(), event->response.size());
+      std::cout << "Got event: " << response << std::endl;
+      loop_.Quit();
+    }
+
+   private:
+    async::Loop& loop_;
+  };
+
   // Create a client to the Echo protocol
   fidl::Client<llcpp::fuchsia::examples::Echo> client(std::move(client_end), dispatcher,
-                                                      std::move(handlers));
+                                                      std::make_shared<EventHandler>(loop));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
   client->EchoString("hello", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {

@@ -183,33 +183,31 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kTransitional_Event_Ordinal: {
-      const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(EventResponse::Type, msg->bytes, msg->num_bytes,
-                          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case kTransitional_Event_Ordinal: {
+        const char* error_message;
+        zx_status_t status =
+            fidl_decode_etc(EventResponse::Type, msg->bytes, msg->num_bytes,
+                            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->Event(reinterpret_cast<EventResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.event) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.event(reinterpret_cast<EventResponse*>(msg->bytes));
-      break;
+      default:
+        break;
     }
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
-::fidl::Result Transitional::EventHandler::HandleOneEvent(
+::fidl::Result Transitional::SyncEventHandler::HandleOneEvent(
     ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -757,33 +755,31 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kChannelProtocol_EventA_Ordinal: {
-      const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(EventAResponse::Type, msg->bytes, msg->num_bytes,
-                          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case kChannelProtocol_EventA_Ordinal: {
+        const char* error_message;
+        zx_status_t status =
+            fidl_decode_etc(EventAResponse::Type, msg->bytes, msg->num_bytes,
+                            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->EventA(reinterpret_cast<EventAResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.event_a) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.event_a(reinterpret_cast<EventAResponse*>(msg->bytes));
-      break;
+      default:
+        break;
     }
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
-::fidl::Result ChannelProtocol::EventHandler::HandleOneEvent(
+::fidl::Result ChannelProtocol::SyncEventHandler::HandleOneEvent(
     ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -1548,49 +1544,44 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
 std::optional<::fidl::UnbindInfo>
 WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          OnEmptyResponseResponse::Type, msg->bytes, msg->num_bytes,
-          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr =
+        reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+      case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+        const char* error_message;
+        zx_status_t status = fidl_decode_etc(
+            OnEmptyResponseResponse::Type, msg->bytes, msg->num_bytes,
+            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->OnEmptyResponse(
+            reinterpret_cast<OnEmptyResponseResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.on_empty_response) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
+      case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+        const char* error_message;
+        zx_status_t status = fidl_decode_etc(
+            OnWithResponseResponse::Type, msg->bytes, msg->num_bytes,
+            msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->OnWithResponse(
+            reinterpret_cast<OnWithResponseResponse*>(msg->bytes));
+        return std::nullopt;
       }
-      handlers_.on_empty_response();
-      break;
+      default:
+        break;
     }
-    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc(
-          OnWithResponseResponse::Type, msg->bytes, msg->num_bytes,
-          msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
-      }
-      if (!handlers_.on_with_response) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.on_with_response(
-          reinterpret_cast<OnWithResponseResponse*>(msg->bytes));
-      break;
-    }
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
-::fidl::Result WithAndWithoutRequestResponse::EventHandler::HandleOneEvent(
+::fidl::Result WithAndWithoutRequestResponse::SyncEventHandler::HandleOneEvent(
     ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -2255,15 +2246,9 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 
 std::optional<::fidl::UnbindInfo> WithErrorSyntax::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
-  }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
 namespace methods {

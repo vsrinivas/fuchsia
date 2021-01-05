@@ -37,15 +37,9 @@ SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
 
 std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
-  }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
 namespace methods {
@@ -126,15 +120,9 @@ FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
 
 std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::DispatchEvent(
     fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr =
-      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                ZX_ERR_NOT_SUPPORTED};
-  }
-  return {};
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                            ZX_ERR_NOT_SUPPORTED};
 }
 
 namespace methods {

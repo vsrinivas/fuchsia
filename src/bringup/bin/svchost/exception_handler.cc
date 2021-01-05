@@ -33,9 +33,18 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
+  class EventHandler : public llcpp::fuchsia::exception::Handler::AsyncEventHandler {
+   public:
+    EventHandler(ExceptionHandler* handler) : handler_(handler) {}
+
+    void Unbound(fidl::UnbindInfo info) { handler_->OnUnbind(info); }
+
+   private:
+    ExceptionHandler* handler_;
+  };
+
   connection_ = fidl::Client<llcpp::fuchsia::exception::Handler>();
-  connection_.Bind(std::move(client_endpoint), dispatcher_,
-                   [this](fidl::UnbindInfo info) { OnUnbind(info); });
+  connection_.Bind(std::move(client_endpoint), dispatcher_, std::make_shared<EventHandler>(this));
 }
 
 void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info) {

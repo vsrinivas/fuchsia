@@ -381,7 +381,7 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
-  class EventHandler : public fio::Directory::EventHandler {
+  class EventHandler : public fio::Directory::SyncEventHandler {
    public:
     EventHandler(zx::channel channel, fdio_t** out_io)
         : channel_(std::move(channel)), out_io_(out_io) {}

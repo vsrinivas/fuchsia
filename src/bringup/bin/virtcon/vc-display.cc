@@ -535,7 +535,7 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
 
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
 
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     EventHandler() = default;
 

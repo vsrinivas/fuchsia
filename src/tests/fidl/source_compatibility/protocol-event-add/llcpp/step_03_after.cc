@@ -6,15 +6,12 @@
 namespace fidl_test = llcpp::fidl::test::protocoleventadd;
 
 // [START contents]
-fidl_test::Example::AsyncEventHandlers createAysncHandlers() {
-  fidl_test::Example::AsyncEventHandlers events = {
-      .on_existing_event = []() {},
-      .on_new_event = []() {},
-  };
-  return events;
-}
+class AsyncEventHandler : public fidl_test::Example::AsyncEventHandler {
+  void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
+  void OnNewEvent(fidl_test::Example::OnNewEventResponse* event) override {}
+};
 
-class EventHandler : public fidl_test::Example::EventHandler {
+class SyncEventHandler : public fidl_test::Example::SyncEventHandler {
   void OnExistingEvent(fidl_test::Example::OnExistingEventResponse* event) override {}
   void OnNewEvent(fidl_test::Example::OnNewEventResponse* event) override {}
 };

@@ -46,7 +46,7 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  class EventHandler : public fio::Node::EventHandler {
+  class EventHandler : public fio::Node::SyncEventHandler {
    public:
     explicit EventHandler(fio::NodeInfo::Tag expected_tag) : expected_tag_(expected_tag) {}
 
@@ -85,7 +85,7 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  class EventHandler : public fio::Node::EventHandler {
+  class EventHandler : public fio::Node::SyncEventHandler {
    public:
     EventHandler() = default;
 

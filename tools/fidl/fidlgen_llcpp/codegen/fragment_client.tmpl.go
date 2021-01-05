@@ -6,7 +6,7 @@ package codegen
 
 const fragmentClientTmpl = `
 {{- define "ClientForwardDeclaration" }}
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   {{- range .TwoWayMethods }}
   class {{ .Name }}ResponseContext;
   {{- end }}
@@ -15,18 +15,11 @@ const fragmentClientTmpl = `
 
 {{- define "ClientDeclaration" }}
 {{- $outer := . }}
-struct {{ .Name }}::AsyncEventHandlers {
-  {{- range .Events -}}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  ::fit::function<void (
-    {{- if .Response -}}
-      {{ .Name }}Response* msg
-    {{- end -}}
-  )> {{ .NameInLowerSnakeCase }};
-{{ "" }}
-  {{- end }}
+class {{ .Name }}::AsyncEventHandler : public {{ .Name }}::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 {{- range .TwoWayMethods }}
@@ -74,46 +67,46 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- end }}
 {{ "" }}
   {{- end }}
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<{{ .Name }}>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers) : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
 std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_incoming_msg_t* msg) {
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  switch (hdr->ordinal) {
-  {{- range .Events }}
-    case {{ .OrdinalName }}:
-    {
-      const char* error_message;
-      zx_status_t status = fidl_decode_etc({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
-                                       msg->handles, msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+  {{- if .Events }}
+  if (event_handler_ != nullptr) {
+    fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+    switch (hdr->ordinal) {
+    {{- range .Events }}
+      case {{ .OrdinalName }}:
+      {
+        const char* error_message;
+        zx_status_t status = fidl_decode_etc({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
+                                             msg->handles, msg->num_handles, &error_message);
+        if (status != ZX_OK) {
+          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
+        }
+        event_handler_->{{ .Name }}(reinterpret_cast<{{ .Name }}Response*>(msg->bytes));
+        return std::nullopt;
       }
-      if (!handlers_.{{ .NameInLowerSnakeCase }}) {
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
-      }
-      handlers_.{{ .NameInLowerSnakeCase }}(
-        {{- if .Response -}}
-        reinterpret_cast<{{ .Name }}Response*>(msg->bytes)
-        {{- end -}}
-      );
-      break;
+    {{- end }}
+      default:
+        break;
     }
-  {{- end }}
-    default:
-      FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
   }
-  return {};
+  {{- end }}
+  FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
+  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
 }
 {{- end }}
 `

@@ -205,6 +205,12 @@ class Parent final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -296,7 +302,7 @@ class Parent final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -669,6 +675,12 @@ class Child final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -814,7 +826,7 @@ class Child final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -937,7 +949,12 @@ namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 
-struct Parent::AsyncEventHandlers {};
+class Parent::AsyncEventHandler : public Parent::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
@@ -950,16 +967,18 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result First(::fidl::BufferSpan _request_buffer,
                        ::zx::channel request);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<Parent>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -996,7 +1015,12 @@ class Parent::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<Parent>> binding_;
 };
 
-struct Child::AsyncEventHandlers {};
+class Child::AsyncEventHandler : public Child::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class Child::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
@@ -1018,16 +1042,18 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result Second(::fidl::BufferSpan _request_buffer,
                         ::zx::channel request);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<Child>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

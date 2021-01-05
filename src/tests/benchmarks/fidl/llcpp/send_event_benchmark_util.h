@@ -30,7 +30,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   zx_status_t status = zx::channel::create(0, &sender_channel, &receiver_channel);
   ZX_ASSERT(status == ZX_OK);
 
-  class EventHandler : public ProtocolType::EventHandler {
+  class EventHandler : public ProtocolType::SyncEventHandler {
    public:
     EventHandler(perftest::RepeatState* state, bool& ready, std::mutex& mu,
                  std::condition_variable& cond)

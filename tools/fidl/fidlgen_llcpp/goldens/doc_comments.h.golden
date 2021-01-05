@@ -1151,14 +1151,19 @@ class Interface final {
     void _InitHeader();
   };
 
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
     // event comment #1
     //
     // event comment #3
-    virtual void OnEvent(OnEventResponse* event) = 0;
+    virtual void OnEvent(OnEventResponse* event) {}
+  };
+
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the
     // status which, in this case, is returned by HandleOneEvent.
@@ -1246,10 +1251,10 @@ class Interface final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |EventHandler|. The return status
-    // of the handler function is folded with any transport-level errors and
-    // returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    // corresponding virtual method defined in |SyncEventHandler|. The return
+    // status of the handler function is folded with any transport-level errors
+    // and returned.
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
@@ -1257,7 +1262,7 @@ class Interface final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -1490,11 +1495,11 @@ namespace fidl {
 namespace test {
 namespace doccomments {
 
-struct Interface::AsyncEventHandlers {
-  // event comment #1
-  //
-  // event comment #3
-  ::fit::function<void()> on_event;
+class Interface::AsyncEventHandler : public Interface::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
@@ -1506,16 +1511,18 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result Method();
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<Interface>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

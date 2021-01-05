@@ -20,6 +20,19 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace fsys = llcpp::fuchsia::sys2;
 
+class EventHandler : public llcpp::fuchsia::driver::framework::DriverHost::AsyncEventHandler {
+ public:
+  EventHandler(DriverHostComponent* component,
+               fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
+      : component_(component), driver_hosts_(driver_hosts) {}
+
+  void Unbound(fidl::UnbindInfo info) override { driver_hosts_->erase(*component_); }
+
+ private:
+  DriverHostComponent* const component_;
+  fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts_;
+};
+
 DriverComponent::DriverComponent(zx::channel exposed_dir, zx::channel driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
@@ -31,7 +44,7 @@ DriverHostComponent::DriverHostComponent(
     zx::channel driver_host, async_dispatcher_t* dispatcher,
     fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
     : driver_host_(std::move(driver_host), dispatcher,
-                   [this, driver_hosts](auto) { driver_hosts->erase(*this); }) {}
+                   std::make_shared<EventHandler>(this, driver_hosts)) {}
 
 zx::status<zx::channel> DriverHostComponent::Start(
     zx::channel node, fidl::VectorView<fidl::StringView> offers,

@@ -127,7 +127,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
                                      fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                                  0755, fidl::StringView("abc"), std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
-  class EventHandler : public fio::Node::EventHandler {
+  class EventHandler : public fio::Node::SyncEventHandler {
    public:
     EventHandler() = default;
 

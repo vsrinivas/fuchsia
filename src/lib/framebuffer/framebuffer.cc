@@ -270,7 +270,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
       fsl::GetCurrentProcessKoid());
   auto close_sysmem_handle = fit::defer([]() { sysmem_allocator.reset(); });
 
-  class EventHandler : public fhd::Controller::EventHandler {
+  class EventHandler : public fhd::Controller::SyncEventHandler {
    public:
     EventHandler() = default;
 

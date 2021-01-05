@@ -1372,13 +1372,16 @@ class Transitional final {
     void _InitHeader();
   };
 
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
-    virtual void Event(EventResponse* event) {
-      ZX_PANIC("Got event Event which is marked as [Transitional].");
-    }
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+    virtual void Event(EventResponse* event) {}
+  };
+
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the
     // status which, in this case, is returned by HandleOneEvent.
@@ -1581,10 +1584,10 @@ class Transitional final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |EventHandler|. The return status
-    // of the handler function is folded with any transport-level errors and
-    // returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    // corresponding virtual method defined in |SyncEventHandler|. The return
+    // status of the handler function is folded with any transport-level errors
+    // and returned.
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
@@ -1592,7 +1595,7 @@ class Transitional final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class RequestResponseContext;
   class ClientImpl;
 
@@ -2850,11 +2853,16 @@ class ChannelProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
-    virtual void EventA(EventAResponse* event) = 0;
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+    virtual void EventA(EventAResponse* event) {}
+  };
+
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the
     // status which, in this case, is returned by HandleOneEvent.
@@ -3271,10 +3279,10 @@ class ChannelProtocol final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |EventHandler|. The return status
-    // of the handler function is folded with any transport-level errors and
-    // returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    // corresponding virtual method defined in |SyncEventHandler|. The return
+    // status of the handler function is folded with any transport-level errors
+    // and returned.
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
@@ -3282,7 +3290,7 @@ class ChannelProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class MethodBResponseContext;
   class TakeHandleResponseContext;
   class MutateSocketResponseContext;
@@ -5161,12 +5169,17 @@ class WithAndWithoutRequestResponse final {
     void _InitHeader();
   };
 
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
-    virtual void OnEmptyResponse(OnEmptyResponseResponse* event) = 0;
-    virtual void OnWithResponse(OnWithResponseResponse* event) = 0;
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+    virtual void OnEmptyResponse(OnEmptyResponseResponse* event) {}
+    virtual void OnWithResponse(OnWithResponseResponse* event) {}
+  };
+
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the
     // status which, in this case, is returned by HandleOneEvent.
@@ -5749,10 +5762,10 @@ class WithAndWithoutRequestResponse final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |EventHandler|. The return status
-    // of the handler function is folded with any transport-level errors and
-    // returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    // corresponding virtual method defined in |SyncEventHandler|. The return
+    // status of the handler function is folded with any transport-level errors
+    // and returned.
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
@@ -5760,7 +5773,7 @@ class WithAndWithoutRequestResponse final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class NoRequestEmptyResponseResponseContext;
   class NoRequestWithResponseResponseContext;
   class WithRequestEmptyResponseResponseContext;
@@ -6794,6 +6807,12 @@ class WithErrorSyntax final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -7135,7 +7154,7 @@ class WithErrorSyntax final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ResponseAsStructResponseContext;
   class ErrorAsPrimitiveResponseContext;
   class ErrorAsEnumResponseContext;
@@ -7880,8 +7899,12 @@ namespace fidl {
 namespace test {
 namespace protocols {
 
-struct Transitional::AsyncEventHandlers {
-  ::fit::function<void(EventResponse* msg)> event;
+class Transitional::AsyncEventHandler
+    : public Transitional::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 class Transitional::RequestResponseContext
@@ -7925,16 +7948,18 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   // response buffers.
   ::fidl::Result OneWay(::fidl::BufferSpan _request_buffer, int64_t x);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<Transitional>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -7991,8 +8016,12 @@ class Transitional::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<Transitional>> binding_;
 };
 
-struct ChannelProtocol::AsyncEventHandlers {
-  ::fit::function<void(EventAResponse* msg)> event_a;
+class ChannelProtocol::AsyncEventHandler
+    : public ChannelProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 class ChannelProtocol::MethodBResponseContext
@@ -8101,16 +8130,18 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       ::fidl::BufferSpan _request_buffer, ::zx::socket a,
       ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<ChannelProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -8169,10 +8200,12 @@ class ChannelProtocol::WeakEventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding<ChannelProtocol>> binding_;
 };
 
-struct WithAndWithoutRequestResponse::AsyncEventHandlers {
-  ::fit::function<void()> on_empty_response;
+class WithAndWithoutRequestResponse::AsyncEventHandler
+    : public WithAndWithoutRequestResponse::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
 
-  ::fit::function<void(OnWithResponseResponse* msg)> on_with_response;
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 class WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext
@@ -8336,16 +8369,18 @@ class WithAndWithoutRequestResponse::ClientImpl final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<WithAndWithoutRequestResponse>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
@@ -8419,7 +8454,13 @@ class WithAndWithoutRequestResponse::WeakEventSender {
       binding_;
 };
 
-struct WithErrorSyntax::AsyncEventHandlers {};
+class WithErrorSyntax::AsyncEventHandler
+    : public WithErrorSyntax::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class WithErrorSyntax::ResponseAsStructResponseContext
     : public ::fidl::internal::ResponseContext {
@@ -8512,16 +8553,18 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   UnownedResultOf::ErrorAsEnum ErrorAsEnum_Sync(
       ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<WithErrorSyntax>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

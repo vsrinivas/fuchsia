@@ -491,7 +491,7 @@ TEST(HidButtonsTest, Notify1) {
     device.FakeInterrupt(ButtonType::MUTE);
     device.DebounceWait();
     {
-      class EventHandler : public Buttons::EventHandler {
+      class EventHandler : public Buttons::SyncEventHandler {
        public:
         EventHandler() = default;
 
@@ -515,7 +515,7 @@ TEST(HidButtonsTest, Notify1) {
     device.FakeInterrupt(ButtonType::MUTE);
     device.DebounceWait();
     {
-      class EventHandler : public Buttons::EventHandler {
+      class EventHandler : public Buttons::SyncEventHandler {
        public:
         EventHandler() = default;
 
@@ -541,7 +541,7 @@ TEST(HidButtonsTest, Notify1) {
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     device.DebounceWait();
     {
-      class EventHandler : public Buttons::EventHandler {
+      class EventHandler : public Buttons::SyncEventHandler {
        public:
         EventHandler() = default;
 
@@ -641,7 +641,7 @@ TEST(HidButtonsTest, Notify2) {
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -663,7 +663,7 @@ TEST(HidButtonsTest, Notify2) {
         EXPECT_TRUE(client1.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -687,7 +687,7 @@ TEST(HidButtonsTest, Notify2) {
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -709,7 +709,7 @@ TEST(HidButtonsTest, Notify2) {
         EXPECT_TRUE(client1.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -738,7 +738,7 @@ TEST(HidButtonsTest, Notify2) {
       device.FakeInterrupt(ButtonType::MUTE);
       device.DebounceWait();
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -762,7 +762,7 @@ TEST(HidButtonsTest, Notify2) {
       device.FakeInterrupt(ButtonType::VOLUME_UP);
       device.DebounceWait();
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -784,7 +784,7 @@ TEST(HidButtonsTest, Notify2) {
         EXPECT_TRUE(client1.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
       {
-        class EventHandler : public Buttons::EventHandler {
+        class EventHandler : public Buttons::SyncEventHandler {
          public:
           EventHandler() = default;
 
@@ -811,7 +811,7 @@ TEST(HidButtonsTest, Notify2) {
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     device.DebounceWait();
     {
-      class EventHandler : public Buttons::EventHandler {
+      class EventHandler : public Buttons::SyncEventHandler {
        public:
         EventHandler() = default;
 
@@ -1000,7 +1000,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
   device.DebounceWait();
 
   // Check that we get notified of both camera and mic presses.
-  class EventHandler : public Buttons::EventHandler {
+  class EventHandler : public Buttons::SyncEventHandler {
    public:
     EventHandler() = default;
 

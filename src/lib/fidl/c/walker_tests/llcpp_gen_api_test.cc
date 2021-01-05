@@ -116,48 +116,32 @@ TEST(GenAPITestCase, EventManaged) {
   ASSERT_OK(loop.StartThread());
 
   static constexpr char data[] = "OnEvent() managed";
-  sync_completion_t done;
-  Example::AsyncEventHandlers handlers{.on_event = [&done](Example::OnEventResponse* message) {
-    ASSERT_EQ(sizeof(data), message->out.size());
-    EXPECT_EQ(0, strncmp(message->out.data(), data, sizeof(data)));
-    sync_completion_signal(&done);
-  }};
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
+  class EventHandler : public Example::AsyncEventHandler {
+   public:
+    EventHandler() = default;
 
-  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
-                                         std::make_unique<Server>(data, sizeof(data)));
-  ASSERT_TRUE(server_binding.is_ok());
+    sync_completion_t& done() { return done_; }
 
-  // Wait for the event from the server.
-  ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data, sizeof(data))));
-  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+    void OnEvent(Example::OnEventResponse* event) {
+      ASSERT_EQ(sizeof(data), event->out.size());
+      EXPECT_EQ(0, strncmp(event->out.data(), data, sizeof(data)));
+      sync_completion_signal(&done_);
+    }
 
-  server_binding.value().Unbind();
-}
-
-TEST(GenAPITestCase, EventNotHandled) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-
-  sync_completion_t done;
-  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, info.status);
-    sync_completion_signal(&done);
+   private:
+    sync_completion_t done_;
   };
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
-  static constexpr char data[] = "OnEvent() unhandled";
+  auto event_handler = std::make_shared<EventHandler>();
+  fidl::Client<Example> client(std::move(local), loop.dispatcher(), event_handler);
+
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, sizeof(data)));
   ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
   ASSERT_OK(server_binding.value()->OnEvent(fidl::StringView(data, sizeof(data))));
-  ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
   server_binding.value().Unbind();
 }
@@ -172,12 +156,23 @@ TEST(GenAPITestCase, Epitaph) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t unbound;
-  fidl::OnClientUnboundFn on_unbound = [&](fidl::UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
-    sync_completion_signal(&unbound);
+
+  class EventHandler : public Example::AsyncEventHandler {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void Unbound(fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
+      sync_completion_signal(&unbound_);
+    };
+
+   private:
+    sync_completion_t& unbound_;
   };
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
+                               std::make_shared<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
   ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
@@ -234,18 +229,28 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-
   sync_completion_t done;
-  Example::AsyncEventHandlers handlers{.on_event = [&done](Example::OnEventResponse* message) {
-    FAIL();
-    sync_completion_signal(&done);
-  }};
-  fidl::OnClientUnboundFn on_unbound = [&done](fidl::UnbindInfo info) {
-    EXPECT_EQ(fidl::UnbindInfo::kDecodeError, info.reason);
-    sync_completion_signal(&done);
+
+  class EventHandler : public Example::AsyncEventHandler {
+   public:
+    EventHandler(sync_completion_t& done) : done_(done) {}
+
+    void OnEvent(Example::OnEventResponse* event) override {
+      FAIL();
+      sync_completion_signal(&done_);
+    }
+
+    void Unbound(fidl::UnbindInfo info) override {
+      EXPECT_EQ(fidl::UnbindInfo::kDecodeError, info.reason);
+      sync_completion_signal(&done_);
+    };
+
+   private:
+    sync_completion_t& done_;
   };
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(on_unbound),
-                               std::move(handlers));
+
+  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
+                               std::make_shared<EventHandler>(done));
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.

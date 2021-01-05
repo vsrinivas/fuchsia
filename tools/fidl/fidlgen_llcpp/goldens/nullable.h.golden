@@ -1286,6 +1286,12 @@ class SimpleProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -1423,7 +1429,7 @@ class SimpleProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class AddResponseContext;
   class ClientImpl;
 
@@ -1777,7 +1783,13 @@ namespace fidl {
 namespace test {
 namespace nullable {
 
-struct SimpleProtocol::AsyncEventHandlers {};
+class SimpleProtocol::AsyncEventHandler
+    : public SimpleProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class SimpleProtocol::AddResponseContext
     : public ::fidl::internal::ResponseContext {
@@ -1810,16 +1822,18 @@ class SimpleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   UnownedResultOf::Add Add_Sync(::fidl::BufferSpan _request_buffer, int32_t a,
                                 int32_t b, ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<SimpleProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

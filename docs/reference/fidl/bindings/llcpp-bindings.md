@@ -421,19 +421,24 @@ multi-threaded dispatcher.
 
 ##### Creation
 
-A client is created with a client-end `zx::channel`, an `async_dispatcher_t*`,
-an optional hook (`OnClientUnboundFn`) to be invoked when the channel is
-unbound, and an optional [`AsyncEventHandlers`](#async-event-handlers)
-containing hooks to be invoked on FIDL events.
+A client is created with a client-end `zx::channel`, an `async_dispatcher_t*` and an optional
+shared pointer on an [`AsyncEventHandler`](#async-event-handlers) which defines the methods to be
+called when a FIDL event is received or when the client is unbound. If the virtual for a particular
+event is not overriden, the event is ignored.
 
 ```cpp
+class EventHandler : public TicTacToe::AsyncEventHandler {
+ public:
+  EventHandler() = default;
+
+  void OnOpponentMove(OnOpponentMoveResponse* event) override { /* ... */ }
+
+  void Unbound(fidl::UnbindInfo unbind_info) override { /* ... */ }
+};
+
 Client<TicTacToe> client;
 zx_status_t status = client.Bind(
-    std::move(client_end), dispatcher,
-    // OnClientUnboundFn
-    [&](fidl::UnbindInfo) { /* ... */ },
-    // AsyncEventHandlers
-    { .on_opponent_move = [&]( /* ... */ ) { /* ... */ } });
+    std::move(client_end), dispatcher, std::make_shared<EventHandler>());
 ```
 The channel may be unbound automatically in case of the server-end being closed
 or due to an invalid message being received from the server. You may also
@@ -549,7 +554,7 @@ Note: If the client is destroyed with outstanding asynchronous transactions,
   two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the
   response buffer, and returns an `UnownedResultOf`.
-* `fidl::Result HandleEvents(EventHandlers& handlers)`: Blocks to consume
+* `fidl::Result HandleOneEvent(SyncEventHandler& event_handler)`: Blocks to consume
   exactly one event from the channel. See [Events](#events)
 
 Note that each method has both an owned and caller-allocated variant. In brief,
@@ -573,8 +578,6 @@ the only difference being that they are all `static` and take an
 * `static UnownedResultOf::MakeMove MakeMove(zx::unowned_channel _client_end,
   fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col, fidl::BufferSpan
   _response_buffer);`:
-* `static fidl::Result HandleEvents(zx::unowned_channel client_end,
-  EventHandlers& handlers)`:
 
 #### Result, ResultOf and UnownedResultOf [#resultof]
 
@@ -801,18 +804,23 @@ on the type of [client](#client) being used.
 #### Async client {#async-event-handlers}
 
 When using a `fidl::Client`, events can be handled asynchronously by passing the
-class a `TicTacToe::AsyncEventHandlers` object. This class has the following
-members:
+class a `std::shared_ptr<TicTacToe::AsyncEventHandler>`. The `AsyncEventHandler` class has the
+following members:
 
-* `fit::function<void(OnOpponentMoveResponse* message)> on_opponent_move`:
-  Handler for an event.
+* `virtual void OnOpponentMove(OnOpponentMoveResponse* message) {}`: handler for the
+  OnOpponentMove event (one method per event).
+
+* `virtual Unbound(::fidl::UnbindInfo info) {}`: method called when the client has been unbound.
+
+To be able to handle events and unbound, a class which inherits from `AsyncEventHandler` must be
+defined.
 
 #### Sync client {#sync-event-handlers}
 
 For `SyncClient` and `Call` clients, events are handled synchronously by calling
-a `HandleOneEvent` function and passing it a `TicTacToe::EventHandler`.
+a `HandleOneEvent` function and passing it a `TicTacToe::SyncEventHandler`.
 
-`EventHandler` is a class that contains a pure virtual method for each event. In
+`SyncEventHandler` is a class that contains a pure virtual method for each event. In
 this example, it consists of the following member:
 
 * `virtual void OnOpponentMove(TicTacToe::OnOpponentMoveResponse* event) = 0`:
@@ -821,16 +829,16 @@ this example, it consists of the following member:
   The status to be returned by `HandleOneEvent` if an unknown event is found.
   This method should be overriden only if a specific status is needed.
 
-To be able to handle events, a class which inherits from EventHandler must be
-defined. This class must define all the virtuals methods. Then an instance of
-this class must be allocated.
+To be able to handle events, a class which inherits from `SyncEventHandler` must be
+defined. This class must define the virtual methods for the events it wants to handle. All the
+other events are ignored. Then an instance of this class must be allocated.
 
 There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
 
-* `::fidl::Result TicTacToe::SyncClient::HandleOneEvent(EventHandler& event_handler)`:
+* `::fidl::Result TicTacToe::SyncClient::HandleOneEvent(SyncEventHandler& event_handler)`:
   A bound version for sync clients.
-* `::fidl::Result TicTacToe::EventHandler::HandleOneEvent(zx::unowned_channel client_end)`:
+* `::fidl::Result TicTacToe::SyncEventHandler::HandleOneEvent(zx::unowned_channel client_end)`:
   An unbound version that uses an `unowned_channel` to handle one event for a
   specific handler.
 
@@ -840,7 +848,7 @@ exactly one virtual method has been called. If not no virtual method has been
 called and the status indicates the error.
 
 If the handlers are always the same (from one call to `HandleOneEvent` to the
-other), the `EventHandler` object should be constructed once and used each time
+other), the `SyncEventHandler` object should be constructed once and used each time
 you need to call `HandleOneEvent`.
 
 If an event is marked as transitional, then a default implementation is

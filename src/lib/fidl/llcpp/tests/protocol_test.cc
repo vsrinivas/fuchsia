@@ -206,7 +206,7 @@ TEST(MagicNumberTest, EventRead) {
   encoded.Write(h1.get());
   ASSERT_TRUE(encoded.ok());
 
-  class EventHandler : public test::Frobinator::EventHandler {
+  class EventHandler : public test::Frobinator::SyncEventHandler {
    public:
     EventHandler() = default;
 
@@ -238,17 +238,29 @@ TEST(EventSenderTest, SendEvent) {
   ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  bool received = false;
-  fidl::Client<test::Frobinator> client(
-      std::move(h1), loop.dispatcher(),
-      test::Frobinator::AsyncEventHandlers{.hrob = [&](test::Frobinator::HrobResponse* message) {
-        ASSERT_EQ(std::string(message->value.data(), message->value.size()), std::string("foo"));
-        received = true;
-        loop.Quit();
-      }});
+
+  class EventHandler : public test::Frobinator::AsyncEventHandler {
+   public:
+    EventHandler(async::Loop& loop) : loop_(loop) {}
+
+    bool received() const { return received_; }
+
+    void Hrob(test::Frobinator::HrobResponse* event) override {
+      ASSERT_EQ(std::string(event->value.data(), event->value.size()), std::string("foo"));
+      received_ = true;
+      loop_.Quit();
+    }
+
+   private:
+    async::Loop& loop_;
+    bool received_ = false;
+  };
+
+  auto event_handler = std::make_shared<EventHandler>(loop);
+  fidl::Client<test::Frobinator> client(std::move(h1), loop.dispatcher(), event_handler);
 
   loop.Run();
-  ASSERT_TRUE(received);
+  ASSERT_TRUE(event_handler->received());
 }
 
 class HandleProviderServer : public test::HandleProvider::Interface {

@@ -6,7 +6,7 @@ package codegen
 
 const fragmentSyncEventHandlerTmpl = `
 {{- define "EventHandlerHandleOneEventMethodDefinition" }}
-::fidl::Result {{ .Name }}::EventHandler::HandleOneEvent(::zx::unowned_channel client_end) {
+::fidl::Result {{ .Name }}::SyncEventHandler::HandleOneEvent(::zx::unowned_channel client_end) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             ::zx::time::infinite(),
                                             nullptr);

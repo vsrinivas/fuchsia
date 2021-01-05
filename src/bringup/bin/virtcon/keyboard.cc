@@ -229,10 +229,21 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  status = reader_client_.Bind(std::move(client), dispatcher_, [this](fidl::UnbindInfo info) {
-    printf("vc: Keyboard Reader unbound.\n");
-    InputReaderUnbound(info);
-  });
+  class EventHandler : public llcpp::fuchsia::input::report::InputReportsReader::AsyncEventHandler {
+   public:
+    explicit EventHandler(Keyboard* keyboard) : keyboard_(keyboard) {}
+
+    void Unbound(::fidl::UnbindInfo info) override {
+      printf("vc: Keyboard Reader unbound.\n");
+      keyboard_->InputReaderUnbound(info);
+    }
+
+   private:
+    Keyboard* const keyboard_;
+  };
+
+  status =
+      reader_client_.Bind(std::move(client), dispatcher_, std::make_shared<EventHandler>(this));
   if (status != ZX_OK) {
     return status;
   }

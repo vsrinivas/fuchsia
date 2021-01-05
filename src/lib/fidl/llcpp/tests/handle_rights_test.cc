@@ -89,10 +89,11 @@ class HandleRightsTest : public ::testing::Test {
     return test::HandleRights::SyncClient(std::move(client_end_));
   }
 
-  fidl::Client<test::HandleRights> AsyncClient(test::HandleRights::AsyncEventHandlers handlers) {
+  fidl::Client<test::HandleRights> AsyncClient(
+      std::shared_ptr<test::HandleRights::AsyncEventHandler> handler) {
     EXPECT_TRUE(client_end_.is_valid());
     return fidl::Client<test::HandleRights>(std::move(client_end_), loop_->dispatcher(),
-                                            std::move(handlers));
+                                            std::move(handler));
   }
 
  private:

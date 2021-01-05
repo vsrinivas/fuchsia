@@ -18,6 +18,25 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 namespace fio = llcpp::fuchsia::io;
 namespace frunner = llcpp::fuchsia::component::runner;
 
+namespace {
+
+class FileEventHandler : public fio::File::AsyncEventHandler {
+ public:
+  explicit FileEventHandler(const std::string& binary_value) : binary_value_(binary_value) {}
+
+  void Unbound(fidl::UnbindInfo info) override {
+    if (info.status != ZX_OK) {
+      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
+           binary_value_.c_str(), zx_status_get_string(info.status));
+    }
+  }
+
+ private:
+  const std::string& binary_value_;
+};
+
+}  // namespace
+
 zx::status<std::unique_ptr<Driver>> Driver::Load(zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
@@ -98,8 +117,9 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     completer.Close(pkg.error_value());
     return;
   }
-  auto binary = start_args.has_program() ? start_args::program_value(start_args.program(), "binary")
-                                         : zx::error(ZX_ERR_INVALID_ARGS);
+  zx::status<std::string> binary = start_args.has_program()
+                                       ? start_args::program_value(start_args.program(), "binary")
+                                       : zx::error(ZX_ERR_INVALID_ARGS);
   if (binary.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing 'binary' argument: %s",
          zx_status_get_string(binary.error_value()));
@@ -131,16 +151,12 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     completer.Close(message->status());
     return;
   }
+
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(
-      std::move(client_end), loop_->dispatcher(), [binary = binary.value()](fidl::UnbindInfo info) {
-        if (info.status != ZX_OK) {
-          LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary.data(),
-               zx_status_get_string(info.status));
-        }
-      });
+  fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher(),
+                               std::make_shared<FileEventHandler>(binary.value()));
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), message = std::move(message),

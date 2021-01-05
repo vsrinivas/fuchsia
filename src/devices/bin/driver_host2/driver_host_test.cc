@@ -228,12 +228,22 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
       fdio_service_connect_at(outgoing_dir.get(), path.data(), server_end.release());
   EXPECT_EQ(ZX_OK, status);
 
-  status = ZX_ERR_INVALID_ARGS;
-  fidl::Client<ftest::Outgoing> outgoing(
-      std::move(client_end), loop().dispatcher(),
-      [&status](fidl::UnbindInfo info) { status = info.status; });
+  class EventHandler : public ftest::Outgoing::AsyncEventHandler {
+   public:
+    EventHandler() = default;
+
+    zx_status_t status() const { return status_; }
+
+    void Unbound(fidl::UnbindInfo info) override { status_ = info.status; }
+
+   private:
+    zx_status_t status_ = ZX_ERR_INVALID_ARGS;
+  };
+
+  auto event_handler = std::make_shared<EventHandler>();
+  fidl::Client<ftest::Outgoing> outgoing(std::move(client_end), loop().dispatcher(), event_handler);
   loop().RunUntilIdle();
-  EXPECT_EQ(ZX_ERR_STOP, status);
+  EXPECT_EQ(ZX_ERR_STOP, event_handler->status());
 
   driver.reset();
   loop().RunUntilIdle();

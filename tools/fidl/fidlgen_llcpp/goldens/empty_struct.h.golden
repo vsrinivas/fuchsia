@@ -740,11 +740,16 @@ class EmptyProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
-  class EventHandler {
+  class EventHandlerInterface {
    public:
-    EventHandler() = default;
-    virtual ~EventHandler() = default;
-    virtual void Receive(ReceiveResponse* event) = 0;
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+    virtual void Receive(ReceiveResponse* event) {}
+  };
+
+  class SyncEventHandler : public EventHandlerInterface {
+   public:
+    SyncEventHandler() = default;
 
     // Method called when an unknown event is found. This methods gives the
     // status which, in this case, is returned by HandleOneEvent.
@@ -958,10 +963,10 @@ class EmptyProtocol final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |EventHandler|. The return status
-    // of the handler function is folded with any transport-level errors and
-    // returned.
-    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+    // corresponding virtual method defined in |SyncEventHandler|. The return
+    // status of the handler function is folded with any transport-level errors
+    // and returned.
+    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
       return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
@@ -969,7 +974,7 @@ class EmptyProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class SendAndReceiveResponseContext;
   class ClientImpl;
 
@@ -1140,8 +1145,12 @@ namespace fidl {
 namespace test {
 namespace emptystruct {
 
-struct EmptyProtocol::AsyncEventHandlers {
-  ::fit::function<void(ReceiveResponse* msg)> receive;
+class EmptyProtocol::AsyncEventHandler
+    : public EmptyProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 class EmptyProtocol::SendAndReceiveResponseContext
@@ -1190,16 +1199,18 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       ::llcpp::fidl::test::emptystruct::Empty e,
       ::fidl::BufferSpan _response_buffer);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<EmptyProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking

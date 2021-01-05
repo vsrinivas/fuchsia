@@ -98,7 +98,7 @@ TEST(ServiceProxyDirTest, Simple) {
                   0755, fidl::StringView(kProxyEchoString), std::move(h1))
                   .status());
 
-    class EventHandler : public fio::Directory::EventHandler {
+    class EventHandler : public fio::Directory::SyncEventHandler {
      public:
       EventHandler() = default;
 
@@ -136,7 +136,7 @@ TEST(ServiceProxyDirTest, Simple) {
                   0755, fidl::StringView(kEchoString), std::move(h1))
                   .status());
 
-    class EventHandler : public fio::Directory::EventHandler {
+    class EventHandler : public fio::Directory::SyncEventHandler {
      public:
       EventHandler() = default;
 

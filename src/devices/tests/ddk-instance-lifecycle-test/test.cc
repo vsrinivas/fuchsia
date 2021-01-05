@@ -64,7 +64,7 @@ class InstanceLifecycleTest : public zxtest::Test {
 };
 
 void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event expected_event) {
-  class EventHandler : public Lifecycle::EventHandler {
+  class EventHandler : public Lifecycle::SyncEventHandler {
    public:
     explicit EventHandler(Event expected_event) : expected_event_(expected_event) {}
 

@@ -67,7 +67,7 @@ class LifecycleTest : public zxtest::Test {
 };
 
 void LifecycleTest::WaitPreRelease(uint64_t child_id) {
-  class EventHandler : public Lifecycle::EventHandler {
+  class EventHandler : public Lifecycle::SyncEventHandler {
    public:
     EventHandler() = default;
 

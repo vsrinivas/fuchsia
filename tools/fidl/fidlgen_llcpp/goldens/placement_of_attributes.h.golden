@@ -825,6 +825,12 @@ class ExampleProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
   // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
@@ -918,7 +924,7 @@ class ExampleProtocol final {
     ::zx::channel channel_;
   };
 
-  struct AsyncEventHandlers;
+  class AsyncEventHandler;
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
@@ -1059,7 +1065,13 @@ namespace fidl {
 namespace test {
 namespace placementofattributes {
 
-struct ExampleProtocol::AsyncEventHandlers {};
+class ExampleProtocol::AsyncEventHandler
+    : public ExampleProtocol::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
 
 class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
@@ -1072,16 +1084,18 @@ class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
                         ::llcpp::exampleusing::Empty arg);
 
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
  private:
   friend class ::fidl::Client<ExampleProtocol>;
 
-  explicit ClientImpl(AsyncEventHandlers handlers)
-      : handlers_(std::move(handlers)) {}
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  AsyncEventHandlers handlers_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 // |EventSender| owns a server endpoint of a channel speaking
