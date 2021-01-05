@@ -99,4 +99,37 @@ TEST(ZbitlViewFblByteArrayTests, BoundsChecking) {
   }
 }
 
+TEST(StorageFromRawHeader, Creation) {
+  // Create a simple in-memory ZBI with a single item payload.
+  zbitl::Image<fbl::Array<std::byte>> image;
+  ASSERT_TRUE(image.clear().is_ok());
+  ASSERT_TRUE(image.Append(zbi_header_t{.type = ZBI_TYPE_DISCARD}, {}).is_ok());
+  std::byte* raw_pointer = image.storage().data();
+  const zbi_header_t* header = reinterpret_cast<zbi_header_t*>(raw_pointer);
+
+  {
+    auto view = zbitl::StorageFromRawHeader(header);  // default type is a ByteView
+    EXPECT_EQ(view.data(), raw_pointer);
+    EXPECT_EQ(view.size(), image.size_bytes());
+  }
+  {
+    auto view = zbitl::StorageFromRawHeader<fbl::Span<const std::byte>>(header);
+    EXPECT_EQ(view.data(), raw_pointer);
+    EXPECT_EQ(view.size(), image.size_bytes());
+  }
+}
+
+TEST(StorageFromRawHeader, BadHeader) {
+  // Create a zbi_header_t with invalid magic.
+  constexpr zbi_header_t header = {
+      .length = 12345,
+  };
+
+  // Ensure that the length field was ignored, and that the returned span only
+  // covers the zbi_header_t itself.
+  zbitl::ByteView view = zbitl::StorageFromRawHeader(&header);
+  EXPECT_EQ(view.size(), sizeof(zbi_header_t));
+  EXPECT_EQ(view.data(), reinterpret_cast<const std::byte*>(&header));
+}
+
 }  // namespace

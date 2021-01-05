@@ -1373,6 +1373,28 @@ using PermissiveView = View<Storage, Checking::kPermissive>;
 template <typename Storage>
 using CrcCheckingView = View<Storage, Checking::kCrc>;
 
+// Convert a pointer to an in-memory ZBI into a Storage type.
+//
+// We require that `zbi` is a pointer to a valid ZBI container header followed
+// by its payload. Basic magic checks on the header are performed; if they
+// fail, we return a Storage spanning just the header but no payload under the
+// assumption that the "length" field of the header is invalid.
+//
+// The template parameter `Storage` may be any storage type that can be
+// constructed with arguments the arguments (const std::byte*, size_t),
+// representing the start and length of the in-memory ZBI.
+template <typename Storage = ByteView>
+Storage StorageFromRawHeader(const zbi_header_t* zbi) {
+  if (zbi->magic != ZBI_ITEM_MAGIC || zbi->type != ZBI_TYPE_CONTAINER ||
+      zbi->extra != ZBI_CONTAINER_MAGIC) {
+    // Invalid header. Don't trust the `length` field.
+    return Storage(reinterpret_cast<const std::byte*>(zbi), sizeof(zbi_header_t));
+  }
+
+  // Return Storage covering the entire header and payload.
+  return Storage(reinterpret_cast<const std::byte*>(zbi), sizeof(zbi_header_t) + zbi->length);
+}
+
 }  // namespace zbitl
 
 #endif  // LIB_ZBITL_VIEW_H_
