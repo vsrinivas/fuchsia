@@ -155,9 +155,9 @@ static bool gicd_access_valid(uint64_t addr, uint8_t access_size) {
     return true;
   } else if (addr >= static_cast<uint64_t>(GicdRegister::IROUTE32) &&
              addr <= static_cast<uint64_t>(GicdRegister::IROUTE1019)) {
-    return access_size == 8;
+    return addr % 8 == 0 && access_size == 8;
   } else {
-    return access_size == 4;
+    return addr % 4 == 0 && access_size == 4;
   }
 }
 
@@ -167,9 +167,9 @@ static bool gicr_access_valid(uint64_t addr, uint8_t access_size) {
     // Byte-accessible registers.
     return true;
   } else if (addr == static_cast<uint64_t>(GicrRegister::TYPE)) {
-    return access_size == 8;
+    return addr % 8 == 0 && access_size == 8;
   } else {
-    return access_size == 4;
+    return addr % 4 == 0 && access_size == 4;
   }
 }
 
@@ -328,7 +328,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
 }
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
-  if (addr % 4 != 0 || !gicd_access_valid(addr, value->access_size)) {
+  if (!gicd_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -439,7 +439,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 }
 
 zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
-  if (addr % 4 != 0 || !gicd_access_valid(addr, value.access_size)) {
+  if (!gicd_access_valid(addr, value.access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -652,7 +652,7 @@ zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
 }
 
 zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
-  if (addr % 4 != 0 || !gicr_access_valid(addr, value->access_size)) {
+  if (!gicr_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -690,7 +690,7 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
 }
 
 zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
-  if (addr % 4 != 0 || !gicr_access_valid(addr, value.access_size)) {
+  if (!gicr_access_valid(addr, value.access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
