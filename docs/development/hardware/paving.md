@@ -55,8 +55,8 @@ To create a USB drive, insert a USB drive into the target machine and run:
 fx mkzedboot <device_path>
 ```
 
-On Linux, `device_path` is typically `/dev/sd&lt;X&gt;` where X is a letter. On macOS
-it is typically `/dev/disk&lt;N&gt;` where 'N' is a number. **Be careful
+On Linux, `device_path` is typically `/dev/sd<X>` where X is a letter. On macOS
+it is typically `/dev/disk<N>` where 'N' is a number. **Be careful
 not to select the wrong device**. Once this is done, remove the USB drive.
 
 ## Paving {#paving}
