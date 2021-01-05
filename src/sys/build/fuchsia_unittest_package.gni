@@ -21,7 +21,6 @@ import("fuchsia_unittest_component.gni")
 # }
 #
 # fuchsia_unittest_package("rot13-test") {
-#   executable_path = "bin/rot13_encoder_decoder_test"
 #   deps = [ ":rot13_encoder_decoder_test" ]
 # }
 # ```
@@ -41,7 +40,7 @@ import("fuchsia_unittest_component.gni")
 #     Type: string
 #     Default: target_name
 #
-#   manifest (required if `executable_path` is not specified)
+#   manifest (optional)
 #     Specify a component manifest for the test.
 #     If a manifest is not specified, a trivial manifest will be generated.
 #     The generated manifest requests no special capabilities, which is good
