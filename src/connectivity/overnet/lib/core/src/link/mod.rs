@@ -55,8 +55,6 @@ const MAX_SET_ROUTE_LENGTH: usize = MAX_PAYLOAD_LENGTH - 64;
 /// Maximum number of frames queued in OutputQueue
 const MAX_QUEUED_FRAMES: usize = 32;
 
-/// Maximum retries for a control message
-const MAX_CONTROL_MESSAGE_RETRIES: usize = 20;
 /// Maximum time to try and send a control message
 const MAX_CONTROL_MESSAGE_RETRY_TIME: Duration = Duration::from_secs(30);
 /// Maximum amount of time to wait before retrying a control message
@@ -659,7 +657,6 @@ impl LinkOutput {
 
         // Resend periodically until acked or we convince ourselves it's never going to happen.
         async move {
-            let mut retries = 0;
             let done_predicate = AckedControlSeq(seq);
             pin_mut!(done_predicate);
             loop {
@@ -674,10 +671,6 @@ impl LinkOutput {
                     }
                     Either::Right((_, lock)) => {
                         drop(lock);
-                        retries += 1;
-                        if retries > MAX_CONTROL_MESSAGE_RETRIES {
-                            return Err(format_err!("Too many retries sending control message"));
-                        }
                         let mut output =
                             self.queue.lock_when_pinned(Pin::new(&READY_TO_RESEND_CONTROL)).await;
                         if output.control_acked_seq >= seq {
