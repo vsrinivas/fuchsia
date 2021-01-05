@@ -32,6 +32,7 @@ group("tools") {
     "//tools/symbol-index($host_toolchain)",
     "//tools/symbolizer($host_toolchain)",
     "//tools/virtual_device:fvd($host_toolchain)",
+    "//tools/zedmon/client:zedmon_client",
   ]
 }
 
