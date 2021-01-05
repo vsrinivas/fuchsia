@@ -30,6 +30,8 @@
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 
@@ -263,6 +265,9 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   }
 
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+  sysmem_allocator->SetDebugClientInfo(
+      fidl::unowned_str(fsl::GetCurrentProcessName() + "-framebuffer"),
+      fsl::GetCurrentProcessKoid());
   auto close_sysmem_handle = fit::defer([]() { sysmem_allocator.reset(); });
 
   class EventHandler : public fhd::Controller::EventHandler {

@@ -19,6 +19,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace fhd = llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 
@@ -91,6 +93,9 @@ class StubDisplayController : public fhd::Controller::Interface {
     ASSERT_OK(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release()));
 
     sysmem_allocator_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+    sysmem_allocator_->SetDebugClientInfo(
+        fidl::unowned_str(fsl::GetCurrentProcessName() + "-debug-client"),
+        fsl::GetCurrentProcessKoid());
   }
 
   ~StubDisplayController() { current_buffer_collection_->Close(); }
