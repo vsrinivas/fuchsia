@@ -146,12 +146,30 @@ struct SoftwareGeneratedInterrupt {
   }
 };
 
-static size_t gicd_register_size(uint64_t addr) {
-  if (addr >= static_cast<uint64_t>(GicdRegister::IROUTE32) &&
-      addr <= static_cast<uint64_t>(GicdRegister::IROUTE1019)) {
-    return 8;
+static bool gicd_access_valid(uint64_t addr, uint8_t access_size) {
+  if ((addr >= static_cast<uint64_t>(GicdRegister::IPRIORITY0) &&
+       addr <= static_cast<uint64_t>(GicdRegister::IPRIORITY63)) ||
+      (addr >= static_cast<uint64_t>(GicdRegister::ITARGETS0) &&
+       addr <= static_cast<uint64_t>(GicdRegister::ITARGETS63))) {
+    // Byte-accessible registers.
+    return true;
+  } else if (addr >= static_cast<uint64_t>(GicdRegister::IROUTE32) &&
+             addr <= static_cast<uint64_t>(GicdRegister::IROUTE1019)) {
+    return access_size == 8;
   } else {
-    return 4;
+    return access_size == 4;
+  }
+}
+
+static bool gicr_access_valid(uint64_t addr, uint8_t access_size) {
+  if (addr >= static_cast<uint64_t>(GicrRegister::IPRIORITY0) &&
+      addr <= static_cast<uint64_t>(GicrRegister::IPRIORITY63)) {
+    // Byte-accessible registers.
+    return true;
+  } else if (addr == static_cast<uint64_t>(GicrRegister::TYPE)) {
+    return access_size == 8;
+  } else {
+    return access_size == 4;
   }
 }
 
@@ -310,7 +328,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
 }
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
-  if (addr % 4 != 0 || value->access_size != gicd_register_size(addr)) {
+  if (addr % 4 != 0 || !gicd_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -344,8 +362,10 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
     case GicdRegister::ITARGETS0... GicdRegister::ITARGETS7: {
       // GIC Architecture Spec 4.3.12: Each field of ITARGETS0 to ITARGETS7
       // returns a mask that corresponds only to the current processor.
-      uint8_t mask = 1u << Vcpu::GetCurrent()->id();
-      value->u32 = mask | mask << 8 | mask << 16 | mask << 24;
+      const uint8_t mask = 1u << Vcpu::GetCurrent()->id();
+      for (uint8_t i = 0; i < value->access_size; i++) {
+        value->data[i] = mask;
+      }
       return ZX_OK;
     }
     case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
@@ -355,8 +375,9 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
         return ZX_OK;
       }
       const uint8_t* masks = &cpu_masks_[addr - static_cast<uint64_t>(GicdRegister::ITARGETS8)];
-      // Target registers are read from 4 at a time.
-      value->u32 = *reinterpret_cast<const uint32_t*>(masks);
+      for (uint8_t i = 0; i < value->access_size; i++) {
+        value->data[i] = masks[i];
+      }
       return ZX_OK;
     }
     case GicdRegister::IROUTE32... GicdRegister::IROUTE1019: {
@@ -418,7 +439,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 }
 
 zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
-  if (addr % 4 != 0 || value.access_size != gicd_register_size(addr)) {
+  if (addr % 4 != 0 || !gicd_access_valid(addr, value.access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -434,10 +455,9 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
         return ZX_OK;
       }
       uint32_t spi = addr - static_cast<uint64_t>(GicdRegister::ITARGETS8);
-      uint8_t* masks = &cpu_masks_[spi];
-      *reinterpret_cast<uint32_t*>(masks) = value.u32;
-      for (uint32_t i = 0; i < 4; i++) {
-        uint8_t cpu_mask = masks[i];
+      for (uint8_t i = 0; i < value.access_size; i++) {
+        const uint8_t cpu_mask = value.data[i];
+        cpu_masks_[spi + i] = cpu_mask;
         if (cpu_mask == 0) {
           continue;
         }
@@ -632,7 +652,7 @@ zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
 }
 
 zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
-  if (addr % 4 != 0) {
+  if (addr % 4 != 0 || !gicr_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -649,15 +669,9 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
     case GicrRegister::WAKE:
     case GicrRegister::ICFG0:
     case GicrRegister::ICFG1:
-      if (value->access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      }
       value->u32 = 0;
       return ZX_OK;
     case GicrRegister::TYPE:
-      if (value->access_size != 8) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      }
       // Set both Processor_Number and Affinity_Value to id_.
       value->u64 = set_bits(static_cast<uint64_t>(id_), 23, 8) |
                    set_bits(static_cast<uint64_t>(id_), 39, 32);
@@ -666,9 +680,6 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
       }
       return ZX_OK;
     case GicrRegister::PID2_V3:
-      if (value->access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      }
       value->u32 = pidr2_arch_rev(kGicv3Revision);
       return ZX_OK;
     default:
@@ -679,7 +690,7 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
 }
 
 zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
-  if (addr % 4 != 0 || value.access_size != 4) {
+  if (addr % 4 != 0 || !gicr_access_valid(addr, value.access_size)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
