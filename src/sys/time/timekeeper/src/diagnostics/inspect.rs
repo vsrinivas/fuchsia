@@ -785,19 +785,19 @@ mod tests {
                         counter: 0u64,
                         monotonic: 0i64,
                         correction: 0i64,
-                        strategy: "NotRequired",
+                        strategy: "Step",
                     },
                     clock_correction_1: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         correction: 0i64,
-                        strategy: "NotRequired",
+                        strategy: "Step",
                     },
                     clock_correction_2: contains {
                         counter: 0u64,
                         monotonic: 0i64,
                         correction: 0i64,
-                        strategy: "NotRequired",
+                        strategy: "Step",
                     },
                 },
                 monitor_track: contains {

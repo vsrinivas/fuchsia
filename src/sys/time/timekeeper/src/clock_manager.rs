@@ -26,10 +26,6 @@ use {
 /// One million for PPM calculations
 const MILLION: i64 = 1_000_000;
 
-/// The minimum size UTC mismatch that will lead to a clock update. If the difference between the
-/// current clock value and new estimate is smaller than this no update will be applied.
-const CLOCK_UPDATE_THRESHOLD: zx::Duration = zx::Duration::from_micros(10);
-
 /// The maximum clock frequency adjustment that Timekeeper will apply to slew away a UTC error,
 /// expressed as a PPM deviation from nominal.
 const MAX_RATE_CORRECTION_PPM: i64 = 200;
@@ -211,13 +207,6 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         self.diagnostics.record(Event::ClockCorrection { track, correction, strategy });
 
         match strategy {
-            ClockCorrectionStrategy::NotRequired => {
-                info!(
-                    "skipping small {:?} clock correction of {:?}ns",
-                    track,
-                    correction.into_nanos()
-                );
-            }
             ClockCorrectionStrategy::NominalRateSlew | ClockCorrectionStrategy::MaxDurationSlew => {
                 // Any pending clock updates will be superseded by the handling of this one.
                 if let Some(task) = self.delayed_updates.take() {
@@ -288,9 +277,7 @@ fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Sle
     let correction_abs = zx::Duration::from_nanos(correction_nanos.abs());
     let sign = if correction_nanos < 0 { -1 } else { 1 };
 
-    if correction_abs < CLOCK_UPDATE_THRESHOLD {
-        (ClockCorrectionStrategy::NotRequired, Slew::default())
-    } else if correction_abs < NOMINAL_RATE_MAX_ERROR {
+    if correction_abs < NOMINAL_RATE_MAX_ERROR {
         let rate_adjust = NOMINAL_RATE_CORRECTION_PPM * sign;
         let duration = (correction_abs * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
         (
@@ -381,8 +368,11 @@ mod tests {
     fn determine_strategy_fn() {
         for sign in vec![-1, 1] {
             let (strategy, slew) = determine_strategy(zx::Duration::from_micros(sign * 5));
-            assert_eq!(strategy, ClockCorrectionStrategy::NotRequired);
-            assert_eq!(slew, Slew::default());
+            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
+            assert_eq!(
+                slew,
+                Slew { rate_adjust: (sign * 20) as i32, duration: zx::Duration::from_millis(250) }
+            );
 
             let (strategy, slew) = determine_strategy(zx::Duration::from_millis(sign * 5));
             assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);

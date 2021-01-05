@@ -129,8 +129,6 @@ pub enum StartClockSource {
 /// The strategies that can be used to align a clock with the estimated UTC.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ClockCorrectionStrategy {
-    /// The clock error is not large enough to merit a change.
-    NotRequired,
     /// The clock will be immediately stepped to the new value.
     Step,
     /// The clock will be gradually slewed to the new value by applying a small rate change for
@@ -144,14 +142,13 @@ pub enum ClockCorrectionStrategy {
 // Required to instantiate a circular buffer of clock corrections in inspect.
 impl Default for ClockCorrectionStrategy {
     fn default() -> Self {
-        ClockCorrectionStrategy::NotRequired
+        ClockCorrectionStrategy::Step
     }
 }
 
 impl Into<CobaltTrackEvent> for ClockCorrectionStrategy {
     fn into(self) -> CobaltTrackEvent {
         match self {
-            Self::NotRequired => CobaltTrackEvent::CorrectionNotRequired,
             Self::Step => CobaltTrackEvent::CorrectionByStep,
             Self::NominalRateSlew => CobaltTrackEvent::CorrectionByNominalRateSlew,
             Self::MaxDurationSlew => CobaltTrackEvent::CorrectionByMaxDurationSlew,
