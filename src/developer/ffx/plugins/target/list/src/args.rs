@@ -10,26 +10,49 @@ use {
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "list", description = "list connected devices")]
+#[argh(
+    subcommand,
+    name = "list",
+    example = "To list targets in short form:
+
+    $ ffx target list --format s
+    fe80::4415:3606:fb52:e2bc%zx-f80ff974f283 pecan-guru-clerk-rhyme
+
+To list targets with only their addresses:
+
+    $ ffx target list --format a
+    fe80::4415:3606:fb52:e2bc%zx-f80ff974f283",
+    description = "List all targets",
+    note = "List all targets that the daemon currently has in memory. This includes
+manually added targets. The daemon also proactively discovers targets as
+they come online. Use `ffx target list` to always get the latest list
+of targets.
+
+The default target is marked with a '*' next to the node name. The table
+has the following columns:
+
+    NAME = The name of the target.
+    TYPE = The product type of the target, currently always 'Unknown'.
+    STATE = The high-level state of the target, currently always 'Unknown'.
+    AGE = Shows the last time the daemon was able to discover the target.
+    ADDRS/IP = The discovered and known addresses of the target.
+    RCS = Indicates if the Remote Control Service is running on the target.
+
+The NAME column shows the target's advertised name. When the target is
+in early boot state such as fastboot, shows 'FastbootDevice' with the
+`product` and `serial` attributes instead.
+
+By default, the `list` command outputs in a tabular format. To override
+the format, pass `--format` and can take the following options: 'simple'
+, 'tabular|table|tab', 'addresses|addrs|addr' or in short form 's', 't',
+ 'a'."
+)]
 pub struct ListCommand {
     #[argh(positional)]
     pub nodename: Option<String>,
 
     #[argh(option, default = "Format::Tabular")]
-    /// determines the output format for the targets. Default is the "tabular"
-    /// format. Expects either "tabular," "addresses," or "simple". Tabular
-    /// format includes the most verbose information. Simple format includes
-    /// the SSH address of a target and its nodename in two unlabeled columns.
-    /// Addresses format provides an unordered list of ssh addresses for all
-    /// targets.
-    ///
-    /// Accepted variations:
-    /// -- "simple" or "s" for simple format.
-    /// -- "tabular" or "table" or "tab" or "t" for tabular format.
-    /// -- "addresses" or "addrs" or "addr" or "a" for addresses format.
-    ///
-    /// Notes:
-    /// -- "simple" and "addresses" formats skip over fastboot targets for now.
+    /// determines the output format for the list operation
     pub format: Format,
 }
 
