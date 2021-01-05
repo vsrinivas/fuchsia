@@ -189,7 +189,7 @@ TEST_P(DirtyCacheTest, DirtyCacheEnabled) {
 }
 
 constexpr size_t kBytesPerWrite = kMinfsBlockSize;
-constexpr size_t kBytesToWrite = 10 * kBytesPerWrite;
+constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
 constexpr size_t kFileMaxSize = kBytesToWrite;
 
 TEST_P(DirtyCacheTest, CleanlyMountedFs) {
@@ -214,6 +214,43 @@ TEST_P(DirtyCacheTest, UnmountFlushedPendingWrites) {
   auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
   CheckDirtyStats(fs().mount_path(), kFileMaxSize);
   file.RemountAndReopen();
+}
+
+TEST_P(DirtyCacheTest, MultipleByteWriteToSameBlockKeepsDirtyBytesTheSame) {
+  constexpr size_t kFileMaxSize = kMinfsBlockSize;
+  constexpr size_t kBytesPerWrite = 10;
+  {
+    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kFileMaxSize, kBytesPerWrite);
+    CheckDirtyStats(fs().mount_path(), minfs::kMinfsBlockSize);
+  }
+  CheckDirtyStats(fs().mount_path(), 0);
+}
+
+TEST_P(DirtyCacheTest, MultipleBlocWriteToSameOffsetKeepsDirtyBytesTheSame) {
+  {
+    constexpr size_t kBytesPerWrite = kMinfsBlockSize;
+    constexpr size_t kBytesToWrite = kBytesPerWrite;
+    constexpr size_t kFileMaxSize = kBytesToWrite;
+    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+    CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+    for (int i = 0; i < 10; i++) {
+      file.Write(kBytesPerWrite, 0);
+      CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+    }
+    CheckDirtyStats(fs().mount_path(), kBytesPerWrite);
+  }
+  CheckDirtyStats(fs().mount_path(), 0);
+}
+
+TEST_P(DirtyCacheTest, MultipleBlocWritesMakesMultipleBlocksDirty) {
+  constexpr size_t kBytesPerWrite = kMinfsBlockSize;
+  constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
+  constexpr size_t kFileMaxSize = kBytesToWrite;
+  {
+    auto file = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite);
+    CheckDirtyStats(fs().mount_path(), kBytesToWrite);
+  }
+  CheckDirtyStats(fs().mount_path(), 0);
 }
 
 }  // namespace
