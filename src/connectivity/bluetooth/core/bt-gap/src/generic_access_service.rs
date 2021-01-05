@@ -153,7 +153,7 @@ impl GenericAccessService {
                 responder.send(Some(name.as_bytes()), gatt::ErrorCode::NoError)
             }
             GENERIC_ACCESS_APPEARANCE_ID => {
-                let appearance = self.hd.get_appearance() as u16;
+                let appearance = self.hd.get_appearance().into_primitive();
                 responder.send(Some(&appearance.to_le_bytes()), gatt::ErrorCode::NoError)
             }
             _ => responder.send(None, gatt::ErrorCode::NotPermitted),
@@ -277,7 +277,7 @@ mod tests {
             delegate_client.on_read_value(GENERIC_ACCESS_APPEARANCE_ID, 0).await.unwrap();
         assert_eq!(
             read_device_appearance.unwrap(),
-            (TEST_DEVICE_APPEARANCE as u16).to_le_bytes().to_vec()
+            TEST_DEVICE_APPEARANCE.into_primitive().to_le_bytes().to_vec()
         );
     }
 

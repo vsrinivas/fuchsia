@@ -8,7 +8,9 @@ library fuchsia.bluetooth;
 /// appearance of a peer at a high level.
 /// (See the Bluetooth assigned-numbers document:
 /// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
-enum Appearance : uint16 {
+/// This enum is flexible as newer devices may use new appearance values and in the future the
+/// assigned numbers document may have additional entries.
+flexible enum Appearance : uint16 {
     UNKNOWN = 0;
     PHONE = 64;
     COMPUTER = 128;

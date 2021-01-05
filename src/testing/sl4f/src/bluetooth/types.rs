@@ -210,7 +210,7 @@ impl From<&Peer> for SerializablePeer {
         };
         SerializablePeer {
             address: peer.address.map(|a| a.bytes),
-            appearance: peer.appearance.map(|a| a as u32),
+            appearance: peer.appearance.map(|a| a.into_primitive() as u32),
             device_class: peer.device_class.map(|d| d.value),
             id: peer.id.map(|i| i.value),
             name: peer.name.clone(),
