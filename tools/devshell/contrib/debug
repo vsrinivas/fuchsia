@@ -174,7 +174,6 @@ fi
 
 ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
 
-# We start the client with the flag that tells it to quit the agent when zxdb quits.
 "${FUCHSIA_BUILD_DIR}/host-tools/zxdb" \
   ${connect_ops[@]} \
   "--symbol-server" "gs://fuchsia-artifacts-release/debug" \

@@ -94,6 +94,9 @@ void DebugAgent::Disconnect() {
   // Remove all DebuggedProcess and DebuggedJob on disconnect. The logic here should be consistent
   // with zxdb::System::DidDisconnect() so that further reconnecting won't create any surprise.
   jobs_.clear();
+  // Removes breakpoints before we detach from the processes, although it should also be safe to
+  // reverse the order.
+  breakpoints_.clear();
   // The destructor of the DebuggedProcess will detach us from the process.
   procs_.clear();
 }
