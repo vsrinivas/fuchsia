@@ -61,8 +61,11 @@ class ResultTest : public ::testing::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_result_server"), ZX_OK);
 
-    zx::channel server_end;
-    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<test::ErrorMethods>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    auto [client_end, server_end] = std::move(endpoints.value());
+    client_end_ = std::move(client_end);
+
     server_ = std::make_unique<ErrorServer>();
     fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
   }
@@ -80,7 +83,7 @@ class ResultTest : public ::testing::Test {
  private:
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<ErrorServer> server_;
-  zx::channel client_end_;
+  fidl::ClientEnd<test::ErrorMethods> client_end_;
 };
 
 TEST_F(ResultTest, OwnedPrimitiveError) {
@@ -150,10 +153,10 @@ TEST(MagicNumberTest, RequestWrite) {
 }
 
 TEST(MagicNumberTest, EventWrite) {
-  zx::channel h1, h2;
-  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
   std::string s = "hi";
-  test::Frobinator::EventSender event_sender(std::move(h1));
+  test::Frobinator::EventSender event_sender(std::move(endpoints->server));
   event_sender.Hrob(fidl::unowned_str(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -164,8 +167,9 @@ TEST(MagicNumberTest, EventWrite) {
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  auto status = zx_channel_read_etc(h2.get(), 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                    ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+  auto status = endpoints->client.channel().read_etc(0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+                                                     ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes,
+                                                     &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
 
@@ -177,16 +181,16 @@ TEST(MagicNumberTest, ResponseWrite) {
   auto loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread("test_llcpp_result_server"), ZX_OK);
 
-  zx::channel h1, h2;
-  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
   std::string s = "hi";
 
   FrobinatorImpl server;
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(h2), &server);
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &server);
 
   fidl::Buffer<test::Frobinator::GrobRequest> request;
   fidl::Buffer<test::Frobinator::GrobResponse> response;
-  auto result = test::Frobinator::Call::Grob(zx::unowned_channel(h1), request.view(),
+  auto result = test::Frobinator::Call::Grob(endpoints->client.channel().borrow(), request.view(),
                                              fidl::unowned_str(s), response.view());
   ASSERT_TRUE(result.ok());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
@@ -232,9 +236,10 @@ TEST(SyncClientTest, DefaultInitializationError) {
 }
 
 TEST(EventSenderTest, SendEvent) {
-  zx::channel h1, h2;
-  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
-  test::Frobinator::EventSender event_sender(std::move(h2));
+  auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  auto [client_end, server_end] = std::move(endpoints.value());
+  test::Frobinator::EventSender event_sender(std::move(server_end));
   ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -257,7 +262,7 @@ TEST(EventSenderTest, SendEvent) {
   };
 
   auto event_handler = std::make_shared<EventHandler>(loop);
-  fidl::Client<test::Frobinator> client(std::move(h1), loop.dispatcher(), event_handler);
+  fidl::Client<test::Frobinator> client(std::move(client_end), loop.dispatcher(), event_handler);
 
   loop.Run();
   ASSERT_TRUE(event_handler->received());
@@ -293,10 +298,11 @@ class HandleTest : public ::testing::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_handle_server"), ZX_OK);
 
-    zx::channel server_end;
-    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<test::HandleProvider>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    client_end_ = std::move(endpoints->client);
     server_ = std::make_unique<HandleProviderServer>();
-    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
+    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(endpoints->server), server_.get());
   }
 
   test::HandleProvider::SyncClient TakeClient() {
@@ -307,7 +313,7 @@ class HandleTest : public ::testing::Test {
  private:
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<HandleProviderServer> server_;
-  zx::channel client_end_;
+  fidl::ClientEnd<test::HandleProvider> client_end_;
 };
 
 TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
@@ -391,11 +397,11 @@ class EmptyImpl : public test::Empty::Interface {
 TEST(EmptyTest, EmptyProtocolHasBindableInterface) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  zx::channel client_end, server_end;
-  ASSERT_EQ(zx::channel::create(0, &client_end, &server_end), ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<test::Empty>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
   EmptyImpl server;
-  fidl::BindServer(loop.dispatcher(), std::move(server_end), &server);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &server);
 }
 
 // Test creating a typed channel endpoint pair.

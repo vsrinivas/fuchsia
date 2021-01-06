@@ -78,9 +78,10 @@ class HandleRightsTest : public ::testing::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_handle_rights_server"), ZX_OK);
 
-    zx::channel server_end;
-    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
-    fidl::BindServer(loop_->dispatcher(), std::move(server_end),
+    auto endpoints = fidl::CreateEndpoints<test::HandleRights>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    client_end_ = std::move(endpoints->client);
+    fidl::BindServer(loop_->dispatcher(), std::move(endpoints->server),
                      std::make_unique<HandleRightsServer>());
   }
 
@@ -98,7 +99,7 @@ class HandleRightsTest : public ::testing::Test {
 
  private:
   std::unique_ptr<async::Loop> loop_;
-  zx::channel client_end_;
+  fidl::ClientEnd<test::HandleRights> client_end_;
 };
 
 TEST_F(HandleRightsTest, SyncGetTooFewRights) {

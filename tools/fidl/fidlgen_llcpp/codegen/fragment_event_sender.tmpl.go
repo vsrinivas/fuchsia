@@ -21,13 +21,15 @@ class {{ .Name }}::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
-  explicit EventSender(::zx::channel server_end)
+  explicit EventSender(::fidl::ServerEnd<{{ .Namespace }}::{{ .Name }}> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::zx::channel& channel() const { return server_end_; }
-  ::zx::channel& channel() { return server_end_; }
+  const ::fidl::ServerEnd<{{ .Name }}>& server_end() const { return server_end_; }
+  ::fidl::ServerEnd<{{ .Name }}>& server_end() { return server_end_; }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
 
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
@@ -50,7 +52,7 @@ class {{ .Name }}::EventSender {
 {{ "" }}
   {{- end }}
  private:
-  ::zx::channel server_end_;
+  ::fidl::ServerEnd<{{ .Name }}> server_end_;
 };
 
 class {{ .Name }}::WeakEventSender {
@@ -102,7 +104,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
   {{ .Name }}Response::OwnedEncodedMessage _response{
       {{- template "PassthroughMessageParams" .Response -}}
   };
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
     {{- /* Caller-allocated */}}
@@ -113,7 +115,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
       {{- template "CommaPassthroughMessageParams" .Response -}}
   );
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
     {{- end }}

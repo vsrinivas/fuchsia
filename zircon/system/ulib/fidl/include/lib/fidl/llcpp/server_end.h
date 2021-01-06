@@ -35,7 +35,10 @@ class ServerEnd final {
   // Creates an |ServerEnd| that wraps the given |channel|.
   // The caller must ensure the |channel| is a server endpoint speaking
   // a protocol compatible with |Protocol|.
-  explicit ServerEnd(zx::channel channel) : channel_(std::move(channel)) {}
+  // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
+  // typed channels.
+  // NOLINTNEXTLINE
+  ServerEnd(zx::channel channel) : channel_(std::move(channel)) {}
 
   ServerEnd(ServerEnd&& other) noexcept = default;
   ServerEnd& operator=(ServerEnd&& other) noexcept = default;
@@ -44,9 +47,13 @@ class ServerEnd final {
   bool is_valid() const { return channel_.is_valid(); }
   explicit operator bool() const { return is_valid(); }
 
+  // Close the underlying channel if any,
+  // and reset the object back to an invalid state.
+  void reset() { channel_.reset(); }
+
   // The underlying channel.
   const zx::channel& channel() const { return channel_; }
-  void set_channel(zx::channel channel) { channel_ = std::move(channel); }
+  zx::channel& channel() { return channel_; }
 
   // Transfers ownership of the underlying channel to the caller.
   zx::channel TakeChannel() { return std::move(channel_); }

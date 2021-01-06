@@ -1255,14 +1255,19 @@ class Parent final {
   class SyncClient final {
    public:
     SyncClient() = default;
-    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    explicit SyncClient(::fidl::ClientEnd<Parent> client_end)
+        : client_end_(std::move(client_end)) {}
+
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
     SyncClient& operator=(SyncClient&&) = default;
 
-    const ::zx::channel& channel() const { return channel_; }
+    const ::fidl::ClientEnd<Parent>& client_end() const { return client_end_; }
+    ::fidl::ClientEnd<Parent>& client_end() { return client_end_; }
 
-    ::zx::channel* mutable_channel() { return &channel_; }
+    const ::zx::channel& channel() const { return client_end_.channel(); }
+    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
@@ -1324,7 +1329,7 @@ class Parent final {
     }
 
    private:
-    ::zx::channel channel_;
+    ::fidl::ClientEnd<Parent> client_end_;
   };
 
   class AsyncEventHandler;
@@ -1470,17 +1475,22 @@ class Child final {
   class SyncClient final {
    public:
     SyncClient() = default;
-    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    explicit SyncClient(::fidl::ClientEnd<Child> client_end)
+        : client_end_(std::move(client_end)) {}
+
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
     SyncClient& operator=(SyncClient&&) = default;
 
-    const ::zx::channel& channel() const { return channel_; }
+    const ::fidl::ClientEnd<Child>& client_end() const { return client_end_; }
+    ::fidl::ClientEnd<Child>& client_end() { return client_end_; }
 
-    ::zx::channel* mutable_channel() { return &channel_; }
+    const ::zx::channel& channel() const { return client_end_.channel(); }
+    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
    private:
-    ::zx::channel channel_;
+    ::fidl::ClientEnd<Child> client_end_;
   };
 
   class AsyncEventHandler;
@@ -1739,19 +1749,23 @@ class Parent::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
-  explicit EventSender(::zx::channel server_end)
+  explicit EventSender(
+      ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Parent>
+          server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::zx::channel& channel() const { return server_end_; }
-  ::zx::channel& channel() { return server_end_; }
+  const ::fidl::ServerEnd<Parent>& server_end() const { return server_end_; }
+  ::fidl::ServerEnd<Parent>& server_end() { return server_end_; }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
 
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::zx::channel server_end_;
+  ::fidl::ServerEnd<Parent> server_end_;
 };
 
 class Parent::WeakEventSender {
@@ -1796,19 +1810,22 @@ class Child::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
-  explicit EventSender(::zx::channel server_end)
+  explicit EventSender(
+      ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::zx::channel& channel() const { return server_end_; }
-  ::zx::channel& channel() { return server_end_; }
+  const ::fidl::ServerEnd<Child>& server_end() const { return server_end_; }
+  ::fidl::ServerEnd<Child>& server_end() { return server_end_; }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
 
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::zx::channel server_end_;
+  ::fidl::ServerEnd<Child> server_end_;
 };
 
 class Child::WeakEventSender {

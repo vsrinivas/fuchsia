@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_CLIENT_H_
 
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/llcpp/client_end.h>
 
 namespace fidl {
 
@@ -25,7 +26,7 @@ class Client final {
 
   // Create initialized Client which manages the binding of the client end of a channel to a
   // dispatcher.
-  Client(zx::channel client_end, async_dispatcher_t* dispatcher,
+  Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
          std::shared_ptr<typename Protocol::AsyncEventHandler> event_handler = nullptr) {
     auto status = Bind(std::move(client_end), dispatcher, std::move(event_handler));
     ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
@@ -45,13 +46,13 @@ class Client final {
 
   // Bind the channel to the dispatcher. If Client is already initialized, destroys the previous
   // binding, releasing its channel.
-  zx_status_t Bind(zx::channel client_end, async_dispatcher_t* dispatcher,
+  zx_status_t Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
                    std::shared_ptr<typename Protocol::AsyncEventHandler> event_handler = nullptr) {
     if (client_)
       client_->ClientBase::Unbind();
     client_.reset(new typename Protocol::ClientImpl(event_handler));
     return client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
-                         std::move(client_end), dispatcher,
+                         client_end.TakeChannel(), dispatcher,
                          [event_handler](UnbindInfo unbind_info) {
                            if (event_handler != nullptr) {
                              event_handler->Unbound(unbind_info);
@@ -73,9 +74,9 @@ class Client final {
   // NOTE: Bind() must have been called before this.
   // WARNING: This is a blocking call. It waits for completion of dispatcher unbind and of any
   // channel operations, including synchronous calls which may block indefinitely.
-  zx::channel WaitForChannel() {
+  fidl::ClientEnd<Protocol> WaitForChannel() {
     ZX_ASSERT(client_);
-    return client_->WaitForChannel();
+    return fidl::ClientEnd<Protocol>(client_->WaitForChannel());
   }
 
   // Return the Client interface for making outgoing FIDL calls. If the client has been unbound,

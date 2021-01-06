@@ -735,14 +735,19 @@ class {{ .Name }} final {
   class SyncClient final {
    public:
     SyncClient() = default;
-    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    explicit SyncClient(::fidl::ClientEnd<{{ .Name }}> client_end)
+        : client_end_(std::move(client_end)) {}
+
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
     SyncClient& operator=(SyncClient&&) = default;
 
-    const ::zx::channel& channel() const { return channel_; }
+    const ::fidl::ClientEnd<{{ .Name }}>& client_end() const { return client_end_; }
+    ::fidl::ClientEnd<{{ .Name }}>& client_end() { return client_end_; }
 
-    ::zx::channel* mutable_channel() { return &channel_; }
+    const ::zx::channel& channel() const { return client_end_.channel(); }
+    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
     {{- range .ClientMethods -}}
@@ -779,11 +784,11 @@ class {{ .Name }} final {
     // method defined in |SyncEventHandler|. The return status of the handler function is folded with
     // any transport-level errors and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
+      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
     }
     {{- end }}
    private:
-    ::zx::channel channel_;
+     ::fidl::ClientEnd<{{ .Name }}> client_end_;
   };
 
 {{ template "ClientForwardDeclaration" . }}

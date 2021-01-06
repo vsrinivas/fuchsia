@@ -10,6 +10,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/types.h>
 #include <lib/fit/function.h>
@@ -179,10 +180,10 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
   using EventSender = typename Protocol::EventSender;
 
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
-                                                    zx::channel&& channel,
+                                                    fidl::ServerEnd<Protocol>&& server_end,
                                                     IncomingMessageDispatcher* interface,
                                                     AnyOnUnboundFn&& on_unbound_fn) {
-    auto ret = std::make_shared<AsyncServerBinding>(dispatcher, std::move(channel), interface,
+    auto ret = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
                                                     std::move(on_unbound_fn), ConstructionKey{});
     // We keep the binding alive until somebody decides to close the channel.
     ret->keep_alive_ = ret;
@@ -197,11 +198,11 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 
   // Do not construct this object outside of this class. This constructor takes
   // a private type following the pass-key idiom.
-  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel,
+  AsyncServerBinding(async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol>&& server_end,
                      IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
                      ConstructionKey key)
-      : AnyAsyncServerBinding(dispatcher, channel.borrow(), interface),
-        event_sender_(EventSender(std::move(channel))),
+      : AnyAsyncServerBinding(dispatcher, server_end.channel().borrow(), interface),
+        event_sender_(EventSender(std::move(server_end))),
         on_unbound_fn_(std::move(on_unbound_fn)) {}
 
  private:

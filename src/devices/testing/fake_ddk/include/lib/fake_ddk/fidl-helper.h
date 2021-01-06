@@ -62,14 +62,14 @@ class FidlMessenger : public fidl::internal::IncomingMessageDispatcher {
   };
   class EventSender {
    public:
-    explicit EventSender(::zx::channel server_channel)
-        : server_channel_(std::move(server_channel)) {}
+    explicit EventSender(::fidl::ServerEnd<FidlMessenger> server_end)
+        : server_end_(std::move(server_end.channel())) {}
 
-    const ::zx::channel& channel() const { return server_channel_; }
-    ::zx::channel& channel() { return server_channel_; }
+    const ::zx::channel& channel() const { return server_end_.channel(); }
+    ::zx::channel& channel() { return server_end_.channel(); }
 
    private:
-    ::zx::channel server_channel_;
+    ::fidl::ServerEnd<FidlMessenger> server_end_;
   };
 
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}

@@ -57,7 +57,7 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 }  // namespace internal
 
 // (Deprecated) Binds an implementation of a low-level C++ server interface to
-// |channel| using |dispatcher|.
+// |server_end| using |dispatcher|.
 //
 // Note: This function is preserved for backwards compatibility reasons only.
 // It would not dispatch a second message on a channel if there were already
@@ -66,7 +66,7 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 // `zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h`.
 //
 // This function adds an |async_wait_t| to the given |dispatcher| that waits
-// asynchronously for new messages to arrive on |channel|. When a message
+// asynchronously for new messages to arrive on |server_end|. When a message
 // arrives, the dispatch function corresponding to the interface is called
 // on one of the threads associated with the |dispatcher|.
 //
@@ -78,30 +78,33 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 // |Close(error)| on the completer to indicate the error condition to the dispatcher.
 // The dispatcher will send an epitaph with this error code before closing the channel.
 //
-// Returns whether |fidl::BindSingleInFlightOnly| was able to begin waiting on the given |channel|.
-// Upon any error, |channel| is closed and the binding is terminated.
+// Returns whether |fidl::BindSingleInFlightOnly| was able to begin waiting on the given
+// |server_end|.
+// Upon any error, |server_end| is closed and the binding is terminated.
 //
 // The |dispatcher| takes ownership of the channel. Shutting down the |dispatcher|
-// results in |channel| being closed.
+// results in |server_end| being closed.
 //
 // It is safe to shutdown the dispatcher at any time.
 //
 // It is unsafe to destroy the dispatcher from within a dispatch function.
 // It is unsafe to destroy the dispatcher while any fidl::Transaction objects are alive.
 template <typename ServerImpl>
-zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   ServerImpl* impl) {
-  return internal::BindSingleInFlightOnlyImpl(dispatcher, std::move(channel), impl, nullptr);
+zx_status_t BindSingleInFlightOnly(
+    async_dispatcher_t* dispatcher,
+    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl) {
+  return internal::BindSingleInFlightOnlyImpl(dispatcher, server_end.TakeChannel(), impl, nullptr);
 }
 
 // As above, but will invoke |on_channel_close_fn| on |impl| when either end of the channel
 // is closed.
 template <typename ServerImpl>
-zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   ServerImpl* impl,
-                                   OnChannelClosedFn<ServerImpl> on_channel_close_fn) {
+zx_status_t BindSingleInFlightOnly(
+    async_dispatcher_t* dispatcher,
+    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
+    OnChannelClosedFn<ServerImpl> on_channel_close_fn) {
   return internal::BindSingleInFlightOnlyImpl(
-      dispatcher, std::move(channel), impl,
+      dispatcher, server_end.TakeChannel(), impl,
       [fn = std::move(on_channel_close_fn)](
           fidl::internal::IncomingMessageDispatcher* interface) mutable {
         fn(static_cast<ServerImpl*>(interface));
@@ -110,13 +113,16 @@ zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel c
 
 // As above, but will destroy |impl| when either end of the channel is closed.
 template <typename ServerImpl>
-zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   std::unique_ptr<ServerImpl> impl) {
+zx_status_t BindSingleInFlightOnly(
+    async_dispatcher_t* dispatcher,
+    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    std::unique_ptr<ServerImpl> impl) {
   OnChannelClosedFn<ServerImpl> fn = [](fidl::internal::IncomingMessageDispatcher* interface) {
     auto* impl = static_cast<ServerImpl*>(interface);
     delete impl;
   };
-  return BindSingleInFlightOnly(dispatcher, std::move(channel), impl.release(), std::move(fn));
+  return BindSingleInFlightOnly(dispatcher, server_end.TakeChannel(), impl.release(),
+                                std::move(fn));
 }
 
 }  // namespace fidl

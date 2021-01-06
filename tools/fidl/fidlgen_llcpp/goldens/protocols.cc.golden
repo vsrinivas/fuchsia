@@ -369,7 +369,7 @@ void Transitional::EventResponse::_InitHeader() {
 
 zx_status_t Transitional::EventSender::Event(int64_t x) const {
   EventResponse::OwnedEncodedMessage _response{x};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -377,7 +377,7 @@ zx_status_t Transitional::EventSender::Event(::fidl::BufferSpan _buffer,
                                              int64_t x) const {
   EventResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                  x);
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -1004,7 +1004,7 @@ void ChannelProtocol::MutateSocketResponse::_CloseHandles() { b.reset(); }
 
 zx_status_t ChannelProtocol::EventSender::EventA(int64_t a, int64_t b) const {
   EventAResponse::OwnedEncodedMessage _response{a, b};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -1012,7 +1012,7 @@ zx_status_t ChannelProtocol::EventSender::EventA(::fidl::BufferSpan _buffer,
                                                  int64_t a, int64_t b) const {
   EventAResponse::UnownedEncodedMessage _response(_buffer.data,
                                                   _buffer.capacity, a, b);
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -1905,14 +1905,14 @@ void WithAndWithoutRequestResponse::OnWithResponseResponse::_InitHeader() {
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnEmptyResponse()
     const {
   OnEmptyResponseResponse::OwnedEncodedMessage _response{};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
     ::fidl::StringView ret) const {
   OnWithResponseResponse::OwnedEncodedMessage _response{ret};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -1920,7 +1920,7 @@ zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
     ::fidl::BufferSpan _buffer, ::fidl::StringView ret) const {
   OnWithResponseResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, ret);
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 

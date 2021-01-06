@@ -1231,14 +1231,21 @@ class Interface final {
   class SyncClient final {
    public:
     SyncClient() = default;
-    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    explicit SyncClient(::fidl::ClientEnd<Interface> client_end)
+        : client_end_(std::move(client_end)) {}
+
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
     SyncClient& operator=(SyncClient&&) = default;
 
-    const ::zx::channel& channel() const { return channel_; }
+    const ::fidl::ClientEnd<Interface>& client_end() const {
+      return client_end_;
+    }
+    ::fidl::ClientEnd<Interface>& client_end() { return client_end_; }
 
-    ::zx::channel* mutable_channel() { return &channel_; }
+    const ::zx::channel& channel() const { return client_end_.channel(); }
+    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
     // method comment #1
     //
@@ -1255,11 +1262,11 @@ class Interface final {
     // status of the handler function is folded with any transport-level errors
     // and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
+      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
     }
 
    private:
-    ::zx::channel channel_;
+    ::fidl::ClientEnd<Interface> client_end_;
   };
 
   class AsyncEventHandler;
@@ -1532,13 +1539,16 @@ class Interface::EventSender {
   // Constructs an event sender with an invalid channel.
   EventSender() = default;
 
-  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
-  explicit EventSender(::zx::channel server_end)
+  explicit EventSender(
+      ::fidl::ServerEnd<::llcpp::fidl::test::doccomments::Interface> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::zx::channel& channel() const { return server_end_; }
-  ::zx::channel& channel() { return server_end_; }
+  const ::fidl::ServerEnd<Interface>& server_end() const { return server_end_; }
+  ::fidl::ServerEnd<Interface>& server_end() { return server_end_; }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
 
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
@@ -1549,7 +1559,7 @@ class Interface::EventSender {
   zx_status_t OnEvent() const;
 
  private:
-  ::zx::channel server_end_;
+  ::fidl::ServerEnd<Interface> server_end_;
 };
 
 class Interface::WeakEventSender {

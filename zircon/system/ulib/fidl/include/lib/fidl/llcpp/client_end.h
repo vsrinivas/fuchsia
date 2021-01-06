@@ -37,7 +37,11 @@ class ClientEnd final {
   // Creates an |ClientEnd| that wraps the given |channel|.
   // The caller must ensure the |channel| is a client endpoint speaking
   // a protocol compatible with |Protocol|.
-  explicit ClientEnd(zx::channel channel) : channel_(std::move(channel)) {}
+  //
+  // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
+  // typed channels.
+  // NOLINTNEXTLINE
+  ClientEnd(zx::channel channel) : channel_(std::move(channel)) {}
 
   ClientEnd(ClientEnd&& other) noexcept = default;
   ClientEnd& operator=(ClientEnd&& other) noexcept = default;
@@ -45,6 +49,10 @@ class ClientEnd final {
   // Whether the underlying channel is valid.
   bool is_valid() const { return channel_.is_valid(); }
   explicit operator bool() const { return is_valid(); }
+
+  // Close the underlying channel if any,
+  // and reset the object back to an invalid state.
+  void reset() { channel_.reset(); }
 
   // The underlying channel.
   const zx::channel& channel() const { return channel_; }

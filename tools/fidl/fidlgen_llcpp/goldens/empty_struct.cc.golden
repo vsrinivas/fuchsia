@@ -369,7 +369,7 @@ void EmptyProtocol::SendAndReceiveResponse::_InitHeader() {
 zx_status_t EmptyProtocol::EventSender::Receive(
     ::llcpp::fidl::test::emptystruct::Empty e) const {
   ReceiveResponse::OwnedEncodedMessage _response{e};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 
@@ -378,7 +378,7 @@ zx_status_t EmptyProtocol::EventSender::Receive(
     ::llcpp::fidl::test::emptystruct::Empty e) const {
   ReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, e);
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 

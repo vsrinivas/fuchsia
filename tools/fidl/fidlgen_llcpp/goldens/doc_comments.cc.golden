@@ -202,7 +202,7 @@ void Interface::OnEventResponse::_InitHeader() {
 
 zx_status_t Interface::EventSender::OnEvent() const {
   OnEventResponse::OwnedEncodedMessage _response{};
-  _response.Write(server_end_.get());
+  _response.Write(server_end_.channel().get());
   return _response.status();
 }
 

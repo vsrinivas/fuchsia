@@ -23,7 +23,7 @@ class Server : public test::TransitionMethods::Interface {
     txn.Reply(fidl::StringView("test reply"));
   }
 
-  void Bind(zx::channel server, async::Loop* loop) {
+  void Bind(fidl::ServerEnd<test::TransitionMethods> server, async::Loop* loop) {
     zx_status_t bind_status =
         fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(server), this);
     EXPECT_EQ(bind_status, ZX_OK);
@@ -35,9 +35,11 @@ class TransitionalTest : public ::testing::Test {
   virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_transitional_server"), ZX_OK);
-    ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end_), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<test::TransitionMethods>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    client_end_ = std::move(endpoints->client);
     server_ = std::make_unique<Server>();
-    server_->Bind(std::move(server_end_), loop_.get());
+    server_->Bind(std::move(endpoints->server), loop_.get());
   }
 
   virtual void TearDown() {
@@ -53,8 +55,7 @@ class TransitionalTest : public ::testing::Test {
  private:
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<Server> server_;
-  zx::channel client_end_;
-  zx::channel server_end_;
+  fidl::ClientEnd<test::TransitionMethods> client_end_;
 };
 
 // The implemented call should succeed.

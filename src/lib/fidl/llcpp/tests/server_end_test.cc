@@ -42,7 +42,7 @@ TEST(ServerEnd, Control) {
   EXPECT_FALSE(server_end_2.is_valid());
 
   zx_handle_t saved2 = h2.get();
-  server_end.set_channel(std::move(h2));
+  server_end.channel() = std::move(h2);
   EXPECT_TRUE(server_end.is_valid());
   EXPECT_EQ(saved2, server_end.channel().get());
 
@@ -54,8 +54,8 @@ TEST(ServerEnd, Control) {
 
 TEST(ServerEnd, Close) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::channel h1, h2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
   class EventHandler : public llcpp_test::Frobinator::AsyncEventHandler {
    public:
@@ -70,9 +70,10 @@ TEST(ServerEnd, Close) {
   };
 
   auto event_handler = std::make_shared<EventHandler>();
-  fidl::Client<llcpp_test::Frobinator> client(std::move(h1), loop.dispatcher(), event_handler);
+  fidl::Client<llcpp_test::Frobinator> client(std::move(endpoints->client), loop.dispatcher(),
+                                              event_handler);
 
-  fidl::ServerEnd<llcpp_test::Frobinator> server_end(std::move(h2));
+  fidl::ServerEnd<llcpp_test::Frobinator> server_end(std::move(endpoints->server));
   EXPECT_TRUE(server_end.is_valid());
 
   constexpr zx_status_t kSysError = ZX_ERR_INVALID_ARGS;
