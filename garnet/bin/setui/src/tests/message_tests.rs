@@ -144,11 +144,10 @@ async fn test_messenger_deletion() {
 async fn test_messenger_deletion_with_fingerprint() {
     let messenger_factory = num_test::message::create_hub();
     let address = 1;
-    let mut receptor = messenger_factory
+    let (_, mut receptor) = messenger_factory
         .create(MessengerType::Addressable(address))
         .await
-        .expect("should get receptor")
-        .1;
+        .expect("should get receptor");
     messenger_factory.delete(receptor.get_signature());
     assert!(receptor.next().await.is_none());
 }
@@ -506,11 +505,10 @@ async fn test_unbound_messenger() {
 
     let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-    let mut unbound_receptor = messenger_factory
+    let (_, mut unbound_receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("messenger should be created")
-        .1;
+        .expect("messenger should be created");
 
     let mut reply_receptor = unbound_messenger_1
         .message(ORIGINAL, Audience::Messenger(unbound_receptor.get_signature()))
@@ -538,8 +536,8 @@ async fn test_next_payload() {
     let messenger_factory = test::message::create_hub();
     let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-    let mut unbound_receptor_2 =
-        messenger_factory.create(MessengerType::Unbound).await.expect("should create messenger").1;
+    let (_, mut unbound_receptor_2) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("should create messenger");
 
     unbound_messenger_1
         .message(ORIGINAL, Audience::Messenger(unbound_receptor_2.get_signature()))
@@ -644,8 +642,8 @@ async fn test_bind_to_recipient() {
     let messenger_factory = test::message::create_hub();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
 
-    let mut receptor =
-        messenger_factory.create(MessengerType::Unbound).await.expect("should create messenger").1;
+    let (_, mut receptor) =
+        messenger_factory.create(MessengerType::Unbound).await.expect("should create messenger");
 
     {
         let (scoped_messenger, _scoped_receptor) =
@@ -687,26 +685,23 @@ async fn test_propagation() {
     let sending_signature = sending_receptor.get_signature();
 
     // Create brokers to propagate a derived message.
-    let mut broker_1 = messenger_factory
+    let (_, mut broker_1) = messenger_factory
         .create(MessengerType::Broker(None))
         .await
-        .expect("broker should be created")
-        .1;
+        .expect("broker should be created");
     let modifier_1_signature = broker_1.get_signature();
 
-    let mut broker_2 = messenger_factory
+    let (_, mut broker_2) = messenger_factory
         .create(MessengerType::Broker(None))
         .await
-        .expect("broker should be created")
-        .1;
+        .expect("broker should be created");
     let modifier_2_signature = broker_2.get_signature();
 
     // Create messenger to be target of source message.
-    let mut target_receptor = messenger_factory
+    let (_, mut target_receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("target messenger should be created")
-        .1;
+        .expect("target messenger should be created");
 
     // Send top level message.
     let mut result_receptor = sending_messenger
@@ -768,11 +763,10 @@ async fn test_relay() {
     let (messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let (messenger_2, mut receptor_2) =
         messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let mut receptor_3 = messenger_factory
+    let (_, mut receptor_3) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("messenger should be created")
-        .1;
+        .expect("messenger should be created");
 
     // Send top level message.
     let mut message_receptor =
@@ -873,11 +867,10 @@ async fn test_broker_filter_audience_broadcast() {
         .await
         .expect("broadcast messenger should be created");
     // Receptor to receive both broadcast and targeted messages.
-    let mut receptor = messenger_factory
+    let (_, mut receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("target receptor should be created")
-        .1;
+        .expect("target receptor should be created");
     // Filter to target only broadcasts.
     let filter = filter::Builder::single(filter::Condition::Audience(Audience::Broadcast));
     // Broker to receive broadcast. It should not receive targeted messages.
@@ -911,11 +904,10 @@ async fn test_broker_filter_audience_messenger() {
         .await
         .expect("broadcast messenger should be created");
     // Receptor to receive both broadcast and targeted messages.
-    let mut receptor = messenger_factory
+    let (_, mut receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("target messenger should be created")
-        .1;
+        .expect("target messenger should be created");
     // Filter to target only messenger.
     let filter = filter::Builder::single(filter::Condition::Audience(Audience::Messenger(
         receptor.get_signature(),
@@ -1179,11 +1171,10 @@ async fn test_group_message_redundant_targets() {
     let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
     // Receptors for messages.
     let target_address = TestAddress::Foo(1);
-    let mut receptor = messenger_factory
+    let (_, mut receptor) = messenger_factory
         .create(MessengerType::Addressable(target_address))
         .await
-        .expect("messenger should be created")
-        .1;
+        .expect("messenger should be created");
     // Create audience with multiple references to same messenger.
     let audience = Audience::Group(
         group::Builder::new()
@@ -1352,12 +1343,11 @@ async fn test_roles_audience() {
 
     // Create another messenger with no role to ensure messages are not routed
     // improperly to other messengers.
-    let mut outside_receptor = messenger_factory
+    let (_, mut outside_receptor) = messenger_factory
         .messenger_builder(MessengerType::Unbound)
         .build()
         .await
-        .expect("other messenger should be created")
-        .1;
+        .expect("other messenger should be created");
     let outside_signature = outside_receptor.get_signature();
 
     // Create messenger to send a message to the given participant.
@@ -1430,11 +1420,10 @@ async fn test_targeted_messenger_client() {
     let messenger_factory = test::message::create_hub();
 
     // Create target messenger.
-    let mut target_receptor = messenger_factory
+    let (_, mut target_receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
-        .expect("receiving messenger should be created")
-        .1;
+        .expect("receiving messenger should be created");
 
     // Create targeted messenger.
     let targeted_messenger = TargetedMessengerClient::new(
