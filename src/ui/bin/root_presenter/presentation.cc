@@ -429,10 +429,13 @@ void Presentation::SetClipSpaceTransform(float x, float y, float scale,
   camera_.SetClipSpaceTransform(clip_offset_x_, clip_offset_y_, clip_scale_);
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
-  safe_presenter_->QueuePresent([this, callback = std::move(callback)] {
-    UpdateViewport();
-    callback();
-  });
+  safe_presenter_->QueuePresent(
+      [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
+        if (weak) {
+          weak->UpdateViewport();
+        }
+        callback();
+      });
 }
 
 void Presentation::ResetClipSpaceTransform() {
