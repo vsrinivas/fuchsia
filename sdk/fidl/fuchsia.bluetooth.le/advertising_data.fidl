@@ -6,16 +6,28 @@ library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 
+// The size of the BT-encoded ServiceData field must fit into a uint8, so the max allowed data
+// size is 255 (uint8::MAX) - 1 byte (field type) - 2 bytes (minimum possible encoded UUID size).
+const uint8 MAX_SERVICE_DATA_LENGTH = 252;
+
+// The size of the BT-encoded ServiceData field must fit into a uint8, so the max allowed data size
+// is 255 (uint8::MAX) - 1 byte (field type) - 2 bytes (company ID size).
+const uint8 MAX_MANUFACTURER_DATA_LENGTH = 252;
+
+// The size of each BT-encoded URI size must fit into a uint8, so the max allowed data size is
+// uint8::MAX - 1 byte (field type).
+const uint8 MAX_URI_LENGTH = 254;
+
 /// Entry in the `service_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
 struct ServiceData {
     bt.Uuid uuid;
-    bytes data;
+    bytes:MAX_SERVICE_DATA_LENGTH data;
 };
 
 /// Entry in the `manufacturer_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
 struct ManufacturerData {
     uint16 company_id;
-    bytes data;
+    bytes:MAX_MANUFACTURER_DATA_LENGTH data;
 };
 
 /// Represents advertising and scan response data that are transmitted by a LE peripheral or
@@ -45,5 +57,5 @@ table AdvertisingData {
     /// - https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
     /// - https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping
     ///   for code-points used by the system to compress the scheme to save space in the payload.
-    7: vector<string:MAX>:MAX uris;
+    7: vector<string:MAX_URI_LENGTH>:MAX uris;
 };
