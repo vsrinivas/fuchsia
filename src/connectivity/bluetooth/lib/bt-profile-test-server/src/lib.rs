@@ -4,17 +4,14 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl::encoding::Decodable,
-    fidl::endpoints::{create_proxy, create_request_stream},
-    fidl_fuchsia_bluetooth_bredr::{
-        ChannelParameters, ConnectionReceiverRequestStream, MockPeerMarker, MockPeerProxy,
-        PeerObserverMarker, PeerObserverRequest, PeerObserverRequestStream, ProfileMarker,
-        ProfileProxy, ProfileTestMarker, ProfileTestProxy, SearchResultsRequestStream,
-        ServiceClassProfileIdentifier, ServiceDefinition,
+    fidl::{
+        encoding::Decodable,
+        endpoints::{create_proxy, create_request_stream},
     },
+    fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_component::{client, client::App, fuchsia_single_component_package_url},
+    fuchsia_component::{client, client::App},
     fuchsia_zircon::{Duration, DurationNum},
     futures::{stream::StreamExt, TryFutureExt},
 };
@@ -34,28 +31,6 @@ const TIMEOUT_SECONDS: i64 = 2 * 60;
 
 pub fn peer_observer_timeout() -> Duration {
     TIMEOUT_SECONDS.seconds()
-}
-
-#[derive(Debug)]
-/// The supported Bluetooth Profiles that can be launched.
-pub enum Profile {
-    AudioSink,
-    AudioSource,
-    Avrcp,
-}
-
-impl Profile {
-    /// Converts the `Profile` enum to a fuchsia component URL, represented
-    /// by a string.
-    fn to_component_url(&self) -> String {
-        match self {
-            Profile::AudioSource => {
-                fuchsia_single_component_package_url!("bt-a2dp-source").to_string()
-            }
-            Profile::AudioSink => fuchsia_single_component_package_url!("bt-a2dp-sink").to_string(),
-            Profile::Avrcp => fuchsia_single_component_package_url!("bt-avrcp").to_string(),
-        }
-    }
 }
 
 /// The `ProfileTestHarness` provides functionality for writing integration tests
@@ -137,13 +112,16 @@ impl MockPeer {
         Ok(Self { mock_peer, profile_svc, observer })
     }
 
-    /// Launches a `profile` for this mock peer.
+    /// Launches a profile for this mock peer with the provided `launch_info`.
     /// Once the profile is launched, the behavior of the mock peer is driven by the profile.
     ///
     /// Returns the result of launching the profile.
-    pub async fn launch_profile(&self, profile: Profile) -> Result<bool, Error> {
-        let url = profile.to_component_url();
-        self.mock_peer.launch_profile(&url).await.map_err(|e| format_err!("{:?}", e))
+    pub async fn launch_profile(&self, launch_info: LaunchInfo) -> Result<(), Error> {
+        self.mock_peer
+            .launch_profile(launch_info)
+            .await
+            .expect("launch profile fidl call failure")
+            .map_err(|e| format_err!("{:?}", e))
     }
 
     /// Expects a request over the PeerObserver protocol for this MockPeer.

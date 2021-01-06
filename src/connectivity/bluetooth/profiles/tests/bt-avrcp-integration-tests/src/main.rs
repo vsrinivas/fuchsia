@@ -4,13 +4,14 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server::{Profile, ProfileTestHarness},
+    bt_profile_test_server::ProfileTestHarness,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     futures::{stream::StreamExt, TryFutureExt},
-    matches::assert_matches,
 };
+
+const AVRCP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("bt-avrcp");
 
 /// Tests that AVRCP correctly advertises it's TG-related services and can be
 /// discovered by another peer in the mock piconet.
@@ -30,7 +31,9 @@ async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: AVRCP.
     let id2 = PeerId(2);
     let mock_peer2 = test_harness.register_peer(id2).await?;
-    assert_matches!(mock_peer2.launch_profile(Profile::Avrcp).await, Ok(true));
+    let launch_info =
+        LaunchInfo { component_url: Some(AVRCP_URL.to_string()), ..LaunchInfo::EMPTY };
+    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
 
     // We expect Peer #1 to discover AVRCP's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
@@ -59,7 +62,9 @@ async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: AVRCP.
     let id2 = PeerId(4);
     let mock_peer2 = test_harness.register_peer(id2).await?;
-    assert_matches!(mock_peer2.launch_profile(Profile::Avrcp).await, Ok(true));
+    let launch_info =
+        LaunchInfo { component_url: Some(AVRCP_URL.to_string()), ..LaunchInfo::EMPTY };
+    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
 
     // We expect Peer #1 to discover AVRCP's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));

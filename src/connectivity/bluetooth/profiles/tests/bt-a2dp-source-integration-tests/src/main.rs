@@ -4,14 +4,16 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server::{Profile, ProfileTestHarness},
+    bt_profile_test_server::ProfileTestHarness,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{PeerId, Uuid},
     futures::{stream::StreamExt, TryFutureExt},
-    matches::assert_matches,
 };
+
+const A2DP_SOURCE_URL: &str =
+    fuchsia_component::fuchsia_single_component_package_url!("bt-a2dp-source");
 
 /// Make the SDP definition for an A2DP sink service.
 fn a2dp_sink_service_definition() -> ServiceDefinition {
@@ -54,7 +56,9 @@ async fn test_a2dp_source_service_advertisement() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: A2DP Source.
     let id2 = PeerId(8);
     let mock_peer2 = test_harness.register_peer(id2).await?;
-    assert_matches!(mock_peer2.launch_profile(Profile::AudioSource).await, Ok(true));
+    let launch_info =
+        LaunchInfo { component_url: Some(A2DP_SOURCE_URL.to_string()), ..LaunchInfo::EMPTY };
+    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
 
     // We expect Peer #1 to discover A2DP Source's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
@@ -82,7 +86,9 @@ async fn test_a2dp_source_search_and_connect() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: A2DP Source.
     let id2 = PeerId(20);
     let mut mock_peer2 = test_harness.register_peer(id2).await?;
-    assert_matches!(mock_peer2.launch_profile(Profile::AudioSource).await, Ok(true));
+    let launch_info =
+        LaunchInfo { component_url: Some(A2DP_SOURCE_URL.to_string()), ..LaunchInfo::EMPTY };
+    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
 
     // We expect A2DP Source to discover Peer #1's service advertisement.
     if let PeerObserverRequest::ServiceFound { peer_id, responder, .. } =

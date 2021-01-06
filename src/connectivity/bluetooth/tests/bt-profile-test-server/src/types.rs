@@ -9,7 +9,7 @@ use {
         profile::Attribute,
         types::{PeerId, Uuid},
     },
-    std::collections::HashSet,
+    std::{collections::HashSet, convert::TryFrom},
 };
 
 use crate::peer::service::ServiceHandle;
@@ -23,6 +23,24 @@ pub struct ServiceFoundResponse {
     pub id: PeerId,
     pub protocol: Option<Vec<bredr::ProtocolDescriptor>>,
     pub attributes: Vec<bredr::Attribute>,
+}
+
+/// Arguments used to launch a profile.
+#[derive(Clone)]
+pub struct LaunchInfo {
+    pub url: String,
+    pub arguments: Vec<String>,
+}
+
+impl TryFrom<bredr::LaunchInfo> for LaunchInfo {
+    type Error = Error;
+
+    fn try_from(src: bredr::LaunchInfo) -> Result<Self, Self::Error> {
+        Ok(LaunchInfo {
+            url: src.component_url.ok_or(format_err!("Component URL must be provided"))?,
+            arguments: src.arguments.unwrap_or(Vec::new()),
+        })
+    }
 }
 
 /// The unique identifier associated with a registered service.

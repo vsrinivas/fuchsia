@@ -9,12 +9,7 @@ use {
     async_utils::stream::{StreamItem, WithEpitaph, WithTag},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr::{
-        Channel, ConnectParameters, ConnectionReceiverProxy, MockPeerRequest, PeerObserverMarker,
-        ProfileAdvertiseResponder, ProfileRequest, ProfileRequestStream, ProfileTestRequest,
-        ProfileTestRequestStream, ScoErrorCode, SearchResultsProxy, ServiceClassProfileIdentifier,
-        ServiceDefinition,
-    },
+    fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::EnvironmentOptions,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
@@ -25,6 +20,7 @@ use {
     parking_lot::Mutex,
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
+        convert::TryFrom,
         sync::Arc,
     },
 };
@@ -34,7 +30,7 @@ mod profile;
 mod types;
 
 use crate::peer::MockPeer;
-use crate::types::Psm;
+use crate::types::{LaunchInfo, Psm};
 
 /// The TestProfileServer implements both the bredr.Profile service and the bredr.ProfileTest
 /// service. The server is responsible for routing incoming asynchronous requests from peers in
@@ -56,8 +52,8 @@ impl TestProfileServer {
     fn register_peer(
         &self,
         id: PeerId,
-        observer: ClientEnd<PeerObserverMarker>,
-        sender: mpsc::Sender<(PeerId, ProfileRequestStream)>,
+        observer: ClientEnd<bredr::PeerObserverMarker>,
+        sender: mpsc::Sender<(PeerId, bredr::ProfileRequestStream)>,
     ) -> Result<(), Error> {
         if self.contains_peer(&id) {
             return Err(format_err!("Peer {} already registered!", id));
@@ -105,17 +101,17 @@ impl TestProfileServer {
         inner.unregister_peer(&id)
     }
 
-    fn launch_profile(&self, id: PeerId, url: String) -> Result<(), Error> {
+    fn launch_profile(&self, id: PeerId, launch_info: LaunchInfo) -> Result<(), Error> {
         let mut inner = self.inner.lock();
-        inner.launch_profile(id, url)
+        inner.launch_profile(id, launch_info)
     }
 
     fn new_advertisement(
         &self,
         id: PeerId,
-        services: Vec<ServiceDefinition>,
-        receiver: ConnectionReceiverProxy,
-        responder: ProfileAdvertiseResponder,
+        services: Vec<bredr::ServiceDefinition>,
+        receiver: bredr::ConnectionReceiverProxy,
+        responder: bredr::ProfileAdvertiseResponder,
     ) {
         let mut inner = self.inner.lock();
         inner.new_advertisement(id, services, receiver, responder);
@@ -125,8 +121,8 @@ impl TestProfileServer {
         &self,
         id: PeerId,
         other_id: PeerId,
-        connection: ConnectParameters,
-    ) -> Result<Channel, Error> {
+        connection: bredr::ConnectParameters,
+    ) -> Result<bredr::Channel, Error> {
         let mut inner = self.inner.lock();
         inner.new_connection(id, other_id, connection)
     }
@@ -134,33 +130,33 @@ impl TestProfileServer {
     fn new_search(
         &self,
         id: PeerId,
-        service_uuid: ServiceClassProfileIdentifier,
+        service_uuid: bredr::ServiceClassProfileIdentifier,
         attr_ids: Vec<u16>,
-        results: SearchResultsProxy,
+        results: bredr::SearchResultsProxy,
     ) {
         let mut inner = self.inner.lock();
         inner.new_search(id, service_uuid, attr_ids, results);
     }
 
-    fn handle_profile_request(&self, id: PeerId, request: ProfileRequest) {
+    fn handle_profile_request(&self, id: PeerId, request: bredr::ProfileRequest) {
         match request {
-            ProfileRequest::Advertise { services, receiver, responder, .. } => {
+            bredr::ProfileRequest::Advertise { services, receiver, responder, .. } => {
                 let proxy = receiver.into_proxy().expect("couldn't get connection receiver");
                 self.new_advertisement(id, services, proxy, responder);
             }
-            ProfileRequest::Connect { peer_id, connection, responder, .. } => {
+            bredr::ProfileRequest::Connect { peer_id, connection, responder, .. } => {
                 let mut channel = self
                     .new_connection(id, peer_id.into(), connection)
                     .map_err(|_| ErrorCode::Failed);
                 let _ = responder.send(&mut channel);
             }
-            ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
+            bredr::ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
                 let proxy = results.into_proxy().expect("couldn't get connection receiver");
                 self.new_search(id, service_uuid, attr_ids, proxy);
             }
-            ProfileRequest::ConnectSco { receiver, .. } => {
+            bredr::ProfileRequest::ConnectSco { receiver, .. } => {
                 let proxy = receiver.into_proxy().expect("couldn't get sco connection receiver");
-                let _ = proxy.error(ScoErrorCode::Failure);
+                let _ = proxy.error(bredr::ScoErrorCode::Failure);
                 error!("ConnectSco not implemented");
             }
         }
@@ -169,11 +165,11 @@ impl TestProfileServer {
     async fn handle_mock_peer_request(
         &self,
         id: PeerId,
-        request: MockPeerRequest,
-        mut sender: mpsc::Sender<(PeerId, ProfileRequestStream)>,
+        request: bredr::MockPeerRequest,
+        mut sender: mpsc::Sender<(PeerId, bredr::ProfileRequestStream)>,
     ) {
         match request {
-            MockPeerRequest::ConnectProxy_ { interface, responder, .. } => {
+            bredr::MockPeerRequest::ConnectProxy_ { interface, responder, .. } => {
                 // Relay the ProfileRequestStream to the central handler.
                 match interface.into_stream() {
                     Ok(stream) => {
@@ -192,9 +188,12 @@ impl TestProfileServer {
                     }
                 }
             }
-            MockPeerRequest::LaunchProfile { component_url, responder, .. } => {
-                let launch_result = self.launch_profile(id, component_url).is_ok();
-                if let Err(e) = responder.send(launch_result) {
+            bredr::MockPeerRequest::LaunchProfile { launch_info, responder, .. } => {
+                let mut result = match LaunchInfo::try_from(launch_info) {
+                    Ok(info) => self.launch_profile(id, info).map_err(|_| ErrorCode::Failed),
+                    Err(_) => Err(ErrorCode::InvalidArguments),
+                };
+                if let Err(e) = responder.send(&mut result) {
                     error!("Error sending on responder: {:?}", e);
                 }
             }
@@ -209,7 +208,7 @@ impl TestProfileServer {
     ///      that is created when a sandboxed instance of a Bluetooth Profile is launched.
     async fn handle_fidl_requests(
         &self,
-        mut profile_test_requests: mpsc::Receiver<ProfileTestRequest>,
+        mut profile_test_requests: mpsc::Receiver<bredr::ProfileTestRequest>,
     ) {
         // A combined stream of all the active peers' MockPeerRequestStreams.
         // Each MockPeerRequest is tagged with its corresponding PeerId.
@@ -226,7 +225,7 @@ impl TestProfileServer {
             select! {
                 // A request from the `ProfileTest` FIDL request stream has been received.
                 test_request = profile_test_requests.select_next_some() => {
-                    let ProfileTestRequest::RegisterPeer { peer_id, peer, observer, responder, .. } = test_request;
+                    let bredr::ProfileTestRequest::RegisterPeer { peer_id, peer, observer, responder, .. } = test_request;
                     let id = peer_id.into();
                     let request_stream = match peer.into_stream() {
                         Ok(stream) => stream,
@@ -338,11 +337,11 @@ impl TestProfileServerInner {
     /// Attempts to launch a profile, specified by the `profile_url`, for the peer.
     ///
     /// Returns an error if Peer `id` is not registered, or if launching the profile fails.
-    pub fn launch_profile(&mut self, id: PeerId, profile_url: String) -> Result<(), Error> {
+    pub fn launch_profile(&mut self, id: PeerId, launch_info: LaunchInfo) -> Result<(), Error> {
         match self.peers.entry(id) {
             Entry::Vacant(_) => Err(format_err!("Peer {} not registered.", id)),
             Entry::Occupied(mut entry) => {
-                let component_stream = entry.get_mut().launch_profile(profile_url)?;
+                let component_stream = entry.get_mut().launch_profile(launch_info)?;
                 fasync::Task::spawn(async move {
                     component_stream.map(|_| ()).collect::<()>().await;
                 })
@@ -359,9 +358,9 @@ impl TestProfileServerInner {
     pub fn new_advertisement(
         &mut self,
         id: PeerId,
-        services: Vec<ServiceDefinition>,
-        receiver: ConnectionReceiverProxy,
-        responder: ProfileAdvertiseResponder,
+        services: Vec<bredr::ServiceDefinition>,
+        receiver: bredr::ConnectionReceiverProxy,
+        responder: bredr::ProfileAdvertiseResponder,
     ) {
         let res = match self.peers.entry(id) {
             Entry::Vacant(_) => {
@@ -390,8 +389,8 @@ impl TestProfileServerInner {
         &mut self,
         initiator: PeerId,
         other: PeerId,
-        connection: ConnectParameters,
-    ) -> Result<Channel, Error> {
+        connection: bredr::ConnectParameters,
+    ) -> Result<bredr::Channel, Error> {
         if !self.contains_peer(&initiator) {
             return Err(format_err!("Peer {} is not registered", initiator));
         }
@@ -401,10 +400,10 @@ impl TestProfileServerInner {
         }
 
         let psm = match connection {
-            ConnectParameters::L2cap(params) => {
+            bredr::ConnectParameters::L2cap(params) => {
                 params.psm.ok_or(format_err!("No PSM provided in connection"))?
             }
-            ConnectParameters::Rfcomm(_) => return Err(format_err!("RFCOMM not supported")),
+            bredr::ConnectParameters::Rfcomm(_) => return Err(format_err!("RFCOMM not supported")),
         };
 
         // Attempt to establish a connection between the peers.
@@ -419,9 +418,9 @@ impl TestProfileServerInner {
     pub fn new_search(
         &mut self,
         id: PeerId,
-        service_uuid: ServiceClassProfileIdentifier,
+        service_uuid: bredr::ServiceClassProfileIdentifier,
         attr_ids: Vec<u16>,
-        results: SearchResultsProxy,
+        results: bredr::SearchResultsProxy,
     ) {
         match self.peers.entry(id) {
             Entry::Vacant(_) => {
@@ -443,7 +442,7 @@ impl TestProfileServerInner {
     pub fn find_matching_advertisements(
         &mut self,
         peer_id: PeerId,
-        service_id: ServiceClassProfileIdentifier,
+        service_id: bredr::ServiceClassProfileIdentifier,
     ) {
         let mut requested_service_ids = HashSet::new();
         requested_service_ids.insert(service_id);
@@ -472,7 +471,7 @@ impl TestProfileServerInner {
     fn find_matching_searches(
         &mut self,
         peer_id: PeerId,
-        service_ids: HashSet<ServiceClassProfileIdentifier>,
+        service_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
     ) {
         // The outstanding advertisements for the peer. It should contain entries
         // for _at least_ the service class IDs in `service_ids`.
@@ -496,8 +495,8 @@ impl TestProfileServerInner {
 
 /// Forward requests from the `fuchsia.bluetooth.bredr.ProfileTest` service to the request handler.
 async fn handle_test_client_connection(
-    mut sender: mpsc::Sender<ProfileTestRequest>,
-    mut stream: ProfileTestRequestStream,
+    mut sender: mpsc::Sender<bredr::ProfileTestRequest>,
+    mut stream: bredr::ProfileTestRequestStream,
 ) {
     while let Some(request) = stream.next().await {
         match request {
@@ -541,6 +540,7 @@ mod tests {
     use fidl_fuchsia_bluetooth_bredr::{
         ChannelParameters, ConnectionReceiverMarker, MockPeerMarker, MockPeerProxy,
         PeerObserverMarker, PeerObserverRequestStream, ProfileMarker, ProfileTestMarker,
+        ProfileTestRequest, ProfileTestRequestStream,
     };
     use futures::pin_mut;
 

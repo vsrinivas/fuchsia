@@ -7,6 +7,15 @@ library fuchsia.bluetooth.bredr;
 using fuchsia.bluetooth;
 using fuchsia.sys;
 
+/// Information used to launch a profile component.
+table LaunchInfo {
+    /// Required. The location from which to retrieve this component.
+    1: fuchsia.sys.component_url component_url;
+
+    /// Optional. The arguments to be provided to the component.
+    2: vector<string:MAX>:MAX arguments;
+};
+
 /// `PeerObserver` provides the integration test client with a way to validate the
 /// behavior of a peer in the piconet.
 /// Dropping `PeerObserver` will stop any subsequent updates for the peer.
@@ -55,12 +64,12 @@ protocol MockPeer {
     /// + request `interface` Interface to drive mock peer behavior.
     ConnectProxy(request<Profile> interface) -> ();
 
-    /// Launch a profile specified by the component url.
+    /// Launch a profile specified by the `launch_info`.
     ///
-    /// + request `component_url` URL of the component to be launched. The provided URL should
-    ///                           be a Bluetooth Profile component.
-    /// - response 'launched' Signal indicating whether component launching was successful or not.
-    LaunchProfile(fuchsia.sys.component_url component_url) -> (bool launched);
+    /// + request `launch_info` Information about the component to be launched.
+    /// - response Acknowledgement when the profile has been launched, or an error code
+    ///            if the profile could not be launched
+    LaunchProfile(LaunchInfo launch_info) -> () error fuchsia.bluetooth.ErrorCode;
 };
 
 /// The `ProfileTest` interface should be used to validate behavior of Bluetooth Profiles

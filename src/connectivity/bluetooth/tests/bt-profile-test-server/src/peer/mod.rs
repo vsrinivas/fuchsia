@@ -30,7 +30,7 @@ pub mod service;
 use self::search::SearchSet;
 use self::service::{RegistrationHandle, ServiceSet};
 use crate::profile::{build_l2cap_descriptor, parse_service_definitions};
-use crate::types::{Psm, ServiceRecord};
+use crate::types::{LaunchInfo, Psm, ServiceRecord};
 
 /// Default SDU size the peer is capable of accepting. This is chosen as the default
 /// max size of the underlying fuchsia_bluetooth::Channel, as this is sufficient for
@@ -132,19 +132,21 @@ impl MockPeer {
         next_profile_handle
     }
 
-    /// Attempts to launch the profile specified by `profile_url`.
+    /// Attempts to launch the profile specified by the `launch_info`.
     ///
     /// Returns a stream that monitors component state. The returned stream _must_ be polled
     /// in order to complete component launching. Furthermore, it should also be polled to
     /// detect component termination - state will be cleaned up thereafter.
     pub fn launch_profile(
         &mut self,
-        profile_url: String,
+        launch_info: LaunchInfo,
     ) -> Result<impl Stream<Item = Result<ComponentStatus, fidl::Error>>, Error> {
         let next_profile_handle = self.get_next_profile_handle();
+        let profile_url = launch_info.url;
 
         // Launch the component and grab the event stream.
-        let app = client::launch(self.env.launcher(), profile_url.clone(), None)?;
+        let app =
+            client::launch(self.env.launcher(), profile_url.clone(), Some(launch_info.arguments))?;
         let component_stream = app.controller().take_event_stream();
 
         let entry = self.launched_profiles.lazy_entry(&next_profile_handle);
@@ -339,7 +341,6 @@ mod tests {
     use crate::types::RegisteredServiceId;
 
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::*;
     use fidl_fuchsia_sys::EnvironmentOptions;
     use fuchsia_async as fasync;
     use fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs};
@@ -388,23 +389,26 @@ mod tests {
     /// All search and advertisement requests over the Profile service will be accepted and stored.
     /// Connection requests aren't required to unit test the successful launching of profiles, so
     /// they are ignored.
-    fn handle_profile_requests(mut stream: ProfileRequestStream, env: Arc<Mutex<TestEnvironment>>) {
+    fn handle_profile_requests(
+        mut stream: bredr::ProfileRequestStream,
+        env: Arc<Mutex<TestEnvironment>>,
+    ) {
         fasync::Task::spawn(async move {
             while let Some(request) = stream.next().await {
                 if let Ok(req) = request {
                     match req {
-                        ProfileRequest::Advertise { receiver, responder, .. } => {
+                        bredr::ProfileRequest::Advertise { receiver, responder, .. } => {
                             let proxy = receiver.into_proxy().unwrap();
                             let mut w_env = env.lock().await;
                             w_env.add_advertisement(proxy, responder);
                         }
-                        ProfileRequest::Search { results, .. } => {
+                        bredr::ProfileRequest::Search { results, .. } => {
                             let proxy = results.into_proxy().unwrap();
                             let mut w_env = env.lock().await;
                             w_env.add_search(proxy);
                         }
-                        ProfileRequest::Connect { .. } => {}
-                        ProfileRequest::ConnectSco { .. } => {}
+                        bredr::ProfileRequest::Connect { .. } => {}
+                        bredr::ProfileRequest::ConnectSco { .. } => {}
                     }
                 }
             }
@@ -438,9 +442,10 @@ mod tests {
     /// to keep alive relevant state.
     fn create_mock_peer(
         id: PeerId,
-    ) -> Result<(MockPeer, PeerObserverRequestStream, Arc<Mutex<TestEnvironment>>), Error> {
+    ) -> Result<(MockPeer, bredr::PeerObserverRequestStream, Arc<Mutex<TestEnvironment>>), Error>
+    {
         let (env, env_vars) = setup_environment(id)?;
-        let (proxy, stream) = create_proxy_and_stream::<PeerObserverMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
         Ok((MockPeer::new(id, env, Some(proxy)), stream, env_vars))
     }
 
@@ -449,10 +454,10 @@ mod tests {
     /// that signals the termination of the service search.
     fn build_and_register_search(
         mock_peer: &mut MockPeer,
-        id: ServiceClassProfileIdentifier,
-    ) -> (SearchResultsRequestStream, impl Future<Output = ()>) {
-        let (client, stream) =
-            create_proxy_and_stream::<SearchResultsMarker>().expect("couldn't create endpoints");
+        id: bredr::ServiceClassProfileIdentifier,
+    ) -> (bredr::SearchResultsRequestStream, impl Future<Output = ()>) {
+        let (client, stream) = create_proxy_and_stream::<bredr::SearchResultsMarker>()
+            .expect("couldn't create endpoints");
         let search_fut = mock_peer.new_search(id, vec![], client);
         (stream, search_fut)
     }
@@ -464,17 +469,18 @@ mod tests {
     fn build_and_register_service(
         mock_peer: &mut MockPeer,
     ) -> (
-        ConnectionReceiverRequestStream,
+        bredr::ConnectionReceiverRequestStream,
         impl Future<Output = ()>,
-        HashSet<ServiceClassProfileIdentifier>,
+        HashSet<bredr::ServiceClassProfileIdentifier>,
     ) {
         // Build the A2DP Sink Service Definition.
         let (a2dp_def, _) = build_a2dp_service_definition();
         let mut expected_ids = HashSet::new();
-        expected_ids.insert(ServiceClassProfileIdentifier::AudioSink);
+        expected_ids.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
 
         // Register the service.
-        let (receiver, stream) = create_proxy_and_stream::<ConnectionReceiverMarker>().unwrap();
+        let (receiver, stream) =
+            create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
         let res = mock_peer.new_advertisement(vec![a2dp_def], receiver);
         assert!(res.is_ok());
         let (svc_ids, adv_fut) = res.unwrap();
@@ -486,10 +492,10 @@ mod tests {
     /// Launches the profile specified by `profile_url`.
     fn do_launch_profile(
         exec: &mut fasync::Executor,
-        profile_url: String,
         mock_peer: &mut MockPeer,
+        launch_info: LaunchInfo,
     ) -> impl Stream<Item = Result<ComponentStatus, fidl::Error>> {
-        let launch_res = mock_peer.launch_profile(profile_url.clone());
+        let launch_res = mock_peer.launch_profile(launch_info);
         let mut component_stream = launch_res.expect("profile should launch");
         match exec.run_singlethreaded(&mut component_stream.next()) {
             Some(Ok(ComponentStatus::DirectoryReady)) => {}
@@ -503,13 +509,13 @@ mod tests {
     /// Panics if the call doesn't happen.
     fn expect_search_service_found(
         exec: &mut fasync::Executor,
-        stream: &mut SearchResultsRequestStream,
+        stream: &mut bredr::SearchResultsRequestStream,
     ) {
         let service_found_fut = stream.select_next_some();
         pin_mut!(service_found_fut);
 
         match exec.run_until_stalled(&mut service_found_fut) {
-            Poll::Ready(Ok(SearchResultsRequest::ServiceFound { responder, .. })) => {
+            Poll::Ready(Ok(bredr::SearchResultsRequest::ServiceFound { responder, .. })) => {
                 let _ = responder.send();
             }
             x => panic!("Expected ServiceFound request but got: {:?}", x),
@@ -520,13 +526,13 @@ mod tests {
     /// Panics if the call doesn't happen.
     fn expect_observer_service_found(
         exec: &mut fasync::Executor,
-        stream: &mut PeerObserverRequestStream,
+        stream: &mut bredr::PeerObserverRequestStream,
     ) {
         let observer_fut = stream.select_next_some();
         pin_mut!(observer_fut);
 
         match exec.run_until_stalled(&mut observer_fut) {
-            Poll::Ready(Ok(PeerObserverRequest::ServiceFound { responder, .. })) => {
+            Poll::Ready(Ok(bredr::PeerObserverRequest::ServiceFound { responder, .. })) => {
                 let _ = responder.send();
             }
             x => panic!("Expected ServiceFound request but got: {:?}", x),
@@ -538,13 +544,13 @@ mod tests {
     /// Panics if the call doesn't happen.
     fn expect_observer_component_terminated(
         exec: &mut fasync::Executor,
-        stream: &mut PeerObserverRequestStream,
+        stream: &mut bredr::PeerObserverRequestStream,
     ) -> String {
         let observer_fut = stream.select_next_some();
         pin_mut!(observer_fut);
 
         match exec.run_until_stalled(&mut observer_fut) {
-            Poll::Ready(Ok(PeerObserverRequest::ComponentTerminated {
+            Poll::Ready(Ok(bredr::PeerObserverRequest::ComponentTerminated {
                 component_url,
                 responder,
                 ..
@@ -563,7 +569,7 @@ mod tests {
     /// component from the MockPeer state.
     /// Validates that the observer relay is notified of component termination.
     #[test]
-    fn test_launch_profiles() {
+    fn launch_multiple_profiles_sucess() {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id1 = PeerId(99);
@@ -571,17 +577,23 @@ mod tests {
             create_mock_peer(id1).expect("Mock peer creation should succeed");
 
         let profile_url1 = fuchsia_single_component_package_url!("bt-a2dp-source").to_string();
-        let component_stream1 = do_launch_profile(&mut exec, profile_url1.clone(), &mut mock_peer);
+        let launch_info1 = LaunchInfo {
+            url: profile_url1.clone(),
+            arguments: vec!["-c".to_string(), "basic".to_string()],
+        };
+        let component_stream1 = do_launch_profile(&mut exec, &mut mock_peer, launch_info1);
         pin_mut!(component_stream1);
 
         // Launching the same profile is OK.
         let profile_url2 = fuchsia_single_component_package_url!("bt-a2dp-source").to_string();
-        let component_stream2 = do_launch_profile(&mut exec, profile_url2.clone(), &mut mock_peer);
+        let launch_info2 = LaunchInfo { url: profile_url2.clone(), arguments: vec![] };
+        let component_stream2 = do_launch_profile(&mut exec, &mut mock_peer, launch_info2);
         pin_mut!(component_stream2);
 
         // Launching a different profile is OK.
         let profile_url3 = fuchsia_single_component_package_url!("bt-avrcp").to_string();
-        let component_stream3 = do_launch_profile(&mut exec, profile_url3.clone(), &mut mock_peer);
+        let launch_info3 = LaunchInfo { url: profile_url3.clone(), arguments: vec![] };
+        let component_stream3 = do_launch_profile(&mut exec, &mut mock_peer, launch_info3);
         pin_mut!(component_stream3);
 
         // Dropping the client's searches and advertisements simulates component disconnection.
@@ -615,10 +627,32 @@ mod tests {
         assert_eq!(expected_urls.sort(), actual_urls.sort());
     }
 
+    #[test]
+    fn launch_profile_with_invalid_args_terminates_immediately() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let id1 = PeerId(659);
+        let (mut mock_peer, _observer_stream, _env_vars) =
+            create_mock_peer(id1).expect("Mock peer creation should succeed");
+
+        // The invalid `arguments` here are specific to A2DP Source - the `-invalid` flag is not
+        // supported by A2DP source.
+        let info = LaunchInfo {
+            url: fuchsia_single_component_package_url!("bt-a2dp-source").to_string(),
+            arguments: vec!["-invalid invalid_arg_123".to_string()],
+        };
+
+        let mut component_stream = mock_peer.launch_profile(info).expect("profile should launch");
+        match exec.run_singlethreaded(&mut component_stream.next()) {
+            Some(Ok(ComponentStatus::Terminated)) => {}
+            x => panic!("Expected directory terminated but got: {:?}", x),
+        }
+    }
+
     /// Tests registration of a new service followed by unregistration when the
     /// client drops the ConnectionReceiver.
     #[test]
-    fn test_register_service() -> Result<(), Error> {
+    fn registered_service_is_unregistered_when_receiver_disconnects() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id = PeerId(234);
@@ -632,8 +666,8 @@ mod tests {
         assert_eq!(svc_ids, advertised_service_records.keys().cloned().collect());
         assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
 
-        // Client decides to not advertise its service anymore by dropping ServerEnd and
-        // the listen-for-close future should resolve.
+        // Client decides to not advertise its service anymore by dropping ServerEnd.
+        // The advertisement future should resolve.
         drop(stream);
         assert!(exec.run_until_stalled(&mut adv_fut).is_ready());
 
@@ -647,7 +681,7 @@ mod tests {
     /// Tests the registration of a new service and establishing a connection
     /// over potentially registered PSMs.
     #[test]
-    fn test_register_service_with_connection() -> Result<(), Error> {
+    fn register_service_with_connection_success() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id = PeerId(234);
@@ -665,26 +699,26 @@ mod tests {
         // An incoming connection request for PSM_AVCTP is invalid because PSM_AVCTP has not
         // been registered as a service.
         let remote_peer = PeerId(987);
-        assert!(mock_peer.new_connection(remote_peer, Psm(PSM_AVCTP)).is_err());
+        assert!(mock_peer.new_connection(remote_peer, Psm(bredr::PSM_AVCTP)).is_err());
 
         // An incoming connection request for PSM_AVDTP is valid, since it was registered
         // in `a2dp_def`. There should be a new connection request on the stream.
-        assert!(mock_peer.new_connection(remote_peer, Psm(PSM_AVDTP)).is_ok());
+        assert!(mock_peer.new_connection(remote_peer, Psm(bredr::PSM_AVDTP)).is_ok());
         match exec.run_until_stalled(&mut stream.next()) {
-            Poll::Ready(Some(Ok(ConnectionReceiverRequest::Connected {
+            Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
                 peer_id,
                 channel,
                 ..
             }))) => {
                 assert_eq!(remote_peer, peer_id.into());
-                assert_eq!(channel.channel_mode, Some(ChannelMode::Basic));
+                assert_eq!(channel.channel_mode, Some(bredr::ChannelMode::Basic));
                 assert_eq!(channel.max_tx_sdu_size, Some(DEFAULT_TX_SDU_SIZE as u16));
             }
             x => panic!("Expected Ready but got: {:?}", x),
         }
         // This should also be echo'ed on the observer.
         match exec.run_until_stalled(&mut observer_stream.next()) {
-            Poll::Ready(Some(Ok(PeerObserverRequest::PeerConnected {
+            Poll::Ready(Some(Ok(bredr::PeerObserverRequest::PeerConnected {
                 peer_id,
                 responder,
                 ..
@@ -702,33 +736,37 @@ mod tests {
     /// same ServiceClassProfileIdentifier.
     /// Tests notifying the outstanding searches with an advertised service.
     #[test]
-    fn test_register_multiple_searches() -> Result<(), Error> {
+    fn register_multiple_searches_success() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id = PeerId(234);
         let (mut mock_peer, mut observer_stream, _env_vars) = create_mock_peer(id)?;
 
         // The new search should be stored.
-        let (mut stream1, search1) =
-            build_and_register_search(&mut mock_peer, ServiceClassProfileIdentifier::AudioSink);
+        let (mut stream1, search1) = build_and_register_search(
+            &mut mock_peer,
+            bredr::ServiceClassProfileIdentifier::AudioSink,
+        );
         pin_mut!(search1);
         let mut expected_searches = HashSet::new();
-        expected_searches.insert(ServiceClassProfileIdentifier::AudioSink);
+        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
         assert_eq!(expected_searches, mock_peer.get_active_searches());
 
         // Adding a search for the same Service Class ID is OK.
-        let (mut stream2, search2) =
-            build_and_register_search(&mut mock_peer, ServiceClassProfileIdentifier::AudioSink);
+        let (mut stream2, search2) = build_and_register_search(
+            &mut mock_peer,
+            bredr::ServiceClassProfileIdentifier::AudioSink,
+        );
         pin_mut!(search2);
         assert_eq!(expected_searches, mock_peer.get_active_searches());
 
         // Adding different search is OK.
         let (mut stream3, search3) = build_and_register_search(
             &mut mock_peer,
-            ServiceClassProfileIdentifier::AvRemoteControl,
+            bredr::ServiceClassProfileIdentifier::AvRemoteControl,
         );
         pin_mut!(search3);
-        expected_searches.insert(ServiceClassProfileIdentifier::AvRemoteControl);
+        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControl);
         assert_eq!(expected_searches, mock_peer.get_active_searches());
 
         // All three futures that listen for search termination should still be active.
@@ -740,7 +778,7 @@ mod tests {
         let mut record = build_a2dp_service_record(Psm(19));
         record.register_service_record(RegisteredServiceId::new(PeerId(999), 789)); // random
         let services = vec![record];
-        mock_peer.notify_searches(&ServiceClassProfileIdentifier::AudioSink, services);
+        mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, services);
 
         // Only `stream1` and `stream2` correspond to searches for AudioSink.
         expect_search_service_found(&mut exec, &mut stream1);
@@ -758,10 +796,10 @@ mod tests {
         Ok(())
     }
 
-    /// Tests that a service search is correctly termianted when the the client drops
+    /// Tests that a service search is correctly terminated when the the client drops
     /// the ServerEnd of the SearchResults channel.
     #[test]
-    fn test_search_termination() -> Result<(), Error> {
+    fn service_search_terminates_when_client_disconnects() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id = PeerId(564);
@@ -770,12 +808,12 @@ mod tests {
         // The new search should be stored.
         let (stream1, search1) = build_and_register_search(
             &mut mock_peer,
-            ServiceClassProfileIdentifier::AvRemoteControlTarget,
+            bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget,
         );
         pin_mut!(search1);
 
         let mut expected_searches = HashSet::new();
-        expected_searches.insert(ServiceClassProfileIdentifier::AvRemoteControlTarget);
+        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget);
         assert_eq!(expected_searches, mock_peer.get_active_searches());
         assert!(exec.run_until_stalled(&mut search1).is_pending());
 
