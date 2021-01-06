@@ -693,41 +693,41 @@ void x86_read_debug_status(uint64_t* dr6) {
   //       In Intel, it can mean that an debug or breakpoint exception occurred during a RTM
   //       block. For now, we mask this bit to make both platforms uniform.
   uint64_t value = 0;
-  asm("mov %%dr6, %0" : "=r"(value));
+  asm volatile("mov %%dr6, %0" : "=r"(value));
   *dr6 = value | X86_DR6_MASK;
 }
 
 void x86_write_debug_status(uint64_t dr6) {
   // Upper 32 bits must be 0.
   uint64_t full_value = dr6 & 0x00000000ffffffff;
-  asm("mov %0, %%dr6" ::"r"(full_value));
+  asm volatile("mov %0, %%dr6" ::"r"(full_value));
 }
 
 void x86_disable_debug_state(void) {
   // Disabling dr7 is enough to disable the debug functionality.
   uint64_t zero_val = 0;
-  asm("mov %0, %%dr7" ::"r"(zero_val));
+  asm volatile("mov %0, %%dr7" ::"r"(zero_val));
 }
 
 void x86_read_hw_debug_regs(x86_debug_state_t* debug_state) {
-  asm("mov %%dr0, %0" : "=r"(debug_state->dr[0]));
-  asm("mov %%dr1, %0" : "=r"(debug_state->dr[1]));
-  asm("mov %%dr2, %0" : "=r"(debug_state->dr[2]));
-  asm("mov %%dr3, %0" : "=r"(debug_state->dr[3]));
+  asm volatile("mov %%dr0, %0" : "=r"(debug_state->dr[0]));
+  asm volatile("mov %%dr1, %0" : "=r"(debug_state->dr[1]));
+  asm volatile("mov %%dr2, %0" : "=r"(debug_state->dr[2]));
+  asm volatile("mov %%dr3, %0" : "=r"(debug_state->dr[3]));
 
   x86_read_debug_status(&debug_state->dr6);
 
-  asm("mov %%dr7, %0" : "=r"(debug_state->dr7));
+  asm volatile("mov %%dr7, %0" : "=r"(debug_state->dr7));
 }
 
 void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state) {
-  asm("mov %0, %%dr0" ::"r"(debug_state->dr[0]));
-  asm("mov %0, %%dr1" ::"r"(debug_state->dr[1]));
-  asm("mov %0, %%dr2" ::"r"(debug_state->dr[2]));
-  asm("mov %0, %%dr3" ::"r"(debug_state->dr[3]));
+  asm volatile("mov %0, %%dr0" ::"r"(debug_state->dr[0]));
+  asm volatile("mov %0, %%dr1" ::"r"(debug_state->dr[1]));
+  asm volatile("mov %0, %%dr2" ::"r"(debug_state->dr[2]));
+  asm volatile("mov %0, %%dr3" ::"r"(debug_state->dr[3]));
   // DR6 is not writable from userspace.
   // IMPORTANT: DR7 should be already masked at this point by calling x86_validate_debug_state.
-  asm("mov %0, %%dr7" ::"r"(debug_state->dr7));
+  asm volatile("mov %0, %%dr7" ::"r"(debug_state->dr7));
 }
 
 #ifndef NDEBUG
