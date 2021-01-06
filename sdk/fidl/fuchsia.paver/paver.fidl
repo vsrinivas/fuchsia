@@ -186,7 +186,7 @@ protocol DataSink {
     /// `fuchsia.io.Node` for now.
     ///
     /// On success, returns a channel to the initialized FVM volume.
-    WipeVolume() -> (request<fuchsia.hardware.block.volume.VolumeManager> volume) error zx.status;
+    WipeVolume() -> (fuchsia.hardware.block.volume.VolumeManager volume) error zx.status;
 
     /// Flush all previously buffered writes to persistent storage.
     Flush() -> (zx.status status);

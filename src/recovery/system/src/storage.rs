@@ -117,7 +117,7 @@ fn create_minfs_from_channel(
 mod tests {
     use super::{create_minfs_from_channel, format_disk, mount_filesystem, Filesystem};
     use anyhow::Error;
-    use fidl::endpoints::ServerEnd;
+    use fidl::endpoints::ClientEnd;
     use fidl_fuchsia_hardware_block_volume::VolumeManagerMarker;
     use fidl_fuchsia_paver::{
         DataSinkRequest, DataSinkRequestStream, PaverMarker, PaverRequest, PaverRequestStream,
@@ -129,7 +129,7 @@ mod tests {
     use ramdevice_client::RamdiskClientBuilder;
     use std::sync::Arc;
 
-    // Mock for a Flesystem.
+    // Mock for a Filesystem.
     struct FilesystemMock {
         format_called: bool,
         mount_called: bool,
@@ -220,12 +220,12 @@ mod tests {
     }
 
     /// Provides a suitable channel for a faked successful WipeVolume call.
-    fn grab_volume() -> ServerEnd<VolumeManagerMarker> {
+    fn grab_volume() -> ClientEnd<VolumeManagerMarker> {
         // We need a channel to a device supported by device_get_topo_path.
         // Grab the system's fist block device.
         let (client_channel, server_channel) = zx::Channel::create().unwrap();
         fdio::service_connect("/dev/class/block/000", server_channel).expect("Open block device");
-        ServerEnd::<VolumeManagerMarker>::new(client_channel)
+        ClientEnd::<VolumeManagerMarker>::new(client_channel)
     }
 
     struct TestEnv {
