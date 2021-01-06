@@ -572,7 +572,7 @@ async fn test_action_fuse() {
             .build();
     }
 
-    assert!(!rx.next().await.is_none());
+    assert!(rx.next().await.is_some());
 }
 
 /// Exercises chained action fuse behavior
@@ -598,10 +598,10 @@ async fn test_chained_action_fuse() {
     }
 
     // Root should fire first
-    assert!(!rx.next().await.is_none());
+    assert!(rx.next().await.is_some());
 
     // Then chain reaction
-    assert!(!rx2.next().await.is_none());
+    assert!(rx2.next().await.is_some());
 }
 
 /// Exercises timestamp value.
@@ -670,7 +670,7 @@ async fn test_bind_to_recipient() {
     }
 
     // Receptor has fallen out of scope, should receive callback.
-    assert!(!rx.next().await.is_none());
+    assert!(rx.next().await.is_some());
 }
 
 #[fuchsia_async::run_until_stalled(test)]
