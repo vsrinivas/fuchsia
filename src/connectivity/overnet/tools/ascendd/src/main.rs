@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, ascendd_lib::Ascendd};
+use {anyhow::Error, ascendd::Ascendd};
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {

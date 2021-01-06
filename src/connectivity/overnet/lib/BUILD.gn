@@ -12,6 +12,9 @@ group("lib") {
     "stream_link",
     "udp_link",
   ]
+  if (is_host) {
+    deps += [ "ascendd" ]
+  }
 }
 
 group("tests") {

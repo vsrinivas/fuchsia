@@ -11,7 +11,7 @@ use {
     crate::onet::HostPipeConnection,
     crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
-    ascendd_lib::Ascendd,
+    ascendd::Ascendd,
     async_std::sync::RwLock,
     async_trait::async_trait,
     chrono::{DateTime, Utc},

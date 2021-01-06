@@ -14,7 +14,7 @@ use {
         ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
-    ascendd_lib::Ascendd,
+    ascendd::Ascendd,
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::{build_info, TryStreamUtilExt},
