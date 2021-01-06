@@ -35,7 +35,7 @@ const GATEWAY_ADDR: net_types::ip::Ipv4Addr = net_types::ip::Ipv4Addr::new([192,
 
 /// Try to parse `frame` as an ICMP or ICMPv6 Echo Request message, and if successful returns the
 /// Echo Reply message that the netstack would expect as a reply.
-fn handle_frame(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Buf<Vec<u8>>>> {
+fn reply_if_echo_request(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Buf<Vec<u8>>>> {
     let mut icmp_body = Vec::new();
     let r = parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpEchoRequest, _>(
         &frame,
@@ -122,7 +122,7 @@ fn handle_frame(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Buf<Vec<u8>
 
 /// Extract the most recent reachability states for IPv4 and IPv6 from the inspect data.
 fn extract_reachability_states(
-    data: diagnostics_hierarchy::DiagnosticsHierarchy,
+    data: &diagnostics_hierarchy::DiagnosticsHierarchy,
 ) -> Result<(String, String)> {
     let (v4, v6) = data
         .children
@@ -258,36 +258,58 @@ where
         .await
         .context("failed to send router advertisement")?;
 
-    let mut frame_stream =
-        fake_ep.frame_stream().map(|r| r.context("fake endpoint frame stream error")).fuse();
+    let echo_reply_stream = fake_ep
+        .frame_stream()
+        .map(|r| r.context("fake endpoint frame stream error"))
+        .try_filter_map(|(frame, dropped)| {
+            assert_eq!(dropped, 0);
+            async {
+                let reply = match reply_if_echo_request(frame, gateway_only)
+                    .context("failed to handle frame")?
+                {
+                    Some(reply) => reply,
+                    None => return Ok(None),
+                };
+                fake_ep
+                    .write(reply.as_ref())
+                    .await
+                    .map(Some)
+                    .context("failed to write echo reply to fake endpoint")
+            }
+        })
+        .fuse();
+    futures::pin_mut!(echo_reply_stream);
 
-    // Verify through the inspect data that the reachability states are "Internet".
+    // Verify through the inspect data that the reachability states are as expected.
     // TODO(fxbug.dev/65585) Get reachability monitor's reachability state over FIDL rather than
     // the inspect data.
     const INSPECT_COMPONENT: &str = "reachability.cmx";
     const INSPECT_TREE_SELECTOR: &str = "root/system";
     let inspect_data_stream = futures::stream::try_unfold((), |()| {
         get_inspect_data(&env, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
-            .and_then(|data| futures::future::ready(extract_reachability_states(data)))
+            .and_then(|data| {
+                futures::future::ready(extract_reachability_states(&data).with_context(|| {
+                    format!("failed to extract reachability states from inspect data: {:#?}", data)
+                }))
+            })
             .map_ok(|states| Some((states, ())))
     })
     .fuse();
     let mut reachability_monitor_wait_fut = reachability.wait().fuse();
     futures::pin_mut!(inspect_data_stream);
+
+    // Ensure that at least one echo request has been replied to before polling the inspect data
+    // stream to guarantee that reachability monitor has initialized its inspect data tree.
+    let () = echo_reply_stream
+        .try_next()
+        .await
+        .context("echo reply stream error")?
+        .ok_or_else(|| anyhow!("echo reply stream ended unexpectedly"))?;
     loop {
         futures::select! {
-            r = frame_stream.try_next() => {
-                let (frame, dropped) = r.context("fake endpoint frame stream error")?
-                    .ok_or_else(|| anyhow!("fake endpoint frame stream ended unexpectedly"))?;
-                assert_eq!(dropped, 0);
-                if let Some(echo_reply) =
-                    handle_frame(frame, gateway_only).context("failed to handle frame")?
-                {
-                    let () = fake_ep
-                        .write(echo_reply.as_ref())
-                        .await
-                        .context("failed to write echo reply to fake endpoint")?;
-                }
+            r = echo_reply_stream.try_next() => {
+                let () = r.context("echo reply stream error")?
+                    .ok_or_else(|| anyhow!("echo reply stream ended unexpectedly"))?;
             }
             r = inspect_data_stream.try_next() => {
                 let (v4, v6) = r.context("inspect data stream error")?
