@@ -107,23 +107,23 @@ void Device::Unbind() {
   dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
-void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
-                         wlan_info_mac_role_t mac_roles_mask) {
-  MacRoles->resize(0);
-  if (mac_roles_mask & WLAN_INFO_MAC_ROLE_CLIENT) {
-    MacRoles->push_back(wlan_device::MacRole::CLIENT);
+void ConvertSupportedMacRoles(::std::vector<wlan_device::MacRole>* fidl_supported_mac_roles,
+                              wlan_info_mac_role_t banjo_supported_mac_roles) {
+  fidl_supported_mac_roles->resize(0);
+  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_CLIENT) {
+    fidl_supported_mac_roles->push_back(wlan_device::MacRole::CLIENT);
   }
-  if (mac_roles_mask & WLAN_INFO_MAC_ROLE_AP) {
-    MacRoles->push_back(wlan_device::MacRole::AP);
+  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_AP) {
+    fidl_supported_mac_roles->push_back(wlan_device::MacRole::AP);
   }
-  if (mac_roles_mask & WLAN_INFO_MAC_ROLE_MESH) {
-    MacRoles->push_back(wlan_device::MacRole::MESH);
+  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_MESH) {
+    fidl_supported_mac_roles->push_back(wlan_device::MacRole::MESH);
   }
 }
 
-static void ConvertPhyInfo(wlan_device::PhyInfo* info, const wlanphy_impl_info_t* phy_info) {
+static void ConvertPhyInfo(wlan_device::PhyInfo* fidl_info, const wlanphy_impl_info_t* banjo_info) {
   // supported_mac_roles
-  ConvertPhyRolesInfo(&info->supported_mac_roles, phy_info->supported_mac_roles);
+  ConvertSupportedMacRoles(&fidl_info->supported_mac_roles, banjo_info->supported_mac_roles);
 }
 
 void Device::Query(QueryCallback callback) {

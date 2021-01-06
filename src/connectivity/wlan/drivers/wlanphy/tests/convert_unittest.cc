@@ -35,7 +35,7 @@ TEST(WlanphyTest, is_power_of_two) {
   EXPECT_FALSE(is_power_of_two(754));
 }
 
-TEST(WlanphyTest, ConvertPhyRolesInfo) {
+TEST(WlanphyTest, ConvertSupportedMacRoles) {
   constexpr wlan_info_mac_role_t kClient = WLAN_INFO_MAC_ROLE_CLIENT;
   constexpr wlan_info_mac_role_t kAp = WLAN_INFO_MAC_ROLE_AP;
   constexpr wlan_info_mac_role_t kMesh = WLAN_INFO_MAC_ROLE_MESH;
@@ -52,20 +52,20 @@ TEST(WlanphyTest, ConvertPhyRolesInfo) {
 
   // Check the return value of the function for each role and some combinations
   // Client
-  ConvertPhyRolesInfo(&roles, kClient);
+  ConvertSupportedMacRoles(&roles, kClient);
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
   // AP
-  ConvertPhyRolesInfo(&roles, kAp);
+  ConvertSupportedMacRoles(&roles, kAp);
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
   // Mesh
-  ConvertPhyRolesInfo(&roles, kMesh);
+  ConvertSupportedMacRoles(&roles, kMesh);
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::MESH), roles.end());
   // Client + AP
-  ConvertPhyRolesInfo(&roles, kClientAp);
+  ConvertSupportedMacRoles(&roles, kClientAp);
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
   // Client + AP + Mesh
-  ConvertPhyRolesInfo(&roles, kClientApMesh);
+  ConvertSupportedMacRoles(&roles, kClientApMesh);
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
   EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::MESH), roles.end());

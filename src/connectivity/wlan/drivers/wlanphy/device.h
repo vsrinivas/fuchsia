@@ -51,8 +51,9 @@ class Device : public ::fuchsia::wlan::device::Phy {
   friend class DeviceConnector;
 };
 
-void ConvertPhyRolesInfo(::std::vector<::fuchsia::wlan::device::MacRole>* MacRoles,
-                         wlan_info_mac_role_t mac_roles_mask);
+void ConvertSupportedMacRoles(
+    ::std::vector<::fuchsia::wlan::device::MacRole>* fidl_supported_mac_roles,
+    wlan_info_mac_role_t banjo_supported_mac_roles);
 }  // namespace wlanphy
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
