@@ -12,10 +12,6 @@ declare_args() {
 
   # The list of environment names to include in "basic_envs".
   basic_env_names = [ "emu" ]
-
-  # Adds GCE as a basic env if true.
-  # TODO(garymm): Delete this, use basic_env_names instead.
-  enable_test_on_gce = false
 }
 
 _all_named_envs = []
@@ -160,10 +156,6 @@ _all_named_envs += [
     env = gce_env
   },
 ]
-
-if (enable_test_on_gce) {
-  basic_env_names += [ "gce" ]
-}
 
 ### END Individual test environments
 
