@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//src/fonts/build/fonts.gni")
+import("//src/sys/build/components.gni")
 
 # Generate all the Fuchsia font `package`s from the values in the files listed
 # in `font_pkgs_paths`.
@@ -21,21 +23,22 @@ foreach(entry, font_pkg_entries) {
   }
   path_to_asset = "${fonts_dir}/${path_prefix}${entry.file_name}"
 
+  resource_target = "${entry.safe_name}_resource"
+  resource(resource_target) {
+    sources = [ path_to_asset ]
+    outputs = [ "data/${entry.file_name}" ]
+  }
+
   package_name = "font-package-${entry.safe_name}"
   all_packages += [ ":${package_name}" ]
-  package(package_name) {
+  fuchsia_package(package_name) {
     metadata = {
       font_barrier = []
       font_paths = [ path_to_asset ]
       font_file_names = [ entry.file_name ]
       fuchsia_package_urls = [ "fuchsia-pkg://fuchsia.com/${package_name}" ]
     }
-    resources = [
-      {
-        path = rebase_path(path_to_asset)
-        dest = entry.file_name
-      },
-    ]
+    deps = [ ":$resource_target" ]
   }
 }
 
