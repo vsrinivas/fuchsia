@@ -161,6 +161,12 @@ static zx_status_t create_buffer_collection(
                                                       collection.TakeServer()),
                "Failed to bind collection");
 
+  constexpr uint32_t kNamePriority = 1000000;
+  const char* kNameString = "framebuffer";
+  CHECKED_CALL(
+      collection->SetName(kNamePriority, fidl::unowned_str(kNameString, strlen(kNameString))),
+      "Failed to set framebuffer name");
+
   sysmem::BufferCollectionConstraints constraints;
   constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
   constraints.min_buffer_count = 1;
