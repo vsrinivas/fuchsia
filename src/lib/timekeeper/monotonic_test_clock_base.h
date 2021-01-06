@@ -20,7 +20,6 @@ class MonotonicTestClockBase : public Clock {
   ~MonotonicTestClockBase() override;
 
  private:
-  zx_status_t GetTime(zx_clock_t clock_id, zx_time_t* time) const final;
   zx_status_t GetUtcTime(zx_time_t* time) const final;
   zx_time_t GetMonotonicTime() const final;
 

@@ -20,15 +20,6 @@ class Clock {
   Clock(const Clock&) = delete;
   Clock& operator=(const Clock&) = delete;
 
-  // Returns the current time for |kClockId|. See |zx_clock_get|.
-  template <zx_clock_t kClockId>
-  zx_status_t Now(zx::basic_time<kClockId>* result) const {
-    zx_time_t time;
-    zx_status_t status = GetTime(kClockId, &time);
-    *result = zx::basic_time<kClockId>(time);
-    return status;
-  }
-
   // Returns the current UTC time.
   zx_status_t UtcNow(zx::time_utc* result) const {
     zx_time_t time;
@@ -41,8 +32,6 @@ class Clock {
   zx::time Now() const { return zx::time(GetMonotonicTime()); }
 
  protected:
-  // Returns the current time for |kClockId|. See |zx_clock_get|.
-  virtual zx_status_t GetTime(zx_clock_t clock_id, zx_time_t* time) const = 0;
   // Returns the current UTC time.
   virtual zx_status_t GetUtcTime(zx_time_t* time) const = 0;
   // Returns the current monotonic time. See |zx_clock_get_monotonic|.

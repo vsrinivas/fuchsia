@@ -22,15 +22,9 @@ TEST(TestClockTest, Assignment) {
 
   zx::time_utc t3;
 
-  EXPECT_EQ(ZX_OK, clock.Now(&t3));
+  EXPECT_EQ(ZX_OK, clock.UtcNow(&t3));
 
   EXPECT_EQ(t1.get(), t3.get());
-
-  zx::time_utc t4;
-
-  EXPECT_EQ(ZX_OK, clock.UtcNow(&t4));
-
-  EXPECT_EQ(t3, t4);
 }
 
 }  // namespace

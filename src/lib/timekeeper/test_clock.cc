@@ -10,11 +10,6 @@ TestClock::TestClock() = default;
 
 TestClock::~TestClock() = default;
 
-zx_status_t TestClock::GetTime(zx_clock_t clock_id, zx_time_t* time) const {
-  *time = current_time_;
-  return ZX_OK;
-}
-
 zx_status_t TestClock::GetUtcTime(zx_time_t* time) const {
   *time = current_time_;
   return ZX_OK;

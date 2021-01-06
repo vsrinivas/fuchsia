@@ -19,26 +19,7 @@ TEST(SystemClockTest, MonotonicClock) {
   EXPECT_GE(time2, time1);
 }
 
-TEST(SystemClockTest, UTCClock) {
-  SystemClock clock;
-
-  zx::time_utc time1;
-  ASSERT_EQ(ZX_OK, clock.Now(&time1));
-
-  EXPECT_GT(time1, zx::time_utc(0));
-}
-
-TEST(SystemClockTest, ThreadClock) {
-  SystemClock clock;
-
-  zx::time_thread time1, time2;
-  ASSERT_EQ(ZX_OK, clock.Now(&time1));
-  ASSERT_EQ(ZX_OK, clock.Now(&time2));
-
-  EXPECT_GE(time2, time1);
-}
-
-TEST(SystemClockTest, UtcNow) {
+TEST(SystemClockTest, UtcClock) {
   SystemClock clock;
 
   zx::time_utc time1;

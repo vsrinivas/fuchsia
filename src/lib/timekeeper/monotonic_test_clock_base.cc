@@ -8,27 +8,16 @@
 #include <type_traits>
 
 namespace timekeeper {
-namespace {
 
-// Returns the starting value for the given clock. Ensures that
-// |ZX_CLOCK_MONOTONIC| has a starting value of zero.
-zx_time_t GetClockStartingValue(zx_clock_t clock_id) {
-  return (clock_id - ZX_CLOCK_MONOTONIC) * ZX_HOUR(24);
-}
-}  // namespace
+const zx_time_t UTC_OFFSET_FROM_MONOTONIC = ZX_HOUR(24);
 
 MonotonicTestClockBase::MonotonicTestClockBase(fit::function<zx_time_t()> clock)
     : clock_(std::move(clock)) {}
 
 MonotonicTestClockBase::~MonotonicTestClockBase() = default;
 
-zx_status_t MonotonicTestClockBase::GetTime(zx_clock_t clock_id, zx_time_t* time) const {
-  *time = GetClockStartingValue(clock_id) + GetMonotonicTime();
-  return ZX_OK;
-}
-
 zx_status_t MonotonicTestClockBase::GetUtcTime(zx_time_t* time) const {
-  *time = GetClockStartingValue(ZX_CLOCK_UTC) + GetMonotonicTime();
+  *time = UTC_OFFSET_FROM_MONOTONIC + GetMonotonicTime();
   return ZX_OK;
 }
 
