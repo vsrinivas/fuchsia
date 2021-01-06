@@ -6,21 +6,19 @@ use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{
-        load_font, path_for_corner_knockouts, path_for_rectangle, DisplayRotation, FontFace,
-        GlyphMap, Paint, Text,
+    drawing::{load_font, DisplayRotation, FontFace},
+    facet::{
+        measure_text_width, FacetId, Scene, SceneBuilder, SetColorMessage, TextFacetOptions,
+        TextHorizontalAlignment, TextVerticalAlignment,
     },
     input::{self},
     make_app_assistant, make_message,
-    render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
-        RenderExt, Style,
-    },
-    App, AppAssistant, Coord, Message, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
+    render::Context as RenderContext,
+    App, AppAssistant, Message, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey,
 };
-use euclid::default::Vector2D;
-use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
+use euclid::{point2, size2, vec2};
+use fuchsia_zircon::{Event, Time};
 use std::path::PathBuf;
 
 fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
@@ -69,31 +67,9 @@ impl AppAssistant for ButtonAppAssistant {
     }
 }
 
-fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Raster {
-    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path_for_rectangle(bounds, render_context), None);
-    raster_builder.build()
-}
-
-fn raster_for_corner_knockouts(
-    bounds: &Rect,
-    corner_radius: Coord,
-    render_context: &mut RenderContext,
-) -> Raster {
-    let path = path_for_corner_knockouts(bounds, corner_radius, render_context);
-    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path, None);
-    raster_builder.build()
-}
-
-struct RasterAndStyle {
-    location: Point,
-    raster: Raster,
-    style: Style,
-}
-
+#[allow(unused)]
 struct Button {
-    pub font_size: u32,
+    pub font_size: f32,
     pub padding: f32,
     bounds: Rect,
     bg_color: Color,
@@ -104,116 +80,96 @@ struct Button {
     tracking_pointer: Option<input::pointer::PointerId>,
     active: bool,
     focused: bool,
-    glyphs: GlyphMap,
     label_text: String,
     face: FontFace,
-    label: Option<Text>,
+    background: FacetId,
+    label: FacetId,
 }
 
 impl Button {
-    pub fn new(text: &str) -> Result<Button, Error> {
+    pub fn new(
+        text: &str,
+        font_size: f32,
+        padding: f32,
+        position: Point,
+        builder: &mut SceneBuilder,
+    ) -> Result<Button, Error> {
         let face = load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))?;
+        let label_width = measure_text_width(&face, font_size, text);
+        let label = builder.text(
+            face.clone(),
+            text,
+            font_size,
+            position,
+            TextFacetOptions {
+                color: Color::white(),
+                horizontal_alignment: TextHorizontalAlignment::Center,
+                vertical_alignment: TextVerticalAlignment::Center,
+                ..TextFacetOptions::default()
+            },
+        );
+        let bg_color = Color::from_hash_code("#B7410E")?;
+        let bg_bounds = Rect::new(
+            position - vec2(label_width, font_size) / 2.0 - vec2(padding, padding),
+            size2(label_width + padding * 2.0, font_size + padding * 2.0),
+        );
+        let background = builder.rectangle(bg_bounds, bg_color);
         let button = Button {
-            font_size: 20,
-            padding: 5.0,
-            bounds: Rect::zero(),
+            font_size: font_size,
+            padding: padding,
+            bounds: bg_bounds,
             fg_color: Color::white(),
-            bg_color: Color::from_hash_code("#B7410E")?,
+            bg_color,
             bg_color_active: Color::from_hash_code("#f0703c")?,
             fg_color_disabled: Color::from_hash_code("#A0A0A0")?,
             bg_color_disabled: Color::from_hash_code("#C0C0C0")?,
             tracking_pointer: None,
             active: false,
             focused: false,
-            glyphs: GlyphMap::new(),
             label_text: text.to_string(),
             face,
-            label: None,
+            background,
+            label,
         };
 
         Ok(button)
     }
 
-    pub fn set_focused(&mut self, focused: bool) {
-        self.focused = focused;
-        if !focused {
-            self.active = false;
-            self.tracking_pointer = None;
+    fn update_button_bg_color(&mut self, scene: &mut Scene) {
+        let (label_color, color) = if self.focused {
+            if self.active {
+                (self.fg_color, self.bg_color_active)
+            } else {
+                (self.fg_color, self.bg_color)
+            }
+        } else {
+            (self.fg_color_disabled, self.bg_color_disabled)
+        };
+        scene.send_message(&self.background, Box::new(SetColorMessage { color }));
+        scene.send_message(&self.label, Box::new(SetColorMessage { color: label_color }));
+    }
+
+    fn set_active(&mut self, scene: &mut Scene, active: bool) {
+        if self.active != active {
+            self.active = active;
+            self.update_button_bg_color(scene);
         }
     }
 
-    fn create_rasters_and_styles(
-        &mut self,
-        render_context: &mut RenderContext,
-    ) -> Result<(RasterAndStyle, RasterAndStyle), Error> {
-        // set up paint with different backgrounds depending on whether the button
-        // is active. The active state is true when a pointer has gone down in the
-        // button's bounds and the pointer has not moved outside the bounds since.
-        let paint = if self.focused {
-            Paint {
-                fg: self.fg_color,
-                bg: if self.active { self.bg_color_active } else { self.bg_color },
+    pub fn set_focused(&mut self, scene: &mut Scene, focused: bool) {
+        if focused != self.focused {
+            self.focused = focused;
+            self.active = false;
+            self.update_button_bg_color(scene);
+            if !focused {
+                self.tracking_pointer = None;
             }
-        } else {
-            Paint { fg: self.fg_color_disabled, bg: self.bg_color_disabled }
-        };
-
-        self.label = Some(Text::new(
-            render_context,
-            &self.label_text,
-            self.font_size as f32,
-            100,
-            &self.face,
-            &mut self.glyphs,
-        ));
-
-        let label = self.label.as_ref().expect("label");
-
-        // calculate button size based on label's text size
-        // plus padding.
-        let bounding_box_size = label.bounding_box.size;
-
-        let button_label_size = Size::new(bounding_box_size.width, self.font_size as f32);
-        let double_padding = 2.0 * self.padding;
-        let button_size = button_label_size + Size::new(double_padding, double_padding);
-        let half_size = Size::new(button_size.width * 0.5, button_size.height * 0.5);
-        let button_origin = Point::zero() - half_size.to_vector();
-        let button_bounds = Rect::new(button_origin, button_size).round_out();
-
-        // record bounds for hit testing
-        self.bounds = button_bounds;
-
-        // Calculate the label offset in display aligned coordinates, since the label,
-        // as a raster, is pre-rotated and we just need to translate it to align with the buttons
-        // bounding box.
-
-        let center = self.bounds.center();
-        let label_center = label.bounding_box.center().to_vector();
-        let label_offset = center - label_center;
-        let raster = raster_for_rectangle(&self.bounds, render_context);
-        let button_raster_and_style = RasterAndStyle {
-            location: Point::zero(),
-            raster,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(paint.bg),
-                blend_mode: BlendMode::Over,
-            },
-        };
-        let label_raster_and_style = RasterAndStyle {
-            location: label_offset,
-            raster: label.raster.clone(),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(paint.fg),
-                blend_mode: BlendMode::Over,
-            },
-        };
-        Ok((button_raster_and_style, label_raster_and_style))
+        }
     }
 
     pub fn handle_pointer_event(
         &mut self,
+        scene: &mut Scene,
         context: &mut ViewAssistantContext,
         pointer_event: &input::pointer::Event,
     ) {
@@ -221,14 +177,12 @@ impl Button {
             return;
         }
 
-        let bounds = self
-            .bounds
-            .translate(Vector2D::new(context.size.width * 0.5, context.size.height * 0.7));
+        let bounds = self.bounds;
 
         if self.tracking_pointer.is_none() {
             match pointer_event.phase {
                 input::pointer::Phase::Down(location) => {
-                    self.active = bounds.contains(location.to_f32());
+                    self.set_active(scene, bounds.contains(location.to_f32()));
                     if self.active {
                         self.tracking_pointer = Some(pointer_event.pointer_id.clone());
                     }
@@ -240,7 +194,7 @@ impl Button {
             if tracking_pointer == &pointer_event.pointer_id {
                 match pointer_event.phase {
                     input::pointer::Phase::Moved(location) => {
-                        self.active = bounds.contains(location.to_f32());
+                        self.set_active(scene, bounds.contains(location.to_f32()));
                     }
                     input::pointer::Phase::Up => {
                         if self.active {
@@ -249,14 +203,14 @@ impl Button {
                             )));
                         }
                         self.tracking_pointer = None;
-                        self.active = false;
+                        self.set_active(scene, false);
                     }
                     input::pointer::Phase::Remove => {
-                        self.active = false;
+                        self.set_active(scene, false);
                         self.tracking_pointer = None;
                     }
                     input::pointer::Phase::Cancel => {
-                        self.active = false;
+                        self.set_active(scene, false);
                         self.tracking_pointer = None;
                     }
                     _ => (),
@@ -266,12 +220,18 @@ impl Button {
     }
 }
 
+#[allow(unused)]
+struct SceneDetails {
+    button: Button,
+    indicator: FacetId,
+    scene: Scene,
+}
+
 struct ButtonViewAssistant {
     focused: bool,
     bg_color: Color,
-    button: Button,
     red_light: bool,
-    composition: Composition,
+    scene_details: Option<SceneDetails>,
 }
 
 const BUTTON_LABEL: &'static str = "Depress Me";
@@ -279,121 +239,64 @@ const BUTTON_LABEL: &'static str = "Depress Me";
 impl ButtonViewAssistant {
     fn new() -> Result<ButtonViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
-        let composition = Composition::new(bg_color);
-        Ok(ButtonViewAssistant {
-            focused: false,
-            bg_color,
-            button: Button::new(BUTTON_LABEL)?,
-            red_light: false,
-            composition,
-        })
+        Ok(ButtonViewAssistant { focused: false, bg_color, red_light: false, scene_details: None })
     }
 
-    fn target_size(&self, size: Size) -> Size {
-        size
-    }
-
-    fn button_center(&self, size: Size) -> Point {
-        Point::new(size.width * 0.5, size.height * 0.7)
+    fn set_red_light(&mut self, red_light: bool) {
+        if red_light != self.red_light {
+            if let Some(scene_details) = self.scene_details.as_mut() {
+                let color = if red_light { Color::red() } else { Color::green() };
+                scene_details
+                    .scene
+                    .send_message(&scene_details.indicator, Box::new(SetColorMessage { color }));
+            }
+            self.red_light = red_light;
+        }
     }
 }
 
 impl ViewAssistant for ButtonViewAssistant {
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
+        Ok(())
+    }
+
     fn render(
         &mut self,
         render_context: &mut RenderContext,
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        // Emulate the size that Carnelian passes when the display is rotated
-        let target_size = self.target_size(context.size);
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let target_size = context.size;
+            let min_dimension = target_size.width.min(target_size.height);
+            let font_size = (min_dimension / 5.0).ceil().min(64.0);
+            let padding = (min_dimension / 20.0).ceil().max(8.0);
+            let center_x = target_size.width * 0.5;
+            let button_y = target_size.height * 0.7;
+            let mut builder = SceneBuilder::new(self.bg_color);
+            let indicator_y = target_size.height / 5.0;
+            let indicator_len = target_size.height.min(target_size.width) / 8.0;
+            let indicator_size = Size::new(indicator_len * 2.0, indicator_len);
+            let indicator_pos =
+                Point::new(center_x - indicator_len, indicator_y - indicator_len / 2.0);
+            let indicator_bounds = Rect::new(indicator_pos, indicator_size);
+            let indicator = builder.rectangle(indicator_bounds, Color::green());
+            let button = Button::new(
+                BUTTON_LABEL,
+                font_size,
+                padding,
+                point2(center_x, button_y),
+                &mut builder,
+            )
+            .expect("button");
+            let scene = builder.build();
+            SceneDetails { scene, indicator, button }
+        });
 
-        // Calculate all locations in the presentation-aligned coordinate space
-        let center_x = target_size.width * 0.5;
-
-        let min_dimension = target_size.width.min(target_size.height);
-        let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
-        let padding = (min_dimension / 20.0).ceil().max(8.0);
-
-        self.button.padding = padding;
-        self.button.font_size = font_size;
-
-        let corner_knockouts =
-            raster_for_corner_knockouts(&Rect::from_size(target_size), 10.0, render_context);
-
-        let corner_knockouts_layer = Layer {
-            raster: corner_knockouts,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(Color::new()),
-                blend_mode: BlendMode::Over,
-            },
-        };
-
-        // Position and size the indicator in presentation space
-        let indicator_y = target_size.height / 5.0;
-        let indicator_len = target_size.height.min(target_size.width) / 8.0;
-        let indicator_size = Size::new(indicator_len * 2.0, indicator_len);
-        let indicator_pos = Point::new(center_x - indicator_len, indicator_y - indicator_len / 2.0);
-
-        let indicator_raster =
-            raster_for_rectangle(&Rect::new(Point::zero(), indicator_size), render_context)
-                .translate(indicator_pos.to_vector().to_i32());
-
-        let indicator_color = if self.red_light {
-            Color::from_hash_code("#ff0000")?
-        } else {
-            Color::from_hash_code("#00ff00")?
-        };
-
-        // Create a layer for the indicator using its pre-transformed raster and
-        // transformed position.
-        let indicator_layer = Layer {
-            raster: indicator_raster,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(indicator_color),
-                blend_mode: BlendMode::Over,
-            },
-        };
-
-        let button_center = self.button_center(target_size);
-        self.button.set_focused(self.focused);
-
-        // Let the button render itself, returning rasters, styles and zero-relative
-        // positions.
-        let (button_raster_and_style, label_raster_and_style) =
-            self.button.create_rasters_and_styles(render_context)?;
-
-        // Calculate the button location in presentation space
-        let button_location = button_center + button_raster_and_style.location.to_vector();
-
-        // Calculate the label location in presentation space
-        let label_location = button_center + label_raster_and_style.location.to_vector();
-
-        // Create layers from the rasters, styles and transformed locations.
-        let button_layer = Layer {
-            raster: button_raster_and_style.raster.translate(button_location.to_vector().to_i32()),
-            style: button_raster_and_style.style,
-        };
-        let label_layer = Layer {
-            raster: label_raster_and_style.raster.translate(label_location.to_vector().to_i32()),
-            style: label_raster_and_style.style,
-        };
-        self.composition.replace(
-            ..,
-            std::iter::once(corner_knockouts_layer)
-                .chain(std::iter::once(label_layer))
-                .chain(std::iter::once(button_layer))
-                .chain(std::iter::once(indicator_layer)),
-        );
-
-        let image = render_context.get_current_image(context);
-        let ext =
-            RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
-        render_context.render(&self.composition, None, image, &ext);
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
-
+        scene_details.scene.render(render_context, ready_event, context)?;
+        self.scene_details = Some(scene_details);
+        context.request_render();
         Ok(())
     }
 
@@ -402,7 +305,7 @@ impl ViewAssistant for ButtonViewAssistant {
             match button_message {
                 ButtonMessages::Pressed(value) => {
                     println!("value = {:#?}", value);
-                    self.red_light = !self.red_light
+                    self.set_red_light(!self.red_light);
                 }
             }
         }
@@ -414,8 +317,14 @@ impl ViewAssistant for ButtonViewAssistant {
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
-        self.button.handle_pointer_event(context, &pointer_event);
-        context.request_render();
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details.button.handle_pointer_event(
+                &mut scene_details.scene,
+                context,
+                &pointer_event,
+            );
+            context.request_render();
+        }
         Ok(())
     }
 
@@ -425,6 +334,9 @@ impl ViewAssistant for ButtonViewAssistant {
         focused: bool,
     ) -> Result<(), Error> {
         self.focused = focused;
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details.button.set_focused(&mut scene_details.scene, focused);
+        }
         context.request_render();
         Ok(())
     }

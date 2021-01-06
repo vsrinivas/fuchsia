@@ -5,23 +5,21 @@
 use anyhow::{Context as _, Error};
 use carnelian::{
     color::Color,
-    geometry::Corners,
+    drawing::{path_for_rectangle, path_for_rounded_rectangle},
+    facet::{Facet, FacetId, LayerGroup, Scene, SceneBuilder},
     input::{self},
     make_app_assistant,
-    render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
-        Raster, RenderExt, Style,
-    },
+    render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
     App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey,
 };
-use euclid::{Angle, Transform2D, Vector2D};
+use euclid::{point2, size2, Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
-use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
+use fuchsia_zircon::{Event, Time};
 use futures::prelude::*;
-use std::f32::consts::PI;
+use std::{any::Any, f32::consts::PI};
 
 #[derive(Default)]
 struct SpinningSquareAppAssistant;
@@ -77,111 +75,37 @@ impl SpinningSquareAppAssistant {
     }
 }
 
-fn path_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    path_builder.move_to(bounds.origin);
-    path_builder.line_to(bounds.top_right());
-    path_builder.line_to(bounds.bottom_right());
-    path_builder.line_to(bounds.bottom_left());
-    path_builder.line_to(bounds.origin);
-    path_builder.build()
+struct SceneDetails {
+    scene: Scene,
+    square: FacetId,
 }
 
-fn path_for_rounded_rectangle(
-    bounds: &Rect,
-    corner_radius: Coord,
-    render_context: &mut RenderContext,
-) -> Path {
-    let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
-    let control_dist = kappa * corner_radius;
+#[derive(Debug)]
+pub struct ToggleRoundedMessage {}
 
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    let top_left_arc_start = bounds.origin + Vector2D::new(0.0, corner_radius);
-    let top_left_arc_end = bounds.origin + Vector2D::new(corner_radius, 0.0);
-    path_builder.move_to(top_left_arc_start);
-    let top_left_curve_center = bounds.origin + Vector2D::new(corner_radius, corner_radius);
-    let p1 = top_left_curve_center + Vector2D::new(-corner_radius, -control_dist);
-    let p2 = top_left_curve_center + Vector2D::new(-control_dist, -corner_radius);
-    path_builder.cubic_to(p1, p2, top_left_arc_end);
-
-    let top_right = bounds.top_right();
-    let top_right_arc_start = top_right + Vector2D::new(-corner_radius, 0.0);
-    let top_right_arc_end = top_right + Vector2D::new(0.0, corner_radius);
-    path_builder.line_to(top_right_arc_start);
-    let top_right_curve_center = top_right + Vector2D::new(-corner_radius, corner_radius);
-    let p1 = top_right_curve_center + Vector2D::new(control_dist, -corner_radius);
-    let p2 = top_right_curve_center + Vector2D::new(corner_radius, -control_dist);
-    path_builder.cubic_to(p1, p2, top_right_arc_end);
-
-    let bottom_right = bounds.bottom_right();
-    let bottom_right_arc_start = bottom_right + Vector2D::new(0.0, -corner_radius);
-    let bottom_right_arc_end = bottom_right + Vector2D::new(-corner_radius, 0.0);
-    path_builder.line_to(bottom_right_arc_start);
-    let bottom_right_curve_center = bottom_right + Vector2D::new(-corner_radius, -corner_radius);
-    let p1 = bottom_right_curve_center + Vector2D::new(corner_radius, control_dist);
-    let p2 = bottom_right_curve_center + Vector2D::new(control_dist, corner_radius);
-    path_builder.cubic_to(p1, p2, bottom_right_arc_end);
-
-    let bottom_left = bounds.bottom_left();
-    let bottom_left_arc_start = bottom_left + Vector2D::new(corner_radius, 0.0);
-    let bottom_left_arc_end = bottom_left + Vector2D::new(0.0, -corner_radius);
-    path_builder.line_to(bottom_left_arc_start);
-    let bottom_left_curve_center = bottom_left + Vector2D::new(corner_radius, -corner_radius);
-    let p1 = bottom_left_curve_center + Vector2D::new(-control_dist, corner_radius);
-    let p2 = bottom_left_curve_center + Vector2D::new(-corner_radius, control_dist);
-    path_builder.cubic_to(p1, p2, bottom_left_arc_end);
-
-    path_builder.line_to(top_left_arc_start);
-    path_builder.build()
-}
-
-struct SpinningSquareViewAssistant {
-    background_color: Color,
+struct SpinningSquareFacet {
     square_color: Color,
     rounded: bool,
     start: Time,
-    square_raster: Option<Raster>,
     square_path: Option<Path>,
-    composition: Composition,
 }
 
-impl SpinningSquareViewAssistant {
-    fn new() -> Result<ViewAssistantPtr, Error> {
-        let square_color = Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff };
-        let background_color = Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff };
-        let start = Time::get_monotonic();
-        let composition = Composition::new(background_color);
-        Ok(Box::new(SpinningSquareViewAssistant {
-            background_color,
-            square_color,
-            rounded: false,
-            start,
-            square_raster: None,
-            square_path: None,
-            composition,
-        }))
-    }
-
-    fn clone_square_raster(&self) -> Raster {
-        self.square_raster.as_ref().expect("square_raster").clone()
+impl SpinningSquareFacet {
+    fn new(square_color: Color, start: Time) -> Self {
+        Self { square_color, rounded: false, start, square_path: None }
     }
 
     fn clone_square_path(&self) -> Path {
         self.square_path.as_ref().expect("square_path").clone()
     }
-
-    fn toggle_rounded(&mut self) {
-        self.rounded = !self.rounded;
-        self.square_path = None;
-    }
 }
 
-impl ViewAssistant for SpinningSquareViewAssistant {
-    fn render(
+impl Facet for SpinningSquareFacet {
+    fn update_layers(
         &mut self,
+        size: Size,
+        layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
@@ -189,10 +113,11 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         const SQUARE_PATH_SIZE_2: Coord = SQUARE_PATH_SIZE / 2.0;
         const CORNER_RADIUS: Coord = SQUARE_PATH_SIZE / 4.0;
 
-        let center_x = context.size.width * 0.5;
-        let center_y = context.size.height * 0.5;
-        let square_size = context.size.width.min(context.size.height) * 0.6;
-        let t = ((context.presentation_time.into_nanos() - self.start.into_nanos()) as f32
+        let center_x = size.width * 0.5;
+        let center_y = size.height * 0.5;
+        let square_size = size.width.min(size.height) * 0.6;
+        let presentation_time = Time::get_monotonic();
+        let t = ((presentation_time.into_nanos() - self.start.into_nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)
             % 1.0;
@@ -214,26 +139,104 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             .post_translate(Vector2D::new(center_x, center_y));
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&self.clone_square_path(), Some(&transformation));
-        self.square_raster = Some(raster_builder.build());
-
-        let layers = std::iter::once(Layer {
-            raster: self.clone_square_raster(),
+        let square_raster = raster_builder.build();
+        layer_group.replace_all(std::iter::once(Layer {
+            raster: square_raster,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(self.square_color),
                 blend_mode: BlendMode::Over,
             },
+        }));
+        Ok(())
+    }
+
+    fn handle_message(&mut self, msg: Box<dyn Any>) {
+        if let Some(_) = msg.downcast_ref::<ToggleRoundedMessage>() {
+            self.rounded = !self.rounded;
+            self.square_path = None;
+        }
+    }
+}
+
+struct SpinningSquareViewAssistant {
+    background_color: Color,
+    square_color: Color,
+    start: Time,
+    scene_details: Option<SceneDetails>,
+}
+
+impl SpinningSquareViewAssistant {
+    fn new() -> Result<ViewAssistantPtr, Error> {
+        let square_color = Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff };
+        let background_color = Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff };
+        let start = Time::get_monotonic();
+        Ok(Box::new(SpinningSquareViewAssistant {
+            background_color,
+            square_color,
+            start,
+            scene_details: None,
+        }))
+    }
+
+    fn toggle_rounded(&mut self) {
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details
+                .scene
+                .send_message(&scene_details.square, Box::new(ToggleRoundedMessage {}));
+        }
+    }
+
+    fn move_backward(&mut self) {
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details
+                .scene
+                .move_facet_backward(scene_details.square)
+                .unwrap_or_else(|e| println!("error in move_facet_backward: {}", e));
+        }
+    }
+
+    fn move_forward(&mut self) {
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details
+                .scene
+                .move_facet_forward(scene_details.square)
+                .unwrap_or_else(|e| println!("error in move_facet_forward: {}", e));
+        }
+    }
+}
+
+impl ViewAssistant for SpinningSquareViewAssistant {
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext,
+    ) -> Result<(), Error> {
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let mut builder = SceneBuilder::new(self.background_color);
+            let square_facet = SpinningSquareFacet::new(self.square_color, self.start);
+            let square = builder.facet(Box::new(square_facet));
+            const STRIPE_COUNT: usize = 5;
+            let stripe_height = context.size.height / (STRIPE_COUNT * 2 + 1) as f32;
+            let stripe_size = size2(context.size.width, stripe_height);
+            let mut y = stripe_height;
+            for _ in 0..STRIPE_COUNT {
+                let stripe_bounds = Rect::new(point2(0.0, y), stripe_size);
+                builder.rectangle(stripe_bounds, Color::white());
+                y += stripe_height * 2.0;
+            }
+            let scene = builder.build();
+            SceneDetails { scene, square }
         });
 
-        self.composition.replace(.., layers);
-
-        let image = render_context.get_current_image(context);
-        let ext = RenderExt {
-            pre_clear: Some(PreClear { color: self.background_color }),
-            ..Default::default()
-        };
-        render_context.render(&self.composition, None, image, &ext);
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        scene_details.scene.render(render_context, ready_event, context)?;
+        self.scene_details = Some(scene_details);
         context.request_render();
         Ok(())
     }
@@ -244,9 +247,17 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
+        const SPACE: u32 = ' ' as u32;
+        const B: u32 = 'b' as u32;
+        const F: u32 = 'f' as u32;
         if let Some(code_point) = keyboard_event.code_point {
-            if code_point == ' ' as u32 && keyboard_event.phase == input::keyboard::Phase::Pressed {
-                self.toggle_rounded();
+            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+                match code_point {
+                    SPACE => self.toggle_rounded(),
+                    B => self.move_backward(),
+                    F => self.move_forward(),
+                    _ => println!("code_point = {}", code_point),
+                }
             }
         }
         Ok(())

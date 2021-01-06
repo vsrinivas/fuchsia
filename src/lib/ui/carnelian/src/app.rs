@@ -204,7 +204,7 @@ impl App {
             }
             MessageInternal::SizeChanged(view_id, new_size) => {
                 let view = self.get_view(view_id);
-                view.handle_size_changed(new_size).await;
+                view.handle_size_changed(new_size);
             }
             MessageInternal::ScenicInputEvent(view_id, event) => {
                 let view = self.get_view(view_id);

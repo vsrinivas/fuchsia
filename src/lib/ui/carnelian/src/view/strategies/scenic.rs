@@ -332,6 +332,7 @@ impl ScenicViewStrategy {
             image_index,
             frame_buffer: None,
             app_sender,
+            mouse_cursor_position: None,
         }
     }
 

@@ -4,7 +4,7 @@
 use crate::{
     app::{FrameBufferPtr, MessageInternal, RenderOptions},
     drawing::DisplayRotation,
-    geometry::{IntSize, Size, UintSize},
+    geometry::{IntPoint, IntSize, Size, UintSize},
     input,
     message::Message,
     render::{
@@ -42,6 +42,7 @@ pub(crate) struct FrameBufferViewStrategy {
     image_sender: futures::channel::mpsc::UnboundedSender<u64>,
     vsync_phase: Time,
     vsync_interval: Duration,
+    mouse_cursor_position: Option<IntPoint>,
 }
 
 const RENDER_FRAME_COUNT: usize = 2;
@@ -129,6 +130,7 @@ impl FrameBufferViewStrategy {
             image_sender: image_sender,
             vsync_phase: Time::get_monotonic(),
             vsync_interval: Duration::from_millis(16),
+            mouse_cursor_position: None,
         }))
     }
 
@@ -176,6 +178,7 @@ impl FrameBufferViewStrategy {
                 image_index,
                 frame_buffer: Some(self.frame_buffer.clone()),
                 app_sender: self.app_sender.clone(),
+                mouse_cursor_position: self.mouse_cursor_position.clone(),
             },
             render_context,
         )
@@ -288,6 +291,15 @@ impl ViewStrategy for FrameBufferViewStrategy {
         view_assistant: &mut ViewAssistantPtr,
         event: &input::Event,
     ) -> Vec<Message> {
+        match &event.event_type {
+            input::EventType::Mouse(mouse_event) => {
+                self.mouse_cursor_position = Some(mouse_event.location);
+                self.app_sender
+                    .unbounded_send(MessageInternal::RequestRender(view_details.key))
+                    .expect("unbounded_send");
+            }
+            _ => (),
+        };
         let (mut framebuffer_context, _render_context) = self.make_context(view_details, None);
         view_assistant
             .handle_input_event(&mut framebuffer_context, &event)

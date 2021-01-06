@@ -266,6 +266,32 @@ pub fn path_for_corner_knockouts(
     path_builder.build()
 }
 
+/// Create a render path for a fuchsia-style teardrop cursor.
+pub fn path_for_cursor(hot_spot: Point, radius: Coord, render_context: &mut RenderContext) -> Path {
+    let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
+    let control_dist = kappa * radius;
+    let mut path_builder = render_context.path_builder().expect("path_builder");
+    let center = hot_spot + Vector2D::new(radius, radius);
+    let left = center + Vector2D::new(-radius, 0.0);
+    let top = center + Vector2D::new(0.0, -radius);
+    let right = center + Vector2D::new(radius, 0.0);
+    let bottom = center + Vector2D::new(0.0, radius);
+    let top_p1 = center + Vector2D::new(control_dist, -radius);
+    let top_p2 = center + Vector2D::new(radius, -control_dist);
+    let right_p1 = center + Vector2D::new(radius, control_dist);
+    let right_p2 = center + Vector2D::new(control_dist, radius);
+    let bottom_p1 = center + Vector2D::new(-control_dist, radius);
+    let bottom_p2 = center + Vector2D::new(-radius, control_dist);
+    path_builder
+        .move_to(hot_spot)
+        .line_to(top)
+        .cubic_to(top_p1, top_p2, right)
+        .cubic_to(right_p1, right_p2, bottom)
+        .cubic_to(bottom_p1, bottom_p2, left)
+        .line_to(hot_spot);
+    path_builder.build()
+}
+
 /// Struct combining a foreground and background color.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub struct Paint {
@@ -404,6 +430,64 @@ pub struct Text {
 }
 
 impl Text {
+    pub fn new_with_lines(
+        context: &mut RenderContext,
+        lines: &Vec<String>,
+        size: f32,
+        face: &FontFace,
+        glyph_map: &mut GlyphMap,
+    ) -> Self {
+        let glyphs = &mut glyph_map.glyphs;
+        let mut bounding_box = Rect::zero();
+        let scale = Scale::uniform(size);
+        let v_metrics = face.font.v_metrics(scale);
+        let mut ascent = v_metrics.ascent;
+        let mut raster_union = None;
+
+        for line in lines.iter() {
+            // TODO: adjust vertical alignment of glyphs to match first glyph.
+            let y_offset = Vector2D::new(0.0, ascent).to_i32();
+            let chars = line.chars();
+            let mut x: f32 = 0.0;
+            let mut last = None;
+            for g in face.font.glyphs_for(chars) {
+                let g = g.scaled(scale);
+                let id = g.id();
+                let w = g.h_metrics().advance_width
+                    + last.map(|last| face.font.pair_kerning(scale, last, id)).unwrap_or(0.0);
+
+                // Lookup glyph entry in cache.
+                // TODO: improve sub pixel placement using a larger cache.
+                let position = y_offset + vec2(x, 0.0).to_i32();
+                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
+
+                // Clone and translate raster.
+                let raster =
+                    glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
+                raster_union = if let Some(raster_union) = raster_union {
+                    Some(raster_union + raster)
+                } else {
+                    Some(raster)
+                };
+
+                // Expand bounding box.
+                let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
+
+                if bounding_box.is_empty() {
+                    bounding_box = *glyph_bounding_box;
+                } else {
+                    bounding_box = bounding_box.union(&glyph_bounding_box);
+                }
+
+                x += w;
+                last = Some(id);
+            }
+            ascent += size;
+        }
+
+        Self { raster: raster_union.expect("raster_union"), bounding_box }
+    }
+
     pub fn new(
         context: &mut RenderContext,
         text: &str,

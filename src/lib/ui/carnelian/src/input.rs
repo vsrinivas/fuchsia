@@ -195,7 +195,7 @@ pub mod touch {
         }
     }
 
-    #[derive(Clone, Copy, Debug, Eq, Ord, PartialOrd, PartialEq)]
+    #[derive(Clone, Copy, Debug, Eq, Ord, PartialOrd, PartialEq, Hash)]
     pub struct ContactId(pub u32);
 
     #[derive(Debug, PartialEq, Clone)]
@@ -244,7 +244,7 @@ pub mod pointer {
         Cancel,
     }
 
-    #[derive(Clone, Debug, Eq, Ord, PartialOrd, PartialEq)]
+    #[derive(Clone, Debug, Eq, Ord, PartialOrd, PartialEq, Hash)]
     pub enum PointerId {
         Mouse(DeviceId),
         Contact(touch::ContactId),

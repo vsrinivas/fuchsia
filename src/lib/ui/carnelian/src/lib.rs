@@ -63,6 +63,7 @@
 mod app;
 pub mod color;
 pub mod drawing;
+pub mod facet;
 pub mod geometry;
 pub mod input;
 pub mod input_ext;

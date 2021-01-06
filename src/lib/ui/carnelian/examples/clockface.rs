@@ -6,15 +6,21 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        color::Color, make_app_assistant, render::*, App, AppAssistant, Point, RenderOptions, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        color::Color,
+        facet::{Facet, LayerGroup, Scene, SceneBuilder},
+        make_app_assistant,
+        render::{
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Raster,
+            Style,
+        },
+        App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        ViewAssistantPtr, ViewKey,
     },
     chrono::{Local, Timelike},
-    euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
-    fuchsia_trace::{self, duration},
+    euclid::{Angle, Transform2D, Vector2D},
     fuchsia_trace_provider,
-    fuchsia_zircon::{AsHandleRef, Event, Signals},
-    std::{collections::BTreeMap, f32},
+    fuchsia_zircon::Event,
+    std::f32,
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
@@ -109,7 +115,7 @@ impl Hand {
         Self { line, raster: None, color }
     }
 
-    fn update(&mut self, context: &mut Context, scale: f32, angle: f32) {
+    fn update(&mut self, context: &mut RenderContext, scale: f32, angle: f32) {
         let rotation = Transform2D::create_rotation(Angle::radians(angle)).post_scale(scale, scale);
         let mut raster_builder = context.raster_builder().unwrap();
         raster_builder.add(&self.line.path, Some(&rotation));
@@ -117,7 +123,7 @@ impl Hand {
     }
 }
 
-struct Scene {
+struct ClockFaceFacet {
     size: Size,
     hour_hand: Hand,
     minute_hand: Hand,
@@ -127,8 +133,8 @@ struct Scene {
     second_index: usize,
 }
 
-impl Scene {
-    fn new(context: &mut Context) -> Self {
+impl ClockFaceFacet {
+    fn new(context: &mut RenderContext) -> Self {
         const HOUR_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 255 };
         const MINUTE_HAND_COLOR: Color = Color { r: 255, g: 114, b: 132, a: 127 };
         const SECOND_HAND_COLOR: Color = Color::white();
@@ -164,7 +170,7 @@ impl Scene {
         }
     }
 
-    fn update(&mut self, context: &mut Context, size: &Size, scale: f32) {
+    fn update(&mut self, context: &mut RenderContext, size: &Size, scale: f32) {
         if self.size != *size {
             self.size = *size;
             self.hour_index = std::usize::MAX;
@@ -202,44 +208,25 @@ impl Scene {
     }
 }
 
-struct Contents {
-    image: Image,
-    composition: Composition,
-    size: Size,
-    previous_rasters: Vec<Raster>,
-}
-
-impl Contents {
-    fn new(image: Image) -> Self {
-        let composition = Composition::new(BACKGROUND_COLOR);
-
-        Self { image, composition, size: Size::zero(), previous_rasters: Vec::new() }
-    }
-
-    fn update(&mut self, context: &mut Context, scene: &Scene, size: &Size, scale: f32) {
+impl Facet for ClockFaceFacet {
+    fn update_layers(
+        &mut self,
+        size: Size,
+        layer_group: &mut LayerGroup,
+        render_context: &mut RenderContext,
+    ) -> std::result::Result<(), anyhow::Error> {
         const SHADOW_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 13 };
         const ELEVATION: f32 = 0.01;
 
-        let center = Vector2D::new(size.width as i32 / 2, size.height as i32 / 2);
+        let scale = size.width.min(size.height);
+
+        self.update(render_context, &size, scale);
+
         let elevation = (ELEVATION * scale) as i32;
+        let center = Vector2D::new(size.width as i32 / 2, size.height as i32 / 2);
         let shadow_offset = center + Vector2D::new(elevation, elevation * 2);
 
-        let clip = Rect::new(
-            Point2D::new(0, 0),
-            Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
-        );
-
-        let ext = if self.size != *size {
-            self.size = *size;
-            RenderExt {
-                pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
-                ..Default::default()
-            }
-        } else {
-            RenderExt::default()
-        };
-
-        let hands = [&scene.hour_hand, &scene.minute_hand, &scene.second_hand];
+        let hands = [&self.hour_hand, &self.minute_hand, &self.second_hand];
 
         let layers = hands
             .iter()
@@ -291,90 +278,48 @@ impl Contents {
                     fill: Fill::Solid(SHADOW_COLOR),
                     blend_mode: BlendMode::Over,
                 },
-            }))
-            .chain(self.previous_rasters.drain(..).map(|raster| Layer {
-                raster,
-                style: Style {
-                    fill_rule: FillRule::WholeTile,
-                    fill: Fill::Solid(BACKGROUND_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
             }));
-        self.composition.replace(.., layers);
-
-        context.render(&self.composition, Some(clip), self.image, &ext);
-
-        // Keep reference to rasters for clearing.
-        self.previous_rasters.extend(
-            hands.iter().map(|hand| hand.raster.clone().unwrap().translate(center)).chain(
-                hands.iter().map(|hand| hand.raster.clone().unwrap().translate(shadow_offset)),
-            ),
-        );
-    }
-}
-
-struct Clockface {
-    scene: Scene,
-    contents: BTreeMap<u64, Contents>,
-}
-
-impl Clockface {
-    pub fn new(context: &mut Context) -> Self {
-        let scene = Scene::new(context);
-
-        Self { scene, contents: BTreeMap::new() }
-    }
-
-    fn update(
-        &mut self,
-        render_context: &mut Context,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        duration!("gfx", "update");
-
-        let size = &context.size;
-        let image_id = context.image_id;
-        let scale = size.width.min(size.height);
-
-        self.scene.update(render_context, size, scale);
-
-        let image = render_context.get_current_image(context);
-        let content = self.contents.entry(image_id).or_insert_with(|| Contents::new(image));
-
-        content.update(render_context, &self.scene, size, scale);
-
+        layer_group.replace_all(layers);
         Ok(())
     }
 }
 
+struct SceneDetails {
+    scene: Scene,
+}
+
 struct ClockfaceViewAssistant {
-    size: Size,
-    clockface: Option<Clockface>,
+    scene_details: Option<SceneDetails>,
 }
 
 impl ClockfaceViewAssistant {
     pub fn new() -> Self {
-        Self { size: Size::zero(), clockface: None }
+        Self { scene_details: None }
     }
 }
 
 impl ViewAssistant for ClockfaceViewAssistant {
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
+        Ok(())
+    }
+
     fn render(
         &mut self,
-        render_context: &mut Context,
+        render_context: &mut RenderContext,
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        if context.size != self.size || self.clockface.is_none() {
-            self.size = context.size;
-            self.clockface = Some(Clockface::new(render_context));
-        }
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let mut builder = SceneBuilder::new(BACKGROUND_COLOR);
+            let clock_face_facet = ClockFaceFacet::new(render_context);
+            let _ = builder.facet(Box::new(clock_face_facet));
+            SceneDetails { scene: builder.build() }
+        });
 
-        if let Some(clockface) = self.clockface.as_mut() {
-            clockface.update(render_context, context).expect("clockface.update");
-        }
+        scene_details.scene.render(render_context, ready_event, context)?;
 
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        self.scene_details = Some(scene_details);
 
         context.request_render();
 

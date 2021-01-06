@@ -7,18 +7,16 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
+        facet::{FacetId, Scene, SceneBuilder, SetLocationMessage, ShedFacet},
         input, make_app_assistant,
-        render::{
-            BlendMode, Composition, Context, Fill, FillRule, Layer, PreClear, Raster, RenderExt,
-            Style,
-        },
-        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        render::Context,
+        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::default::{Point2D, Transform2D, Vector2D},
+    euclid::default::Point2D,
     fuchsia_trace_provider,
-    fuchsia_zircon::{AsHandleRef, Event, Signals},
-    std::collections::BTreeMap,
+    fuchsia_zircon::Event,
+    std::{collections::BTreeMap, path::PathBuf},
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -53,40 +51,30 @@ impl AppAssistant for SvgAppAssistant {
     }
 }
 
-struct Rendering {
-    size: Size,
-    composition: Composition,
-    last_position: Option<Point2D<f32>>,
-}
-
-impl Rendering {
-    fn new() -> Rendering {
-        let composition = Composition::new(BACKGROUND_COLOR);
-
-        Rendering { size: Size::zero(), composition, last_position: None }
-    }
+struct SceneDetails {
+    scene: Scene,
+    facet_id: FacetId,
 }
 
 struct SvgViewAssistant {
-    rasters: Option<Vec<(Raster, Style)>>,
-    renderings: BTreeMap<u64, Rendering>,
-    position: Point2D<f32>,
+    scene_details: Option<SceneDetails>,
     touch_locations: BTreeMap<input::pointer::PointerId, Point2D<f32>>,
+    position: Point,
 }
 
 impl SvgViewAssistant {
     pub fn new() -> Self {
-        Self {
-            rasters: None,
-            renderings: BTreeMap::new(),
-            position: Point2D::zero(),
-            touch_locations: BTreeMap::new(),
-        }
+        Self { scene_details: None, touch_locations: BTreeMap::new(), position: Point::zero() }
     }
 }
 
 impl ViewAssistant for SvgViewAssistant {
     fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
         Ok(())
     }
 
@@ -96,62 +84,19 @@ impl ViewAssistant for SvgViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        let image_id = context.image_id;
-        let rendering = self.renderings.entry(image_id).or_insert_with(|| Rendering::new());
-
-        let position = self.position;
-        let last_position = rendering.last_position;
-        let rasters = self.rasters.get_or_insert_with(|| {
-            let shed = carnelian::render::Shed::open("/pkg/data/static/fuchsia.shed").unwrap();
-            let size = shed.size();
-            let min_side = size.width.min(size.height);
-            let min_screen_side = context.size.width.min(context.size.height);
-            let scale_factor = min_screen_side / min_side * 0.75;
-            let transform = Transform2D::create_translation(-size.width / 2.0, -size.height / 2.0)
-                .post_scale(scale_factor, scale_factor)
-                .post_translate(Vector2D::new(context.size.width / 2.0, context.size.height / 2.0));
-
-            shed.rasters(render_context, Some(&transform))
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let location = Rect::from_size(context.size).center();
+            self.position = location;
+            let mut builder = SceneBuilder::new(BACKGROUND_COLOR);
+            let shed_facet =
+                ShedFacet::new(PathBuf::from("/pkg/data/static/fuchsia.shed"), location);
+            let shed_facet_id = builder.facet(Box::new(shed_facet));
+            let scene = builder.build();
+            SceneDetails { scene, facet_id: shed_facet_id }
         });
 
-        let layers = rasters.iter().map(|(raster, style)| Layer {
-            raster: raster.clone().translate(position.to_vector().to_i32()),
-            style: *style,
-        });
-
-        if let Some(last_position) = last_position {
-            rendering.composition.replace(
-                ..,
-                layers.chain(rasters.iter().map(|(raster, _)| Layer {
-                    raster: raster.clone().translate(last_position.to_vector().to_i32()),
-                    style: Style {
-                        fill_rule: FillRule::WholeTile,
-                        fill: Fill::Solid(BACKGROUND_COLOR),
-                        blend_mode: BlendMode::Over,
-                    },
-                })),
-            );
-        } else {
-            rendering.composition.replace(.., layers);
-        }
-
-        let ext = if rendering.size != context.size {
-            rendering.size = context.size;
-            RenderExt {
-                pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
-                ..Default::default()
-            }
-        } else {
-            RenderExt::default()
-        };
-
-        rendering.last_position = Some(position);
-
-        let image = render_context.get_current_image(context);
-        render_context.render(&rendering.composition, None, image, &ext);
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
-
-        context.request_render();
+        scene_details.scene.render(render_context, ready_event, context)?;
+        self.scene_details = Some(scene_details);
 
         Ok(())
     }
@@ -173,7 +118,14 @@ impl ViewAssistant for SvgViewAssistant {
                     self.position += touch_location.to_f32() - *location;
                     *location = touch_location.to_f32();
                 }
+                if let Some(scene_details) = self.scene_details.as_mut() {
+                    scene_details.scene.send_message(
+                        &scene_details.facet_id,
+                        Box::new(SetLocationMessage { location: self.position }),
+                    );
+                }
             }
+
             input::pointer::Phase::Up => {
                 self.touch_locations.remove(&pointer_event.pointer_id.clone());
             }

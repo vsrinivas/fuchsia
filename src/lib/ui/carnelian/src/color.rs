@@ -39,6 +39,26 @@ impl Color {
         Color { r: 255, g: 255, b: 255, a: 255 }
     }
 
+    /// Create a new color set to red with full alpha
+    pub const fn red() -> Color {
+        Color { r: 255, g: 0, b: 0, a: 255 }
+    }
+
+    /// Create a new color set to green with full alpha
+    pub const fn green() -> Color {
+        Color { r: 0, g: 255, b: 0, a: 255 }
+    }
+
+    /// Create a new color set to blue with full alpha
+    pub const fn blue() -> Color {
+        Color { r: 0, g: 0, b: 255, a: 255 }
+    }
+
+    /// Create a new color set to Fuchsia with full alpha
+    pub const fn fuchsia() -> Color {
+        Color { r: 255, g: 0, b: 255, a: 255 }
+    }
+
     fn extract_hex_slice(hash_code: &str, start_index: usize) -> Result<u8, Error> {
         Ok(u8::from_str_radix(&hash_code[start_index..start_index + 2], 16)?)
     }
@@ -75,5 +95,11 @@ impl Color {
             srgb_to_linear(self.r),
             self.a as f32 * 255.0f32.recip(),
         ]
+    }
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Color::new()
     }
 }

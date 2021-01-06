@@ -4,7 +4,7 @@
 
 use crate::{
     app::{FrameBufferPtr, MessageInternal},
-    geometry::Size,
+    geometry::{IntPoint, Size},
     input::{self},
     message::Message,
     render::Context,
@@ -45,6 +45,7 @@ pub struct ViewAssistantContext {
 
     /// Frame buffer
     pub frame_buffer: Option<FrameBufferPtr>,
+    pub mouse_cursor_position: Option<IntPoint>,
 
     messages: Vec<Message>,
     app_sender: UnboundedSender<MessageInternal>,
@@ -70,6 +71,11 @@ pub trait ViewAssistant {
     /// This method is called once when a view is created.
     #[allow(unused_variables)]
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        Ok(())
+    }
+
+    #[allow(unused_variables)]
+    fn resize(&mut self, new_size: &Size) -> Result<(), Error> {
         Ok(())
     }
 
@@ -442,8 +448,11 @@ impl ViewController {
         self.send_update_message();
     }
 
-    pub(crate) async fn handle_size_changed(&mut self, new_size: Size) {
+    pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
         self.physical_size = new_size;
+        self.assistant
+            .resize(&new_size)
+            .unwrap_or_else(|e| println!("handle_size_changed error: {}", e));
         self.render_requested = true;
         self.send_update_message();
     }
