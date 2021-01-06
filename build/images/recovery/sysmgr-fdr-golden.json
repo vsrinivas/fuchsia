@@ -4,6 +4,10 @@
     "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
     "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
   ],
+  "critical_components": [
+    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
+  ],
   "services": {
     "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
     "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
