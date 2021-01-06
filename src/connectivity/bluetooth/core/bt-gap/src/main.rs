@@ -102,24 +102,40 @@ async fn launch_profile_forwarding_component(
     }
 }
 
-/// Relays the provided `chan` to upstream clients.
+/// Creates a handler that will setup an incoming Profile service channel.
 ///
-/// If `component` is set, the `chan` will be relayed to the component.
-/// Otherwise, `chan` will be relayed directly to the `profile_hd`.
-fn relay_profile_channel(
-    chan: zx::Channel,
-    component: &Option<(App, NestedEnvironment)>,
-    profile_hd: HostDispatcher,
-) {
-    match &component {
-        Some((rfcomm_component, _env)) => {
-            info!("Passing Profile to RFCOMM Service");
-            let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
+/// If `component` is set, the channel will be relayed to the component.
+/// Otherwise, it will be relayed directly to the dispatcher.
+fn profile_handler(
+    dispatcher: &HostDispatcher,
+    component: Option<(App, NestedEnvironment)>,
+) -> impl FnMut(zx::Channel) -> Option<()> {
+    let hd = dispatcher.clone();
+    move |chan| {
+        match &component {
+            Some((rfcomm_component, _env)) => {
+                info!("Passing Profile to RFCOMM Service");
+                let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
+            }
+            None => {
+                info!("Directly connecting Profile Service to Adapter");
+                fasync::Task::spawn(hd.clone().request_host_service(chan, Profile)).detach();
+            }
         }
-        None => {
-            info!("Directly connecting Profile Service to Adapter");
-            fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
-        }
+        None
+    }
+}
+
+fn host_service_handler(
+    dispatcher: &HostDispatcher,
+    service_name: &'static str,
+    service: HostService,
+) -> impl FnMut(fuchsia_zircon::Channel) -> Option<()> {
+    let dispatcher = dispatcher.clone();
+    move |chan| {
+        info!("Connecting {} to Adapter", service_name);
+        fasync::Task::spawn(dispatcher.clone().request_host_service(chan, service)).detach();
+        None
     }
 }
 
@@ -172,11 +188,6 @@ async fn run() -> Result<(), Error> {
         watch_hosts_registrar,
     );
     let watch_hd = hd.clone();
-    let central_hd = hd.clone();
-    let control_hd = hd.clone();
-    let peripheral_hd = hd.clone();
-    let profile_hd = hd.clone();
-    let gatt_hd = hd.clone();
     let bootstrap_hd = hd.clone();
     let access_hd = hd.clone();
     let config_hd = hd.clone();
@@ -209,8 +220,7 @@ async fn run() -> Result<(), Error> {
     // to the Host Server. If RFCOMM is not available for any reason, bt-gap will forward `Profile`
     // requests directly to the Host Server.
     let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
-    let bt_rfcomm = match launch_profile_forwarding_component(rfcomm_url, profile_hd.clone()).await
-    {
+    let bt_rfcomm = match launch_profile_forwarding_component(rfcomm_url, hd.clone()).await {
         Ok((rfcomm, env)) => Some((rfcomm, env)),
         Err(e) => {
             warn!("bt-gap unable to launch bt-rfcomm: {:?}", e);
@@ -224,27 +234,23 @@ async fn run() -> Result<(), Error> {
     inspect.serve(&mut fs)?;
 
     fs.dir("svc")
-        .add_fidl_service(move |s| control_service(control_hd.clone(), s))
-        .add_service_at(CentralMarker::NAME, move |chan| {
-            info!("Connecting CentralService to Adapter");
-            fasync::Task::spawn(central_hd.clone().request_host_service(chan, LeCentral)).detach();
-            None
+        .add_fidl_service({
+            let hd = hd.clone();
+            move |s| control_service(hd.clone(), s)
         })
-        .add_service_at(PeripheralMarker::NAME, move |chan| {
-            info!("Connecting Peripheral Service to Adapter");
-            fasync::Task::spawn(peripheral_hd.clone().request_host_service(chan, LePeripheral))
-                .detach();
-            None
-        })
-        .add_service_at(ProfileMarker::NAME, move |chan| {
-            relay_profile_channel(chan, &bt_rfcomm, profile_hd.clone());
-            None
-        })
-        .add_service_at(Server_Marker::NAME, move |chan| {
-            info!("Connecting Gatt Service to Adapter");
-            fasync::Task::spawn(gatt_hd.clone().request_host_service(chan, LeGatt)).detach();
-            None
-        })
+        .add_service_at(
+            CentralMarker::NAME,
+            host_service_handler(&hd, CentralMarker::DEBUG_NAME, LeCentral),
+        )
+        .add_service_at(
+            PeripheralMarker::NAME,
+            host_service_handler(&hd, PeripheralMarker::DEBUG_NAME, LePeripheral),
+        )
+        .add_service_at(
+            Server_Marker::NAME,
+            host_service_handler(&hd, Server_Marker::DEBUG_NAME, LeGatt),
+        )
+        .add_service_at(ProfileMarker::NAME, profile_handler(&hd, bt_rfcomm))
         // TODO(fxbug.dev/1496) - according fuchsia.bluetooth.sys/bootstrap.fidl, the bootstrap service should
         // only be available before initialization, and only allow a single commit before becoming
         // unservicable. This behavior interacts with parts of Bluetooth lifecycle and component

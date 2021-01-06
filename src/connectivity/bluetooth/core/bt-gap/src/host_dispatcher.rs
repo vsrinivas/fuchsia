@@ -59,6 +59,7 @@ use crate::{
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 
 /// Available FIDL services that can be provided by a particular Host
+#[derive(Copy, Clone)]
 pub enum HostService {
     LeCentral,
     LePeripheral,
@@ -1111,7 +1112,7 @@ mod tests {
     use crate::{
         build_config::{BrEdrConfig, Config},
         host_dispatcher::test as hd_test,
-        launch_profile_forwarding_component, relay_profile_channel,
+        launch_profile_forwarding_component, profile_handler,
         store::stash::Stash,
     };
     use {
@@ -1246,7 +1247,10 @@ mod tests {
                     ..sys::Settings::new_empty()
                 })
                 .await;
-            assert_matches!(updated_config, Config { bredr: BrEdrConfig { connectable: false, ..}, ..});
+            assert_matches!(
+                updated_config,
+                Config { bredr: BrEdrConfig { connectable: false, .. }, .. }
+            );
         };
         futures::future::join(run_host, disable_connectable_fut).await;
         assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
@@ -1280,7 +1284,8 @@ mod tests {
         // Simulate a new client connection - this should be relayed to the launched RFCOMM
         // component but _not_ the upstream Host Server.
         let (chan, _local) = zx::Channel::create().unwrap();
-        relay_profile_channel(chan, &component, host_dispatcher.clone());
+        let mut relay_handler = profile_handler(&host_dispatcher, component);
+        relay_handler(chan);
 
         // We don't expect the `chan` to be relayed to the host server.
         let host_fut = host_server.try_next();
@@ -1319,7 +1324,8 @@ mod tests {
         // Relay the channel - we have no component.
         let component = None;
         let (chan, _local) = zx::Channel::create().unwrap();
-        relay_profile_channel(chan, &component, host_dispatcher.clone());
+        let mut relay_handler = profile_handler(&host_dispatcher, component);
+        relay_handler(chan);
 
         // We expect the `chan` to be relayed to the `host_dispatcher` (which then forwards
         // to the `host_server`) since the `component` is not set.
