@@ -5,10 +5,10 @@ which can later be retrieved and printed.
 
 ## Kernel trace format
 
-The kernel trace format is pretty simple.
-See files `ktrace.h` and `ktrace-def.h` in
-`system/ulib/zircon-internal/include/lib/zircon-internal`
-for a description.
+The kernel trace format is described in the 
+[ktrace.h](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h) and 
+[ktrace-def.h](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace-def.h) files under
+[system/ulib/zircon-internal/include/lib/zircon-internal](/zircon/system/ulib/zircon-internal/include/lib/zircon-internal).
 
 ## Controlling what to trace
 
@@ -78,3 +78,8 @@ Fuchsia's tracing system supports collecting kernel trace records through
 the `ktrace_provider` trace provider.
 For documentation of Fuchsia's tracing system see the documentation in
 [Fuchsia tracing system](/docs/concepts/tracing/README.md).
+
+## More information
+
+More information on `ktrace` can be found in the
+[full list of kernel command line parameters](/docs/reference/kernel/kernel_cmdline.md).

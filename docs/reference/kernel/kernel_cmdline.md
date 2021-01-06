@@ -1,9 +1,10 @@
-# Zircon Kernel Commandline Options
+# Zircon Kernel Command Line Options
 
-**TODO([fxbug.dev/53594](https://fxbug.dev/53594))**: kernel_cmdlind.md is slated to be replaced by [//docs/gen/boot-options.md](/docs/gen/boot-options.md)
+Note: kernel_cmdlind.md is slated to be replaced by [//docs/gen/boot-options.md](/docs/gen/boot-options.md)
+      Tracked in [fxbug.dev/53594](https://fxbug.dev/53594).
 
-The Zircon kernel receives a textual commandline from the bootloader,
-which can be used to alter some behaviours of the system.  Kernel commandline
+The Zircon kernel receives a textual command line from the bootloader,
+which can be used to alter some behaviours of the system.  Kernel command line
 parameters are in the form of *option* or *option=value*, separated by
 spaces, and may not contain spaces.
 
@@ -11,7 +12,7 @@ For boolean options, *option=0*, *option=false*, or *option=off* will
 disable the option.  Any other form (*option*, *option=true*, *option=wheee*,
 etc) will enable it.
 
-The kernel commandline is passed from the kernel to the userboot process
+The kernel command line is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
@@ -20,7 +21,7 @@ override earlier ones.
 
 The devmgr reads the file /boot/config/devmgr (if it exists) at startup
 and imports name=value lines into its environment, augmenting or overriding
-the values from the kernel commandline.  Leading whitespace is ignored and
+the values from the kernel command line.  Leading whitespace is ignored and
 lines starting with # are ignored.  Whitespace is not allowed in names.
 
 ## aslr.disable
@@ -310,7 +311,7 @@ information to know how to disable the WDT at all.
 
 If this option is set (disabled by default), the system will halt on
 a kernel panic instead of rebooting. To enable halt-on-panic,
-pass the kernel commandline argument `kernel.halt-on-panic=true`.
+pass the kernel command line argument `kernel.halt-on-panic=true`.
 
 Since the kernel can't reliably draw to a framebuffer when the GPU is enabled,
 the system will reboot by default if the kernel crashes or panics.
@@ -933,7 +934,7 @@ Specify if the device given with `console.path` is a virtio-console device.
 Defaults to false.  This is needed as a workaround due to drivers not being able
 to implement fuchsia.io.File themselves.
 
-# Additional Gigaboot Commandline Options
+# Additional Gigaboot Command Line Options
 
 ## bootloader.timeout=\<num>
 This option sets the boot timeout in the bootloader, with a default of 3
@@ -948,7 +949,7 @@ Example: `bootloader.fbres=640x480`
 ## bootloader.default=\<network|local|zedboot>
 This option sets the default boot device to netboot, use a local zircon.bin or to netboot via zedboot.
 
-# How to pass the commandline to the kernel
+# How to pass the command line to the kernel
 
 ## in the emulator or Qemu, using fx emu or fx qemu
 
@@ -960,7 +961,7 @@ fx qemu -c gfxconsole.font=18x32 -c gfxconsole.early=false
 
 ## in GigaBoot20x6, when netbooting
 
-Pass the kernel commandline at the end, after a -- separator, for example:
+Pass the kernel command line at the end, after a -- separator, for example:
 
 ```
 bootserver zircon.bin bootfs.bin -- gfxconsole.font=18x32 gfxconsole.early=false
