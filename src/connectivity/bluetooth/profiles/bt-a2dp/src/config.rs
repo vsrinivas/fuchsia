@@ -7,7 +7,8 @@ use {
     argh::FromArgs,
     fidl_fuchsia_bluetooth_bredr as bredr,
     serde::{self, Deserialize},
-    std::{fs::File, io::Read},
+    std::{collections::HashSet, fs::File, io::Read},
+    thiserror::Error,
 };
 
 use crate::sources::AudioSourceType;
@@ -19,16 +20,24 @@ pub(crate) const DEFAULT_DOMAIN: &str = "Bluetooth";
 #[derive(FromArgs)]
 #[argh(description = "Bluetooth Advanced Audio Distribution Profile")]
 pub struct A2dpConfigurationArgs {
-    #[argh(option)]
     /// published media session domain (optional, defaults to 'Bluetooth')
+    #[argh(option)]
     pub domain: Option<String>,
     #[argh(option)]
     /// audio source for A2DP source streams. options: [audio_out, big_ben], Defaults to 'audio_out'
+    /// has no effect if source is disabled
     pub source: Option<AudioSourceType>,
-    #[argh(option, short = 'c', long = "channelmode")]
     /// channel mode requested for the signaling channel
     /// options: [basic, etrm]. Defaults to 'basic'
+    #[argh(option, short = 'c', long = "channelmode")]
     pub channel_mode: Option<String>,
+
+    /// enable source, allowing peers to stream audio to this device. defaults to true.
+    #[argh(option)]
+    pub enable_source: Option<bool>,
+    /// enable sink, allowing peers to stream audio from this device. defaults to true.
+    #[argh(option)]
+    pub enable_sink: Option<bool>,
 }
 
 /// Parses the ChannelMode from the String argument.
@@ -65,6 +74,10 @@ pub struct A2dpConfiguration {
     /// Mode used for A2DP signaling channel establishment.
     #[serde(deserialize_with = "deserialize_channel_mode")]
     pub channel_mode: bredr::ChannelMode,
+    /// Enable source streams. defaults to true.
+    pub enable_source: bool,
+    /// Enable sink streams. defaults to true.
+    pub enable_sink: bool,
 }
 
 impl Default for A2dpConfiguration {
@@ -73,18 +86,33 @@ impl Default for A2dpConfiguration {
             domain: DEFAULT_DOMAIN.into(),
             source: AudioSourceType::AudioOut,
             channel_mode: bredr::ChannelMode::Basic,
+            enable_source: true,
+            enable_sink: true,
         }
     }
+}
+
+/// Problems that can exist with a configuration not covered by syntax errors.
+#[derive(Error, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ConfigurationError {
+    #[error("Must enable at least one of source or sink")]
+    NoProfilesEnabled,
 }
 
 impl A2dpConfiguration {
     /// Loads configuration using the default method
     /// The configuration file is used if it exists, with runtime arguments overriding them if
-    /// present.
+    /// present.  Returns Error if there is either syntax or configuration errors.
     pub fn load_default() -> Result<Self, Error> {
         let configured = Self::from_config(DEFAULT_CONFIG_FILE_PATH).unwrap_or(Default::default());
         let args: A2dpConfigurationArgs = argh::from_env();
-        configured.merge(args)
+        let merged = configured.merge(args)?;
+        let problems = merged.errors();
+        if !problems.is_empty() {
+            return Err(format_err!("Configuration unsupported: {:?}", problems));
+        }
+        Ok(merged)
     }
 
     pub fn merge(self, args: A2dpConfigurationArgs) -> Result<Self, Error> {
@@ -95,6 +123,8 @@ impl A2dpConfiguration {
         Ok(Self {
             domain: args.domain.unwrap_or(self.domain),
             source: args.source.unwrap_or(self.source),
+            enable_source: args.enable_source.unwrap_or(self.enable_source),
+            enable_sink: args.enable_sink.unwrap_or(self.enable_sink),
             channel_mode,
             ..self
         })
@@ -106,6 +136,15 @@ impl A2dpConfiguration {
 
     pub fn from_reader<R: Read>(config_reader: R) -> Result<Self, Error> {
         Ok(serde_json::from_reader(config_reader)?)
+    }
+
+    /// Returns a set of configuration problems with the current configuration.
+    pub fn errors(&self) -> HashSet<ConfigurationError> {
+        let mut e = HashSet::new();
+        if !(self.enable_sink || self.enable_source) {
+            e.insert(ConfigurationError::NoProfilesEnabled);
+        }
+        e
     }
 }
 
@@ -131,7 +170,7 @@ mod tests {
 
     #[test]
     fn success_using_provided_config_file() {
-        A2dpConfiguration::load_default().expect("Parse config file correctly");
+        A2dpConfiguration::load_default().expect("provided config is not Ok()");
     }
 
     #[test]
@@ -144,58 +183,77 @@ mod tests {
 
         let unknown_fields = br#"
             {
-                "some_unknown_field" : true,
-                "domain" : "Testing",
-                "source" : "audio_out",
-                "channel_mode" : "ertm"
+                "some_unknown_field": true,
+                "domain": "Testing",
+                "source": "audio_out",
+                "channel_mode": "ertm"
             }
         "#;
         assert!(A2dpConfiguration::from_reader(&unknown_fields[..]).is_err());
 
         let incorrectly_typed_fields = br#"
             {
-                "domain" : false,
-                "source" : 2,
-                "channel_mode" : 0.1
+                "domain": false,
+                "source": 2,
+                "channel_mode": 0.1
             }
         "#;
         assert!(A2dpConfiguration::from_reader(&incorrectly_typed_fields[..]).is_err());
     }
 
     #[test]
+    fn unsupported_configs() {
+        let no_profiles = br#"
+            {
+                "enable_source": false,
+                "enable_sink": false
+            }
+        "#;
+        let config = A2dpConfiguration::from_reader(&no_profiles[..]).expect("no syntax errors");
+
+        let problems = config.errors();
+        assert!(problems.contains(&ConfigurationError::NoProfilesEnabled));
+    }
+
+    #[test]
     fn missing_field_defaults() {
         let missing_domain = br#"
             {
-                "source" : "big_ben",
-                "channel_mode" : "ertm"
+                "source": "big_ben",
+                "channel_mode": "ertm"
             }
         "#;
         let config =
             A2dpConfiguration::from_reader(&missing_domain[..]).expect("without domain config");
         assert_eq!(A2dpConfiguration::default().domain, config.domain);
         assert_eq!(AudioSourceType::BigBen, config.source);
+        assert_eq!(true, config.enable_source);
 
         let missing_source = br#"
             {
-                "domain" : "Testing",
-                "channel_mode" : "ertm"
+                "domain": "Testing",
+                "channel_mode": "ertm",
+                "enable_sink": false
             }
         "#;
         let config =
             A2dpConfiguration::from_reader(&missing_source[..]).expect("without source config");
         assert_eq!(A2dpConfiguration::default().source, config.source);
         assert_eq!(bredr::ChannelMode::EnhancedRetransmission, config.channel_mode);
+        assert_eq!(false, config.enable_sink);
 
         let missing_mode = br#"
             {
-                "domain" : "Testing",
-                "source" : "audio_out"
+                "domain": "Testing",
+                "source": "audio_out",
+                "enable_source": false
             }
         "#;
         let config =
             A2dpConfiguration::from_reader(&missing_mode[..]).expect("without mode config");
         assert_eq!(A2dpConfiguration::default().channel_mode, config.channel_mode);
         assert_eq!("Testing", config.domain);
+        assert_eq!(false, config.enable_source);
 
         let missing_all = b"{}";
         let config = A2dpConfiguration::from_reader(&missing_all[..]).expect("without everything");

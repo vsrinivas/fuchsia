@@ -11,7 +11,7 @@ use {
         connected_peers::ConnectedPeers,
         media_types::*,
         peer::ControllerPool,
-        stream,
+        stream::{Stream, Streams},
     },
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
@@ -48,6 +48,7 @@ mod source_task;
 mod sources;
 mod volume_relay;
 
+use crate::config::A2dpConfiguration;
 use crate::encoding::EncodedStream;
 use crate::pcm_audio::PcmAudio;
 use sources::AudioSourceType;
@@ -110,24 +111,30 @@ struct StreamsBuilder {
     codec_negotiation: CodecNegotiation,
     domain: String,
     aac_available: bool,
-    source_type: AudioSourceType,
+    sink_enabled: bool,
+    source_type: Option<AudioSourceType>,
 }
 
 impl StreamsBuilder {
     async fn system_available(
         cobalt_sender: CobaltSender,
-        domain: String,
-        source_type: AudioSourceType,
+        config: &A2dpConfiguration,
     ) -> Result<Self, Error> {
+        if !config.enable_sink && !config.enable_source {
+            return Err(format_err!("At least one of source or sink must be enabled"));
+        }
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
         // Sink codecs
-        // SBC is required for sink.
         let sbc_endpoint = Self::build_sbc_sink_endpoint()?;
         let sbc_codec_cap = find_codec_cap(&sbc_endpoint).expect("just built");
-        let sbc_config = MediaCodecConfig::try_from(sbc_codec_cap)?;
-        if let Err(e) = player::Player::test_playable(&sbc_config).await {
-            warn!("Can't play required SBC audio: {}", e);
-            return Err(e);
+
+        // SBC is required to be playable if sink is enabled.
+        if config.enable_sink {
+            let sbc_config = MediaCodecConfig::try_from(sbc_codec_cap)?;
+            if let Err(e) = player::Player::test_playable(&sbc_config).await {
+                warn!("Can't play required SBC audio: {}", e);
+                return Err(e);
+            }
         }
 
         let mut caps_available = vec![sbc_codec_cap.clone()];
@@ -145,8 +152,16 @@ impl StreamsBuilder {
         }
 
         let codec_negotiation = CodecNegotiation::build(caps_available, avdtp::EndpointType::Sink)?;
+        let source_type = if config.enable_source { Some(config.source) } else { None };
 
-        Ok(Self { cobalt_sender, codec_negotiation, domain, aac_available, source_type })
+        Ok(Self {
+            cobalt_sender,
+            codec_negotiation,
+            domain: config.domain.clone(),
+            aac_available,
+            sink_enabled: config.enable_sink,
+            source_type,
+        })
     }
 
     fn build_sbc_sink_endpoint() -> avdtp::Result<avdtp::StreamEndpoint> {
@@ -253,29 +268,37 @@ impl StreamsBuilder {
         )
     }
 
-    fn streams(&self) -> Result<stream::Streams, Error> {
+    fn streams(&self) -> Result<Streams, Error> {
         let publisher =
             fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
                 .context("Failed to connect to MediaSession interface")?;
 
         let domain = self.domain.clone();
-        let sink_task_builder =
-            sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
-        let source_task_builder = source_task::SourceTaskBuilder::new(self.source_type);
 
-        let mut streams = stream::Streams::new();
+        let mut streams = Streams::new();
 
-        let sbc_sink_endpoint = Self::build_sbc_sink_endpoint()?;
-        streams.insert(stream::Stream::build(sbc_sink_endpoint, sink_task_builder.clone()));
+        // Sink streams
+        if self.sink_enabled {
+            let sink_task_builder =
+                sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
+            let sbc_sink_endpoint = Self::build_sbc_sink_endpoint()?;
+            streams.insert(Stream::build(sbc_sink_endpoint, sink_task_builder.clone()));
+            if self.aac_available {
+                let aac_sink_endpoint = Self::build_aac_sink_endpoint()?;
+                streams.insert(Stream::build(aac_sink_endpoint, sink_task_builder.clone()));
+            }
+        }
 
-        let sbc_source_endpoint = Self::build_sbc_source_endpoint()?;
-        streams.insert(stream::Stream::build(sbc_source_endpoint, source_task_builder.clone()));
+        if let Some(source_type) = self.source_type {
+            let source_task_builder = source_task::SourceTaskBuilder::new(source_type);
 
-        if self.aac_available {
-            let aac_sink_endpoint = Self::build_aac_sink_endpoint()?;
-            streams.insert(stream::Stream::build(aac_sink_endpoint, sink_task_builder.clone()));
-            let aac_source_endpoint = Self::build_aac_source_endpoint()?;
-            streams.insert(stream::Stream::build(aac_source_endpoint, source_task_builder.clone()));
+            let sbc_source_endpoint = Self::build_sbc_source_endpoint()?;
+            streams.insert(Stream::build(sbc_source_endpoint, source_task_builder.clone()));
+
+            if self.aac_available {
+                let aac_source_endpoint = Self::build_aac_source_endpoint()?;
+                streams.insert(Stream::build(aac_source_endpoint, source_task_builder.clone()));
+            }
         }
 
         Ok(streams)
@@ -432,7 +455,7 @@ fn handle_audio_mode_connection(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let config = config::A2dpConfiguration::load_default()?;
+    let config = A2dpConfiguration::load_default()?;
 
     fuchsia_syslog::init_with_tags(&["a2dp"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
@@ -462,8 +485,7 @@ async fn main() -> Result<(), Error> {
         sender
     };
 
-    let stream_builder =
-        StreamsBuilder::system_available(cobalt.clone(), config.domain, config.source).await?;
+    let stream_builder = StreamsBuilder::system_available(cobalt.clone(), &config).await?;
 
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
@@ -629,8 +651,6 @@ mod tests {
     use futures::channel::mpsc;
     use futures::{pin_mut, task::Poll, StreamExt};
 
-    use crate::config::DEFAULT_DOMAIN;
-
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
         let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
@@ -647,7 +667,7 @@ mod tests {
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
-            stream::Streams::new(),
+            Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             proxy.clone(),
             Some(cobalt_sender),
@@ -720,17 +740,28 @@ mod tests {
     }
 
     #[test]
+    fn test_at_least_one_profile_enabled() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (sender, _) = fake_cobalt_sender();
+        let config =
+            A2dpConfiguration { enable_sink: false, enable_source: false, ..Default::default() };
+        let mut streams_fut = Box::pin(StreamsBuilder::system_available(sender, &config));
+
+        let streams = exec.run_singlethreaded(&mut streams_fut);
+        assert!(
+            streams.is_err(),
+            "Stream building should fail when both source and sink are disabled"
+        );
+    }
+
+    #[test]
     /// build_local_streams should fail because it can't start the SBC encoder, because
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
         let mut exec = fasync::Executor::new().expect("executor should build");
-
         let (sender, _) = fake_cobalt_sender();
-        let mut streams_fut = Box::pin(StreamsBuilder::system_available(
-            sender,
-            DEFAULT_DOMAIN.into(),
-            AudioSourceType::BigBen,
-        ));
+        let config = A2dpConfiguration { source: AudioSourceType::BigBen, ..Default::default() };
+        let mut streams_fut = Box::pin(StreamsBuilder::system_available(sender, &config));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
