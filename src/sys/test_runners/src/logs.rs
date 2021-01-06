@@ -110,6 +110,34 @@ pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle, zx::Handle), Log
     }
 }
 
+/// Buffer `stdlogger` by newline and write to `log_writer`.
+pub async fn buffer_and_drain_logger(
+    mut stdlogger: LoggerStream,
+    log_writer: &mut LogWriter,
+) -> Result<(), LogError> {
+    let mut buf: Vec<u8> = vec![];
+    let newline = b'\n';
+    while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
+        if bytes.is_empty() {
+            continue;
+        }
+
+        // buffer by newline, find last newline and send message till then,
+        // store rest in buffer.
+        buf.extend(bytes);
+        if let Some(i) = buf.iter().rposition(|&x| x == newline) {
+            log_writer.write(buf.drain(0..=i).as_slice()).await?;
+        }
+    }
+
+    if buf.len() > 0 {
+        //  Flush remainder of buffer in case the last message isn't terminated with a newline.
+        log_writer.write(&buf).await?;
+    }
+
+    Ok(())
+}
+
 /// Error while reading/writing log using socket
 #[derive(Debug, Error)]
 pub enum LogError {

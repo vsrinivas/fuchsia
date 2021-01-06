@@ -28,7 +28,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
+        logs::{buffer_and_drain_logger, LogStreamReader, LogWriter, LoggerStream},
     },
 };
 
@@ -347,36 +347,10 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, mut stdlogger) =
+        let (process, _job, stdlogger) =
             launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
-        let mut buf: Vec<u8> = vec![];
-        let newline = b'\n';
-        while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
-            if bytes.is_empty() {
-                continue;
-            }
-
-            // buffer by newline, find last newline and send message till then,
-            // store rest in buffer.
-            match bytes.iter().rposition(|&x| x == newline) {
-                Some(i) => {
-                    buf.extend_from_slice(&bytes[0..=i]);
-                    buf.push(newline);
-                    test_logger.write(&buf).await?;
-                    buf.clear();
-                    buf.extend_from_slice(&bytes[i + 1..]);
-                }
-                None => {
-                    buf.extend(bytes);
-                }
-            }
-        }
-
-        if buf.len() > 0 {
-            // last message did not contain newline, send it.
-            test_logger.write(&buf).await?;
-        }
+        buffer_and_drain_logger(stdlogger, test_logger).await?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await

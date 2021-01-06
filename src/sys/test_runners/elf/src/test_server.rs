@@ -20,7 +20,7 @@ use {
         elf::{Component, EnumeratedTestCases, FidlError, KernelError, SuiteServer},
         errors::*,
         launch,
-        logs::{LogError, LogWriter, LoggerStream},
+        logs::{buffer_and_drain_logger, LogWriter, LoggerStream},
     },
 };
 
@@ -131,29 +131,11 @@ impl TestServer {
         }
 
         // Launch test program
-        let (process, _job, mut stdlogger) =
+        let (process, _job, stdlogger) =
             launch_component_process::<RunTestError>(&component, args).await?;
 
         // Drain stdout
-        const NEWLINE: u8 = b'\n';
-        while let Some(mut bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
-            if bytes.is_empty() {
-                continue;
-            }
-
-            // Avoid printing trailing empty line
-            if *bytes.last().unwrap() == NEWLINE {
-                bytes.truncate(bytes.len() - 1);
-            }
-
-            // Buffer at newlines
-            let mut iter = bytes.split(|&x| x == NEWLINE);
-
-            while let Some(line) = iter.next() {
-                let line = [line, &[NEWLINE]].concat();
-                test_logger.write(&line).await?;
-            }
-        }
+        buffer_and_drain_logger(stdlogger, &mut test_logger).await?;
 
         // Wait for test to return
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
