@@ -96,6 +96,9 @@ void physmap_for_each_gap(fbl::Function<void(vaddr_t base, size_t size)> func,
 // from the physmap.
 void physmap_protect_non_arena_regions();
 
+// Mark all arenas of the physmap as no-execute.
+void physmap_protect_arena_regions_noexecute();
+
 #endif  // !__ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSMAP_H_

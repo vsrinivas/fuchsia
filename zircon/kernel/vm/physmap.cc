@@ -19,18 +19,29 @@
 
 namespace {
 
+// Permissions & flags for regions of the physmap backed by memory. Execute permissions
+// are not included - we do not ever execute from physmap addresses.
+constexpr uint kPhysmapMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+// Permissions & flags for regions of the physmap that are not backed by memory; they
+// may represent MMIOs or non-allocatable (ACPI NVS) memory. The kernel will not normally
+// access these addresses.
+constexpr uint kGapMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_UNCACHED_DEVICE;
+
 // Protect the region [ |base|, |base| + |size| ) from the physmap.
-void physmap_protect_region(vaddr_t base, size_t size) {
+void physmap_protect_region(vaddr_t base, size_t size, uint mmu_flags) {
   DEBUG_ASSERT(base % PAGE_SIZE == 0);
   DEBUG_ASSERT(size % PAGE_SIZE == 0);
   const size_t page_count = size / PAGE_SIZE;
   LTRACEF("base=0x%" PRIx64 "; page_count=0x%" PRIx64 "\n", base, page_count);
 
-  // Ideally, we'd drop the PERM_READ, but MMU code doesn't support that.
-  constexpr uint mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_UNCACHED_DEVICE;
   zx_status_t status =
       VmAspace::kernel_aspace()->arch_aspace().Protect(base, page_count, mmu_flags);
   DEBUG_ASSERT(status == ZX_OK);
+}
+
+void physmap_protect_gap(vaddr_t base, size_t size) {
+  // Ideally, we'd drop the PERM_READ, but MMU code doesn't support that.
+  physmap_protect_region(base, size, kGapMmuFlags);
 }
 
 }  // namespace
@@ -79,5 +90,21 @@ void physmap_protect_non_arena_regions() {
   zx_status_t status = pmm_get_arena_info(num_arenas, 0, arenas.get(), size);
   ASSERT(status == ZX_OK);
 
-  physmap_for_each_gap(physmap_protect_region, arenas.get(), num_arenas);
+  physmap_for_each_gap(physmap_protect_gap, arenas.get(), num_arenas);
+}
+
+void physmap_protect_arena_regions_noexecute() {
+  const size_t num_arenas = pmm_num_arenas();
+  fbl::AllocChecker ac;
+  auto arenas = ktl::unique_ptr<pmm_arena_info_t[]>(new (&ac) pmm_arena_info_t[num_arenas]);
+  ASSERT(ac.check());
+  const size_t size = num_arenas * sizeof(pmm_arena_info_t);
+
+  zx_status_t status = pmm_get_arena_info(num_arenas, 0, arenas.get(), size);
+  ASSERT(status == ZX_OK);
+
+  for (uint i = 0; i < num_arenas; i++) {
+    physmap_protect_region(reinterpret_cast<vaddr_t>(paddr_to_physmap(arenas[i].base)),
+                           /*size=*/arenas[i].size, /*mmu_flags=*/kPhysmapMmuFlags);
+  }
 }

@@ -153,6 +153,9 @@ void vm_init() {
 #error "unsupported architecture"
 #endif
 
+  // Mark the physmap no-execute.
+  physmap_protect_arena_regions_noexecute();
+
   VmAspace* aspace = VmAspace::kernel_aspace();
 
   fbl::RefPtr<VmAddressRegion> kernel_region;

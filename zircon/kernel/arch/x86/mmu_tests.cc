@@ -170,7 +170,22 @@ static bool x86_test_l1tf_invariant() {
   END_TEST;
 }
 
+// Ensure the physmap is marked no-execute.
+static bool x86_test_physmap_nx() {
+  BEGIN_TEST;
+
+  for (uintptr_t addr = PHYSMAP_BASE; addr < (PHYSMAP_BASE + PHYSMAP_SIZE); addr += PAGE_SIZE) {
+    paddr_t paddr;
+    uint mmu_flags;
+    EXPECT_OK(VmAspace::kernel_aspace()->arch_aspace().Query(addr, &paddr, &mmu_flags));
+    EXPECT_TRUE(!(mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE));
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(x86_mmu_tests)
 UNITTEST("user-aspace page table tests", x86_arch_vmaspace_usermmu_tests)
 UNITTEST("l1tf test", x86_test_l1tf_invariant)
+UNITTEST("physmap nx", x86_test_physmap_nx)
 UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests")
