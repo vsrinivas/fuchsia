@@ -10,8 +10,16 @@
 #include <zircon/types.h>
 
 #include <cinttypes>
+#include <filesystem>
+#include <memory>
 
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -21,12 +29,42 @@ const char kConfigPath[] = "/pkg/data/feedback_data/config.json";
 const char kDataRegisterPath[] = "/tmp/data_register.json";
 const char kUserBuildFlagPath[] = "/config/data/feedback_data/limit_inspect_data";
 
+void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
+  // We read the set of /cache files into a single /tmp file.
+  system_log_recorder::ProductionDecoder decoder;
+  float compression_ratio;
+  if (!system_log_recorder::Concatenate(kCurrentLogsDir, &decoder, kPreviousLogsFilePath,
+                                        &compression_ratio)) {
+    return;
+  }
+  FX_LOGS(INFO) << fxl::StringPrintf(
+      "Found logs from previous boot cycle (compression ratio %.2f), available at %s\n",
+      compression_ratio, kPreviousLogsFilePath);
+
+  cobalt->LogCount(system_log_recorder::ToCobalt(decoder.GetEncodingVersion()),
+                   (uint64_t)(compression_ratio * 100));
+
+  // Clean up the /cache files now that they have been concatenated into a single /tmp file.
+  files::DeletePath(kCurrentLogsDir, /*recusive=*/true);
+}
+
 }  // namespace
 
 std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     inspect::Node* root_node,
                                                     const bool is_first_instance) {
+  auto cobalt = std::make_unique<cobalt::Logger>(dispatcher, services);
+
+  // We want to move the previous boot logs from /cache to /tmp:
+  // // (1) before we construct the static attachment from the /tmp file
+  // // (2) only in the first instance of the component since boot as the /cache files would
+  // correspond to the current boot in any other instances.
+  if (is_first_instance) {
+    FX_CHECK(!std::filesystem::exists(kPreviousLogsFilePath));
+    CreatePreviousLogsFile(cobalt.get());
+  }
+
   Config config;
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
@@ -35,23 +73,25 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     return nullptr;
   }
 
-  return std::make_unique<MainService>(dispatcher, std::move(services), root_node, config,
-                                       is_first_instance);
+  return std::unique_ptr<MainService>(new MainService(
+      dispatcher, std::move(services), std::move(cobalt), root_node, config, is_first_instance));
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services, inspect::Node* root_node,
+                         std::shared_ptr<sys::ServiceDirectory> services,
+                         std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node,
                          Config config, const bool is_first_instance)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
-      cobalt_(dispatcher_, services),
+      cobalt_(std::move(cobalt)),
       clock_(),
       inspect_data_budget_(kUserBuildFlagPath),
       device_id_manager_(dispatcher_, kDeviceIdPath),
-      datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
-                 config.attachment_allowlist, is_first_instance, &inspect_data_budget_),
+      datastore_(dispatcher_, services, cobalt_.get(), config.annotation_allowlist,
+                 config.attachment_allowlist, &inspect_data_budget_),
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
-                     config.attachment_allowlist, &cobalt_, &datastore_, &inspect_data_budget_),
+                     config.attachment_allowlist, cobalt_.get(), &datastore_,
+                     &inspect_data_budget_),
       data_register_(&datastore_, kDataRegisterPath) {}
 
 void MainService::SpawnSystemLogRecorder() {

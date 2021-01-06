@@ -8,7 +8,9 @@
     "sandbox": {
         "features": [
             "build-info",
-            "isolated-persistent-storage"
+            "isolated-cache-storage",
+            "isolated-persistent-storage",
+            "isolated-temp"
         ]
     }
 }

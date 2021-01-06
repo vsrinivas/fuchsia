@@ -6,15 +6,13 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_STATIC_ATTACHMENTS_H_
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
 namespace feedback_data {
 
 // Synchronously fetches the static attachments, i.e. the attachments that don't change during a
 // boot cycle.
-Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt,
-                                 bool is_first_instance);
+Attachments GetStaticAttachments(const AttachmentKeys& allowlist);
 
 }  // namespace feedback_data
 }  // namespace forensics

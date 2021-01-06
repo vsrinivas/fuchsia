@@ -11,10 +11,6 @@
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
-#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -50,44 +46,10 @@ AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
   return value;
 }
 
-void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
-  // We read the set of /cache files into a single /tmp file.
-  system_log_recorder::ProductionDecoder decoder;
-  float compression_ratio;
-  if (!system_log_recorder::Concatenate(kCurrentLogsDir, &decoder, kPreviousLogsFilePath,
-                                        &compression_ratio)) {
-    return;
-  }
-  FX_LOGS(INFO) << fxl::StringPrintf(
-      "Found logs from previous boot cycle (compression ratio %.2f), available at %s\n",
-      compression_ratio, kPreviousLogsFilePath);
-
-  cobalt->LogCount(system_log_recorder::ToCobalt(decoder.GetEncodingVersion()),
-                   (uint64_t)(compression_ratio * 100));
-
-  // Clean up the /cache files now that they have been concatenated into a single /tmp file.
-  files::DeletePath(kCurrentLogsDir, /*recusive=*/true);
-}
-
-AttachmentValue BuildAttachmentValue(const AttachmentKey& key, cobalt::Logger* cobalt,
-                                     const bool is_first_instance) {
+AttachmentValue BuildAttachmentValue(const AttachmentKey& key) {
   if (key == kAttachmentBuildSnapshot) {
     return ReadAttachmentValueFromFilepath(key, "/config/build-info/snapshot");
   } else if (key == kAttachmentLogSystemPrevious) {
-    // If this is the first instance of the component since boot, we have to create the /tmp log
-    // file. Otherwise we can return it immediately if it exists (it wouldn't on a pave for
-    // instance).
-    //
-    if (is_first_instance) {
-      FX_CHECK(!std::filesystem::exists(kPreviousLogsFilePath));
-      // The /tmp log file is created it by aggregating the content stored in the /cache files for
-      // the current boot cycle that are still containing the content from the previous boot cycle.
-      //
-      // This assumes that the static attachments are fetched before any log persistence for the
-      // current boot cycle as this would overwrite these /cache files with the content for the
-      // current boot cycle.
-      CreatePreviousLogsFile(cobalt);
-    }
     return ReadAttachmentValueFromFilepath(key, kPreviousLogsFilePath);
   }
   // There are non-static attachments in the allowlist that we just skip here.
@@ -106,11 +68,10 @@ AttachmentKeys RestrictAllowlist(const AttachmentKeys& allowlist) {
 
 }  // namespace
 
-Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt,
-                                 const bool is_first_instance) {
+Attachments GetStaticAttachments(const AttachmentKeys& allowlist) {
   Attachments attachments;
   for (const auto& key : RestrictAllowlist(allowlist)) {
-    attachments.insert({key, BuildAttachmentValue(key, cobalt, is_first_instance)});
+    attachments.insert({key, BuildAttachmentValue(key)});
   }
   return attachments;
 }

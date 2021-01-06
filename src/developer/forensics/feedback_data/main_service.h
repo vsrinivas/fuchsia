@@ -38,9 +38,6 @@ class MainService {
                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                 inspect::Node* root_node, bool is_first_instance);
 
-  MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-              inspect::Node* root_node, Config config, bool is_first_instance);
-
   void SpawnSystemLogRecorder();
 
   // FIDL protocol handlers.
@@ -55,9 +52,13 @@ class MainService {
       ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
 
  private:
+  MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+              std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node, Config config,
+              bool is_first_instance);
+
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
-  cobalt::Logger cobalt_;
+  std::unique_ptr<cobalt::Logger> cobalt_;
   timekeeper::SystemClock clock_;
   InspectDataBudget inspect_data_budget_;
 

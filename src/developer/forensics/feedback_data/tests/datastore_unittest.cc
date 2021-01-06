@@ -13,7 +13,6 @@
 #include <lib/zx/time.h>
 
 #include <cstddef>
-#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -24,9 +23,6 @@
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/log_message.h"
@@ -41,7 +37,6 @@
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
-#include "src/developer/forensics/utils/log_format.h"
 #include "src/developer/forensics/utils/time.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -74,17 +69,6 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
     kAttachmentBuildSnapshot,
 };
 
-std::string MakeFilepath(const std::string& dir, const size_t file_num) {
-  return files::JoinPath(dir, std::to_string(file_num));
-}
-
-const std::vector<std::string> kCurrentLogFilePaths = {
-    MakeFilepath(kCurrentLogsDir, 0), MakeFilepath(kCurrentLogsDir, 1),
-    MakeFilepath(kCurrentLogsDir, 2), MakeFilepath(kCurrentLogsDir, 3),
-    MakeFilepath(kCurrentLogsDir, 4), MakeFilepath(kCurrentLogsDir, 5),
-    MakeFilepath(kCurrentLogsDir, 6), MakeFilepath(kCurrentLogsDir, 7),
-};
-
 class DatastoreTest : public UnitTestFixture {
  public:
   DatastoreTest() : executor_(dispatcher()), inspect_data_budget_("non-existent_path") {}
@@ -92,18 +76,14 @@ class DatastoreTest : public UnitTestFixture {
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
-    FX_CHECK(files::CreateDirectory(kCurrentLogsDir));
   }
-
-  void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
 
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
-                      const AttachmentKeys& attachment_allowlist,
-                      const bool is_first_instance = true) {
+                      const AttachmentKeys& attachment_allowlist) {
     datastore_ =
         std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, is_first_instance, &inspect_data_budget_);
+                                    attachment_allowlist, &inspect_data_budget_);
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -455,48 +435,10 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
-MATCHER_P2(MatchesCobaltEvent, expected_type, expected_metric_id, "") {
-  return arg.type == expected_type && arg.metric_id == expected_metric_id;
-}
-
-TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
-  std::string previous_log_contents = "";
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    auto encoder = system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    previous_log_contents = previous_log_contents + str;
-    WriteFile(filepath, encoder.Encode(str));
-  }
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
-
-  ::fit::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.value(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
-
-  EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
-
-  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-  for (const auto& file : kCurrentLogFilePaths) {
-    ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
-  }
-
-  // Verify the event type and metric_id.
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  MatchesCobaltEvent(cobalt::EventType::kCount,
-                                     cobalt_registry::kPreviousBootLogCompressionRatioMetricId),
-              }));
-}
-
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
-                 /*is_first_instance=*/false);
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -514,8 +456,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
   const std::string previous_log_contents = "";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
-                 /*is_first_instance=*/false);
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -528,32 +469,6 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-}
-
-TEST_F(DatastoreTest, GetAttachments_PreviousSyslogNotFirstInstance) {
-  // Simulate a case where there is no logs from the previous boot cycle and then a restart during
-  // the current boot cycle. We want to make sure that we are not including the logs for the
-  // current boot cycle as "previous boot logs".
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    WriteFile(filepath, "Test data.");
-  }
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
-                 /*is_first_instance=*/false);
-
-  ::fit::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_ok());
-  EXPECT_THAT(attachments.value(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure))}));
-
-  EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray(
-                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure))}));
-
-  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-  for (const auto& file : kCurrentLogFilePaths) {
-    ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
-  }
 }
 
 TEST_F(DatastoreTest, GetAttachments_SysLog) {

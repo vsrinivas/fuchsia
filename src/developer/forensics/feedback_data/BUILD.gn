@@ -208,6 +208,11 @@ source_set("main_service") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
+    "//src/lib/files",
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 }
