@@ -6,10 +6,12 @@ package codegen
 
 const fragmentSyncEventHandlerTmpl = `
 {{- define "EventHandlerHandleOneEventMethodDefinition" }}
-::fidl::Result {{ .Name }}::SyncEventHandler::HandleOneEvent(::zx::unowned_channel client_end) {
-  zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            ::zx::time::infinite(),
-                                            nullptr);
+::fidl::Result {{ .Name }}::SyncEventHandler::HandleOneEvent(
+    ::fidl::UnownedClientEnd<{{ .Namespace }}::{{ .Name }}> client_end) {
+  zx_status_t status = zx_object_wait_one(client_end.channel(),
+                                          ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                          ZX_TIME_INFINITE,
+                                          nullptr);
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
   }
@@ -39,10 +41,11 @@ const fragmentSyncEventHandlerTmpl = `
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  status = client_end->read_etc(ZX_CHANNEL_READ_MAY_DISCARD,
-                                read_bytes, read_handles,
-                                kReadAllocSize, kHandleAllocSize,
-                                &actual_bytes, &actual_handles);
+  status = zx_channel_read_etc(client_end.channel(),
+                               ZX_CHANNEL_READ_MAY_DISCARD,
+                               read_bytes, read_handles,
+                               kReadAllocSize, kHandleAllocSize,
+                               &actual_bytes, &actual_handles);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,

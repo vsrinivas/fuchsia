@@ -19,9 +19,10 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
-  ::zx::unowned_channel _client_end{{ if .Request }}, {{ end }}
-  {{ template "CallerBufferParams" .Request }}
-  {{ if .HasResponse }}, ::fidl::BufferSpan _response_buffer{{ end }}
+::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
+{{- if .Request }}, {{ end }}
+{{- template "CallerBufferParams" .Request }}
+{{- if .HasResponse }}, ::fidl::BufferSpan _response_buffer{{ end }}
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}

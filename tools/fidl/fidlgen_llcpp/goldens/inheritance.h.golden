@@ -425,20 +425,20 @@ class super final {
    public:
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
-    static ResultOf::foo foo(::zx::unowned_channel _client_end,
+    static ResultOf::foo foo(::fidl::UnownedClientEnd<super> _client_end,
                              ::fidl::StringView s) {
-      return ResultOf::foo(_client_end->get(), s);
+      return ResultOf::foo(_client_end.channel(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
+    static UnownedResultOf::foo foo(::fidl::UnownedClientEnd<super> _client_end,
                                     ::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -933,20 +933,20 @@ class sub final {
    public:
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
-    static ResultOf::foo foo(::zx::unowned_channel _client_end,
+    static ResultOf::foo foo(::fidl::UnownedClientEnd<sub> _client_end,
                              ::fidl::StringView s) {
-      return ResultOf::foo(_client_end->get(), s);
+      return ResultOf::foo(_client_end.channel(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
+    static UnownedResultOf::foo foo(::fidl::UnownedClientEnd<sub> _client_end,
                                     ::fidl::BufferSpan _request_buffer,
                                     ::fidl::StringView s,
                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
   };
 

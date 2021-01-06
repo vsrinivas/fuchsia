@@ -22,7 +22,9 @@ const fragmentSyncRequestManagedTmpl = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestManagedMethodArguments" -}}
-::zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }}
+::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
+{{- if .Request }}, {{ end }}
+{{- template "Params" .Request }}
 {{- end }}
 
 {{- define "SyncRequestManagedMethodDefinition" }}

@@ -1390,7 +1390,9 @@ class Transitional final {
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
     // corresponding virtual method.
-    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
+    ::fidl::Result HandleOneEvent(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+            client_end);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -1507,34 +1509,36 @@ class Transitional final {
    public:
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::Request Request(::zx::unowned_channel _client_end,
-                                     int64_t x) {
-      return ResultOf::Request(_client_end->get(), x);
+    static ResultOf::Request Request(
+        ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
+      return ResultOf::Request(_client_end.channel(), x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::Request Request(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        int64_t x, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<Transitional> _client_end,
+        ::fidl::BufferSpan _request_buffer, int64_t x,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, x,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          x, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::OneWay OneWay(::zx::unowned_channel _client_end,
-                                   int64_t x) {
-      return ResultOf::OneWay(_client_end->get(), x);
+    static ResultOf::OneWay OneWay(
+        ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
+      return ResultOf::OneWay(_client_end.channel(), x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::OneWay OneWay(::zx::unowned_channel _client_end,
-                                          ::fidl::BufferSpan _request_buffer,
-                                          int64_t x) {
-      return UnownedResultOf::OneWay(_client_end->get(), _request_buffer.data,
+    static UnownedResultOf::OneWay OneWay(
+        ::fidl::UnownedClientEnd<Transitional> _client_end,
+        ::fidl::BufferSpan _request_buffer, int64_t x) {
+      return UnownedResultOf::OneWay(_client_end.channel(),
+                                     _request_buffer.data,
                                      _request_buffer.capacity, x);
     }
   };
@@ -1595,7 +1599,7 @@ class Transitional final {
     // status of the handler function is folded with any transport-level errors
     // and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
+      return event_handler.HandleOneEvent(client_end_);
     }
 
    private:
@@ -2878,7 +2882,10 @@ class ChannelProtocol final {
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
     // corresponding virtual method.
-    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
+    ::fidl::Result HandleOneEvent(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::ChannelProtocol>
+            client_end);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -3143,69 +3150,75 @@ class ChannelProtocol final {
    public:
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::MethodA MethodA(::zx::unowned_channel _client_end,
-                                     int64_t a, int64_t b) {
-      return ResultOf::MethodA(_client_end->get(), a, b);
+    static ResultOf::MethodA MethodA(
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
+        int64_t b) {
+      return ResultOf::MethodA(_client_end.channel(), a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    static UnownedResultOf::MethodA MethodA(::zx::unowned_channel _client_end,
-                                            ::fidl::BufferSpan _request_buffer,
-                                            int64_t a, int64_t b) {
-      return UnownedResultOf::MethodA(_client_end->get(), _request_buffer.data,
+    static UnownedResultOf::MethodA MethodA(
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
+      return UnownedResultOf::MethodA(_client_end.channel(),
+                                      _request_buffer.data,
                                       _request_buffer.capacity, a, b);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::MethodB MethodB(::zx::unowned_channel _client_end,
-                                     int64_t a, int64_t b) {
-      return ResultOf::MethodB(_client_end->get(), a, b);
+    static ResultOf::MethodB MethodB(
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
+        int64_t b) {
+      return ResultOf::MethodB(_client_end.channel(), a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MethodB MethodB(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        int64_t a, int64_t b, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, a,
-          b, _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          a, b, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::TakeHandle TakeHandle(::zx::unowned_channel _client_end,
-                                           ::zx::handle h) {
-      return ResultOf::TakeHandle(_client_end->get(), h);
+    static ResultOf::TakeHandle TakeHandle(
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::handle h) {
+      return ResultOf::TakeHandle(_client_end.channel(), h);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::TakeHandle TakeHandle(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        ::zx::handle h, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::TakeHandle(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, h,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          h, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MutateSocket MutateSocket(
-        ::zx::unowned_channel _client_end, ::zx::socket a) {
-      return ResultOf::MutateSocket(_client_end->get(), a);
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::socket a) {
+      return ResultOf::MutateSocket(_client_end.channel(), a);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::MutateSocket MutateSocket(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        ::zx::socket a, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
+        ::fidl::BufferSpan _request_buffer, ::zx::socket a,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, a,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          a, _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -3297,7 +3310,7 @@ class ChannelProtocol final {
     // status of the handler function is folded with any transport-level errors
     // and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
+      return event_handler.HandleOneEvent(client_end_);
     }
 
    private:
@@ -5202,7 +5215,10 @@ class WithAndWithoutRequestResponse final {
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
     // corresponding virtual method.
-    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
+    ::fidl::Result HandleOneEvent(
+        ::fidl::UnownedClientEnd<
+            ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+            client_end);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -5608,81 +5624,85 @@ class WithAndWithoutRequestResponse final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::NoRequestNoResponse NoRequestNoResponse(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::NoRequestNoResponse(_client_end->get());
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+      return ResultOf::NoRequestNoResponse(_client_end.channel());
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::NoRequestEmptyResponse(_client_end->get());
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+      return ResultOf::NoRequestEmptyResponse(_client_end.channel());
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
     // heap-allocated.
     static ResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::NoRequestWithResponse(_client_end->get());
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
+      return ResultOf::NoRequestWithResponse(_client_end.channel());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::zx::unowned_channel _client_end
-
-        ,
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::NoRequestWithResponse(
-          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
+      return UnownedResultOf::NoRequestWithResponse(_client_end.channel(),
+                                                    _response_buffer.data,
+                                                    _response_buffer.capacity);
     }
 
     // Request is heap-allocated.
     static ResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-      return ResultOf::WithRequestNoResponse(_client_end->get(), arg);
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::StringView arg) {
+      return ResultOf::WithRequestNoResponse(_client_end.channel(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        ::fidl::StringView arg) {
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
           arg);
     }
 
     // Allocates 16 bytes of response buffer on the stack. Request is
     // heap-allocated.
     static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-      return ResultOf::WithRequestEmptyResponse(_client_end->get(), arg);
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::StringView arg) {
+      return ResultOf::WithRequestEmptyResponse(_client_end.channel(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        ::fidl::StringView arg, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
           arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::zx::unowned_channel _client_end, ::fidl::StringView arg) {
-      return ResultOf::WithRequestWithResponse(_client_end->get(), arg);
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::StringView arg) {
+      return ResultOf::WithRequestWithResponse(_client_end.channel(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
-        ::fidl::StringView arg, ::fidl::BufferSpan _response_buffer) {
+        ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
+        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
+        ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity,
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
           arg, _response_buffer.data, _response_buffer.capacity);
     }
   };
@@ -5790,7 +5810,7 @@ class WithAndWithoutRequestResponse final {
     // status of the handler function is folded with any transport-level errors
     // and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
+      return event_handler.HandleOneEvent(client_end_);
     }
 
    private:
@@ -7065,55 +7085,52 @@ class WithErrorSyntax final {
     // Allocates 80 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ResponseAsStruct ResponseAsStruct(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::ResponseAsStruct(_client_end->get());
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+      return ResultOf::ResponseAsStruct(_client_end.channel());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ResponseAsStruct ResponseAsStruct(
-        ::zx::unowned_channel _client_end
-
-        ,
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ResponseAsStruct(
-          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
+      return UnownedResultOf::ResponseAsStruct(_client_end.channel(),
+                                               _response_buffer.data,
+                                               _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::ErrorAsPrimitive(_client_end->get());
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+      return ResultOf::ErrorAsPrimitive(_client_end.channel());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::zx::unowned_channel _client_end
-
-        ,
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsPrimitive(
-          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
+      return UnownedResultOf::ErrorAsPrimitive(_client_end.channel(),
+                                               _response_buffer.data,
+                                               _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsEnum ErrorAsEnum(
-        ::zx::unowned_channel _client_end) {
-      return ResultOf::ErrorAsEnum(_client_end->get());
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
+      return ResultOf::ErrorAsEnum(_client_end.channel());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
-        ::zx::unowned_channel _client_end
-
-        ,
+        ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsEnum(
-          _client_end->get(), _response_buffer.data, _response_buffer.capacity);
+      return UnownedResultOf::ErrorAsEnum(_client_end.channel(),
+                                          _response_buffer.data,
+                                          _response_buffer.capacity);
     }
   };
 

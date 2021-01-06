@@ -570,7 +570,8 @@ class {{ .Name }} final {
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
     // method.
-    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
+    ::fidl::Result HandleOneEvent(
+        ::fidl::UnownedClientEnd<{{ .Namespace }}::{{ .Name }}> client_end);
   };
   {{- end }}
 
@@ -707,7 +708,7 @@ class {{ .Name }} final {
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
     static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }}) {
-      return ResultOf::{{ .Name }}(_client_end->get()
+      return ResultOf::{{ .Name }}(_client_end.channel()
         {{- template "CommaPassthroughMessageParams" .Request -}}
         );
     }
@@ -718,7 +719,7 @@ class {{ .Name }} final {
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-      return UnownedResultOf::{{ .Name }}(_client_end->get()
+      return UnownedResultOf::{{ .Name }}(_client_end.channel()
         {{- if .Request -}}
           , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
@@ -784,7 +785,7 @@ class {{ .Name }} final {
     // method defined in |SyncEventHandler|. The return status of the handler function is folded with
     // any transport-level errors and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
+      return event_handler.HandleOneEvent(client_end_);
     }
     {{- end }}
    private:

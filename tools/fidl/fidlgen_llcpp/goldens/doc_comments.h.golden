@@ -1172,7 +1172,9 @@ class Interface final {
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
     // corresponding virtual method.
-    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
+    ::fidl::Result HandleOneEvent(
+        ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+            client_end);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -1223,8 +1225,9 @@ class Interface final {
     // method comment #3
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    static ResultOf::Method Method(::zx::unowned_channel _client_end) {
-      return ResultOf::Method(_client_end->get());
+    static ResultOf::Method Method(
+        ::fidl::UnownedClientEnd<Interface> _client_end) {
+      return ResultOf::Method(_client_end.channel());
     }
   };
 
@@ -1262,7 +1265,7 @@ class Interface final {
     // status of the handler function is folded with any transport-level errors
     // and returned.
     ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(::zx::unowned_channel(channel()));
+      return event_handler.HandleOneEvent(client_end_);
     }
 
    private:

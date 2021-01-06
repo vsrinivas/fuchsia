@@ -1118,41 +1118,43 @@ class Protocol final {
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::zx::unowned_channel _client_end,
+        ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
-      return ResultOf::RequestStrictResponseFlexible(_client_end->get(), s);
+      return ResultOf::RequestStrictResponseFlexible(_client_end.channel(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::zx::unowned_channel _client_end,
+        ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
-      return ResultOf::RequestFlexibleResponseStrict(_client_end->get(), s);
+      return ResultOf::RequestFlexibleResponseStrict(_client_end.channel(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     static UnownedResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
-        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::fidl::UnownedClientEnd<Protocol> _client_end,
+        ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
-          _client_end->get(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
+          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
+          s, _response_buffer.data, _response_buffer.capacity);
     }
   };
 
