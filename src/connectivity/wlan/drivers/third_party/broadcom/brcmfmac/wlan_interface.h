@@ -45,10 +45,6 @@ class WlanInterface {
   void DdkRelease();
 
   static wlan_info_mac_role_t GetMacRoles(struct brcmf_pub* drvr);
-  static bool IsPhyTypeSupported(struct brcmf_pub* drvr, wlan_info_phy_type_t phy_type);
-  static wlan_info_phy_type_t GetSupportedPhyTypes(struct brcmf_pub* drvr);
-  static wlan_info_driver_feature_t GetSupportedDriverFeatures(struct brcmf_pub* drvr);
-  static wlan_info_hardware_capability_t GetSupportedHardwareCapabilities(struct brcmf_pub* drvr);
 
   static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);
   static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);

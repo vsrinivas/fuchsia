@@ -159,10 +159,11 @@ impl<'a> BoundScanner<'a> {
             send_scan_end_and_return!(req.txn_id, ScanError::SsidTooLong, self);
         }
 
-        let wlan_info = self.ctx.device.wlan_info().ifc_info;
-        let hw_scan =
-            (wlan_info.driver_features & banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD).0
-                > 0;
+        let wlanmac_info = self.ctx.device.wlanmac_info();
+        let hw_scan = (wlanmac_info.driver_features
+            & banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD)
+            .0
+            > 0;
         if hw_scan {
             let scan_type = if req.scan_type == fidl_mlme::ScanTypes::Active {
                 banjo_wlan_mac::WlanHwScanType::ACTIVE
@@ -298,7 +299,7 @@ impl<'a> BoundScanner<'a> {
         ssid: &[u8],
         channel: banjo_wlan_info::WlanChannel,
     ) -> Result<(), Error> {
-        let iface_info = self.ctx.device.wlan_info().ifc_info;
+        let iface_info = self.ctx.device.wlanmac_info();
         let band_info = get_band_info(&iface_info, channel)
             .ok_or(format_err!("no band found for chan {:?}", channel.primary))?;
         let rates: Vec<u8> = band_info.rates.iter().cloned().filter(|r| *r > 0).collect();
@@ -341,7 +342,7 @@ impl<'a> BoundScanner<'a> {
 }
 
 fn get_band_info(
-    iface_info: &banjo_hw_wlaninfo::WlanInfo,
+    iface_info: &banjo_wlan_mac::WlanmacInfo,
     channel: banjo_wlan_info::WlanChannel,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
@@ -675,7 +676,7 @@ mod tests {
     fn test_start_hw_scan_success() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
-        m.fake_device.info.ifc_info.driver_features |=
+        m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -723,7 +724,7 @@ mod tests {
         let mut m = MockObjects::new();
         let device = m.fake_device.as_device_fail_start_hw_scan();
         let mut ctx = m.make_ctx_with_device(device);
-        m.fake_device.info.ifc_info.driver_features |=
+        m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -747,7 +748,7 @@ mod tests {
     fn test_start_hw_scan_aborted() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
-        m.fake_device.info.ifc_info.driver_features |=
+        m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
 

@@ -18,9 +18,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/wlan/mac.h>
+#include <ddk/protocol/wlanphyimpl.h>
 
 #include "ce.h"
 #include "hw.h"
@@ -314,7 +315,8 @@ void ath10k_pci_irq_msi_fw_mask(struct ath10k* ar);
 zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar);
 zx_status_t ath10k_pci_setup_resource(struct ath10k* ar);
 void ath10k_pci_release_resource(struct ath10k* ar);
-void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info);
+void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info);
+void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info);
 
 extern wlanmac_protocol_ops_t wlanmac_ops;
 

@@ -188,19 +188,20 @@ TEST_F(WlanDeviceTest, MacQuery) {
 
   wlanmac_info_t info = {};
   ASSERT_EQ(ZX_OK, wlanmac_ops.query(&mvmvif_sta_, options, &info));
-  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.ifc_info.mac_role);
+  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.mac_role);
+
   //
   // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
   //
   //   .bands[0]: WLAN_INFO_BAND_2GHZ
   //   .bands[1]: WLAN_INFO_BAND_5GHZ
   //
-  ASSERT_EQ(2, info.ifc_info.bands_count);
-  EXPECT_EQ(expected_rate(0), info.ifc_info.bands[0].rates[0]);    // 1 Mbps
-  EXPECT_EQ(expected_rate(7), info.ifc_info.bands[0].rates[7]);    // 18 Mbps
-  EXPECT_EQ(expected_rate(11), info.ifc_info.bands[0].rates[11]);  // 54 Mbps
-  EXPECT_EQ(expected_rate(4), info.ifc_info.bands[1].rates[0]);    // 6 Mbps
-  EXPECT_EQ(165, info.ifc_info.bands[1].supported_channels.channels[24]);
+  ASSERT_EQ(2, info.bands_count);
+  EXPECT_EQ(expected_rate(0), info.bands[0].rates[0]);    // 1 Mbps
+  EXPECT_EQ(expected_rate(7), info.bands[0].rates[7]);    // 18 Mbps
+  EXPECT_EQ(expected_rate(11), info.bands[0].rates[11]);  // 54 Mbps
+  EXPECT_EQ(expected_rate(4), info.bands[1].rates[0]);    // 6 Mbps
+  EXPECT_EQ(165, info.bands[1].supported_channels.channels[24]);
 }
 
 TEST_F(WlanDeviceTest, MacStart) {
@@ -348,19 +349,7 @@ TEST_F(WlanDeviceTest, PhyQuery) {
 
   // Normal case
   ASSERT_EQ(ZX_OK, wlanphy_ops.query(iwl_trans, &info));
-  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.wlan_info.mac_role);
-  //
-  // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
-  //
-  //   .bands[0]: WLAN_INFO_BAND_2GHZ
-  //   .bands[1]: WLAN_INFO_BAND_5GHZ
-  //
-  ASSERT_EQ(2, info.wlan_info.bands_count);
-  EXPECT_EQ(expected_rate(0), info.wlan_info.bands[0].rates[0]);    // 1 Mbps
-  EXPECT_EQ(expected_rate(7), info.wlan_info.bands[0].rates[7]);    // 18 Mbps
-  EXPECT_EQ(expected_rate(11), info.wlan_info.bands[0].rates[11]);  // 54 Mbps
-  EXPECT_EQ(expected_rate(4), info.wlan_info.bands[1].rates[0]);    // 6 Mbps
-  EXPECT_EQ(165, info.wlan_info.bands[1].supported_channels.channels[24]);
+  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.supported_mac_roles);
 }
 
 TEST_F(WlanDeviceTest, PhyPartialCreateCleanup) {

@@ -62,15 +62,7 @@ struct PhyInfo {
     // The topological path of the phy in the device tree.
     string? dev_path;
 
-    // The hardware MAC address for the phy. May not be the same as the MAC address used to
-    // communicate with external systems.
-    array<uint8>:6 hw_mac_address;
-
-    vector<SupportedPhy>:8 supported_phys;
-    vector<fuchsia.wlan.common.DriverFeature>:8 driver_features;
-    vector<MacRole>:8 mac_roles;
-    vector<Capability>:8 caps;
-    vector<BandInfo>:8 bands;
+    vector<MacRole>:8 supported_mac_roles;
 };
 
 struct QueryResponse {

@@ -71,7 +71,7 @@ class DeviceInterface {
                                        ::fuchsia::wlan::minstrel::Peer* peer_fidl) = 0;
 
   virtual fbl::RefPtr<DeviceState> GetState() = 0;
-  virtual const wlanmac_info_t& GetWlanInfo() const = 0;
+  virtual const wlanmac_info_t& GetWlanMacInfo() const = 0;
 };
 
 }  // namespace wlan

@@ -69,7 +69,7 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
       .mesh_id = req.body()->mesh_id.data(),
       .mesh_id_len = req.body()->mesh_id.size(),
   };
-  auto rates = GetRatesByChannel(device->GetWlanInfo().ifc_info, channel.primary);
+  auto rates = GetRatesByChannel(device->GetWlanMacInfo(), channel.primary);
   static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
   c.rates = {reinterpret_cast<const SupportedRate*>(rates.data()), rates.size()};
   return BuildBeacon(c, buffer, tim_ele_offset);

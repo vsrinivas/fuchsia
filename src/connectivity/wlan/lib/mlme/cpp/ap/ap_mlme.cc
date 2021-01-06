@@ -38,8 +38,8 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
         return MLME(mlme)->device_->SetKey(key);
       },
-      .get_wlan_info = [](void* mlme) -> wlanmac_info_t {
-        return MLME(mlme)->device_->GetWlanInfo();
+      .get_wlanmac_info = [](void* mlme) -> wlanmac_info_t {
+        return MLME(mlme)->device_->GetWlanMacInfo();
       },
       .configure_bss = [](void* mlme, wlan_bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);

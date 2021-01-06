@@ -304,7 +304,7 @@ impl InfraBss {
 
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
         if mgmt_subtype == mac::MgmtSubtype::PROBE_REQ {
-            let driver_features = ctx.device.wlan_info().ifc_info.driver_features;
+            let driver_features = ctx.device.wlanmac_info().driver_features;
             if (driver_features & WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
                 // We expected the probe response to be handled by hardware.
                 return Err(Rejection::Error(format_err!(
@@ -2102,7 +2102,7 @@ mod tests {
     #[test]
     fn handle_probe_req_has_offload() {
         let mut fake_device = FakeDevice::new();
-        fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
+        fake_device.info.driver_features |= WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(

@@ -164,7 +164,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   debugfn();
 
   wlan_mlme::DeviceInfo resp;
-  const wlan_info_t& info = device_->GetWlanInfo().ifc_info;
+  const wlanmac_info_t& info = device_->GetWlanMacInfo();
 
   memcpy(resp.mac_addr.data(), info.mac_addr, ETH_MAC_SIZE);
 
@@ -184,8 +184,6 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
       // TODO(fxbug.dev/28723): return an error!
       break;
   }
-
-  auto wlanmac_info = device_->GetWlanInfo().ifc_info;
 
   resp.bands.resize(0);
   for (uint8_t band_idx = 0; band_idx < info.bands_count; band_idx++) {
@@ -207,7 +205,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
       }
     }
 
-    band.cap = CapabilityInfo::FromDdk(wlanmac_info.caps).val();
+    band.cap = CapabilityInfo::FromDdk(info.caps).val();
 
     if (band_info.ht_supported) {
       auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);

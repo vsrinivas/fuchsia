@@ -4,7 +4,7 @@
 
 #include <cstddef>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/mac.h>
 #include <fbl/span.h>
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_CAPS_H_
@@ -13,9 +13,10 @@
 
 namespace wlan {
 
-const wlan_info_band_info_t* FindBandByChannel(const wlan_info_t& device_info, uint8_t channel);
+const wlan_info_band_info_t* FindBandByChannel(const wlanmac_info_t& device_info, uint8_t channel);
 
-const fbl::Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info, uint8_t channel);
+const fbl::Span<const uint8_t> GetRatesByChannel(const wlanmac_info_t& device_info,
+                                                 uint8_t channel);
 
 }  // namespace wlan
 

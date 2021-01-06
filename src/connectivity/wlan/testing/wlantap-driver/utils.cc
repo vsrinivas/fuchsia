@@ -8,6 +8,8 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlan/info.h>
+#include <ddk/protocol/wlan/mac.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
@@ -106,14 +108,6 @@ wlan_device::MacRole ConvertMacRole(uint16_t role) {
   ZX_ASSERT(0);
 }
 
-uint16_t ConvertMacRoles(const ::std::vector<wlan_device::MacRole>& roles) {
-  uint16_t ret = 0;
-  for (auto role : roles) {
-    ret |= ConvertMacRole(role);
-  }
-  return ret;
-}
-
 uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
   uint32_t ret = 0;
   for (auto cap : caps) {
@@ -169,17 +163,27 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out
       out->supported_channels.channels);
 }
 
-zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
-  std::memset(out, 0, sizeof(*out));
-  std::copy_n(in.hw_mac_address.begin(), ETH_MAC_SIZE, out->mac_addr);
-  out->supported_phys = ConvertSupportedPhys(in.supported_phys);
-  out->driver_features = ConvertDriverFeatures(in.driver_features);
-  out->mac_role = ConvertMacRoles(in.mac_roles);
-  out->caps = ConvertCaps(in.caps);
-  out->bands_count = std::min(in.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
-  for (size_t i = 0; i < out->bands_count; ++i) {
-    ConvertBandInfo((in.bands)[i], &out->bands[i]);
+zx_status_t ConvertTapPhyConfig(wlanmac_info_t* mac_info,
+                                const wlan_tap::WlantapPhyConfig& tap_phy_config) {
+  std::memset(mac_info, 0, sizeof(*mac_info));
+  std::copy_n(tap_phy_config.iface_mac_addr.begin(), ETH_MAC_SIZE, mac_info->mac_addr);
+  mac_info->supported_phys = ConvertSupportedPhys(tap_phy_config.supported_phys);
+  mac_info->driver_features = ConvertDriverFeatures(tap_phy_config.driver_features);
+  mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
+  mac_info->caps = ConvertCaps(tap_phy_config.caps);
+  mac_info->bands_count =
+      std::min(tap_phy_config.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
+
+  for (size_t i = 0; i < mac_info->bands_count; ++i) {
+    ConvertBandInfo((tap_phy_config.bands)[i], &mac_info->bands[i]);
   }
+  return ZX_OK;
+}
+
+zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
+                                const wlan_tap::WlantapPhyConfig& tap_phy_config) {
+  std::memset(phy_impl_info, 0, sizeof(*phy_impl_info));
+  phy_impl_info->supported_mac_roles = ConvertMacRole(tap_phy_config.mac_role);
   return ZX_OK;
 }
 

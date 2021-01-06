@@ -85,14 +85,15 @@ struct MockDevice : public DeviceInterface {
     state = fbl::AdoptRef(new DeviceState);
     state->set_address(addr);
 
-    auto info = &wlanmac_info.ifc_info;
-    memcpy(info->mac_addr, addr.byte, 6);
-    info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
-    info->supported_phys = WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
-    info->driver_features = 0;
-    info->bands_count = 2;
-    info->bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
-    info->bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
+    memcpy(wlanmac_info.mac_addr, addr.byte, 6);
+    wlanmac_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    wlanmac_info.supported_phys =
+        WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
+    wlanmac_info.driver_features = 0;
+    wlanmac_info.bands_count = 2;
+    wlanmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
+    wlanmac_info.bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
+    wlanmac_info.caps = 0;
     state->set_channel({
         .primary = 1,
         .cbw = WLAN_CHANNEL_BANDWIDTH__20,
@@ -183,7 +184,7 @@ struct MockDevice : public DeviceInterface {
 
   fbl::RefPtr<DeviceState> GetState() final { return state; }
 
-  const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
+  const wlanmac_info_t& GetWlanMacInfo() const final { return wlanmac_info; }
 
   zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) final {
     return ZX_ERR_NOT_SUPPORTED;

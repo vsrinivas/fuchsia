@@ -182,7 +182,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   zx_status_t Query(wlanphy_impl_info_t* info) {
     zxlogf(INFO, "%s: received a 'Query' DDK request", name_.c_str());
-    zx_status_t status = ConvertPhyInfo(&info->wlan_info, phy_config_->phy_info);
+    zx_status_t status = ConvertTapPhyConfig(info, *phy_config_);
     zxlogf(INFO, "%s: responded to 'Query' with status %s", name_.c_str(),
            zx_status_get_string(status));
     return status;
@@ -210,7 +210,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: received a 'CreateIface' DDK request", name_.c_str());
     wlan_device::MacRole dev_role = ConvertMacRole(req->role);
     auto role_str = RoleToString(dev_role);
-    if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
+    if (phy_config_->mac_role != dev_role) {
       zxlogf(ERROR, "%s: CreateIface(%s): role not supported", name_.c_str(), role_str.c_str());
       return ZX_ERR_NOT_SUPPORTED;
     }

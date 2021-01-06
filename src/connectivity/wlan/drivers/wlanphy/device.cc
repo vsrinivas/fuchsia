@@ -14,6 +14,7 @@
 
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
@@ -106,55 +107,6 @@ void Device::Unbind() {
   dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
-static void ConvertPhySupportedPhyInfo(::std::vector<wlan_device::SupportedPhy>* SupportedPhys,
-                                       uint16_t supported_phys_mask) {
-  SupportedPhys->resize(0);
-  if (supported_phys_mask & WLAN_INFO_PHY_TYPE_DSSS) {
-    SupportedPhys->push_back(wlan_device::SupportedPhy::DSSS);
-  }
-  if (supported_phys_mask & WLAN_INFO_PHY_TYPE_CCK) {
-    SupportedPhys->push_back(wlan_device::SupportedPhy::CCK);
-  }
-  if (supported_phys_mask & WLAN_INFO_PHY_TYPE_OFDM) {
-    SupportedPhys->push_back(wlan_device::SupportedPhy::OFDM);
-  }
-  if (supported_phys_mask & WLAN_INFO_PHY_TYPE_HT) {
-    SupportedPhys->push_back(wlan_device::SupportedPhy::HT);
-  }
-  if (supported_phys_mask & WLAN_INFO_PHY_TYPE_VHT) {
-    SupportedPhys->push_back(wlan_device::SupportedPhy::VHT);
-  }
-}
-
-static void ConvertPhyDriverFeaturesInfo(::std::vector<wlan_common::DriverFeature>* DriverFeatures,
-                                         uint32_t driver_features_mask) {
-  DriverFeatures->resize(0);
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::RATE_SELECTION);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::SYNTH);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::SAE_DRIVER_AUTH);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_MFP) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::MFP);
-  }
-}
-
 void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
                          wlan_info_mac_role_t mac_roles_mask) {
   MacRoles->resize(0);
@@ -169,97 +121,9 @@ void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
   }
 }
 
-void ConvertPhyCaps(::std::vector<wlan_device::Capability>* Capabilities, uint32_t phy_caps_mask) {
-  Capabilities->resize(0);
-  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE) {
-    Capabilities->push_back(wlan_device::Capability::SHORT_PREAMBLE);
-  }
-  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT) {
-    Capabilities->push_back(wlan_device::Capability::SPECTRUM_MGMT);
-  }
-  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME) {
-    Capabilities->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
-  }
-  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT) {
-    Capabilities->push_back(wlan_device::Capability::RADIO_MSMT);
-  }
-  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP) {
-    Capabilities->push_back(wlan_device::Capability::SIMULTANEOUS_CLIENT_AP);
-  }
-}
-
-static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
-                               const wlan_info_channel_list_t* phy_channels) {
-  // base_freq
-  Channels->base_freq = phy_channels->base_freq;
-
-  // channels
-  Channels->channels.resize(0);
-  size_t channel_ndx = 0;
-  while ((channel_ndx < std::size(phy_channels->channels)) &&
-         (phy_channels->channels[channel_ndx] > 0)) {
-    Channels->channels.push_back(phy_channels->channels[channel_ndx]);
-    channel_ndx++;
-  }
-}
-
-void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t bands_count,
-                        const wlan_info_band_info_t* all_phy_bands) {
-  BandInfo->resize(0);
-  for (uint8_t band_num = 0; band_num < bands_count; band_num++) {
-    wlan_device::BandInfo out_band{};
-    const wlan_info_band_info_t& this_phy_band = all_phy_bands[band_num];
-    out_band.band_id = wlan::common::BandToFidl(this_phy_band.band);
-
-    // ht_caps
-    if (this_phy_band.ht_supported) {
-      out_band.ht_caps = wlan_internal::HtCapabilities::New();
-      auto ht_cap = ::wlan::HtCapabilities::FromDdk(this_phy_band.ht_caps);
-      static_assert(sizeof(out_band.ht_caps->bytes) == sizeof(ht_cap));
-      memcpy(out_band.ht_caps->bytes.data(), &ht_cap, sizeof(ht_cap));
-    }
-
-    // vht_caps
-    if (this_phy_band.vht_supported) {
-      out_band.vht_caps = wlan_internal::VhtCapabilities::New();
-      auto vht_cap = ::wlan::VhtCapabilities::FromDdk(this_phy_band.vht_caps);
-      static_assert(sizeof(out_band.vht_caps->bytes) == sizeof(vht_cap));
-      memcpy(out_band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));
-    }
-
-    // rates
-    out_band.rates.resize(0);
-    size_t rate_ndx = 0;
-    while ((rate_ndx < std::size(this_phy_band.rates)) && (this_phy_band.rates[rate_ndx] > 0)) {
-      out_band.rates.push_back(this_phy_band.rates[rate_ndx]);
-      rate_ndx++;
-    }
-
-    // supported_channels
-    ConvertPhyChannels(&out_band.supported_channels, &this_phy_band.supported_channels);
-
-    BandInfo->push_back(std::move(out_band));
-  }
-}
-
-static void ConvertPhyInfo(wlan_device::PhyInfo* info, const wlan_info_t* phy_info) {
-  // mac
-  memcpy(info->hw_mac_address.data(), phy_info->mac_addr, ETH_ALEN);
-
-  // supported_phys
-  ConvertPhySupportedPhyInfo(&info->supported_phys, phy_info->supported_phys);
-
-  // driver_features
-  ConvertPhyDriverFeaturesInfo(&info->driver_features, phy_info->driver_features);
-
-  // mac_roles
-  ConvertPhyRolesInfo(&info->mac_roles, phy_info->mac_role);
-
-  // caps
-  ConvertPhyCaps(&info->caps, phy_info->caps);
-
-  // bands
-  ConvertPhyBandInfo(&info->bands, phy_info->bands_count, phy_info->bands);
+static void ConvertPhyInfo(wlan_device::PhyInfo* info, const wlanphy_impl_info_t* phy_info) {
+  // supported_mac_roles
+  ConvertPhyRolesInfo(&info->supported_mac_roles, phy_info->supported_mac_roles);
 }
 
 void Device::Query(QueryCallback callback) {
@@ -267,7 +131,7 @@ void Device::Query(QueryCallback callback) {
   wlan_device::QueryResponse resp;
   wlanphy_impl_info_t phy_impl_info;
   resp.status = wlanphy_impl_.ops->query(wlanphy_impl_.ctx, &phy_impl_info);
-  ConvertPhyInfo(&resp.info, &phy_impl_info.wlan_info);
+  ConvertPhyInfo(&resp.info, &phy_impl_info);
   callback(std::move(resp));
 }
 

@@ -79,7 +79,7 @@ class Device : public DeviceInterface {
   zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final;
   fbl::RefPtr<DeviceState> GetState() final;
   zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final;
-  const wlanmac_info_t& GetWlanInfo() const final;
+  const wlanmac_info_t& GetWlanMacInfo() const final;
   zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) final;
   zx_status_t GetMinstrelStats(const common::MacAddr& addr,
                                ::fuchsia::wlan::minstrel::Peer* peer_fidl) final;

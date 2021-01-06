@@ -89,7 +89,7 @@ typedef struct {
   /**
    * Get information and capabilities of this WLAN interface
    */
-  wlanmac_info_t (*get_wlan_info)(void *device);
+  wlanmac_info_t (*get_wlanmac_info)(void *device);
   /**
    * Configure the device's BSS.
    * |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.

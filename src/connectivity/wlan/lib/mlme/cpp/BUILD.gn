@@ -75,6 +75,7 @@ source_set("mlme") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.protocol.wlan.mac",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//sdk/lib/fdio",

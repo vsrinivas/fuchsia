@@ -26,8 +26,9 @@ struct WlanphyImplCreateIfaceReq {
 
 /// Info about this WLAN PHY.
 struct WlanphyImplInfo {
-    // WLAN capabilities information.
-    ddk.hw.wlan.wlaninfo.WlanInfo wlan_info;
+    /// Bitmask for MAC roles supported. For an interface, this will be a single
+    /// value.
+    ddk.hw.wlan.wlaninfo.WlanInfoMacRole supported_mac_roles;
 };
 
 const uint8 WLANPHY_ALPHA2_LEN = 2;

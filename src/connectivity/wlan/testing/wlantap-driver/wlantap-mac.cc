@@ -41,13 +41,9 @@ struct WlantapMacImpl : WlantapMac {
 
   // Wlanmac protocol impl
 
-  static zx_status_t WlanmacQuery(void* ctx, uint32_t options, wlanmac_info_t* info) {
+  static zx_status_t WlanmacQuery(void* ctx, uint32_t options, wlanmac_info_t* mac_info) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    wlan_info_t* ifc_info = &info->ifc_info;
-
-    ConvertPhyInfo(ifc_info, self.phy_config_->phy_info);
-    ifc_info->mac_role = ConvertMacRole(self.role_);
-    std::copy_n(self.phy_config_->iface_mac_addr.begin(), ETH_MAC_SIZE, ifc_info->mac_addr);
+    ConvertTapPhyConfig(mac_info, *self.phy_config_);
     return ZX_OK;
   }
 

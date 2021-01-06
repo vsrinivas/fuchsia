@@ -23,21 +23,16 @@ pub(crate) fn create_wlantap_config(
     wlantap::WlantapPhyConfig {
         // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
         iface_mac_addr,
-        phy_info: fidl_device::PhyInfo {
-            id: 0,
-            dev_path: None,
-            hw_mac_address: [0; 6],
-            supported_phys: vec![
-                SupportedPhy::Dsss,
-                SupportedPhy::Cck,
-                SupportedPhy::Ofdm,
-                SupportedPhy::Ht,
-            ],
-            driver_features: vec![DriverFeature::Synth, DriverFeature::TxStatusReport],
-            mac_roles: vec![mac_role],
-            caps: vec![],
-            bands: vec![create_2_4_ghz_band_info()],
-        },
+        supported_phys: vec![
+            SupportedPhy::Dsss,
+            SupportedPhy::Cck,
+            SupportedPhy::Ofdm,
+            SupportedPhy::Ht,
+        ],
+        driver_features: vec![DriverFeature::Synth, DriverFeature::TxStatusReport],
+        mac_role: mac_role,
+        caps: vec![],
+        bands: vec![create_2_4_ghz_band_info()],
         name,
         quiet: false,
     }

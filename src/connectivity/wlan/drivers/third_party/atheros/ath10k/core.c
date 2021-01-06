@@ -2292,8 +2292,7 @@ static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_impl_info_t* phy_inf
 
   // Reset the output values.
   memset(phy_info, 0, sizeof(*phy_info));
-  wlan_info_t* ifc_info = &phy_info->wlan_info;
-  ath10k_pci_fill_wlan_info(ar, ifc_info);
+  ath10k_pci_fill_wlanphy_impl_info(ar, phy_info);
 
   return ZX_OK;
 }

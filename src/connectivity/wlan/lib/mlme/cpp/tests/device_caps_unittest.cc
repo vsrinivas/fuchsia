@@ -8,7 +8,7 @@
 namespace wlan {
 
 TEST(FindBandByChannel, OneBands) {
-  constexpr wlan_info_t info = {
+  constexpr wlanmac_info_t info = {
       .bands =
           {
               {
@@ -33,7 +33,7 @@ TEST(FindBandByChannel, OneBands) {
 }
 
 TEST(FindBandByChannel, TwoBands) {
-  constexpr static wlan_info_t info = {
+  constexpr static wlanmac_info_t info = {
       .bands =
           {
               {
@@ -58,7 +58,7 @@ TEST(FindBandByChannel, TwoBands) {
 }
 
 TEST(GetRatesByChannel, SimpleTest) {
-  constexpr static wlan_info_t info = {
+  constexpr static wlanmac_info_t info = {
       .bands =
           {
               {

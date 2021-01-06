@@ -88,7 +88,9 @@ zx_status_t ClientMlme::Init() {
       .start_hw_scan = [](void* device, const wlan_hw_scan_config_t* config) -> zx_status_t {
         return DEVICE(device)->StartHwScan(config);
       },
-      .get_wlan_info = [](void* device) -> wlanmac_info_t { return DEVICE(device)->GetWlanInfo(); },
+      .get_wlanmac_info = [](void* device) -> wlanmac_info_t {
+        return DEVICE(device)->GetWlanMacInfo();
+      },
       .configure_bss = [](void* device, wlan_bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
       },

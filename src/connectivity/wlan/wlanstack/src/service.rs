@@ -1309,12 +1309,7 @@ mod tests {
         fidl_wlan_dev::PhyInfo {
             id: 10,
             dev_path: Some("/dev/null".to_string()),
-            hw_mac_address: [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b],
-            supported_phys: Vec::new(),
-            driver_features: Vec::new(),
-            mac_roles: Vec::new(),
-            caps: Vec::new(),
-            bands: Vec::new(),
+            supported_mac_roles: Vec::new(),
         }
     }
 

@@ -101,7 +101,7 @@ impl ClientMlme {
         // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
-        let iface_mac = device.wlan_info().ifc_info.mac_addr;
+        let iface_mac = device.wlanmac_info().mac_addr;
         let timer = Timer::<TimedEvent>::new(scheduler);
         Self {
             sta: None,
@@ -222,7 +222,7 @@ impl ClientMlme {
                 self.sta.replace(Client::new(
                     bss.ssid().to_vec(),
                     Bssid(bss.bssid),
-                    self.ctx.device.wlan_info().ifc_info.mac_addr,
+                    self.ctx.device.wlanmac_info().mac_addr,
                     bss.beacon_period,
                     bss.rsne().is_some()
                     // TODO (fxb/61020): Add detection of WPA1 in softmac for testing

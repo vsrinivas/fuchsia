@@ -63,7 +63,7 @@ pub struct Device {
     /// Make scan request to the driver
     start_hw_scan: extern "C" fn(device: *mut c_void, config: *const WlanHwScanConfig) -> i32,
     /// Get information and capabilities of this WLAN interface
-    get_wlan_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
+    get_wlanmac_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
     configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32,
@@ -139,8 +139,8 @@ impl Device {
         (self.get_wlan_channel)(self.device)
     }
 
-    pub fn wlan_info(&self) -> WlanmacInfo {
-        (self.get_wlan_info)(self.device)
+    pub fn wlanmac_info(&self) -> WlanmacInfo {
+        (self.get_wlanmac_info)(self.device)
     }
 
     pub fn configure_bss(&self, mut cfg: WlanBssConfig) -> Result<(), zx::Status> {
@@ -334,7 +334,7 @@ mod test_utils {
             zx::sys::ZX_ERR_NOT_SUPPORTED
         }
 
-        pub extern "C" fn get_wlan_info(device: *mut c_void) -> WlanmacInfo {
+        pub extern "C" fn get_wlanmac_info(device: *mut c_void) -> WlanmacInfo {
             unsafe { (*(device as *const Self)).info }
         }
 
@@ -424,7 +424,7 @@ mod test_utils {
                 set_wlan_channel: Self::set_wlan_channel,
                 set_key: Self::set_key,
                 start_hw_scan: Self::start_hw_scan,
-                get_wlan_info: Self::get_wlan_info,
+                get_wlanmac_info: Self::get_wlanmac_info,
                 configure_bss: Self::configure_bss,
                 enable_beaconing: Self::enable_beaconing,
                 disable_beaconing: Self::disable_beaconing,
@@ -486,7 +486,7 @@ mod test_utils {
             },
         };
 
-        let ifc_info = WlanInfo {
+        WlanmacInfo {
             mac_addr: [7u8; 6],
             mac_role: WlanInfoMacRole::CLIENT,
             supported_phys: WlanInfoPhyType::OFDM | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
@@ -494,8 +494,7 @@ mod test_utils {
             caps: WlanInfoHardwareCapability(0),
             bands,
             bands_count,
-        };
-        WlanmacInfo { ifc_info }
+        }
     }
 
     fn ht_cap() -> Ieee80211HtCapabilities {
@@ -679,12 +678,15 @@ mod tests {
     }
 
     #[test]
-    fn get_wlan_info() {
+    fn get_wlanmac_info() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        let info = dev.wlan_info();
-        assert_eq!(info.ifc_info.mac_addr, [7u8; 6]);
-        assert_eq!(info.ifc_info.bands_count, 2);
+        let info = dev.wlanmac_info();
+        assert_eq!(info.mac_addr, [7u8; 6]);
+        assert_eq!(info.mac_role, WlanInfoMacRole::CLIENT);
+        assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
+        assert_eq!(info.caps, WlanInfoHardwareCapability(0));
+        assert_eq!(info.bands_count, 2);
     }
 
     #[test]

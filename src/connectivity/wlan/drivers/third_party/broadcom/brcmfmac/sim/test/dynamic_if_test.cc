@@ -477,16 +477,6 @@ TEST_F(DynamicIfTest, DualInterfaces) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
-TEST_F(DynamicIfTest, PhyQuery) {
-  Init();
-  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
-  // Test brcmfmac supports simutaneous client ap operation
-  wlanphy_impl_info_t info = {};
-  PhyQuery(&info);
-  EXPECT_NE(info.wlan_info.caps & WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP,
-            static_cast<size_t>(0));
-}
-
 // Start both client and SoftAP interfaces simultaneously and check if
 // the client can associate to a FakeAP and a fake client can associate to the
 // SoftAP.

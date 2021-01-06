@@ -139,13 +139,13 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
 
-  state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
+  state_->set_address(common::MacAddr(wlanmac_info_.mac_addr));
 
   std::unique_ptr<Mlme> mlme;
 
   // mac_role is a bitfield, but only a single value is supported for an
   // interface
-  switch (wlanmac_info_.ifc_info.mac_role) {
+  switch (wlanmac_info_.mac_role) {
     case WLAN_INFO_MAC_ROLE_CLIENT:
       infof("Initialize a client MLME.\n");
       mlme.reset(new ClientMlme(this));
@@ -159,7 +159,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       mlme.reset(new MeshMlme(this));
       break;
     default:
-      errorf("unsupported MAC role: %u\n", wlanmac_info_.ifc_info.mac_role);
+      errorf("unsupported MAC role: %u\n", wlanmac_info_.mac_role);
       return ZX_ERR_NOT_SUPPORTED;
   }
   ZX_DEBUG_ASSERT(mlme != nullptr);
@@ -170,7 +170,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
   if (ShouldEnableMinstrel()) {
-    zx_status_t status = CreateMinstrel(wlanmac_info_.ifc_info.driver_features);
+    zx_status_t status = CreateMinstrel(wlanmac_info_.driver_features);
     if (ZX_OK == status) {
       debugmstl("Minstrel Manager created successfully.\n");
     }
@@ -301,9 +301,9 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     return ZX_ERR_INVALID_ARGS;
 
   memset(info, 0, sizeof(*info));
-  memcpy(info->mac, wlanmac_info_.ifc_info.mac_addr, ETH_MAC_SIZE);
+  memcpy(info->mac, wlanmac_info_.mac_addr, ETH_MAC_SIZE);
   info->features = ETHERNET_FEATURE_WLAN;
-  if (wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
+  if (wlanmac_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
   info->mtu = 1500;
@@ -660,7 +660,7 @@ zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }
 
-const wlanmac_info_t& Device::GetWlanInfo() const { return wlanmac_info_; }
+const wlanmac_info_t& Device::GetWlanMacInfo() const { return wlanmac_info_; }
 
 zx_status_t Device::GetMinstrelPeers(wlan_minstrel::Peers* peers_fidl) {
   if (minstrel_ == nullptr) {
@@ -830,8 +830,8 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
 }
 
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
-  for (uint8_t i = 0; i < wlanmac_info.ifc_info.bands_count; i++) {
-    auto bandinfo = wlanmac_info.ifc_info.bands[i];
+  for (uint8_t i = 0; i < wlanmac_info.bands_count; i++) {
+    auto bandinfo = wlanmac_info.bands[i];
 
     // Validate channels
     auto& supported_channels = bandinfo.supported_channels;
@@ -873,7 +873,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
 }
 
 bool Device::ShouldEnableMinstrel() {
-  const auto& info = wlanmac_info_.ifc_info;
+  const auto& info = wlanmac_info_;
   return (info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) &&
          !(info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION);
 }

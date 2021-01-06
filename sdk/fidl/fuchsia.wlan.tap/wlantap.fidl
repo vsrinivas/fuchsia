@@ -12,8 +12,12 @@ using zx;
 struct WlantapPhyConfig {
     // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
     array<uint8>:6 iface_mac_addr;
-    fuchsia.wlan.device.PhyInfo phy_info;
-    string name;
+    fuchsia.wlan.device.MacRole mac_role;
+    vector<fuchsia.wlan.device.SupportedPhy>:8 supported_phys;
+    vector<fuchsia.wlan.common.DriverFeature>:8 driver_features;
+    vector<fuchsia.wlan.device.Capability>:8 caps;
+    vector<fuchsia.wlan.device.BandInfo>:8 bands;
+    string:32 name; // Arbitrary maximum size of 32 chosen to satisfy FidlLint
     bool quiet;
 };
 

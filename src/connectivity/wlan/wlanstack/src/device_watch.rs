@@ -127,22 +127,16 @@ mod tests {
     fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
         fidl_wlantap::WlantapPhyConfig {
             iface_mac_addr: [1; 6],
-            phy_info: fidl_wlan_dev::PhyInfo {
-                // TODO(fxbug.dev/64309): The id and dev_path fields are ignored.
-                id: 0,
-                dev_path: None,
-                hw_mac_address: [0; 6],
-                supported_phys: vec![
-                    SupportedPhy::Dsss,
-                    SupportedPhy::Cck,
-                    SupportedPhy::Ofdm,
-                    SupportedPhy::Ht,
-                ],
-                driver_features: vec![],
-                mac_roles: vec![fidl_wlan_dev::MacRole::Client],
-                caps: vec![],
-                bands: vec![create_2_4_ghz_band_info()],
-            },
+            supported_phys: vec![
+                SupportedPhy::Dsss,
+                SupportedPhy::Cck,
+                SupportedPhy::Ofdm,
+                SupportedPhy::Ht,
+            ],
+            driver_features: vec![],
+            mac_role: fidl_wlan_dev::MacRole::Client,
+            caps: vec![],
+            bands: vec![create_2_4_ghz_band_info()],
             name: String::from("devwatchtap"),
             quiet: false,
         }

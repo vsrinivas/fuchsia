@@ -162,26 +162,3 @@ struct WlanInfoBandInfo {
 /// The maximum number of bands supported in a WlanInfo struct. For now this is 2
 /// to keep the struct a small, fixed size.
 const usize WLAN_INFO_MAX_BANDS = 2;
-
-struct WlanInfo {
-    /// MAC address.
-    array<uint8>:6 mac_addr;
-
-    /// Bitmask for MAC roles supported. For an interface, this will be a single
-    /// value.
-    WlanInfoMacRole mac_role;
-
-    /// Bitmask indicating the WlanInfoPhyType values supported by the hardware.
-    WlanInfoPhyType supported_phys;
-
-    /// Bitmask indicating the WlanInfoDriverFeature values supported by the driver
-    /// and hardware.
-    WlanInfoDriverFeature driver_features;
-
-    /// Bitmask indicating WlanInfoHardwareCapability values.
-    WlanInfoHardwareCapability caps;
-
-    /// Supported bands.
-    array<WlanInfoBandInfo>:WLAN_INFO_MAX_BANDS bands;
-    usize bands_count;
-};

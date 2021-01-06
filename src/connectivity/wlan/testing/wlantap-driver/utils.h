@@ -5,10 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
-#include <wlan/protocol/mac.h>
+
+#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/mac.h>
+#include <ddk/protocol/wlanphyimpl.h>
 
 #include "utils.h"
 
@@ -22,7 +24,10 @@ uint16_t ConvertMacRole(::fuchsia::wlan::device::MacRole role);
 uint16_t ConvertMacRoles(::std::vector<::fuchsia::wlan::device::MacRole>& role);
 uint32_t ConvertCaps(const ::std::vector<::fuchsia::wlan::device::Capability>& caps);
 void ConvertBandInfo(const ::fuchsia::wlan::device::BandInfo& in, wlan_info_band_info_t* out);
-zx_status_t ConvertPhyInfo(wlan_info_t* out, const ::fuchsia::wlan::device::PhyInfo& in);
+zx_status_t ConvertTapPhyConfig(wlanmac_info_t* mac_info,
+                                const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
+zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
+                                const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
 wlan_tx_status_t ConvertTxStatus(const ::fuchsia::wlan::tap::WlanTxStatus& in);
 }  // namespace wlan
 

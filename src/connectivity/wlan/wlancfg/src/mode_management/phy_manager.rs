@@ -163,7 +163,13 @@ impl PhyManager {
     fn phys_for_role(&self, role: MacRole) -> Vec<u16> {
         self.phys
             .iter()
-            .filter_map(|(k, v)| if v.phy_info.mac_roles.contains(&role) { Some(*k) } else { None })
+            .filter_map(|(k, v)| {
+                if v.phy_info.supported_mac_roles.contains(&role) {
+                    Some(*k)
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }
@@ -193,7 +199,7 @@ impl PhyManagerApi for PhyManager {
             let mut phy_container = PhyContainer::new(response.info);
 
             if self.client_connections_enabled
-                && phy_container.phy_info.mac_roles.contains(&MacRole::Client)
+                && phy_container.phy_info.supported_mac_roles.contains(&MacRole::Client)
             {
                 let iface_id =
                     create_iface(&self.device_service, phy_id, MacRole::Client, None).await?;
@@ -573,16 +579,7 @@ mod tests {
 
     /// Create a PhyInfo object for unit testing.
     fn fake_phy_info(id: u16, mac_roles: Vec<MacRole>) -> fidl_device::PhyInfo {
-        fidl_device::PhyInfo {
-            id: id,
-            dev_path: None,
-            hw_mac_address: [0, 1, 2, 3, 4, 5],
-            supported_phys: Vec::new(),
-            driver_features: Vec::new(),
-            mac_roles: mac_roles,
-            caps: Vec::new(),
-            bands: Vec::new(),
-        }
+        fidl_device::PhyInfo { id: id, dev_path: None, supported_mac_roles: mac_roles }
     }
 
     /// Creates a QueryIfaceResponse from the arguments provided by the caller.
@@ -686,8 +683,7 @@ mod tests {
         }
 
         // Send an update for the same PHY ID and ensure that the PHY info is updated.
-        let mut phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
-        phy_info.hw_mac_address = [5, 4, 3, 2, 1, 0];
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         {
             let add_phy_fut = phy_manager.add_phy(phy_info.id);
@@ -699,8 +695,7 @@ mod tests {
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
 
-        let mut phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
-        phy_info.hw_mac_address = [5, 4, 3, 2, 1, 0];
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
         assert_eq!(phy_manager.phys.get(&fake_phy_id).unwrap().phy_info, phy_info);

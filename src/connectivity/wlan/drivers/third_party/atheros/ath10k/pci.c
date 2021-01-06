@@ -3081,11 +3081,7 @@ static void ath10k_get_vht_cap(struct ath10k* ar, ieee80211_vht_capabilities_t* 
 }
 
 static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* dev_band,
-                                   void* cookie) {
-  wlan_info_t* ifc_info = cookie;
-
-  ZX_DEBUG_ASSERT(ifc_info->bands_count < WLAN_INFO_MAX_BANDS);
-  wlan_info_band_info_t* wlan_band = &ifc_info->bands[ifc_info->bands_count++];
+                                   wlan_info_band_info_t* wlan_band) {
   wlan_band->band = dev_band->band_id;
 
   // ht_caps
@@ -3115,45 +3111,58 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
   ath10k_foreach_channel(dev_band, ath10k_chan_query_info, &next_ch);
 }
 
-void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
+static void ath10k_wlanmac_band_query_info(struct ath10k* ar, const struct ath10k_band* dev_band,
+                                           void* cookie) {
+  wlanmac_info_t* mac_info = cookie;
+
+  ZX_DEBUG_ASSERT(mac_info->bands_count < WLAN_INFO_MAX_BANDS);
+  ath10k_band_query_info(ar, dev_band, &mac_info->bands[mac_info->bands_count++]);
+}
+
+// TODO(fxbug.dev/52941): Remove this function in favor of a more targeted query for phy data.
+void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info) {
+  // mac_role
+  phy_info->supported_mac_roles = ar->mac_role;
+}
+
+void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info) {
   // eth_info
   ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
-  memcpy(ifc_info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
+  memcpy(mac_info->mac_addr, ar->mac_addr, ETH_MAC_SIZE);
 
   // mac_role
-  ifc_info->mac_role = ar->mac_role;
+  mac_info->mac_role = ar->mac_role;
 
   // supported_phys
-  ifc_info->supported_phys =
+  mac_info->supported_phys =
       WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK | WLAN_INFO_PHY_TYPE_OFDM;
   if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) {
-    ifc_info->supported_phys |= WLAN_INFO_PHY_TYPE_HT;
+    mac_info->supported_phys |= WLAN_INFO_PHY_TYPE_HT;
   }
-  ifc_info->supported_phys |= WLAN_INFO_PHY_TYPE_VHT;
+  mac_info->supported_phys |= WLAN_INFO_PHY_TYPE_VHT;
 
   // driver_features
-  ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
+  mac_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
                               WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION |
                               WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
 
   // caps
-  ifc_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+  mac_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
                    WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
                    WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
 
   // bands
-  ath10k_foreach_band(ar, ath10k_band_query_info, ifc_info);
+  ath10k_foreach_band(ar, ath10k_wlanmac_band_query_info, mac_info);
 }
 
-static zx_status_t ath10k_pci_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+static zx_status_t ath10k_pci_mac_query(void* ctx, uint32_t options, wlanmac_info_t* mac_info) {
   struct ath10k* ar = ctx;
 
   ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
 
-  memset(info, 0, sizeof(*info));
+  memset(mac_info, 0, sizeof(*mac_info));
 
-  wlan_info_t* ifc_info = &info->ifc_info;
-  ath10k_pci_fill_wlan_info(ar, ifc_info);
+  ath10k_pci_fill_wlanmac_info(ar, mac_info);
 
   return ZX_OK;
 }
@@ -3332,7 +3341,7 @@ static zx_status_t ath10k_pci_start_hw_scan(void* ctx, const wlan_hw_scan_config
 }
 
 wlanmac_protocol_ops_t wlanmac_ops = {
-    .query = ath10k_pci_query,
+    .query = ath10k_pci_mac_query,
     .start = ath10k_pci_start,
     .stop = ath10k_pci_stop,
     .queue_tx = ath10k_pci_queue_tx,

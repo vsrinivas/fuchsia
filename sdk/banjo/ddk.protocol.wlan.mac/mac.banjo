@@ -10,8 +10,24 @@ using ddk.protocol.wlan.info;
 using zx;
 
 struct WlanmacInfo {
-    /// Interface capabilities information
-    ddk.hw.wlan.wlaninfo.WlanInfo ifc_info;
+    /// MAC address.
+    array<uint8>:6 mac_addr;
+
+    /// MAC role
+    ddk.hw.wlan.wlaninfo.WlanInfoMacRole mac_role;
+
+    /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
+    ddk.hw.wlan.wlaninfo.WlanInfoPhyType supported_phys;
+
+    /// Bitmask indicating enabled WlanInfoDriverFeature values.
+    ddk.hw.wlan.wlaninfo.WlanInfoDriverFeature driver_features;
+
+    /// Bitmask indicating enabled WlanInfoHardwareCapability values.
+    ddk.hw.wlan.wlaninfo.WlanInfoHardwareCapability caps;
+
+    /// Supported bands.
+    array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo>:WLAN_INFO_MAX_BANDS bands;
+    usize bands_count;
 };
 
 enum WlanRxInfoFlags : uint32 {

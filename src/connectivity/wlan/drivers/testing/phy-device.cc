@@ -98,71 +98,11 @@ namespace {
 wlan_device::PhyInfo get_info() {
   wlan_device::PhyInfo info;
 
-  // The "local" bit is set to prevent collisions with globally-administered MAC addresses.
-  static const uint8_t kTestMacAddr[] = {
-      0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
-  };
-  memcpy(info.hw_mac_address.data(), kTestMacAddr, info.hw_mac_address.size());
+  info.supported_mac_roles.resize(0);
 
-  info.supported_phys.resize(0);
-  info.driver_features.resize(0);
-  info.mac_roles.resize(0);
-  info.caps.resize(0);
-  info.bands.resize(0);
+  info.supported_mac_roles.push_back(wlan_device::MacRole::CLIENT);
+  info.supported_mac_roles.push_back(wlan_device::MacRole::AP);
 
-  info.supported_phys.push_back(wlan_device::SupportedPhy::DSSS);
-  info.supported_phys.push_back(wlan_device::SupportedPhy::CCK);
-  info.supported_phys.push_back(wlan_device::SupportedPhy::OFDM);
-  info.supported_phys.push_back(wlan_device::SupportedPhy::HT);
-
-  info.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
-
-  info.mac_roles.push_back(wlan_device::MacRole::CLIENT);
-  info.mac_roles.push_back(wlan_device::MacRole::AP);
-
-  info.caps.push_back(wlan_device::Capability::SHORT_PREAMBLE);
-  info.caps.push_back(wlan_device::Capability::SHORT_SLOT_TIME);
-
-  wlan_device::BandInfo band24;
-  band24.band_id = wlan_common::Band::WLAN_BAND_2GHZ;
-
-  HtCapabilities ht_caps;
-  ht_caps.ht_cap_info.set_val(0x01fe);
-  ht_caps.mcs_set.rx_mcs_head.set_val(0x01000000ff);
-  ht_caps.mcs_set.rx_mcs_tail.set_val(0);
-  ht_caps.mcs_set.tx_mcs.set_val(0x10);
-
-  band24.ht_caps = wlan_internal::HtCapabilities::New();
-  static_assert(sizeof(band24.ht_caps->bytes) == sizeof(ht_caps));
-  memcpy(band24.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
-
-  band24.rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
-  band24.supported_channels.base_freq = 2417;
-  band24.supported_channels.channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-
-  info.bands.push_back(std::move(band24));
-
-  wlan_device::BandInfo band5;
-  band5.band_id = wlan_common::Band::WLAN_BAND_5GHZ;
-
-  ht_caps = HtCapabilities{};
-  ht_caps.ht_cap_info.set_val(0x01fe);
-  ht_caps.mcs_set.rx_mcs_head.set_val(0x010000ffff);
-  ht_caps.mcs_set.rx_mcs_tail.set_val(0);
-  ht_caps.mcs_set.tx_mcs.set_val(0x10);
-
-  band5.ht_caps = wlan_internal::HtCapabilities::New();
-  static_assert(sizeof(band5.ht_caps->bytes) == sizeof(ht_caps));
-  memcpy(band5.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
-
-  band5.rates = {12, 18, 24, 36, 48, 72, 96, 108};
-  band5.supported_channels.base_freq = 5000;
-  band5.supported_channels.channels = {36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
-                                       60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
-                                       118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
-                                       149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196};
-
-  info.bands.push_back(std::move(band5));
   return info;
 }
 }  // namespace
