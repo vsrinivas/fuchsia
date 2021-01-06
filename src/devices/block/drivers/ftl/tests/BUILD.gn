@@ -23,6 +23,7 @@ group("tests") {
   testonly = true
   deps = [
     ":ftl-fuzzers",
+    ":ftl-integration-package",  # Flaky Test, build only.
     ":ftl-test",
   ]
 }
@@ -107,6 +108,10 @@ fuzzers_package("ftl-fuzzers") {
 isolated_devmgr_unittest_package("ftl-integration-package") {
   package_name = "ftl-integration"
   executable_path = "test/ftl-integration-test"
+  test_specs = {
+    # Flaky build only test.
+    environments = []
+  }
   deps = [
     ":ftl-integration",
     "//src/devices/block/bin/blktest",

@@ -54,11 +54,11 @@ TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
   ASSERT_FALSE(r->result.is_err());
   zx::vmo inspect_vmo(std::move(r->result.mutable_response().vmo));
   ASSERT_TRUE(inspect_vmo.is_valid());
-  auto base_hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(inspect_vmo).take_value();
   auto* hierarchy_ptr = base_hierarchy.GetByPath({"ftl"});
-  ASSERT_NOT_NULL(hierarchy);
+  ASSERT_NOT_NULL(hierarchy_ptr);
   for (const auto& property_name : property_list) {
-    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy_ptr->node().get_property<inspect::UintPropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
   }
 }
