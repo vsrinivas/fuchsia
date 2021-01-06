@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     async_utils::stream::{StreamItem, StreamWithEpitaph, WithEpitaph},
+    bt_rfcomm::ServerChannel,
     fidl::endpoints::{create_request_stream, ClientEnd},
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
@@ -31,7 +32,7 @@ use {
 };
 
 use crate::profile::*;
-use crate::rfcomm::{RfcommServer, ServerChannel};
+use crate::rfcomm::RfcommServer;
 use crate::types::{AdvertiseParams, ServiceGroup, ServiceGroupHandle, Services};
 
 /// The returned result of a Profile.Advertise request.

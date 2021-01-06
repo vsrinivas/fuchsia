@@ -7,7 +7,7 @@ use {
     packet_encoding::{Decodable, Encodable},
 };
 
-use crate::rfcomm::frame::FrameParseError;
+use crate::frame::FrameParseError;
 
 /// The maximum size (in bytes) of a Test Command pattern.
 /// This is an arbitrarily chosen constant, and is not defined in the RFCOMM/GSM specs.

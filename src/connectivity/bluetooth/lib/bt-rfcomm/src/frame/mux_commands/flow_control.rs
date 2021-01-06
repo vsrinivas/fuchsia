@@ -4,7 +4,7 @@
 
 use packet_encoding::{Decodable, Encodable};
 
-use crate::rfcomm::frame::FrameParseError;
+use crate::frame::FrameParseError;
 
 /// The length (in bytes) of a Flow Control Command. Both Flow Control On and Off commands
 /// contain no parameters.

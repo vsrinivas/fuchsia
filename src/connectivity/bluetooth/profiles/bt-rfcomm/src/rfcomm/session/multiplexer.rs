@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    bt_rfcomm::{frame::Frame, RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
     fuchsia_bluetooth::types::Channel,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
@@ -12,10 +13,9 @@ use {
 };
 
 use crate::rfcomm::{
-    frame::Frame,
     inspect::SessionMultiplexerInspect,
     session::channel::{FlowControlMode, FlowControlledData, SessionChannel},
-    types::{RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
+    types::Error,
 };
 
 /// The parameters associated with this Session.
@@ -180,16 +180,16 @@ impl SessionMultiplexer {
 
     /// Starts the session multiplexer and assumes the provided `role`. Returns Ok(()) if mux
     /// startup is successful.
-    pub fn start(&mut self, role: Role) -> Result<(), RfcommError> {
+    pub fn start(&mut self, role: Role) -> Result<(), Error> {
         // Re-starting the multiplexer is not valid, as this would invalidate any opened
         // RFCOMM channels.
         if self.started() {
-            return Err(RfcommError::MultiplexerAlreadyStarted);
+            return Err(Error::MultiplexerAlreadyStarted);
         }
 
         // Role must be a valid started role.
         if !role.is_multiplexer_started() {
-            return Err(RfcommError::InvalidRole(role));
+            return Err(RfcommError::InvalidRole(role).into());
         }
 
         self.set_role(role);
@@ -234,8 +234,8 @@ impl SessionMultiplexer {
         &mut self,
         dlci: DLCI,
         flow_control: FlowControlMode,
-    ) -> Result<(), RfcommError> {
-        self.channels.get_mut(&dlci).map_or(Err(RfcommError::InvalidDLCI(dlci)), |channel| {
+    ) -> Result<(), Error> {
+        self.channels.get_mut(&dlci).map_or(Err(RfcommError::InvalidDLCI(dlci).into()), |channel| {
             channel.set_flow_control(flow_control)
         })
     }
@@ -249,7 +249,7 @@ impl SessionMultiplexer {
         &mut self,
         dlci: DLCI,
         user_data_sender: mpsc::Sender<Frame>,
-    ) -> Result<Channel, RfcommError> {
+    ) -> Result<Channel, Error> {
         // If the session parameters have not been negotiated, set them to the default.
         if !self.parameters_negotiated() {
             self.negotiate_parameters(SessionParameters::default());
@@ -258,7 +258,7 @@ impl SessionMultiplexer {
         // Potentially reserve a new SessionChannel for the provided DLCI.
         let channel = self.find_or_create_session_channel(dlci);
         if channel.is_established() {
-            return Err(RfcommError::ChannelAlreadyEstablished(dlci));
+            return Err(Error::ChannelAlreadyEstablished(dlci));
         }
 
         // Create endpoints for the multiplexed channel. Establish the local end and
@@ -279,11 +279,11 @@ impl SessionMultiplexer {
         &mut self,
         dlci: DLCI,
         user_data: FlowControlledData,
-    ) -> Result<(), RfcommError> {
+    ) -> Result<(), Error> {
         if let Some(session_channel) = self.channels.get_mut(&dlci) {
             return session_channel.receive_user_data(user_data);
         }
-        Err(RfcommError::InvalidDLCI(dlci))
+        Err(RfcommError::InvalidDLCI(dlci).into())
     }
 }
 

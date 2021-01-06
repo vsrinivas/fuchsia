@@ -8,10 +8,7 @@ use {
     std::convert::TryFrom,
 };
 
-use crate::rfcomm::{
-    frame::FrameParseError,
-    types::{DLCI, MAX_RFCOMM_FRAME_SIZE},
-};
+use crate::{frame::FrameParseError, DLCI, MAX_RFCOMM_FRAME_SIZE};
 
 /// The length (in bytes) of a DLC Parameter Negotiation command.
 /// Defined in GSM 7.10 Section 5.4.6.3.1.

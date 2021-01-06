@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    bt_rfcomm::ServerChannel,
     fidl_fuchsia_bluetooth::PeerId,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::profile::{
@@ -14,7 +15,6 @@ use {
 };
 
 use crate::profile::{psms_from_service_definitions, server_channels_from_service_definitions};
-use crate::rfcomm::ServerChannel;
 
 /// Every group of registered services will be assigned a ServiceGroupHandle to track
 /// relevant information about the advertisement. There can be multiple `ServiceGroupHandle`s
@@ -188,25 +188,26 @@ impl Drop for ServiceGroup {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-
-    use fidl::encoding::Decodable;
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{
-        Channel, ProfileDescriptor, ProtocolIdentifier, ServiceClassProfileIdentifier,
+    use {
+        fidl::{encoding::Decodable, endpoints::create_proxy_and_stream},
+        fidl_fuchsia_bluetooth_bredr::{
+            Channel, ProfileDescriptor, ProtocolIdentifier, ServiceClassProfileIdentifier,
+        },
+        fuchsia_async as fasync,
+        fuchsia_bluetooth::{
+            profile::{DataElement, ProtocolDescriptor},
+            types::{PeerId, Uuid},
+        },
+        futures::{stream::StreamExt, task::Poll},
+        matches::assert_matches,
+        std::convert::TryFrom,
     };
-    use fuchsia_async as fasync;
-    use fuchsia_bluetooth::{
-        profile::{DataElement, ProtocolDescriptor},
-        types::{PeerId, Uuid},
-    };
-    use futures::{stream::StreamExt, task::Poll};
-    use matches::assert_matches;
 
     /// Defines a Protocol requesting RFCOMM with the provided server `channel`.
     pub fn rfcomm_protocol_descriptor_list(
         channel: Option<ServerChannel>,
     ) -> Vec<ProtocolDescriptor> {
-        let params = channel.map(|c| vec![DataElement::Uint8(c.0)]).unwrap_or(vec![]);
+        let params = channel.map(|c| vec![DataElement::Uint8(c.into())]).unwrap_or(vec![]);
         vec![
             ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
             ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::Rfcomm, params: params },
@@ -292,8 +293,8 @@ pub(crate) mod tests {
         // SecurityRequirements/ChannelParameters.
         let (mut group2, _server2) = build_service_group();
         let psm = 6;
-        let defs2 =
-            vec![other_service_definition(psm), rfcomm_service_definition(Some(ServerChannel(1)))];
+        let sc2 = ServerChannel::try_from(1).ok();
+        let defs2 = vec![other_service_definition(psm), rfcomm_service_definition(sc2)];
         group2.set_service_defs(defs2.clone());
         let new_chan_params = ChannelParameters {
             channel_mode: Some(bredr::ChannelMode::Basic),
@@ -340,7 +341,7 @@ pub(crate) mod tests {
         assert_eq!(service_group.allocated_server_channels(), &expected_server_channels);
         assert_eq!(service_group.allocated_psms(), &expected_psms);
 
-        let sc = ServerChannel(10);
+        let sc = ServerChannel::try_from(10).unwrap();
         let rfcomm_def = rfcomm_service_definition(Some(sc));
         service_group.set_service_defs(vec![rfcomm_def, other_def]);
 
@@ -355,8 +356,8 @@ pub(crate) mod tests {
 
         let (mut service_group, mut server) = build_service_group();
 
-        let defs =
-            vec![other_service_definition(6), rfcomm_service_definition(Some(ServerChannel(1)))];
+        let sc = ServerChannel::try_from(1).ok();
+        let defs = vec![other_service_definition(6), rfcomm_service_definition(sc)];
         service_group.set_service_defs(defs);
 
         let id = PeerId(123);

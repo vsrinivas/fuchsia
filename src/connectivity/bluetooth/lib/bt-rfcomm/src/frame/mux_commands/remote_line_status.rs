@@ -8,7 +8,7 @@ use {
     std::convert::TryFrom,
 };
 
-use crate::rfcomm::{frame::FrameParseError, types::DLCI};
+use crate::{frame::FrameParseError, DLCI};
 
 /// The length (in bytes) of the RLS command.
 /// Defined in GSM 7.10 Section 5.4.6.3.10.

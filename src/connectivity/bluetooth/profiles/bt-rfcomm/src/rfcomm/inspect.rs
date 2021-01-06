@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    bt_rfcomm::{Role, DLCI},
     fuchsia_async as fasync,
     fuchsia_bluetooth::inspect::DataStreamInspect,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, IValue, Inspect},
 };
 
-use crate::rfcomm::{
-    session::{channel::FlowControlMode, multiplexer::SessionParameters},
-    types::{Role, DLCI},
-};
+use crate::rfcomm::session::{channel::FlowControlMode, multiplexer::SessionParameters};
 
 pub(crate) const FLOW_CONTROLLER: &str = "flow_controller";
 pub(crate) const CREDIT_FLOW_CONTROL: &str = "Credit-Based";

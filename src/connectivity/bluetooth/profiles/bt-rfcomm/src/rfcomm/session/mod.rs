@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::format_err,
+    bt_rfcomm::{
+        frame::{
+            mux_commands::*, CommandResponse, Frame, FrameData, FrameParseError, UIHData, UserData,
+        },
+        Role, ServerChannel, DLCI,
+    },
     fidl_fuchsia_bluetooth::ErrorCode,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, PeerId},
@@ -34,24 +40,17 @@ use self::{
     channel::{Credits, FlowControlMode, FlowControlledData},
     multiplexer::{SessionMultiplexer, SessionParameters},
 };
-use crate::rfcomm::frame::{
-    mux_commands::{
-        CreditBasedFlowHandshake, ModemStatusParams, MuxCommand, MuxCommandIdentifier,
-        MuxCommandMarker, MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
-        DEFAULT_INITIAL_CREDITS,
-    },
-    Frame, FrameData, FrameParseError, UIHData, UserData,
-};
 use crate::rfcomm::inspect::SessionInspect;
-use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, SignaledTask, DLCI};
+use crate::rfcomm::types::{Error, SignaledTask};
 
 /// A function used to relay an opened inbound RFCOMM channel to a local client.
-type ChannelOpenedFn =
-    Box<dyn Fn(ServerChannel, Channel) -> BoxFuture<'static, Result<(), Error>> + Send + Sync>;
+type ChannelOpenedFn = Box<
+    dyn Fn(ServerChannel, Channel) -> BoxFuture<'static, Result<(), anyhow::Error>> + Send + Sync,
+>;
 
 /// Represents the callback for a pending open channel request initiated by a local client.
 type ChannelRequestFn =
-    Box<dyn FnOnce(Result<Channel, ErrorCode>) -> Result<(), Error> + Send + Sync>;
+    Box<dyn FnOnce(Result<Channel, ErrorCode>) -> Result<(), anyhow::Error> + Send + Sync>;
 
 /// Maintains the set of outstanding frames that have been sent to the remote peer.
 /// Provides an API for inserting and removing sent Frames that expect a response.
@@ -77,7 +76,7 @@ impl OutstandingFrames {
     /// Potentially registers a new `frame` with the `OutstandingFrames` manager. Returns
     /// true if the frame requires a response and is registered, false if no response
     /// is needed, or an error if the frame was unable to be processed.
-    fn register_frame(&mut self, frame: &Frame) -> Result<bool, RfcommError> {
+    fn register_frame(&mut self, frame: &Frame) -> Result<bool, Error> {
         // We don't care about Response frames as we don't expect a response for them.
         if frame.command_response == CommandResponse::Response {
             return Ok(false);
@@ -88,9 +87,7 @@ impl OutstandingFrames {
         // attempt to send duplicate MuxCommands.
         if let FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) = &frame.data {
             return match self.mux_commands.entry(data.identifier()) {
-                Entry::Occupied(_) => {
-                    Err(RfcommError::Other(format_err!("MuxCommand outstanding")))
-                }
+                Entry::Occupied(_) => Err(Error::Other(format_err!("MuxCommand outstanding"))),
                 Entry::Vacant(entry) => {
                     entry.insert(data.clone());
                     Ok(true)
@@ -114,7 +111,7 @@ impl OutstandingFrames {
                     // TODO(fxbug.dev/60900): Our implementation should never try to send
                     // more than one command frame on the same DLCI. However, it may make
                     // sense to make this more intelligent and queue for later.
-                    Err(RfcommError::Other(format_err!("Command Frame outstanding")))
+                    Err(Error::Other(format_err!("Command Frame outstanding")))
                 }
                 Entry::Vacant(entry) => {
                     entry.insert(frame.clone());
@@ -249,9 +246,9 @@ impl SessionInner {
     async fn process_channel_pending_parameter_negotiation(
         &mut self,
         server_channel: ServerChannel,
-    ) -> Result<(), RfcommError> {
+    ) -> Result<(), Error> {
         if !self.multiplexer().started() {
-            return Err(RfcommError::MultiplexerNotStarted);
+            return Err(Error::MultiplexerNotStarted);
         }
 
         if let Some(channel_open_fn) = self.pending_channels.remove(&server_channel) {
@@ -264,9 +261,9 @@ impl SessionInner {
 
     /// Processes all of the pending open channel requests that are waiting for multiplexer startup
     /// to complete.
-    async fn process_channels_pending_startup(&mut self) -> Result<(), RfcommError> {
+    async fn process_channels_pending_startup(&mut self) -> Result<(), Error> {
         if !self.multiplexer().started() {
-            return Err(RfcommError::MultiplexerNotStarted);
+            return Err(Error::MultiplexerNotStarted);
         }
 
         let outstanding_channels = std::mem::take(&mut self.pending_channels);
@@ -328,14 +325,12 @@ impl SessionInner {
         &mut self,
         server_channel: ServerChannel,
         channel_result: Result<Channel, ErrorCode>,
-    ) -> Result<(), RfcommError> {
+    ) -> Result<(), Error> {
         if let Some(callback) = self.pending_channels.remove(&server_channel) {
             return callback(channel_result)
-                .map_err(|e| RfcommError::Other(format_err!("{:?}", e).into()));
+                .map_err(|e| Error::Other(format_err!("{:?}", e).into()));
         }
-        Err(RfcommError::Other(
-            format_err!("No outstanding client for: {:?}", server_channel).into(),
-        ))
+        Err(Error::Other(format_err!("No outstanding client for: {:?}", server_channel).into()))
     }
 
     /// Relays the inbound `channel` opened for the provided `server_channel` to the local clients
@@ -344,7 +339,7 @@ impl SessionInner {
         &self,
         server_channel: ServerChannel,
         channel: Channel,
-    ) -> Result<(), RfcommError> {
+    ) -> Result<(), Error> {
         (self.channel_opened_fn)(server_channel, channel)
             .await
             .map_err(|e| format_err!("{:?}", e).into())
@@ -352,10 +347,10 @@ impl SessionInner {
 
     /// Attempts to initiate multiplexer startup by sending an SABM command over the
     /// Mux Control DLCI.
-    async fn start_multiplexer(&mut self) -> Result<(), RfcommError> {
+    async fn start_multiplexer(&mut self) -> Result<(), Error> {
         if self.multiplexer().started() || self.role() == Role::Negotiating {
             warn!("StartMultiplexer request when multiplexer has role: {:?}", self.role());
-            return Err(RfcommError::MultiplexerAlreadyStarted);
+            return Err(Error::MultiplexerAlreadyStarted);
         }
         self.multiplexer().set_role(Role::Negotiating);
 
@@ -366,10 +361,10 @@ impl SessionInner {
 
     /// Attempts to initiate the parameter negotiation (PN) procedure as defined in RFCOMM 5.5.3
     /// for the given `dlci`.
-    async fn start_parameter_negotiation(&mut self, dlci: DLCI) -> Result<(), RfcommError> {
+    async fn start_parameter_negotiation(&mut self, dlci: DLCI) -> Result<(), Error> {
         if !self.multiplexer().started() {
             warn!("ParameterNegotiation request before multiplexer startup");
-            return Err(RfcommError::MultiplexerNotStarted);
+            return Err(Error::MultiplexerNotStarted);
         }
 
         let pn_params = ParameterNegotiationParams::default_command(dlci);
@@ -402,11 +397,11 @@ impl SessionInner {
         &mut self,
         server_channel: ServerChannel,
         channel_request_fn: ChannelRequestFn,
-    ) -> Result<(), RfcommError> {
+    ) -> Result<(), Error> {
         // There can only be one outstanding request per `server_channel`.
         if self.pending_channels.contains_key(&server_channel) {
             let _ = channel_request_fn(Err(ErrorCode::Failed));
-            return Err(RfcommError::Other(format_err!("Request in progress").into()));
+            return Err(Error::Other(format_err!("Request in progress").into()));
         }
 
         // If the multiplexer has not started yet, save the open channel request and
@@ -437,7 +432,7 @@ impl SessionInner {
 
         if self.multiplexer().dlci_established(&dlci) {
             let _ = channel_request_fn(Err(ErrorCode::Canceled));
-            return Err(RfcommError::ChannelAlreadyEstablished(dlci));
+            return Err(Error::ChannelAlreadyEstablished(dlci));
         }
 
         // Otherwise, save the pending channel request and send the SABM Command to begin
@@ -506,7 +501,7 @@ impl SessionInner {
 
     /// Handles a multiplexer command over the Mux Control DLCI. Potentially sends a response
     /// frame to the remote peer. Returns an error if the `mux_command` couldn't be handled.
-    async fn handle_mux_command(&mut self, mux_command: &MuxCommand) -> Result<(), RfcommError> {
+    async fn handle_mux_command(&mut self, mux_command: &MuxCommand) -> Result<(), Error> {
         trace!("Handling MuxCommand: {:?}", mux_command);
 
         // For responses, validate that we were expecting the response and finish the operation.
@@ -528,13 +523,13 @@ impl SessionInner {
                         _ => {
                             // TODO(fxbug.dev/59585): We currently don't send any other mux commands,
                             // add other handlers here when implemented.
-                            Err(RfcommError::NotImplemented)
+                            Err(Error::NotImplemented)
                         }
                     }
                 }
                 None => {
                     warn!("Received unexpected MuxCommand response: {:?}", mux_command);
-                    Err(RfcommError::Other(format_err!("Unexpected response").into()))
+                    Err(Error::Other(format_err!("Unexpected response").into()))
                 }
             };
         }
@@ -696,7 +691,7 @@ impl SessionInner {
 
     /// Handles an incoming Frame received from the peer. Returns a flag indicating whether
     /// the session should terminate, or an error if the frame was unable to be handled.
-    async fn handle_frame(&mut self, frame: Frame) -> Result<bool, RfcommError> {
+    async fn handle_frame(&mut self, frame: Frame) -> Result<bool, Error> {
         let (dlci, credits) = (frame.dlci, frame.credits);
         match frame.data {
             FrameData::SetAsynchronousBalancedMode => {
@@ -789,7 +784,7 @@ impl SessionInner {
     async fn process_incoming_frames(
         inner: Arc<Mutex<Self>>,
         mut data_receiver: mpsc::Receiver<Vec<u8>>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(bytes) = data_receiver.next().await {
             let mut w_inner = inner.lock().await;
             match Frame::parse(w_inner.role().opposite_role(), w_inner.credit_based_flow(), &bytes)
@@ -968,15 +963,14 @@ impl SignaledTask for Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {
+        fuchsia_async as fasync,
+        futures::{pin_mut, task::Poll, Future},
+        matches::assert_matches,
+        std::convert::TryFrom,
+    };
 
-    use fuchsia_async as fasync;
-    use futures::{pin_mut, task::Poll, Future};
-    use matches::assert_matches;
-    use std::convert::TryFrom;
-
-    use crate::rfcomm::frame::mux_commands::*;
-    use crate::rfcomm::session::multiplexer::ParameterNegotiationState;
-    use crate::rfcomm::test_util::*;
+    use crate::{rfcomm::session::multiplexer::ParameterNegotiationState, rfcomm::test_util::*};
 
     /// Makes a DLC PN frame with arbitrary command parameters.
     /// `command_response` indicates whether the frame should be a command or response.
@@ -1936,7 +1930,7 @@ mod tests {
             Box::new(|_, _channel| async { panic!("Don't expect channels!") }.boxed());
         assert!(session.multiplexer().start(Role::Initiator).is_ok());
 
-        let server_channel = ServerChannel(5);
+        let server_channel = ServerChannel::try_from(5).unwrap();
         let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
         // Simulate PN finishing ahead of time so that we can directly test the rejection case.
         session.finish_parameter_negotiation(&ParameterNegotiationParams::default_command(

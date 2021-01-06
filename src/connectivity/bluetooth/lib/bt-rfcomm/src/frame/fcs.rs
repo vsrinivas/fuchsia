@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use log::trace;
-
 // CRC table for calculating FCS. GSM 7.10 Annex B, Section B.3.5.
 const CRC_TABLE: [u8; 256] = [
     0x00, 0x91, 0xE3, 0x72, 0x07, 0x96, 0xE4, 0x75, 0x0E, 0x9F, 0xED, 0x7C, 0x09, 0x98, 0xEA, 0x7B,
@@ -28,7 +26,6 @@ const CRC_TABLE: [u8; 256] = [
 /// This calculation is derived exactly as specified in GSM 7.10 Section 5.2.1.6.
 /// See GSM 7.10 Section B.3.3 for the algorithm.
 pub fn calculate_fcs(buf: &[u8]) -> u8 {
-    trace!("Calculating FCS for buf: {:?}", buf);
     let mut fcs: u8 = 0xFF;
     let mut offset: usize = 0;
     while offset != buf.len() {
@@ -45,7 +42,6 @@ pub fn calculate_fcs(buf: &[u8]) -> u8 {
 /// This calculation is derived exactly as specified in GSM 7.10 Section 5.2.1.6.
 /// See GSM 7.10 Section B.3.4 for the algorithm.
 pub fn verify_fcs(fcs: u8, buf: &[u8]) -> bool {
-    trace!("Verifying FCS {:?} with buf: {:?}", fcs, buf);
     let mut calculated_fcs: u8 = 0xFF;
     let mut offset: usize = 0;
     while offset != buf.len() {

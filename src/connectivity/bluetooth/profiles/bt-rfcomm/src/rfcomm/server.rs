@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -21,8 +22,7 @@ use {
     },
 };
 
-use crate::profile::build_rfcomm_protocol;
-use crate::rfcomm::{session::Session, types::SignaledTask, ServerChannel};
+use crate::rfcomm::{session::Session, types::SignaledTask};
 
 /// Manages the current clients of the RFCOMM server. Provides an API for
 /// registering, unregistering, and relaying RFCOMM channels to clients.
@@ -224,23 +224,20 @@ impl RfcommServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use fidl::{
-        encoding::Decodable,
-        endpoints::{create_proxy, create_proxy_and_stream},
+    use {
+        bt_rfcomm::{frame::mux_commands::*, frame::*, Role, DLCI},
+        fidl::{
+            encoding::Decodable,
+            endpoints::{create_proxy, create_proxy_and_stream},
+        },
+        fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker,
+        fuchsia_async as fasync,
+        fuchsia_bluetooth::types::Channel,
+        futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt},
+        matches::assert_matches,
     };
-    use fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker;
-    use fuchsia_async as fasync;
-    use fuchsia_bluetooth::types::Channel;
-    use futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt};
-    use matches::assert_matches;
 
-    use crate::rfcomm::{
-        frame::mux_commands::*,
-        frame::*,
-        test_util::{expect_frame_received_by_peer, send_peer_frame},
-        types::{CommandResponse, Role, DLCI},
-    };
+    use crate::rfcomm::test_util::{expect_frame_received_by_peer, send_peer_frame};
 
     fn setup_rfcomm_manager() -> (fasync::Executor, RfcommServer) {
         let exec = fasync::Executor::new().unwrap();

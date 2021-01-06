@@ -4,24 +4,14 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_rfcomm::{
+        profile::{build_rfcomm_protocol, is_rfcomm_protocol},
+        ServerChannel,
+    },
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::profile::{DataElement, ProtocolDescriptor, ServiceDefinition},
-    std::collections::HashSet,
+    fuchsia_bluetooth::profile::{DataElement, ServiceDefinition},
+    std::{collections::HashSet, convert::TryFrom},
 };
-
-use crate::rfcomm::ServerChannel;
-
-/// Returns a ProtocolDescriptorList for an RFCOMM service with the provided `server_channel`.
-pub fn build_rfcomm_protocol(server_channel: ServerChannel) -> Vec<ProtocolDescriptor> {
-    // The PSM for L2CAP is empty when RFCOMM is used.
-    vec![
-        ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
-        ProtocolDescriptor {
-            protocol: bredr::ProtocolIdentifier::Rfcomm,
-            params: vec![DataElement::Uint8(server_channel.0)],
-        },
-    ]
-}
 
 /// Updates the provided `service` with the assigned `server_channel` if
 /// the service is requesting RFCOMM.
@@ -41,14 +31,6 @@ pub fn update_svc_def_with_server_channel(
 
     service.protocol_descriptor_list = build_rfcomm_protocol(server_channel);
     Ok(())
-}
-
-/// Returns true if the provided `protocol` is RFCOMM.
-///
-/// Protocols are generally specified by a vector of ProtocolDescriptors which
-/// are ordered from lowest level (typically L2CAP) to highest.
-fn is_rfcomm_protocol(protocol: &Vec<ProtocolDescriptor>) -> bool {
-    protocol.iter().any(|descriptor| descriptor.protocol == bredr::ProtocolIdentifier::Rfcomm)
 }
 
 /// Returns true if the provided `service` is requesting RFCOMM.
@@ -74,7 +56,7 @@ pub fn server_channel_from_service_definition(
             }
 
             if let DataElement::Uint8(sc) = descriptor.params[0] {
-                return Some(ServerChannel(sc));
+                return ServerChannel::try_from(sc).ok();
             }
             return None;
         }
@@ -102,6 +84,7 @@ pub fn psms_from_service_definitions(services: &Vec<ServiceDefinition>) -> HashS
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_bluetooth::profile::ProtocolDescriptor;
 
     use crate::types::tests::rfcomm_protocol_descriptor_list;
 
@@ -126,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_update_service_definition_with_rfcomm() {
-        let server_channel = ServerChannel(10);
+        let server_channel = ServerChannel::try_from(10).unwrap();
         let mut def = ServiceDefinition::default();
         let mut expected = def.clone();
 
@@ -203,6 +186,7 @@ mod tests {
                 params: vec![DataElement::Uint8(sc)],
             },
         ];
-        assert_eq!(Some(ServerChannel(sc)), server_channel_from_service_definition(&def));
+        let expected = ServerChannel::try_from(sc).ok();
+        assert_eq!(server_channel_from_service_definition(&def), expected);
     }
 }

@@ -4,33 +4,43 @@
 
 use {
     bitfield::bitfield,
-    log::trace,
     packet_encoding::{pub_decodable_enum, Decodable, Encodable},
     std::convert::TryFrom,
 };
 
+/// The DLC PN frame definition.
 mod dlc_parameter_negotiation;
-mod flow_control;
-mod modem_status;
-mod non_supported;
-mod remote_line_status;
-mod remote_port_negotiation;
-mod test_command;
-
-pub use self::{
-    dlc_parameter_negotiation::{
-        CreditBasedFlowHandshake, ParameterNegotiationParams, DEFAULT_INITIAL_CREDITS,
-    },
-    flow_control::FlowControlParams,
-    modem_status::ModemStatusParams,
-    non_supported::NonSupportedCommandParams,
-    remote_line_status::RemoteLineStatusParams,
-    remote_port_negotiation::RemotePortNegotiationParams,
-    test_command::TestCommandParams,
+pub use dlc_parameter_negotiation::{
+    CreditBasedFlowHandshake, ParameterNegotiationParams, DEFAULT_INITIAL_CREDITS,
 };
-use crate::rfcomm::{
-    frame::FrameParseError,
-    types::{CommandResponse, DLCI},
+
+/// The Flow Control On/Off frame definitions.
+mod flow_control;
+pub use flow_control::FlowControlParams;
+
+/// The Modem Status frame definition.
+mod modem_status;
+pub use modem_status::ModemStatusParams;
+
+/// The Not-supported frame definition.
+mod non_supported;
+pub use non_supported::NonSupportedCommandParams;
+
+/// The Remote Line Status frame definition.
+mod remote_line_status;
+pub use remote_line_status::RemoteLineStatusParams;
+
+/// The Remote Port Negotiation frame definition.
+mod remote_port_negotiation;
+pub use remote_port_negotiation::RemotePortNegotiationParams;
+
+/// The Test Command frame definition.
+mod test_command;
+pub use test_command::TestCommandParams;
+
+use crate::{
+    frame::{CommandResponse, FrameParseError},
+    DLCI,
 };
 
 pub_decodable_enum! {
@@ -280,7 +290,6 @@ impl Decodable for MuxCommand {
                 return Err(FrameParseError::InvalidFrame);
             }
         }
-        trace!("The MuxCommand Length is: {:?}", length);
 
         // Validate that the buffer is large enough given the variable length.
         // 1 byte for Type field, `num_length_octets` bytes for the length field, and `length`
@@ -342,10 +351,10 @@ mod tests {
 
     use matches::assert_matches;
 
-    use self::dlc_parameter_negotiation::CreditBasedFlowHandshake;
-    use self::modem_status::ModemStatusSignals;
-    use self::remote_line_status::RlsError;
-    use crate::rfcomm::types::DLCI;
+    use {
+        dlc_parameter_negotiation::CreditBasedFlowHandshake, modem_status::ModemStatusSignals,
+        remote_line_status::RlsError,
+    };
 
     #[test]
     fn test_decode_mux_command_empty_buf() {

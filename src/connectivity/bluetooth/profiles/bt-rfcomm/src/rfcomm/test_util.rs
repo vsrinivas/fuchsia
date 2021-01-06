@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    bt_rfcomm::{
+        frame::{mux_commands::MuxCommandMarker, Frame, FrameData, UIHData, UserData},
+        DLCI,
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::Channel,
     futures::{channel::mpsc, task::Poll, StreamExt},
     packet_encoding::Encodable,
 };
-
-use crate::rfcomm::frame::{mux_commands::MuxCommandMarker, Frame, FrameData, UIHData, UserData};
-use crate::rfcomm::types::DLCI;
 
 /// Simulates the peer sending an RFCOMM frame over the L2CAP `remote` socket.
 #[track_caller]

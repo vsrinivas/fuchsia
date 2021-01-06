@@ -7,7 +7,7 @@ use {
     packet_encoding::{Decodable, Encodable},
 };
 
-use crate::rfcomm::frame::FrameParseError;
+use crate::frame::FrameParseError;
 
 /// The NonSupportedCommand Response is always 1 byte. See GSM 7.10 Section 5.4.6.3.8.
 const NON_SUPPORTED_COMMAND_RESPONSE_LENGTH: usize = 1;

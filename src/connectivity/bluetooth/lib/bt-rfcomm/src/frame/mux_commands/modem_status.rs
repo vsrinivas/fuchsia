@@ -8,7 +8,7 @@ use {
     std::convert::TryFrom,
 };
 
-use crate::rfcomm::{frame::FrameParseError, types::DLCI};
+use crate::{frame::FrameParseError, DLCI};
 
 /// Length (in bytes) of a Modem Status Command with no break value.
 const MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH: usize = 2;

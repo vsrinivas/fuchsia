@@ -2,50 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    log::trace,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
-    std::convert::TryFrom,
-    thiserror::Error,
-};
+use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
 
+/// The command or response classification used when parsing an RFCOMM frame.
+mod command_response;
+pub use command_response::CommandResponse;
+/// Errors associated with parsing an RFCOMM frame.
+mod error;
+pub use error::FrameParseError;
 /// Frame Check Sequence calculations.
 mod fcs;
-
-/// Multiplexer Commands.
+/// Field definitions for an RFCOMM frame.
+mod field;
+/// Definitions for multiplexer command frames.
 pub mod mux_commands;
 
-use crate::rfcomm::{
-    frame::{
-        fcs::{calculate_fcs, verify_fcs},
-        mux_commands::MuxCommand,
-    },
-    types::{CommandResponse, Role, DLCI},
+use crate::{Role, DLCI};
+use {
+    fcs::{calculate_fcs, verify_fcs},
+    field::*,
+    mux_commands::MuxCommand,
 };
-
-/// Errors associated with parsing an RFCOMM Frame.
-#[derive(Error, Debug)]
-pub enum FrameParseError {
-    #[error("Provided buffer is too small")]
-    BufferTooSmall,
-    #[error("Invalid buffer size provided. Expected: {}, Actual: {}", .0, .1)]
-    InvalidBufferLength(usize, usize),
-    #[error("FCS check for the Frame failed")]
-    FCSCheckFailed,
-    #[error("DLCI ({:?}) is invalid", .0)]
-    InvalidDLCI(u8),
-    #[error("Frame is invalid")]
-    InvalidFrame,
-    #[error("Frame type is unsupported")]
-    UnsupportedFrameType,
-    #[error("Mux Command type {} is unsupported", .0)]
-    UnsupportedMuxCommandType(u8),
-    #[error("Value is out of range")]
-    OutOfRange,
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
-}
 
 pub_decodable_enum! {
     /// The type of frame provided in the Control field.
@@ -243,65 +220,8 @@ impl Encodable for FrameData {
 /// See RFCOMM 5.1.
 const MIN_FRAME_SIZE: usize = 4;
 
-/// The Address field is the first byte in the frame. See GSM 7.10 Section 5.2.1.2.
-const FRAME_ADDRESS_IDX: usize = 0;
-bitfield! {
-    pub struct AddressField(u8);
-    impl Debug;
-    pub bool, ea_bit, set_ea_bit: 0;
-    pub bool, cr_bit, set_cr_bit: 1;
-    pub u8, dlci_raw, set_dlci: 7, 2;
-}
-
-impl AddressField {
-    fn dlci(&self) -> Result<DLCI, FrameParseError> {
-        DLCI::try_from(self.dlci_raw())
-    }
-}
-
-/// The Control field is the second byte in the frame. See GSM 7.10 Section 5.2.1.3.
-const FRAME_CONTROL_IDX: usize = 1;
-bitfield! {
-    pub struct ControlField(u8);
-    impl Debug;
-    pub bool, poll_final, set_poll_final: 4;
-    pub u8, frame_type_raw, set_frame_type: 7, 0;
-}
-
-impl ControlField {
-    fn frame_type(&self) -> Result<FrameTypeMarker, FrameParseError> {
-        // The P/F bit is ignored when determining Frame Type. See RFCOMM 4.2 and GSM 7.10
-        // Section 5.2.1.3.
-        const FRAME_TYPE_MASK: u8 = 0b11101111;
-        FrameTypeMarker::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
-    }
-}
-
-/// The Information field is the third byte in the frame. See GSM 7.10 Section 5.2.1.4.
-const FRAME_INFORMATION_IDX: usize = 2;
-
-/// The information field can be represented as two E/A padded octets, each 7-bits wide.
-/// This shift is used to access the upper bits of a two-octet field.
-/// See GSM 7.10 Section 5.2.1.4.
-const INFORMATION_SECOND_OCTET_SHIFT: usize = 7;
-
 /// The maximum length that can be represented in a single E/A padded octet.
 const MAX_SINGLE_OCTET_LENGTH: usize = 127;
-
-bitfield! {
-    pub struct InformationField(u8);
-    impl Debug;
-    pub bool, ea_bit, set_ea_bit: 0;
-    pub u8, length, set_length_inner: 7, 1;
-}
-
-impl InformationField {
-    fn set_length(&mut self, length: u8) {
-        // The length is only 7 bits wide.
-        let mask = 0b1111111;
-        self.set_length_inner(length & mask);
-    }
-}
 
 /// Returns true if the provided `length` needs to be represented as 2 octets.
 fn is_two_octet_length(length: usize) -> bool {
@@ -367,7 +287,6 @@ impl Frame {
         if is_two_octet_length {
             length |= (buf[FRAME_INFORMATION_IDX + 1] as u16) << INFORMATION_SECOND_OCTET_SHIFT;
         }
-        trace!("Frame InformationLength is {:?}", length);
 
         // The header size depends on the Information Length size and the (optional) credits octet.
         // Address (1) + Control (1) + Length (1 or 2)
@@ -557,9 +476,9 @@ impl Encodable for Frame {
 mod tests {
     use super::*;
 
-    use self::mux_commands::{MuxCommandParams, RemotePortNegotiationParams};
-    use crate::rfcomm::frame::fcs::calculate_fcs;
-    use matches::assert_matches;
+    use {matches::assert_matches, std::convert::TryFrom};
+
+    use mux_commands::{MuxCommandParams, RemotePortNegotiationParams};
 
     #[test]
     fn test_is_mux_startup_frame() {

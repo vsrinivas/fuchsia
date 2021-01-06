@@ -4,6 +4,10 @@
 
 use {
     async_trait::async_trait,
+    bt_rfcomm::{
+        frame::{Frame, UserData},
+        Role, DLCI,
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::Channel,
     fuchsia_inspect as inspect,
@@ -18,9 +22,8 @@ use {
 };
 
 use crate::rfcomm::{
-    frame::{Frame, UserData},
     inspect::{DuplexDataStreamInspect, SessionChannelInspect, FLOW_CONTROLLER},
-    types::{RfcommError, Role, SignaledTask, DLCI},
+    types::{Error, SignaledTask},
 };
 
 /// Upper bound for the number of credits we allow a remote device to have.
@@ -380,9 +383,9 @@ impl SessionChannel {
     /// Note: It is valid to call `set_flow_control()` multiple times before the
     /// channel has been established (usually due to back and forth during parameter negotiation).
     /// The most recent `flow_control` will be used.
-    pub fn set_flow_control(&mut self, flow_control: FlowControlMode) -> Result<(), RfcommError> {
+    pub fn set_flow_control(&mut self, flow_control: FlowControlMode) -> Result<(), Error> {
         if self.is_established() {
-            return Err(RfcommError::ChannelAlreadyEstablished(self.dlci));
+            return Err(Error::ChannelAlreadyEstablished(self.dlci));
         }
         self.flow_control = Some(flow_control.as_new());
         self.inspect.set_flow_control(flow_control);
@@ -490,9 +493,9 @@ impl SessionChannel {
 
     /// Receive a user data payload from the remote peer, which will be queued to be sent
     /// to the local profile client.
-    pub fn receive_user_data(&mut self, data: FlowControlledData) -> Result<(), RfcommError> {
+    pub fn receive_user_data(&mut self, data: FlowControlledData) -> Result<(), Error> {
         if !self.is_established() {
-            return Err(RfcommError::ChannelNotEstablished(self.dlci));
+            return Err(Error::ChannelNotEstablished(self.dlci));
         }
 
         // This unwrap is safe because the task is guaranteed to be set if the channel
@@ -514,15 +517,16 @@ impl SignaledTask for SessionChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {
+        bt_rfcomm::frame::FrameData,
+        fuchsia_async::DurationExt,
+        fuchsia_inspect_derive::WithInspect,
+        fuchsia_zircon::DurationNum,
+        futures::{channel::mpsc, pin_mut, task::Poll},
+        matches::assert_matches,
+        std::convert::TryFrom,
+    };
 
-    use fuchsia_async::DurationExt;
-    use fuchsia_inspect_derive::WithInspect;
-    use fuchsia_zircon::DurationNum;
-    use futures::{channel::mpsc, pin_mut, task::Poll};
-    use matches::assert_matches;
-    use std::convert::TryFrom;
-
-    use crate::rfcomm::frame::FrameData;
     use crate::rfcomm::test_util::{expect_frame, expect_pending, expect_user_data_frame};
 
     fn establish_channel(channel: &mut SessionChannel) -> (Channel, mpsc::Receiver<Frame>) {
