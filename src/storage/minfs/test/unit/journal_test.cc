@@ -127,6 +127,12 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
       done += written;
     }
     ASSERT_OK(foo->Close());
+    // The infrastructure relies on the number of blocks written to block device
+    // to function properly. Sync here ensures that what was written in this
+    // function gets persisted to underlying block device.
+    sync_completion_t completion;
+    fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
   }
 };
 
@@ -134,7 +140,7 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
 constexpr uint64_t kGrowFvmCutoff = 32 * JournalGrowFvmTest::kDiskBlocksPerFsBlock;
 
 TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
-  auto bcache = CutOffDevice(write_count() - kGrowFvmCutoff);
+  auto bcache = CutOffDevice(write_count());
   EXPECT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
   std::unique_ptr<Minfs> fs;
   ASSERT_OK(Minfs::Create(std::move(bcache), MountOptions(), &fs));
@@ -174,6 +180,9 @@ TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   std::vector<uint8_t> buf(10, 0xaf);
   size_t written;
   ASSERT_OK(foo->Write(buf.data(), buf.size(), 0, &written));
+  sync_completion_t completion;
+  foo->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  ASSERT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
   ASSERT_EQ(written, buf.size());
 
   // Make a note of which block was allocated.

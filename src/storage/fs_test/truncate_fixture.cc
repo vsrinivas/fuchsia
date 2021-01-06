@@ -37,7 +37,19 @@ void FillFile(int fd, uint8_t* u8, ssize_t new_len, ssize_t old_len) {
     }
     // Overwrite those zeroes with the contents of u8
     ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
-    ASSERT_EQ(write(fd, u8 + old_len, new_len - old_len), new_len - old_len);
+    auto bytes_to_write = new_len - old_len;
+    // We write |bytes_to_write| in a loop because write() may succeed but still return fewer bytes
+    // than requested.
+    while (bytes_to_write > 0) {
+      // We need fsync here because CoW based fs(like minfs) may need more blocks than absolute
+      // minimum required as updates/overwrites go to a new block while still retaining old
+      // block reservation.
+      fsync(fd);
+      auto written = write(fd, u8 + old_len, new_len - old_len);
+      ASSERT_GT(written, 0);
+      bytes_to_write -= written;
+      old_len += written;
+    }
   } else {  // Shrunk the file (or kept it the same length)
     // Verify that the file is unchanged up to new_len
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);

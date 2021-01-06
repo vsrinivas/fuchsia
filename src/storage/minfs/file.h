@@ -5,6 +5,10 @@
 #ifndef SRC_STORAGE_MINFS_FILE_H_
 #define SRC_STORAGE_MINFS_FILE_H_
 
+#include <functional>
+#include <memory>
+#include <mutex>
+
 #ifdef __Fuchsia__
 #include "src/storage/minfs/vnode_allocation.h"
 #endif
@@ -55,19 +59,58 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
+  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual)
+      FS_TA_EXCLUDES(cached_transaction_lock_) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
+
+  // Updates, in memory, inode's modify_time with current time.
+  void UpdateModificationTime();
 
   // Returns the number of blocks required to persist uncached data of size |length|
   // starting at |offset|.
   zx::status<uint32_t> GetRequiredBlockCount(size_t offset, size_t length);
+
+  // Returns the number of blocks required to persist data of size |length|
+  // starting at |offset| with caching enabled.
+  zx::status<uint32_t> GetRequiredBlockCountForDirtyCache(size_t offset, size_t length,
+                                                          uint32_t uncached_block_count);
+
+  using WalkWriteBlockHandlerType = std::function<zx::status<>(uint32_t, bool, bool)>;
+  // Walks all the dirty blocks that need to be written and calls |handler| on
+  // each of those blocks.
+  zx::status<> WalkFileBlocks(size_t offset, size_t length, WalkWriteBlockHandlerType& handler);
+
+  // Marks blocks of |length| starting at file |offset| as pending.
+  zx::status<> MarkRequiredBlocksPending(size_t offset, size_t length);
+
+  bool IsDirty() const final;
+
+  // Returns true if the file dirty cache needs to be flushed. An error here
+  // implies that the |length| and |offset| write don't fit in the current
+  // filesystem limits - see minfs::GetRequiredBlockCount.
+  zx::status<bool> ShouldFlush(bool is_truncate, size_t length, size_t offset);
+
+  // Flushes dirty cache if ShouldFlush returns true.
+  zx::status<> CheckAndFlush(bool is_truncate, size_t length, size_t offset);
+
+  // Flush all the pending writes.
+  zx::status<> FlushCachedWrites() FS_TA_EXCLUDES(cached_transaction_lock_) final;
+
+  // Drops all cached writes.
+  void DropCachedWrites() final;
+
   // Flushes(sends the transaction to journaling layer to be written to journal and disk) or caches
   // current transaction.
-  zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false);
+  zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false)
+      FS_TA_EXCLUDES(cached_transaction_lock_);
 
   // Sends the transaction to journaling layer to be written to journal and disk.
   zx::status<> ForceFlushTransaction(std::unique_ptr<Transaction> transaction);
+
+  // Returns a transaction either by converting CachedBlockTransaction to Transaction
+  // or by creating a new transaction.
+  zx::status<std::unique_ptr<Transaction>> GetTransaction(uint32_t reserve_blocks);
 #ifdef __Fuchsia__
   // Allocate all data blocks pending in |allocation_state_|.
   void AllocateAndCommitData(std::unique_ptr<Transaction> transaction);
@@ -82,6 +125,9 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // thread.
   PendingAllocationData allocation_state_;
 #endif
+  mutable std::mutex cached_transaction_lock_;
+  std::unique_ptr<CachedBlockTransaction> cached_transaction_
+      FS_TA_GUARDED(cached_transaction_lock_);
 };
 
 }  // namespace minfs

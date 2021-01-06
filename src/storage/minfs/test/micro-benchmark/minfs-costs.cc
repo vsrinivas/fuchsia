@@ -197,8 +197,8 @@ void MinfsProperties::AddCreateCost(BlockFidlMetrics* out) const {
   AddJournalCosts(1, 4, out);
 }
 
-void MinfsProperties::AddWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
-                                   BlockFidlMetrics* out) const {
+void MinfsProperties::AddUncachedWriteCost(uint64_t start_offset, uint64_t bytes_per_write,
+                                           int write_count, BlockFidlMetrics* out) const {
   // Only writing less than a block at offset 0 is supported at the moment.
   EXPECT_LE(bytes_per_write, superblock_.block_size);
   EXPECT_EQ(start_offset, 0u);
@@ -222,6 +222,38 @@ void MinfsProperties::AddWriteCost(uint64_t start_offset, uint64_t bytes_per_wri
       AddIoStats(1, 1, &out->write);
     }
   }
+}
+
+void MinfsProperties::AddCachedWriteCost(uint64_t start_offset, uint64_t bytes_per_write,
+                                         int write_count, BlockFidlMetrics* out) const {
+  // Only writing less than a block at offset 0 is supported at the moment.
+  EXPECT_LE(bytes_per_write, superblock_.block_size);
+  EXPECT_EQ(start_offset, 0ul);
+  // A write would involve (not in that order)
+  // 1. Allocating a block
+  // 2. Updating inode to point to block
+  // 3. Updating superblock
+  // 4. Writing data
+  // Step 1-3 are journalled.
+  AddJournalCosts(1, 3, out);
+  if (bytes_per_write < superblock_.BlockSize()) {
+    EXPECT_LE(bytes_per_write * write_count, superblock_.block_size);
+    // Here we assume that all the writes are contained within a block. So, if
+    // the |write_count| is greater than 1, the block will see CoW/update.
+    AddIoStats(1, 1, &out->write);
+  } else {
+    // Here every write allocates a new block and a fresh data is written to it.
+    // There is no CoW/update happens to the block.
+    AddIoStats(1, write_count, &out->write);
+  }
+}
+
+void MinfsProperties::AddWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
+                                   bool dirty_cache_enabled, BlockFidlMetrics* out) const {
+  if (dirty_cache_enabled) {
+    return AddCachedWriteCost(start_offset, bytes_per_write, write_count, out);
+  }
+  return AddUncachedWriteCost(start_offset, bytes_per_write, write_count, out);
 }
 
 }  // namespace minfs_micro_benchmanrk

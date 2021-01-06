@@ -26,6 +26,9 @@
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
+
+#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/writeback.h"
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -634,6 +637,11 @@ void Minfs::Sync(SyncCallback closure) {
     if (closure)
       closure(ZX_OK);
     return;
+  }
+  auto dirty_vnodes = GetDirtyVnodes();
+  for (auto vnode : dirty_vnodes) {
+    auto status = vnode->FlushCachedWrites();
+    ZX_ASSERT(status.is_ok());
   }
   EnqueueCallback(std::move(closure));
 }
@@ -1337,6 +1345,7 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
                   fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
+  FX_LOGS(DEBUG) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
 
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);

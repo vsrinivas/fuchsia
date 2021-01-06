@@ -20,6 +20,7 @@ namespace minfs {
 // and block count.
 class PendingAllocationData {
  public:
+  using const_iterator = bitmap::RleBitmapBase<blk_t>::const_iterator;
   PendingAllocationData() = default;
   ~PendingAllocationData() { ZX_DEBUG_ASSERT(IsEmpty()); }
 
@@ -53,6 +54,11 @@ class PendingAllocationData {
   blk_t GetNodeSize() const { return node_size_; }
 
   void SetNodeSize(blk_t size) { node_size_ = size; }
+
+  // Iterate over the ranges in the bitmap.  Modifying the list while
+  // iterating over it may yield undefined results.
+  const_iterator cbegin() const { return block_map_.cbegin(); }
+  const_iterator cend() const { return block_map_.cend(); }
 
  private:
   // Number of additional blocks to be allocated on behalf of the vnode.
