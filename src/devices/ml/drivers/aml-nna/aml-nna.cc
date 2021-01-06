@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -19,6 +18,7 @@
 #include <fbl/auto_lock.h>
 
 #include "s905d3-nna-regs.h"
+#include "src/devices/ml/drivers/aml-nna/aml_nna_bind.h"
 #include "t931-nna-regs.h"
 
 namespace {
@@ -201,11 +201,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace aml_nna
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_nna, aml_nna::driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_NNA),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
-ZIRCON_DRIVER_END(aml_nna)
+ZIRCON_DRIVER(aml_nna, aml_nna::driver_ops, "zircon", "0.1");
