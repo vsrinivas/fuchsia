@@ -15,7 +15,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -27,6 +26,7 @@
 #include <hw/reg.h>
 
 #include "nvme-hw.h"
+#include "src/devices/block/drivers/nvme/nvme_bind.h"
 
 #define TXN_FLAG_FAILED 1
 
@@ -1057,9 +1057,4 @@ static zx_driver_ops_t driver_ops = {
     .bind = nvme_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(nvme, driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 1),      // Mass Storage
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 8),   // NVM
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 2),  // NVMHCI
-    ZIRCON_DRIVER_END(nvme)
+ZIRCON_DRIVER(nvme, driver_ops, "zircon", "0.1");

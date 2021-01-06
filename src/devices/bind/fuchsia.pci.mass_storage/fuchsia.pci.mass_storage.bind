@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.pci.mass_storage;
+
+extend uint fuchsia.BIND_PCI_SUBCLASS {
+  SCSI         =  0x00,
+  IDE          =  0x01,
+  FLOPPY_DISK  =  0x02,
+  IPI_BUS      =  0x03,
+  RAID_BUS     =  0x04,
+  ATA          =  0x05,
+  SATA         =  0x06,
+  SERIAL_SCSI  =  0x07,
+  NVMEM        =  0x08,
+  MASS_STORAGE =  0x80,
+};

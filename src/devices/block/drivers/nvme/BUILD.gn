@@ -2,8 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
+bind_rules("nvme_bind") {
+  rules = "nvme.bind"
+  output = "nvme_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci.mass_storage",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":nvme_bind_test" ]
+}
 driver_module("nvme") {
   configs += [
     "//build/config:all_source",
@@ -12,14 +27,12 @@ driver_module("nvme") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nvme.c" ]
   deps = [
+    ":nvme_bind",
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
   ]
 }
