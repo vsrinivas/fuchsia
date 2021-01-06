@@ -77,7 +77,7 @@ static const eth_dev_metadata_t eth_mac_device = {
     // c++ init error
     .pid = 0,
     // c++ init error
-    .did = PDEV_DID_ETH_MAC,
+    .did = PDEV_DID_DESIGNWARE_ETH_MAC,
 };
 
 static const pbus_metadata_t eth_board_metadata[] = {
@@ -105,7 +105,7 @@ static pbus_dev_t dwmac_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "dwmac";
   dev.vid = PDEV_VID_DESIGNWARE;
-  dev.did = PDEV_DID_ETH_MAC;
+  dev.did = PDEV_DID_DESIGNWARE_ETH_MAC;
   dev.mmio_list = eth_mac_mmios;
   dev.mmio_count = countof(eth_mac_mmios);
   dev.irq_list = eth_mac_irqs;
@@ -159,7 +159,7 @@ static const device_fragment_t eth_fragments[] = {
 static const zx_bind_inst_t eth_board_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ETH_BOARD),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_MAC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DESIGNWARE_ETH_MAC),
 };
 static const device_fragment_part_t eth_board_fragment[] = {
     {std::size(root_match), root_match},

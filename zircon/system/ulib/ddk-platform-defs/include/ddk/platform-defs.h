@@ -28,7 +28,6 @@ __BEGIN_CDECLS
 // 0x0D unused
 #define PDEV_DID_OPTEE                  0x0E  // OP-TEE OS Driver
 #define PDEV_DID_RTC_FALLBACK           0x0F  // Synthetic RTC device
-#define PDEV_DID_ETH_MAC                0x10  // Ethernet MAC
 #define PDEV_DID_ETH_PHY                0x11  // Ethernet PHY
 #define PDEV_DID_CAMERA_SENSOR          0x12  // Camera Sensor
 #define PDEV_DID_HID_BUTTONS            0x13  // HID Buttons
@@ -186,6 +185,7 @@ __BEGIN_CDECLS
 
 // Designware
 #define PDEV_VID_DESIGNWARE         0x0C
+#define PDEV_DID_DESIGNWARE_ETH_MAC 0x10
 
 // Mediatek
 #define PDEV_VID_MEDIATEK           0x0D

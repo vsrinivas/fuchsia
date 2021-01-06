@@ -11,4 +11,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   DWC3 = 1,
   DWC2 = 5,
+  ETH_MAC = 0x10,
 };
