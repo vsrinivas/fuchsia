@@ -164,8 +164,8 @@ package. In this guide, the source file is `main.rs`.
     ```
 
     ```
-    fx shell run fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
-    ```
+    fx shell run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
+    ":hello-world-rust-component-v1"    ```
 
 1.  Navigate to the shell tab where you ran `fx log`.
 
