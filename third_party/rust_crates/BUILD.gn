@@ -236,12 +236,6 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("id_tree") {
-    deps = [ ":id_tree-v1_5_0" ]
-  }
-}
-
 if (!(current_os == "fuchsia")) {
   group("indoc") {
     deps = [ ":indoc-v0_3_3" ]
@@ -3676,28 +3670,6 @@ rust_library("hyper-rustls-v0_20_0") {
     "-Cmetadata=b9f204e9124022d3",
     "-Cextra-filename=-b9f204e9124022d3",
     "--cfg=feature=\"rustls-native-certs\"",
-  ]
-}
-
-rust_library("id_tree-v1_5_0") {
-  crate_name = "id_tree"
-  crate_root = "//third_party/rust_crates/vendor/id_tree/src/lib.rs"
-  output_name = "id_tree-dcaa51240080dc87"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":snowflake-v1_3_0" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=dcaa51240080dc87",
-    "-Cextra-filename=-dcaa51240080dc87",
   ]
 }
 
@@ -8034,28 +8006,6 @@ rust_library("smol-v0_1_11") {
     "--edition=2018",
     "-Cmetadata=64af227c49a8c7a8",
     "-Cextra-filename=-64af227c49a8c7a8",
-  ]
-}
-
-rust_library("snowflake-v1_3_0") {
-  crate_name = "snowflake"
-  crate_root = "//third_party/rust_crates/vendor/snowflake/src/lib.rs"
-  output_name = "snowflake-ce6dd979630de036"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=ce6dd979630de036",
-    "-Cextra-filename=-ce6dd979630de036",
-    "--cfg=feature=\"default\"",
   ]
 }
 
