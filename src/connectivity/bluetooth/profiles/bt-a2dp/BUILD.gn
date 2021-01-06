@@ -54,6 +54,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
@@ -73,6 +74,7 @@ rustc_binary("bin") {
   sources = [
     "src/avrcp_relay.rs",
     "src/avrcp_target.rs",
+    "src/config.rs",
     "src/encoding.rs",
     "src/latm.rs",
     "src/main.rs",
@@ -173,6 +175,7 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
@@ -181,6 +184,7 @@ rustc_test("encoding_integration_bin") {
   sources = [
     "src/avrcp_relay.rs",
     "src/avrcp_target.rs",
+    "src/config.rs",
     "src/encoding.rs",
     "src/latm.rs",
     "src/main.rs",

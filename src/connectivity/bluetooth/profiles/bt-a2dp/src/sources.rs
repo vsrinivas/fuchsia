@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, PcmFormat};
 use fuchsia_async as fasync;
 use fuchsia_audio_device_output::driver::SoftPcmOutput;
@@ -11,6 +11,7 @@ use fuchsia_zircon::{self as zx, DurationNum};
 use futures::stream::{BoxStream, FusedStream};
 use futures::task::{Context, Poll};
 use futures::{FutureExt, StreamExt};
+use serde::Deserialize;
 use std::pin::Pin;
 
 use crate::PcmAudio;
@@ -106,23 +107,21 @@ impl AudioOutStream {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize, PartialEq, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum AudioSourceType {
     AudioOut,
     BigBen,
 }
 
 impl std::str::FromStr for AudioSourceType {
-    type Err = std::convert::Infallible;
+    type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "audio_out" => AudioSourceType::AudioOut,
-            "big_ben" => AudioSourceType::BigBen,
-            _ => {
-                eprintln!("Unrecognized audio source, using audio out");
-                AudioSourceType::AudioOut
-            }
-        })
+        match s {
+            "audio_out" => Ok(AudioSourceType::AudioOut),
+            "big_ben" => Ok(AudioSourceType::BigBen),
+            _ => Err(format_err!("Unrecognized audio source, use audio_out or big_ben")),
+        }
     }
 }
 

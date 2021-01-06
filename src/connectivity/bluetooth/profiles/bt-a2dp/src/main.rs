@@ -6,7 +6,6 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    argh::FromArgs,
     bt_a2dp::{
         codec::{CodecNegotiation, MediaCodecConfig},
         connected_peers::ConnectedPeers,
@@ -39,6 +38,7 @@ use {
 
 mod avrcp_relay;
 mod avrcp_target;
+mod config;
 mod encoding;
 mod latm;
 mod pcm_audio;
@@ -108,7 +108,7 @@ fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapabil
 struct StreamsBuilder {
     cobalt_sender: CobaltSender,
     codec_negotiation: CodecNegotiation,
-    domain: Option<String>,
+    domain: String,
     aac_available: bool,
     source_type: AudioSourceType,
 }
@@ -116,7 +116,7 @@ struct StreamsBuilder {
 impl StreamsBuilder {
     async fn system_available(
         cobalt_sender: CobaltSender,
-        domain: Option<String>,
+        domain: String,
         source_type: AudioSourceType,
     ) -> Result<Self, Error> {
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
@@ -258,7 +258,7 @@ impl StreamsBuilder {
             fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
                 .context("Failed to connect to MediaSession interface")?;
 
-        let domain = self.domain.clone().unwrap_or("Bluetooth".to_string());
+        let domain = self.domain.clone();
         let sink_task_builder =
             sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
         let source_task_builder = source_task::SourceTaskBuilder::new(self.source_type);
@@ -391,37 +391,6 @@ fn handle_services_found(
     .detach();
 }
 
-/// Parses the ChannelMode from the String argument.
-///
-/// Returns an Error if the provided argument is an invalid string.
-fn channel_mode_from_arg(channel_mode: Option<String>) -> Result<bredr::ChannelMode, Error> {
-    match channel_mode {
-        None => Ok(bredr::ChannelMode::Basic),
-        Some(s) if s == "basic" => Ok(bredr::ChannelMode::Basic),
-        Some(s) if s == "ertm" => Ok(bredr::ChannelMode::EnhancedRetransmission),
-        Some(s) => return Err(format_err!("invalid channel mode: {}", s)),
-    }
-}
-
-/// Options available from the command line
-#[derive(FromArgs)]
-#[argh(description = "Bluetooth Advanced Audio Distribution Profile")]
-struct Opt {
-    #[argh(option)]
-    /// published Media Session Domain (optional, defaults to a native Fuchsia session)
-    // TODO - Point to any media documentation about domains
-    domain: Option<String>,
-
-    #[argh(option, default = "AudioSourceType::AudioOut")]
-    /// audio source. options: [audio_out, big_ben]. Defaults to 'audio_out'
-    source: AudioSourceType,
-
-    #[argh(option, short = 'c', long = "channelmode")]
-    /// channel mode preferred for the AVDTP signaling channel
-    /// (optional, defaults to "basic", values: "basic", "ertm").
-    channel_mode: Option<String>,
-}
-
 async fn test_encode_sbc() -> Result<(), Error> {
     // all sinks must support these options
     let required_format = PcmFormat {
@@ -463,12 +432,11 @@ fn handle_audio_mode_connection(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let opts: Opt = argh::from_env();
+    let config = config::A2dpConfiguration::load_default()?;
 
     fuchsia_syslog::init_with_tags(&["a2dp"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
-    let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
     // Check to see that we can encode SBC audio.
     // This is a requireement of A2DP 1.3: Section 4.2
     if let Err(e) = test_encode_sbc().await {
@@ -487,7 +455,7 @@ async fn main() -> Result<(), Error> {
         info!("Failed to start AbsoluteVolume Relay: {:?}", e);
     }
 
-    let cobalt_logger: CobaltSender = {
+    let cobalt: CobaltSender = {
         let (sender, reporter) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
         fasync::Task::spawn(reporter).detach();
@@ -495,7 +463,7 @@ async fn main() -> Result<(), Error> {
     };
 
     let stream_builder =
-        StreamsBuilder::system_available(cobalt_logger.clone(), opts.domain, opts.source).await?;
+        StreamsBuilder::system_available(cobalt.clone(), config.domain, config.source).await?;
 
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
@@ -504,7 +472,7 @@ async fn main() -> Result<(), Error> {
         stream_builder.streams()?,
         stream_builder.negotiation(),
         profile_svc.clone(),
-        Some(cobalt_logger.clone()),
+        Some(cobalt.clone()),
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
         warn!("Failed to attach to inspect: {:?}", e);
@@ -550,7 +518,7 @@ async fn main() -> Result<(), Error> {
         .advertise(
             &mut service_defs.into_iter(),
             bredr::ChannelParameters {
-                channel_mode: Some(signaling_channel_mode),
+                channel_mode: Some(config.channel_mode),
                 ..bredr::ChannelParameters::EMPTY
             },
             connect_client,
@@ -578,7 +546,7 @@ async fn main() -> Result<(), Error> {
     handle_profile_events(
         peers,
         profile_svc,
-        signaling_channel_mode,
+        config.channel_mode,
         connect_requests,
         source_results,
         sink_results,
@@ -660,7 +628,8 @@ mod tests {
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
     use futures::{pin_mut, task::Poll, StreamExt};
-    use matches::assert_matches;
+
+    use crate::config::DEFAULT_DOMAIN;
 
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -747,7 +716,7 @@ mod tests {
         drop(sink_results_proxy);
         let res = exec.run_until_stalled(&mut handler_fut).expect("handler should have finished");
         // Ending service search is an error condition for the handler.
-        assert_matches!(res, Err(_));
+        assert!(res.is_err());
     }
 
     #[test]
@@ -757,8 +726,11 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (sender, _) = fake_cobalt_sender();
-        let mut streams_fut =
-            Box::pin(StreamsBuilder::system_available(sender, None, AudioSourceType::BigBen));
+        let mut streams_fut = Box::pin(StreamsBuilder::system_available(
+            sender,
+            DEFAULT_DOMAIN.into(),
+            AudioSourceType::BigBen,
+        ));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
@@ -896,24 +868,6 @@ mod tests {
         let result = exec.run_singlethreaded(test_encode_sbc());
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_channel_mode_from_arg() {
-        let channel_string = None;
-        assert_matches!(channel_mode_from_arg(channel_string), Ok(bredr::ChannelMode::Basic));
-
-        let channel_string = Some("basic".to_string());
-        assert_matches!(channel_mode_from_arg(channel_string), Ok(bredr::ChannelMode::Basic));
-
-        let channel_string = Some("ertm".to_string());
-        assert_matches!(
-            channel_mode_from_arg(channel_string),
-            Ok(bredr::ChannelMode::EnhancedRetransmission)
-        );
-
-        let channel_string = Some("foobar123".to_string());
-        assert!(channel_mode_from_arg(channel_string).is_err());
     }
 
     #[test]
