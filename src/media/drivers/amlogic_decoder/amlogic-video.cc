@@ -36,6 +36,7 @@
 #include "mpeg12_decoder.h"
 #include "pts_manager.h"
 #include "registers.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "util.h"
 #include "vdec1.h"
@@ -881,6 +882,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     status = ZX_ERR_INTERNAL;
     return status;
   }
+  sysmem_sync_ptr_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
   parser_ = std::make_unique<Parser>(this, std::move(parser_interrupt_handle_));
 
   if (is_tee_available()) {

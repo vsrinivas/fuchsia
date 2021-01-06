@@ -179,6 +179,7 @@ if (target_cpu == "arm64") {
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fdio",
       "//sdk/lib/fidl/cpp",
+      "//src/lib/fsl",
       "//src/media/lib/codec_impl",
     ]
     public_configs = [ ":sources_include_config" ]
