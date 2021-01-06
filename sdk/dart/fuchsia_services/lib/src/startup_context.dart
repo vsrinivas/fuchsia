@@ -34,6 +34,9 @@ abstract class StartupContext {
   /// Use [viewRef] to provide reference to this component's view.
   final Handle? viewRef;
 
+  StartupContext(
+      {required this.incoming, required this.outgoing, this.viewRef});
+
   /// Creates a startup context from the process startup info.
   ///
   /// Returns a cached [StartupContext] instance associated with the currently

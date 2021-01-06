@@ -8,7 +8,6 @@ import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fidl_io;
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
 import 'package:fuchsia/fuchsia.dart';
-import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 import '../incoming.dart';
@@ -53,8 +52,7 @@ class StartupContextImpl implements StartupContext {
     required this.incoming,
     required this.outgoing,
     this.viewRef,
-  })  : assert(incoming != null),
-        assert(outgoing != null);
+  });
 
   /// Creates a startup context from the process startup info.
   ///
@@ -67,9 +65,8 @@ class StartupContextImpl implements StartupContext {
   factory StartupContextImpl.fromStartupInfo() {
     if (Platform.isFuchsia) {
       if (!Directory(_serviceRootPath).existsSync()) {
-        final componentName = Platform.script?.pathSegments?.lastWhere(
-            ((_) => true) as bool Function(String),
-            orElse: () => '???');
+        final componentName = Platform.script.pathSegments
+            .lastWhere((_) => true, orElse: () => '???');
         throw Exception(
             'Attempting to launch component [$componentName] without a valid /svc directory. '
             'This is an indication that the system is not in a valid state.');
@@ -109,10 +106,6 @@ class StartupContextImpl implements StartupContext {
   /// Typically used for testing or by implementations of [fidl_sys.Runner] to
   /// obtain the [StartupContext] for components being run by the runner.
   factory StartupContextImpl.from(fidl_sys.StartupInfo startupInfo) {
-    if (startupInfo == null) {
-      throw ArgumentError.notNull('startupInfo');
-    }
-
     final flat = startupInfo.flatNamespace;
     if (flat.paths.length != flat.directories.length) {
       throw Exception('The flat namespace in the given fuchsia.sys.StartupInfo '
@@ -139,9 +132,6 @@ class StartupContextImpl implements StartupContext {
   }
 
   static Outgoing _getOutgoingFromHandle(Handle outgoingServicesHandle) {
-    if (outgoingServicesHandle == null) {
-      throw ArgumentError.notNull('outgoingServicesHandle');
-    }
     final outgoingServices = Outgoing()
       ..serve(InterfaceRequest<fidl_io.Node>(Channel(outgoingServicesHandle)));
     return outgoingServices;

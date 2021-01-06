@@ -41,7 +41,7 @@ class Incoming {
   ///
   /// If you are launching a component use the [Incoming()] constructor
   /// to get an unbound directory.
-  Incoming.withDirectory(this._dirProxy) : assert(_dirProxy != null);
+  Incoming.withDirectory(this._dirProxy);
 
   /// Terminates connection and return Zircon status.
   Future<int> close() async {
