@@ -1788,12 +1788,6 @@ zx_status_t ClientProxy::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
-void ClientProxy::DdkUnbind(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "ClientProxy::DdkUnbind");
-  CloseOnControllerLoop();
-  txn.Reply();
-}
-
 void ClientProxy::DdkRelease() {
   // Schedule release on controller loop. This way, we can safely cancel any pending tasks before
   // releasing the client.
