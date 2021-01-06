@@ -4,12 +4,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 
 #include "block_device.h"
+#include "src/devices/block/drivers/ftl/ftl_bind.h"
 
 namespace {
 
@@ -38,6 +38,4 @@ static constexpr zx_driver_ops_t ftl_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(ftl, ftl_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_FTL) ZIRCON_DRIVER_END(ftl)
+ZIRCON_DRIVER(ftl, ftl_driver_ops, "zircon", "0.1");

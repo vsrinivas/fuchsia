@@ -1,0 +1,8 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.nand;
+
+fuchsia.BIND_PROTOCOL == fuchsia.nand.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_NAND_CLASS == fuchsia.nand.BIND_NAND_CLASS.FTL;

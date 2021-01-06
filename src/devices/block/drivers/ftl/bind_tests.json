@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+    "name": "Vendor",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.FTL"
+    }
+  }
+]
