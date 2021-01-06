@@ -30,7 +30,7 @@ pub async fn test(
                 test_url: cmd.test_url,
                 timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
                 test_filter: cmd.test_filter,
-                also_run_disabled_tests: cmd.also_run_disabled_tests,
+                also_run_disabled_tests: cmd.run_disabled,
                 parallel: cmd.parallel,
                 test_args: None,
                 harness: harness_proxy,

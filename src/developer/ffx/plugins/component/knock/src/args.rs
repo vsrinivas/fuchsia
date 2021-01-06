@@ -9,11 +9,21 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "knock",
-    description = "Attempts to connect to a service on the target.",
-    note = "Useful for starting a service or verifying that a service exists.
+    description = "Connect to a service on the target",
+    example = "To connect to a service:
 
-Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:expose:*' would return all services exposed by the component remote-control."
+    $ ffx component knock 'core/appmgr:out:fuchsia.hwinfo.Product'",
+    note = "Knock verifies the existence of a service exposed by a component by
+attempting to connect to it. The command expects a <selector> with the
+following format:
+
+`<component moniker>:(in|out|exposed)[:<service name>].`
+
+Note that wildcards can be used but must match exactly one service.
+
+The `component select` command can be used to explore the component
+topology to compose the correct selector for use in `component knock`.",
+    error_code(1, "Failed to connect to service")
 )]
 pub struct KnockCommand {
     #[argh(positional)]

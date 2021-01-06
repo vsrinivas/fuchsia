@@ -6,7 +6,25 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "run", description = "run a component")]
+#[argh(
+    subcommand,
+    name = "run",
+    example = "To run the 'hello_world_rust' component:
+
+    $ ffx component run \\
+    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
+
+To run the Remote Control Service:
+
+    $ ffx component run \\
+    fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx",
+    description = "Run a component on the target",
+    note = "Runs a specified v1 component on the target. The <url> must follow the
+format:
+
+`fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`."
+)]
+
 pub struct RunComponentCommand {
     #[argh(positional)]
     /// url of component to run

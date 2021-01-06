@@ -29,12 +29,15 @@ const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 const TARGET_FAILURE_MSG: &str = "\
 We weren't able to open a connection to a target.
 
-Use `ffx target list` to verify the state of connected devices. This error probably means that either:
+Use `ffx target list` to verify the state of connected devices. This error
+probably means that either:
 
 1) There are no available targets. Make sure your device is connected.
-2) There are multiple available targets and you haven't specified a target or provided a default.
-Tip: You can use `ffx --target \"my-nodename\" <command>` to specify a target for a particular command, or
-use `ffx target default set \"my-nodename\"` if you always want to use a particular target.";
+2) There are multiple available targets and you haven't specified a target or
+provided a default.
+Tip: You can use `ffx --target \"my-nodename\" <command>` to specify a target
+for a particular command, or use `ffx target default set \"my-nodename\"` if
+you always want to use a particular target.";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.

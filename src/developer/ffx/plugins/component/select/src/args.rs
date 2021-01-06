@@ -10,8 +10,20 @@ use {argh::FromArgs, ffx_core::ffx_command};
     subcommand,
     name = "select",
     description = "Lists components matching a selector",
-    note = "Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:expose:*' would return all services exposed by the component remote-control."
+    example = "To show services exposed by remote-control:
+
+    $ ffx component select remote-control:expose:*'
+
+Or to show all services offered by v1 components:
+
+    $ ffx component select core/appmgr:out:*",
+    note = "Component select allows for looking up various services exposed by the
+component. The command expects a <selector> with the following format:
+
+`<component moniker>:(in|out|exposed)[:<service name>]`
+
+Wildcards may be used anywhere in the selector.",
+    error_code(1, "No matching component paths found")
 )]
 pub struct SelectCommand {
     #[argh(positional)]

@@ -6,35 +6,42 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "test", description = "run tests")]
+#[argh(
+    subcommand,
+    name = "test",
+    description = "Run test suite",
+    note = "Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
+
+Note that if running multiple iterations of a test and an iteration times
+out, no further iterations will be executed."
+)]
+
 pub struct TestCommand {
-    /// test timeout.
+    /// test timeout
     #[argh(option, short = 't')]
     pub timeout: Option<u32>,
 
-    /// test url. Test should implement `fuchsia.test.Suite` protocol.
+    /// test url
     #[argh(positional)]
     pub test_url: String,
 
-    /// test filter. A glob pattern for matching tests.
+    /// a glob pattern for matching tests
     #[argh(option)]
     pub test_filter: Option<String>,
 
     #[argh(switch)]
-    /// list tests in the Test Suite
+    /// list tests in the suite
     pub list: bool,
 
-    /// whether to also run tests that have been marked disabled/ignored by the test author.
+    /// run tests that have been marked disabled/ignored
     #[argh(switch)]
-    pub also_run_disabled_tests: bool,
+    pub run_disabled: bool,
 
-    /// run test cases in parallel.
+    /// run tests in parallel
     #[argh(option)]
     pub parallel: Option<u16>,
 
-    /// number of times to run the test. By default run 1 time.
-    /// If an iteration of test times out, no further iterations
-    /// would be executed.
+    /// number of times to run the test [default = 1]
     #[argh(option)]
     pub count: Option<u16>,
 }
