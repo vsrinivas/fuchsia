@@ -29,6 +29,7 @@
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "vc.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
@@ -293,6 +294,11 @@ static zx_status_t create_buffer_collection(
                    "vc: Failed to create collection channel");
   RETURN_IF_ERROR(sysmem_allocator->AllocateSharedCollection(token.TakeServer()),
                   "vc: Failed to allocate shared collection");
+  constexpr uint32_t kVcNamePriority = 1000000;
+  const char* kVcCollectionName = "vc-framebuffer";
+  RETURN_IF_ERROR(token->SetName(kVcNamePriority,
+                                 fidl::unowned_str(kVcCollectionName, strlen(kVcCollectionName))),
+                  "vc: Failed to set debug info");
   ASSIGN_OR_RETURN(auto display_token,
                    EndpointOrError<sysmem::BufferCollectionToken::SyncClient>::Create(),
                    "vc: Failed to allocate display token");
@@ -759,5 +765,7 @@ bool vc_sysmem_connect() {
   }
 
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
+  sysmem_allocator->SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+                                       fsl::GetCurrentProcessKoid());
   return true;
 }

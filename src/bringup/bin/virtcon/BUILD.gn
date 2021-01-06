@@ -46,6 +46,7 @@ group("common") {
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/svc",
+    "//src/lib/fsl",
     "//src/lib/listnode",
     "//src/storage/deprecated-fs-fidl-handler",
     "//src/ui/input/lib/hid-input-report",
