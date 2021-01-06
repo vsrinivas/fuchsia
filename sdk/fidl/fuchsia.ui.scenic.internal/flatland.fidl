@@ -144,6 +144,7 @@ alias ContentId = uint64;
 ///
 /// All functions in this protocol are feed-forward. The operations they represent are not fully
 /// executed until Present() is called.
+[Discoverable]
 protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///

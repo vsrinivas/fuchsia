@@ -15,6 +15,10 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
+#include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
+#include "src/ui/scenic/lib/flatland/flatland_manager.h"
+#include "src/ui/scenic/lib/flatland/link_system.h"
+#include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
@@ -63,6 +67,11 @@ class App {
   std::shared_ptr<Scenic> scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Watchdog> watchdog_;
+
+  std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;
+  std::shared_ptr<flatland::LinkSystem> link_system_;
+  std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
+  std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
 
   AnnotationRegistry annotation_registry_;
 

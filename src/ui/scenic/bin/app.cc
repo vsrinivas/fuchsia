@@ -103,6 +103,14 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
                                                LifecycleControllerImpl::kShutdownTimeout);
                                          }
                                        })),
+      uber_struct_system_(std::make_shared<flatland::UberStructSystem>()),
+      link_system_(
+          std::make_shared<flatland::LinkSystem>(uber_struct_system_->GetNextInstanceId())),
+      flatland_presenter_(
+          std::make_shared<flatland::DefaultFlatlandPresenter>(async_get_default_dispatcher())),
+      flatland_manager_(std::make_shared<flatland::FlatlandManager>(
+          async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
+          std::vector<std::shared_ptr<flatland::BufferCollectionImporter>>({}))),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
@@ -160,6 +168,12 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
   watchdog_ = std::make_unique<Watchdog>(kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
                                          async_get_default_dispatcher());
+
+  // TODO(fxbug.dev/67206): this should be moved into FlatlandManager.
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)> handler =
+      fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
+  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+  FX_DCHECK(status == ZX_OK);
 }
 
 void App::InitializeServices(escher::EscherUniquePtr escher,
@@ -251,6 +265,9 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   auto input = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph());
   FX_DCHECK(input);
 #endif
+
+  flatland_presenter_->SetFrameScheduler(frame_scheduler_);
+  frame_scheduler_->AddSessionUpdater(flatland_manager_);
 
   // Create the snapshotter and pass it to scenic.
   auto snapshotter =

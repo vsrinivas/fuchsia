@@ -62,6 +62,7 @@ source_set("base_deps") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
