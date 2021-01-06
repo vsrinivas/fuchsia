@@ -12,7 +12,10 @@ use {
     crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
     ascendd::Ascendd,
-    async_std::sync::RwLock,
+    async_std::{
+        future::{timeout, TimeoutError},
+        sync::RwLock,
+    },
     async_trait::async_trait,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
@@ -42,6 +45,8 @@ use {
 };
 
 pub use crate::target_task::*;
+
+const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 
 pub trait SshFormatter {
     fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()>;
@@ -129,6 +134,8 @@ pub enum TargetEvent {
 pub enum RcsConnectionError {
     /// There is something wrong with the FIDL connection.
     FidlConnectionError(fidl::Error),
+    /// There was a timeout trying to communicate with RCS.
+    ConnectionTimeoutError(TimeoutError),
     /// There is an error from within Rcs itself.
     RemoteControlError(IdentifyHostError),
 
@@ -141,6 +148,9 @@ impl Display for RcsConnectionError {
         match self {
             RcsConnectionError::FidlConnectionError(ferr) => {
                 write!(f, "fidl connection error: {}", ferr)
+            }
+            RcsConnectionError::ConnectionTimeoutError(_) => {
+                write!(f, "timeout error")
             }
             RcsConnectionError::RemoteControlError(ierr) => write!(f, "internal error: {:?}", ierr),
             RcsConnectionError::TargetError(error) => write!(f, "general error: {}", error),
@@ -649,7 +659,11 @@ impl Target {
     }
 
     pub async fn from_rcs_connection(r: RcsConnection) -> Result<Self, RcsConnectionError> {
-        let fidl_target = match r.proxy.identify_host().await {
+        let identify_result =
+            timeout(Duration::from_millis(IDENTIFY_HOST_TIMEOUT_MILLIS), r.proxy.identify_host())
+                .await
+                .map_err(|e| RcsConnectionError::ConnectionTimeoutError(e))?;
+        let fidl_target = match identify_result {
             Ok(res) => match res {
                 Ok(target) => target,
                 Err(e) => return Err(RcsConnectionError::RemoteControlError(e)),
