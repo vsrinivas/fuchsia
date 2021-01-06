@@ -87,7 +87,7 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 
        If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
        Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
-       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/v1_test_component#restricting_log_severity
+       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/logs.md#restricting_log_severity
 
        If --wait-for-utc is specified, the runner waits up to <timeout_sec> seconds
        for the UTC clock to start before launching the test component. If the

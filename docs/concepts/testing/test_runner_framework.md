@@ -1,81 +1,159 @@
-# Introduction to the Fuchsia Test Runner Framework
+# The Fuchsia Test Runner Framework
 
-This document introduces the Fuchsia Test Runner Framework along with
-fundamental concepts and terminology around testing in Fuchsia.
+<<../components/_v2_banner.md>>
 
-Note: The Fuchsia Test Runner Framework is only supported from
-[Components v2][glossary-components-v2]. All component-related concepts
-discussed herein refer to Components v2 unless otherwise noted.
+## Integrating testing frameworks with the Component Framework
 
-## Tests as components {#tests-as-components}
+The Fuchsia [Component Framework][cf] allows developers to create components in
+a variety of languages and runtimes. Fuchsia's own code uses a diverse mix of
+programming languages for components, including C/C++, Rust, Dart, and Go.
 
-Like any other Fuchsia program, a Fuchsia test is a
-[component][glossary-component]. Like all components, a Fuchsia test component
-may be viewed as a [realm][realms], or tree of components, also called a *test
-realm*. The component at the root of the test realm is known as the *test root*.
-
-For a component to be a test, it must implement and [expose][manifests-expose]
-the [`fuchsia.test.Suite`](#test-suite-protocol) protocol.
-
-Components in the test realm may play various roles, as defined in
-[test roles](#test-roles).
-
-<!-- TODO: add diagrams -->
+The Test Runner Framework uses the Component Framework's concept of
+[runners][runners] as an integration layer between various languages & testing
+runtimes and a common Fuchsia protocol for launching tests and receiving their
+results.
 
 ## The test suite protocol {#test-suite-protocol}
 
 The test suite protocol, [`fuchsia.test.Suite`][fidl-test-suite], is the
 protocol implemented by a test that the test manager uses to run tests and
-obtain information about them. Most commonly, the test code itself (i.e., the
-[test driver](#test-roles)) is written using a language-specific test library,
-and the protocol is implemented by a [test runner](#test-runner) on the test's
-behalf.
+obtain information about them. A component that implements this protocol may be
+launched as a test (such as with `fx test`). Using this protocol, the test
+component is responsible for receiving requests to run (for instance which test
+cases to run and how many test cases to run in parallel) and reporting their
+results (for instance which test cases were run and whether they passed or
+failed).
 
-## Test runners
+Test authors typically don't need to implement this protocol. Instead, they rely
+on a [test runner](#test-runners) to do this for them. For instance, you might
+write a test in C++ using the GoogleTest framework, and then use
+[`gtest_runner`](#gtest-runner) in your [component manifest][component-manifest]
+to integrate with the Test Runner Framework.
 
-The [fuchsia.test.Suite](#test-suite-protocol) protocol is the way for
-[Components v2](#glossary-components-v2) tests to enumerate their test cases and
-report results. This differs from [Components v1](#glossary-components-v1),
-where test results are reported through stdout and exit codes. Most commonly, a
-test will not implement the `fuchsia.test.Suite` protocol from scratch, but
-would instead use a *test runner* that integrates a language-native testing
-library with the protocol. The test component does this by declaring it uses the
-appropriate test runner in the [test driver](#test-roles)'s manifest. For
-example, for a C++ gtest, the test driver's manifest would contain the
-following:
+## Test runners {#test-runners}
+
+Test runners are reusable adapters between the Test Runner Framework and common
+languages & frameworks used by developers to write tests. They implement the
+[`fuchsia.test.Suite`][fidl-test-suite] protocol on behalf of the test author,
+leaving the test author to focus on their test logic.
+
+Component manifests for simple unit tests can be [generated][unit-tests]
+by the build rules. Generated component manifests for v2 tests will include the
+appropriate test runner based on their build definition. For instance a test
+executable that depends on the GoogleTest library will include the
+[GoogleTest runner](#gtest-runner) in its generated manifest.
+
+### Inventory of test runners
+
+The following test runners are currently available for general use:
+
+#### GoogleTest runner {#gtest-runner}
+
+A runner for tests written in C/C++ using the GoogleTest framework.
+Use this for all tests written using GoogleTest.
+
+Common GoogleTest features are supported, such as disabling tests, running
+only specified tests, running the same test multiple times, etc'.
+Standard output, standard error, and logs are captured from the test.
+
+In order to use this runner, add the following to your component manifest:
 
 ```json5
-// test_driver.cml
 {
-    ...
-    use: [
-        ...
-        // Use the gtest runner
-        {
-            runner: "gtest_runner",
-        },
-    ],
-    expose: [
-        ...
-        // Test driver must still expose fuchsia.test.Suite
-        {
-            protocol: "/svc/fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
+    include: [ "src/sys/test_runners/gtest/default.shard.cml" ]
 }
 ```
 
-However, it's cumbersome for a test to manually implement this protocol. For
-this reason, the Fuchsia Test Runner Framework provides a set of special runners
-called *test runners*. A test runner integrates a [test driver](#test-roles)
-that uses a language-native test library (such as C++ `gtest` or rust `libtest`)
-with the test suite protocol. If your component declares it uses the appropriate
-test runner in its [component manifest][manifests], you can write your test
-natively against the language-specific test library and do not need to manually
-export results under the test suite protocol.
+By default GoogleTest test cases run serially (one test case at a time).
 
-For a working example follow this [link][v2-driver-pattern].
+#### Rust runner {#rust-runner}
+
+A runner for tests written in the Rust programming language and following Rust
+testing idioms.
+Use this for all idiomatic Rust tests (i.e. tests with modules that set the
+attribute `[cfg(test)]`).
+
+Common Rust testing features are supported, such as disabling tests, running
+only specified tests, running the same test multiple times, etc'.
+Standard output, standard error, and logs are captured from the test.
+
+In order to use this runner, add the following to your component manifest:
+
+```json5
+{
+    include: [ "src/sys/test_runners/rust/default.shard.cml" ]
+}
+```
+
+By default Rust test cases run in parallel, at most 10 cases at a time.
+
+#### Go test runner {#gotest-runner}
+
+A runner for tests written in the Go programming language and following Go
+testing idioms.
+Use this for all tests written in Go using `import "testing"`.
+
+Common Go testing features are supported, such as disabling tests, running
+only specified tests, running the same test multiple times, etc'.
+Standard output, standard error, and logs are captured from the test.
+
+In order to use this runner, add the following to your component manifest:
+
+```json5
+{
+    include: [ "src/sys/test_runners/gotests/default.shard.cml" ]
+}
+```
+
+By default Go test cases run in parallel, at most 10 cases at a time.
+
+#### ELF test runner {#elf-test-runner}
+
+The simplest test runner - it waits for your program to terminate, then reports
+that the test passed if the program returned zero or that it failed for any
+non-zero return value.
+
+Use this test runner if your test is implemented as an ELF program (for instance
+an executable written in C/C++) but it does not use a common testing framework
+that's supported by existing runners and you'd rather not implement a bespoke
+test runner.
+
+In order to use this runner, add the following to your component manifest:
+
+```json5
+{
+    include: [ "src/sys/test_runners/elf/default.shard.cml" ]
+}
+```
+
+There is no notion of parallelism since tests that use this runner don't have a
+notion of multiple test cases.
+
+### Controlling parallel execution of test cases
+
+When using `fx test` to launch tests, they may run each test case in sequence or
+run multiple test cases in parallel up to a given limit. The default parallelism
+behavior is determined by the test runner.
+
+To manually set the parallelism level for test cases, run the following:
+
+```posix-terminal
+fx shell run-test-suite --parallel=5 <test_url>
+```
+
+## Temporary storage
+
+To use temporary storage in your test, add the following to your component manifest:
+
+```json5
+{
+    include: [ "src/sys/test_runners/tmp_storage.shard.cml" ]
+}
+```
+
+At runtime, your test will have read/write access to `/tmp`.
+The contents of this directory will be empty when the test starts, and will be
+deleted after the test finishes.
 
 ## Hermeticity
 
@@ -89,8 +167,7 @@ the test's realm is called a *system capability*.
 
 ## Test roles {#test-roles}
 
-Components in the [test realm](#tests-as-components) may play various roles in
-the test, as follows:
+Components in the test realm may play various roles in the test, as follows:
 
 -   Test driver: The component that actually runs the test, and implements
     (either directly or through a [test runner](#test-runners)) the
@@ -104,15 +181,10 @@ the test, as follows:
     This may be identical to a component from production, or a component written
     specifically for the test intended to model production behavior.
 
+[cf]: /docs/concepts/components/v2/
+[component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
-[glossary-component]: ../../glossary.md#component
-[glossary-components-v1]: ../../glossary.md#components-v1
-[glossary-components-v2]: ../../glossary.md#components-v2
-[manifests]: /docs/concepts/components/v2/component_manifests.md
-[manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
 [manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
-[realms]: /docs/concepts/components/v2/realms.md
-[realms-definitions]: /docs/concepts/components/v2/realms.md#definitions
+[runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
-[v2-driver-pattern]: v2_test_component.md#driver_pattern_for_v2_component_tests

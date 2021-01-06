@@ -51,6 +51,7 @@ constexpr char kSystemServices[] = "system-services";
 //
 // Please document the rationale for each entry added.  See also:
 // docs/concepts/testing/v1_test_component.md
+// [START allowed_system_services]
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::FactoryItems::Name_,
     fuchsia::boot::Items::Name_,
@@ -88,6 +89,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
 };
+// [END allowed_system_services]
 
 // These tests do not run in continuous integration because they make real network requests. Do not
 // add to this list under any circumstances. If your tests require real network access, consider

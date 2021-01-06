@@ -552,6 +552,28 @@ for us.
    }
    ```
 
+It's also possible to generate multiple unit test components and include them in
+a single package.
+
+```gn
+import("//src/sys/build/components.gni")
+
+fuchsia_unittest_component("rot13-encrypt-test") {
+  ...
+}
+
+fuchsia_unittest_component("rot13-decrypt-test") {
+  ...
+}
+
+fuchsia_test_package("rot13-tests") {
+  test_components = [
+    ":rot13-encrypt-test",
+    ":rot13-decrypt-test",
+  ]
+}
+```
+
 The generated component manifest file can be found as follows:
 
 <pre class="prettyprint">
@@ -577,6 +599,40 @@ fx test rot13-test
 ```
 
 See also: [`fx test`][fx-test]
+
+You can generate a [CFv2 test component][v2-test-component] by specifying:
+
+```gn
+import("//src/sys/build/components.gni")
+
+fuchsia_unittest_package("rot13-test") {
+  v2 = true
+  ...
+}
+```
+
+Or:
+
+```gn
+import("//src/sys/build/components.gni")
+
+fuchsia_unittest_component("rot13-encrypt-test") {
+  v2 = true
+  ...
+}
+
+fuchsia_unittest_component("rot13-decrypt-test") {
+  v2 = true
+  ...
+}
+
+fuchsia_test_package("rot13-tests") {
+  test_components = [
+    ":rot13-encrypt-test",
+    ":rot13-decrypt-test",
+  ]
+}
+```
 
 #### Multiple unit tests in a single package
 
@@ -1412,10 +1468,11 @@ templates. These unsupported features include:
 [glossary-package]: /docs/glossary.md#fuchsia-package
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
 [pm]: /src/sys/pkg/bin/pm/README.md
-[restrict-log-severity]: /docs/concepts/testing/v1_test_component.md#restricting_log_severity
+[restrict-log-severity]: /docs/concepts/testing/logs.md#restricting_log_severity
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
 [test-environments]: /docs/concepts/testing/environments.md
+[v2-test-component]: /docs/concepts/testing/v2_test_component.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md

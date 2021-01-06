@@ -245,9 +245,29 @@ To:
 fx test --e2e <END_TO_END_TEST>
 ```
 
+## Test-driven development
+
+The `fx smoke-test` command automatically detects all tests that are known to
+the build system as affected by changes in your checkout. Try the following:
+
+```posix-terminal
+fx -i smoke-test --verbose
+```
+
+In the command above, `--verbose` will also print which tests `fx smoke-test`
+thinks are affected by your change. `-i` will automatically repeat this command
+every time you save your changes. For test-driven development, try launching
+this command in a separate shell and watching your code rebuild and retest as
+you're working on it.
+
+`fx smoke-test` works best with hermetic test packages. A test package is
+hermetic if the package contains all the dependencies of any tests in it.
+That is to say, any code changes that affect the outcome of this test should
+require rebuilding that test's package as well.
+
 <!-- Reference links -->
 
-[tests-as-components]: /docs/concepts/testing/tests_as_components.md
+[tests-as-components]: /docs/concepts/testing/v1_test_component.md
 [scripting-layer-for-fuchsia]: /docs/concepts/testing/sl4f.md
 [component-uri]: /docs/concepts/components/component_urls.md
 [glossary-components-v2]: /docs/glossary.md#components-v2

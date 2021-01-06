@@ -6,27 +6,33 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Testability rubrics"
-  path: /docs/concepts/testing/testability_rubric.md
-- title: "Tests as components"
-  path: /docs/concepts/testing/tests_as_components.md
-- title: "Test components (Components v1)"
-  path: /docs/concepts/testing/v1_test_component.md
-- title: "Test Runner Framework"
+- title: "Testing with Components v1"
   section:
-  - title: "Introduction"
-    path: /docs/concepts/testing/test_runner_framework.md
-  - title: "Test components (Components v2)"
+  - title: "Test components"
+    path: /docs/concepts/testing/v1_test_component.md
+  - title: "Testing isolated cache storage"
+    path: /docs/concepts/testing/testing_isolated_cache_storage.md
+- title: "Testing with Components v2"
+  section:
+  - title: "Test components"
     path: /docs/concepts/testing/v2_test_component.md
-  - title: "Test environments"
-    path: /docs/concepts/testing/environments.md
+  - title: "Test Runner Framework"
+    path: /docs/concepts/testing/test_runner_framework.md
+  - title: "Complex topologies & integration testing"
+    path: /docs/concepts/testing/v2_integration_testing.md
+- title: "Test environments"
+  path: /docs/concepts/testing/environments.md
 - title: "Scripting Layer for Fuchsia (SL4F)"
   path: /docs/concepts/testing/sl4f.md
+- title: "Logging & tests"
+  path: /docs/concepts/testing/logs.md
 - title: "Fuzz testing"
   path: /docs/concepts/testing/fuzz_testing.md
-- title: "Flaky test policy"
-  path: /docs/concepts/testing/test_flake_policy.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
-- title: "Testing isolated cache storage"
-  path: /docs/concepts/testing/testing_isolated_cache_storage.md
+- title: "Policy"
+  section:
+  - title: "Testability rubrics"
+    path: /docs/concepts/testing/testability_rubric.md
+  - title: "Flaky test policy"
+    path: /docs/concepts/testing/test_flake_policy.md

@@ -2,57 +2,60 @@
 
 <<../components/_v1_banner.md>>
 
-Note: If looking for a guide to write v2 test component refer
- [Fuchsia Test Runner Framework][trf].
+## Introduction
 
-## Create a test component
+Test components are [components][glossary-component] that implement a test.
+Tests run in a given environment, and then report whether they passed or failed.
+Typically tests are written using various testing frameworks, and may report
+more detailed results such as whether individual test cases within a test suite
+passed or failed.
 
-### BUILD.gn
+The Component Framework allows launching tests as components. Most tests are
+comprised of a single component - these are typically referred to as unit tests.
+Some tests exercise multiple components working together - these are typically
+referred to as integration tests.
 
-```gn
-import("//src/sys/build/components.gni")
+## Creating a test component and package
 
-executable("my_test") {
-  sources = [ "my_test.cc" ]
-  testonly = true
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-}
+A test package may contain one or more test components.
+Test components are components that implement a test suite.
+Test packages can also contain other components that are not the test itself,
+but participate in the test. For instance:
 
-fuchsia_component("my-test-component") {
-  testonly = true
-  manifest = "meta/my_test.cmx"
-  deps = [ ":my_test" ]
-}
+- A package may contain a single test component which implements a unit test
+  that exercises some business logic.
+- A package may contain a test component and a second component that implements
+  a service. The test component may then act as a client of the second
+  component, which makes for an integration test between client and server code.
+  Both the clients and server are located in the same package in order to ensure
+  that the second component is present and can be launched by the test
+  component.
 
-fuchsia_test_package("my-test-package") {
-  test_components = [ ":my-test-component" ]
-}
+In order to define your test package and components, you should use the
+appropriate build rules. Refer to the [test packages][test-packages] guide.
 
-group("tests") {
-  deps = [ ":my-integration-test" ]
-  testonly = true
-}
-```
+## Test component manifest
 
-See also: [test packages][test-packages]
+Every component has a [manifest][component-manifest]. Test components may have
+manifests that are similar to regular components, or they may use additional
+special syntax for testing that's covered below.
 
-### meta/my\_test.cmx
+A component manifest for a simple unit test might be named `meta/my_test.cmx`
+and look as follows:
 
 ```json
 {
+    "include": [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ],
     "program": {
         "binary": "bin/my_test"
-    },
-    "sandbox": {
-        "services": [...]
     }
 }
 ```
 
-## Running the tests
+Component manifests for simple unit tests can be [generated][unit-tests]
+by the build rules.
+
+## Running your test
 
 To run a Fuchsia test out of your build, execute:
 
@@ -64,150 +67,67 @@ For more information, see [Run Fuchsia tests][executing-tests].
 
 ## Isolated Storage
 
-- By default, the test component is launched in a new hermetic environment.
-- The generated environment name is of form test\_env\_XXXXX, where XXXXX is a
-  randomly generated number.
-- Each test component receives a new isolated storage directory.
-- The directory is deleted after the text exits, regardless of the test's
-  outcome.
+By default, the test component is launched in a new hermetic environment,
+isolated from system services and system storage. This keeps the rest of the
+system from interfering with the results of your test, and vice versa.
 
-### Keep storage for debugging
+Test environments have unique generated names in the form `test_env_XXXXXXXX`,
+where the placeholder is 8 random hexadecimal digits.
 
-If you need to keep test storage for debugging after the test ends, use
-[run-test-component][run-test-component] in the Fuchsia shell and pass
-`--realm-label` flag.
+Test components may use persistent storage as usual, by specifying
+`"isolated-persistent-storage"` under `sandbox.features` in their manifest.
+However unlike regular components, the test's storage directory will be cleared
+before the test component is launched and after it terminates.
+
+This is usually the desired behavior since it keeps test runs from interfering
+with each other via side effects. However, if you need to retain a test's
+storage for troubleshooting, use [run-test-component][run-test-component] in the
+Fuchsia shell and pass the `--realm-label` flag followed by a name for your test
+environment.
 
 The `--realm-label` flag defines the label for an environment that your test
-runs in. When the test ends, the storage won't be deleted automatically -
-it'll be accessible at a path under /data. Assuming you:
+runs in. When the test ends, the storage won't be deleted automatically.
+Instead it'll be accessible at a path under `/data`. The path will take the
+following form:
 
-- gave your test component (in package `mypackage` with component manifest
-  `myurl.cmx`) access to the "isolated-persistent-storage" feature
-- passed --realm-label=foo to run-test-component
-- wrote to the file `/data/bar` from the test binary
-- can connect to the device via `fx shell`
-
-You should see the written file under the path
-`/data/r/sys/r/<REALM>/fuchsia.com:<PACKAGE>:0#meta:<CMX>/<FILE>`, e.g.
-`/data/r/sys/r/foo/fuchsia.com:mypackage:0#meta:myurl.cmx/bar`
-
-Assuming you can connect to the device via ssh, you can get the data off the
-device with the in-tree utility `fx scp`.
-
-When you're done exploring the contents of the directory, you may want to
-delete it to free up space or prevent it from interfering with the results of
-future tests.
-
-## Ambient Services
-
-All test components are started in a new hermetic environment. By default, this
-environment only contains a few basic services (ambient):
-
-```text
-"fuchsia.process.Launcher"
-"fuchsia.process.Resolver"
-"fuchsia.sys.Environment"
-"fuchsia.sys.Launcher"
-"fuchsia.sys.Loader"
+```
+/data/r/sys/r/<realm-label>/fuchsia.com:<package-name>:0#meta:<cmx>/</file>
 ```
 
-Tests can use these services by mentioning them in their `sandbox > services`.
-
-## Logger Service
-
-Tests and the components launched in a hermetic environment will have access to system's `fuchsia.logger.LogSink` service if it is included in their sandbox. For tests to inject Logger, the tests must use `injected-services` (see below). Then, the injected Logger service takes precedence.
-
-## Restricting log severity
-
-Tests may be configured to fail when the component's test environment produces
-high severity [logs][syslogs]. This is useful, for instance, 
-when such logs are unexpected, as they indicate an error.
-
-A test might expect to log at ERROR severity. For example, the test might be
-covering a failure condition & recovery steps. Other tests might expect not to
-log anything more severe than INFO. The common case and default behavior is for
-errors above WARN level to be considered failures, but there are configuration
-options to override it.
-
-For instance, to allow a test to produce **ERROR** logs:
-
-  * {Using fuchsia\_test\_package}
-
-  ```gn
-  fuchsia_component("my-package") {
-    testonly = true
-    manifest = "meta/my-test.cmx"
-    deps = [ ":my_test" ]
-  }
-
-  fuchsia_test_package("my-package") {
-    test_specs = {
-        log_settings = {
-          max_severity = "ERROR"
-        }
-    }
-    test_components = [ ":my-test" ]
-  }
-  ```
-
-  * {Using test\_package}
-
-  ```gn
-  test_package("my-package") {
-    deps = [
-      ":my_test",
-    ]
-
-    meta = []
-      {
-        path = rebase_path("meta/my-test.cmx")
-        dest = "my-test.cmx"
-      },
-    ]
-
-    tests = [
-      {
-        log_settings = {
-          max_severity = "ERROR"
-        }
-        name = "my_test"
-        environments = basic_envs
-      },
-    ]
-  }
-  ```
-
-To make the test fail on any message more severe than **INFO** set `max_severity`
-to **"INFO"**.
-
-Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`.
-
-If your test was already configured using [legacy methods][legacy-restrict-logs]
-you will need to remove your test from the config file (eg.
-max_severity_fuchsia.json) and run `fx ota`.
-
-If the test is not removed from the legacy list, the configuration in legacy
-list would be preferred and you will see a warning when running the test.
-
-### Running the test
-
-When running the test on development device, prefer `fx test` to run the test.
-The tool will automatically pick the configuration and pass it to
-run-test-component. If for some reason you need to use `run-test-component`,
-you need to pass the flag yourself.
-
-```sh
-fx shell run-test-component --max-log-severity=ERROR <test_url>
+For instance:
+```
+/data/r/sys/r/foo/fuchsia.com:mypackage:0#meta:myurl.cmx/bar
 ```
 
-## Run external services
+You can copy the files from the target device using `fx scp`. Afterwards,
+consider deleting the storage directory.
 
-If your test needs to use (i.e. its sandbox includes) any services other than the ambient and logger services above, you must perform either, both or none:
+## Services
 
-- Inject the services by starting other components that provide those services in the hermetic test environment
-- Request non-hermetic system services be included in the test environment, when a service cannot be faked or mocked, see [Other system services](#Other-system-services).
+### Basic system services
 
-To inject additional services, you can add a `injected-services` clause to the manifest file's facets:
+By default, test components may only access a small subset of system services,
+in order to promote hermeticity. These system services can be used in a test
+component by specifying them in the test manifest under `sandbox.services` as
+usual.
+
+```
+fuchsia.logger.LogSink
+fuchsia.process.Launcher
+fuchsia.process.Resolver
+fuchsia.sys.Environment
+fuchsia.sys.Launcher
+fuchsia.sys.Loader
+```
+
+### Integration testing
+
+A test component may need to interact with other components, such as in an
+integration test. The recommended way to do this is to include all components
+under test in the test's package, and then specify in the test's manifest a
+mapping between the services that these components offer and their launch URLs.
+
+This is done as follows:
 
 ```json
 "facets": {
@@ -220,23 +140,38 @@ To inject additional services, you can add a `injected-services` clause to the m
 }
 ```
 
-`fx test` will start `component_url1` and `component_url2` and the
-test will have access to `service_name1` and `service_name2`. Note that this makes the injected services available in the test environment, but the test component still needs to "use" them by including the service in its `sandbox > services`.
+### Additional system services
 
-### Other system services
+Tests may request access to additional system services, at the expense of their
+own hermeticity (as they become subject to elements of the system outside of the
+test's scope).
 
-There are some services that cannot be faked or mocked. You can connect to real
-system versions of these services by mentioning these services in
-`system-services`. Services that cannot be faked are listed
+This is done as follows:
+
+```json
+"facets": {
+  "fuchsia.test": {
+    "system-services": {
+        "service_name1",
+        "service_name2"
+    }
+  }
+}
+```
+
+Real system services cannot be accessed by test components unless explicitly
+allowlisted as shown below:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/bin/run_test_component/test_metadata.cc" region_tag="allowed_system_services" adjust_indentation="auto" %}
+```
+
+
 [here](/garnet/bin/run_test_component/test_metadata.cc).
 
-Test can only list allowlisted system services under `"system-services"` as
-demonstrated above.
-
+[component-manifest]: /docs/concepts/components/v1/component_manifests.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
+[glossary-component]: /docs/glossary.md#component
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
-[syslogs]: /docs/development/diagnostics/logs/README.md
 [test-packages]: /docs/development/components/build.md#test-packages
-[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/v1_test_component.md#restricting-log-severity
-[trf]: test_runner_framework.md
-
+[unit-tests]: /docs/development/components/build.md#unit-tests

@@ -1,8 +1,8 @@
 # Testing Rust code
 
-This document describes best practices for writing tests for Rust code, and
-paired with the [Tests as components][component_tests] concept guide, it
-also describes how to component-ize, package, and run these tests.
+This document describes best practices for writing tests for Rust code.
+Please also refer to the [components testing guide][component_tests] for
+instructions on defining test packages and components and running them.
 
 This document is targeted towards developers working inside of `fuchsia.git`,
 and the workflow described is unlikely to work for IDK consumers.
@@ -194,7 +194,7 @@ rustc_binary("bin") {
 }
 ```
 
-[component_tests]:/docs/concepts/testing/tests_as_components.md
+[component_tests]:/docs/concepts/testing/v1_test_component.md
 [example-src]: /examples/hello_world/rust
 [`matches`]: https://fuchsia-docs.firebaseapp.com/rust/matches/index.html
 [`pretty_assertions`]: https://fuchsia-docs.firebaseapp.com/rust/pretty_assertions/index.html
