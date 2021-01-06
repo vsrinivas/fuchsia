@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("aml_ram_bind") {
+  rules = "aml_ram.bind"
+  output = "aml_ram_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("aml-ram") {
   configs += [
@@ -16,6 +27,7 @@ driver_module("aml-ram") {
   }
   sources = [ "aml-ram.cc" ]
   deps = [
+    ":aml_ram_bind",
     ":common",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -30,6 +42,7 @@ test("aml-ram-test-bin") {
     "aml-ram.cc",
   ]
   deps = [
+    ":aml_ram_bind",
     ":common",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/testing/fake-bti",
@@ -49,9 +62,6 @@ group("common") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -70,5 +80,8 @@ fuchsia_unittest_package("aml-ram-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-ram-test" ]
+  deps = [
+    ":aml-ram-test",
+    ":aml_ram_bind_test",
+  ]
 }

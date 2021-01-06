@@ -8,7 +8,6 @@
 #include <lib/zx/clock.h>
 #include <zircon/assert.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -17,6 +16,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+
+#include "src/devices/ram/drivers/aml-ram/aml_ram_bind.h"
 
 namespace amlogic_ram {
 
@@ -379,12 +380,5 @@ static constexpr zx_driver_ops_t aml_ram_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_ram, aml_ram_driver_ops, "zircon", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_RAM_CTL),
-    // This driver can likely support S905D3 in the future.
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-ZIRCON_DRIVER_END(aml_ram)
-    // clang-format on
+ZIRCON_DRIVER(aml_ram, aml_ram_driver_ops, "zircon", "0.1");
+// clang-format on
