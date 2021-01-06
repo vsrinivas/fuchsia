@@ -59,6 +59,7 @@ Thumbs.db
 tools/cipd.gni
 topaz/
 vendor/
+!/src/connectivity/bluetooth/hci/vendor
 !/third_party/rust_crates/vendor
 tmp/
 json_generator_tests_*.txt
