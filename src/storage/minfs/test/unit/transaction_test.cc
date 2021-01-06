@@ -4,6 +4,8 @@
 
 // Tests Transaction behavior.
 
+#include <zircon/assert.h>
+
 #include <memory>
 #include <vector>
 
@@ -28,9 +30,9 @@ class FakeStorage : public AllocatorStorage {
   FakeStorage(const FakeStorage&) = delete;
   FakeStorage& operator=(const FakeStorage&) = delete;
 
-  explicit FakeStorage(uint32_t units) : pool_used_(0), pool_total_(units) {}
+  FakeStorage(uint32_t units) : pool_used_(0), pool_total_(units) {}
 
-  ~FakeStorage() override = default;
+  ~FakeStorage() {}
 
   zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return ZX_OK; }
 
@@ -65,7 +67,7 @@ class FakeStorage : public AllocatorStorage {
 // Fake BlockDevice class to be used in Transaction tests.
 class FakeBlockDevice : public block_client::BlockDevice {
  public:
-  FakeBlockDevice() = default;
+  FakeBlockDevice() {}
 
   zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final {
     return ZX_OK;
@@ -381,9 +383,9 @@ TEST(TransactionTest, EnqueueAndVerifyDataWork) {
 
 class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs> {
  public:
-  explicit MockVnodeMinfs(bool* alive) : VnodeMinfs(nullptr), alive_(alive) { *alive_ = true; }
+  MockVnodeMinfs(bool* alive) : VnodeMinfs(nullptr), alive_(alive) { *alive_ = true; }
 
-  ~MockVnodeMinfs() override { *alive_ = false; }
+  ~MockVnodeMinfs() { *alive_ = false; }
 
   // fbl::Recyclable interface.
   void fbl_recycle() final { delete this; }
@@ -404,9 +406,6 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   bool HasPendingAllocation(blk_t vmo_offset) final { return false; }
   void CancelPendingWriteback() final {}
   bool DirtyCacheEnabled() const final { return false; }
-  bool IsDirty() const final { return false; }
-  zx::status<> FlushCachedWrites() final { return zx::ok(); }
-  void DropCachedWrites() final {}
 
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }

@@ -24,7 +24,6 @@ MinfsMetrics::MinfsMetrics(const ::llcpp::fuchsia::minfs::Metrics* metrics)
   init_user_data_size = metrics->init_user_data_size;
   init_user_data_ticks = metrics->init_user_data_ticks;
   vnodes_opened_cache_hit = metrics->vnodes_opened_cache_hit;
-  dirty_bytes = metrics->dirty_bytes;
 }
 
 void MinfsMetrics::CopyToFidl(::llcpp::fuchsia::minfs::Metrics* metrics) const {
@@ -37,7 +36,6 @@ void MinfsMetrics::CopyToFidl(::llcpp::fuchsia::minfs::Metrics* metrics) const {
   metrics->init_user_data_size = init_user_data_size.load();
   metrics->init_user_data_ticks = init_user_data_ticks.load();
   metrics->vnodes_opened_cache_hit = vnodes_opened_cache_hit.load();
-  metrics->dirty_bytes = dirty_bytes.load();
 }
 
 void MinfsMetrics::Dump(FILE* stream, std::optional<bool> success) const {
@@ -50,7 +48,6 @@ void MinfsMetrics::Dump(FILE* stream, std::optional<bool> success) const {
   fprintf(stream, "bytes of files initialized:         %lu\n", init_user_data_size.load());
   fprintf(stream, "ticks during initialization:        %lu\n", init_user_data_ticks.load());
   fprintf(stream, "vnodes open cache hits:             %lu\n", vnodes_opened_cache_hit.load());
-  fprintf(stream, "dirty bytes:                        %lu\n", dirty_bytes.load());
 }
 #endif  // FS_WITH_METRICS
 

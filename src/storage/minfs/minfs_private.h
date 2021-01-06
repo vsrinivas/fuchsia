@@ -261,18 +261,10 @@ class Minfs :
   [[nodiscard]] zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                              std::unique_ptr<Transaction>* transaction) final;
 
-  // Converts a cached transaction into a Transaction. Extends block reservation
-  // by |reserve_blocks|.
-  // On failure to reserve blocks, returns error but out will have a trnsaction
-  // that was converted.
-  [[nodiscard]] zx_status_t ContinueTransaction(
-      size_t reserve_blocks, std::unique_ptr<CachedBlockTransaction> cached_transaction,
-      std::unique_ptr<Transaction>* out);
 #ifdef __Fuchsia__
   void EnqueueCallback(SyncCallback callback) final;
 #endif
 
-  [[nodiscard]] bool IsJournalErrored();
   void EnqueueAllocation(std::unique_ptr<PendingWork> transaction);
 
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
@@ -339,13 +331,6 @@ class Minfs :
   // Update aggregate information about renaming Vnodes.
   void UpdateRenameMetrics(bool success, const fs::Duration& duration);
 
-  // Adds |dirty_bytes| number of bytes to metrics. Also marks whether those
-  // bytes needs allocation or not.
-  zx::status<> AddDirtyBytes(uint64_t dirty_bytes, bool allocated) FS_TA_EXCLUDES(hash_lock_);
-
-  // Subtracts |dirty_bytes| number of bytes to from dirty bytes metrics.
-  void SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) FS_TA_EXCLUDES(hash_lock_);
-
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
   [[nodiscard]] zx_status_t GetMetrics(::llcpp::fuchsia::minfs::Metrics* out) const {
@@ -381,13 +366,6 @@ class Minfs :
   const InspectableInodeManager* GetInodeManager() const final { return inodes_.get(); }
 
   const Allocator& GetBlockAllocator() const final { return *block_allocator_; }
-  // Returns number of blocks available.
-  uint32_t BlocksAvailable() const { return GetBlockAllocator().GetAvailable(); }
-
-  // Returns number of reserved blocks but are yet to be allocated.
-  // This helps to determine if we should fail incoming writes because we will
-  // run out of space.
-  uint32_t BlocksReserved() const { return GetBlockAllocator().GetReserved(); }
 
 #ifndef __Fuchsia__
   BlockOffsets GetBlockOffsets() const final { return offsets_; }
@@ -435,10 +413,6 @@ class Minfs :
   // Internal version of VnodeLookup which may also return unlinked vnodes.
   fbl::RefPtr<VnodeMinfs> VnodeLookupInternal(uint32_t ino) FS_TA_EXCLUDES(hash_lock_);
 
-  // Returns a vector of vnodes having one or more blocks that needs to be
-  // flushed.
-  std::vector<fbl::RefPtr<VnodeMinfs>> GetDirtyVnodes();
-
   // Check if filesystem is readonly.
   bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
 
@@ -477,8 +451,8 @@ class Minfs :
   std::unique_ptr<InodeManager> inodes_;
 
 #ifdef __Fuchsia__
-  mutable fbl::Mutex txn_lock_;   // Lock required to start a new Transaction.
-  mutable fbl::Mutex hash_lock_;  // Lock required to access the vnode_hash_.
+  mutable fbl::Mutex txn_lock_;  // Lock required to start a new Transaction.
+  fbl::Mutex hash_lock_;         // Lock required to access the vnode_hash_.
 #endif
   // Vnodes exist in the hash table as long as one or more reference exists;
   // when the Vnode is deleted, it is immediately removed from the map.

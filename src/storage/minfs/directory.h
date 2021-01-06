@@ -5,8 +5,6 @@
 #ifndef SRC_STORAGE_MINFS_DIRECTORY_H_
 #define SRC_STORAGE_MINFS_DIRECTORY_H_
 
-#include <lib/zx/status.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vnode.h>
@@ -71,9 +69,6 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
     // We don't yet enable dirty cache for directory.
     return false;
   }
-  zx::status<> FlushCachedWrites() final { return zx::ok(); }
-  void DropCachedWrites() final {}
-  bool IsDirty() const final { return false; }
 
 #ifdef __Fuchsia__
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,

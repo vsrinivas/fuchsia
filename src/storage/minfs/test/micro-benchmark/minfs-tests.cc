@@ -76,18 +76,6 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     *out_stats = *result->stats;
   }
 
-  bool DirtyCacheEnabled() const {
-    fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-    EXPECT_TRUE(fd);
-
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    auto mount_state_or = ::llcpp::fuchsia::minfs::Minfs::Call::GetMountState(caller.channel());
-    EXPECT_TRUE(mount_state_or.ok());
-    EXPECT_EQ(mount_state_or.value().status, ZX_OK);
-    EXPECT_NE(mount_state_or.value().mount_state, nullptr);
-    return mount_state_or.value().mount_state->dirty_cache_enabled;
-  }
-
   const MinfsProperties& FsProperties() const { return properties_; }
 
   void CompareAndDump(const BlockFidlMetrics& computed) {
@@ -177,7 +165,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     for (int i = 0; i < write_count; i++) {
       EXPECT_EQ(write(fd, ch, sizeof(ch)), static_cast<ssize_t>(sizeof(ch)));
     }
-    FsProperties().AddWriteCost(0, bytes_per_write, write_count, DirtyCacheEnabled(), &computed);
+    FsProperties().AddWriteCost(0, bytes_per_write, write_count, &computed);
 
     SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithData);
     CompareAndDump(computed);

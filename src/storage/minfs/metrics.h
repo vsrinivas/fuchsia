@@ -38,7 +38,6 @@ class MinfsMetrics : public FsMetrics {
   std::atomic<uint64_t> init_user_data_size;
   std::atomic<uint64_t> init_user_data_ticks;
   std::atomic<uint64_t> vnodes_opened_cache_hit;
-  std::atomic<uint64_t> dirty_bytes;
 };
 }  // namespace minfs
 #endif  // SRC_STORAGE_MINFS_METRICS_H_

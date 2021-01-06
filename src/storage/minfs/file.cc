@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/minfs/file.h"
+
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,6 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "src/storage/minfs/file.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/unowned_vmo_buffer.h"
 #include "src/storage/minfs/vnode.h"
@@ -120,26 +120,12 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     ValidateVmoTail(GetInode()->size);
 
-    // In the future we could resolve on a per state (i.e. reservation) basis, but since swaps
-    // are currently only made within a single thread, for now it is okay to resolve
-    // everything.
+    // In the future we could resolve on a per state (i.e. reservation) basis, but since swaps are
+    // currently only made within a single thread, for now it is okay to resolve everything.
     transaction->PinVnode(fbl::RefPtr(this));
   }
 
-  // At this point there should not be any pending allocations. Following code block
-  // prints and asserts it.
-  if (allocation_state_.GetTotalPending() != 0) {
-    FX_LOGS(ERROR) << "Found modified blocks(" << allocation_state_.GetTotalPending()
-                   << ") after marking them clean";
-    for (auto modified_blocks = allocation_state_.cbegin();
-         modified_blocks != allocation_state_.cend(); ++modified_blocks) {
-      FX_LOGS(ERROR) << "   bitoff:" << modified_blocks->bitoff
-                     << " bitlen:" << modified_blocks->bitlen;
-    }
-    ZX_ASSERT(allocation_state_.GetTotalPending() == 0);
-  }
-
-  InodeSync(transaction.get(), DirtyCacheEnabled() ? kMxFsSyncDefault : kMxFsSyncMtime);
+  InodeSync(transaction.get(), kMxFsSyncMtime);
   Vfs()->CommitTransaction(std::move(transaction));
 }
 
@@ -172,9 +158,6 @@ zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count,
     *bnos++ = new_block;
     bool cleared = allocation_state_.ClearPending(file_block, old_block != 0);
     ZX_DEBUG_ASSERT(cleared);
-    // We have cleared pending bit for the block. Update the accounding for the
-    // dirty block.
-    Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), old_block != 0);
     --count;
     status = iterator.Advance();
     if (status != ZX_OK)
@@ -184,11 +167,6 @@ zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count,
 }
 
 #endif
-
-void File::UpdateModificationTime() {
-  zx_time_t cur_time = GetTimeUTC();
-  GetMutableInode()->modify_time = cur_time;
-}
 
 blk_t File::GetBlockCount() const {
 #ifdef __Fuchsia__
@@ -218,7 +196,6 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
   bool using_new_block = (old_bno == 0);
 #ifdef __Fuchsia__
   allocation_state_.SetPending(local_bno, !using_new_block);
-  [[maybe_unused]] auto unused_ = Vfs()->AddDirtyBytes(Vfs()->BlockSize(), !using_new_block);
 #else
   if (using_new_block) {
     Vfs()->BlockNew(transaction, out_bno);
@@ -237,9 +214,6 @@ void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno,
   }
 #ifdef __Fuchsia__
   if (!indirect) {
-    if (allocation_state_.IsPending(local_bno)) {
-      Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), old_bno != 0);
-    }
     // Remove this block from the pending allocation map in case it's set so we do not
     // proceed to allocate a new block.
     allocation_state_.ClearPending(local_bno, old_bno != 0);
@@ -288,53 +262,8 @@ zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
     return uncached;
   }
 
-  if (uncached.is_error()) {
-    return uncached;
-  }
-
-  return GetRequiredBlockCountForDirtyCache(offset, length, uncached.value());
-}
-
-zx::status<> File::CheckAndFlush(bool is_truncate, size_t length, size_t offset) {
-  auto status = ShouldFlush(is_truncate, length, offset);
-  if (status.is_error()) {
-    return zx::error(status.error_value());
-  }
-  if (!status.value()) {
-    return zx::ok();
-  }
-  return FlushCachedWrites();
-}
-
-zx::status<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_blocks) {
-  std::unique_ptr<Transaction> transaction;
-  std::unique_ptr<CachedBlockTransaction> cached_transaction;
-  {
-    std::lock_guard<std::mutex> lock(cached_transaction_lock_);
-    cached_transaction = std::move(cached_transaction_);
-    if (!DirtyCacheEnabled()) {
-      ZX_ASSERT(cached_transaction == nullptr);
-    }
-  }
-  zx_status_t status;
-  if (!DirtyCacheEnabled() || cached_transaction == nullptr) {
-    if ((status = Vfs()->BeginTransaction(0, reserve_blocks, &transaction)) != ZX_OK) {
-      return zx::error(status);
-    }
-  } else {
-    if ((status = Vfs()->ContinueTransaction(reserve_blocks, std::move(cached_transaction),
-                                             &transaction)) != ZX_OK) {
-      // Failure here means that we ran out of space. Force flush pending writes
-      // and return the failure.
-      if (transaction != nullptr) {
-        [[maybe_unused]] auto error =
-            FlushTransaction(std::move(transaction), /*force_flush=*/true).status_value();
-      }
-      return zx::error(status);
-    }
-  }
-
-  return zx::ok(std::move(transaction));
+  // dirty cache should remain disabled.
+  ZX_ASSERT(false);
 }
 
 zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
@@ -347,31 +276,15 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   auto get_metrics = fbl::MakeAutoCall(
       [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
 
-  // If this file's pending blocks have crossed a limit or if there are no free blocks in the
-  // filesystem, try to flush before we proceed.
-  if (auto status = CheckAndFlush(false, len, offset); status.is_error()) {
-    return status.error_value();
-  }
-
   // Calculate maximum number of blocks to reserve for this write operation.
   auto reserve_blocks_or = GetRequiredBlockCount(offset, len);
   if (reserve_blocks_or.is_error()) {
     return reserve_blocks_or.error_value();
   }
-
-  size_t reserve_blocks = reserve_blocks_or.value();
+  std::unique_ptr<Transaction> transaction;
   zx_status_t status;
-  auto transaction_or = GetTransaction(reserve_blocks);
-  if (transaction_or.is_error()) {
-    return transaction_or.error_value();
-  }
-  std::unique_ptr<Transaction> transaction = std::move(transaction_or.value());
-  // We mark block that has writes pending only after we have enough blocks reserved through
-  // BeginTransaction or through ContinueTransaction.
-  if (DirtyCacheEnabled()) {
-    if (auto status = MarkRequiredBlocksPending(offset, len); status.is_error()) {
-      return status.error_value();
-    }
+  if ((status = Vfs()->BeginTransaction(0, reserve_blocks_or.value(), &transaction)) != ZX_OK) {
+    return status;
   }
 
   status =
@@ -380,13 +293,13 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     return status;
   }
 
-  if (*out_actual == 0) {
-    return ZX_OK;
+  // If anything was written, enqueue operations allocated within WriteInternal.
+  if (*out_actual != 0) {
+    auto status = FlushTransaction(std::move(transaction));
+    ZX_ASSERT(status.is_ok());
   }
 
-  // If anything was written, enqueue operations allocated within WriteInternal.
-  UpdateModificationTime();
-  return FlushTransaction(std::move(transaction)).status_value();
+  return ZX_OK;
 }
 
 zx_status_t File::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
@@ -397,13 +310,6 @@ zx_status_t File::Append(const void* data, size_t len, size_t* out_end, size_t* 
 
 zx_status_t File::Truncate(size_t len) {
   TRACE_DURATION("minfs", "File::Truncate");
-
-  // TODO(unknown): Following can be optimized.
-  // - do not flush part of the file that will be truncated.
-  // - conditionally flush unaffected part if necessary.
-  if (auto status = FlushCachedWrites(); status.is_error()) {
-    return status.error_value();
-  }
 
   fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics =
@@ -422,12 +328,22 @@ zx_status_t File::Truncate(size_t len) {
     return status;
   }
 
-  // Force sync the inode to persistent storage: although our data blocks will be allocated
+#ifdef __Fuchsia__
+  // Shortcut case: If we don't have any data blocks to update, we may as well just update
+  // the inode by itself.
+  //
+  // This allows us to avoid "only setting GetInode()->size" in the data task responsible for
+  // calling "AllocateAndCommitData()".
+  if (allocation_state_.IsEmpty()) {
+    GetMutableInode()->size = allocation_state_.GetNodeSize();
+  }
+#endif
+
+  // Sync the inode to persistent storage: although our data blocks will be allocated
   // later, the act of truncating may have allocated indirect blocks.
   //
   // Ensure our inode is consistent with that metadata.
-  UpdateModificationTime();
-  auto result = FlushTransaction(std::move(transaction), true);
+  auto result = FlushTransaction(std::move(transaction));
   ZX_ASSERT(result.is_ok());
   return ZX_OK;
 }

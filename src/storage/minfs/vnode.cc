@@ -263,9 +263,6 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
 
   if (IsUnlinked()) {
     if (fd_count_ == 0) {
-      // No need to flush/retain dirty cache or the reservations for unlinked
-      // inode.
-      DropCachedWrites();
       zx_status_t status = Purge(transaction);
       if (status != ZX_OK) {
         return status;
@@ -363,9 +360,6 @@ zx_status_t VnodeMinfs::RemoveUnlinked() {
     fs_->VnodeRelease(this);
     return status;
   }
-  // The transaction may go async in journal layer. Hold the reference over this
-  // vnode so that we keep the vnode around until the transaction is complete.
-  transaction->PinVnode(fbl::RefPtr(this));
 
   fs_->RemoveUnlinked(transaction.get(), this);
   if ((status = Purge(transaction.get())) != ZX_OK) {
@@ -380,22 +374,10 @@ zx_status_t VnodeMinfs::Close() {
   ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing ino with no fds open");
   fd_count_--;
 
-  if (fd_count_ != 0) {
+  if (fd_count_ != 0 || !IsUnlinked()) {
     return ZX_OK;
   }
 
-  if (!IsUnlinked()) {
-    auto result = FlushCachedWrites();
-    if (result.is_error()) {
-      FX_LOGS(ERROR) << "Failed(" << result.error_value()
-                     << ") to flush pending writes for inode:" << GetIno();
-    }
-    return result.status_value();
-  }
-
-  // This vnode is unlinked and fd_count_ == 0. We don't need not flush the dirty
-  // contents of the vnode to disk.
-  DropCachedWrites();
   return RemoveUnlinked();
 }
 
@@ -507,15 +489,13 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
       break;
     }
 
-    if (!DirtyCacheEnabled()) {
-      // Update this block on-disk
-      blk_t bno;
-      if ((status = BlockGetWritable(transaction, n, &bno))) {
-        break;
-      }
-
-      IssueWriteback(transaction, n, bno + fs_->Info().dat_block, 1);
+    // Update this block on-disk
+    blk_t bno;
+    if ((status = BlockGetWritable(transaction, n, &bno))) {
+      break;
     }
+
+    IssueWriteback(transaction, n, bno + fs_->Info().dat_block, 1);
 #else   // __Fuchsia__
     blk_t bno;
     if ((status = BlockGetWritable(transaction, n, &bno))) {
@@ -596,10 +576,7 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
     // any unhandled field update is unsupported
     return ZX_ERR_INVALID_ARGS;
   }
-
-  // Commit transaction if dirty cache is disabled. Otherwise this will
-  // happen later.
-  if (dirty && !DirtyCacheEnabled()) {
+  if (dirty) {
     // write to disk, but don't overwrite the time
     zx_status_t status;
     std::unique_ptr<Transaction> transaction;
@@ -663,7 +640,6 @@ constexpr const char kFsName[] = "minfs";
 zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Minfs name too long");
-  uint32_t reserved_blocks = Vfs()->BlocksReserved();
   Transaction transaction(fs_);
   *info = {};
   info->block_size = fs_->BlockSize();
@@ -671,7 +647,7 @@ zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* in
   info->fs_type = VFS_TYPE_MINFS;
   info->fs_id = fs_->GetFsId();
   info->total_bytes = fs_->Info().block_count * fs_->Info().block_size;
-  info->used_bytes = (fs_->Info().alloc_block_count + reserved_blocks) * fs_->Info().block_size;
+  info->used_bytes = fs_->Info().alloc_block_count * fs_->Info().block_size;
   info->total_nodes = fs_->Info().inode_count;
   info->used_nodes = fs_->Info().alloc_inode_count;
 
@@ -858,16 +834,13 @@ zx_status_t VnodeMinfs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtoco
 
 void VnodeMinfs::Sync(SyncCallback closure) {
   TRACE_DURATION("minfs", "VnodeMinfs::Sync");
-  // The transaction may go async in journal layer. Hold the reference over this
-  // vnode so that we keep the vnode around until the transaction is complete.
-  auto vn = fbl::RefPtr(this);
-  fs_->Sync([vn, cb = std::move(closure)](zx_status_t status) mutable {
+  fs_->Sync([this, cb = std::move(closure)](zx_status_t status) mutable {
     // This is called on the journal thread. Operations here must be threadsafe.
     if (status != ZX_OK) {
       cb(status);
       return;
     }
-    status = vn->fs_->bc_->Sync();
+    status = fs_->bc_->Sync();
     cb(status);
   });
   return;

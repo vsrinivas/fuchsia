@@ -69,7 +69,6 @@ board_package_labels = [
 
 max_fuchsia_zbi_size = "16777216"  # 16 MiB
 max_zedboot_zbi_size = "16777216"  # 16 MiB
-minfs_enable_dirty_cache = true
 
 use_vbmeta = true
 build_uefi_disk = true
