@@ -1,0 +1,11 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.bluetooth;
+
+fuchsia.BIND_PROTOCOL == fuchsia.bluetooth.BIND_PROTOCOL.GATT_SVC;
+
+// See the Bluetooth Assigned Numbers: 16-bit UUID Numbers specification
+// available from https://www.bluetooth.com/specifications/assigned-numbers/
+fuchsia.BIND_BT_GATT_SVC_UUID16 == 0x1812; // HUMAN_INTERFACE_DEVICE

@@ -10,7 +10,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include "boot_descriptors.h"
+#include "src/connectivity/bluetooth/profiles/bt-hog/boot_descriptors.h"
+#include "src/connectivity/bluetooth/profiles/bt-hog/bt_hog_bind.h"
 
 #define BT_HOG_STATUS_OK(s) (s->status == ZX_OK && s->att_ecode == BT_GATT_ERR_NO_ERROR)
 
@@ -463,3 +464,7 @@ zx_status_t bt_hog_bind(void* ctx, zx_device_t* device) {
 
   return status;
 }
+
+static zx_driver_ops_t bt_hog_driver_ops = {.version = DRIVER_OPS_VERSION, .bind = bt_hog_bind};
+
+ZIRCON_DRIVER(bt_hog, bt_hog_driver_ops, "fuchsia", "0.1");

@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_BT_GATT_SVC_UUID16": "0x1812",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.GATT_SVC"
+        },
+        "expected": "match",
+        "name": "Match"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_BT_GATT_SVC_UUID16": "0xaaaa",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.GATT_SVC"
+        },
+        "expected": "abort",
+        "name": "Bad BT_GATT_SVC_UUID16"
+    }
+]
