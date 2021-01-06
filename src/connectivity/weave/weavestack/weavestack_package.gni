@@ -7,7 +7,7 @@ import("//tools/cmc/build/cmc.gni")
 
 template("_weavestack_package") {
   invoker_manifest = invoker.manifest
-  cmx_name = get_path_info(invoker_manifest, "file")
+  cmx_name = get_path_info(invoker_manifest, "name")
   if (defined(invoker.extra_cmx)) {
     manifest_merge_target = "${target_name}_${cmx_name}_merge"
     cmc_merge(manifest_merge_target) {
