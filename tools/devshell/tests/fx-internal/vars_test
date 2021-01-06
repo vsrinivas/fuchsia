@@ -60,18 +60,14 @@ TEST_fx-build-dir-if-present() {
   BT_ASSERT_FUNCTION_EXISTS fx-build-dir-if-present
 
   FUCHSIA_BUILD_DIR=""
-  local -r CONFIG_FILE="${FUCHSIA_DIR}/.config"
-  local -r BUILD_DIR_PATH="out"
-  echo "FUCHSIA_BUILD_DIR=${BUILD_DIR_PATH}" > "${CONFIG_FILE}"
+  local -r FX_BUILD_DIR_FILE_PATH="${FUCHSIA_DIR}/.fx-build-dir"
+  local -r BUILD_DIR_PATH="out/mybuild"
+  echo "${BUILD_DIR_PATH}" > "${FX_BUILD_DIR_FILE_PATH}"
 
   BT_EXPECT fx-build-dir-if-present
 
   # Expect an absolute path.
   BT_EXPECT_EQ "${FUCHSIA_BUILD_DIR}" "${FUCHSIA_DIR}/${BUILD_DIR_PATH}"
-
-  local -r FX_BUILD_DIR_FILE_PATH="${FUCHSIA_DIR}/.fx-build-dir"
-  BT_EXPECT_FILE_CONTAINS "${FX_BUILD_DIR_FILE_PATH}" "${BUILD_DIR_PATH}"
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${CONFIG_FILE}"
 }
 
 TEST_fx-build-config-load() {

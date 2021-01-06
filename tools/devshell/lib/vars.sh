@@ -126,20 +126,7 @@ function fx-build-dir-if-present {
     export FUCHSIA_BUILD_DIR="${_FX_BUILD_DIR}"
   else
     if [[ ! -f "${FUCHSIA_DIR}/.fx-build-dir" ]]; then
-
-      # Old path, try to load old default config and migrate it:
-      if [[ -f "${FUCHSIA_DIR}/.config" ]]; then
-        source "${FUCHSIA_DIR}/.config" || return 1
-
-        # After transition period, this branch is removed, and only the else
-        # branch remains. Transition period to end April 2019.
-        fx-build-dir-write "${FUCHSIA_BUILD_DIR}" || return 1
-        # We must remove the old default config or it has "sticky" behavior.
-        rm -f -- "${FUCHSIA_DIR}/.config"
-      else
-        return 1
-      fi
-
+      return 1
     fi
 
     # .fx-build-dir contains $FUCHSIA_BUILD_DIR

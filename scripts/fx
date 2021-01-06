@@ -137,23 +137,12 @@ source "${features_sh}" || exit $?
 
 while [[ $# -ne 0 ]]; do
   case $1 in
-    --config=*|--dir=*|-d=*|--disable=*|--enable=*)
+    --dir=*|-d=*|--disable=*|--enable=*)
       # Turn --switch=value into --switch value.
       arg="$1"
       shift
       set -- "${arg%%=*}" "${arg#*=}" "$@"
       continue
-      ;;
-    --config)
-      fx-warn "DEPRECATION NOTICE: --config is deprecated, use --dir instead."
-      sleep 5
-      if [[ $# -lt 2 ]]; then
-        usage
-        fx-error "Missing path to config file for --config argument"
-        exit 1
-      fi
-      shift # Removes --config.
-      export _FX_BUILD_DIR="$(source "$1"; echo "${FUCHSIA_BUILD_DIR}")"
       ;;
     --dir)
       if [[ $# -lt 2 ]]; then
