@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.VIRTIO;
+accept fuchsia.BIND_PCI_DID {
+  fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_SCSI,
+  fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_SCSI_HOST,
+}

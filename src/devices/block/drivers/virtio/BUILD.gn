@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("virtio_block_bind") {
+  rules = "virtio_block.bind"
+  output = "virtio_block_bind.h"
+  tests = "block_bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
 
 driver_module("virtio_block") {
   configs += [
@@ -17,6 +25,7 @@ driver_module("virtio_block") {
   sources = [ "block_driver.cc" ]
   deps = [
     ":block_lib",
+    ":virtio_block_bind",
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
@@ -46,6 +55,13 @@ source_set("scsi_lib") {
   ]
 }
 
+bind_rules("virtio_scsi_bind") {
+  rules = "virtio_scsi.bind"
+  output = "virtio_scsi_bind.h"
+  tests = "scsi_bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
 driver_module("virtio_scsi") {
   configs += [
     "//build/config:all_source",
@@ -57,6 +73,7 @@ driver_module("virtio_scsi") {
   sources = [ "scsi_driver.cc" ]
   deps = [
     ":scsi_lib",
+    ":virtio_scsi_bind",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
@@ -116,6 +133,8 @@ group("tests") {
   deps = [
     ":virtio-block-test",
     ":virtio-scsi-test",
+    ":virtio_block_bind_test",
+    ":virtio_scsi_bind_test",
   ]
 }
 
