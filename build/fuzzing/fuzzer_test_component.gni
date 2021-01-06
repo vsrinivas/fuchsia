@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/generated_v1_manifest.gni")
-import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 # Defines a Fuchsia component for a fuzzer test.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -42,53 +41,52 @@ template("fuzzer_test_component") {
          "missing 'deps' for fuzzer_test_component($target_name)")
   fuzzer_test = "${invoker.fuzzer}_test"
 
-  manifest_target = "${target_name}_generated_v1_manifest"
-  manifest_output = "$target_gen_dir/${fuzzer_test}.cmx"
-  generated_v1_manifest(manifest_target) {
-    manifest = manifest_output
-    binary = "test/" + fuzzer_test
-    args = [ "-q" ]
-    if (defined(invoker.corpus)) {
-      corpus_path = get_label_info(invoker.corpus, "dir")
-      corpus_name = get_label_info(invoker.corpus, "name")
-      if (corpus_name != get_path_info(corpus_path, "file")) {
-        corpus_path += "/" + corpus_name
-      }
-      args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
-    }
-    args += [ "data/corpus" ]
-    forward_variables_from(invoker,
-                           [
-                             "features",
-                             "services",
-                           ])
-    if (!defined(features)) {
-      features = []
-    }
-    if (!defined(include)) {
-      include = []
-    }
-    include += [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
-    if (!defined(services)) {
-      services = []
-    }
-    features += [ "isolated-persistent-storage" ]
+  meta_target_name = "${target_name}_metadata"
+  group(meta_target_name) {
+    testonly = true
+    deps = invoker.deps + [ "//build/fuzzing:component" ]
+
     metadata = {
+      test_component_manifest_cmx = [
+        {
+          forward_variables_from(invoker, [ "include" ])
+
+          program = {
+            args = [ "-q" ]
+            if (defined(invoker.corpus)) {
+              corpus_path = get_label_info(invoker.corpus, "dir")
+              corpus_name = get_label_info(invoker.corpus, "name")
+              if (corpus_name != get_path_info(corpus_path, "file")) {
+                corpus_path += "/" + corpus_name
+              }
+              args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
+            }
+            args += [ "data/corpus" ]
+          }
+
+          sandbox = {
+            forward_variables_from(invoker,
+                                   [
+                                     "features",
+                                     "services",
+                                   ])
+          }
+        },
+      ]
+
       fuzz_spec = [
         {
           label = invoker.label
           fuzzer_test = fuzzer_test
-          test_manifest = get_path_info(manifest_output, "file")
+          test_manifest = get_path_info(":${invoker.target_name}", "file")
         },
       ]
     }
   }
 
-  fuchsia_component(target_name) {
+  fuchsia_unittest_component(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
     component_name = fuzzer_test
-    testonly = true
-    deps = invoker.deps + [ ":$manifest_target" ]
-    manifest = manifest_output
+    deps = invoker.deps + [ ":$meta_target_name" ]
   }
 }

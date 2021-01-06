@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/generated_v1_manifest.gni")
-import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 # Defines a Fuchsia component for a fuzzer.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -43,54 +42,50 @@ template("fuzzer_component") {
   assert(defined(invoker.deps),
          "missing 'deps' for fuzzer_component($target_name)")
 
-  manifest_target = "${target_name}_generated_v1_manifest"
-  manifest_output = "$target_gen_dir/${invoker.fuzzer}.cmx"
-  generated_v1_manifest(manifest_target) {
-    manifest = manifest_output
-    binary = "bin/" + invoker.fuzzer
-    if (defined(invoker.options)) {
-      args = []
-      foreach(option, invoker.options) {
-        args += [ "-$option" ]
-      }
-    }
-    forward_variables_from(invoker,
-                           [
-                             "features",
-                             "include",
-                             "services",
-                           ])
-    if (!defined(features)) {
-      features = []
-    }
-    features += [
-      "isolated-persistent-storage",
-      "isolated-temp",
-    ]
-    if (!defined(include)) {
-      include = []
-    }
-    include += [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
-    if (!defined(services)) {
-      services = []
-    }
-    services += [ "fuchsia.process.Launcher" ]
+  meta_target_name = "${target_name}_metadata"
+
+  fuchsia_unittest_component(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    component_name = invoker.fuzzer
+    deps = invoker.deps + [ ":$meta_target_name" ]
+  }
+
+  group(meta_target_name) {
+    testonly = true
+    deps = invoker.deps + [ "//build/fuzzing:component" ]
+
     metadata = {
+      test_component_manifest_cmx = [
+        {
+          forward_variables_from(invoker, [ "include" ])
+
+          program = {
+            if (defined(invoker.options)) {
+              args = []
+              foreach(option, invoker.options) {
+                args += [ "-$option" ]
+              }
+            }
+          }
+
+          sandbox = {
+            forward_variables_from(invoker,
+                                   [
+                                     "features",
+                                     "services",
+                                   ])
+          }
+        },
+      ]
+
       fuzz_spec = [
         {
           label = invoker.label
           fuzzer = invoker.fuzzer
-          manifest = get_path_info(manifest_output, "file")
+          manifest = get_target_outputs(":${invoker.target_name}")
+          manifest = get_path_info(manifest[0], "file")
         },
       ]
     }
-  }
-
-  fuchsia_component(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    component_name = invoker.fuzzer
-    testonly = true
-    deps = invoker.deps + [ ":$manifest_target" ]
-    manifest = manifest_output
   }
 }
