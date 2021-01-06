@@ -51,12 +51,9 @@ def main():
     allow_invalid_program_binary = "#[allow(invalid_program_binary)]"
 
     # These runners don't respect program.binary
+    # fxbug.dev/67151 do something more sophisticated
     runners_to_avoid = [
         "appmgr_mock_runner.cmx",
-        "dart_aot_runner.cmx",
-        "dart_jit_runner.cmx",
-        "flutter_aot_runner.cmx",
-        "flutter_jit_runner.cmx",
         "guest_runner.cmx",
         "netemul-runner.cmx",
     ]
