@@ -173,6 +173,7 @@ static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_addr
         AbrGetSlotSuffix(firmware_slot), AbrGetSlotSuffix(target_slot));
     return kBootResultErrorMismatchedFirmwareSlot;
   }
+  *out_slot = target_slot;
 
   if (target_slot != kAbrSlotIndexR) {
     zircon_boot_dlog("updating metadata\n");
@@ -190,7 +191,6 @@ static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_addr
     return kBootResultErrorSlotFail;
   }
 
-  *out_slot = target_slot;
   return kBootResultOK;
 }
 
@@ -200,7 +200,11 @@ ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load
   ZirconBootResult res;
   if (ops->get_firmware_slot) {
     res = LoadImageFirmwareAbr(ops, load_address, load_address_size, force_recovery, &slot);
-    if (res == kBootResultErrorMismatchedFirmwareSlot || res == kBootResultErrorSlotFail) {
+    if (res == kBootResultErrorSlotFail && slot == kAbrSlotIndexR) {
+      // Recovery failure and not because of slot mismatch. Simply return. Up to the device to
+      // decide what to do.
+      return res;
+    } else if (res == kBootResultErrorMismatchedFirmwareSlot || res == kBootResultErrorSlotFail) {
       ZIRCON_BOOT_OPS_CALL(ops, reboot, force_recovery);
       zircon_boot_dlog("Should not reach here. Reboot handoff failed\n");
       return kBootResultRebootReturn;

@@ -50,7 +50,7 @@ static AvbIOResult GetPreloadedPartition(AvbOps* ops, const char* partition, siz
   return AVB_IO_RESULT_OK;
 }
 
-/* If a negative offset is given, computes the unsigned offset. */
+// If a negative offset is given, computes the unsigned offset.
 static inline int64_t calc_offset(uint64_t size, int64_t offset) {
   if (offset < 0) {
     return size + offset;
@@ -106,8 +106,8 @@ static void SetKeyVersion(AvbAtxOps* atx_ops, size_t rollback_index_location,
   }
 }
 
-/* avb_slot_verify uses this call to check that a partition exists.
- * Checks for existence but ignores GUID because it's unused.*/
+// avb_slot_verify uses this call to check that a partition exists.
+// Checks for existence but ignores GUID because it's unused.
 static AvbIOResult GetUniqueGuidForPartition(AvbOps* ops, const char* partition, char* guid_buf,
                                              size_t guid_buf_size) {
   VBootContext* context = (VBootContext*)ops->user_data;
@@ -213,8 +213,17 @@ static void CreateAvbAndAvbAtxOps(ZirconBootOps* zb_ops, VBootContext* ctx, AvbO
   atx_ops->get_random = NULL;
 }
 
-bool ZirconVBootSlotVerify(ZirconBootOps* zb_ops, zbi_header_t* image, size_t capacity,
-                           const char* ab_suffix, bool has_successfully_booted) {
+struct property_lookup_user_data {
+  zbi_header_t* zbi;
+  size_t capacity;
+};
+
+static bool PropertyLookupDescForeach(const AvbDescriptor* header, void* user_data);
+
+static bool ZirconVBootSlotVerifyInternal(ZirconBootOps* zb_ops, zbi_header_t* image,
+                                          size_t capacity, const char* ab_suffix,
+                                          bool has_successfully_booted,
+                                          AvbSlotVerifyData** ptr_verify_data) {
   AvbOps avb_ops;
   AvbAtxOps atx_ops;
   VBootContext context = {
@@ -222,10 +231,149 @@ bool ZirconVBootSlotVerify(ZirconBootOps* zb_ops, zbi_header_t* image, size_t ca
       .preloaded_image = image,
   };
   CreateAvbAndAvbAtxOps(zb_ops, &context, &avb_ops, &atx_ops);
+
+  bool unlocked;
+  if (avb_ops.read_is_device_unlocked(&avb_ops, &unlocked)) {
+    zircon_boot_dlog("Failed to read lock state.\n");
+    return false;
+  }
+
   const char* const requested_partitions[] = {"zircon", NULL};
-  // TODO(b/174968242): Enable slot verification, rollback index update, property descriptor append.
-  AvbSlotVerifyResult result =
-      avb_slot_verify(&avb_ops, requested_partitions, ab_suffix, AVB_SLOT_VERIFY_FLAGS_NONE,
-                      AVB_HASHTREE_ERROR_MODE_EIO, NULL);
-  return result == AVB_SLOT_VERIFY_RESULT_OK;
+
+  AvbSlotVerifyFlags flag =
+      unlocked ? AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR : AVB_SLOT_VERIFY_FLAGS_NONE;
+  AvbSlotVerifyResult result = avb_slot_verify(&avb_ops, requested_partitions, ab_suffix, flag,
+                                               AVB_HASHTREE_ERROR_MODE_EIO, ptr_verify_data);
+
+  AvbSlotVerifyData* verify_data = *ptr_verify_data;
+  // Copy zbi items within vbmeta regardless of lock state.
+  if (result == AVB_SLOT_VERIFY_RESULT_OK) {
+    struct property_lookup_user_data lookup_data = {.zbi = image, .capacity = capacity};
+
+    for (size_t i = 0; i < verify_data->num_vbmeta_images; ++i) {
+      AvbVBMetaData* vb = &verify_data->vbmeta_images[i];
+      // load properties into KV store.
+      if (!avb_descriptor_foreach(vb->vbmeta_data, vb->vbmeta_size, PropertyLookupDescForeach,
+                                  &lookup_data)) {
+        zircon_boot_dlog("Fail to parse VBMETA properties\n");
+        return false;
+      }
+    }
+  }
+
+  if (unlocked) {
+    zircon_boot_dlog("Device unlocked: not checking verification result.\n");
+    return true;
+  }
+
+  if (result != AVB_SLOT_VERIFY_RESULT_OK) {
+    zircon_boot_dlog("Failed to verify slot: %s, err_code: %s\n", ab_suffix,
+                     avb_slot_verify_result_to_string(result));
+    return false;
+  }
+
+  // Increase rollback index values to match the verified slot only if
+  // it has already successfully booted.
+  if (has_successfully_booted) {
+    for (size_t i = 0; i < AVB_MAX_NUMBER_OF_ROLLBACK_INDEX_LOCATIONS; i++) {
+      uint64_t rollback_index_value = verify_data->rollback_indexes[i];
+
+      if (rollback_index_value == ROLLBACK_INDEX_NOT_USED) {
+        continue;
+      }
+
+      AvbIOResult result = avb_ops.write_rollback_index(&avb_ops, i, rollback_index_value);
+      if (result != AVB_IO_RESULT_OK) {
+        zircon_boot_dlog("Failed to write rollback index: %zu\n", i);
+        return false;
+      }
+    }
+
+    // Also increase rollback index values for Fuchsia key version locations.
+    for (size_t i = 0; i < AVB_ATX_NUM_KEY_VERSIONS; i++) {
+      AvbIOResult result = avb_ops.write_rollback_index(&avb_ops, context.key_versions[i].location,
+                                                        context.key_versions[i].value);
+      if (result != AVB_IO_RESULT_OK) {
+        zircon_boot_dlog("Failed to write rollback index: %zu\n", context.key_versions[i].location);
+        return false;
+      }
+    }
+  }
+  zircon_boot_dlog("slot: %s successfully verified.\n", ab_suffix);
+  return true;
+}
+
+bool ZirconVBootSlotVerify(ZirconBootOps* zb_ops, zbi_header_t* image, size_t capacity,
+                           const char* ab_suffix, bool has_successfully_booted) {
+  AvbSlotVerifyData* verify_data = NULL;
+  bool res = ZirconVBootSlotVerifyInternal(zb_ops, image, capacity, ab_suffix,
+                                           has_successfully_booted, &verify_data);
+  if (verify_data) {
+    avb_slot_verify_data_free(verify_data);
+  }
+  return res;
+}
+
+// If the given property holds a ZBI container, appends its contents to the ZBI
+// container in |lookup_data|.
+static void ProcessProperty(const AvbPropertyDescriptor prop_desc, uint8_t* start,
+                            const struct property_lookup_user_data* lookup_data) {
+  const char* key = (const char*)start;
+  if (key[prop_desc.key_num_bytes] != 0) {
+    zircon_boot_dlog(
+        "No terminating NUL byte in the property key."
+        "Skipping this property descriptor.\n");
+    return;
+  }
+  // Only look at properties whose keys start with the 'zbi' prefix.
+  if (strncmp(key, "zbi", strlen("zbi"))) {
+    return;
+  }
+  zircon_boot_dlog("Found vbmeta ZBI property '%s' (%lu bytes)\n", key, prop_desc.value_num_bytes);
+
+  // We don't care about the key. Move value data to the start address to make sure
+  // that the zbi item starts from an aligned address.
+  uint64_t value_offset, value_size;
+  if (!avb_safe_add(&value_offset, prop_desc.key_num_bytes, 1) ||
+      !avb_safe_add(&value_size, prop_desc.value_num_bytes, 1)) {
+    zircon_boot_dlog(
+        "Overflow while computing offset and size for value."
+        "Skipping this property descriptor.\n");
+    return;
+  }
+  memmove(start, start + value_offset, value_size);
+
+  const zbi_header_t* vbmeta_zbi = (const zbi_header_t*)start;
+
+  const uint64_t zbi_size = sizeof(zbi_header_t) + vbmeta_zbi->length;
+  if (zbi_size > prop_desc.value_num_bytes) {
+    zircon_boot_dlog("vbmeta ZBI length exceeds property size (%lu > %lu)\n", zbi_size,
+                     prop_desc.value_num_bytes);
+    return;
+  }
+
+  zbi_result_t result = zbi_check(vbmeta_zbi, NULL);
+  if (result != ZBI_RESULT_OK) {
+    zircon_boot_dlog("Mal-formed vbmeta ZBI: error %d\n", result);
+    return;
+  }
+
+  result = zbi_extend(lookup_data->zbi, lookup_data->capacity, vbmeta_zbi);
+  if (result != ZBI_RESULT_OK) {
+    zircon_boot_dlog("Failed to add vbmeta ZBI: error %d\n", result);
+    return;
+  }
+}
+
+// Callback for vbmeta property iteration. |user_data| must be a pointer to a
+// property_lookup_user_data struct.
+static bool PropertyLookupDescForeach(const AvbDescriptor* header, void* user_data) {
+  AvbPropertyDescriptor prop_desc;
+  if (header->tag == AVB_DESCRIPTOR_TAG_PROPERTY &&
+      avb_property_descriptor_validate_and_byteswap((const AvbPropertyDescriptor*)header,
+                                                    &prop_desc)) {
+    ProcessProperty(prop_desc, (uint8_t*)header + sizeof(AvbPropertyDescriptor),
+                    (struct property_lookup_user_data*)user_data);
+  }
+  return true;
 }
