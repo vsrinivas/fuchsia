@@ -411,6 +411,7 @@ if (current_toolchain != sysroot_toolchain) {
     inputs = [ sysroot_entries_json_file ]
     outputs = sysroot_headers
     script = "populate_sysroot_headers.py"
+    depfile = "$root_out_dir/headers.d"
     args = [
       "--src-dir",
       rebase_path("//", root_build_dir),
@@ -418,6 +419,8 @@ if (current_toolchain != sysroot_toolchain) {
       rebase_path(inputs[0], root_build_dir),
       "--sysroot-dir",
       rebase_path(sysroot_dir, root_build_dir),
+      "--dep-file",
+      rebase_path(depfile, root_build_dir),
 
       # The --debug flag can be used to print the script's operations for debugging.
       #"--debug",
