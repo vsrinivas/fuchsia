@@ -790,6 +790,7 @@ void System::DidConnect() {
 }
 
 void System::DidDisconnect() {
+  // The logic here should be consistent with debug_agent::DebugAgent::Disconnect().
   for (auto& target : targets_)
     target->ImplicitlyDetach();
   for (auto& job : jobs_)

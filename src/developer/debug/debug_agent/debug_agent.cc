@@ -90,6 +90,12 @@ void DebugAgent::Connect(debug_ipc::StreamBuffer* stream) {
 void DebugAgent::Disconnect() {
   FX_DCHECK(stream_);
   stream_ = nullptr;
+
+  // Remove all DebuggedProcess and DebuggedJob on disconnect. The logic here should be consistent
+  // with zxdb::System::DidDisconnect() so that further reconnecting won't create any surprise.
+  jobs_.clear();
+  // The destructor of the DebuggedProcess will detach us from the process.
+  procs_.clear();
 }
 
 debug_ipc::StreamBuffer* DebugAgent::stream() {
