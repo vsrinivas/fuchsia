@@ -14,6 +14,7 @@ declare_args() {
   basic_env_names = [ "emu" ]
 
   # Adds GCE as a basic env if true.
+  # TODO(garymm): Delete this, use basic_env_names instead.
   enable_test_on_gce = false
 }
 
@@ -148,20 +149,20 @@ _all_named_envs += [
   },
 ]
 
+gce_env = {
+  dimensions = {
+    device_type = "GCE"
+  }
+}
+_all_named_envs += [
+  {
+    name = "gce"
+    env = gce_env
+  },
+]
+
 if (enable_test_on_gce) {
   basic_env_names += [ "gce" ]
-  gce_env = {
-    dimensions = {
-      device_type = "GCE"
-    }
-  }
-
-  _all_named_envs += [
-    {
-      name = "gce"
-      env = gce_env
-    },
-  ]
 }
 
 ### END Individual test environments
