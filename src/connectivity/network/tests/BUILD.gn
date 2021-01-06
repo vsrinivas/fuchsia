@@ -117,7 +117,8 @@ fuchsia_component("connect") {
   deps = [ "connect" ]
 }
 
-fuchsia_unittest_component("connect_test") {
+fuchsia_component("connect_test") {
+  testonly = true
   deps = [ ":connect" ]
   manifest = "meta/connect_test.cmx"
 }

@@ -56,7 +56,7 @@ run it:
 ```json
 {
     "program": {
-        "binary": "TODO(shayba): properly support manifest-only tests"
+        "binary": "TODO(https://fxbug.dev/66956): properly support manifest-only tests"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
     "facets" : {
