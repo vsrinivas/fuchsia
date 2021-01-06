@@ -55,6 +55,36 @@ TEST(AddressRanges, NonCanonical) {
   EXPECT_EQ(AddressRange(0x100, 0x600), e.GetExtent());
 }
 
+TEST(AddressRanges, GetRangeContaining) {
+  AddressRanges empty;
+  EXPECT_FALSE(empty.GetRangeContaining(0x123));
+
+  // This has two touching ranges to test the boundary condition, and one by itself.
+  AddressRanges some(AddressRanges::kCanonical,
+                     {AddressRange(100, 200), AddressRange(200, 300), AddressRange(400, 500)});
+
+  EXPECT_FALSE(some.GetRangeContaining(99));
+
+  std::optional<AddressRange> result = some.GetRangeContaining(100);
+  ASSERT_TRUE(result);
+  ASSERT_EQ(some[0], *result);
+
+  result = some.GetRangeContaining(150);
+  ASSERT_TRUE(result);
+  ASSERT_EQ(some[0], *result);
+
+  // Ends are non-inclusive, so the boundary should be in the second one.
+  result = some.GetRangeContaining(200);
+  ASSERT_TRUE(result);
+  EXPECT_EQ(some[1], *result);
+
+  EXPECT_FALSE(some.GetRangeContaining(300));  // Non-inclusive end of the last range.
+
+  result = some.GetRangeContaining(400);
+  ASSERT_TRUE(result);
+  EXPECT_EQ(some[2], *result);
+}
+
 TEST(AddressRanges, InRange) {
   AddressRanges empty;
   EXPECT_FALSE(empty.InRange(0));

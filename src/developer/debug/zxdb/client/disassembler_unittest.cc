@@ -269,6 +269,7 @@ TEST(Disassembler, CallX64) {
   block_with_data.data = std::vector<uint8_t>{
       0xe8, 0xce, 0x00, 0x00, 0x00,  // call +0xce (relative to next instruction).
       0xe8, 0xf4, 0xff, 0xff, 0xff,  // call -0x0c (relative to next instruction).
+      0xff, 0xd0                     // call rax (indirect call to register value).
   };
   block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
 
@@ -276,15 +277,19 @@ TEST(Disassembler, CallX64) {
   vect.push_back(block_with_data);
 
   MemoryDump dump(std::move(vect));
-  size_t consumed = d.DisassembleDump(dump, block_with_data.address, opts, 2, &out);
-  EXPECT_EQ(10u, consumed);
-  ASSERT_EQ(2u, out.size());
+  size_t consumed = d.DisassembleDump(dump, block_with_data.address, opts, 0, &out);
+  EXPECT_EQ(12u, consumed);
+  ASSERT_EQ(3u, out.size());
   EXPECT_EQ(Row(0x123456780, &block_with_data.data[0], 5, "call", "0xce", "",
+                Disassembler::InstructionType::kCallDirect,
                 block_with_data.address + 5 /* = length of instruction */ + 0xce),
             out[0]);
   EXPECT_EQ(Row(0x123456785, &block_with_data.data[5], 5, "call", "-0xc", "",
-                block_with_data.address + 10 - 12),
+                Disassembler::InstructionType::kCallDirect, block_with_data.address + 10 - 12),
             out[1]);
+  EXPECT_EQ(Row(0x12345678a, &block_with_data.data[10], 2, "call", "rax", "",
+                Disassembler::InstructionType::kCallIndirect),
+            out[2]);
 }
 
 TEST(Disassembler, CallArm64) {
@@ -305,6 +310,7 @@ TEST(Disassembler, CallArm64) {
   block_with_data.valid = true;
   block_with_data.data = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x94,  // bl +0x06 (relative to this instruction)
+      0x00, 0x00, 0x3f, 0xd6,  // blr x0
   };
   block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
 
@@ -313,9 +319,15 @@ TEST(Disassembler, CallArm64) {
 
   MemoryDump dump(std::move(vect));
   size_t consumed = d.DisassembleDump(dump, block_with_data.address, opts, 4, &out);
-  EXPECT_EQ(4u, consumed);
-  ASSERT_EQ(1u, out.size());
-  EXPECT_EQ(Row(0xc55f8, &block_with_data.data[0], 4, "bl", "#0x18", "", 0xc5610), out[0]);
+  EXPECT_EQ(8u, consumed);
+  ASSERT_EQ(2u, out.size());
+  EXPECT_EQ(Row(0xc55f8, &block_with_data.data[0], 4, "bl", "#0x18", "",
+                Disassembler::InstructionType::kCallDirect, 0xc5610),
+            out[0]);
+  EXPECT_EQ(Row(0xc55fc, &block_with_data.data[4], 4, "blr", "x0", "",
+                Disassembler::InstructionType::kCallIndirect),
+            out[1]);
+  *out[0].call_dest;
 }
 
 }  // namespace zxdb

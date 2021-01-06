@@ -18,6 +18,21 @@
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
+// Because of the way GDB works, Clang and GCC both emit separate "statements" for each line of
+// a multiline conditional. We would prefer if DWARF line table "IsStmt" entries mapped to
+// language statements.
+//
+// As a result, out substatement extraction only works on a single line. If you have a complex
+// multiline statement, each line of that will be separate and to get to the substatement you want
+// you'll have to first step to the right line.
+//
+// Typically (at least in debug mode), statements are executed "bottom up". For a 3-line statement,
+// there will be line entries for line 1 (initial stuff), then 3, 2, and back to 1 again. We could
+// try to be smarter and consider all statements in between two references of the same line, or
+// going backwards, as part of the same toplevel statement. This would allow us to handle these
+// unoptimized multiline C/C++ statements better. But optimized code would become much less
+// predictable and we'll have to test carefully.
+
 namespace zxdb {
 
 namespace {
@@ -68,31 +83,26 @@ std::vector<SubstatementCall> GetInlineCallsForLocation(const ProcessSymbols* sy
   return result;
 }
 
+// Sanity threshold to avoid doing too many queries if the symbols are corrupt, very different
+// than we expect, or exceptionally long. This is in bytes.
+constexpr uint64_t kMaxRangeSize = 1024;
+
 // Checks all addresses in the given address range and adds the ranges that map to the given
 // file_line to the output. This will also check for ranges that begin in the range but end outside
 // of it.
 //
-// If expand_after_line_0 is set, if a query returns "line 0" from the line table (compiler
-// generated code), it will consider the code immediately following it, even if that code is outside
-// of the input range. This is used when the range being queried is open-ended and you just want
-// all contiguous matching lines starting at a given address without being tripped up by a "line 0"
-// entry at the beginning.
+// The stop_on_no_match flag indicates that adding line entries should stop as soon as a line is
+// found that doesn't match the guven line (excepting compiler-generated "line 0" entries). This
+// is used to greedily add all matching ranges.
 //
 // This just does many individual queries. This could be done faster using the line table directly
 // since then we can go through it linearly for the range we care about. But that approach makes the
 // querying more complex and so far this has not shown to be too slow.
 void AppendAddressRangesForLineInRange(Process* process, const FileLine& file_line,
-                                       const AddressRange& range, bool expand_after_line_0,
+                                       const AddressRange& range, bool stop_on_no_match,
                                        AddressRanges::RangeVector* out) {
-  // Sanity threshold to avoid doing too many queries if the symbols are corrupt or very different
-  // than we expect.
-  constexpr uint64_t kMaxRangeSize = 1024;
-
-  bool allow_next_query_out_of_range = false;  // Used to implement expand_after_line_0. See above.
-
   TargetPointer cur = range.begin();
-  while (allow_next_query_out_of_range ||
-         (cur < range.end() && cur - range.begin() < kMaxRangeSize)) {
+  while (cur < range.end() && cur - range.begin() < kMaxRangeSize) {
     LineDetails line_details = process->GetSymbols()->LineDetailsForAddress(cur);
     if (!line_details.is_valid())
       return;
@@ -101,10 +111,12 @@ void AppendAddressRangesForLineInRange(Process* process, const FileLine& file_li
     if (extent.empty())
       return;
 
-    if (line_details.file_line() == file_line)
+    if (line_details.file_line() == file_line) {
       out->push_back(extent);
+    } else if (line_details.file_line().line() != 0 && stop_on_no_match) {
+      return;  // Found a non-matching line, done.
+    }
 
-    allow_next_query_out_of_range = line_details.file_line().line() == 0 && expand_after_line_0;
     cur = extent.end();
   }
 }
@@ -149,12 +161,24 @@ void GetSubstatementCallsForLine(
 
   // The address immediately following the last inline call also counts as a place to query since
   // the last inline could be followed by a function call on the same line. If there are no inlines,
-  // this location will just be the code range we're querying. Since the Append... funciton counts
-  // any ranges beginning in the range we give it, we only need to supply a 1-byte range.
+  // this location will just be the code range we're querying. We query from there to the end of
+  // the enclosing function, but tell the Append... function to stop as soon as it finds a
+  // non-matching line entry.
   TargetPointer end_inline_address =
       inline_ranges.empty() ? loc.address() : inline_ranges.back().end();
+  // Compute the end of the function to know where to stop searching.
+  TargetPointer function_end = end_inline_address + 1;  // Default to querying one byte.
+  if (const Function* func = loc.symbol().Get()->AsFunction()) {
+    // There can be more than one discontiguous address range for the function, use the one
+    // that contains the address we're starting the query from. It's theoretically possible the
+    // range we want to query covers a discontiguous memory region, but ignore that case since it
+    // makes everything much more complicated.
+    AddressRanges function_ranges = func->GetAbsoluteCodeRanges(loc.symbol_context());
+    if (std::optional<AddressRange> range = function_ranges.GetRangeContaining(end_inline_address))
+      function_end = range->end();
+  }
   AppendAddressRangesForLineInRange(process, loc.file_line(),
-                                    AddressRange(end_inline_address, end_inline_address + 1), true,
+                                    AddressRange(end_inline_address, function_end), true,
                                     &line_code_ranges);
 
   // Make all of the matching ranges in a canonical form.
@@ -207,10 +231,12 @@ std::vector<SubstatementCall> GetSubstatementCallsForMemory(const ArchInfo* arch
 
   std::vector<SubstatementCall> result;
   for (const auto& row : rows) {
-    if (row.call_dest && ranges.InRange(row.address)) {
+    if ((row.type == Disassembler::InstructionType::kCallDirect ||
+         row.type == Disassembler::InstructionType::kCallIndirect) &&
+        ranges.InRange(row.address)) {
       auto& call = result.emplace_back();
       call.call_addr = row.address;
-      call.call_dest = *row.call_dest;
+      call.call_dest = row.call_dest;  // Will be nullopt for indirect calls.
     }
   }
 

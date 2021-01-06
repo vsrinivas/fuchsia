@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 
+#include <iosfwd>
 #include <memory>
 #include <optional>
 #include <string>
@@ -39,21 +40,32 @@ class Disassembler {
     bool emit_undecodable = true;
   };
 
+  // Special known instruction classes. These are just the types of instructions we have a need to
+  // identify, more classes can be added as needed.
+  enum class InstructionType {
+    kCallDirect,    // Call to a hardcoded address.
+    kCallIndirect,  // Call to a register value.
+    kOther,
+  };
+
   // One disassembled instruction.
   struct Row {
     Row();
     Row(uint64_t address, const uint8_t* bytes, size_t bytes_len, std::string op,
-        std::string params, std::string comment, std::optional<uint64_t> call_dest = std::nullopt);
+        std::string params, std::string comment, InstructionType type = InstructionType::kOther,
+        std::optional<uint64_t> call_dest = std::nullopt);
     ~Row();
 
-    uint64_t address;
+    uint64_t address = 0;
     std::vector<uint8_t> bytes;
     std::string op;
     std::string params;
     std::string comment;
 
-    // If this instruction is a call instruction, this will contain the address of the destination
-    // of the call.
+    InstructionType type = InstructionType::kOther;
+
+    // If this instruction is a direct call instruction, this will contain the address of the
+    // destination of the call.
     //
     // This is currently filled in for the most common cases but is not complete. It could be
     // expanded to handle more call variants, and we could also add a tag have a destination address
@@ -103,13 +115,13 @@ class Disassembler {
                          size_t max_instructions, std::vector<Row>* out) const;
 
  private:
-  // Determines if this is a call instruction and computes the destination of the call. Returns
-  // a nullopt if it's not decodable as a call.
+  // Computes the instruction type for the given instruction. If this is a direction call
+  // instruction it will compute the destination of the call.
   //
   // The address is the address of the beginning of the instruction. It is needed to decode relative
   // addresses. The data and data_len indicates the array of bytes that makes up the instruction.
-  std::optional<uint64_t> GetCallDest(uint64_t address, const uint8_t* data, uint64_t data_len,
-                                      const llvm::MCInst& inst) const;
+  void FillInstructionInfo(uint64_t address, const uint8_t* data, uint64_t data_len,
+                           const llvm::MCInst& inst, Row* row) const;
 
   const ArchInfo* arch_ = nullptr;
 
@@ -119,6 +131,9 @@ class Disassembler {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Disassembler);
 };
+
+// For unit testing.
+std::ostream& operator<<(std::ostream& out, const Disassembler::Row& row);
 
 }  // namespace zxdb
 

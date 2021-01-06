@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include <limits>
+#include <ostream>
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -16,6 +17,7 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -72,18 +74,57 @@ void SplitInstruction(std::string* instruction, std::string* params) {
 Disassembler::Row::Row() = default;
 
 Disassembler::Row::Row(uint64_t address, const uint8_t* bytes, size_t bytes_len, std::string op,
-                       std::string params, std::string comment, std::optional<uint64_t> call_dest)
+                       std::string params, std::string comment, InstructionType type,
+                       std::optional<uint64_t> call_dest)
     : address(address),
       bytes(bytes, bytes + bytes_len),
       op(op),
       params(params),
       comment(comment),
+      type(type),
       call_dest(call_dest) {}
+
 Disassembler::Row::~Row() = default;
 
 bool Disassembler::Row::operator==(const Row& other) const {
   return address == other.address && bytes == other.bytes && op == other.op &&
-         params == other.params && comment == other.comment && call_dest == other.call_dest;
+         params == other.params && comment == other.comment && type == other.type &&
+         call_dest == other.call_dest;
+}
+
+std::ostream& operator<<(std::ostream& out, const Disassembler::Row& row) {
+  out << to_hex_string(row.address) << "\t";
+
+  for (size_t i = 0; i < row.bytes.size(); i++) {
+    if (i > 0)
+      out << " ";
+    out << to_hex_string(row.bytes[i], 2, false);
+  }
+
+  out << "\t" << row.op << "\t" << row.params;
+
+  if (!row.comment.empty()) {
+    out << "\t# " << row.comment;
+  } else if (row.type != Disassembler::InstructionType::kOther) {
+    out << "\t#";
+  }
+
+  switch (row.type) {
+    case Disassembler::InstructionType::kCallDirect:
+      if (row.call_dest) {
+        out << " (call to " << to_hex_string(*row.call_dest) << ")";
+      } else {
+        out << " (call to unknown)";
+      }
+      break;
+    case Disassembler::InstructionType::kCallIndirect:
+      out << " (indirect call)";
+      break;
+    case Disassembler::InstructionType::kOther:
+      break;
+  }
+
+  return out;
 }
 
 Disassembler::Disassembler() = default;
@@ -133,7 +174,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
     comment_stream.flush();
 
     SplitInstruction(&out->op, &out->params);
-    out->call_dest = GetCallDest(address, data, consumed, inst);
+    FillInstructionInfo(address, data, consumed, inst, out);
   } else {
     // Failure decoding.
     if (!options.emit_undecodable)
@@ -236,14 +277,15 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump, uint64_t start_addr
   return static_cast<size_t>(dump.size());
 }
 
-std::optional<uint64_t> Disassembler::GetCallDest(uint64_t address, const uint8_t* data,
-                                                  uint64_t data_len,
-                                                  const llvm::MCInst& inst) const {
+void Disassembler::FillInstructionInfo(uint64_t address, const uint8_t* data, uint64_t data_len,
+                                       const llvm::MCInst& inst, Row* row) const {
+  row->type = InstructionType::kOther;  // Default to "other" for early returns below.
+
   // inst.getOpcode() returns an LLVM enum value that's defined in an internal header not included
   // in our build. Therefore, this can not be used and the raw instruction bytes are checked
   // instead.
   if (inst.getNumOperands() != 1)
-    return std::nullopt;  // All call instructions we care about have one operand.
+    return;  // All instructions we care about have one operand.
   const llvm::MCOperand& operand = inst.getOperand(0);
 
   if (arch_->arch() == debug_ipc::Arch::kX64) {
@@ -254,20 +296,55 @@ std::optional<uint64_t> Disassembler::GetCallDest(uint64_t address, const uint8_
       // Opcode has one operand which is a 32-bit signed offset from the address of the next
       // instruction.
       if (!operand.isImm())
-        return std::nullopt;  // Invalid.
-      return address + 5 /* length of instruction */ + operand.getImm();
+        return;  // Invalid.
+
+      row->type = InstructionType::kCallDirect;
+      row->call_dest = address + 5 /* length of instruction */ + operand.getImm();
+      return;
     }
-  } else if (arch_->arch() == debug_ipc::Arch::kArm64) {
+
+    // Indirect calls are listed as:
+    //   Opcode byte   Mod R/M byte
+    //   11111111      ..010...      Near call "FF /2"
+    //   11111111      ..011...      Far call "FF /3"
+    constexpr uint8_t kModRMByteRegOpcodeMask = 0b00111000;
+    constexpr uint8_t kNearCallModRMValue = 0b00010000;
+    constexpr uint8_t kFarCallModRMValue = 0b00011000;
+    if (data_len >= 2 && data[0] == 0xff &&
+        ((data[1] & kModRMByteRegOpcodeMask) == kNearCallModRMValue ||
+         (data[1] & kModRMByteRegOpcodeMask) == kFarCallModRMValue)) {
+      row->type = InstructionType::kCallIndirect;
+      return;
+    }
+  } else if (arch_->arch() == debug_ipc::Arch::kArm64 && data_len == sizeof(uint32_t)) {
     // The BL instruction has the high 6 bits 0b100101 (in data[3] for little-endian).
-    if (data_len == sizeof(uint32_t) && (data[3] & 0b11111100) == 0b10010100) {
+    if ((data[3] & 0b11111100) == 0b10010100) {
       // Opcode has one operand which is a 24-bit signed offset from the address of this
       // instruction, divided by 4.
       if (!operand.isImm())
-        return std::nullopt;  // Invalid.
-      return address + operand.getImm() * 4;
+        return;  // Invalid.
+
+      row->type = InstructionType::kCallDirect;
+      row->call_dest = address + operand.getImm() * 4;
+      return;
+    }
+
+    uint32_t instruction;
+    memcpy(&instruction, data, sizeof(uint32_t));
+
+    // The BLR instruction (Branch and Link to Register value) has the encoding:
+    //  3         2         1         0
+    // 10987654321098765432109876543210
+    // --------------------------------
+    // 1101011000111111000000.....00000
+    //                         ^---- destination register
+    constexpr uint32_t kBLRMask = 0b11111111'11111111'11111100'00011111;
+    constexpr uint32_t kBLRInst = 0b11010110'00111111'00000000'00000000;
+    if ((instruction & kBLRMask) == kBLRInst) {
+      row->type = InstructionType::kCallIndirect;
+      return;
     }
   }
-  return std::nullopt;
 }
 
 }  // namespace zxdb

@@ -144,14 +144,19 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
 
     ranges.emplace_back(ip, calls[i].call_addr);
 
-    auto locs = symbols->ResolveInputLocation(InputLocation(calls[i].call_dest));
-    FX_DCHECK(locs.size() == 1);  // Should always get one result for an address lookup.
-
     std::string index_str = fxl::StringPrintf("%zu", ranges.size());
     prompt_opts.options.push_back(index_str);  // Tell the prompt this is a valid option.
-
     message.Append(Syntax::kSpecial, fxl::StringPrintf("%3s ", index_str.c_str()));
-    message.Append(FormatLocation(locs[0], format_opts));
+
+    if (calls[i].call_dest) {
+      // Provide a symbol name for the call destination.
+      auto locs = symbols->ResolveInputLocation(InputLocation(*calls[i].call_dest));
+      FX_DCHECK(locs.size() == 1);  // Should always get one result for an address lookup.
+      message.Append(FormatLocation(locs[0], format_opts));
+    } else {
+      // Indirect calls won't have a call address.
+      message.Append("«Indirect or virtual function call, no name available.»");
+    }
     message.Append("\n");
   }
 

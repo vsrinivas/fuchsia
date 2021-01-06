@@ -28,7 +28,7 @@ std::optional<AddressRange> AddressRanges::GetRangeContaining(uint64_t addr) con
   // This would be faster using brute-force for smallish numbers of elements,
   // but it doesn't matter that much and forcing the more complex code path in
   // all cases helps ensure correctness.
-  auto found = std::lower_bound(ranges_.begin(), ranges_.end(), addr, AddressRangeEndAddrCmp());
+  auto found = std::upper_bound(ranges_.begin(), ranges_.end(), addr, AddressRangeEndAddrCmp());
   if (found == ranges_.end() || !found->InRange(addr))
     return std::nullopt;
   return *found;

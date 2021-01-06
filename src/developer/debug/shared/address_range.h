@@ -72,6 +72,7 @@ struct AddressRangeBeginCmp {
 // contains the item if it exists.
 struct AddressRangeEndAddrCmp {
   bool operator()(const AddressRange& range, uint64_t addr) const { return range.end() < addr; }
+  bool operator()(uint64_t addr, const AddressRange& range) const { return addr < range.end(); }
 };
 
 // Used for putting address ranges in a set where range uniqueness is required.

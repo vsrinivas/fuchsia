@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SUBSTATEMENT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SUBSTATEMENT_H_
 
+#include <optional>
 #include <vector>
 
 #include "lib/fit/function.h"
@@ -23,8 +24,12 @@ class Process;
 class ProcessSymbols;
 
 struct SubstatementCall {
-  TargetPointer call_addr;  // Address of the call instruction.
-  TargetPointer call_dest;  // Destination of the call. Will be the same as call_addr for inlines.
+  // Address of the call instruction.
+  TargetPointer call_addr;
+
+  // Destination of the call if known. Will be the same as call_addr for inlines. This will be
+  // nullopt for indirect call instructions.
+  std::optional<TargetPointer> call_dest;
 
   // Set for inline calls. Null for real function calls.
   fxl::RefPtr<Function> inline_call;
