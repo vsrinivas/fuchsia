@@ -215,6 +215,12 @@ zx_status_t make_single_participant_collection(zx::channel* collection_client_ch
   return ZX_OK;
 }
 
+static void SetDefaultCollectionName(const zx::channel& collection) {
+  constexpr uint32_t kPriority = 1000000;
+  const char* kName = "sysmem-test";
+  fuchsia_sysmem_BufferCollectionSetName(collection.get(), kPriority, kName, strlen(kName));
+}
+
 const std::string& GetBoardName() {
   static std::string s_board_name;
   if (s_board_name.empty()) {
@@ -480,6 +486,8 @@ TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
   zx_status_t status = make_single_participant_collection(&collection_client);
   ASSERT_EQ(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client);
+
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
   constraints->min_buffer_count_for_camping = 3;
@@ -554,6 +562,8 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator2_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -676,6 +686,7 @@ TEST(Sysmem, MinBufferCount) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -793,6 +804,7 @@ TEST(Sysmem, NoToken) {
   status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator2_client.get(),
                                                                collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -926,6 +938,8 @@ TEST(Sysmem, NoSync) {
   status = fuchsia_sysmem_BufferCollectionSync(collection_client.get());
   EXPECT_NE(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client);
+
   // The duplicate/sync should print out an errror message but succeed.
   status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
                                                          token_server_2.release());
@@ -985,6 +999,8 @@ TEST(Sysmem, MultipleParticipants) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
   ASSERT_EQ(status, ZX_OK, "");
+
+  SetDefaultCollectionName(collection_client_1);
 
   BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
   constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -1284,6 +1300,8 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
       allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client_1);
+
   BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
   constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
   constraints_1->min_buffer_count_for_camping = 1;
@@ -1408,6 +1426,8 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
       allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client_1);
+
   BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
   constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
   constraints_1->min_buffer_count_for_camping = 2;
@@ -1473,6 +1493,8 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
       allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client_2);
+
   // Not all constraints have been input (client 2 hasn't SetConstraints()
   // yet), so the buffers haven't been allocated yet.
   zx_status_t check_status;
@@ -1529,6 +1551,8 @@ TEST(Sysmem, HeapConstraints) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
@@ -1590,6 +1614,8 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainFails) {
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
 
+  SetDefaultCollectionName(collection_client);
+
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
   constraints->min_buffer_count_for_camping = 1;
@@ -1650,6 +1676,8 @@ TEST(Sysmem, SystemRamHeapSupportsAllDomains) {
         allocator_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
+    SetDefaultCollectionName(collection_client);
+
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.vulkan = fuchsia_sysmem_VULKAN_IMAGE_USAGE_TRANSFER_DST;
     constraints->min_buffer_count_for_camping = 1;
@@ -1706,6 +1734,7 @@ TEST(Sysmem, RequiredSize) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -1788,6 +1817,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client_1.get(), token_client_1.release(), collection_server_1.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client_1);
 
   // First client has CPU usage constraints but no buffer memory constraints.
   BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
@@ -1870,6 +1900,7 @@ TEST(Sysmem, ContiguousSystemRamIsCached) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
@@ -1975,6 +2006,7 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
     status = fuchsia_sysmem_AllocatorBindSharedCollection(
         allocator_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
+    SetDefaultCollectionName(collection_client);
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.vulkan = fuchsia_sysmem_vulkanUsageTransferDst;
@@ -2208,6 +2240,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client_1);
 
   BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
   constraints_1->usage.none = fuchsia_sysmem_noneUsage;
@@ -2315,6 +2348,7 @@ TEST(Sysmem, PixelFormatBgr24) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator2_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -2459,6 +2493,7 @@ TEST(Sysmem, HeapAmlogicSecure) {
                                                                        aux_constraints.release());
       ASSERT_EQ(status, ZX_OK, "");
     }
+    SetDefaultCollectionName(collection_client);
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.video = fuchsia_sysmem_videoUsageHwDecoder;
@@ -2570,6 +2605,7 @@ TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
     zx::channel collection_client;
     zx_status_t status = make_single_participant_collection(&collection_client);
     ASSERT_EQ(status, ZX_OK, "");
+    SetDefaultCollectionName(collection_client);
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.video = fuchsia_sysmem_videoUsageHwDecoder;
@@ -2631,6 +2667,7 @@ TEST(Sysmem, HeapAmlogicSecureVdec) {
     zx::channel collection_client;
     zx_status_t status = make_single_participant_collection(&collection_client);
     ASSERT_EQ(status, ZX_OK, "");
+    SetDefaultCollectionName(collection_client);
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.video =
@@ -2699,6 +2736,7 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainSupportedSucceeds) {
   zx::channel collection_client;
   zx_status_t status = make_single_participant_collection(&collection_client);
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   constexpr uint32_t kBufferCount = 3;
   constexpr uint32_t kBufferSize = 64 * 1024;
@@ -2767,6 +2805,7 @@ TEST(Sysmem, AllocatedBufferZeroInRam) {
     zx::channel collection_client;
     zx_status_t status = make_single_participant_collection(&collection_client);
     ASSERT_EQ(status, ZX_OK, "");
+    SetDefaultCollectionName(collection_client);
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -2856,6 +2895,7 @@ TEST(Sysmem, DefaultAttributes) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -2931,6 +2971,7 @@ TEST(Sysmem, TooManyFormats) {
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -2978,6 +3019,7 @@ TEST(Sysmem, TooManyBuffers) {
   status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator_client.get(),
                                                                collection_server.release());
   ASSERT_EQ(status, ZX_OK, "");
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->has_buffer_memory_constraints = true;
@@ -3066,6 +3108,7 @@ TEST(Sysmem, EventSink) {
   loop.Run();
   EXPECT_TRUE(server.got_tokens_known());
   loop.ResetQuit();
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
@@ -3114,6 +3157,7 @@ bool BasicAllocationSucceeds(
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
       allocator_client.get(), token_client.release(), collection_server.release());
   ZX_ASSERT(status == ZX_OK);
+  SetDefaultCollectionName(collection_client);
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
   constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
