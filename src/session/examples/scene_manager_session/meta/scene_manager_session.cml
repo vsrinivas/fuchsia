@@ -6,7 +6,7 @@
     use: [
         { runner: "elf" },
         {
-            directory: "dev-class-input-report",
+            directory: "dev-input-report",
             from: "parent",
             rights: [ "r*" ],
             path: "/dev/class/input-report",
