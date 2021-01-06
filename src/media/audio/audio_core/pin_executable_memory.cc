@@ -108,9 +108,13 @@ __attribute__((no_sanitize_address)) void PinExecutableMemory::Pin() {
 
   TRACE_INSTANT("audio", "Pinned bytes", TRACE_SCOPE_THREAD, total_bytes);
 
-  auto end_time = zx::clock::get_monotonic();
-  FX_LOGS(INFO) << "pinned " << total_bytes << " bytes (" << total_executable_bytes
-                << " executable bytes) in " << (end_time - start_time).to_nsecs() << " ns";
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (total_bytes != last_pinned_bytes_) {
+    last_pinned_bytes_ = total_bytes;
+    auto end_time = zx::clock::get_monotonic();
+    FX_LOGS(INFO) << "pinned " << total_bytes << " executable bytes in "
+                  << (end_time - start_time).to_nsecs() << " ns";
+  }
 }
 
 std::vector<zx_info_maps_t> PinExecutableMemory::ListVMaps() {

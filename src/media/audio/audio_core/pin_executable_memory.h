@@ -97,6 +97,7 @@ class PinExecutableMemory {
 
   std::mutex mutex_;
   std::vector<Range> discarded_mappings_ FXL_GUARDED_BY(mutex_);
+  size_t last_pinned_bytes_ FXL_GUARDED_BY(mutex_) = 0;
 };
 
 }  // namespace media::audio
