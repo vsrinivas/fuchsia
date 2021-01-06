@@ -30,7 +30,6 @@ type Config struct {
 	MaxReadSize                  int                    `json:"maxReadSize"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`
-	OutputTreeStateFilename      string                 `json:"outputTreeStateFilename"`
 	SingleLicenseFiles           []string               `json:"singleLicenseFiles"`
 	StopLicensePropagation       []string               `json:"stopLicensePropagation"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`

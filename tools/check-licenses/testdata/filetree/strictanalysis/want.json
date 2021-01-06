@@ -2,30 +2,30 @@
 	"name": "root",
 	"path": "{root}",
 	"strict analysis": true,
-	"children": {
-		"{root}/stop": {
+	"children": [
+		{
 			"name": "stop",
 			"path": "{root}/stop",
 			"strict analysis": false,
-			"children": {
-				"{root}/stop/subdir": {
+			"children": [
+				{
 					"name": "subdir",
 					"path": "{root}/stop/subdir",
 					"strict analysis": false
 				}
-			}
+			]
 		},
-		"{root}/stop2": {
+		{
 			"name": "stop2",
 			"path": "{root}/stop2",
 			"strict analysis": true,
-			"children": {
-				"{root}/stop2/subdir": {
+			"children": [
+				{
 					"name": "subdir",
 					"path": "{root}/stop2/subdir",
 					"strict analysis": true
 				}
-			}
+			]
 		}
-        }
+        ]
 }

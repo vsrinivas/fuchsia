@@ -18,12 +18,12 @@ type File struct {
 	Licenses []*License `json:"licenses"`
 }
 
-// ByPath implements sort.Interface for []*File based on the Path field.
-type byPath []*File
+// fileByPath implements sort.Interface for []*File based on the Path field.
+type fileByPath []*File
 
-func (a byPath) Len() int           { return len(a) }
-func (a byPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byPath) Less(i, j int) bool { return a[i].Path < a[j].Path }
+func (a fileByPath) Len() int           { return len(a) }
+func (a fileByPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a fileByPath) Less(i, j int) bool { return a[i].Path < a[j].Path }
 
 func NewFile(path string, parent *FileTree) (*File, error) {
 	symlink, err := filepath.EvalSymlinks(path)

@@ -6,13 +6,11 @@ package checklicenses
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime/trace"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -23,19 +21,25 @@ type FileTree struct {
 	Path               string                `json:"path"`
 	SingleLicenseFiles map[string][]*License `json:"project licenses"`
 	Files              []*File               `json:"files"`
-	Children           map[string]*FileTree  `json:"children"`
+	Children           []*FileTree           `json:"children"`
 	Parent             *FileTree             `json:"-"`
 	StrictAnalysis     bool                  `json:"strict analysis"`
 
 	sync.RWMutex
 }
 
+// filetreeByPath implements sort.Interface for []*FileTree based on the Path field.
+type filetreeByPath []*FileTree
+
+func (a filetreeByPath) Len() int           { return len(a) }
+func (a filetreeByPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a filetreeByPath) Less(i, j int) bool { return a[i].Path < a[j].Path }
+
 // NewFileTree returns an instance of FileTree, given the input configuration
 // file.
 func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Config, metrics *Metrics) (*FileTree, error) {
 	defer trace.StartRegion(ctx, "NewFileTree").End()
 	ft := FileTree{
-		Children:           make(map[string]*FileTree),
 		SingleLicenseFiles: make(map[string][]*License),
 	}
 
@@ -90,7 +94,7 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 				if err != nil {
 					return err
 				}
-				ft.Children[path] = child
+				ft.Children = append(ft.Children, child)
 				return filepath.SkipDir
 			}
 			return nil
@@ -137,6 +141,9 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		// TODO(jcecil): This must be an error.
 		return nil, err
 	}
+
+	sort.Sort(fileByPath(ft.Files))
+	sort.Sort(filetreeByPath(ft.Children))
 
 	return &ft, nil
 }
@@ -209,49 +216,6 @@ func (ft *FileTree) getFileIterator() <-chan *File {
 		close(ch)
 	}()
 	return ch
-}
-
-// Maps are used in FileTree to prevent duplicate values (since go doesn't have sets).
-// However, Maps make the final JSON object difficult to read.
-// Define a custom MarshalJSON function to convert the internal Maps into slices.
-func (ft *FileTree) MarshalJSON() ([]byte, error) {
-	type Alias FileTree
-	childrenList := []*FileTree{}
-	fileList := []string{}
-
-	for _, c := range ft.Children {
-		childrenList = append(childrenList, c)
-	}
-
-	for _, f := range ft.Files {
-		fileList = append(fileList, f.Name)
-	}
-
-	return json.Marshal(&struct {
-		*Alias
-		Children []*FileTree `json:"children"`
-	}{
-		Alias:    (*Alias)(ft),
-		Children: childrenList,
-	})
-}
-
-func (ft *FileTree) saveTreeState(filename string) error {
-	jsonString, err := json.MarshalIndent(ft, "", " ")
-	if err != nil {
-		return fmt.Errorf("error marshalling the file tree: %v\n", err)
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = io.WriteString(file, string(jsonString))
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (ft *FileTree) Equal(other *FileTree) bool {

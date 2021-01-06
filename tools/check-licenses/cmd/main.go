@@ -30,7 +30,6 @@ var (
 	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", true, "If true, exits if it encounters files that are unlicensed.")
 	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
 	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
-	outputTreeStateFilename      = flag.String("output_tree_state_filename", "", "Filename for saving the state of the file tree.")
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
 	pproffile                    = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
 	tracefile                    = flag.String("trace", "", "generate file that can be parsed by go tool trace")
@@ -121,7 +120,6 @@ func mainImpl() error {
 	config.ExitOnUnlicensedFiles = *exitOnUnlicensedFiles
 
 	config.OutputLicenseFile = *outputLicenseFile
-	config.OutputTreeStateFilename = *outputTreeStateFilename
 
 	if *licensePatternDir != "" {
 		if info, err := os.Stat(*licensePatternDir); os.IsNotExist(err) && info.IsDir() {

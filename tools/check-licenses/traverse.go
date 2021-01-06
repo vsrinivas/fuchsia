@@ -87,10 +87,6 @@ func Walk(ctx context.Context, config *Config) error {
 
 	defer trace.StartRegion(ctx, "finalization").End()
 
-	if config.OutputTreeStateFilename != "" {
-		file_tree.saveTreeState(config.OutputTreeStateFilename)
-	}
-
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {

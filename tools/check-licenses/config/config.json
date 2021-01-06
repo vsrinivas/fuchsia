@@ -107,7 +107,6 @@
   "outputLicenseFile": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
-  "outputTreeStateFilename": "",
   "singleLicenseFiles": [
     "about_os_credits.html",
     "copying",
