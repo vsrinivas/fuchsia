@@ -278,7 +278,6 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
                                                  struct magma_system_command_buffer* command_buffer,
                                                  struct magma_system_exec_resource* resources,
                                                  uint64_t* semaphore_ids) {
-  // printf("magma_execute_command_buffer_with_resources\n");
   if (command_buffer->resource_count > 0) {
     DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->resource_count);
 
