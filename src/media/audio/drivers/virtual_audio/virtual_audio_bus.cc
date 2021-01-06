@@ -3,10 +3,10 @@
 
 #include <lib/async/default.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 
+#include "src/media/audio/drivers/virtual_audio/virtual_audio_bind.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
@@ -69,9 +69,7 @@ static constexpr zx_driver_ops_t virtual_audio_bus_driver_ops = []() {
 __BEGIN_CDECLS
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(virtual_audio, virtual_audio_bus_driver_ops, "fuchsia", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT)
-ZIRCON_DRIVER_END(virtual_audio)
+ZIRCON_DRIVER(virtual_audio, virtual_audio_bus_driver_ops, "fuchsia", "0.1");
 // clang-format on
 
 __END_CDECLS
