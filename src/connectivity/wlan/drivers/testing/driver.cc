@@ -4,17 +4,18 @@
 
 #include "driver.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
 #include <memory>
 
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/test.h>
+
 #include "phy-device.h"
+#include "src/connectivity/wlan/drivers/testing/wlanphy_test_bind.h"
 
 // Not guarded by a mutex, because it will be valid between .init and .release
 // and nothing else will exist outside those two calls.
@@ -75,7 +76,4 @@ static constexpr zx_driver_ops_t wlanphy_test_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(wlanphy_test, wlanphy_test_driver_ops, "fuchsia", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(wlanphy_test)
+ZIRCON_DRIVER(wlanphy_test, wlanphy_test_driver_ops, "fuchsia", "0.1");
