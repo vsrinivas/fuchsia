@@ -44,7 +44,11 @@ zx_status_t elf_load_get_interp(elf_load_info_t* info, zx_handle_t vmo, char** i
   char* buffer = NULL;
   uintptr_t offset;
   if (elf_load_find_interp(info->phdrs, info->header.e_phnum, &offset, interp_len)) {
-    buffer = malloc(*interp_len + 1);
+    size_t buffer_len;
+    if (add_overflow(*interp_len, 1, &buffer_len)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    buffer = malloc(buffer_len);
     if (buffer == NULL)
       return ZX_ERR_NO_MEMORY;
     zx_status_t status = zx_vmo_read(vmo, buffer, offset, *interp_len);
