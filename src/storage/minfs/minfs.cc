@@ -1345,7 +1345,7 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
                   fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
-  FX_LOGS(INFO) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
+  FX_LOGS(DEBUG) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
 
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
