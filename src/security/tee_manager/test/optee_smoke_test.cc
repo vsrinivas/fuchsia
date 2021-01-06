@@ -44,17 +44,6 @@ uint32_t GetHandleCount(zx::unowned_handle h) {
 class OpteeSmokeTest : public sys::testing::TestWithEnvironment {
  protected:
   void SetUp() override {
-    auto services = CreateServices();
-
-    fuchsia::sys::LaunchInfo launch_info{
-        "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"};
-    zx_status_t status =
-        services->AddServiceWithLaunchInfo(std::move(launch_info), fuchsia::tee::Device::Name_);
-    ASSERT_EQ(status, ZX_OK);
-
-    environment_ = CreateNewEnclosingEnvironment("optee_test", std::move(services));
-    WaitForEnclosingEnvToStart(environment_.get());
-
     TEEC_Result result = TEEC_InitializeContext(nullptr, &context_);
     ASSERT_TRUE(IsTeecSuccess(result));
     context_guard_ = ContextGuard(&context_);
@@ -74,7 +63,6 @@ class OpteeSmokeTest : public sys::testing::TestWithEnvironment {
   TEEC_Session* GetSession() { return &session_; }
 
  private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   TEEC_Context context_{};
   ContextGuard context_guard_;
   TEEC_Session session_{};
