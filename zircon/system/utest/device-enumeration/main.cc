@@ -377,6 +377,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // Amber LED.
       "gpio-light",
       "class/light/000",
+
+      "spi/aml-spi-1/spi/spi-1-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
