@@ -170,4 +170,15 @@ impl MockPeer {
 
         Ok(connect_requests)
     }
+
+    pub async fn make_connection(
+        &self,
+        peer_id: PeerId,
+        mut params: ConnectParameters,
+    ) -> Result<Channel, Error> {
+        self.profile_svc
+            .connect(&mut peer_id.into(), &mut params)
+            .await?
+            .map_err(|e| format_err!("{:?}", e))
+    }
 }

@@ -352,11 +352,15 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
         if let Some(peer) = peer_weak.upgrade() {
             let mut peer_guard = peer.write();
 
-            // The old tasks need to be cleaned up. Potentially terminate the control
-            // channel processing task and the notification processing task.
+            // The old tasks need to be cleaned up. Potentially terminate the channel
+            // processing tasks and the notification processing task.
             // Reset the `cancel_tasks` flag so that we don't fall into a loop of
             // constantly clearing the tasks.
             if peer_guard.cancel_tasks {
+                browse_channel_abort_handle.take().map(|a| {
+                    trace!("state_watcher: clearing previous browse channel task.");
+                    a.abort()
+                });
                 control_channel_abort_handle.take().map(|a| {
                     trace!("state_watcher: clearing previous control channel task.");
                     a.abort()
@@ -414,14 +418,15 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                 }
                 &PeerChannelState::Connected(_) => {
                     // The Browse channel must be established after the control channel.
-                    // Ensure that the control channel exists and the browse channel doesn't
-                    // before spawning the browse processing task.
-                    if control_channel_abort_handle.is_some()
-                        && browse_channel_abort_handle.is_none()
-                    {
-                        browse_channel_abort_handle =
-                            Some(start_browse_stream_processing_task(peer.clone()));
+                    // Ensure that the control channel exists before starting the browse task.
+                    if control_channel_abort_handle.is_none() {
+                        trace!("Received Browse connection before Control .. disconnecting");
+                        peer_guard.browse_channel.disconnect();
+                        continue;
                     }
+                    // We always use the newest Browse connection.
+                    browse_channel_abort_handle =
+                        Some(start_browse_stream_processing_task(peer.clone()));
                 }
             }
         } else {
