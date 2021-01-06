@@ -37,7 +37,10 @@ async fn base_resolver_appmgr_bridge_test() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     // Subscribe to events and begin execution of component manager
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     // Begin component manager's execution
     event_source.start_component_tree().await;

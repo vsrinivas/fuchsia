@@ -11,7 +11,7 @@ use {
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},
     test_utils_lib::{
-        events::{self as events, Event, EventSource},
+        events::{self as events, Event, EventMode, EventSource, EventSubscription},
         injectors::*,
         matcher::EventMatcher,
         sequence::EventSequence,
@@ -23,7 +23,10 @@ async fn test_exit_detection() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    let event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
 
     let collection_name = String::from("test-collection");
@@ -55,7 +58,10 @@ async fn test_exit_after_rendezvous() {
     let event_source = EventSource::new_sync().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
     rendezvous_service.inject(&event_source, EventMatcher::ok()).await;
-    let event_stream = event_source.subscribe(vec![events::Stopped::NAME]).await.unwrap();
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
 
     // Launch the component under test.

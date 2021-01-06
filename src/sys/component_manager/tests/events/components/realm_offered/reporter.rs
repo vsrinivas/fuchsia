@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     test_utils_lib::{
-        events::{Event, EventSource, Handler, Started},
+        events::{Event, EventMode, EventSource, EventSubscription, Handler, Started},
         matcher::EventMatcher,
     },
 };
@@ -16,7 +16,10 @@ use {
 async fn main() {
     // Track all the starting components.
     let event_source = EventSource::new_sync().unwrap();
-    let mut event_stream = event_source.subscribe(vec!["started_nested"]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec!["started_nested"], EventMode::Sync)])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 

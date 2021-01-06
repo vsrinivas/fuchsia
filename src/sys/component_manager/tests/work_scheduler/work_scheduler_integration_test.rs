@@ -14,7 +14,10 @@ async fn basic_work_scheduler_test() {
     let test = OpaqueTest::default(root_component_url).await.unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;
@@ -36,7 +39,10 @@ async fn unbound_work_scheduler_test() {
     let test = OpaqueTest::default(root_component_url).await.unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;

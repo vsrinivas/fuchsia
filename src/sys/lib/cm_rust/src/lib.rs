@@ -539,6 +539,7 @@ fsys::UseEventDecl,
     source_name: CapabilityName,
     target_name: CapabilityName,
     filter: Option<HashMap<String, DictionaryValue>>,
+    mode: EventMode,
 });
 fidl_into_struct!(UseEventStreamDecl, UseEventStreamDecl, fsys::UseEventStreamDecl,
 fsys::UseEventStreamDecl,
@@ -633,6 +634,7 @@ fsys::OfferEventDecl,
     target: OfferTarget,
     target_name: CapabilityName,
     filter: Option<HashMap<String, DictionaryValue>>,
+    mode: EventMode,
 });
 fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDeclUnknown,
 {
@@ -1454,6 +1456,30 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EventMode {
+    Sync,
+    Async,
+}
+
+impl FidlIntoNative<EventMode> for Option<fsys::EventMode> {
+    fn fidl_into_native(self) -> EventMode {
+        match self {
+            Some(fsys::EventMode::Sync) => EventMode::Sync,
+            _ => EventMode::Async,
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::EventMode>> for EventMode {
+    fn native_into_fidl(self) -> Option<fsys::EventMode> {
+        match self {
+            EventMode::Sync => Some(fsys::EventMode::Sync),
+            _ => Some(fsys::EventMode::Async),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
     Child(String),
@@ -1724,6 +1750,7 @@ mod tests {
                            ]),
                            ..fdata::Dictionary::EMPTY
                        }),
+                       mode: Some(fsys::EventMode::Sync),
                        ..fsys::UseEventDecl::EMPTY
                    }),
                ]),
@@ -1869,6 +1896,7 @@ mod tests {
                            ]),
                            ..fdata::Dictionary::EMPTY
                        }),
+                       mode: Some(fsys::EventMode::Sync),
                        ..fsys::OfferEventDecl::EMPTY
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
@@ -2052,6 +2080,7 @@ mod tests {
                             source_name: "capability_ready".into(),
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
+                            mode: EventMode::Sync,
                         })
                     ],
                     exposes: vec![
@@ -2137,6 +2166,7 @@ mod tests {
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mystarted".into(),
                             filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/a".to_string())}),
+                            mode: EventMode::Sync,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![

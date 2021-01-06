@@ -7,7 +7,7 @@ use {
     fuchsia_component::client::{connect_to_service, ScopedInstance},
     fuchsia_syslog as syslog,
     test_utils_lib::{
-        events::{Destroyed, Event, EventSource, Started},
+        events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
 };
@@ -18,8 +18,13 @@ async fn main() {
 
     // Track all the starting child components.
     let event_source = EventSource::new_async().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![Started::NAME, Destroyed::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Destroyed::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
 
     let mut instances = vec![];
     let url =

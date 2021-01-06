@@ -42,12 +42,14 @@
                 "stopped",
             ],
             from: "framework",
+            modes: ["async"],
             to: [ "#archivist" ],
         },
         {
             event: "capability_ready",
             from: "framework",
             to: [ "#archivist" ],
+            modes: ["async"],
             filter: { name: "diagnostics" },
         },
         {

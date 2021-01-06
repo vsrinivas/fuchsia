@@ -1475,7 +1475,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `runner`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`"
         ),
 
         test_cml_use_disallows_nested_dirs(

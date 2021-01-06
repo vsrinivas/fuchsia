@@ -65,7 +65,10 @@ async fn empty_component() {
     let test =
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/cs-tests#meta/empty.cm").await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 
@@ -102,7 +105,10 @@ async fn tree() {
     let test =
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/cs-tests#meta/root.cm").await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 
@@ -235,7 +241,10 @@ async fn echo_realm() {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     {
-        let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+            .await
+            .unwrap();
         event_source.start_component_tree().await;
 
         // 3 components are started. Order is irrelevant.

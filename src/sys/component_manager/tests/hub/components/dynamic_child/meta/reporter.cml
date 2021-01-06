@@ -33,6 +33,7 @@
                 "stopped",
             ],
             from: "framework",
+            modes: ["sync"],
         },
     ],
 }

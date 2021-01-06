@@ -28,12 +28,14 @@
                     "not_published",
                 ],
             },
+            modes: ["sync"],
         },
         {
             // We need the resolved event for start_component_tree.
             // See fxbug.dev/52929.
             event: "resolved",
             from: "framework",
+            modes: ["sync"],
         },
     ],
 }

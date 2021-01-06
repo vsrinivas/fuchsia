@@ -32,7 +32,9 @@ pub async fn start_policy_test(
         .build()
         .await?;
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await?;
     event_source.start_component_tree().await;
 
     // Wait for the root component to be started so we can connect to its Realm service through the

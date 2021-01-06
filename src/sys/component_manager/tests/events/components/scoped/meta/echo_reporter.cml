@@ -29,6 +29,7 @@
                 "started",
             ],
             from: "framework",
+            modes: ["sync"],
         },
     ],
     expose: [

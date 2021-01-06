@@ -29,11 +29,13 @@
                 "started",
             ],
             from: "framework",
+            modes: ["sync"],
         },
         {
             event: [ "capability_requested" ],
             from: "framework",
             filter: { name: "fidl.test.components.Trigger" },
+            modes: ["async"],
         },
         {
             event_stream: [ "capability_requested" ],

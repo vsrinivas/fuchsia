@@ -6,7 +6,7 @@ use {
     crate::model::{
         events::{
             dispatcher::{EventDispatcher, EventDispatcherScope},
-            event::Event,
+            event::{Event, EventMode},
             registry::SubscriptionOptions,
         },
         hooks::{EventType, HasEventType},
@@ -18,9 +18,6 @@ use {
 };
 
 pub struct EventStream {
-    /// The options used to generate this EventStream.
-    options: SubscriptionOptions,
-
     /// The receiving end of a channel of Events.
     rx: mpsc::UnboundedReceiver<Event>,
 
@@ -34,17 +31,18 @@ pub struct EventStream {
 }
 
 impl EventStream {
-    pub fn new(options: SubscriptionOptions) -> Self {
+    pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded();
-        Self { options, rx, tx, dispatchers: vec![] }
+        Self { rx, tx, dispatchers: vec![] }
     }
 
     pub fn create_dispatcher(
         &mut self,
+        options: SubscriptionOptions,
+        mode: EventMode,
         scopes: Vec<EventDispatcherScope>,
     ) -> Weak<EventDispatcher> {
-        let dispatcher =
-            Arc::new(EventDispatcher::new(self.options.clone(), scopes, self.tx.clone()));
+        let dispatcher = Arc::new(EventDispatcher::new(options, mode, scopes, self.tx.clone()));
         self.dispatchers.push(dispatcher.clone());
         Arc::downgrade(&dispatcher)
     }

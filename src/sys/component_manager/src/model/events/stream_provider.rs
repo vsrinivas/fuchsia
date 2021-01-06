@@ -7,8 +7,11 @@ use {
         error::ModelError,
         events::{
             error::EventsError,
-            event::SyncMode,
-            registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
+            event::EventMode,
+            registry::{
+                EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
+                SubscriptionType,
+            },
             serve::serve_event_stream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -76,10 +79,17 @@ impl EventStreamProvider {
     ) -> Result<(), ModelError> {
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(target_moniker.clone()),
-            SyncMode::Async,
             self.execution_mode.clone(),
         );
-        let event_stream = registry.subscribe(&options, events).await?;
+        let event_stream = registry
+            .subscribe(
+                &options,
+                events
+                    .into_iter()
+                    .map(|event| EventSubscription::new(event, EventMode::Async))
+                    .collect(),
+            )
+            .await?;
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();

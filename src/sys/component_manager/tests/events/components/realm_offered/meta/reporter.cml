@@ -19,10 +19,12 @@
         {
             event: "started_nested",
             from: "parent",
+            modes: ["sync"],
         },
         {
             event: "resolved",
             from: "framework",
+            modes: ["sync"],
         },
         { runner: "elf" },
     ],

@@ -10,6 +10,7 @@ use {
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
+            events::{event::EventMode, registry::EventSubscription},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             resolver::ResolverError,
             rights,
@@ -310,6 +311,7 @@ async fn capability_requested_event_at_parent() {
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
                     filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
+                    mode: cm_rust::EventMode::Async,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -331,7 +333,7 @@ async fn capability_requested_event_at_parent() {
     let mut event_stream = capability_util::subscribe_to_events(
         &namespace_root,
         &CapabilityPath::try_from("/svc/fuchsia.sys2.EventSource").unwrap(),
-        vec!["capability_requested".into()],
+        vec![EventSubscription::new("capability_requested".into(), EventMode::Async)],
     )
     .await
     .unwrap();
@@ -2710,18 +2712,21 @@ async fn use_event_from_framework() {
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "started".into(),
                     target_name: "started".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -2730,7 +2735,10 @@ async fn use_event_from_framework() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            names: vec!["capability_requested".into(), "started".into()],
+            requests: vec![
+                EventSubscription::new("capability_requested".into(), EventMode::Sync),
+                EventSubscription::new("started".into(), EventMode::Sync),
+            ],
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -2760,6 +2768,7 @@ async fn cannot_offer_capability_requested_event() {
                 target_name: "capability_requested_on_a".into(),
                 target: OfferTarget::Child("b".to_string()),
                 filter: None,
+                mode: cm_rust::EventMode::Sync,
             }))
             .add_lazy_child("b")
             .build(),
@@ -2782,6 +2791,7 @@ async fn cannot_use_capability_requested_event_from_realm() {
                 source_name: "capability_requested".into(),
                 target_name: "capability_requested_from_parent".into(),
                 filter: None,
+                mode: cm_rust::EventMode::Sync,
             }))
             .build(),
     )];
@@ -2810,6 +2820,7 @@ async fn use_event_from_parent() {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
@@ -2834,12 +2845,14 @@ async fn use_event_from_parent() {
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -2847,7 +2860,10 @@ async fn use_event_from_parent() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event { names: vec!["started".into()], expected_res: ExpectedResult::Ok },
+        CheckUse::Event {
+            requests: vec![EventSubscription::new("started".into(), EventMode::Sync)],
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
 }
@@ -2877,6 +2893,7 @@ async fn use_event_from_grandparent() {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
@@ -2891,6 +2908,7 @@ async fn use_event_from_grandparent() {
                     target_name: "stopped_on_b".into(),
                     target: OfferTarget::Child("b".to_string()),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .add_lazy_child("b")
                 .build(),
@@ -2904,6 +2922,7 @@ async fn use_event_from_grandparent() {
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("c".to_string()),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
@@ -2918,6 +2937,7 @@ async fn use_event_from_grandparent() {
                     target_name: "destroyed".into(),
                     target: OfferTarget::Child("c".to_string()),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .add_lazy_child("c")
                 .build(),
@@ -2935,24 +2955,28 @@ async fn use_event_from_grandparent() {
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
                     source_name: "destroyed".into(),
                     target_name: "destroyed".into(),
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
                     source_name: "stopped_on_a".into(),
                     target_name: "stopped".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -2961,7 +2985,10 @@ async fn use_event_from_grandparent() {
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Event {
-            names: vec!["started".into(), "destroyed".into()],
+            requests: vec![
+                EventSubscription::new("started".into(), EventMode::Sync),
+                EventSubscription::new("destroyed".into(), EventMode::Sync),
+            ],
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -2969,7 +2996,7 @@ async fn use_event_from_grandparent() {
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Event {
-            names: vec!["stopped".into()],
+            requests: vec![EventSubscription::new("stopped".into(), EventMode::Sync)],
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
@@ -3003,6 +3030,7 @@ async fn event_filter_routing() {
                             "foo".to_string(), "bar".to_string(), "baz".to_string()
                         ])
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
@@ -3029,12 +3057,14 @@ async fn event_filter_routing() {
                     filter: Some(hashmap! {
                         "name".to_string() => DictionaryValue::Str("foo".into()),
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
@@ -3060,6 +3090,7 @@ async fn event_filter_routing() {
                             "foo".to_string(), "bar".to_string()
                         ])
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Parent,
@@ -3071,6 +3102,7 @@ async fn event_filter_routing() {
                             "foo".to_string(), "bar".to_string()
                         ])
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .add_lazy_child("c")
                 .add_lazy_child("d")
@@ -3093,12 +3125,14 @@ async fn event_filter_routing() {
                             "foo".to_string(), "bar".to_string()
                         ])
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -3117,12 +3151,14 @@ async fn event_filter_routing() {
                     filter: Some(hashmap! {
                         "name".to_string() => DictionaryValue::Str("baz".into()),
                     }),
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -3131,7 +3167,7 @@ async fn event_filter_routing() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            names: vec!["capability_ready_foo".into()],
+            requests: vec![EventSubscription::new("capability_ready_foo".into(), EventMode::Sync)],
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -3139,7 +3175,10 @@ async fn event_filter_routing() {
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Event {
-            names: vec!["capability_ready_foo_bar".into()],
+            requests: vec![EventSubscription::new(
+                "capability_ready_foo_bar".into(),
+                EventMode::Sync,
+            )],
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -3147,7 +3186,204 @@ async fn event_filter_routing() {
     test.check_use(
         vec!["b:0", "d:0"].into(),
         CheckUse::Event {
-            names: vec!["capability_ready_baz".into()],
+            requests: vec![EventSubscription::new("capability_ready_baz".into(), EventMode::Sync)],
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///   a
+///   |
+///   b
+///   |
+///   c
+///
+/// a: offer framework event "capability_ready" with mode "async".
+/// b: offers parent event "capabilty_ready" with mode "sync".
+/// c: uses realm event "capability_ready" with mode "sync"
+#[fuchsia_async::run_singlethreaded(test)]
+async fn event_mode_routing_failure() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Parent,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Parent,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready_foo_bar".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            requests: vec![EventSubscription::new(
+                "capability_ready_foo_bar".into(),
+                EventMode::Sync,
+            )],
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///   a
+///   |
+///   b
+///   |
+///   c
+///
+/// a: offer framework event "capability_ready" with mode "sync".
+/// b: offers parent event "capabilty_ready" with mode "async".
+/// c: uses realm event "capability_ready" with mode "async"
+#[fuchsia_async::run_singlethreaded(test)]
+async fn event_mode_routing_success() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Parent,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Parent,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready_foo_bar".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            requests: vec![EventSubscription::new(
+                "capability_ready_foo_bar".into(),
+                EventMode::Async,
+            )],
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            requests: vec![EventSubscription::new(
+                "capability_ready_foo_bar".into(),
+                EventMode::Sync,
+            )],
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )
@@ -3811,18 +4047,21 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "started".into(),
                     target_name: "started".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
                     filter: None,
+                    mode: cm_rust::EventMode::Sync,
                 }))
                 .build(),
         ),
@@ -3860,7 +4099,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            names: vec!["capability_requested".into()],
+            requests: vec![EventSubscription::new("capability_requested".into(), EventMode::Async)],
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -3869,7 +4108,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            names: vec!["started".into()],
+            requests: vec![EventSubscription::new("started".into(), EventMode::Async)],
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )

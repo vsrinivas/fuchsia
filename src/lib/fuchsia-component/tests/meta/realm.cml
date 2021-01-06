@@ -21,6 +21,7 @@
         {
             event: "destroyed",
             from: "framework",
+            modes: ["sync"],
         },
     ],
 }

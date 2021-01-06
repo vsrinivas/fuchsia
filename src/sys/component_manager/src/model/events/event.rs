@@ -7,8 +7,8 @@ use {
     futures::channel::oneshot, moniker::AbsoluteMoniker,
 };
 
-#[derive(PartialEq, Clone)]
-pub enum SyncMode {
+#[derive(PartialEq, Clone, Debug)]
+pub enum EventMode {
     Sync,
     Async,
 }
@@ -33,11 +33,11 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn sync_mode(&self) -> SyncMode {
+    pub fn mode(&self) -> EventMode {
         if self.responder.is_none() {
-            SyncMode::Async
+            EventMode::Async
         } else {
-            SyncMode::Sync
+            EventMode::Sync
         }
     }
 

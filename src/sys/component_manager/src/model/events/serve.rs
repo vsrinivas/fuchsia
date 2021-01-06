@@ -9,7 +9,8 @@ use {
         model::{
             error::ModelError,
             events::{
-                event::{Event, SyncMode},
+                event::{Event, EventMode},
+                registry::EventSubscription,
                 source::EventSource,
                 stream::EventStream,
             },
@@ -42,9 +43,24 @@ pub async fn serve_event_source_sync(
                 match request {
                     fsys::BlockingEventSourceRequest::Subscribe { events, stream, responder } => {
                         // Subscribe to events.
-                        let events: Vec<CapabilityName> =
-                            events.into_iter().map(|e| e.into()).collect();
-                        match event_source.subscribe(events).await {
+                        let requests = events
+                            .into_iter()
+                            .filter(|request| {
+                                request.event_name.is_some() && request.mode.is_some()
+                            })
+                            .map(|request| EventSubscription {
+                                event_name: request
+                                    .event_name
+                                    .map(|name| CapabilityName::from(name))
+                                    .unwrap(),
+                                mode: match request.mode {
+                                    Some(fsys::EventMode::Sync) => EventMode::Sync,
+                                    _ => EventMode::Async,
+                                },
+                            })
+                            .collect();
+
+                        match event_source.subscribe(requests).await {
                             Ok(event_stream) => {
                                 // Unblock the component
                                 responder.send(&mut Ok(()))?;
@@ -423,7 +439,7 @@ async fn serve_routing_protocol(
 
 /// Serves the server end of Handler FIDL protocol asynchronously
 fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMarker>> {
-    if event.sync_mode() == SyncMode::Async {
+    if event.mode() == EventMode::Async {
         return None;
     }
     let (client_end, mut stream) = create_request_stream::<fsys::HandlerMarker>()

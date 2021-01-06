@@ -38,6 +38,27 @@ pub struct EventSource {
     proxy: fsys::BlockingEventSourceProxy,
 }
 
+pub enum EventMode {
+    Sync,
+    Async,
+}
+
+pub struct EventSubscription {
+    names: Vec<String>,
+    mode: EventMode,
+}
+
+impl EventSubscription {
+    pub fn new(names: Vec<impl ToString>, mode: EventMode) -> Self {
+        Self { names: names.into_iter().map(|name| name.to_string()).collect(), mode }
+    }
+}
+impl From<Vec<String>> for EventSubscription {
+    fn from(event_names: Vec<String>) -> Self {
+        Self { names: event_names, mode: EventMode::Sync }
+    }
+}
+
 impl EventSource {
     /// Connects to the BlockingEventSource service at its default location
     /// The default location is presumably "/svc/fuchsia.sys2.BlockingEventSource"
@@ -65,20 +86,35 @@ impl EventSource {
     /// thread before creating an EventStream object.
     pub async fn subscribe_endpoint(
         &self,
-        event_names: Vec<impl AsRef<str>>,
+        events: Vec<EventSubscription>,
     ) -> Result<ServerEnd<fsys::EventStreamMarker>, Error> {
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>()?;
-        let subscription =
-            self.proxy.subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end);
-
+        let mut requests = vec![];
+        for request in events.into_iter() {
+            requests.append(
+                &mut request
+                    .names
+                    .iter()
+                    .map(|name| fsys::EventSubscription {
+                        event_name: Some(name.to_string()),
+                        mode: Some(match &request.mode {
+                            EventMode::Sync => fsys::EventMode::Sync,
+                            _ => fsys::EventMode::Async,
+                        }),
+                        ..fsys::EventSubscription::EMPTY
+                    })
+                    .collect(),
+            );
+        }
+        let subscription = self.proxy.subscribe(&mut requests.into_iter(), client_end);
         subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(server_end)
     }
 
     /// Subscribe to the events given by |event_names|.
     /// Returns an EventStream object that is *NOT* thread-safe.
-    pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
-        let server_end = self.subscribe_endpoint(event_names).await?;
+    pub async fn subscribe(&self, events: Vec<EventSubscription>) -> Result<EventStream, Error> {
+        let server_end = self.subscribe_endpoint(events).await?;
         Ok(EventStream::new(server_end.into_stream()?))
     }
 

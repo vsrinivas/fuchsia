@@ -382,7 +382,10 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                events::{event::SyncMode, source::EventSource, stream::EventStream},
+                events::{
+                    event::EventMode, registry::EventSubscription, source::EventSource,
+                    stream::EventStream,
+                },
                 realm::{BindReason, Realm},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
@@ -437,11 +440,18 @@ mod tests {
             } else {
                 let mut event_source = builtin_environment
                     .event_source_factory
-                    .create_for_debug(SyncMode::Sync)
+                    .create_for_debug(EventMode::Sync)
                     .await
                     .expect("created event source");
-                let event_stream =
-                    event_source.subscribe(events).await.expect("subscribe to event stream");
+                let event_stream = event_source
+                    .subscribe(
+                        events
+                            .into_iter()
+                            .map(|event| EventSubscription::new(event, EventMode::Sync))
+                            .collect(),
+                    )
+                    .await
+                    .expect("subscribe to event stream");
                 event_source.start_component_tree().await;
                 Some(EventsData { _event_source: event_source, event_stream })
             };

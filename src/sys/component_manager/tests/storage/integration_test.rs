@@ -39,7 +39,10 @@ async fn storage() {
     .unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 
@@ -74,7 +77,10 @@ async fn storage_from_collection() {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME])
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Destroyed::NAME, CapabilityRouted::NAME],
+            EventMode::Sync,
+        )])
         .await
         .unwrap();
 

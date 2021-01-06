@@ -10,8 +10,9 @@ use {
             events::{
                 dispatcher::{EventDispatcher, EventDispatcherScope},
                 error::EventsError,
-                event::SyncMode,
+                event::EventMode,
                 filter::EventFilter,
+                mode_set::EventModeSet,
                 stream::EventStream,
                 synthesizer::{EventSynthesisProvider, EventSynthesizer},
             },
@@ -38,13 +39,26 @@ use {
 #[derive(Debug)]
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
+    pub mode: EventMode,
     pub scopes: Vec<EventDispatcherScope>,
 }
 
 #[derive(Debug)]
+pub struct RequestedEventState {
+    pub mode: EventMode,
+    pub scopes: Vec<EventDispatcherScope>,
+}
+
+impl RequestedEventState {
+    pub fn new(mode: EventMode) -> Self {
+        Self { mode, scopes: Vec::new() }
+    }
+}
+
+#[derive(Debug)]
 pub struct RouteEventsResult {
-    /// Maps from source name to a set of scope monikers
-    mapping: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
+    /// Maps from source name to a mode and set of scope monikers.
+    mapping: HashMap<CapabilityName, RequestedEventState>,
 }
 
 impl RouteEventsResult {
@@ -52,10 +66,15 @@ impl RouteEventsResult {
         Self { mapping: HashMap::new() }
     }
 
-    fn insert(&mut self, source_name: CapabilityName, scope: EventDispatcherScope) {
-        let values = self.mapping.entry(source_name).or_insert(Vec::new());
-        if !values.contains(&scope) {
-            values.push(scope);
+    fn insert(
+        &mut self,
+        source_name: CapabilityName,
+        mode: EventMode,
+        scope: EventDispatcherScope,
+    ) {
+        let event_state = self.mapping.entry(source_name).or_insert(RequestedEventState::new(mode));
+        if !event_state.scopes.contains(&scope) {
+            event_state.scopes.push(scope);
         }
     }
 
@@ -70,7 +89,11 @@ impl RouteEventsResult {
     pub fn to_vec(self) -> Vec<RoutedEvent> {
         self.mapping
             .into_iter()
-            .map(|(source_name, scopes)| RoutedEvent { source_name, scopes })
+            .map(|(source_name, state)| RoutedEvent {
+                source_name,
+                mode: state.mode,
+                scopes: state.scopes,
+            })
             .collect()
     }
 }
@@ -79,20 +102,26 @@ impl RouteEventsResult {
 pub struct SubscriptionOptions {
     /// Determines how event routing is done.
     pub subscription_type: SubscriptionType,
-    /// Determines whether component manager waits for a response from the
-    /// event receiver.
-    pub sync_mode: SyncMode,
     /// Specifies the mode ComponentManager was started in.
     pub execution_mode: ExecutionMode,
 }
 
+pub struct EventSubscription {
+    pub event_name: CapabilityName,
+    /// Determines whether component manager waits for a response from the
+    /// event receiver.
+    pub mode: EventMode,
+}
+
+impl EventSubscription {
+    pub fn new(event_name: CapabilityName, mode: EventMode) -> Self {
+        Self { event_name, mode }
+    }
+}
+
 impl SubscriptionOptions {
-    pub fn new(
-        subscription_type: SubscriptionType,
-        sync_mode: SyncMode,
-        execution_mode: ExecutionMode,
-    ) -> Self {
-        Self { subscription_type, sync_mode, execution_mode }
+    pub fn new(subscription_type: SubscriptionType, execution_mode: ExecutionMode) -> Self {
+        Self { subscription_type, execution_mode }
     }
 }
 
@@ -100,7 +129,6 @@ impl Default for SubscriptionOptions {
     fn default() -> SubscriptionOptions {
         SubscriptionOptions {
             subscription_type: SubscriptionType::Component(AbsoluteMoniker::root()),
-            sync_mode: SyncMode::Async,
             execution_mode: ExecutionMode::Production,
         }
     }
@@ -172,25 +200,34 @@ impl EventRegistry {
     pub async fn subscribe(
         &self,
         options: &SubscriptionOptions,
-        events: Vec<CapabilityName>,
+        requests: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
         // Register event capabilities if any. It identifies the sources of these events (might be the
         // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
         // realms.
+        let mut event_names = HashMap::new();
+        for request in requests {
+            if event_names.insert(request.event_name.clone(), request.mode.clone()).is_some() {
+                return Err(EventsError::duplicate_event(request.event_name).into());
+            }
+        }
         let events = match &options.subscription_type {
-            SubscriptionType::AboveRoot => events
-                .into_iter()
-                .map(|event| RoutedEvent {
-                    source_name: event.clone(),
+            SubscriptionType::AboveRoot => event_names
+                .iter()
+                .map(|(source_name, mode)| RoutedEvent {
+                    source_name: source_name.clone(),
+                    mode: mode.clone(),
                     scopes: vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()],
                 })
                 .collect(),
             SubscriptionType::Component(target_moniker) => {
-                let route_result = self.route_events(&target_moniker, &events).await?;
-                if route_result.len() != events.len() {
-                    let names = events
+                let route_result = self.route_events(&target_moniker, &event_names).await?;
+                if route_result.len() != event_names.len() {
+                    let names = event_names
+                        .keys()
                         .into_iter()
-                        .filter(|event| !route_result.contains_event(&event))
+                        .filter(|event_name| !route_result.contains_event(&event_name))
+                        .cloned()
                         .collect();
                     return Err(EventsError::not_available(names).into());
                 }
@@ -207,7 +244,7 @@ impl EventRegistry {
         events: Vec<RoutedEvent>,
     ) -> Result<EventStream, ModelError> {
         // TODO(fxbug.dev/48510): get rid of this channel and use FIDL directly.
-        let mut event_stream = EventStream::new(options.clone());
+        let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for event in &events {
@@ -216,7 +253,11 @@ impl EventRegistry {
                 .all(|e| e.to_string() != event.source_name.str())
             {
                 let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
-                let dispatcher = event_stream.create_dispatcher(event.scopes.clone());
+                let dispatcher = event_stream.create_dispatcher(
+                    options.clone(),
+                    event.mode.clone(),
+                    event.scopes.clone(),
+                );
                 dispatchers.push(dispatcher);
             }
         }
@@ -299,7 +340,7 @@ impl EventRegistry {
     pub async fn route_events(
         &self,
         target_moniker: &AbsoluteMoniker,
-        events: &Vec<CapabilityName>,
+        events: &HashMap<CapabilityName, EventMode>,
     ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let realm = model.look_up_realm(&target_moniker).await?;
@@ -312,14 +353,16 @@ impl EventRegistry {
         for use_decl in decl.uses {
             match &use_decl {
                 UseDecl::Event(event_decl) => {
-                    if !events.contains(&event_decl.target_name) {
-                        continue;
+                    if let Some(mode) = events.get(&event_decl.target_name) {
+                        let (source_name, scope_moniker) =
+                            Self::route_event(event_decl, &realm).await?;
+                        let scope = EventDispatcherScope::new(scope_moniker)
+                            .with_filter(EventFilter::new(event_decl.filter.clone()))
+                            .with_mode_set(EventModeSet::new(event_decl.mode.clone()));
+                        if scope.mode_set.supports_mode(mode) {
+                            result.insert(source_name, mode.clone(), scope);
+                        }
                     }
-                    let (source_name, scope_moniker) =
-                        Self::route_event(event_decl, &realm).await?;
-                    let scope = EventDispatcherScope::new(scope_moniker)
-                        .with_filter(EventFilter::new(event_decl.filter.clone()));
-                    result.insert(source_name, scope);
                 }
                 _ => {}
             }
@@ -441,12 +484,8 @@ mod tests {
         let registry = EventRegistry::new(Arc::downgrade(&model));
         let mut event_stream = registry
             .subscribe(
-                &SubscriptionOptions::new(
-                    SubscriptionType::AboveRoot,
-                    SyncMode::Sync,
-                    ExecutionMode::Debug,
-                ),
-                vec![EventType::CapabilityRouted.into()],
+                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
+                vec![EventSubscription::new(EventType::CapabilityRouted.into(), EventMode::Sync)],
             )
             .await
             .expect("subscribe succeeds");
@@ -503,12 +542,8 @@ mod tests {
 
         let mut event_stream_a = event_registry
             .subscribe(
-                &SubscriptionOptions::new(
-                    SubscriptionType::AboveRoot,
-                    SyncMode::Async,
-                    ExecutionMode::Production,
-                ),
-                vec![EventType::Discovered.into()],
+                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                vec![EventSubscription::new(EventType::Discovered.into(), EventMode::Async)],
             )
             .await
             .expect("subscribe succeeds");
@@ -517,12 +552,8 @@ mod tests {
 
         let mut event_stream_b = event_registry
             .subscribe(
-                &SubscriptionOptions::new(
-                    SubscriptionType::AboveRoot,
-                    SyncMode::Async,
-                    ExecutionMode::Production,
-                ),
-                vec![EventType::Discovered.into()],
+                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                vec![EventSubscription::new(EventType::Discovered.into(), EventMode::Async)],
             )
             .await
             .expect("subscribe succeeds");
@@ -562,12 +593,8 @@ mod tests {
 
         let mut event_stream = event_registry
             .subscribe(
-                &SubscriptionOptions::new(
-                    SubscriptionType::AboveRoot,
-                    SyncMode::Async,
-                    ExecutionMode::Production,
-                ),
-                vec![EventType::Resolved.into()],
+                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                vec![EventSubscription::new(EventType::Resolved.into(), EventMode::Async)],
             )
             .await
             .expect("subscribed to event stream");
@@ -599,14 +626,17 @@ mod tests {
             event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
         );
 
-        let options = SubscriptionOptions::new(
-            SubscriptionType::AboveRoot,
-            SyncMode::Async,
-            ExecutionMode::Production,
-        );
+        let options =
+            SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production);
 
         let mut event_stream_a = event_registry
-            .subscribe(&options, vec![EventType::CapabilityRequested.into()])
+            .subscribe(
+                &options,
+                vec![EventSubscription::new(
+                    EventType::CapabilityRequested.into(),
+                    EventMode::Async,
+                )],
+            )
             .await
             .expect("subscribe succeeds");
 
@@ -616,7 +646,13 @@ mod tests {
         );
 
         let mut event_stream_b = event_registry
-            .subscribe(&options, vec![EventType::CapabilityRequested.into()])
+            .subscribe(
+                &options,
+                vec![EventSubscription::new(
+                    EventType::CapabilityRequested.into(),
+                    EventMode::Async,
+                )],
+            )
             .await
             .expect("subscribe succeeds");
 

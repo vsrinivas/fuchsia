@@ -293,6 +293,15 @@ pub struct OfferTo(pub Vec<OfferToRef>);
 )]
 pub struct Rights(pub Vec<Right>);
 
+/// A list of event modes.
+#[derive(CheckedVec, Debug, PartialEq)]
+#[checked_vec(
+    expected = "a nonempty array of event modes, with unique elements",
+    min_length = 1,
+    unique_items = true
+)]
+pub struct EventModes(pub Vec<EventMode>);
+
 /// Generates deserializer for `OneOrMany<Name>`.
 #[derive(OneOrMany, Debug, Clone)]
 #[one_or_many(
@@ -504,6 +513,15 @@ pub enum RegistrationRef {
     Parent,
     /// A reference to this component.
     Self_,
+}
+
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum EventMode {
+    /// Async events are allowed.
+    Async,
+    /// Sync events are allowed.
+    Sync,
 }
 
 /// A right or bundle of rights to apply to a directory.
@@ -865,6 +883,7 @@ pub struct Use {
     pub event: Option<OneOrMany<Name>>,
     pub event_stream: Option<OneOrMany<Name>>,
     pub filter: Option<Map<String, Value>>,
+    pub modes: Option<EventModes>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -880,6 +899,7 @@ pub struct Expose {
     pub to: Option<ExposeToRef>,
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
+    pub modes: Option<EventModes>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -899,6 +919,7 @@ pub struct Offer {
     pub subdir: Option<RelativePath>,
     pub dependency: Option<DependencyType>,
     pub filter: Option<Map<String, Value>>,
+    pub modes: Option<EventModes>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -988,6 +1009,10 @@ pub trait PathClause {
 
 pub trait FilterClause {
     fn filter(&self) -> Option<&Map<String, Value>>;
+}
+
+pub trait EventModesClause {
+    fn event_modes(&self) -> Option<&EventModes>;
 }
 
 pub trait RightsClause {
@@ -1214,6 +1239,12 @@ impl RightsClause for Use {
     }
 }
 
+impl EventModesClause for Use {
+    fn event_modes(&self) -> Option<&EventModes> {
+        self.modes.as_ref()
+    }
+}
+
 impl CapabilityClause for Expose {
     fn service(&self) -> &Option<Name> {
         &self.service
@@ -1285,6 +1316,12 @@ impl FilterClause for Expose {
 impl RightsClause for Expose {
     fn rights(&self) -> Option<&Rights> {
         self.rights.as_ref()
+    }
+}
+
+impl EventModesClause for Expose {
+    fn event_modes(&self) -> Option<&EventModes> {
+        self.modes.as_ref()
     }
 }
 
@@ -1361,6 +1398,12 @@ impl PathClause for Offer {
 impl FilterClause for Offer {
     fn filter(&self) -> Option<&Map<String, Value>> {
         self.filter.as_ref()
+    }
+}
+
+impl EventModesClause for Offer {
+    fn event_modes(&self) -> Option<&EventModes> {
+        self.modes.as_ref()
     }
 }
 
@@ -1598,6 +1641,7 @@ mod tests {
             subdir: None,
             dependency: None,
             filter: None,
+            modes: None,
         }
     }
 
@@ -1616,6 +1660,7 @@ mod tests {
             event: None,
             event_stream: None,
             filter: None,
+            modes: None,
         }
     }
 

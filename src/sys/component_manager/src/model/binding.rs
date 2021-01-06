@@ -136,7 +136,7 @@ mod tests {
             config::RuntimeConfig,
             model::{
                 actions::{ActionKey, ActionSet},
-                events::event::SyncMode,
+                events::{event::EventMode, registry::EventSubscription},
                 hooks::{EventPayload, EventType, HooksRegistration},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
@@ -203,15 +203,15 @@ mod tests {
         ])
         .await;
 
-        let events = vec![EventType::Started.into()];
+        let events = vec![EventSubscription::new(EventType::Started.into(), EventMode::Sync)];
         let mut event_source = builtin_environment
             .event_source_factory
-            .create_for_debug(SyncMode::Sync)
+            .create_for_debug(EventMode::Sync)
             .await
             .expect("create event source");
 
         let mut event_stream =
-            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
+            event_source.subscribe(events).await.expect("subscribe to event stream");
         event_source.start_component_tree().await;
 
         // Bind to "system", pausing before it starts.
@@ -538,12 +538,19 @@ mod tests {
         ];
         let mut event_source = builtin_environment
             .event_source_factory
-            .create_for_debug(SyncMode::Sync)
+            .create_for_debug(EventMode::Sync)
             .await
             .expect("create event source");
 
-        let mut event_stream =
-            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
+        let mut event_stream = event_source
+            .subscribe(
+                events
+                    .into_iter()
+                    .map(|event| EventSubscription::new(event, EventMode::Sync))
+                    .collect(),
+            )
+            .await
+            .expect("subscribe to event stream");
         event_source.start_component_tree().await;
 
         let model_copy = model.clone();

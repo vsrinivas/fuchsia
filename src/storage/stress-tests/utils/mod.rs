@@ -28,7 +28,7 @@ use {
         time::Duration,
     },
     test_utils_lib::{
-        events::{Event, Started},
+        events::{Event, EventMode, EventSubscription, Started},
         matcher::EventMatcher,
         opaque_test::OpaqueTest,
     },
@@ -49,7 +49,10 @@ async fn start_test() -> OpaqueTest {
 
     // Wait for the root component to start
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut started_event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+    let mut started_event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
     EventMatcher::ok().moniker(".").expect_match::<Started>(&mut started_event_stream).await;
 

@@ -38,17 +38,20 @@
                 "stopped",
             ],
             from: "parent",
+            modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
             filter: { name: "diagnostics" },
+            modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "framework",
             filter: { name: "fuchsia.logger.LogSink" },
+            modes: [ "async" ],
         },
         {
             event_stream: [ "capability_requested" ],

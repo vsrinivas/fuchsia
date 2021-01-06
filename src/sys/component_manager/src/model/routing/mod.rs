@@ -14,7 +14,7 @@ use {
         channel,
         model::{
             error::ModelError,
-            events::filter::EventFilter,
+            events::{filter::EventFilter, mode_set::EventModeSet},
             hooks::{Event, EventPayload},
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             realm::{BindReason, ComponentManagerRealm, ExtendedRealm, Realm, WeakRealm},
@@ -679,6 +679,7 @@ pub enum CapabilityState {
     },
     Event {
         filter_state: WalkState<EventFilter>,
+        modes_state: WalkState<EventModeSet>,
     },
     Other,
 }
@@ -713,12 +714,13 @@ impl CapabilityState {
                     subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
                 }
             }
-            ComponentCapability::Use(UseDecl::Event(UseEventDecl { filter, .. }))
-            | ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl { filter, .. })) => {
-                CapabilityState::Event {
-                    filter_state: WalkState::at(EventFilter::new(filter.clone())),
-                }
-            }
+            ComponentCapability::Use(UseDecl::Event(UseEventDecl { mode, filter, .. }))
+            | ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl {
+                mode, filter, ..
+            })) => CapabilityState::Event {
+                filter_state: WalkState::at(EventFilter::new(filter.clone())),
+                modes_state: WalkState::at(EventModeSet::new(mode.clone())),
+            },
             ComponentCapability::UsedExpose(ExposeDecl::Directory(ExposeDirectoryDecl {
                 ..
             })) => CapabilityState::Directory {
@@ -1098,10 +1100,14 @@ async fn walk_offer_chain<'a>(
             }
             _ => (None, None),
         };
-        let event_filter = EventFilter::new(match offer {
+        let event_filter = Some(EventFilter::new(match offer {
             OfferDecl::Event(OfferEventDecl { filter, .. }) => filter.clone(),
             _ => None,
-        });
+        }));
+        let event_mode = Some(EventModeSet::new(match offer {
+            OfferDecl::Event(OfferEventDecl { mode, .. }) => mode.clone(),
+            _ => cm_rust::EventMode::Async,
+        }));
         match source {
             OfferSource::Service(_) => {
                 return Err(ModelError::unsupported("Service capability"));
@@ -1119,8 +1125,9 @@ async fn walk_offer_chain<'a>(
             }
             OfferSource::Event(OfferEventSource::Framework) => {
                 // An event offered from framework is scoped to the current realm.
-                if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
-                    *filter_state = filter_state.finalize(Some(event_filter))?;
+                if let CapabilityState::Event { modes_state, filter_state } = &mut pos.cap_state {
+                    *modes_state = modes_state.finalize(event_mode)?;
+                    *filter_state = filter_state.finalize(event_filter)?;
                 }
                 let capability = InternalCapability::framework_from_offer_decl(offer)
                     .expect("not a framework offer declaration");
@@ -1143,8 +1150,9 @@ async fn walk_offer_chain<'a>(
             OfferSource::Event(OfferEventSource::Parent) => {
                 // The offered capability comes from the parent, so follow the
                 // parent
-                if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
-                    *filter_state = filter_state.advance(Some(event_filter))?;
+                if let CapabilityState::Event { modes_state, filter_state } = &mut pos.cap_state {
+                    *modes_state = modes_state.advance(event_mode)?;
+                    *filter_state = filter_state.advance(event_filter)?;
                 }
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());

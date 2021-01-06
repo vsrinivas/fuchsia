@@ -620,6 +620,7 @@ impl<'a> ValidationContext<'a> {
         self.validate_use_source(event.source.as_ref(), "UseEventDecl", "source");
         check_name(event.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
         check_name(event.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
+        check_events_mode(&event.mode, "UseEventDecl", "mode", &mut self.errors);
         if let Some(target_name) = event.target_name.as_ref() {
             if !self.all_event_names.insert(target_name) {
                 self.errors.push(Error::duplicate_field(
@@ -1461,6 +1462,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
+        check_events_mode(&event.mode, "OfferEventDecl", "mode", &mut self.errors);
     }
 
     fn validate_environment_debug_registration(&mut self, debug: &'a fsys::DebugRegistration) {
@@ -1833,6 +1835,20 @@ fn check_url_scheme(
         return false;
     }
     true
+}
+
+/// Events mode should be always present.
+fn check_events_mode(
+    mode: &Option<fsys::EventMode>,
+    decl_type: &str,
+    field_name: &str,
+    errors: &mut Vec<Error>,
+) {
+    // TODO(fxb/66470): This check exists while we're introducing event modes but we eventually want async
+    // events to be the default.
+    if mode.is_none() {
+        errors.push(Error::missing_field(decl_type, field_name));
+    }
 }
 
 #[cfg(test)]
@@ -2385,6 +2401,7 @@ mod tests {
                         source_name: None,
                         target_name: None,
                         filter: None,
+                        mode: None,
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
@@ -2413,6 +2430,7 @@ mod tests {
                 Error::missing_field("UseEventDecl", "source"),
                 Error::missing_field("UseEventDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "target_name"),
+                Error::missing_field("UseEventDecl", "mode"),
                 Error::missing_field("UseEventStreamDecl", "target_path"),
                 Error::missing_field("UseEventStreamDecl", "events"),
             ])),
@@ -2482,6 +2500,7 @@ mod tests {
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(EventMode::Sync),
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
@@ -2608,6 +2627,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: None,
+                        mode: Some(EventMode::Sync),
                         ..UseEventDecl::EMPTY
                     }),
                 ]);
@@ -3366,6 +3386,7 @@ mod tests {
                         target: None,
                         target_name: None,
                         filter: None,
+                        mode: None,
                         ..OfferEventDecl::EMPTY
                     })
                 ]);
@@ -3397,6 +3418,7 @@ mod tests {
                 Error::missing_field("OfferEventDecl", "source"),
                 Error::missing_field("OfferEventDecl", "target"),
                 Error::missing_field("OfferEventDecl", "target_name"),
+                Error::missing_field("OfferEventDecl", "mode"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -3547,6 +3569,7 @@ mod tests {
                         })),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(EventMode::Async),
                         ..OfferEventDecl::EMPTY
                     }),
                 ]);
@@ -3793,6 +3816,7 @@ mod tests {
                         })),
                         target_name: Some("/path".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(fsys::EventMode::Sync),
                         ..OfferEventDecl::EMPTY
                     })
                 ]);
@@ -4200,6 +4224,7 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
+                        mode: Some(EventMode::Async),
                         ..OfferEventDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
@@ -4211,6 +4236,7 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
+                        mode: Some(EventMode::Async),
                         ..OfferEventDecl::EMPTY
                     }),
                 ]);
@@ -4391,6 +4417,7 @@ mod tests {
                             }
                         )),
                         filter: None,
+                        mode: Some(EventMode::Async),
                         ..OfferEventDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
@@ -4401,6 +4428,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         filter: None,
+                        mode: Some(EventMode::Async),
                         ..OfferEventDecl::EMPTY
                     }),
                 ]);
@@ -4443,7 +4471,9 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some(format!("started_{}", i)),
+
                             filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                            mode: Some(EventMode::Sync),
                             ..OfferEventDecl::EMPTY
                         })
                     })

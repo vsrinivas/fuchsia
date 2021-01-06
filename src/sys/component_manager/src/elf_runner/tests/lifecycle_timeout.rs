@@ -7,7 +7,7 @@ use {
     fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::{self as fxlog},
     test_utils_lib::{
-        events::{Destroyed, Event, EventSource, Stopped},
+        events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -22,7 +22,13 @@ async fn test_stop_timeouts() {
     fxlog::init().unwrap();
 
     let event_source = EventSource::new_sync().unwrap();
-    let event_stream = event_source.subscribe(vec![Stopped::NAME, Destroyed::NAME]).await.unwrap();
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, Destroyed::NAME],
+            EventMode::Sync,
+        )])
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then

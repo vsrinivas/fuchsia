@@ -5,8 +5,9 @@
 use {
     crate::model::{
         events::{
-            event::{Event, SyncMode},
+            event::{Event, EventMode},
             filter::EventFilter,
+            mode_set::EventModeSet,
             registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
         },
         hooks::{
@@ -44,6 +45,10 @@ pub struct EventDispatcher {
     /// The options used to generate this EventDispatcher.
     options: SubscriptionOptions,
 
+    /// Determines whether component manager waits for a response from the
+    /// event receiver.
+    mode: EventMode,
+
     /// Specifies the realms that this EventDispatcher can dispatch events from and under what
     /// conditions.
     scopes: Vec<EventDispatcherScope>,
@@ -57,12 +62,13 @@ pub struct EventDispatcher {
 impl EventDispatcher {
     pub fn new(
         options: SubscriptionOptions,
+        mode: EventMode,
         scopes: Vec<EventDispatcherScope>,
         tx: mpsc::UnboundedSender<Event>,
     ) -> Self {
         // TODO(fxbug.dev/48360): flatten scope_monikers. There might be monikers that are
         // contained within another moniker in the list.
-        Self { options, scopes, tx: Mutex::new(tx) }
+        Self { options, mode, scopes, tx: Mutex::new(tx) }
     }
 
     /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
@@ -89,9 +95,9 @@ impl EventDispatcher {
             "target_moniker" => target_moniker.as_str()
         );
 
-        let (maybe_responder_tx, maybe_responder_rx) = match self.options.sync_mode {
-            SyncMode::Async => (None, None),
-            SyncMode::Sync => {
+        let (maybe_responder_tx, maybe_responder_rx) = match self.mode {
+            EventMode::Async => (None, None),
+            EventMode::Sync => {
                 let (responder_tx, responder_rx) = oneshot::channel();
                 (Some(responder_tx), Some(responder_rx))
             }
@@ -114,7 +120,10 @@ impl EventDispatcher {
         // moniker here. For now taking the first one and ignoring the rest.
         // Ensure that the event is coming from a realm within the scope of this dispatcher and
         // matching the path filter if one exists.
-        self.scopes.iter().filter(|scope| scope.contains(&self.options, &event)).next()
+        self.scopes
+            .iter()
+            .filter(|scope| scope.contains(&self.options, self.mode.clone(), &event))
+            .next()
     }
 }
 
@@ -126,11 +135,17 @@ pub struct EventDispatcherScope {
 
     /// Filters for an event in that realm.
     pub filter: EventFilter,
+
+    pub mode_set: EventModeSet,
 }
 
 impl EventDispatcherScope {
     pub fn new(moniker: AbsoluteMoniker) -> Self {
-        Self { moniker, filter: EventFilter::new(None) }
+        Self {
+            moniker,
+            filter: EventFilter::new(None),
+            mode_set: EventModeSet::new(cm_rust::EventMode::Async),
+        }
     }
 
     pub fn with_filter(mut self, filter: EventFilter) -> Self {
@@ -138,16 +153,27 @@ impl EventDispatcherScope {
         self
     }
 
+    pub fn with_mode_set(mut self, mode_set: EventModeSet) -> Self {
+        self.mode_set = mode_set;
+        self
+    }
+
     /// For the top-level EventStreams and event strems used in unit tests in the c_m codebase we
     /// don't take filters into account.
     pub fn for_debug(mut self) -> Self {
         self.filter = EventFilter::debug();
+        self.mode_set = EventModeSet::debug();
         self
     }
 
     /// Given the provided options, indicates whether or not the event is contained
     /// in this scope.
-    pub fn contains(&self, options: &SubscriptionOptions, event: &ComponentEvent) -> bool {
+    pub fn contains(
+        &self,
+        options: &SubscriptionOptions,
+        mode: EventMode,
+        event: &ComponentEvent,
+    ) -> bool {
         let in_scope = match &event.result {
             Ok(EventPayload::CapabilityRequested { source_moniker, .. })
             | Err(EventError {
@@ -197,7 +223,7 @@ impl EventDispatcherScope {
             }),
             _ => None,
         };
-        self.filter.has_fields(&filterable_fields)
+        self.filter.has_fields(&filterable_fields) && self.mode_set.supports_mode(&mode)
     }
 }
 
@@ -234,9 +260,13 @@ mod tests {
             self.rx.next().await.map(|e| e.event)
         }
 
-        fn create_dispatcher(&self, options: SubscriptionOptions) -> Arc<EventDispatcher> {
+        fn create_dispatcher(
+            &self,
+            options: SubscriptionOptions,
+            mode: EventMode,
+        ) -> Arc<EventDispatcher> {
             let scopes = vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()];
-            Arc::new(EventDispatcher::new(options, scopes, self.tx.clone()))
+            Arc::new(EventDispatcher::new(options.clone(), mode, scopes, self.tx.clone()))
         }
     }
 
@@ -283,13 +313,10 @@ mod tests {
     async fn can_send_capability_requested_to_source() {
         // Verify we can dispatch to a debug source.
         // Sync events get a responder if the message was dispatched.
-        let options = SubscriptionOptions::new(
-            SubscriptionType::AboveRoot,
-            SyncMode::Async,
-            ExecutionMode::Production,
-        );
+        let options =
+            SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production);
         let mut factory = EventDispatcherFactory::new();
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Async);
         let source_moniker = vec!["root:0", "a:0", "b:0", "c:0"].into();
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
         assert_matches!(
@@ -300,37 +327,33 @@ mod tests {
         // Verify that we cannot dispatch the CapabilityRequested event to the root component.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0 component.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0", "a:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0 component.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0", "a:0", "b:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we CAN dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0 component.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0", "a:0", "b:0", "c:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_some());
         assert_matches!(
             factory.next_event().await,
@@ -340,10 +363,9 @@ mod tests {
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0/d:0 component.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0", "a:0", "b:0", "c:0", "d:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
     }
 
@@ -354,12 +376,8 @@ mod tests {
         let mut factory = EventDispatcherFactory::new();
 
         // Verify we can dispatch a CapabilityRouted event in debug mode.
-        let options = SubscriptionOptions::new(
-            SubscriptionType::AboveRoot,
-            SyncMode::Sync,
-            ExecutionMode::Debug,
-        );
-        let dispatcher = factory.create_dispatcher(options);
+        let options = SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         assert!(dispatch_capability_routed_event(&dispatcher).await.is_some());
         assert_matches!(
             factory.next_event().await,
@@ -369,10 +387,9 @@ mod tests {
         // Verify that we cannot dispatch the CapabilityRouted event in production.
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(vec!["root:0"].into()),
-            SyncMode::Sync,
             ExecutionMode::Production,
         );
-        let dispatcher = factory.create_dispatcher(options);
+        let dispatcher = factory.create_dispatcher(options, EventMode::Sync);
         // This indicates that the event was not dispatched.
         assert!(dispatch_capability_routed_event(&dispatcher).await.is_none());
     }

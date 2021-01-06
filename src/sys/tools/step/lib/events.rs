@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Error},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     std::sync::{Arc, Mutex},
-    test_utils_lib::events::{EventSource, EventStream, Handler},
+    test_utils_lib::events::{EventMode, EventSource, EventStream, EventSubscription, Handler},
 };
 
 /// Prints detailed description of an `event`
@@ -60,7 +60,10 @@ impl EventListener {
         event_source: &EventSource,
     ) -> Self {
         let event_types_str: Vec<&str> = event_types.iter().map(|x| x.as_ref()).collect();
-        let server_end = event_source.subscribe_endpoint(event_types_str).await.unwrap();
+        let server_end = event_source
+            .subscribe_endpoint(vec![EventSubscription::new(event_types_str, EventMode::Sync)])
+            .await
+            .unwrap();
         let events = Arc::new(Mutex::new(vec![]));
         let clone = events.clone();
 

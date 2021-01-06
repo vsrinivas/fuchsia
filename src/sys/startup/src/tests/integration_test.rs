@@ -5,7 +5,7 @@
 use {
     fuchsia_async as fasync,
     test_utils_lib::{
-        events::{CapabilityRouted, Event, Handler},
+        events::{CapabilityRouted, Event, EventMode, EventSubscription, Handler},
         matcher::EventMatcher,
         opaque_test::{OpaqueTest, OpaqueTestBuilder},
     },
@@ -23,7 +23,10 @@ async fn integration_test() {
     let test: OpaqueTest = builder.build().await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
 
-    let mut event_stream = event_source.subscribe(vec![CapabilityRouted::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![CapabilityRouted::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
     event_source.start_component_tree().await;
 
     let event = EventMatcher::ok()

@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::{
-                event::SyncMode,
+                event::EventMode,
                 registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
                 source::EventSource,
             },
@@ -78,23 +78,23 @@ impl EventSourceFactory {
     }
 
     /// Creates a debug event source.
-    pub async fn create_for_debug(&self, sync_mode: SyncMode) -> Result<EventSource, ModelError> {
-        EventSource::new_for_debug(self.model.clone(), self.event_registry.clone(), sync_mode).await
+    pub async fn create_for_debug(&self, mode: EventMode) -> Result<EventSource, ModelError> {
+        EventSource::new_for_debug(self.model.clone(), self.event_registry.clone(), mode).await
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
     pub async fn create(
         &self,
         target_moniker: AbsoluteMoniker,
-        sync_mode: SyncMode,
+        mode: EventMode,
     ) -> Result<EventSource, ModelError> {
         EventSource::new(
             self.model.clone(),
             SubscriptionOptions::new(
                 SubscriptionType::Component(target_moniker),
-                sync_mode,
                 self.execution_mode.clone(),
             ),
+            mode,
             self.event_registry.clone(),
         )
         .await
@@ -137,10 +137,10 @@ impl EventSourceFactory {
         // from framework. This now needs to be done on CapabilityRouted as the protocol name that
         // we have in the component decl might not match the source name after all the routing and
         // potential renames.
-        let sync_mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_NAME) {
-            SyncMode::Async
+        let mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_NAME) {
+            EventMode::Async
         } else if decl.uses_protocol(&EVENT_SOURCE_SYNC_SERVICE_NAME) {
-            SyncMode::Sync
+            EventMode::Sync
         } else {
             return Ok(());
         };
@@ -152,7 +152,7 @@ impl EventSourceFactory {
         assert!(!event_source_registry.contains_key(&key));
         // An EventSource is created on resolution in order to ensure that discovery
         // and resolution of children is not missed.
-        let event_source = self.create(key.clone(), sync_mode).await?;
+        let event_source = self.create(key.clone(), mode).await?;
         event_source_registry.insert(key, event_source);
         Ok(())
     }
@@ -224,6 +224,7 @@ mod tests {
                 source_name: "resolved".into(),
                 target_name: "resolved".into(),
                 filter: None,
+                mode: cm_rust::EventMode::Sync,
             }))
             .build();
         let event = Event::new_for_test(
@@ -258,6 +259,7 @@ mod tests {
                         source_name: "resolved".into(),
                         target_name: "resolved".into(),
                         filter: None,
+                        mode: cm_rust::EventMode::Sync,
                     }))
                     .build(),
             );

@@ -43,12 +43,18 @@ impl TestRunner {
             // in predictable orders. There is a possibility for the CapabilityRouted event
             // to be interleaved between the Started events.
             let event_source = test.connect_to_event_source().await.unwrap();
-            let mut start_event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();
+            let mut start_event_stream = event_source
+                .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
+                .await
+                .unwrap();
 
             // Subscribe to events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_names contains
             // Started or CapabilityRouted
-            let event_stream = event_source.subscribe(event_names).await.unwrap();
+            let event_stream = event_source
+                .subscribe(vec![EventSubscription::new(event_names, EventMode::Sync)])
+                .await
+                .unwrap();
 
             // Inject HubReportCapability wherever it's requested.
             hub_report_capability.inject(&event_source, EventMatcher::ok()).await;

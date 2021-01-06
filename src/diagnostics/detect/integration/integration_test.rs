@@ -33,7 +33,7 @@ use {
     log::*,
     std::sync::Arc,
     test_utils_lib::{
-        events::{Event, EventStream, Stopped},
+        events::{Event, EventMode, EventStream, EventSubscription, Stopped},
         injectors::{CapabilityInjector, DirectoryInjector},
         matcher::EventMatcher,
         opaque_test::OpaqueTest,
@@ -180,7 +180,10 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     // Start a component_manager as a v1 component
     let test = OpaqueTest::default(DETECT_PROGRAM_URL).await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut exit_stream = event_source.subscribe(vec![Stopped::NAME]).await.unwrap();
+    let mut exit_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     DirectoryInjector::new(prepare_injected_config_directory(&test_data))
         .inject(&event_source, EventMatcher::ok().capability_name(CONFIG_DATA_CAPABILITY_NAME))

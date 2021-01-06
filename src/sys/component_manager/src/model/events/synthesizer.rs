@@ -200,7 +200,9 @@ mod tests {
         crate::model::{
             events::{
                 dispatcher::EventDispatcherScope,
+                event::EventMode,
                 filter::EventFilter,
+                mode_set::EventModeSet,
                 registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
             },
@@ -422,11 +424,19 @@ mod tests {
     ) -> EventStream {
         let scopes = scope_monikers
             .into_iter()
-            .map(|moniker| EventDispatcherScope { moniker, filter: EventFilter::debug() })
+            .map(|moniker| EventDispatcherScope {
+                moniker,
+                filter: EventFilter::debug(),
+                mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
+            })
             .collect::<Vec<_>>();
         let events = events
             .into_iter()
-            .map(|event| RoutedEvent { source_name: event.into(), scopes: scopes.clone() })
+            .map(|event| RoutedEvent {
+                source_name: event.into(),
+                mode: EventMode::Async,
+                scopes: scopes.clone(),
+            })
             .collect();
         registry
             .subscribe_with_routed_events(&SubscriptionOptions::default(), events)

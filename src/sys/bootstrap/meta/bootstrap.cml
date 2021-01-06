@@ -624,12 +624,14 @@
                 "stopped",
             ],
             from: "parent",
+            modes: ["async"],
             to: [ "#archivist" ],
         },
         {
             event: "capability_ready",
             from: "parent",
             to: [ "#archivist" ],
+            modes: ["async"],
             filter: { name: "diagnostics" },
         },
 

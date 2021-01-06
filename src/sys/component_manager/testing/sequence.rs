@@ -5,7 +5,7 @@
 use {
     crate::{
         descriptor::EventDescriptor,
-        events::{event_name, EventSource, EventStream},
+        events::{event_name, EventMode, EventSource, EventStream, EventSubscription},
         matcher::EventMatcher,
     },
     anyhow::{format_err, Error},
@@ -66,7 +66,9 @@ impl EventSequence {
         event_source: &mut EventSource,
     ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
         let event_names = self.event_names()?;
-        let event_stream = event_source.subscribe(event_names).await?;
+        let event_stream = event_source
+            .subscribe(vec![EventSubscription::new(event_names, EventMode::Sync)])
+            .await?;
         let expected_events = self.clone();
         let (tx, rx) = oneshot::channel();
         fasync::Task::spawn(async move {

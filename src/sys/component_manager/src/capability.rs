@@ -1049,6 +1049,7 @@ mod tests {
                 target: cm_rust::OfferTarget::Child("child".to_string()),
                 target_name: "started".into(),
                 filter: None,
+                mode: cm_rust::EventMode::Sync,
             })],
             ..default_component_decl()
         };
@@ -1060,6 +1061,7 @@ mod tests {
             source_name: "started".into(),
             target_name: "started-x".into(),
             filter: None,
+            mode: cm_rust::EventMode::Sync,
         }));
 
         assert_eq!(
@@ -1076,6 +1078,7 @@ mod tests {
             source_name: "foo".into(),
             target_name: "started".into(),
             filter: None,
+            mode: cm_rust::EventMode::Sync,
         }));
         assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
     }
@@ -1146,6 +1149,7 @@ mod tests {
             source_name: "started".into(),
             target_name: "started-x".into(),
             filter: None,
+            mode: EventMode::Async,
         }));
         assert_eq!(event_capability.type_name(), CapabilityTypeName::Event);
     }

@@ -23,7 +23,10 @@ async fn destruction() {
 
     let mut event_source = test.connect_to_event_source().await.unwrap();
 
-    let mut event_stream = event_source.subscribe(vec![Destroyed::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Destroyed::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
     let expectation = EventSequence::new()
         .all_of(
             vec![

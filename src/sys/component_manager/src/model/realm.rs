@@ -1155,7 +1155,7 @@ pub mod tests {
         crate::model::{
             actions::ShutdownAction,
             binding::Binder,
-            events::{event::SyncMode, stream::EventStream},
+            events::{event::EventMode, registry::EventSubscription, stream::EventStream},
             hooks::{EventError, EventErrorPayload, EventType},
             rights,
             testing::{
@@ -1683,11 +1683,14 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(SyncMode::Sync)
+            .create_for_debug(EventMode::Sync)
             .await
             .expect("create event source");
         let mut event_stream = event_source
-            .subscribe(vec![EventType::CapabilityReady.into()])
+            .subscribe(vec![EventSubscription::new(
+                EventType::CapabilityReady.into(),
+                EventMode::Sync,
+            )])
             .await
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;
@@ -1712,15 +1715,20 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(SyncMode::Sync)
+            .create_for_debug(EventMode::Sync)
             .await
             .expect("create event source");
         let mut event_stream = event_source
-            .subscribe(vec![
-                EventType::Discovered.into(),
-                EventType::Resolved.into(),
-                EventType::Started.into(),
-            ])
+            .subscribe(
+                vec![
+                    EventType::Discovered.into(),
+                    EventType::Resolved.into(),
+                    EventType::Started.into(),
+                ]
+                .into_iter()
+                .map(|event| EventSubscription::new(event, EventMode::Sync))
+                .collect(),
+            )
             .await
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;
@@ -1746,7 +1754,7 @@ pub mod tests {
         assert_eq!(realm_timestamp, started_timestamp);
 
         let mut event_stream = event_source
-            .subscribe(vec![EventType::Running.into()])
+            .subscribe(vec![EventSubscription::new(EventType::Running.into(), EventMode::Sync)])
             .await
             .expect("subscribe to event stream");
         let event = event_stream.wait_until(EventType::Running, vec![].into()).await.unwrap().event;
@@ -1771,11 +1779,11 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(SyncMode::Async)
+            .create_for_debug(EventMode::Async)
             .await
             .expect("failed creating event source");
         let mut stop_event_stream = event_source
-            .subscribe(vec![EventType::Stopped.into()])
+            .subscribe(vec![EventSubscription::new(EventType::Stopped.into(), EventMode::Async)])
             .await
             .expect("couldn't susbscribe to event stream");
 

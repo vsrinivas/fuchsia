@@ -11,6 +11,7 @@ use {
         model::{
             binding::Binder,
             error::ModelError,
+            events::{event::EventMode, registry::EventSubscription},
             hooks::HooksRegistration,
             model::Model,
             realm::BindReason,
@@ -97,7 +98,7 @@ pub enum CheckUse {
         expected_res: ExpectedResult,
     },
     Event {
-        names: Vec<CapabilityName>,
+        requests: Vec<EventSubscription>,
         expected_res: ExpectedResult,
     },
 }
@@ -491,10 +492,11 @@ impl RoutingTest {
                     .await;
                 }
             }
-            CheckUse::Event { names, expected_res } => {
+            CheckUse::Event { requests, expected_res } => {
                 // Fails if the component did not use the protocol EventSource or if the event is
                 // not allowed.
-                capability_util::subscribe_to_event_stream(&namespace, expected_res, names).await;
+                capability_util::subscribe_to_event_stream(&namespace, expected_res, requests)
+                    .await;
             }
         }
     }
@@ -976,7 +978,7 @@ pub mod capability_util {
     pub async fn subscribe_to_event_stream(
         namespace: &ManagedNamespace,
         expected_res: ExpectedResult,
-        events: Vec<CapabilityName>,
+        events: Vec<EventSubscription>,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.BlockingEventSource".parse().unwrap();
         let res = subscribe_to_events(namespace, &path, events).await;
@@ -994,16 +996,25 @@ pub mod capability_util {
     pub async fn subscribe_to_events(
         namespace: &ManagedNamespace,
         event_source_path: &CapabilityPath,
-        events: Vec<CapabilityName>,
+        events: Vec<EventSubscription>,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
         let event_source_proxy =
             connect_to_svc_in_namespace::<BlockingEventSourceMarker>(namespace, event_source_path)
                 .await;
-        let event_names: Vec<String> = events.into_iter().map(|event| event.to_string()).collect();
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
         event_source_proxy
-            .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
+            .subscribe(
+                &mut events.into_iter().map(|request| fsys::EventSubscription {
+                    event_name: Some(request.event_name.to_string()),
+                    mode: Some(match request.mode {
+                        EventMode::Sync => fsys::EventMode::Sync,
+                        _ => fsys::EventMode::Async,
+                    }),
+                    ..fsys::EventSubscription::EMPTY
+                }),
+                client_end,
+            )
             .await?
             .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
         event_source_proxy.start_component_tree().await?;

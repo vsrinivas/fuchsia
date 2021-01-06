@@ -866,6 +866,7 @@ mod tests {
                         source_name: "started".into(),
                         target_name: "started".into(),
                         filter: None,
+                        mode: cm_rust::EventMode::Async,
                     }))
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.EventStream")

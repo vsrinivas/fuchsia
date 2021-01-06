@@ -10,8 +10,11 @@ use {
             error::ModelError,
             events::{
                 error::EventsError,
-                event::SyncMode,
-                registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
+                event::EventMode,
+                registry::{
+                    EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
+                    SubscriptionType,
+                },
                 serve::serve_event_source_sync,
                 stream::EventStream,
             },
@@ -20,7 +23,6 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -53,14 +55,25 @@ impl EventSource {
     pub async fn new(
         model: Weak<Model>,
         options: SubscriptionOptions,
+        mode: EventMode,
         registry: Weak<EventRegistry>,
     ) -> Result<Self, ModelError> {
         // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
-        let resolve_instance_event_stream = Arc::new(Mutex::new(match options.sync_mode {
-            SyncMode::Async => None,
-            SyncMode::Sync => {
+        let resolve_instance_event_stream = Arc::new(Mutex::new(match mode {
+            EventMode::Async => None,
+            EventMode::Sync => {
                 let registry = registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-                Some(registry.subscribe(&options, vec![EventType::Resolved.into()]).await?)
+                Some(
+                    registry
+                        .subscribe(
+                            &options,
+                            vec![EventSubscription::new(
+                                EventType::Resolved.into(),
+                                EventMode::Sync,
+                            )],
+                        )
+                        .await?,
+                )
             }
         }));
 
@@ -70,11 +83,12 @@ impl EventSource {
     pub async fn new_for_debug(
         model: Weak<Model>,
         registry: Weak<EventRegistry>,
-        sync_mode: SyncMode,
+        mode: EventMode,
     ) -> Result<Self, ModelError> {
         Self::new(
             model,
-            SubscriptionOptions::new(SubscriptionType::AboveRoot, sync_mode, ExecutionMode::Debug),
+            SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
+            mode,
             registry,
         )
         .await
@@ -94,12 +108,11 @@ impl EventSource {
     /// requested from the current realm.
     pub async fn subscribe(
         &mut self,
-        events: Vec<CapabilityName>,
+        requests: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-
         // Create an event stream for the given events
-        registry.subscribe(&self.options, events).await
+        registry.subscribe(&self.options, requests).await
     }
 
     /// Serves a `EventSource` FIDL protocol.

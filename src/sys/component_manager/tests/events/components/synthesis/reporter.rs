@@ -11,7 +11,8 @@ use {
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
     test_utils_lib::events::{
-        CapabilityReady, Event, EventSource, MarkedForDestruction, Running, Started,
+        CapabilityReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
+        Running, Started,
     },
 };
 
@@ -40,12 +41,10 @@ async fn main() -> Result<(), Error> {
     // Subscribe to events.
     let event_source = EventSource::new_async()?;
     let mut event_stream = event_source
-        .subscribe(vec![
-            Started::NAME,
-            Running::NAME,
-            MarkedForDestruction::NAME,
-            CapabilityReady::NAME,
-        ])
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, CapabilityReady::NAME],
+            EventMode::Async,
+        )])
         .await?;
 
     let echo = component::connect_to_service::<fecho::EchoMarker>()?;

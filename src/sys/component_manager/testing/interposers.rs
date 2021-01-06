@@ -5,7 +5,8 @@
 use {
     crate::{
         events::{
-            CapabilityRouted, Event, EventSource, EventStream, EventStreamError, RoutingProtocol,
+            CapabilityRouted, Event, EventMode, EventSource, EventStream, EventStreamError,
+            EventSubscription, RoutingProtocol,
         },
         matcher::EventMatcher,
     },
@@ -36,7 +37,10 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
     ) -> AbortHandle {
         let matcher = matcher.capability_name(Self::Marker::NAME);
         let server_end = event_source
-            .subscribe_endpoint(vec![CapabilityRouted::NAME])
+            .subscribe_endpoint(vec![EventSubscription::new(
+                vec![CapabilityRouted::NAME],
+                EventMode::Sync,
+            )])
             .await
             .expect("Could not subscribe to CapabilityRouted event for interposition");
         let (abort_handle, abort_registration) = AbortHandle::new_pair();

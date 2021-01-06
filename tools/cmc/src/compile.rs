@@ -9,6 +9,7 @@ use crate::translate;
 use crate::util::write_depfile;
 use crate::validate;
 use cm_types as cm;
+use cml::EventModesClause;
 use fidl::encoding::encode_persistent;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
@@ -268,6 +269,16 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(source_name.into()),
                     target_name: Some(target_name.into()),
+                    mode: match use_.event_modes() {
+                        Some(modes) => {
+                            if modes.0.contains(&cml::EventMode::Sync) {
+                                Some(fsys::EventMode::Sync)
+                            } else {
+                                Some(fsys::EventMode::Async)
+                            }
+                        }
+                        None => Some(fsys::EventMode::Async),
+                    },
                     // We have already validated that none will be present if we were using many
                     // events.
                     filter: match use_.filter.clone() {
@@ -497,6 +508,16 @@ fn translate_offer(
                     filter: match offer.filter.clone() {
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
+                    },
+                    mode: match offer.event_modes() {
+                        Some(modes) => {
+                            if modes.0.contains(&cml::EventMode::Sync) {
+                                Some(fsys::EventMode::Sync)
+                            } else {
+                                Some(fsys::EventMode::Async)
+                            }
+                        }
+                        None => Some(fsys::EventMode::Async),
                     },
                     ..fsys::OfferEventDecl::EMPTY
                 }));
@@ -1256,6 +1277,7 @@ mod tests {
                             source_name: Some("destroyed".to_string()),
                             target_name: Some("destroyed".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::UseEventDecl::EMPTY
                         }
                     ),
@@ -1265,6 +1287,7 @@ mod tests {
                             source_name: Some("started".to_string()),
                             target_name: Some("started".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::UseEventDecl::EMPTY
                         }
                     ),
@@ -1274,6 +1297,7 @@ mod tests {
                             source_name: Some("stopped".to_string()),
                             target_name: Some("stopped".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::UseEventDecl::EMPTY
                         }
                     ),
@@ -1291,6 +1315,7 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::UseEventDecl::EMPTY
                         }
                     ),
@@ -1936,6 +1961,7 @@ mod tests {
                             })),
                             target_name: Some("destroyed_net".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
@@ -1948,6 +1974,7 @@ mod tests {
                             })),
                             target_name: Some("stopped".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
@@ -1960,6 +1987,7 @@ mod tests {
                             })),
                             target_name: Some("started".to_string()),
                             filter: None,
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
@@ -1983,6 +2011,7 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
+                            mode: Some(fsys::EventMode::Async),
                             ..fsys::OfferEventDecl::EMPTY
                         }
                     ),

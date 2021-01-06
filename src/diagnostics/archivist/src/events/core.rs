@@ -19,9 +19,30 @@ impl EventSource for fsys::EventSourceProxy {
     async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
         let (client_end, request_stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
-        let mut event_names =
-            vec!["running", "started", "stopped", "diagnostics_ready"].into_iter();
-        let subscription = self.subscribe(&mut event_names, client_end);
+        let mut events = vec![
+            fsys::EventSubscription {
+                event_name: Some("running".to_string()),
+                mode: Some(fsys::EventMode::Async),
+                ..fsys::EventSubscription::EMPTY
+            },
+            fsys::EventSubscription {
+                event_name: Some("started".to_string()),
+                mode: Some(fsys::EventMode::Async),
+                ..fsys::EventSubscription::EMPTY
+            },
+            fsys::EventSubscription {
+                event_name: Some("stopped".to_string()),
+                mode: Some(fsys::EventMode::Async),
+                ..fsys::EventSubscription::EMPTY
+            },
+            fsys::EventSubscription {
+                event_name: Some("diagnostics_ready".to_string()),
+                mode: Some(fsys::EventMode::Async),
+                ..fsys::EventSubscription::EMPTY
+            },
+        ]
+        .into_iter();
+        let subscription = self.subscribe(&mut events, client_end);
         subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
         EventStreamServer::new(sender).spawn(request_stream);
         Ok(())
@@ -248,10 +269,30 @@ pub mod tests {
             {
                 match request {
                     fsys::EventSourceRequest::Subscribe { events, stream, responder } => {
-                        assert_eq!(
-                            events,
-                            vec!["running", "started", "stopped", "diagnostics_ready",]
-                        );
+                        let mut events_iter = events.into_iter();
+                        {
+                            let subscription_request = events_iter.next().unwrap();
+                            assert_eq!(subscription_request.event_name.unwrap(), "running",);
+                            assert_eq!(subscription_request.mode.unwrap(), fsys::EventMode::Async,);
+                        }
+                        {
+                            let subscription_request = events_iter.next().unwrap();
+                            assert_eq!(subscription_request.event_name.unwrap(), "started",);
+                            assert_eq!(subscription_request.mode.unwrap(), fsys::EventMode::Async,);
+                        }
+                        {
+                            let subscription_request = events_iter.next().unwrap();
+                            assert_eq!(subscription_request.event_name.unwrap(), "stopped",);
+                            assert_eq!(subscription_request.mode.unwrap(), fsys::EventMode::Async,);
+                        }
+                        {
+                            let subscription_request = events_iter.next().unwrap();
+                            assert_eq!(
+                                subscription_request.event_name.unwrap(),
+                                "diagnostics_ready",
+                            );
+                            assert_eq!(subscription_request.mode.unwrap(), fsys::EventMode::Async,);
+                        }
                         responder.send(&mut Ok(())).expect("responder send ok");
                         return stream;
                     }

@@ -19,7 +19,10 @@ async fn main() {
 
     // Subscribe to relevant events
     let mut event_stream = event_source
-        .subscribe(vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME])
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME],
+            EventMode::Sync,
+        )])
         .await
         .unwrap();
 

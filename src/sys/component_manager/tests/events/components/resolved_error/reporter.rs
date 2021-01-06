@@ -8,7 +8,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
     test_utils_lib::{
-        events::{Event, EventSource, Resolved, Started},
+        events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
         matcher::EventMatcher,
     },
 };
@@ -19,8 +19,13 @@ async fn main() {
 
     // Track all the starting child components.
     let event_source = EventSource::new_async().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![Resolved::NAME, Started::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Resolved::NAME, Started::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 

@@ -35,7 +35,7 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                event::SyncMode,
+                event::EventMode,
                 registry::{EventRegistry, ExecutionMode},
                 running_provider::RunningProvider,
                 source_factory::EventSourceFactory,
@@ -735,7 +735,7 @@ impl BuiltinEnvironment {
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if self.execution_mode.is_debug() {
-            let event_source = self.event_source_factory.create_for_debug(SyncMode::Sync).await?;
+            let event_source = self.event_source_factory.create_for_debug(EventMode::Sync).await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
                 event_source.serve(stream);

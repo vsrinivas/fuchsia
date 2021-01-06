@@ -209,8 +209,13 @@ async fn event_dispatch_order_test() {
     .unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![Discovered::NAME, Resolved::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Discovered::NAME, Resolved::NAME],
+            EventMode::Sync,
+        )])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 

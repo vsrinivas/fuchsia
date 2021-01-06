@@ -207,11 +207,13 @@
                 "started",
                 "stopped",
             ],
+            modes: ["async"],
             from: "framework",
             to: [ "#bootstrap" ],
         },
         {
             event: "capability_ready",
+            modes: ["async"],
             from: "framework",
             to: [ "#bootstrap" ],
             filter: { name: "diagnostics" },

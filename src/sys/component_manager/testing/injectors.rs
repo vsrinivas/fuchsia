@@ -5,7 +5,8 @@
 use {
     crate::{
         events::{
-            CapabilityRouted, Event, EventSource, EventStream, EventStreamError, RoutingProtocol,
+            CapabilityRouted, Event, EventMode, EventSource, EventStream, EventStreamError,
+            EventSubscription, RoutingProtocol,
         },
         matcher::EventMatcher,
     },
@@ -34,7 +35,10 @@ pub trait CapabilityInjector: 'static + Send + Sync {
 
     async fn subscribe(self: &Arc<Self>, event_source: &EventSource, matcher: EventMatcher) {
         let server_end = event_source
-            .subscribe_endpoint(vec![CapabilityRouted::NAME])
+            .subscribe_endpoint(vec![EventSubscription::new(
+                vec![CapabilityRouted::NAME],
+                EventMode::Sync,
+            )])
             .await
             .expect("Could not subscribe to CapabilityRouted event for injection");
 

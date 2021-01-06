@@ -13,7 +13,7 @@ use {
     maplit::hashmap,
     std::collections::HashSet,
     test_utils_lib::{
-        events::{CapabilityReady, Event, EventSource, Handler},
+        events::{CapabilityReady, Event, EventMode, EventSource, EventSubscription, Handler},
         matcher::EventMatcher,
     },
 };
@@ -52,7 +52,10 @@ async fn main() {
 
     let fs = ServiceFs::new_local();
     let event_source = EventSource::new_sync().unwrap();
-    let mut event_stream = event_source.subscribe(vec![CapabilityReady::NAME]).await.unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![CapabilityReady::NAME], EventMode::Sync)])
+        .await
+        .unwrap();
 
     event_source.start_component_tree().await;
 

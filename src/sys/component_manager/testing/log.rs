@@ -5,7 +5,7 @@
 use {
     crate::{
         descriptor::EventDescriptor,
-        events::{EventSource, EventStream},
+        events::{EventMode, EventSource, EventStream, EventSubscription},
     },
     anyhow::Error,
     fuchsia_async as fasync,
@@ -28,9 +28,11 @@ impl EventLog {
     /// in a separate task.
     pub async fn record_events(
         event_source: &mut EventSource,
-        event_names: Vec<impl AsRef<str>>,
+        event_names: Vec<impl ToString>,
     ) -> Result<EventLog, Error> {
-        let event_stream = event_source.subscribe(event_names).await?;
+        let event_stream = event_source
+            .subscribe(vec![EventSubscription::new(event_names, EventMode::Sync)])
+            .await?;
         Ok(EventLog::new(event_stream))
     }
 

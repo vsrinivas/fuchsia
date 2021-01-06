@@ -26,6 +26,7 @@
                 "started",
             ],
             from: "framework",
+            modes: ["async"],
         },
     ],
 }
