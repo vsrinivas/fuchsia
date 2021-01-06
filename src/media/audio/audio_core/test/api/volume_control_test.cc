@@ -87,11 +87,10 @@ TEST_F(VolumeControlTest, RoutedCorrectly) {
 }
 
 TEST_F(VolumeControlTest, FailToConnectToCaptureUsageVolume) {
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
-
   fuchsia::media::audio::VolumeControlPtr client;
-  audio_core_->BindUsageVolumeControl(fidl::Clone(usage), client.NewRequest());
+  audio_core_->BindUsageVolumeControl(fidl::Clone(fuchsia::media::Usage::WithCaptureUsage(
+                                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)),
+                                      client.NewRequest());
   AddErrorHandler(client, "VolumeControl");
 
   ExpectError(client, ZX_ERR_NOT_SUPPORTED);

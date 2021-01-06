@@ -121,10 +121,6 @@ class StreamUsage {
 
   // RenderUsage
   constexpr bool is_render_usage() const { return std::holds_alternative<RenderUsage>(usage_); }
-  constexpr StreamUsage& set_render_usage(RenderUsage usage) {
-    usage_ = usage;
-    return *this;
-  }
   constexpr RenderUsage render_usage() const {
     FX_DCHECK(is_render_usage());
     return std::get<RenderUsage>(usage_);
@@ -132,10 +128,6 @@ class StreamUsage {
 
   // CaptureUsage
   constexpr bool is_capture_usage() const { return std::holds_alternative<CaptureUsage>(usage_); }
-  constexpr StreamUsage& set_capture_usage(CaptureUsage usage) {
-    usage_ = usage;
-    return *this;
-  }
   constexpr CaptureUsage capture_usage() const {
     FX_DCHECK(is_capture_usage());
     return std::get<CaptureUsage>(usage_);

@@ -346,9 +346,9 @@ void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
     }
 
     if (usage_volume_) {
-      fuchsia::media::Usage usage;
-      usage.set_render_usage(usage_);
-      audio_core->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
+      audio_core->BindUsageVolumeControl(
+          fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_)),
+          usage_volume_control_.NewRequest());
 
       usage_volume_control_.set_error_handler([this](zx_status_t status) {
         CLI_CHECK(Shutdown(),

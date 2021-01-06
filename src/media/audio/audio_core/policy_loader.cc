@@ -91,8 +91,7 @@ static std::optional<fuchsia::media::Usage> JsonToUsage(const rapidjson::Value& 
     if (!u) {
       return std::nullopt;
     }
-    ret.set_render_usage(*u);
-    return ret;
+    return fuchsia::media::Usage::WithRenderUsage(std::move(*u));
   }
 
   if (usage.HasMember("capture_usage")) {
@@ -100,8 +99,7 @@ static std::optional<fuchsia::media::Usage> JsonToUsage(const rapidjson::Value& 
     if (!u) {
       return std::nullopt;
     }
-    ret.set_capture_usage(*u);
-    return ret;
+    return fuchsia::media::Usage::WithCaptureUsage(std::move(*u));
   }
 
   return std::nullopt;

@@ -67,12 +67,10 @@ class MockActivityDispatcher : public AudioAdmin::ActivityDispatcher {
 
 class MockStreamVolume : public StreamVolume {
  public:
-  explicit MockStreamVolume(fuchsia::media::AudioRenderUsage usage) {
-    usage_.set_render_usage(usage);
-  }
-  explicit MockStreamVolume(fuchsia::media::AudioCaptureUsage usage) {
-    usage_.set_capture_usage(usage);
-  }
+  explicit MockStreamVolume(fuchsia::media::AudioRenderUsage usage)
+      : usage_(fuchsia::media::Usage::WithRenderUsage(std::move(usage))) {}
+  explicit MockStreamVolume(fuchsia::media::AudioCaptureUsage usage)
+      : usage_(fuchsia::media::Usage::WithCaptureUsage(std::move(usage))) {}
 
   // |StreamVolume|
   fuchsia::media::Usage GetStreamUsage() const final { return fidl::Clone(usage_); }

@@ -58,25 +58,22 @@ class UsageReporterTest : public HermeticAudioTest {
   };
 
   std::unique_ptr<Controller> CreateController(AudioRenderUsage u) {
-    fuchsia::media::Usage usage;
-    usage.set_render_usage(u);
-
     auto c = std::make_unique<Controller>(this);
     environment()->ConnectToService(c->usage_reporter.NewRequest());
     AddErrorHandler(c->usage_reporter, "UsageReporter");
-    c->usage_reporter->Watch(std::move(usage), c->fake_watcher.NewBinding());
+
+    c->usage_reporter->Watch(fuchsia::media::Usage::WithRenderUsage(std::move(u)),
+                             c->fake_watcher.NewBinding());
 
     return c;
   }
 
   std::unique_ptr<Controller> CreateController(AudioCaptureUsage u) {
-    fuchsia::media::Usage usage;
-    usage.set_capture_usage(u);
-
     auto c = std::make_unique<Controller>(this);
     environment()->ConnectToService(c->usage_reporter.NewRequest());
     AddErrorHandler(c->usage_reporter, "UsageReporter");
-    c->usage_reporter->Watch(std::move(usage), c->fake_watcher.NewBinding());
+    c->usage_reporter->Watch(fuchsia::media::Usage::WithCaptureUsage(std::move(u)),
+                             c->fake_watcher.NewBinding());
 
     return c;
   }
@@ -133,13 +130,10 @@ TEST_F(UsageReporterTest, RenderUsageDucked) {
       }));
 
   // Duck MEDIA when SYSTEM_AGENT is active.
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_render_usage(AudioRenderUsage::SYSTEM_AGENT);
-    affected.set_render_usage(AudioRenderUsage::MEDIA);
-    audio_core_->SetInteraction(std::move(active), std::move(affected),
-                                fuchsia::media::Behavior::DUCK);
-  }
+  audio_core_->SetInteraction(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA),
+      fuchsia::media::Behavior::DUCK);
 
   StartRendererWithUsage(AudioRenderUsage::SYSTEM_AGENT);
   ExpectCallback();
@@ -165,13 +159,10 @@ TEST_F(UsageReporterTest, RenderUsageMuted) {
       }));
 
   // Mute MEDIA when SYSTEM_AGENT is active.
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_render_usage(AudioRenderUsage::SYSTEM_AGENT);
-    affected.set_render_usage(AudioRenderUsage::MEDIA);
-    audio_core_->SetInteraction(std::move(active), std::move(affected),
-                                fuchsia::media::Behavior::MUTE);
-  }
+  audio_core_->SetInteraction(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA),
+      fuchsia::media::Behavior::MUTE);
 
   StartRendererWithUsage(AudioRenderUsage::SYSTEM_AGENT);
   ExpectCallback();
@@ -216,13 +207,10 @@ TEST_F(UsageReporterTest, CaptureUsageDucked) {
       }));
 
   // Duck COMMUNICATION when SYSTEM_AGENT is active.
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_capture_usage(AudioCaptureUsage::SYSTEM_AGENT);
-    affected.set_capture_usage(AudioCaptureUsage::COMMUNICATION);
-    audio_core_->SetInteraction(std::move(active), std::move(affected),
-                                fuchsia::media::Behavior::DUCK);
-  }
+  audio_core_->SetInteraction(
+      fuchsia::media::Usage::WithCaptureUsage(AudioCaptureUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithCaptureUsage(AudioCaptureUsage::COMMUNICATION),
+      fuchsia::media::Behavior::DUCK);
 
   StartCapturerWithUsage(AudioCaptureUsage::SYSTEM_AGENT);
   ExpectCallback();
@@ -248,13 +236,10 @@ TEST_F(UsageReporterTest, CaptureUsageMuted) {
       }));
 
   // Mute COMMUNICATION when SYSTEM_AGENT is active.
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_capture_usage(AudioCaptureUsage::SYSTEM_AGENT);
-    affected.set_capture_usage(AudioCaptureUsage::COMMUNICATION);
-    audio_core_->SetInteraction(std::move(active), std::move(affected),
-                                fuchsia::media::Behavior::MUTE);
-  }
+  audio_core_->SetInteraction(
+      fuchsia::media::Usage::WithCaptureUsage(AudioCaptureUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithCaptureUsage(AudioCaptureUsage::COMMUNICATION),
+      fuchsia::media::Behavior::MUTE);
 
   StartCapturerWithUsage(AudioCaptureUsage::SYSTEM_AGENT);
   ExpectCallback();

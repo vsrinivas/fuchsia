@@ -133,9 +133,7 @@ void AudioRenderer::BindGainControl(
 }
 
 fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
-  fuchsia::media::Usage usage;
-  usage.set_render_usage(usage_);
-  return usage;
+  return fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_));
 }
 
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
