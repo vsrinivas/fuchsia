@@ -17,7 +17,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
-#include "src/developer/forensics/testing/stubs/logger.h"
+#include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -32,7 +32,7 @@ namespace {
     const int32_t severity, const std::string& text,
     const zx::duration timestamp_offset = zx::duration(0),
     const std::vector<std::string>& tags = {}) {
-  return ::fit::ok(stubs::BuildLogMessage(severity, text, timestamp_offset, tags));
+  return ::fit::ok(testing::BuildLogMessage(severity, text, timestamp_offset, tags));
 }
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.

@@ -194,27 +194,6 @@ source_set("loader") {
   ]
 }
 
-source_set("logger") {
-  testonly = true
-
-  sources = [
-    "logger.cc",
-    "logger.h",
-  ]
-
-  public_deps = [
-    ":fidl_server",
-    "//sdk/fidl/fuchsia.logger",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async:async-cpp",
-  ]
-}
-
 source_set("product_info_provider") {
   testonly = true
 

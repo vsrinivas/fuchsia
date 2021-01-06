@@ -29,6 +29,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -36,7 +37,6 @@
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/last_reboot_info_provider.h"
-#include "src/developer/forensics/testing/stubs/logger.h"
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -52,14 +52,14 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-using stubs::BuildLogMessage;
-using testing::Contains;
-using testing::ElementsAreArray;
-using testing::Eq;
-using testing::IsEmpty;
-using testing::Not;
-using testing::Pair;
-using testing::UnorderedElementsAreArray;
+using testing::BuildLogMessage;
+using ::testing::Contains;
+using ::testing::ElementsAreArray;
+using ::testing::Eq;
+using ::testing::IsEmpty;
+using ::testing::Not;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAreArray;
 
 constexpr zx::duration kTimeout = zx::sec(30);
 

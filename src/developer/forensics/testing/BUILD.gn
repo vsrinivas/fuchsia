@@ -72,3 +72,17 @@ source_set("gtest_with_syslog_main") {
     "//third_party/googletest:gtest",
   ]
 }
+
+source_set("log_message") {
+  testonly = true
+
+  sources = [
+    "log_message.cc",
+    "log_message.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.logger",
+    "//zircon/public/lib/zx",
+  ]
+}

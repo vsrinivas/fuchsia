@@ -18,7 +18,6 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
-#include "src/developer/forensics/testing/stubs/logger.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/file.h"
