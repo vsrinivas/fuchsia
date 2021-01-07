@@ -292,18 +292,20 @@ func identifierName(qualifiedName string) string {
 
 // Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:              "ErrStringTooLong",
-	gidlir.StringNotUtf8:              "ErrStringNotUTF8",
-	gidlir.NonEmptyStringWithNullBody: "ErrUnexpectedNullRef",
-	gidlir.StrictUnionFieldNotSet:     "ErrInvalidXUnionTag",
-	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",
-	gidlir.InvalidPaddingByte:         "ErrNonZeroPadding",
-	gidlir.StrictEnumUnknownValue:     "ErrInvalidEnumValue",
-	gidlir.StrictBitsUnknownBit:       "ErrInvalidBitsValue",
-	gidlir.ExceededMaxOutOfLineDepth:  "ErrExceededMaxOutOfLineDepth",
-	gidlir.ExtraHandles:               "ErrTooManyHandles",
-	gidlir.TooFewHandles:              "ErrNotEnoughHandles",
-	gidlir.NonResourceUnknownHandles:  "ErrValueTypeHandles",
+	gidlir.StringTooLong:               "ErrStringTooLong",
+	gidlir.StringNotUtf8:               "ErrStringNotUTF8",
+	gidlir.NonEmptyStringWithNullBody:  "ErrUnexpectedNullRef",
+	gidlir.StrictUnionFieldNotSet:      "ErrInvalidXUnionTag",
+	gidlir.StrictUnionUnknownField:     "ErrInvalidXUnionTag",
+	gidlir.InvalidPaddingByte:          "ErrNonZeroPadding",
+	gidlir.StrictEnumUnknownValue:      "ErrInvalidEnumValue",
+	gidlir.StrictBitsUnknownBit:        "ErrInvalidBitsValue",
+	gidlir.ExceededMaxOutOfLineDepth:   "ErrExceededMaxOutOfLineDepth",
+	gidlir.InvalidNumBytesInEnvelope:   "ErrInvalidNumBytesInEnvelope",
+	gidlir.InvalidNumHandlesInEnvelope: "ErrInvalidNumHandlesInEnvelope",
+	gidlir.ExtraHandles:                "ErrTooManyHandles",
+	gidlir.TooFewHandles:               "ErrNotEnoughHandles",
+	gidlir.NonResourceUnknownHandles:   "ErrValueTypeHandles",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {
