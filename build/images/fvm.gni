@@ -43,29 +43,35 @@ declare_args() {
   # configurations.
   fvm_reserved_slices = "1"
 
-  # Users of the filesystem may know required minimum load (total number of
-  # data bytes and total number of files) on the fs. Following parameters
-  # help to reserve the space needed for the load.
+  # The following blobfs_* and minfs_* arguments are used to determine the
+  # initial dimensions of the blobfs and minfs partitions added to an FVM
+  # image. If they are unset, the sizes of the input blobfs/minfs images will
+  # determine the dimensions of the respective partition within FVM.
+  #
+  # These dimensions cannot make a partition smaller than the image provided
+  # to the FVM tool; in that case, the partition dimensions would be expanded
+  # to fit the input image.
+  #
+  # There are both board-level overrides and product-level dimensions. The
+  # product-level overrides, if set, will take precedence.
 
   # minimum_inodes is the number of inodes to reserve for the fs
   # An empty string does not reserve any additional space than minimum
   # required for the filesystem.
-  blobfs_minimum_inodes = ""
-  minfs_minimum_inodes = ""
-
-  # For build/images:fvm.blob.sparse.blk, use this argument.
-  blob_blobfs_minimum_inodes = ""
+  blobfs_board_minimum_inodes = ""
+  blobfs_product_minimum_inodes = ""
+  minfs_board_minimum_inodes = ""
+  minfs_product_minimum_inodes = ""
 
   # Number of bytes to reserve for data in the fs. This is in addition
   # to what is reserved, if any, for the inodes. Data bytes constitutes
   # "usable" space of the fs.
   # An empty string does not reserve any additional space than minimum
   # required for the filesystem.
-  blobfs_minimum_data_bytes = ""
-  minfs_minimum_data_bytes = ""
-
-  # For build/images:fvm.blob.sparse.blk, use this argument.
-  blob_blobfs_minimum_data_bytes = ""
+  blobfs_board_minimum_data_bytes = ""
+  blobfs_product_minimum_data_bytes = ""
+  minfs_board_minimum_data_bytes = ""
+  minfs_product_minimum_data_bytes = ""
 
   # In addition to reserving space for inodes and data, fs needs additional
   # space for maintaining some internal data structures. So the
@@ -75,11 +81,24 @@ declare_args() {
   # data bytes and reservation for all other internal fs metadata.
   # An empty string does not put any upper bound. A filesystem may
   # reserve few blocks required for its operations.
+  blobfs_board_maximum_bytes = ""
+  blobfs_product_maximum_bytes = ""
+  minfs_board_maximum_bytes = ""
+  minfs_product_maximum_bytes = ""
+
+  # TODO(fxbug.dev/67015): Remove these; these are left here to facilitate a
+  # soft transition. DO NOT USE THESE VARIABLES.
+  blobfs_minimum_inodes = ""
+  blob_blobfs_minimum_inodes = ""
+  minfs_minimum_inodes = ""
+  blobfs_minimum_data_bytes = ""
+  blob_blobfs_minimum_data_bytes = ""
+  minfs_minimum_data_bytes = ""
   blobfs_maximum_bytes = ""
+  blob_blobfs_maximum_bytes = ""
   minfs_maximum_bytes = ""
 
-  # For build/images:fvm.blob.sparse.blk, use this argument.
-  blob_blobfs_maximum_bytes = ""
+  # End of variables for blobfs/minfs dimensions
 
   # Specifying these variables will generate a NAND FVM image suitable for
   # directly flashing via fastboot. The NAND characteristics are required

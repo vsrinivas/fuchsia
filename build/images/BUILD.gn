@@ -977,17 +977,93 @@ write_file(max_fvm_size_file, max_fvm_size)
 fvm_blob_partition = {
   type = "blob"
   dep = ":blob.blk"
-  minimum_inodes = blobfs_minimum_inodes
-  minimum_data_bytes = blobfs_minimum_data_bytes
-  maximum_bytes = blobfs_maximum_bytes
+
+  # TODO(fxbug.dev/67015): Remove non-board/product variables
+  if (blobfs_minimum_inodes != "") {
+    minimum_inodes = blobfs_minimum_inodes
+  } else if (blobfs_product_minimum_inodes != "") {
+    minimum_inodes = blobfs_product_minimum_inodes
+  } else if (blobfs_board_minimum_inodes != "") {
+    minimum_inodes = blobfs_board_minimum_inodes
+  }
+
+  if (blobfs_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_minimum_data_bytes
+  } else if (blobfs_product_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_product_minimum_data_bytes
+  } else if (blobfs_board_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_board_minimum_data_bytes
+  }
+
+  if (blobfs_maximum_bytes != "") {
+    maximum_bytes = blobfs_maximum_bytes
+  } else if (blobfs_product_maximum_bytes != "") {
+    maximum_bytes = blobfs_product_maximum_bytes
+  } else if (blobfs_board_maximum_bytes != "") {
+    maximum_bytes = blobfs_board_maximum_bytes
+  }
+}
+
+# TODO(fxbug.dev/67015): Remove this and simply use fvm_blob_partition. Use
+# product overrides where needed to have different dimensions specified.
+fvm_blob_sparse_partition = {
+  type = "blob"
+  dep = ":blob.blk"
+
+  # TODO(fxbug.dev/67015): Remove non-board/product variables
+  if (blob_blobfs_minimum_inodes != "") {
+    minimum_inodes = blobfs_minimum_inodes
+  } else if (blobfs_product_minimum_inodes != "") {
+    minimum_inodes = blobfs_product_minimum_inodes
+  } else if (blobfs_board_minimum_inodes != "") {
+    minimum_inodes = blobfs_board_minimum_inodes
+  }
+
+  if (blob_blobfs_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_minimum_data_bytes
+  } else if (blobfs_product_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_product_minimum_data_bytes
+  } else if (blobfs_board_minimum_data_bytes != "") {
+    minimum_data_bytes = blobfs_board_minimum_data_bytes
+  }
+
+  if (blob_blobfs_maximum_bytes != "") {
+    maximum_bytes = blobfs_maximum_bytes
+  } else if (blobfs_product_maximum_bytes != "") {
+    maximum_bytes = blobfs_product_maximum_bytes
+  } else if (blobfs_board_maximum_bytes != "") {
+    maximum_bytes = blobfs_board_maximum_bytes
+  }
 }
 
 fvm_data_partition = {
   type = "data"
   dep = ":data.blk"
-  minimum_inodes = minfs_minimum_inodes
-  minimum_data_bytes = minfs_minimum_data_bytes
-  maximum_bytes = minfs_maximum_bytes
+
+  # TODO(fxbug.dev/67015): Remove non-board/product variables
+  if (minfs_minimum_inodes != "") {
+    minimum_inodes = minfs_minimum_inodes
+  } else if (minfs_product_minimum_inodes != "") {
+    minimum_inodes = minfs_product_minimum_inodes
+  } else if (minfs_board_minimum_inodes != "") {
+    minimum_inodes = minfs_board_minimum_inodes
+  }
+
+  if (minfs_minimum_data_bytes != "") {
+    minimum_data_bytes = minfs_minimum_data_bytes
+  } else if (minfs_product_minimum_data_bytes != "") {
+    minimum_data_bytes = minfs_product_minimum_data_bytes
+  } else if (minfs_board_minimum_data_bytes != "") {
+    minimum_data_bytes = minfs_board_minimum_data_bytes
+  }
+
+  if (minfs_maximum_bytes != "") {
+    maximum_bytes = minfs_maximum_bytes
+  } else if (minfs_product_maximum_bytes != "") {
+    maximum_bytes = minfs_product_maximum_bytes
+  } else if (minfs_board_maximum_bytes != "") {
+    maximum_bytes = minfs_board_maximum_bytes
+  }
 }
 
 # The rule for generating raw fvm.blk. Normally, fastboot fvm images should be
@@ -1112,15 +1188,7 @@ generate_fvm("fvm.blob.sparse.blk") {
   deps = [ ":blob.blk" ]
   args = fvm_sparse_args
   with_empty_minfs = true
-  partitions = [
-    {
-      type = "blob"
-      dep = ":blob.blk"
-      minimum_inodes = blob_blobfs_minimum_inodes
-      minimum_data_bytes = blob_blobfs_minimum_data_bytes
-      maximum_bytes = blob_blobfs_maximum_bytes
-    },
-  ]
+  partitions = [ fvm_blob_sparse_partition ]
 
   metadata = {
     image_paths = [ "IMAGE_FVM_BLOB_SPARSE=$rebased_fvm_blob_sparse_blk_path" ]
