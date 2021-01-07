@@ -14,13 +14,13 @@ void main() {
   sl4f.Sl4f sl4fDriver;
   sl4f.Time sl4fTime;
 
-  setUp(() async {
+  setUpAll(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
     sl4fTime = sl4f.Time(sl4fDriver);
   });
 
-  tearDown(() async {
+  tearDownAll(() async {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
