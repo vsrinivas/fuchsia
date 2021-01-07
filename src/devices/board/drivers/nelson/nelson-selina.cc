@@ -17,9 +17,14 @@ static constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 
-static constexpr zx_bind_inst_t gpio_match[] = {
+static constexpr zx_bind_inst_t irq_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SELINA_IRQ),
+};
+
+static constexpr zx_bind_inst_t reset_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SELINA_RESET),
 };
 
 static constexpr zx_bind_inst_t spi_match[] = {
@@ -29,9 +34,14 @@ static constexpr zx_bind_inst_t spi_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RADAR_SENSOR),
 };
 
-static constexpr device_fragment_part_t gpio_fragment[] = {
+static constexpr device_fragment_part_t irq_gpio_fragment[] = {
     {countof(root_match), root_match},
-    {countof(gpio_match), gpio_match},
+    {countof(irq_gpio_match), irq_gpio_match},
+};
+
+static constexpr device_fragment_part_t reset_gpio_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_gpio_match), reset_gpio_match},
 };
 
 static constexpr device_fragment_part_t spi_fragment[] = {
@@ -40,7 +50,8 @@ static constexpr device_fragment_part_t spi_fragment[] = {
 };
 
 static constexpr device_fragment_t fragments[] = {
-    {"gpio", countof(gpio_fragment), gpio_fragment},
+    {"irq-gpio", countof(irq_gpio_fragment), irq_gpio_fragment},
+    {"reset-gpio", countof(reset_gpio_fragment), reset_gpio_fragment},
     {"spi", countof(spi_fragment), spi_fragment},
 };
 
