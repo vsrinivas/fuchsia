@@ -10,7 +10,6 @@
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
@@ -19,6 +18,7 @@
 
 #include "common.h"
 #include "registers-ovl.h"
+#include "src/graphics/display/drivers/mt8167s-display/mt8167s-display-bind.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
@@ -719,9 +719,4 @@ static constexpr zx_driver_ops_t display_ops = []() {
 
 }  // namespace mt8167s_display
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
-ZIRCON_DRIVER_END(mt8167s_display)
+ZIRCON_DRIVER(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1");
