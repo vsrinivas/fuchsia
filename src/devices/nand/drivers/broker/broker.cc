@@ -13,10 +13,11 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/nand/drivers/broker/nand-broker-bind.h"
 
 namespace {
 
@@ -217,9 +218,4 @@ static constexpr zx_driver_ops_t nand_broker_ops = []() {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(nand_broker, nand_broker_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF_AUTOBIND,
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NAND)
-ZIRCON_DRIVER_END(nand_broker)
-    // clang-format on
+ZIRCON_DRIVER(nand_broker, nand_broker_ops, "zircon", "0.1");

@@ -2,10 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
 group("broker") {
   deps = [ ":nand-broker" ]
+}
+
+bind_rules("nand-broker-bind") {
+  disable_autobind = true
+  rules = "nand-broker.bind"
+  output = "nand-broker-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
 driver_module("nand-broker") {
@@ -13,19 +22,14 @@ driver_module("nand-broker") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "broker.cc" ]
   deps = [
+    ":nand-broker-bind",
     "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -35,5 +39,8 @@ driver_module("nand-broker") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:nandpart-broker-test" ]
+  deps = [
+    ":nand-broker-bind_test",
+    "test:nandpart-broker-test",
+  ]
 }
