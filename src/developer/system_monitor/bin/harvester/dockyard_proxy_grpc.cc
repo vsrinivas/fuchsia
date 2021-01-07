@@ -48,14 +48,14 @@ void BuildSampleListById(SampleListById* by_id,
 }
 
 dockyard_proto::LogBatch BuildLogBatch(
-    const std::vector<const std::string>& batch, uint64_t mono, uint64_t time) {
+    const std::vector<const std::string>& batch, uint64_t monotonic_time, uint64_t time) {
   dockyard_proto::LogBatch logs;
   for (const auto& json : batch) {
     auto log = logs.add_log_json();
     log->set_json(json);
   }
   logs.set_time(time);
-  logs.set_mono(mono);
+  logs.set_monotonic_time(monotonic_time);
   return logs;
 }
 
@@ -92,7 +92,7 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
 
 DockyardProxyStatus DockyardProxyGrpc::SendLogs(
     const std::vector<const std::string>& batch) {
-  uint64_t mono = zx::clock::get_monotonic().get();
+  uint64_t monotonic_time = zx::clock::get_monotonic().get();
 
   // TODO(fxbug.dev/65180): Add a check for ZX_CLOCK_STARTED.
   auto now = std::chrono::system_clock::now();
@@ -102,7 +102,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendLogs(
 
   // Data we are sending to the server.
   dockyard_proto::LogBatch logs =
-      internal::BuildLogBatch(batch, mono, nanoseconds);
+      internal::BuildLogBatch(batch, monotonic_time, nanoseconds);
 
   grpc::ClientContext context;
   std::shared_ptr<grpc::ClientReaderWriterInterface<dockyard_proto::LogBatch,

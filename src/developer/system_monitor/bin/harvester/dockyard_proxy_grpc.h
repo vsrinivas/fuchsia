@@ -25,7 +25,7 @@ void BuildSampleListById(SampleListById* by_id,
                          const SampleList& sample_list);
 
 dockyard_proto::LogBatch BuildLogBatch(
-    const std::vector<const std::string>& batch, uint64_t mono, uint64_t time);
+    const std::vector<const std::string>& batch, uint64_t monotonic_time, uint64_t time);
 }  // namespace internal
 
 class DockyardProxyGrpc : public DockyardProxy {

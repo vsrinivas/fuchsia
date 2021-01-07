@@ -91,23 +91,23 @@ TEST(DockyardClientTest, SendLogTest) {
     EXPECT_EQ(log_json[i].json(), batch[i]);
   }
   EXPECT_THAT(logs.time(), AllOf(Gt(startTime), Lt(getUtcTime())));
-  EXPECT_THAT(logs.mono(), AllOf(Gt(startMono), Lt(getMonotonicTime())));
+  EXPECT_THAT(logs.monotonic_time(), AllOf(Gt(startMono), Lt(getMonotonicTime())));
 }
 
 TEST_F(DockyardProxyGrpcTest, BuildLogBatch) {
   const std::string logs1 = "[{hello: world}, {foo: bar}]";
   const std::string logs2 = "[{hello: world}, {foo: bar}]";
   std::vector<const std::string> batch = {logs1, logs1};
-  uint64_t mono = 100;
+  uint64_t monotonic_time = 100;
   uint64_t time = 1000;
 
   dockyard_proto::LogBatch result =
-      harvester::internal::BuildLogBatch(batch, mono, time);
+      harvester::internal::BuildLogBatch(batch, monotonic_time, time);
 
   auto log_json = result.log_json();
   for (auto i = 0; i < log_json.size(); i++) {
     EXPECT_EQ(log_json[i].json(), batch[i]);
   }
-  EXPECT_EQ(result.mono(), mono);
+  EXPECT_EQ(result.monotonic_time(), monotonic_time);
   EXPECT_EQ(result.time(), time);
 }
