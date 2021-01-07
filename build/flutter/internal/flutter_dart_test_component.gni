@@ -162,7 +162,7 @@ template("flutter_dart_test_component") {
 
     deps = [
       ":$_test_package_target_name",
-      "//topaz/lib/fuchsia_test_helper",
+      "//src/flutter/lib/fuchsia_test_helper",
     ]
     non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
     if (defined(invoker.non_dart_deps)) {
