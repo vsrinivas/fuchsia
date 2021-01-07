@@ -30,7 +30,7 @@ removed from this namespace and all bind property keys will be defined in bind l
 The compiler takes a list of library sources, and one program source. For example:
 
 ```
-fx bindc \
+fx bindc compile \
   --include src/devices/bind/fuchsia.usb/fuchsia.usb.bind \
   --output tools/bindc/examples/gizmo.h \
   tools/bindc/examples/gizmo.bind
@@ -401,7 +401,7 @@ described in this page.
 You can run the debugger with the `--debug` option in the bind compiler.
 
 ```
-fx bindc \
+fx bindc debug \
   --include src/devices/bind/fuchsia.usb/fuchsia.usb.bind \
   --debug tools/bindc/examples/gizmo.dev \
   tools/bindc/examples/gizmo.bind
