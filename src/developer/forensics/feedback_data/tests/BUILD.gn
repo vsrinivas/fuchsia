@@ -292,10 +292,10 @@ executable("inspect_data_budget_unittest_exe") {
   ]
 }
 
-executable("inspect_ptr_unittest_exe") {
+executable("inspect_unittest_exe") {
   testonly = true
 
-  sources = [ "inspect_ptr_unittest.cc" ]
+  sources = [ "inspect_unittest.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
@@ -419,10 +419,10 @@ executable("screenshot_ptr_unittest_exe") {
   ]
 }
 
-executable("system_log_ptr_unittest_exe") {
+executable("system_log_unittest_exe") {
   testonly = true
 
-  sources = [ "system_log_ptr_unittest.cc" ]
+  sources = [ "system_log_unittest.cc" ]
 
   deps = [
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
@@ -611,12 +611,12 @@ fuchsia_component("inspect_data_budget_unittest") {
   deps = [ ":inspect_data_budget_unittest_exe" ]
 }
 
-fuchsia_component("inspect_ptr_unittest") {
+fuchsia_component("inspect_unittest") {
   testonly = true
 
-  manifest = "meta/inspect_ptr_unittest.cmx"
+  manifest = "meta/inspect_unittest.cmx"
 
-  deps = [ ":inspect_ptr_unittest_exe" ]
+  deps = [ ":inspect_unittest_exe" ]
 }
 
 fuchsia_component("inspect_test_app") {
@@ -678,12 +678,12 @@ fuchsia_component("screenshot_ptr_unittest") {
   deps = [ ":screenshot_ptr_unittest_exe" ]
 }
 
-fuchsia_component("system_log_ptr_unittest") {
+fuchsia_component("system_log_unittest") {
   testonly = true
 
-  manifest = "meta/system_log_ptr_unittest.cmx"
+  manifest = "meta/system_log_unittest.cmx"
 
-  deps = [ ":system_log_ptr_unittest_exe" ]
+  deps = [ ":system_log_unittest_exe" ]
 }
 
 ###############################################################################
@@ -701,14 +701,14 @@ fuchsia_test_package("feedback-data-tests") {
     ":device_id_provider_unittest",
     ":feedback_data_integration_test",
     ":inspect_data_budget_unittest",
-    ":inspect_ptr_unittest",
+    ":inspect_unittest",
     ":metadata_unittest",
     ":kernel_log_ptr_integration_test",
     ":last_reboot_info_provider_unittest",
     ":main_service_unittest",
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
-    ":system_log_ptr_unittest",
+    ":system_log_unittest",
   ]
 
   deps = [

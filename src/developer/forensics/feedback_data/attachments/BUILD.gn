@@ -9,16 +9,16 @@ visibility = [ "//src/developer/forensics/feedback_data/*" ]
 ###############################################################################
 source_set("attachment_providers") {
   sources = [
+    "inspect.cc",
+    "inspect.h",
     "inspect_data_budget.cc",
     "inspect_data_budget.h",
-    "inspect_ptr.cc",
-    "inspect_ptr.h",
     "kernel_log_ptr.cc",
     "kernel_log_ptr.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
-    "system_log_ptr.cc",
-    "system_log_ptr.h",
+    "system_log.cc",
+    "system_log.h",
   ]
 
   public_deps = [
