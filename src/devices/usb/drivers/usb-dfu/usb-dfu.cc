@@ -11,12 +11,13 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/usb/drivers/usb-dfu/usb_dfu_bind.h"
 
 namespace {
 
@@ -293,10 +294,5 @@ static constexpr zx_driver_ops_t dfu_driver_ops = []() {
 }  // namespace usb
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_dfu, usb::dfu_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_APPLICATION_SPECIFIC),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_DFU),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_DFU),
-ZIRCON_DRIVER_END(usb_dfu)
-    // clang-format on
+ZIRCON_DRIVER(usb_dfu, usb::dfu_driver_ops, "zircon", "0.1");
+// clang-format on

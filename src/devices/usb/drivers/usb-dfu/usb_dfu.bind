@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.usb;
+using fuchsia.usb.application_specific;
+
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.APPLICATION_SPECIFIC;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.application_specific.BIND_USB_SUBCLASS.DFU;
+fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.application_specific.BIND_USB_PROTOCOL.DFU;
