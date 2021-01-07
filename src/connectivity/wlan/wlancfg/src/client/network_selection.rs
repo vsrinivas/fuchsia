@@ -32,8 +32,8 @@ use {
 
 const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
 const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_seconds(10); // TODO(61992) Tweak duration
-/// Above this RSSI, we'll give 5G networks a preference
-const RSSI_CUTOFF_5G_PREFERENCE: i8 = -50;
+/// Above or at this RSSI, we'll give 5G networks a preference
+const RSSI_CUTOFF_5G_PREFERENCE: i8 = -58;
 /// The score boost for 5G networks that we are giving preference to.
 const RSSI_5G_PREFERENCE_BOOST: i8 = 15;
 
@@ -68,7 +68,7 @@ impl InternalBss<'_> {
         let channel = Channel::from_fidl(self.bss_info.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
-        if channel.is_5ghz() && rssi > RSSI_CUTOFF_5G_PREFERENCE {
+        if channel.is_5ghz() && rssi >= RSSI_CUTOFF_5G_PREFERENCE {
             return rssi.saturating_add(RSSI_5G_PREFERENCE_BOOST);
         }
         return rssi;
@@ -874,11 +874,11 @@ mod tests {
         },
         -34; "5GHz score is (RSSI + mod), when above threshold")]
     #[test_case(types::Bss {
-            rssi: -51,
+            rssi: -71,
             channel: generate_channel(36),
             ..generate_random_bss()
         },
-        -51; "5GHz score is RSSI, when below threshold")]
+        -71; "5GHz score is RSSI, when below threshold")]
     fn scoring_test(bss: types::Bss, expected_score: i8) {
         let mut rng = rand::thread_rng();
 
