@@ -15,11 +15,12 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <usb/usb-request.h>
+
+#include "src/devices/block/drivers/ums-function/usb_ums_bind.h"
 
 #define BLOCK_SIZE 512L
 #define STORAGE_SIZE (4L * 1024L * 1024L * 1024L)
@@ -753,9 +754,4 @@ static zx_driver_ops_t usb_ums_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_ums, usb_ums_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
-ZIRCON_DRIVER_END(usb_ums)
+ZIRCON_DRIVER(usb_ums, usb_ums_ops, "zircon", "0.1");

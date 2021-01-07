@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.mass_storage;
+
+extend uint fuchsia.BIND_USB_SUBCLASS {
+  RBC = 0x01,
+  MMC = 0x02,
+  SFF_8070i = 0x05,
+  SCSI = 0x06,
+};
+
+extend uint fuchsia.BIND_USB_PROTOCOL {
+  BULK_ONLY = 0x50,
+};
