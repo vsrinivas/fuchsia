@@ -110,11 +110,17 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
                 FX_PLOGS(ERROR, result.error()) << "Failed to convert config";
                 return fit::error(result.error());
               }
+
               auto num_streams = result.value().streams().size();
+              auto config_metrics = device->metrics_.CreateConfiguration(config_index, num_streams);
+              for (uint32_t stream_index = 0; stream_index < result.value().streams().size();
+                   ++stream_index) {
+                config_metrics->stream(stream_index)
+                    .SetProperties(result.value().streams()[stream_index]);
+              }
+              device->configuration_metrics_.push_back(std::move(config_metrics));
               device->configurations_.push_back(result.take_value());
               device->configs_.push_back(std::move(*config));
-              device->configuration_metrics_.push_back(
-                  device->metrics_.CreateConfiguration(config_index, num_streams));
             }
             device->SetConfiguration(0);
             return fit::ok();
@@ -170,11 +176,14 @@ void DeviceImpl::OnControllerDisconnected(zx_status_t status) {
 void DeviceImpl::RemoveClient(uint64_t id) { clients_.erase(id); }
 
 void DeviceImpl::SetConfiguration(uint32_t index) {
+  configuration_metrics_[current_configuration_index_]->SetActive(false);
+  current_configuration_index_ = index;
+  configuration_metrics_[current_configuration_index_]->SetActive(true);
+
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
   stream_to_pending_legacy_stream_request_params_.clear();
   stream_request_sent_to_controller_.clear();
-  current_configuration_index_ = index;
   FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
     client.second->ConfigurationUpdated(current_configuration_index_);

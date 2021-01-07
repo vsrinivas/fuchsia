@@ -5,6 +5,7 @@
 #ifndef SRC_CAMERA_BIN_DEVICE_METRICS_REPORTER_H_
 #define SRC_CAMERA_BIN_DEVICE_METRICS_REPORTER_H_
 
+#include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/inspect/cpp/component.h>
 
@@ -21,11 +22,19 @@ class MetricsReporter {
   class Stream {
    public:
     Stream(inspect::Node& parent, uint32_t index);
+
+    void SetProperties(const fuchsia::camera3::StreamProperties2&);
     void FrameReceived();
     void FrameDropped();
 
    private:
     inspect::Node node_;
+
+    inspect::StringProperty frame_rate_;
+    inspect::BoolProperty supports_crop_region_;
+    inspect::Node supported_resolutions_node_;
+    std::vector<inspect::StringProperty> supported_resolutions_;
+
     inspect::UintProperty frames_received_;
     inspect::UintProperty frames_dropped_;
   };
@@ -38,8 +47,11 @@ class MetricsReporter {
     // 0 <= index < num_streams.
     Stream& stream(uint32_t index) { return streams_[index]; }
 
+    void SetActive(bool active) { active_node_.Set(active); }
+
    private:
     inspect::Node node_;
+    inspect::BoolProperty active_node_;
     inspect::Node streams_node_;
     std::vector<Stream> streams_;
   };
