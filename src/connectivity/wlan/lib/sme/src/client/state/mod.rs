@@ -131,13 +131,7 @@ statemachine!(
 
 /// Context surrounding the state change, for Inspect logging
 pub enum StateChangeContext {
-    Disconnect {
-        msg: String,
-        reason_code: u16,
-        /// True if disconnect is initiated within the device.
-        /// False if disconnect happens due to frame sent by AP.
-        locally_initiated: bool,
-    },
+    Disconnect { msg: String, disconnect_source: DisconnectSource },
     Msg(String),
 }
 
@@ -536,6 +530,12 @@ impl Associated {
     ) -> Associating {
         let (mut protection, connected_duration) = self.link_state.disconnect();
 
+        let disconnect_source = if ind.locally_initiated {
+            DisconnectSource::Mlme(ind.reason_code)
+        } else {
+            DisconnectSource::Ap(ind.reason_code)
+        };
+
         if let Some(duration) = connected_duration {
             let disconnect_info = DisconnectInfo {
                 connected_duration: duration,
@@ -544,13 +544,7 @@ impl Associated {
                 bssid: self.bss.bssid,
                 ssid: self.bss.ssid().to_vec(),
                 channel: Channel::from_fidl(self.bss.chan),
-                reason_code: ind.reason_code,
-                disconnect_source: if ind.locally_initiated {
-                    DisconnectSource::Mlme
-                } else {
-                    DisconnectSource::Ap
-                },
-                user_disconnect_reason: None,
+                disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
             context.info.report_disconnect(disconnect_info);
@@ -575,9 +569,11 @@ impl Associated {
             &context.mlme_sink,
         );
         state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!("received DisassociateInd msg; reason code {:?}", ind.reason_code),
-            reason_code: ind.reason_code,
-            locally_initiated: ind.locally_initiated,
+            msg: format!(
+                "received DisassociateInd msg; reason code {:?}",
+                disconnect_source.reason_code()
+            ),
+            disconnect_source,
         });
         Associating {
             cfg: self.cfg,
@@ -595,6 +591,13 @@ impl Associated {
         context: &mut Context,
     ) -> Idle {
         let (_, connected_duration) = self.link_state.disconnect();
+
+        let disconnect_source = if ind.locally_initiated {
+            DisconnectSource::Mlme(ind.reason_code as u16)
+        } else {
+            DisconnectSource::Ap(ind.reason_code as u16)
+        };
+
         match connected_duration {
             Some(duration) => {
                 let disconnect_info = DisconnectInfo {
@@ -604,13 +607,7 @@ impl Associated {
                     bssid: self.bss.bssid,
                     ssid: self.bss.ssid().to_vec(),
                     channel: Channel::from_fidl(self.bss.chan),
-                    reason_code: ind.reason_code.into_primitive(),
-                    disconnect_source: if ind.locally_initiated {
-                        DisconnectSource::Mlme
-                    } else {
-                        DisconnectSource::Ap
-                    },
-                    user_disconnect_reason: None,
+                    disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
@@ -626,9 +623,11 @@ impl Associated {
         }
 
         state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!("received DeauthenticateInd msg; reason code {:?}", ind.reason_code),
-            reason_code: ind.reason_code.into_primitive(),
-            locally_initiated: ind.locally_initiated,
+            msg: format!(
+                "received DeauthenticateInd msg; reason code {:?}",
+                disconnect_source.reason_code()
+            ),
+            disconnect_source,
         });
         Idle { cfg: self.cfg }
     }
@@ -963,8 +962,7 @@ impl ClientState {
         context: &mut Context,
         user_disconnect_reason: fidl_sme::UserDisconnectReason,
     ) -> Self {
-        let reason_code = fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive();
-        let locally_initiated = true;
+        let disconnect_source = DisconnectSource::User(user_disconnect_reason);
         if let Self::Associated(state) = &self {
             if let LinkState::LinkUp(link_up) = &state.link_state {
                 let disconnect_info = DisconnectInfo {
@@ -974,9 +972,7 @@ impl ClientState {
                     bssid: state.bss.bssid,
                     ssid: state.bss.ssid().to_vec(),
                     channel: Channel::from_fidl(state.bss.chan),
-                    reason_code,
-                    disconnect_source: DisconnectSource::User,
-                    user_disconnect_reason: Some(user_disconnect_reason),
+                    disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
@@ -986,9 +982,11 @@ impl ClientState {
         let new_state = Self::new(self.disconnect_internal(context));
 
         let state_change_ctx = Some(StateChangeContext::Disconnect {
-            msg: "disconnect command".to_string(),
-            reason_code,
-            locally_initiated,
+            msg: format!(
+                "received disconnect command from user; reason {:?}",
+                user_disconnect_reason
+            ),
+            disconnect_source,
         });
         log_state_change(start_state, &new_state, state_change_ctx, context);
         new_state
@@ -1177,15 +1175,15 @@ fn log_state_change(
             // Only log the `disconnect_ctx` if an operation had an effect of moving from
             // non-idle state to idle state. This is so that the client that consumes
             // `disconnect_ctx` does not log a disconnect event when it's effectively no-op.
-            StateChangeContext::Disconnect { msg, reason_code, locally_initiated }
+            StateChangeContext::Disconnect { msg, disconnect_source }
                 if start_state != IDLE_STATE =>
             {
                 info!(
-                    "{} => {}, ctx: `{}`, locally_initiated: {}",
+                    "{} => {}, ctx: `{}`, disconnect_source: {:?}",
                     start_state,
                     new_state.state_name(),
                     msg,
-                    locally_initiated
+                    disconnect_source,
                 );
 
                 inspect_log!(context.inspect.state_events.lock(), {
@@ -1193,8 +1191,8 @@ fn log_state_change(
                     to: new_state.state_name(),
                     ctx: msg,
                     disconnect_ctx: {
-                        reason_code: reason_code,
-                        locally_initiated: locally_initiated,
+                        reason_code: disconnect_source.reason_code(),
+                        locally_initiated: disconnect_source.locally_initiated(),
                     }
                 });
             }
@@ -2135,7 +2133,8 @@ mod tests {
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_mlme::ReasonCode::from_primitive(3)
+                    .expect("invalid fidl_mlme::ReasonCode value 3"),
                 locally_initiated: true,
             },
         };
@@ -2146,8 +2145,7 @@ mod tests {
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
             assert_eq!(info.bssid, [8; 6]);
-            assert_eq!(info.reason_code, fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive());
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme);
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(3));
         });
     }
 
@@ -2170,8 +2168,7 @@ mod tests {
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
             assert_eq!(info.bssid, [8; 6]);
-            assert_eq!(info.reason_code, 4);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme);
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(4));
         });
     }
 
@@ -2187,9 +2184,7 @@ mod tests {
             assert_eq!(info.last_snr, 30);
             assert_eq!(info.ssid, b"bar");
             assert_eq!(info.bssid, [8; 6]);
-            assert_eq!(info.reason_code, fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive());
-            assert_eq!(info.disconnect_source, DisconnectSource::User);
-            assert_eq!(info.user_disconnect_reason, Some(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
+            assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
     }
 

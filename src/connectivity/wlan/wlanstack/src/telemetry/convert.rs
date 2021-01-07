@@ -209,8 +209,8 @@ pub(super) fn convert_disconnect_source(
 ) -> metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause {
     use metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause::*;
     match disconnect_source {
-        DisconnectSource::User => Manual,
-        DisconnectSource::Mlme | DisconnectSource::Ap => Drop,
+        DisconnectSource::User(_) => Manual,
+        DisconnectSource::Mlme(_) | DisconnectSource::Ap(_) => Drop,
     }
 }
 

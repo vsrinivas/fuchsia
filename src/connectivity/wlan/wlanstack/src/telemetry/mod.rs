@@ -7,7 +7,7 @@ mod convert;
 use {
     crate::{device::IfaceMap, inspect, telemetry::convert::*},
     fidl_fuchsia_cobalt::HistogramBucket,
-    fidl_fuchsia_wlan_stats as fidl_stats,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_stats as fidl_stats,
     fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats},
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
@@ -676,17 +676,24 @@ pub fn log_disconnect(
             cbw: format!("{:?}", info.channel.cbw.to_fidl().0),
             secondary80: info.channel.cbw.to_fidl().1,
         },
-        reason_code: info.reason_code,
+        reason_code: info.disconnect_source.reason_code(),
+        locally_initiated: info.disconnect_source.locally_initiated(),
         disconnect_source: match info.disconnect_source {
-            DisconnectSource::User => "user",
-            DisconnectSource::Mlme => "mlme",
-            DisconnectSource::Ap => "ap",
+            DisconnectSource::User(_) => "user",
+            DisconnectSource::Mlme(_) => "mlme",
+            DisconnectSource::Ap(_) => "ap",
         },
-        user_disconnect_reason?: info.user_disconnect_reason.map(|reason| format!("{:?}", reason)),
+        disconnect_reason: match info.disconnect_source {
+            DisconnectSource::User(user_reason) => format!("{:?}", user_reason),
+            DisconnectSource::Mlme(mlme_reason) => fidl_mlme::ReasonCode::from_primitive(mlme_reason)
+                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
+            DisconnectSource::Ap(ap_reason) => fidl_mlme::ReasonCode::from_primitive(ap_reason)
+                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
+        },
         time_since_channel_switch?: info.time_since_channel_switch.map(|d| d.into_nanos()),
     });
 
-    if let DisconnectSource::Mlme = info.disconnect_source {
+    if let DisconnectSource::Mlme(_) = info.disconnect_source {
         use metrics::LostConnectionCountMetricDimensionConnectedTime::*;
 
         let duration_dim = match &info.connected_duration {
@@ -723,9 +730,9 @@ pub fn log_disconnect(
         _ => AtLeastSixHours,
     };
     let disconnect_source_dim = match &info.disconnect_source {
-        DisconnectSource::User => User,
-        DisconnectSource::Mlme => Mlme,
-        DisconnectSource::Ap => Ap,
+        DisconnectSource::User(_) => User,
+        DisconnectSource::Mlme(_) => Mlme,
+        DisconnectSource::Ap(_) => Ap,
     };
     let snr_dim = convert_snr(info.last_snr);
     let recent_channel_switch_dim = match info.time_since_channel_switch.map(|d| d < 1.minutes()) {
@@ -762,6 +769,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
+        fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
         fuchsia_zircon as zx,
@@ -1040,8 +1048,12 @@ mod tests {
     fn test_log_disconnect_initiated_from_mlme() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
-        let disconnect_info =
-            DisconnectInfo { disconnect_source: DisconnectSource::Mlme, ..fake_disconnect_info() };
+        let disconnect_info = DisconnectInfo {
+            disconnect_source: DisconnectSource::Mlme(
+                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            ),
+            ..fake_disconnect_info()
+        };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
@@ -1066,8 +1078,12 @@ mod tests {
     fn test_log_disconnect_initiated_from_user_request() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
-        let disconnect_info =
-            DisconnectInfo { disconnect_source: DisconnectSource::User, ..fake_disconnect_info() };
+        let disconnect_info = DisconnectInfo {
+            disconnect_source: DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+            ),
+            ..fake_disconnect_info()
+        };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
@@ -1082,8 +1098,12 @@ mod tests {
     fn test_log_disconnect_initiated_from_ap() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
-        let disconnect_info =
-            DisconnectInfo { disconnect_source: DisconnectSource::Ap, ..fake_disconnect_info() };
+        let disconnect_info = DisconnectInfo {
+            disconnect_source: DisconnectSource::Ap(
+                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            ),
+            ..fake_disconnect_info()
+        };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
@@ -1123,6 +1143,8 @@ mod tests {
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
 
+        let disconnect_source =
+            DisconnectSource::Mlme(fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive());
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
@@ -1130,9 +1152,7 @@ mod tests {
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
-            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            disconnect_source: DisconnectSource::Mlme,
-            user_disconnect_reason: None,
+            disconnect_source,
             time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
         };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
@@ -1156,7 +1176,7 @@ mod tests {
                         last_snr: 1i64,
                         reason_code: 1u64,
                         disconnect_source: "mlme",
-                        user_disconnect_reason: "None",
+                        disconnect_reason: "UnspecifiedReason",
                         time_since_channel_switch: 1337i64,
                     }
                 }
@@ -1330,7 +1350,9 @@ mod tests {
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
                 ssid: fake_bss!(Open).ssid().to_vec(),
-                disconnect_source: DisconnectSource::User,
+                disconnect_source: DisconnectSource::User(
+                    fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+                ),
                 disconnect_at: now - DURATION_SINCE_LAST_DISCONNECT,
             }),
         }
@@ -1434,9 +1456,9 @@ mod tests {
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
-            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            disconnect_source: DisconnectSource::Mlme,
-            user_disconnect_reason: None,
+            disconnect_source: DisconnectSource::Mlme(
+                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            ),
             time_since_channel_switch: None,
         }
     }

@@ -36,6 +36,7 @@ enum UserDisconnectReason {
     NETWORK_CONFIG_UPDATED = 9;
 
     // The following reasons should only be used for development and testing.
+    WLANSTACK_UNIT_TESTING = 124;
     WLAN_SME_UNIT_TESTING = 125;
     WLAN_SERVICE_UTIL_TESTING = 126;
     WLAN_DEV_TOOL = 127;

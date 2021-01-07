@@ -565,11 +565,14 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
 
-        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectSource::User);
+        stats_collector.report_disconnect(
+            b"foo".to_vec(),
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
+        );
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => {
             assert_variant!(stats.previous_disconnect_info, Some(info) => {
-                assert_eq!(info.disconnect_source, DisconnectSource::User);
+                assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
             })
         });
     }
@@ -581,7 +584,10 @@ mod tests {
         // Connects then disconnect
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
-        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectSource::User);
+        stats_collector.report_disconnect(
+            b"foo".to_vec(),
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
+        );
 
         // Attempt to connect but fails
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
@@ -597,7 +603,7 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => {
             assert_variant!(stats.previous_disconnect_info, Some(info) => {
-                assert_eq!(info.disconnect_source, DisconnectSource::User);
+                assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
             })
         });
     }

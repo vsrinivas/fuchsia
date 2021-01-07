@@ -337,8 +337,6 @@ pub struct DisconnectInfo {
     pub bssid: [u8; 6],
     pub ssid: Ssid,
     pub channel: wlan_common::channel::Channel,
-    pub reason_code: u16,
-    pub user_disconnect_reason: Option<fidl_sme::UserDisconnectReason>,
     pub disconnect_source: DisconnectSource,
     pub time_since_channel_switch: Option<zx::Duration>,
 }
@@ -350,21 +348,31 @@ pub struct PreviousDisconnectInfo {
     pub disconnect_at: zx::Time,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DisconnectSource {
-    /// Disconnect happens due to manual request from upper layer.
-    User,
-    /// Disconnect is initiated by AP.
-    Ap,
-    /// Disconnect is initiated by MLME.
-    Mlme,
+    /// Disconnect initiated by upper layer.
+    User(fidl_sme::UserDisconnectReason),
+    /// Disconnect initiated by AP.
+    Ap(u16),
+    /// Disconnect initiated by MLME.
+    Mlme(u16),
 }
 
 impl DisconnectSource {
-    pub fn is_locally_initiated(&self) -> bool {
+    pub fn reason_code(&self) -> u16 {
         match self {
-            Self::User | Self::Mlme => true,
-            Self::Ap => false,
+            DisconnectSource::Ap(ap_reason_code) => *ap_reason_code,
+            DisconnectSource::Mlme(mlme_reason_code) => *mlme_reason_code,
+            DisconnectSource::User(_) => {
+                fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive()
+            }
+        }
+    }
+
+    pub fn locally_initiated(&self) -> bool {
+        match self {
+            DisconnectSource::Ap(_) => false,
+            DisconnectSource::Mlme(_) | DisconnectSource::User(_) => true,
         }
     }
 }
@@ -398,5 +406,35 @@ mod tests {
         assert_eq!(ConnectionMilestone::from_duration(5.seconds()), ConnectionMilestone::Connected);
         assert_eq!(ConnectionMilestone::from_duration(1.minute()), ConnectionMilestone::OneMinute);
         assert_eq!(ConnectionMilestone::from_duration(3.minutes()), ConnectionMilestone::OneMinute);
+    }
+
+    #[test]
+    fn test_disconnect_source_locally_initiated() {
+        assert!(!DisconnectSource::Ap(fidl_mlme::ReasonCode::NoMoreStas.into_primitive())
+            .locally_initiated());
+        assert!(DisconnectSource::Mlme(
+            fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive()
+        )
+        .locally_initiated());
+        assert!(DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
+            .locally_initiated());
+    }
+
+    #[test]
+    fn test_disconnect_source_reason_code() {
+        assert_eq!(
+            fidl_mlme::ReasonCode::NoMoreStas.into_primitive(),
+            DisconnectSource::Ap(fidl_mlme::ReasonCode::NoMoreStas.into_primitive()).reason_code()
+        );
+        assert_eq!(
+            fidl_mlme::ReasonCode::ReasonInactivity.into_primitive(),
+            DisconnectSource::Mlme(fidl_mlme::ReasonCode::ReasonInactivity.into_primitive())
+                .reason_code()
+        );
+        assert_eq!(
+            fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive(),
+            DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
+                .reason_code()
+        );
     }
 }
