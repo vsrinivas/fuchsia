@@ -10,13 +10,24 @@ use {
     },
     chrono::prelude::*,
     fuchsia_zircon as zx,
+    lazy_static::lazy_static,
     log::{info, warn},
-    std::sync::Arc,
+    std::{cmp, sync::Arc},
 };
 
-/// The variance (i.e. standard deviation squared) of the system oscillator frequency error, used
-/// to control the growth in uncertainty during the prediction phase.
-const OSCILLATOR_ERROR_VARIANCE: f64 = 2.25e-10; // 15ppm^2
+/// One million for PPM calculations
+const MILLION: u64 = 1_000_000;
+
+/// The standard deviation of the system oscillator frequency error in parts per million, used to
+/// control the growth in error bound.
+const OSCILLATOR_ERROR_STD_DEV_PPM: u64 = 15;
+
+lazy_static! {
+    /// The variance (i.e. standard deviation squared) of the system oscillator frequency error,
+    /// used to control the growth in uncertainty during the prediction phase.
+    static ref OSCILLATOR_ERROR_VARIANCE: f64 =
+        (OSCILLATOR_ERROR_STD_DEV_PPM as f64 / MILLION as f64).powi(2);
+}
 
 /// The minimum covariance allowed for the UTC estimate in nanoseconds squared. This helps the
 /// kalman filter not drink its own bathwater after receiving very low uncertainly updates from a
@@ -95,7 +106,7 @@ impl<D: Diagnostics> Estimator<D> {
         // Estimated UTC increases by (change in monotonic time) * frequency.
         self.estimate_0 += self.estimate_1 * monotonic_step;
         // Estimated covariance increases as a function of the time step and oscillator error.
-        self.covariance_00 += monotonic_step.powf(2.0) * OSCILLATOR_ERROR_VARIANCE;
+        self.covariance_00 += monotonic_step.powf(2.0) * *OSCILLATOR_ERROR_VARIANCE;
     }
 
     /// Correct the estimate by incorporating measurement data.
@@ -146,46 +157,66 @@ impl<D: Diagnostics> Estimator<D> {
 
     /// Returns the estimated utc at the supplied monotonic time.
     pub fn estimate(&self, monotonic: zx::Time) -> zx::Time {
-        // TODO(jsankey): Accommodate a oscillator frequency error when implementing the frequency
+        // TODO(jsankey): Accommodate an oscillator frequency error when implementing the frequency
         // correction algorithm.
         let utc_at_last_update = self.reference_utc + f64_to_duration(self.estimate_0);
         utc_at_last_update + (monotonic - self.monotonic)
+    }
+
+    /// Returns a ~95% confidence bound on the estimate error at the specified monotonic time,
+    /// in nanoseconds.
+    pub fn error_bound(&self, monotonic: zx::Time) -> u64 {
+        // Assuming the error tends to follow a normal distribution with a standard deviation
+        // (aka sigma) of sqrt(covariance) after many independent inputs, a 95% confidence bound
+        // is 2*sigma at the time of the last update.
+        let bound_at_update = 2 * self.covariance_00.sqrt() as u64;
+        // The error bound will grow the further we get from this last update time.
+        let nanos_since_update = cmp::max(0, (monotonic - self.monotonic).into_nanos()) as u64;
+        bound_at_update + 2 * (nanos_since_update * OSCILLATOR_ERROR_STD_DEV_PPM) / MILLION
     }
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::diagnostics::FakeDiagnostics, test_util::assert_near};
+    use {super::*, crate::diagnostics::FakeDiagnostics, test_util::assert_near, zx::DurationNum};
 
-    const TIME_1: zx::Time = zx::Time::from_nanos(10000);
-    const TIME_2: zx::Time = zx::Time::from_nanos(20000);
-    const TIME_3: zx::Time = zx::Time::from_nanos(30000);
+    const TIME_1: zx::Time = zx::Time::from_nanos(10_000_000_000);
+    const TIME_2: zx::Time = zx::Time::from_nanos(20_000_000_000);
+    const TIME_3: zx::Time = zx::Time::from_nanos(30_000_000_000);
     const OFFSET_1: zx::Duration = zx::Duration::from_seconds(777);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(999);
     const STD_DEV_1: zx::Duration = zx::Duration::from_millis(22);
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const TEST_TRACK: Track = Track::Primary;
-    const SQRT_COV_1: i64 = STD_DEV_1.into_nanos();
+    const SQRT_COV_1: u64 = STD_DEV_1.into_nanos() as u64;
 
-    fn create_estimate_event(offset: zx::Duration, sqrt_covariance: i64) -> Event {
+    fn create_estimate_event(offset: zx::Duration, sqrt_covariance: u64) -> Event {
         Event::EstimateUpdated {
             track: TEST_TRACK,
             offset,
-            sqrt_covariance: zx::Duration::from_nanos(sqrt_covariance),
+            sqrt_covariance: zx::Duration::from_nanos(sqrt_covariance as i64),
         }
     }
 
     #[test]
-    fn initialize_and_estimate() {
+    fn initialize() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let estimator = Estimator::new(
             TEST_TRACK,
             Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
+        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
         assert_eq!(estimator.estimate(TIME_1), TIME_1 + OFFSET_1);
         assert_eq!(estimator.estimate(TIME_2), TIME_2 + OFFSET_1);
-        diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
+        assert_eq!(estimator.error_bound(TIME_1), 2 * SQRT_COV_1);
+        // Earlier time should return same error bound.
+        assert_eq!(estimator.error_bound(TIME_1 - 1.second()), 2 * SQRT_COV_1);
+        // Later time should have a higher bound.
+        assert_eq!(
+            estimator.error_bound(TIME_1 + 1.second()),
+            2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
+        );
     }
 
     #[test]
@@ -198,12 +229,20 @@ mod test {
         );
         estimator.update(Sample::new(TIME_2 + OFFSET_2, TIME_2, STD_DEV_1));
 
-        let expected_offset = (OFFSET_1 + OFFSET_2) / 2;
+        // Expected offset is biased slightly towards the second estimate.
+        let expected_offset = 88_8002_580_002.nanos();
+        let expected_sqrt_cov = 15_556_529u64;
         assert_eq!(estimator.estimate(TIME_3), TIME_3 + expected_offset);
+        assert_eq!(
+            estimator.error_bound(TIME_3),
+            2 * expected_sqrt_cov
+                + ((TIME_3 - TIME_2).into_nanos() as u64 * 2 * OSCILLATOR_ERROR_STD_DEV_PPM)
+                    / MILLION
+        );
 
         diagnostics.assert_events(&[
             create_estimate_event(OFFSET_1, SQRT_COV_1),
-            create_estimate_event(expected_offset, 15556349),
+            create_estimate_event(expected_offset, expected_sqrt_cov),
         ]);
     }
 
@@ -259,8 +298,8 @@ mod test {
         estimator.update(Sample::new(TIME_2 + OFFSET_2, TIME_2, ZERO_DURATION));
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
         diagnostics.assert_events(&[
-            create_estimate_event(OFFSET_1, MIN_COVARIANCE.sqrt() as i64),
-            create_estimate_event(OFFSET_2, MIN_COVARIANCE.sqrt() as i64),
+            create_estimate_event(OFFSET_1, MIN_COVARIANCE.sqrt() as u64),
+            create_estimate_event(OFFSET_2, MIN_COVARIANCE.sqrt() as u64),
         ]);
     }
 
