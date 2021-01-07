@@ -11,7 +11,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -23,6 +22,8 @@
 #include <soc/as370/as370-usb.h>
 #include <soc/vs680/vs680-reset.h>
 #include <soc/vs680/vs680-usb.h>
+
+#include "src/devices/usb/drivers/as370-usb-phy/as370_usb_phy_bind.h"
 
 namespace as370_usb_phy {
 
@@ -51,11 +52,11 @@ zx_status_t UsbPhy::InitPhy() {
     // 2.  Assert sticky resets to USBOTG PHY and MAC. (set usb0PhyRstn, usb0CoreRstn
     //     and usb0MahbRstn to 0)
     vs680::Gbl_perifStickyResetN::Get()
-      .ReadFrom(resetmmio)
-      .set_usb0PhyRstn(0)
-      .set_usb0CoreRstn(0)
-      .set_usb0MahbRstn(0)
-      .WriteTo(resetmmio);
+        .ReadFrom(resetmmio)
+        .set_usb0PhyRstn(0)
+        .set_usb0CoreRstn(0)
+        .set_usb0MahbRstn(0)
+        .WriteTo(resetmmio);
 
     // 3.1.  Program USB_CTRL0
     vs680::USB_PHY_CTRL0::Get().FromValue(0).set_value(0x533DADF0).WriteTo(mmio);
@@ -70,10 +71,10 @@ zx_status_t UsbPhy::InitPhy() {
 
     // 6.  De-assert core(set usb0CoreRstn and usb0MahbRstn to 1).
     vs680::Gbl_perifStickyResetN::Get()
-      .ReadFrom(resetmmio)
-      .set_usb0CoreRstn(1)
-      .set_usb0MahbRstn(1)
-      .WriteTo(resetmmio);
+        .ReadFrom(resetmmio)
+        .set_usb0CoreRstn(1)
+        .set_usb0MahbRstn(1)
+        .WriteTo(resetmmio);
     usleep(100);
 
     return ZX_OK;
@@ -207,9 +208,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace as370_usb_phy
 
-ZIRCON_DRIVER_BEGIN(as370_usb_phy, as370_usb_phy::driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_USB_PHY),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_USB_PHY),
-ZIRCON_DRIVER_END(as370_usb_phy)
+ZIRCON_DRIVER(as370_usb_phy, as370_usb_phy::driver_ops, "zircon", "0.1");
