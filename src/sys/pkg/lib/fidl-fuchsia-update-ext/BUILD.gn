@@ -22,6 +22,18 @@ rustc_library("fidl-fuchsia-update-ext") {
     "src/lib.rs",
     "src/types.rs",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//src/lib/zircon/rust:fuchsia-zircon",
+      "//third_party/rust_crates:anyhow",
+    ]
+    sources += [ "src/commit.rs" ]
+    test_deps = [
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia-async",
+    ]
+  }
 }
 
 test_package("fidl-fuchsia-update-ext-tests") {

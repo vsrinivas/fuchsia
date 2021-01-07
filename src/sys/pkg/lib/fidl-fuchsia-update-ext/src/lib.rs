@@ -5,7 +5,13 @@
 //! `fidl_fuchsia_update_ext` contains wrapper types around the auto-generated `fidl_fuchsia_update`
 //! bindings.
 
+#[cfg(target_os = "fuchsia")]
+mod commit;
 mod types;
+
+#[cfg(target_os = "fuchsia")]
+pub use crate::commit::{query_commit_status, CommitStatus};
+
 pub use crate::types::{
     proptest_util::random_version_available, CheckOptions, CheckOptionsBuilder,
     CheckOptionsDecodeError, Initiator, InstallationDeferredData, InstallationErrorData,
