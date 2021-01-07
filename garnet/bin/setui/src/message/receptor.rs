@@ -87,15 +87,6 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
 
     // Used to consume receptor.
     pub fn ack(self) {}
-
-    /// Relays a response to the given message client. Useful for chaining
-    /// together responses.
-    pub async fn relay(
-        &mut self,
-        client: MessageClient<P, A, R>,
-    ) -> Result<Receptor<P, A, R>, Error> {
-        self.next_payload().await.map(|payload| client.reply(payload.0).send())
-    }
 }
 
 /// Extracts the payload from a given `MessageEvent`. Such event is provided

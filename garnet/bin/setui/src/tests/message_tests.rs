@@ -10,7 +10,6 @@ use crate::message::base::{
 use crate::message::messenger::TargetedMessengerClient;
 use crate::message::receptor::Receptor;
 use crate::tests::message_utils::verify_payload;
-use fuchsia_async as fasync;
 use fuchsia_zircon::DurationNum;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
@@ -24,7 +23,6 @@ use std::task::Poll;
 pub enum TestMessage {
     Foo,
     Bar,
-    Error,
     Baz,
     Qux,
     Thud,
@@ -753,107 +751,6 @@ async fn test_propagation() {
 
     // Ensure original sender gets reply.
     verify_payload(REPLY, &mut result_receptor, None).await;
-}
-
-/// Verifies that the proper signal is fired when a receptor disappears.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_relay() {
-    let messenger_factory = test::message::create_hub();
-
-    let (messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let (messenger_2, mut receptor_2) =
-        messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let (_, mut receptor_3) = messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("messenger should be created");
-
-    // Send top level message.
-    let mut message_receptor =
-        messenger_1.message(ORIGINAL, Audience::Messenger(receptor_2.get_signature())).send();
-
-    let messenger = messenger_2.clone();
-    let messenger_3_signature = receptor_3.get_signature();
-    // Move handling of incoming message and propagate to a separate thread so
-    // that we do not block reception of message below.
-    fasync::Task::spawn(async move {
-        // Verify message is received by the target receptor. Forward message
-        // and propagate response.
-        verify_payload(
-            ORIGINAL,
-            &mut receptor_2,
-            Some(Box::new(move |client| -> BoxFuture<'_, ()> {
-                let messenger = messenger.clone();
-                let target_signature = messenger_3_signature.clone();
-                Box::pin(async move {
-                    assert!(messenger
-                        .message(client.get_payload(), Audience::Messenger(target_signature))
-                        .send()
-                        .relay(client.clone())
-                        .await
-                        .is_ok());
-                    ()
-                })
-            })),
-        )
-        .await;
-    })
-    .detach();
-    // Verify message is received by the forwarded receptor and reply.
-    verify_payload(
-        ORIGINAL,
-        &mut receptor_3,
-        Some(Box::new(|client| -> BoxFuture<'_, ()> {
-            Box::pin(async move {
-                client.reply(REPLY).send().ack();
-                ()
-            })
-        })),
-    )
-    .await;
-    // Verify response is propagated back.
-    verify_payload(REPLY, &mut message_receptor, None).await;
-}
-
-/// Verifies that the proper signal is fired when a receptor disappears.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_relay_error() {
-    let messenger_factory = test::message::create_hub();
-
-    let (messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let (messenger_2, mut receptor_2) =
-        messenger_factory.create(MessengerType::Unbound).await.unwrap();
-    let error_message = TestMessage::Error;
-
-    // Send top level message.
-    let mut message_receptor =
-        messenger_1.message(ORIGINAL, Audience::Messenger(receptor_2.get_signature())).send();
-
-    let messenger = messenger_2.clone();
-    let error_message_clone = error_message.clone();
-    // Verify message is received by the target receptor. Forward message to
-    // unknown address and ensure error is received. Send back error message.
-    verify_payload(
-        ORIGINAL,
-        &mut receptor_2,
-        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
-            let messenger = messenger.clone();
-            let error_message = error_message_clone.clone();
-            Box::pin(async move {
-                assert!(messenger
-                    .message(client.get_payload(), Audience::Address(TestAddress::Foo(1)))
-                    .send()
-                    .relay(client.clone())
-                    .await
-                    .is_err());
-                client.reply(error_message).send().ack();
-                ()
-            })
-        })),
-    )
-    .await;
-    // Verify error is propagated back.
-    verify_payload(error_message, &mut message_receptor, None).await;
 }
 
 #[fuchsia_async::run_until_stalled(test)]
