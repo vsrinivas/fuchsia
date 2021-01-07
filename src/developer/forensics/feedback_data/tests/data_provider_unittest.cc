@@ -152,9 +152,10 @@ class DataProviderTest : public UnitTestFixture {
  protected:
   void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
                          const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
-    datastore_ =
-        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, &inspect_data_budget_);
+    datastore_ = std::make_unique<Datastore>(
+        dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
+        PreviousBootFile::FromData(/*is_first_instance=*/true, "empty_boot_id.txt"),
+        &inspect_data_budget_);
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get(), &inspect_data_budget_);

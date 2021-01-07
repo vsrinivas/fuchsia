@@ -78,12 +78,21 @@ class DatastoreTest : public UnitTestFixture {
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
   }
 
+  void TearDown() override {
+    FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true));
+    files::DeletePath(files::JoinPath("/data/", kBootIdFileName), /*recursive=*/true);
+    files::DeletePath(files::JoinPath("/tmp/", kBootIdFileName), /*recursive=*/true);
+  }
+
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist) {
-    datastore_ =
-        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, &inspect_data_budget_);
+    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBootIdFileName), "previous_boot_id"));
+    datastore_ = std::make_unique<Datastore>(
+        dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
+        PreviousBootFile::FromData(/*is_first_instance=*/true, kBootIdFileName),
+        &inspect_data_budget_);
+    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBootIdFileName), "current_boot_id"));
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {

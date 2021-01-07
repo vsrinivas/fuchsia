@@ -20,6 +20,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -65,6 +66,12 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     CreatePreviousLogsFile(cobalt.get());
   }
 
+  // Move the boot id and create a new one.
+  PreviousBootFile boot_id_file = PreviousBootFile::FromData(is_first_instance, kBootIdFileName);
+  if (is_first_instance) {
+    files::WriteFile(boot_id_file.CurrentBootPath(), uuid::Generate());
+  }
+
   Config config;
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
@@ -73,14 +80,15 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     return nullptr;
   }
 
-  return std::unique_ptr<MainService>(new MainService(
-      dispatcher, std::move(services), std::move(cobalt), root_node, config, is_first_instance));
+  return std::unique_ptr<MainService>(new MainService(dispatcher, std::move(services),
+                                                      std::move(cobalt), root_node, config,
+                                                      boot_id_file, is_first_instance));
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
                          std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node,
-                         Config config, const bool is_first_instance)
+                         Config config, PreviousBootFile boot_id_file, const bool is_first_instance)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(std::move(cobalt)),
@@ -88,7 +96,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       inspect_data_budget_(kUserBuildFlagPath),
       device_id_manager_(dispatcher_, kDeviceIdPath),
       datastore_(dispatcher_, services, cobalt_.get(), config.annotation_allowlist,
-                 config.attachment_allowlist, &inspect_data_budget_),
+                 config.attachment_allowlist, boot_id_file, &inspect_data_budget_),
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
                      config.attachment_allowlist, cobalt_.get(), &datastore_,
                      &inspect_data_budget_),

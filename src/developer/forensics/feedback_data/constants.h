@@ -50,6 +50,8 @@ constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
 constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
+constexpr char kAnnotationSystemBootIdCurrent[] = "system.boot-id.current";
+constexpr char kAnnotationSystemBootIdPrevious[] = "system.boot-id.previous";
 constexpr char kAnnotationSystemLastRebootReason[] = "system.last-reboot.reason";
 constexpr char kAnnotationSystemLastRebootUptime[] = "system.last-reboot.uptime";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
@@ -87,6 +89,12 @@ constexpr char kSnapshotFilename[] = "snapshot.zip";
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kDeviceIdPath[] = "/data/device_id.txt";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Boot ID
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+constexpr char kBootIdFileName[] = "boot_id.txt";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // UTC-monotonic difference

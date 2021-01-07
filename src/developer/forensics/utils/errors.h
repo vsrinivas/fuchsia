@@ -47,6 +47,7 @@ class ErrorOr {
   }
 
   bool operator==(const ErrorOr& other) const { return data_ == other.data_; }
+  bool operator!=(const ErrorOr& other) const { return !(*this == other); }
 
  private:
   std::variant<T, enum Error> data_;

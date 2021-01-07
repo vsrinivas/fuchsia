@@ -65,6 +65,8 @@ class MainServiceTest : public UnitTestFixture {
   void TearDown() override {
     FX_CHECK(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/true));
     FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true));
+    FX_CHECK(files::DeletePath(files::JoinPath("/data/", kBootIdFileName), /*recursive=*/true));
+    FX_CHECK(files::DeletePath(files::JoinPath("/tmp/", kBootIdFileName), /*recursive=*/true));
   }
 
  protected:
@@ -138,6 +140,26 @@ TEST_F(MainServiceTest, NoMovesPreviousBootLogsAfterFirstInstance) {
 
   // Verify no event was sent to cobalt.
   EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
+}
+
+TEST_F(MainServiceTest, MovesPreviousBootIdAndCreatesCurrentBootId) {
+  const std::string previous_boot_id = "previous_boot_id";
+  WriteFile(files::JoinPath("/data/", kBootIdFileName), previous_boot_id);
+
+  CreateMainService(/*is_first_instance=*/true);
+
+  EXPECT_EQ(ReadFile(files::JoinPath("/tmp/", kBootIdFileName)), previous_boot_id);
+  EXPECT_THAT(ReadFile(files::JoinPath("/data/", kBootIdFileName)), Not(IsEmpty()));
+  EXPECT_NE(ReadFile(files::JoinPath("/data/", kBootIdFileName)), previous_boot_id);
+}
+
+TEST_F(MainServiceTest, NoMovesPreviousIdAfterFirstInstance) {
+  const std::string previous_boot_id = "previous_boot_id";
+  WriteFile(files::JoinPath("/data/", kBootIdFileName), previous_boot_id);
+
+  CreateMainService(/*is_first_instance=*/false);
+
+  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBootIdFileName)), previous_boot_id);
 }
 
 TEST_F(MainServiceTest, CheckInspect) {

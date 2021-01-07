@@ -300,6 +300,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                                           MatchesKey(kAnnotationHardwareProductName),
                                           MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
                                           MatchesKey(kAnnotationHardwareProductSKU),
+                                          MatchesKey(kAnnotationSystemBootIdCurrent),
                                           MatchesKey(kAnnotationSystemLastRebootReason),
                                           MatchesKey(kAnnotationSystemLastRebootUptime),
                                           MatchesKey(kAnnotationSystemUpdateChannelCurrent),

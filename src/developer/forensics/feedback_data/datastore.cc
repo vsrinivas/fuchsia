@@ -19,6 +19,7 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -27,14 +28,14 @@ namespace feedback_data {
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist,
+                     const AttachmentKeys& attachment_allowlist, PreviousBootFile boot_id_file,
                      InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(feedback_data::GetStaticAnnotations(annotation_allowlist_)),
+      static_annotations_(feedback_data::GetStaticAnnotations(annotation_allowlist_, boot_id_file)),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)),
       inspect_data_budget_(inspect_data_budget) {

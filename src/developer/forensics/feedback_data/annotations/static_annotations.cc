@@ -22,8 +22,14 @@ namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
-    kAnnotationBuildBoard,   kAnnotationBuildProduct, kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildVersion, kAnnotationBuildIsDebug, kAnnotationDeviceBoardName,
+    kAnnotationBuildBoard,
+    kAnnotationBuildProduct,
+    kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildVersion,
+    kAnnotationBuildIsDebug,
+    kAnnotationDeviceBoardName,
+    kAnnotationSystemBootIdCurrent,
+    kAnnotationSystemBootIdPrevious,
 };
 
 AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
@@ -39,7 +45,7 @@ AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::s
   return value;
 }
 
-AnnotationOr BuildAnnotationOr(const AnnotationKey& key) {
+AnnotationOr BuildAnnotationOr(const AnnotationKey& key, const PreviousBootFile boot_id_file) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
@@ -56,6 +62,10 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key) {
 #endif
   } else if (key == kAnnotationDeviceBoardName) {
     return GetBoardName();
+  } else if (key == kAnnotationSystemBootIdCurrent) {
+    return ReadAnnotationOrFromFilepath(key, boot_id_file.CurrentBootPath());
+  } else if (key == kAnnotationSystemBootIdPrevious) {
+    return ReadAnnotationOrFromFilepath(key, boot_id_file.PreviousBootPath());
   }
   // We should never attempt to build a non-static annotation as a static annotation.
   FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
@@ -64,11 +74,12 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key) {
 
 }  // namespace
 
-Annotations GetStaticAnnotations(const AnnotationKeys& allowlist) {
+Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
+                                 const PreviousBootFile boot_id_file) {
   Annotations annotations;
 
   for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
-    annotations.insert({key, BuildAnnotationOr(key)});
+    annotations.insert({key, BuildAnnotationOr(key, boot_id_file)});
   }
   return annotations;
 }

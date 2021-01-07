@@ -20,6 +20,7 @@
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/inspect_manager.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/system_clock.h"
 
@@ -54,7 +55,7 @@ class MainService {
  private:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               std::unique_ptr<cobalt::Logger> cobalt, inspect::Node* root_node, Config config,
-              bool is_first_instance);
+              PreviousBootFile boot_id_file, bool is_first_instance);
 
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;

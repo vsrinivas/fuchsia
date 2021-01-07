@@ -116,6 +116,7 @@ source_set("datastore") {
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
@@ -211,8 +212,10 @@ source_set("main_service") {
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
+    "//src/developer/forensics/utils:previous_boot_file",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/lib/uuid",
     "//zircon/public/lib/zx",
   ]
 }

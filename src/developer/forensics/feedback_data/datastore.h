@@ -19,6 +19,7 @@
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/previous_boot_file.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -41,7 +42,8 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist, InspectDataBudget* inspect_data_budget);
+            const AttachmentKeys& attachment_allowlist, PreviousBootFile boot_id_file,
+            InspectDataBudget* inspect_data_budget);
 
   ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fit::promise<Attachments> GetAttachments(zx::duration timeout);
