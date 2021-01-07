@@ -1570,20 +1570,35 @@ mod tests {
 
         // Process scan results
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-        // Sleep very briefly to allow the scan module to finish. The fact that the location
-        // sensor is non existent and its channel for receiving scan results doesn't work seems
-        // to take a brief moment to propagate, and allow the scan process to finish.
-        // TODO(fxbug.dev/65923): This is a hack but I'm not sure how else to handle it.
-        let sleep_duration = zx::Duration::from_millis(10);
-        exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
+        // It takes an indeterminate amount of time for the scan module to either send the results
+        // to the location sensor, or be notified by the component framework that the location
+        // sensor's channel is closed / non-existent. Keep trying to advance the future until the
+        // next expected event happens (i.e. an event is present on the sme stream for the expected
+        // active scan).
+        let mut counter = 0;
+        let sme_stream_result = loop {
+            counter += 1;
+            if counter > 1000 {
+                panic!("Failed to progress network selection future until active scan");
+            };
+            let sleep_duration = zx::Duration::from_millis(2);
+            exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
+            assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+            match exec.run_until_stalled(&mut test_values.sme_stream.next()) {
+                Poll::Pending => continue,
+                other_result => {
+                    debug!("Required {} iterations to get an SME stream message", counter);
+                    break other_result;
+                }
+            }
+        };
         // An additional directed active scan should be made for the selected network
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![test_id_1.ssid.clone()],
             channels: vec![1],
         });
-        let mock_scan_results = vec![fidl_sme::BssInfo {
+        let mut mock_scan_results = vec![fidl_sme::BssInfo {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
@@ -1597,11 +1612,23 @@ mod tests {
             compatible: true,
             bss_desc: bss_desc1_active.clone(),
         }];
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_scan_results,
+        assert_variant!(
+            sme_stream_result,
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
         );
 
         // Check that we pick a network

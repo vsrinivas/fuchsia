@@ -17,7 +17,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.location.sensor",
+            "fuchsia.location.sensor.WlanBaseStationWatcher",
             "fuchsia.process.Launcher",
             "fuchsia.stash.SecureStore"
         ]
