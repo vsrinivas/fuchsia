@@ -8,21 +8,15 @@ The Fuchsia [Component Framework][cf] allows developers to create components in
 a variety of languages and runtimes. Fuchsia's own code uses a diverse mix of
 programming languages for components, including C/C++, Rust, Dart, and Go.
 
-The Test Runner Framework uses the Component Framework's concept of
-[runners][runners] as an integration layer between various languages & testing
-runtimes and a common Fuchsia protocol for launching tests and receiving their
-results.
+The Test Runner Framework uses Component Framework [runners][runners] as an
+integration layer between various testing runtimes and a common Fuchsia protocol
+for launching tests and receiving their results.
 
 ## The test suite protocol {#test-suite-protocol}
 
-The test suite protocol, [`fuchsia.test.Suite`][fidl-test-suite], is the
-protocol implemented by a test that the test manager uses to run tests and
-obtain information about them. A component that implements this protocol may be
-launched as a test (such as with `fx test`). Using this protocol, the test
-component is responsible for receiving requests to run (for instance which test
-cases to run and how many test cases to run in parallel) and reporting their
-results (for instance which test cases were run and whether they passed or
-failed).
+The test suite protocol, [`fuchsia.test.Suite`][fidl-test-suite], is used by the
+test manager to control tests, such as to invoke test cases and to collect their
+results.
 
 Test authors typically don't need to implement this protocol. Instead, they rely
 on a [test runner](#test-runners) to do this for them. For instance, you might
@@ -35,7 +29,8 @@ to integrate with the Test Runner Framework.
 Test runners are reusable adapters between the Test Runner Framework and common
 languages & frameworks used by developers to write tests. They implement the
 [`fuchsia.test.Suite`][fidl-test-suite] protocol on behalf of the test author,
-leaving the test author to focus on their test logic.
+allowing developers to write idiomatic tests for their language and framework of
+choice.
 
 Component manifests for simple unit tests can be [generated][unit-tests]
 by the build rules. Generated component manifests for v2 tests will include the
