@@ -53,6 +53,7 @@ test("fbl") {
     "intrusive_sized_singly_linked_list_tests.cc",
     "intrusive_wavl_tree_tests.cc",
     "macro_tests.cc",
+    "no_destructor_tests.cc",
     "recycler_tests.cc",
     "ref_ptr_tests.cc",
     "span_tests.cc",

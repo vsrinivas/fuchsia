@@ -32,6 +32,7 @@ zx_library("fbl") {
     "fbl/intrusive_wavl_tree_internal.h",
     "fbl/macros.h",
     "fbl/mutex.h",
+    "fbl/no_destructor.h",
     "fbl/null_lock.h",
     "fbl/recycler.h",
     "fbl/ref_counted.h",
