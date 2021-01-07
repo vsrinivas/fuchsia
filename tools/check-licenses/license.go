@@ -51,9 +51,9 @@ type License struct {
 // Match is used to store a single match result alongside the License along
 // with a list of all matching files
 type Match struct {
-	authors string
-	value   string
-	files   []string
+	authors    string
+	files      []string
+	variations map[string]bool
 }
 
 func NewLicense(path string, config *Config) (*License, error) {
@@ -98,27 +98,38 @@ func (l *License) Search(data []byte, path string) bool {
 		// Replace < and > so that it doesn't cause special character highlights.
 		authors = strings.ReplaceAll(authors, "<", "&lt")
 		authors = strings.ReplaceAll(authors, ">", "&gt")
-
-		newMatch := &Match{
-			authors: authors,
-			value:   string(m),
-			files:   []string{path},
-		}
+		blurb := strings.ReplaceAll(string(m), "<", "&lt")
+		blurb = strings.ReplaceAll(blurb, ">", "&gt")
 
 		l.Lock()
-		if _, ok := l.matches[newMatch.authors]; !ok {
-			// Replace < and > so that it doesn't cause special character highlights.
-			p := strings.ReplaceAll(newMatch.value, "<", "&lt")
-			p = strings.ReplaceAll(p, ">", "&gt")
-			l.matches[newMatch.authors] = &Match{authors: newMatch.authors, value: p, files: newMatch.files}
+		if _, ok := l.matches[authors]; !ok {
+			variations := make(map[string]bool)
+			variations[blurb] = true
+
+			l.matches[authors] = &Match{
+				authors:    authors,
+				files:      []string{path},
+				variations: variations,
+			}
 		} else {
-			l.matches[newMatch.authors].files = append(l.matches[newMatch.authors].files, newMatch.files...)
+			l.matches[authors].files = append(l.matches[authors].files, path)
+			l.matches[authors].variations[blurb] = true
 		}
 		l.Unlock()
 
 		return true
 	}
 	return false
+}
+
+func (l *Match) GetText() string {
+	// Sort the variations so we always return the same blurb.
+	texts := []string{}
+	for key := range l.variations {
+		texts = append(texts, key)
+	}
+	sort.Strings(texts)
+	return texts[0]
 }
 
 func (l *License) Equal(other *License) bool {

@@ -89,13 +89,13 @@ var funcMap = template.FuncMap{
 		return l.pattern.String()
 	},
 	"getText": func(l *License, author string) string {
-		return l.matches[author].value
+		return l.matches[author].GetText()
 	},
 	"getHTMLText": func(l *License, author string) string {
-		return strings.Replace(l.matches[author].value, "\n", "<br />", -1)
+		return strings.Replace(l.matches[author].GetText(), "\n", "<br />", -1)
 	},
 	"getEscapedText": func(l *License, author string) string {
-		return strings.Replace(l.matches[author].value, "\"", "\\\"", -1)
+		return strings.Replace(l.matches[author].GetText(), "\"", "\\\"", -1)
 	},
 	"getCategory": func(l *License) string {
 		return strings.TrimSuffix(l.Category, ".lic")
