@@ -66,7 +66,11 @@ void main() {
       expect((userspaceTimeOffset - kernelTimeOffset).abs(),
           lessThan(maxUserspaceKernelDiff));
     });
-  }, timeout: Timeout(Duration(minutes: 1)));
+  },
+      // While time synchronization is generally expected to complete within a minute, on emulators
+      // the timeout may be exceeded if the device is busy even if time synchronization has
+      // succeeded.
+      timeout: Timeout(Duration(minutes: 2)));
 }
 
 Future<void> waitUntilTimeSynchronized(sl4f.Time sl4fTime) async {
