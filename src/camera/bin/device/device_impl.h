@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/camera/bin/device/metrics_reporter.h"
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/camera/bin/device/sysmem_allocator.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
@@ -33,13 +34,14 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   // References to |dispatcher|, |executor|, and |context| may be retained by the instance so the
   // caller must ensure these outlive the returned DeviceImpl.
   static fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
-      async_dispatcher_t* dispatcher, fit::executor& executor,
+      async_dispatcher_t* dispatcher, fit::executor& executor, camera::MetricsReporter metrics,
       fuchsia::camera2::hal::ControllerHandle controller,
       fuchsia::sysmem::AllocatorHandle allocator,
       fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event);
 
   DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
-             fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event);
+             camera::MetricsReporter metrics, fuchsia::sysmem::AllocatorHandle allocator,
+             zx::event bad_state_event);
   ~DeviceImpl() override;
 
   // Returns a service handler for use with a service directory.
@@ -141,6 +143,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   std::map<uint32_t, bool> stream_request_sent_to_controller_;
   async_dispatcher_t* dispatcher_;
   fit::executor& executor_;
+  camera::MetricsReporter metrics_;
   SysmemAllocator sysmem_allocator_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
@@ -150,6 +153,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   std::vector<fuchsia::camera3::Configuration2> configurations_;
+  std::vector<std::unique_ptr<camera::MetricsReporter::Configuration>> configuration_metrics_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   uint32_t current_configuration_index_ = 0;

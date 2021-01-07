@@ -16,6 +16,7 @@
 #include <string>
 
 #include "src/camera/bin/device/device_impl.h"
+#include "src/camera/bin/device/metrics_reporter.h"
 
 int main(int argc, char* argv[]) {
   syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera", "camera_device"});
@@ -66,9 +67,13 @@ int main(int argc, char* argv[]) {
                    });
   ZX_ASSERT(wait.Begin(loop.dispatcher()) == ZX_OK);
 
+  // Create our metrics reporter.
+  camera::MetricsReporter metrics(*context);
+
   // Create the device and publish its service.
-  auto result = DeviceImpl::Create(loop.dispatcher(), executor, std::move(controller),
-                                   std::move(allocator), std::move(registry), std::move(event));
+  auto result =
+      DeviceImpl::Create(loop.dispatcher(), executor, std::move(metrics), std::move(controller),
+                         std::move(allocator), std::move(registry), std::move(event));
   std::unique_ptr<DeviceImpl> device;
   executor.schedule_task(
       result.then([&context, &device, &loop, &outgoing_service_name](

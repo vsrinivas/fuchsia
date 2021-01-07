@@ -14,6 +14,8 @@ source_set("lib") {
     "device_impl.cc",
     "device_impl.h",
     "device_impl_client.cc",
+    "metrics_reporter.cc",
+    "metrics_reporter.h",
     "stream_impl.cc",
     "stream_impl.h",
     "stream_impl_client.cc",
@@ -37,6 +39,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace",
@@ -81,6 +84,7 @@ executable("unittests") {
   output_name = "camera_device_unittests"
   sources = [
     "device_impl_unittest.cc",
+    "metrics_reporter_unittest.cc",
     "sysmem_allocator_unittest.cc",
     "util_unittest.cc",
   ]
@@ -90,12 +94,14 @@ executable("unittests") {
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/camera/lib/fake_controller",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
   ]
 
   # Increase the default stack size from 256 KB because creating the configs can take up a very

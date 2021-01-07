@@ -18,6 +18,7 @@
 #include <set>
 #include <vector>
 
+#include "src/camera/bin/device/metrics_reporter.h"
 #include "src/camera/bin/device/util.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
@@ -36,7 +37,8 @@ class StreamImpl {
   // callback may be invoked from any thread.
   using CheckTokenCallback = fit::function<void(zx_koid_t, fit::function<void(bool)>)>;
 
-  StreamImpl(async_dispatcher_t* dispatcher, const fuchsia::camera3::StreamProperties2& properties,
+  StreamImpl(async_dispatcher_t* dispatcher, camera::MetricsReporter::Stream& metrics,
+             const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
@@ -139,6 +141,7 @@ class StreamImpl {
   };
 
   async_dispatcher_t* dispatcher_;
+  camera::MetricsReporter::Stream& metrics_;
   const fuchsia::camera3::StreamProperties2& properties_;
   const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;
