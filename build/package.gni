@@ -176,6 +176,12 @@ import("//tools/cmc/build/validate_component_manifest_references.gni")
 #       dest (required)
 #         [path] Location the resource will be placed within `data/`.
 #
+#   extra_manifests (optional)
+#     [list of GN paths] An optional list of paths to extra manifests to
+#     add items to this package. This is a horrible hack used to ensure
+#     that variant_shared_library_toolchain() instances can be installed
+#     into a package() instance. Do not use this for any other purpose.
+#
 #   deps (optional)
 #   public_deps (optional)
 #   data_deps (optional)
@@ -541,6 +547,11 @@ template("package") {
     foreach(entry, pkg_manifest) {
       manifest_sources += [ entry.source ]
       manifest_args += [ "--entry=${entry.dest}=${entry.source}" ]
+    }
+    if (defined(invoker.extra_manifests)) {
+      foreach(manifest, invoker.extra_manifests) {
+        manifest_args += [ "@" + rebase_path(manifest, root_build_dir) ]
+      }
     }
 
     pkg.metadata = {

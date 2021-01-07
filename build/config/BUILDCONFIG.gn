@@ -757,13 +757,21 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
           link_output_barrier = []
 
           # Used by the distribution_manifest template.
-          distribution_entries = [
-            {
-              source = rebased_output_file
-              destination = "lib/${variant_dir}$install_name"
-              label = get_label_info(":$target_name", "label_with_toolchain")
-            },
-          ]
+          if (!defined(distribution_entries)) {
+            distribution_entries = [
+              {
+                source = rebased_output_file
+                destination = "lib/${variant_dir}$install_name"
+                label = get_label_info(":$target_name", "label_with_toolchain")
+              },
+            ]
+          } else {
+            not_needed([
+                         "install_name",
+                         "rebased_output_file",
+                         "variant_dir",
+                       ])
+          }
         }
 
         if (is_fuchsia) {
@@ -1568,6 +1576,7 @@ template("variant_target") {
 
   # IMPORTANT: The computations below are duplicated in several other
   # files. Please keep them in sync, see:
+  #   //build/toolchain/variant_shared_library_redirect.gni
   #   //zircon/system/ulib/c/libc_toolchain.gni
   #   //zircon/system/ulib/zircon/vdso_toolchain.gni
   target_variant = false

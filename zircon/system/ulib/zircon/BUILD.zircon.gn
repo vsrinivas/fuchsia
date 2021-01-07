@@ -121,9 +121,9 @@ if (_can_redirect_to_zircon) {
       deps = [ ":headers" ]
     }
   } else {
-    user_vdso_toolchain = "//zircon/system/ulib/zircon:user.vdso_$target_cpu"
+    import("vdso_toolchain.gni")
     group("headers") {
-      public_deps = [ ":headers($user_vdso_toolchain)" ]
+      public_deps = [ ":headers($zircon_vdso_toolchain)" ]
     }
   }
 
@@ -138,7 +138,7 @@ if (_can_redirect_to_zircon) {
       }
     } else {
       group("zircon") {
-        public_deps = [ ":zircon($user_vdso_toolchain)" ]
+        public_deps = [ ":zircon($zircon_vdso_toolchain)" ]
       }
     }
   } else {
@@ -219,6 +219,15 @@ if (_can_redirect_to_zircon) {
       # Set e_entry so _zx_process_exit is easy to find without reading .dynsym.
       "-Wl,-e,_zx_process_exit",
     ]
+
+    if (zx != "/") {
+      # This ensures that the vDSO is never installed into Fuchsia packages
+      # or bootfs filesystems, since it will be hard-coded into the kernel.
+      metadata = {
+        distribution_entries_barrier = []
+        distribution_entries = []
+      }
+    }
   }
 
   source_set("syscall-asm") {
