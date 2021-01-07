@@ -12,6 +12,7 @@ rustc_library("cm_fidl_analyzer") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/moniker",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
   sources = [
