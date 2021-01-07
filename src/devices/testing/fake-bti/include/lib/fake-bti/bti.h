@@ -25,6 +25,28 @@ zx_status_t fake_bti_create(zx_handle_t* out);
 zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_count,
                                         zx_handle_t* out);
 
+// This struct stores state of a VMO pinned to a BTI. |size| and |offset| are
+// the actual size and offset used to pin pages when calling |zx_bti_pin()|;
+// |vmo| is a duplicate of the original pinned VMO.
+typedef struct {
+  zx_handle_t vmo;
+  uint64_t size;
+  uint64_t offset;
+} fake_bti_pinned_vmo_info_t;
+
+// Fake BTI stores all pinned VMOs for testing purposes. Tests can call this
+// method to get duplicates of all pinned VMO handles, as well as the pinned
+// pages' size and offset for each VMO.
+//
+// |out_vmo_info| points to a buffer containing |out_num_vmos| vmo info
+// elements. The method writes no more than |out_num_vmos| elements to the
+// buffer, and will write the actual number of pinned vmos to |actual_num_vmos|
+// if the argument is not null.
+//
+// It's the caller's repsonsibility to close all the returned VMO handles.
+zx_status_t fake_bti_get_pinned_vmos(zx_handle_t bti, fake_bti_pinned_vmo_info_t* out_vmo_info,
+                                     size_t out_num_vmos, size_t* actual_num_vmos);
+
 __END_CDECLS
 
 #endif  // SRC_DEVICES_TESTING_FAKE_BTI_INCLUDE_LIB_FAKE_BTI_BTI_H_

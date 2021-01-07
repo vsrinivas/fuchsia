@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <cstdint>
 #include <utility>
 
 #include <fbl/auto_lock.h>
@@ -19,8 +20,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/span.h>
 #include <fbl/vector.h>
-
-#include "zircon/errors.h"
 
 // Normally just defined in the kernel:
 #define PAGE_SIZE_SHIFT 12
@@ -57,10 +56,58 @@ class Bti final : public fake_object::Object {
     return true;
   }
 
+  zx_status_t PinVmo(const zx::unowned_vmo& vmo, uint64_t size, uint64_t offset) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = vmo->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    zx::vmo vmo_dup;
+    status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    fbl::AutoLock lock(&lock_);
+    pinned_vmos_.push_back({std::move(vmo_dup), size, offset, info.koid});
+    return ZX_OK;
+  }
+
+  void RemovePinnedVmo(const zx::vmo& vmo, uint64_t size, uint64_t offset) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    fbl::AutoLock lock(&lock_);
+    for (size_t i = 0; i < pinned_vmos_.size(); ++i) {
+      if (pinned_vmos_[i].size == size && pinned_vmos_[i].offset == offset &&
+          pinned_vmos_[i].koid == info.koid) {
+        pinned_vmos_.erase(i);
+        return;
+      }
+    }
+    ZX_PANIC("%s: pinned vmo (koid=%lu, offset=%lu, size=%lu) not found", __func__, info.koid,
+             offset, size);
+  }
+
+  const auto& pinned_vmos() const { return pinned_vmos_; }
+
  private:
   Bti() = default;
   explicit Bti(fbl::Span<const zx_paddr_t> paddrs) : paddrs_(paddrs) {}
 
+  struct PinnedVmoInfo {
+    zx::vmo vmo;
+    uint64_t size;
+    uint64_t offset;
+    uint64_t koid;
+    PinnedVmoInfo(zx::vmo vmo_in, uint64_t size_in, uint64_t offset_in, uint64_t koid_in)
+        : vmo(std::move(vmo_in)), size(size_in), offset(offset_in), koid(koid_in) {}
+  };
+
+  fbl::Mutex lock_;
+  fbl::Vector<PinnedVmoInfo> pinned_vmos_ TA_GUARDED(lock_);
   fbl::Span<const zx_paddr_t> paddrs_ = {};
   size_t paddrs_index_ = 0;
   uint64_t pmo_count_ = 0;
@@ -80,6 +127,8 @@ class Pmt final : public fake_object::Object {
     *out = std::move(pmt);
     return ZX_OK;
   }
+
+  void Unpin() { bti().RemovePinnedVmo(vmo_, size_, offset_); }
 
   fake_object::HandleType type() const final { return fake_object::HandleType::PMT; }
   Bti& bti() { return *bti_; }
@@ -137,12 +186,10 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
   ZX_ASSERT_MSG(false, "fake object_get_info: Unsupported PMT topic %u\n", topic);
 }
 
-__EXPORT
 zx_status_t fake_bti_create(zx_handle_t* out) {
   return fake_bti_create_with_paddrs(nullptr, 0, out);
 }
 
-__EXPORT
 zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_count,
                                         zx_handle_t* out) {
   fbl::RefPtr<fake_object::Object> new_bti;
@@ -157,6 +204,36 @@ zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_c
   }
 
   return add_status.status_value();
+}
+
+zx_status_t fake_bti_get_pinned_vmos(zx_handle_t bti, fake_bti_pinned_vmo_info_t* out_vmo_info,
+                                     size_t out_num_vmos, size_t* actual_num_vmos) {
+  // Make sure this is a valid fake bti:
+  zx::status get_status = fake_object::FakeHandleTable().Get(bti);
+  ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::BTI,
+                "fake_bti_get_pinned_vmos: Bad handle %u\n", bti);
+  fbl::RefPtr<Bti> bti_obj = fbl::RefPtr<Bti>::Downcast(std::move(get_status.value()));
+
+  const auto& vmos = bti_obj->pinned_vmos();
+  if (actual_num_vmos != nullptr) {
+    *actual_num_vmos = vmos.size();
+  }
+
+  for (size_t i = 0; i < vmos.size() && i < out_num_vmos; i++) {
+    const auto& vmo_info = vmos[i];
+    zx::vmo vmo_dup;
+    zx_status_t status = vmo_info.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    *(out_vmo_info++) = {
+        .vmo = vmo_dup.release(),
+        .size = vmo_info.size,
+        .offset = vmo_info.offset,
+    };
+  }
+  return ZX_OK;
 }
 
 // Fake syscall implementations
@@ -256,7 +333,11 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
     ++bti_obj->pmo_count();
   }
 
-  return add_status.status_value();
+  if (add_status.is_error()) {
+    return add_status.status_value();
+  }
+
+  return bti_obj->PinVmo(zx::unowned_vmo(vmo), size, offset);
 }
 
 __EXPORT
@@ -273,6 +354,7 @@ zx_status_t zx_pmt_unpin(zx_handle_t handle) {
   ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::PMT,
                 "fake pmt_unpin: Bad handle %u\n", handle);
   fbl::RefPtr<Pmt> pmt = fbl::RefPtr<Pmt>::Downcast(std::move(get_status.value()));
+  pmt->Unpin();
   --pmt->bti().pmo_count();
   zx::status remove_status = fake_object::FakeHandleTable().Remove(handle);
   ZX_ASSERT_MSG(remove_status.is_ok(), "fake pmt_unpin: Failed to remove handle %u: %s\n", handle,
@@ -281,6 +363,7 @@ zx_status_t zx_pmt_unpin(zx_handle_t handle) {
 }
 
 // A fake version of zx_vmo_create_contiguous.  This version just creates a normal vmo.
+// The vmo will be always pinned at offset 0 with its full size.
 __EXPORT
 zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
                                      zx_handle_t* out) {
@@ -297,7 +380,6 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
   }
 
   // Make sure this is a valid fake bti:
-  fbl::RefPtr<fake_object::Object> bti_obj;
   zx::status get_status = fake_object::FakeHandleTable().Get(bti_handle);
   ZX_ASSERT_MSG(get_status.is_ok() && get_status.value()->type() == fake_object::HandleType::BTI,
                 "fake bti_pin: Bad handle %u\n", bti_handle);
