@@ -13,6 +13,8 @@
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/lib/fsl/handles/object_info.h"
 
+namespace camera {
+
 StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request)
     : stream_(stream),
@@ -174,3 +176,5 @@ void StreamImpl::Client::GetNextFrame2(GetNextFrame2Callback callback) {
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {
   stream_.OnNewRequest(std::move(request));
 }
+
+}  // namespace camera

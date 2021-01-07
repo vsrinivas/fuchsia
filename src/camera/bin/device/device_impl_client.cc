@@ -10,6 +10,8 @@
 
 #include "src/camera/bin/device/device_impl.h"
 
+namespace camera {
+
 DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Device> request)
     : device_(device), id_(id), binding_(this, std::move(request)) {
@@ -101,3 +103,5 @@ void DeviceImpl::Client::ConnectToStream(uint32_t index,
 void DeviceImpl::Client::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
   device_.Bind(std::move(request));
 }
+
+}  // namespace camera

@@ -43,7 +43,7 @@ class MetricsReporterTest : public ::gtest::TestLoopFixture {
 
  protected:
   sys::testing::ComponentContextProvider component_context_provider_;
-  camera::MetricsReporter metrics_{*component_context_provider_.context()};
+  MetricsReporter metrics_{*component_context_provider_.context()};
 };
 
 TEST_F(MetricsReporterTest, InitialState) {

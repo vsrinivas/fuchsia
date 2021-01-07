@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_BIN_DEVICE_MESSAGES_H_
 #define SRC_CAMERA_BIN_DEVICE_MESSAGES_H_
 
-namespace Messages {
+namespace camera {
 
 constexpr auto kDeviceAlreadyBound =
     "This device already has active clients. New clients may connect via existing clients using "
@@ -15,6 +15,6 @@ constexpr auto kStreamAlreadyBound =
     "This stream already has active clients. New clients may connect via existing clients using "
     "the camera3.Stream.Rebind method.";
 
-}  // namespace Messages
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_MESSAGES_H_

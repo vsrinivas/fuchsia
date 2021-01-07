@@ -71,13 +71,13 @@ int main(int argc, char* argv[]) {
   camera::MetricsReporter metrics(*context);
 
   // Create the device and publish its service.
-  auto result =
-      DeviceImpl::Create(loop.dispatcher(), executor, std::move(metrics), std::move(controller),
-                         std::move(allocator), std::move(registry), std::move(event));
-  std::unique_ptr<DeviceImpl> device;
+  auto result = camera::DeviceImpl::Create(loop.dispatcher(), executor, std::move(metrics),
+                                           std::move(controller), std::move(allocator),
+                                           std::move(registry), std::move(event));
+  std::unique_ptr<camera::DeviceImpl> device;
   executor.schedule_task(
       result.then([&context, &device, &loop, &outgoing_service_name](
-                      fit::result<std::unique_ptr<DeviceImpl>, zx_status_t>& result) {
+                      fit::result<std::unique_ptr<camera::DeviceImpl>, zx_status_t>& result) {
         if (result.is_error()) {
           FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
           loop.Quit();

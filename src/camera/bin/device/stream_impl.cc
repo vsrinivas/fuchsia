@@ -17,6 +17,9 @@
 #include "src/camera/bin/device/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
+namespace camera {
+namespace {
+
 static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
   ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
   ZX_DEBUG_ASSERT(format.coded_height < std::numeric_limits<int32_t>::max());
@@ -24,7 +27,9 @@ static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) 
           .height = static_cast<int32_t>(format.coded_height)};
 }
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, camera::MetricsReporter::Stream& metrics,
+}  // namespace
+
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& metrics,
                        const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
@@ -318,3 +323,5 @@ void StreamImpl::RestoreLegacyStreamState() {
                                         [](zx_status_t) {});
   }
 }
+
+}  // namespace camera

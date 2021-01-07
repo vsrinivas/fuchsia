@@ -22,6 +22,8 @@
 #include "src/camera/bin/device/util.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
+namespace camera {
+
 // Represents a specific stream in a camera device's configuration. Serves multiple clients of the
 // camera3.Stream protocol.
 class StreamImpl {
@@ -37,7 +39,7 @@ class StreamImpl {
   // callback may be invoked from any thread.
   using CheckTokenCallback = fit::function<void(zx_koid_t, fit::function<void(bool)>)>;
 
-  StreamImpl(async_dispatcher_t* dispatcher, camera::MetricsReporter::Stream& metrics,
+  StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& metrics,
              const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
@@ -129,19 +131,18 @@ class StreamImpl {
     StreamImpl& stream_;
     uint64_t id_;
     fidl::Binding<fuchsia::camera3::Stream> binding_;
-    camera::HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>>
-        buffers_;
-    camera::HangingGetHelper<fuchsia::math::Size,
-                             fit::function<bool(fuchsia::math::Size, fuchsia::math::Size)>>
+    HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>> buffers_;
+    HangingGetHelper<fuchsia::math::Size,
+                     fit::function<bool(fuchsia::math::Size, fuchsia::math::Size)>>
         resolution_;
-    camera::HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
+    HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
     GetNextFrame2Callback frame_callback_;
     bool participant_ = false;
     std::queue<fuchsia::camera3::FrameInfo2> frames_;
   };
 
   async_dispatcher_t* dispatcher_;
-  camera::MetricsReporter::Stream& metrics_;
+  MetricsReporter::Stream& metrics_;
   const fuchsia::camera3::StreamProperties2& properties_;
   const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;
@@ -159,5 +160,7 @@ class StreamImpl {
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
   friend class Client;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_STREAM_IMPL_H_

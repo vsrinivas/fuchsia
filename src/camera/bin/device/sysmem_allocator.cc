@@ -11,6 +11,7 @@
 #include <lib/fit/scope.h>
 #include <lib/syslog/cpp/macros.h>
 
+namespace camera {
 namespace {
 
 constexpr uint32_t kNamePriority = 30;  // Higher than Scenic but below the maximum.
@@ -161,3 +162,5 @@ fit::promise<> SysmemAllocator::WaitForFreeSpace(
         }
       });
 }
+
+}  // namespace camera

@@ -8,6 +8,8 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+namespace camera {
+
 class FakeDeviceListenerRegistry : public fuchsia::ui::policy::DeviceListenerRegistry {
  public:
   explicit FakeDeviceListenerRegistry(async_dispatcher_t* dispatcher);
@@ -26,5 +28,7 @@ class FakeDeviceListenerRegistry : public fuchsia::ui::policy::DeviceListenerReg
   std::map<uint32_t, fuchsia::ui::policy::MediaButtonsListenerPtr> listeners_;
   uint32_t listener_id_next_ = 1;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_TESTING_FAKE_DEVICE_LISTENER_REGISTRY_H_

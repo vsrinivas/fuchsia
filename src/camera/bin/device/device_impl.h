@@ -26,6 +26,8 @@
 #include "src/camera/bin/device/sysmem_allocator.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
+namespace camera {
+
 // Represents a physical camera device, and serves multiple clients of the camera3.Device protocol.
 class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
  public:
@@ -34,14 +36,13 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   // References to |dispatcher|, |executor|, and |context| may be retained by the instance so the
   // caller must ensure these outlive the returned DeviceImpl.
   static fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
-      async_dispatcher_t* dispatcher, fit::executor& executor, camera::MetricsReporter metrics,
+      async_dispatcher_t* dispatcher, fit::executor& executor, MetricsReporter metrics,
       fuchsia::camera2::hal::ControllerHandle controller,
       fuchsia::sysmem::AllocatorHandle allocator,
       fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event);
 
-  DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
-             camera::MetricsReporter metrics, fuchsia::sysmem::AllocatorHandle allocator,
-             zx::event bad_state_event);
+  DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor, MetricsReporter metrics,
+             fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event);
   ~DeviceImpl() override;
 
   // Returns a service handler for use with a service directory.
@@ -129,8 +130,8 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
     DeviceImpl& device_;
     uint64_t id_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
-    camera::HangingGetHelper<uint32_t> configuration_;
-    camera::HangingGetHelper<MuteState> mute_state_;
+    HangingGetHelper<uint32_t> configuration_;
+    HangingGetHelper<MuteState> mute_state_;
   };
 
   struct ControllerCreateStreamParams {
@@ -143,7 +144,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   std::map<uint32_t, bool> stream_request_sent_to_controller_;
   async_dispatcher_t* dispatcher_;
   fit::executor& executor_;
-  camera::MetricsReporter metrics_;
+  MetricsReporter metrics_;
   SysmemAllocator sysmem_allocator_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
@@ -153,7 +154,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   std::vector<fuchsia::camera3::Configuration2> configurations_;
-  std::vector<std::unique_ptr<camera::MetricsReporter::Configuration>> configuration_metrics_;
+  std::vector<std::unique_ptr<MetricsReporter::Configuration>> configuration_metrics_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   uint32_t current_configuration_index_ = 0;
@@ -166,5 +167,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
   friend class Client;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_DEVICE_IMPL_H_

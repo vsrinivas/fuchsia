@@ -4,6 +4,8 @@
 
 #include "src/camera/bin/device/testing/fake_device_listener_registry.h"
 
+namespace camera {
+
 FakeDeviceListenerRegistry::FakeDeviceListenerRegistry(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
@@ -34,3 +36,5 @@ void FakeDeviceListenerRegistry::RegisterMediaButtonsListener(
   ZX_ASSERT(listener_ptr.Bind(std::move(listener), dispatcher_) == ZX_OK);
   listeners_[listener_id_next_++] = std::move(listener_ptr);
 }
+
+}  // namespace camera

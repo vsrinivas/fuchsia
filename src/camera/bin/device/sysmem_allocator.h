@@ -14,6 +14,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
+namespace camera {
+
 class SysmemAllocator {
  public:
   SysmemAllocator(async_dispatcher_t* dispatcher, fuchsia::sysmem::AllocatorHandle allocator);
@@ -56,5 +58,7 @@ class SysmemAllocator {
   fit::sequencer serialize_requests_;
   fit::scope scope_;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_SYSMEM_ALLOCATOR_H_

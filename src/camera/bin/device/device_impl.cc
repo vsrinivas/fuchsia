@@ -17,6 +17,7 @@
 #include "src/camera/bin/device/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
+namespace camera {
 namespace {
 
 using ConfigPtr = std::unique_ptr<fuchsia::camera2::hal::Config>;
@@ -64,7 +65,7 @@ fit::promise<std::vector<ConfigPtr>, zx_status_t> FetchConfigs(
 }  // namespace
 
 DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
-                       camera::MetricsReporter metrics, fuchsia::sysmem::AllocatorHandle allocator,
+                       MetricsReporter metrics, fuchsia::sysmem::AllocatorHandle allocator,
                        zx::event bad_state_event)
     : dispatcher_(dispatcher),
       executor_(executor),
@@ -76,7 +77,7 @@ DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
 DeviceImpl::~DeviceImpl() = default;
 
 fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
-    async_dispatcher_t* dispatcher, fit::executor& executor, camera::MetricsReporter metrics,
+    async_dispatcher_t* dispatcher, fit::executor& executor, MetricsReporter metrics,
     fuchsia::camera2::hal::ControllerHandle controller, fuchsia::sysmem::AllocatorHandle allocator,
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event) {
   auto device = std::make_unique<DeviceImpl>(dispatcher, executor, std::move(metrics),
@@ -331,3 +332,5 @@ void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event
     }
   }
 }
+
+}  // namespace camera
