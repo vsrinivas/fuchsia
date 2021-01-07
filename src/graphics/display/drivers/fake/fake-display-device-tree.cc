@@ -157,6 +157,7 @@ void FakeDisplayDeviceTree::AsyncShutdown() {
   // FIDL loops must be destroyed first to avoid races between cleanup tasks and loop_.
   ddk_.ShutdownFIDL();
 
+  display_->DdkChildPreRelease(controller_);
   controller_->DdkAsyncRemove();
   display_->DdkAsyncRemove();
   ddk_.DeviceAsyncRemove(const_cast<zx_device_t*>(sysmem_->device()));

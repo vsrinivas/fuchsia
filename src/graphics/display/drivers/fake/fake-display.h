@@ -40,7 +40,8 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 class FakeDisplay;
 class ClampRgb;
 
-using DeviceType = ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::Unbindable, ddk::ChildPreReleaseable>;
 
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol>,
@@ -95,6 +96,10 @@ class FakeDisplay : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
+  void DdkChildPreRelease(void* child_ctx) {
+    fbl::AutoLock lock(&display_lock_);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient();
+  }
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
   const display_clamp_rgb_impl_protocol_t* clamp_rgbimpl_proto() const {

@@ -18,13 +18,14 @@
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/goldfish/control.h>
 #include <ddktl/protocol/goldfish/pipe.h>
+#include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
 namespace goldfish {
 
 class Display;
-using DisplayType = ddk::Device<Display, ddk::Unbindable>;
+using DisplayType = ddk::Device<Display, ddk::Unbindable, ddk::ChildPreReleaseable>;
 
 class Display : public DisplayType,
                 public ddk::DisplayControllerImplProtocol<Display, ddk::base_protocol> {
@@ -40,6 +41,10 @@ class Display : public DisplayType,
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+  void DdkChildPreRelease(void* child_ctx) {
+    fbl::AutoLock lock(&flush_lock_);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient();
+  }
 
   // Display controller protocol implementation.
   void DisplayControllerImplSetDisplayControllerInterface(

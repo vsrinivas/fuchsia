@@ -62,7 +62,7 @@ typedef struct dpll_state {
 
 class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, ddk::Resumable,
-                               ddk::GetProtocolable>;
+                               ddk::GetProtocolable, ddk::ChildPreReleaseable>;
 
 class Controller : public DeviceType,
                    public ddk::DisplayControllerImplProtocol<Controller, ddk::base_protocol> {
@@ -78,6 +78,16 @@ class Controller : public DeviceType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkResume(ddk::ResumeTxn txn);
+  void DdkChildPreRelease(void* child_ctx) {
+    fbl::AutoLock lock(&display_lock_);
+    if (dc_intf_.is_valid()) {
+      display_controller_interface_protocol_t proto;
+      dc_intf_.GetProto(&proto);
+      if (proto.ctx == child_ctx) {
+        dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient();
+      }
+    }
+  }
   zx_status_t Bind(std::unique_ptr<i915::Controller>* controller_ptr);
 
   // display controller protocol ops
