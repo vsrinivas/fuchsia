@@ -15,6 +15,7 @@ test("disk_extractor_unit_test") {
   testonly = true
   sources = [
     "extractor_test.cc",
+    "hex_dump_generator_test.cc",
     "minfs_extractor_test.cc",
   ]
   deps = [
@@ -26,6 +27,7 @@ test("disk_extractor_unit_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/third_party/ulib/cksum",
   ]
 }
 
@@ -40,15 +42,20 @@ fuchsia_test_package("disk-extractor-unit-test") {
 }
 
 static_library("disk_extractor") {
-  public = [ "extractor.h" ]
+  public = [
+    "extractor.h",
+    "hex_dump_generator.h",
+  ]
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fs",
+    "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath:safemath",
   ]
 
   sources = [
     "extractor.cc",
+    "hex_dump_generator.cc",
     "minfs_extractor.cc",
   ]
   public_deps = [
