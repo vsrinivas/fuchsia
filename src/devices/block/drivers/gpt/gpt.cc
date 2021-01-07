@@ -23,13 +23,13 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <utf_conversion/utf_conversion.h>
 
 #include "ddk/driver.h"
+#include "src/devices/block/drivers/gpt/gpt_bind.h"
 #include "zircon/errors.h"
 #include "zircon/status.h"
 
@@ -420,9 +420,4 @@ constexpr zx_driver_ops_t gpt_driver_ops = []() {
 
 }  // namespace gpt
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(gpt, gpt::gpt_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
-ZIRCON_DRIVER_END(gpt)
-    // clang-format on
+ZIRCON_DRIVER(gpt, gpt::gpt_driver_ops, "zircon", "0.1");

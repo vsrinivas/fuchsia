@@ -2,13 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":gpt-device-test" ]
+  deps = [
+    ":gpt-device-test",
+    ":gpt_bind_test",
+  ]
+}
+
+bind_rules("gpt_bind") {
+  disable_autobind = true
+  rules = "gpt.bind"
+  output = "gpt_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 
 driver_module("gpt") {
@@ -19,14 +31,12 @@ driver_module("gpt") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpt.cc" ]
   deps = [
+    ":gpt_bind",
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
@@ -43,13 +53,11 @@ test("gpt-device-test-bin") {
     "gpt_device_test.cc",
   ]
   deps = [
+    ":gpt_bind",
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
