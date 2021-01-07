@@ -5,7 +5,6 @@
 #include <fuchsia/device/inspect/test/llcpp/fidl.h>
 #include <lib/inspect/cpp/inspect.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -14,6 +13,8 @@
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/tests/driver-inspect-test/inspect-test-bind.h"
 
 namespace {
 
@@ -77,9 +78,4 @@ zx_driver_ops_t test_inspect_driver_ops = []() -> zx_driver_ops_t {
 }();
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(TestInspect, test_inspect_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_INSPECT_TEST),
-ZIRCON_DRIVER_END(TestInspect)
-    // clang-format on
+ZIRCON_DRIVER(TestInspect, test_inspect_driver_ops, "zircon", "0.1");
