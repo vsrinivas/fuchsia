@@ -15,6 +15,7 @@ go_library("serial") {
   ]
   deps = [
     "//third_party/golibs:golang.org/x/sys",
+    "//tools/lib/logger",
     "//tools/lib/ring",
   ]
 }

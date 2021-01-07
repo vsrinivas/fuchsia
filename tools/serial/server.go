@@ -10,10 +10,11 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // ErrNetClosing comes from the stdlib, but is not exported by the stdlib, see
@@ -41,7 +42,7 @@ type ServerOptions struct {
 	// errors that are incidental to program logic, but may be relevant for
 	// diagnosis of general behaviors, such as errors in IO with the unix socket
 	// clients.
-	Logger *log.Logger
+	Logger *logger.Logger
 
 	// AuxiliaryOutput is an optional serial output sink. It will be closed before
 	// server.Run returns. It is dup'd for each incoming socket.
@@ -86,7 +87,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 				if IsErrNetClosing(err) {
 					return
 				}
-				s.logf("error: serial: accept: %s", err)
+				s.errorf("serial: accept: %s", err)
 				return
 			}
 
@@ -101,12 +102,12 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 				for {
 					l, err := b.ReadString('\n')
 					if err != nil {
-						s.logf("error: serial: conn read: %s", err)
+						s.errorf("serial: conn read: %s", err)
 						return
 					}
 					_, err = io.WriteString(s.serial, l)
 					if err != nil {
-						s.logf("error: serial: write: %s", err)
+						s.errorf("serial: write: %s", err)
 						return
 					}
 				}
@@ -117,14 +118,14 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 
 				f, err := os.Open(s.AuxiliaryOutput.Name())
 				if err != nil {
-					s.logf("error: serial: %s", err)
+					s.errorf("serial: %s", err)
 				}
 				defer f.Close()
 
 				if s.StartAtEnd {
 					_, err = f.Seek(0, io.SeekEnd)
 					if err != nil {
-						s.logf("error: serial: seek: %s", err)
+						s.errorf("serial: seek: %s", err)
 						return
 					}
 				}
@@ -183,8 +184,8 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	return err
 }
 
-func (s *Server) logf(format string, args ...interface{}) {
+func (s *Server) errorf(format string, args ...interface{}) {
 	if s.Logger != nil {
-		s.Logger.Printf(format, args...)
+		s.Logger.Errorf(format, args...)
 	}
 }

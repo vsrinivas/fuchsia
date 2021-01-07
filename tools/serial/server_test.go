@@ -10,14 +10,18 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
-	"log"
 	"path/filepath"
 
 	"io/ioutil"
 	"net"
 	"os"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
+
+var warningLogger = logger.NewLogger(logger.WarningLevel, color.NewColor(color.ColorNever), nil, nil, "test-serial")
 
 func TestServerDrainsSerial(t *testing.T) {
 	serial, device := serialAndDevice()
@@ -95,7 +99,7 @@ func TestServerSocketOutput(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -149,7 +153,7 @@ func TestServerSerialWrites(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -209,7 +213,7 @@ func TestServerSerialClosing(t *testing.T) {
 	serial, _ := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
 
 	ctx := context.Background()
 
