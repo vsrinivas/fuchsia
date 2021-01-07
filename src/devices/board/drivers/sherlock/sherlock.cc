@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -19,6 +19,12 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#if IS_LUIS
+#include "src/devices/board/drivers/sherlock/luis-bind.h"
+#else
+#include "src/devices/board/drivers/sherlock/sherlock-bind.h"
+#endif
 
 namespace sherlock {
 
@@ -267,10 +273,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace sherlock
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sherlock, sherlock::driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
-ZIRCON_DRIVER_END(sherlock)
+ZIRCON_DRIVER(sherlock, sherlock::driver_ops, "zircon", "0.1");
