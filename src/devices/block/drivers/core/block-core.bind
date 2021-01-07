@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.block;
+using fuchsia.hardware.block;
 
-extend uint fuchsia.BIND_PROTOCOL {
-  DEVICE = 1,
-  BLOCK_IMPL = 2,
-};
+fuchsia.BIND_PROTOCOL == fuchsia.hardware.block.BIND_PROTOCOL.BLOCK_IMPL;
+

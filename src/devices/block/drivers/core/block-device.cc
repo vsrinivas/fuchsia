@@ -26,7 +26,6 @@
 #include <limits>
 #include <new>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -38,7 +37,8 @@
 #include <fbl/mutex.h>
 #include <storage-metrics/block-metrics.h>
 
-#include "manager.h"
+#include "src/devices/block/drivers/core/block-core-bind.h"
+#include "src/devices/block/drivers/core/manager.h"
 
 class BlockDevice;
 
@@ -592,5 +592,4 @@ static constexpr zx_driver_ops_t block_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(block, block_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK_IMPL), ZIRCON_DRIVER_END(block)
+ZIRCON_DRIVER(block, block_driver_ops, "zircon", "0.1");
