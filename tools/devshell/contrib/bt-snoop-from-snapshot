@@ -69,12 +69,17 @@ def get_inspect_from_snapshot(filename):
   inspect_file = "inspect.json"
   try:
     with ZipFile(filename) as snapshot:
-      data = snapshot.read(inspect_file)
+      # find the full path to the inspect file and parse it as json data
+      inspect_path = next(name for name in snapshot.namelist() if name.endswith(inspect_file))
+      data = snapshot.read(inspect_path)
       data = json.loads(data)
       return data
   except (IOError, BadZipFile) as e:
     raise ConversionError('Failed to open snapshot zip file "' + filename +
                           '":\n' + str(e))
+  except StopIteration:
+    raise ConversionError('Could not find "' + inspect_file +
+                          "' in snapshot zip file. " + BUG_MSG)
   except KeyError as e:
     reason = str(e) + " " + BUG_MSG
     raise ConversionError(reason)
