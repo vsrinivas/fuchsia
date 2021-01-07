@@ -13,6 +13,7 @@
 #include <ddk/driver.h>
 
 #include "src/camera/drivers/controller/bind.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {
 
@@ -50,6 +51,8 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
     FX_PLOGST(ERROR, kTag, status) << "Could not setup sysmem allocator";
     return status;
   }
+
+  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
   auto shutdown_callback = [this] {
     shutdown_waiter_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
