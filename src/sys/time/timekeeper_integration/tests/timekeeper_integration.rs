@@ -26,7 +26,7 @@ use futures::{
     Future, FutureExt, SinkExt,
 };
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, info};
 use parking_lot::Mutex;
 use push_source::{PushSource, TestUpdateAlgorithm, Update};
 use std::sync::Arc;
@@ -283,6 +283,7 @@ impl NestedTimekeeper {
                     // Since timekeeper only pulls a time off of the RTC device once on startup, we
                     // don't attempt to update the sent time.
                     responder.send(&mut zx_time_to_rtc_time(initial_time)).unwrap();
+                    info!("Sent response from fake RTC.");
                 }
                 DeviceRequest::Set { rtc, responder } => {
                     rtc_updates.0.lock().push(rtc);
