@@ -885,13 +885,12 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
         final numHandlesConsumed =
             decoder.countClaimedHandles() - claimedHandles;
-        if (header.numBytes != numBytesConsumed)
-          throw FidlError('field was mis-sized');
-        if (header.numHandles > numHandlesConsumed)
-          throw FidlError('Envelope contains extra handles',
-              FidlErrorCode.fidlTooManyHandles);
         if (header.numHandles != numHandlesConsumed)
-          throw FidlError('handles were mis-sized');
+          throw FidlError('envelope handles were mis-sized',
+              FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
+        if (header.numBytes != numBytesConsumed)
+          throw FidlError('envelope was mis-sized',
+              FidlErrorCode.fidlInvaliNumBytesInEnvelope);
         return field;
       }
 
@@ -908,9 +907,11 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
       return null;
     case kAllocAbsent:
       if (header.numBytes != 0)
-        throw FidlError('absent envelope with non-zero bytes');
+        throw FidlError('absent envelope with non-zero bytes',
+            FidlErrorCode.fidlInvaliNumBytesInEnvelope);
       if (header.numHandles != 0)
-        throw FidlError('absent envelope with non-zero handles');
+        throw FidlError('absent envelope with non-zero handles',
+            FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
       return null;
     default:
       throw FidlError('Bad reference encoding');

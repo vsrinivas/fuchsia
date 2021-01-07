@@ -347,17 +347,19 @@ func toDartIntList(handles []gidlir.Handle) string {
 
 // Dart error codes defined in: topaz/public/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:              "fidlStringTooLong",
-	gidlir.StringNotUtf8:              "unknown",
-	gidlir.NonEmptyStringWithNullBody: "fidlNonEmptyStringWithNullBody",
-	gidlir.StrictUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
-	gidlir.StrictUnionUnknownField:    "fidlStrictXUnionUnknownField",
-	gidlir.StrictBitsUnknownBit:       "fidlInvalidBit",
-	gidlir.StrictEnumUnknownValue:     "fidlInvalidEnumValue",
-	gidlir.InvalidPaddingByte:         "unknown",
-	gidlir.TooFewHandles:              "fidlTooFewHandles",
-	gidlir.ExtraHandles:               "fidlTooManyHandles",
-	gidlir.NonResourceUnknownHandles:  "fidlNonResourceHandle",
+	gidlir.StringTooLong:               "fidlStringTooLong",
+	gidlir.StringNotUtf8:               "unknown",
+	gidlir.NonEmptyStringWithNullBody:  "fidlNonEmptyStringWithNullBody",
+	gidlir.StrictUnionFieldNotSet:      "fidlStrictXUnionFieldNotSet",
+	gidlir.StrictUnionUnknownField:     "fidlStrictXUnionUnknownField",
+	gidlir.StrictBitsUnknownBit:        "fidlInvalidBit",
+	gidlir.StrictEnumUnknownValue:      "fidlInvalidEnumValue",
+	gidlir.InvalidPaddingByte:          "unknown",
+	gidlir.InvalidNumBytesInEnvelope:   "fidlInvaliNumBytesInEnvelope",
+	gidlir.InvalidNumHandlesInEnvelope: "fidlInvaliNumHandlesInEnvelope",
+	gidlir.TooFewHandles:               "fidlTooFewHandles",
+	gidlir.ExtraHandles:                "fidlTooManyHandles",
+	gidlir.NonResourceUnknownHandles:   "fidlNonResourceHandle",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {
