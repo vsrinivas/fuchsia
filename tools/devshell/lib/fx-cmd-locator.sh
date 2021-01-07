@@ -28,6 +28,21 @@ function get_exec_from_metadata {
 EOF
 }
 
+function get_metadata_value {
+  local -r key="$1"
+  local -r file="$2"
+
+  # extracts the value of metadata in the form of "#### key=value" and
+  # returns 0 if it is found or 1 otherwise
+  awk -F ' *= *' -f - "${file}" <<EOF
+  /^#### +${key} */ {
+    print \$2;
+    found=1
+  }
+  END { exit 1-found }
+EOF
+}
+
 function _relative {
   cmd="$1"
   if [[ "${cmd}" == *"${FUCHSIA_DIR}"* ]]; then

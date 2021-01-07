@@ -130,4 +130,49 @@ TEST_fx-hosttools-subcommand-run() {
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${output}"
 }
 
+
+# check if the subcommand metadata REQUIRES_BUILD_DIR works as intended
+TEST_fx-subcommand-requires-build-dir-no() {
+  cat >"${base_dir}/tools/devshell/get-build-dir" <<'EOF'
+#### REQUIRES_BUILD_DIR=no
+
+echo "${FUCHSIA_BUILD_DIR}"
+EOF
+  chmod u+x "${base_dir}/tools/devshell/get-build-dir"
+
+  # since requires_build_dir=no, it should not fail, but it should return an
+  # empty string
+  rm "${base_dir}/.fx-build-dir"
+  BT_EXPECT "${fx}" get-build-dir >/dev/null
+  BT_EXPECT_EQ "$(${fx} get-build-dir)" ""
+
+  # now it should return the build dir specified in "--dir"
+  BT_EXPECT "${fx}" --dir out/default get-build-dir >/dev/null
+  BT_EXPECT_EQ "$(${fx} --dir out/default get-build-dir)" "${base_dir}/out/default"
+
+  # now it should return the build dir
+  echo "out/default" > "${base_dir}/.fx-build-dir"
+  BT_EXPECT "${fx}" get-build-dir >/dev/null
+  BT_EXPECT_EQ "$(${fx} get-build-dir)" "${base_dir}/out/default"
+}
+
+# check if the subcommand metadata REQUIRES_BUILD_DIR works as intended
+TEST_fx-subcommand-requires-build-dir() {
+  cat >"${base_dir}/tools/devshell/get-build-dir" <<'EOF'
+#### REQUIRES_BUILD_DIR=yes
+
+echo "${FUCHSIA_BUILD_DIR}"
+EOF
+  chmod u+x "${base_dir}/tools/devshell/get-build-dir"
+
+  # should fail because there is no build dir
+  rm "${base_dir}/.fx-build-dir"
+  BT_EXPECT_FAIL "${fx}" get-build-dir >/dev/null 2>&1
+
+  # now it should succeed and return the build dir
+  echo "out/default" > "${base_dir}/.fx-build-dir"
+  BT_EXPECT "${fx}" get-build-dir >/dev/null
+  BT_EXPECT_EQ "$(${fx} get-build-dir)" "${base_dir}/out/default"
+}
+
 BT_RUN_TESTS "$@"

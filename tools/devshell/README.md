@@ -32,26 +32,28 @@ capabilities and standard library.
 
 ## Consuming vars.sh and implementing subcommands
 
-Most subcommands start with a pre-amble of this nature (paths vary slightly):
+Subcommands can use a set of common functions defined in `vars.sh`. To do so,
+they need to start with a pre-amble of this nature (paths vary slightly):
 
 ```
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-fx-config-read
 ```
 
-This pre-amble ensures that the devshell helpers are loaded, and then reads
-the active fx configuration from the user-selected Fuchsia build directory.
+This pre-amble ensures that the devshell helpers are loaded.
 
-`fx-config-read` is required for most environment variables to be set, and is
-necessary for most scripts.
+If there is an active Fuchsia build directory, either specified by the '--dir'
+argument, 'fx use' or 'fx set', the configuration from that build directory
+will be read into [environment variables](#envvariables) and will be available
+to the command, regardless of if the command uses `vars.sh` or not.
+
+If a command requires that a valid Fuchsia build directory is present, then it
+can set the [metadata](#metadata) `REQUIRES_BUILD_DIR` in its header.
+
+NOTE: In the past, most commands would need `fx-config-read` to be explicitly
+called. This is not needed anymore: all commands get build variables
+automatically set without any extra action.
 
 ## Helper functions
-
-`fx-config-read` loads the current user configuration that is either defined
-by the fx configuration modulated by `fx set` and `fx use`, or by flags to fx
-such as `--config` and `--dir`. It is necessary as a pre-amble for any script
-that wants to consume build artifacts, as it defined most of the standard
-environment variables such as `$FUCHSIA_BUILD_DIR`.
 
 `fx-error` and `fx-warn` simply print their arguments, prefixing them with
 `ERROR: ` or `WARNING: ` respectively. If the output stream supports color,
@@ -100,9 +102,9 @@ considered internal and may change more often. Users can request additional
 helper functions by contacting the devshell owners, or by defining their own
 library scripts in contrib.
 
-## Environment variables
+## Environment variables {:#envvariables}
 
-After a successful invocation of `fx-config-read` in a script, one would observe the following environment variables:
+Any script started from 'fx' will get the following environment variables:
 
 ```
 FUCHSIA_ARCH         - The current architecture selected (currently one of x64/arm64)
@@ -115,11 +117,10 @@ ZIRCON_TOOLS_DIR     - The path to the Zircon host-tools build directory.
 FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
 ```
 
-`fx-config-read` and/or `fx` could set additional environment variables, but
-users should not rely on them - only the above list are to be preserved
-(unless marked deprecated).
+`fx` could set additional environment variables, but users should not rely on
+them - only the above list are to be preserved (unless marked deprecated).
 
-## Optional features
+## Optional features {:#features}
 
 `fx` supports the definition of optional features that are enabled by default
 and can be disabled by the user for the duration of a single `fx` invocation.
@@ -145,7 +146,7 @@ but non-shell commands, like Dart, can directly check for the value of the
 environmental variable. If `FUCHSIA_DISABLED_<FEATURE>` is set to "1",
 "FEATURE" is disabled, otherwise it is enabled.
 
-## Documenting subcommands
+## Documenting subcommands {:#doc}
 
 As many `fx` subcommands delegate to sub-programs passing on flags directly
 to them, it is prohibitive to always be able to respond to the `-h` or
@@ -172,7 +173,29 @@ and are used to provide full subcommand help output. The long form output should
 document all flags and provide fuller description of the subcommand behaviors as
 appropriate.
 
-Lines starting with `####` contain metadata. The following metadata fields are
+Where possible, a subcommand can use `fx-command-help` to print out the
+long-form help (defined by `##` lines). Many subcommands implement `-h` and
+`--help` to invoke `fx-command-help` and this is recommended.
+
+Lines starting with `####` contain [metadata](#metadata).
+
+### Metadata-only (\*.fx) files {:#metadatafiles}
+
+When subcommands are scripts, documentation and metadata are embedded as
+comments in the scripts themselves. However, that's not always possible, for
+example for binaries produced by the build, such as `fidldoc`, prebuilt binaries
+like `gn` and symlinks like `rustdoc` and `gen-cargo`. In any case where metadata
+cannot be in the subcommand itself, `fx` looks for a metadata file with the `.fx`
+extension in the same directories where it looks for subcommands. If such a file
+exists, it represents a subcommand with the same name without the `.fx` extension.
+
+`<subcommand>.fx` files follow the same format described in
+the [previous section](#doc).
+
+### Metadata in fx subcommands {:#metadata}
+
+Metadata are declared as lines starting with `####` [in the script](#doc) or
+in the [metadata-only file](#metadatafiles). The following metadata keys are
 supported:
 
 * `#### CATEGORY=Category`: the subcommand is grouped under the specified
@@ -183,25 +206,9 @@ supported:
 * `#### DEPRECATED`: deprecated subcommands are not listed by default on
   `fx help`.
 
-Where possible, a subcommand can use `fx-command-help` to print out the
-long-form help (defined by `##` lines). Many subcommands implement `-h` and
-`--help` to invoke `fx-command-help` and this is recommended.
-
-### fx metadata files
-
-When subcommands are scripts, documentation is embedded as comments in
-the scripts themselves. However, that's not always possible, for example for
-binaries produced by the build, such as `fidldoc`, prebuilt binaries like `gn` and
-symlinks like `rustdoc` and `gen-cargo`. In any case where metadata cannot be
-in the subcommand itself, `fx` looks for a metadata file with the `.fx` extension
-in the same directories where it looks for subcommands. If such a file exists,
-it represents a subcommand with the same name without the `.fx` extension.
-
-`<subcommand>.fx` files follow the same format described in
-the previous section, with an optional metadata field:
-
 * `#### EXECUTABLE=location_of_executable`: points to the actual executable,
-  which can be anywhere in the tree or in the build output. It can/must use the
+  which can be anywhere in the tree or in the build output. This only makes
+  sense in [metadata-only files](#metadatafiles). It can/must use the
   following variables to refer to known paths:
 
   * `${FUCHSIA_DIR}`: root of the Fuchsia source tree
@@ -216,6 +223,8 @@ the previous section, with an optional metadata field:
   * `#### EXECUTABLE=${FUCHSIA_DIR}/.jiri_root/bin/jiri`
   * `#### EXECUTABLE=${PREBUILT_3P_DIR}/ninja/${HOST_PLATFORM}/ninja`
 
+* `#### REQUIRES_BUILD_DIR=yes|no`: indicates if 'fx' should fail before
+  executing the command in case there is no valid build directory present.
 
 ## Testing
 
