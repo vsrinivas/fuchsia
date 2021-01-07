@@ -13,8 +13,9 @@
 // Enable Trait Manager.
 #define WEAVE_DEVICE_CONFIG_ENABLE_TRAIT_MANAGER 1
 
-// Disable Weave-based time sync service, as this is handled in Fuchsia by
+// Disable Weave-based time sync services, as these are handled in Fuchsia by
 // other component(s).
 #define WEAVE_DEVICE_CONFIG_ENABLE_WEAVE_TIME_SERVICE_TIME_SYNC 0
+#define WEAVE_DEVICE_CONFIG_ENABLE_SERVICE_DIRECTORY_TIME_SYNC 0
 
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_CONFIG_H_
