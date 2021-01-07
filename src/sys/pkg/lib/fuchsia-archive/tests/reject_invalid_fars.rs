@@ -5,10 +5,12 @@
 #![cfg(test)]
 
 use {
-    fuchsia_archive::{Error, Reader, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE},
+    fuchsia_archive::{ChunkType, Error, Reader, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE},
     matches::assert_matches,
     std::{fs::File, path::Path},
 };
+
+const ALL_ZEROES_CHUNK_TYPE: ChunkType = [0u8; 8];
 
 // Creates a test fn named after the first parameter that:
 //   1. opens a FAR file named after the first parameter
@@ -43,6 +45,12 @@ tests! {
         Err(Error::IndexEntriesOutOfOrder {
             prev: DIR_NAMES_CHUNK_TYPE,
             next: DIR_NAMES_CHUNK_TYPE
+        }),
+
+    duplicate_index_entries_of_unknown_type =>
+        Err(Error::IndexEntriesOutOfOrder {
+            prev: ALL_ZEROES_CHUNK_TYPE,
+            next: ALL_ZEROES_CHUNK_TYPE
         }),
 
     no_directory_index_entry => Err(Error::MissingDirectoryChunkIndexEntry),

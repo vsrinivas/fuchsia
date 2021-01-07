@@ -268,8 +268,12 @@ func (r *Reader) readEntries() error {
 		r.indexEntries[i].Offset = binary.LittleEndian.Uint64(buf[8:])
 		r.indexEntries[i].Length = binary.LittleEndian.Uint64(buf[16:])
 
-		if i > 0 && r.indexEntries[i-1].Type > r.indexEntries[i].Type {
-			return ErrInvalidArchive("invalid index entry order")
+		if i > 0 {
+			if r.indexEntries[i-1].Type > r.indexEntries[i].Type {
+				return ErrInvalidArchive(fmt.Sprintf("invalid index entry order, chunk type %x before chunk type %x", r.indexEntries[i-1].Type, r.indexEntries[i].Type))
+			} else if r.indexEntries[i-1].Type == r.indexEntries[i].Type {
+				return ErrInvalidArchive(fmt.Sprintf("duplicate chunk types of %x in index", r.indexEntries[i].Type))
+			}
 		}
 		if r.indexEntries[i].Offset < r.index.Length {
 			return ErrInvalidArchive("short offset")
@@ -282,19 +286,11 @@ func (r *Reader) readEntries() error {
 
 		switch r.indexEntries[i].Type {
 		case DirChunk:
-			// The spec requires exactly one to be part of the FAR.
-			if dirIndex != nil {
-				return ErrInvalidArchive("extra directory chunk")
-			}
 			dirIndex = &r.indexEntries[i]
 			if dirIndex.Length%DirectoryEntryLen != 0 {
 				return ErrInvalidArchive("bad directory index")
 			}
 		case DirNamesChunk:
-			// The spec requires exactly one to be part of the FAR.
-			if dirNamesIndex != nil {
-				return ErrInvalidArchive("extra directory names chunk")
-			}
 			dirNamesIndex = &r.indexEntries[i]
 			// DirNamesChunk length must be a multiple of 8.
 			if dirNamesIndex.Length%8 != 0 {

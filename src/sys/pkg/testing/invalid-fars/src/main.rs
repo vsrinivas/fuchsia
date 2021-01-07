@@ -11,6 +11,8 @@ use {
     },
 };
 
+const ALL_ZEROES_CHUNK_TYPE: ChunkType = [0u8; 8];
+
 /// Top-level command.
 #[derive(argh::FromArgs, Debug)]
 struct Opt {
@@ -78,6 +80,18 @@ fn main() {
                 IndexEntry { chunk_type: DIR_CHUNK_TYPE, offset: 88, len: 0 },
                 IndexEntry { chunk_type: DIR_NAMES_CHUNK_TYPE, offset: 88, len: 0 },
                 IndexEntry { chunk_type: DIR_NAMES_CHUNK_TYPE, offset: 88, len: 0 },
+            ]
+        },
+    );
+
+    make_test_file!(
+        "duplicate-index-entries-of-unknown-type.far",
+        Index {
+            entries: &[
+                IndexEntry { chunk_type: ALL_ZEROES_CHUNK_TYPE, offset: 112, len: 0 },
+                IndexEntry { chunk_type: ALL_ZEROES_CHUNK_TYPE, offset: 112, len: 0 },
+                IndexEntry { chunk_type: DIR_CHUNK_TYPE, offset: 112, len: 0 },
+                IndexEntry { chunk_type: DIR_NAMES_CHUNK_TYPE, offset: 112, len: 0 },
             ]
         },
     );
