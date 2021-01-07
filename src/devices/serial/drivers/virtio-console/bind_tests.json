@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+      "name": "CONSOLE",
+      "expected": "match",
+      "device": {
+          "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+          "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+          "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_CONSOLE"
+      }
+  },
+  {
+      "name": "T_CONSOLE",
+      "expected": "match",
+      "device": {
+          "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+          "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+          "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_CONSOLE"
+      }
+  },
+  {
+      "name": "Missing Protocol",
+      "expected": "abort",
+      "device": {
+          "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+          "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_CONSOLE"
+      }
+  },
+  {
+      "name": "Missing PCI VID",
+      "expected": "abort",
+      "device": {
+          "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+          "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_CONSOLE"
+      }
+  },
+  {
+      "name": "Missing PCI DID",
+      "expected": "abort",
+      "device": {
+          "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+          "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO"
+      }
+  }
+]

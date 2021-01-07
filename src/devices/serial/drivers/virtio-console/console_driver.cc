@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 
 #include "console.h"
+#include "src/devices/serial/drivers/virtio-console/virtio_console_bind.h"
 
 static const zx_driver_ops_t virtio_console_driver_ops = []() {
   zx_driver_ops_t ops = {};
@@ -16,8 +17,4 @@ static const zx_driver_ops_t virtio_console_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(virtio_console, virtio_console_driver_ops, "zircon", "0.1", 16)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_CONSOLE),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_CONSOLE), ZIRCON_DRIVER_END(virtio_console)
+ZIRCON_DRIVER(virtio_console, virtio_console_driver_ops, "zircon", "0.1");
