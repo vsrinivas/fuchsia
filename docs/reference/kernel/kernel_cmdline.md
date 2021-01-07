@@ -24,6 +24,9 @@ and imports name=value lines into its environment, augmenting or overriding
 the values from the kernel command line.  Leading whitespace is ignored and
 lines starting with # are ignored.  Whitespace is not allowed in names.
 
+In order to specify options in the build, see
+[this guide](/docs/development/kernel/build.md#options).
+
 ## aslr.disable
 
 If this option is set, the system will not use Address Space Layout

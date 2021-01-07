@@ -8,6 +8,8 @@
 toc:
 - title: "Getting started"
   path: /docs/development/kernel/getting_started.md
+- title: "Kernel in the build"
+  path: /docs/development/kernel/build.md
 - title: "Manage memory"
   section:
   - include: /docs/development/kernel/memory/_toc.yaml
