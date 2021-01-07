@@ -13,14 +13,14 @@
 #include <curl/curl.h>
 
 #include "lib/fit/function.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
-namespace {
-class CurlFDWatcher;
-}  // namespace
-
-class Curl {
+// Curl must be constructed through fxl::MakeShared<Curl>().
+class Curl : public fxl::RefCountedThreadSafe<Curl> {
  public:
   class Error {
    public:
@@ -31,28 +31,24 @@ class Curl {
       return *this;
     }
 
-    bool operator==(const Error& other) { return other.code_ == code_; }
+    bool operator==(const Error& other) const { return other.code_ == code_; }
 
-    operator CURLcode() { return code_; }
-    operator bool() { return code_ != CURLE_OK; }
+    explicit operator CURLcode() const { return code_; }
+    explicit operator bool() const { return code_ != CURLE_OK; }
 
-    std::string ToString() { return curl_easy_strerror(code_); }
+    std::string ToString() const { return curl_easy_strerror(code_); }
 
    private:
     CURLcode code_;
   };
 
+  // Escapes URL strings (converts all letters consider illegal in URLs to their %XX versions)
+  static std::string Escape(const std::string& input);
+
   // Callback when we receive data from libcurl. The return value should be the number of bytes
   // successfully processed (i.e. if we are passing this data to the write() syscall and it returns
   // a short bytes written count, we should as well).
   using DataCallback = fit::function<size_t(const std::string&)>;
-
-  Curl();
-  ~Curl();
-  Curl(Curl&) = delete;
-  Curl(Curl&& other) = delete;
-
-  static std::shared_ptr<Curl> MakeShared();
 
   Error SetURL(const std::string& url) {
     return Error(curl_easy_setopt(curl_, CURLOPT_URL, url.c_str()));
@@ -68,9 +64,6 @@ class Curl {
   void set_data_callback(DataCallback handler) { data_callback_ = std::move(handler); }
   void set_header_callback(DataCallback handler) { header_callback_ = std::move(handler); }
 
-  // Believe it or not this takes a curl handle, so it can't be static.
-  std::string Escape(const std::string& input);
-
   // Run the curl request synchronously.
   Error Perform();
 
@@ -82,33 +75,27 @@ class Curl {
   long ResponseCode();
 
  private:
-  friend class CurlFDWatcher;
+  class Impl;
 
-  friend size_t DoHeaderCallback(char* data, size_t size, size_t nitems, void* curl);
-  friend size_t DoDataCallback(char* data, size_t size, size_t nitems, void* curl);
-
-  static CURLM* multi_handle;
-
-  static void InitMulti();
-
+  Curl();
+  ~Curl();
   void FreeSList();
   void PrepareToPerform();
 
-  // Effectively a count of the number of Curl objects outstanding. When it first becomes nonzero we
-  // run curl_global_init() and when it becomes zero again we run curl_global_cleanup().
-  static size_t global_init;
-
+  fxl::RefPtr<Impl> impl_;
   CURL* curl_ = nullptr;
   struct curl_slist* slist_ = nullptr;
   bool get_body_ = true;
 
   std::string post_data_;
-  std::weak_ptr<Curl> weak_self_ref_;
-  std::shared_ptr<Curl> self_ref_;
+  fxl::RefPtr<Curl> self_ref_;
   std::vector<std::string> headers_;
   fit::callback<void(Curl*, Error)> multi_cb_;
   DataCallback header_callback_ = [](const std::string& data) { return data.size(); };
   DataCallback data_callback_ = [](const std::string& data) { return data.size(); };
+
+  FRIEND_REF_COUNTED_THREAD_SAFE(Curl);
+  FRIEND_MAKE_REF_COUNTED(Curl);
 };
 
 }  // namespace zxdb

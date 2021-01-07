@@ -81,9 +81,9 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
                       fit::callback<void(const Err&)> cb) override;
   void OnAuthenticationResponse(Curl::Error result, fit::callback<void(const Err&)> cb,
                                 const std::string& response);
-  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id, DebugSymbolFileType file_type);
+  fxl::RefPtr<Curl> PrepareCurl(const std::string& build_id, DebugSymbolFileType file_type);
   void FetchWithCurl(const std::string& build_id, DebugSymbolFileType file_type,
-                     std::shared_ptr<Curl> curl, SymbolServer::FetchCallback cb);
+                     fxl::RefPtr<Curl> curl, SymbolServer::FetchCallback cb);
 
   fxl::WeakPtrFactory<CloudStorageSymbolServerImpl> weak_factory_;
 };
@@ -148,15 +148,13 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
     return result;
   }
 
-  Curl curl;
-
   result = kAuthServer;
   result += "?client_id=";
-  result += curl.Escape(kClientId);
+  result += Curl::Escape(kClientId);
   result += "&redirect_uri=urn:ietf:wg:oauth:2.0:oob";
   result += "&response_type=code";
   result += "&scope=";
-  result += curl.Escape(kScope);
+  result += Curl::Escape(kScope);
 
   return result;
 }
@@ -165,7 +163,7 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
     const std::map<std::string, std::string>& post_data, fit::callback<void(const Err&)> cb) {
   ChangeState(SymbolServer::State::kBusy);
 
-  auto curl = Curl::MakeShared();
+  auto curl = fxl::MakeRefCounted<Curl>();
 
   curl->SetURL(kTokenServer);
   curl->set_post_data(post_data);
@@ -339,8 +337,8 @@ bool CloudStorageSymbolServer::LoadGCloudAuth() {
   return true;
 }
 
-std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& build_id,
-                                                                DebugSymbolFileType file_type) {
+fxl::RefPtr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& build_id,
+                                                            DebugSymbolFileType file_type) {
   if (state() != SymbolServer::State::kReady) {
     return nullptr;
   }
@@ -348,7 +346,7 @@ std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::strin
   std::string url = "https://storage.googleapis.com/";
   url += path_ + ToDebugFileName(build_id, file_type);
 
-  auto curl = Curl::MakeShared();
+  auto curl = fxl::MakeRefCounted<Curl>();
   FX_DCHECK(curl);
 
   curl->SetURL(url);
@@ -408,7 +406,7 @@ void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id, DebugSymbo
 
 void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
                                                  DebugSymbolFileType file_type,
-                                                 std::shared_ptr<Curl> curl, FetchCallback cb) {
+                                                 fxl::RefPtr<Curl> curl, FetchCallback cb) {
   auto cache_path = session()->system().settings().GetString(ClientSettings::System::kSymbolCache);
   std::string path;
 

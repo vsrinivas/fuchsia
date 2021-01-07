@@ -14,8 +14,8 @@ namespace zxdb {
 
 namespace {
 
-std::shared_ptr<Curl> PrepareCurl(std::string_view user_agent) {
-  auto curl = Curl::MakeShared();
+fxl::RefPtr<Curl> PrepareCurl(std::string_view user_agent) {
+  auto curl = fxl::MakeRefCounted<Curl>();
 
   curl->SetURL(GoogleAnalyticsClient::kEndpoint);
   curl->headers().emplace_back(fxl::Substitute("User-Agent: $0", user_agent));
@@ -27,7 +27,7 @@ bool IsResponseCodeSuccess(long response_code) {
   return response_code >= 200 && response_code < 300;
 }
 
-fit::promise<void, GoogleAnalyticsNetError> CurlPerformAsync(const std::shared_ptr<Curl>& curl) {
+fit::promise<void, GoogleAnalyticsNetError> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
   FX_DCHECK(curl);
 
   fit::bridge<void, GoogleAnalyticsNetError> bridge;
