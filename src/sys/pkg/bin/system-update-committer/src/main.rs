@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::Config,
     crate::fidl::FidlServer,
     anyhow::{anyhow, Context, Error},
+    config::Config,
     fidl_fuchsia_paver::PaverMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -15,7 +15,7 @@ use {
     std::sync::Arc,
 };
 
-mod check_and_set;
+mod check_and_commit;
 mod config;
 mod fidl;
 
@@ -31,9 +31,8 @@ pub fn main() -> Result<(), Error> {
     Ok(())
 }
 
-// Soon, we will grow this to be smarter. Everyone starts somewhere. 🌱
 async fn main_inner_async() -> Result<(), Error> {
-    // FIXME(http://fxbug.dev/64595) Actually use the configuration once we start implementing
+    // TODO(http://fxbug.dev/64595) Actually use the configuration once we start implementing
     // health checks.
     let _config = Config::load_from_config_data_or_default();
 
@@ -52,17 +51,15 @@ async fn main_inner_async() -> Result<(), Error> {
         .duplicate_handle(zx::Rights::SIGNAL_PEER | zx::Rights::SIGNAL)
         .context("while duplicating p_check")?;
 
-    // Handle check and set.
+    // Handle check and commit.
     futures.push(
         async move {
-            // NOTE: The docs for check_and_set_system_health say that we should respond to
-            // an error here by rebooting, but we'll be refactoring this away Soon™, so for now
-            // we just log it.
+            // TODO(http://fxbug.dev/64595) combine the config and the result of check_and_commit
+            // to determine if we should reboot. For now, we just log.
             if let Err(e) =
-                crate::check_and_set::check_and_set_system_health(&boot_manager, &p_check_clone)
-                    .await
+                crate::check_and_commit::check_and_commit(&boot_manager, &p_check_clone).await
             {
-                fx_log_warn!("error checking and setting system health: {:#}", anyhow!(e));
+                fx_log_warn!("error checking health and committing: {:#}", anyhow!(e));
             }
         }
         .boxed_local(),

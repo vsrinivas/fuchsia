@@ -33,7 +33,12 @@ rustc_library("lib") {
 
   source_root = "src/main.rs"
   sources = [
-    "src/check_and_set.rs",
+    "src/check_and_commit.rs",
+    "src/check_and_commit/check.rs",
+    "src/check_and_commit/commit.rs",
+    "src/check_and_commit/configuration.rs",
+    "src/check_and_commit/errors.rs",
+    "src/check_and_commit/policy.rs",
     "src/config.rs",
     "src/fidl.rs",
     "src/main.rs",
