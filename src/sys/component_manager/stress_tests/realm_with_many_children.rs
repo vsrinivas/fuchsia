@@ -9,12 +9,10 @@ use {
     futures::stream,
 };
 
-const NUM_CHILDREN: u16 = 1000;
+const NUM_CHILDREN: u16 = 128 ;
 
-// TODO(fxbug.dev/58641): enable this stress test
+/// Creates NUM_CHILDREN children, makes sure they are running and finally stops them.
 #[fasync::run_singlethreaded(test)]
-#[ignore]
-/// This stress test will create a 1000 children, make sure they are running and then stop them.
 async fn launch_and_stress_test() {
     let stream = stream::iter(0..NUM_CHILDREN);
     const URL: &str =
