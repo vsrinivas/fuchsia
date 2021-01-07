@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "astro.h"
+#include "src/devices/board/drivers/astro/astro.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -19,6 +18,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/board/drivers/astro/astro-bind.h"
 
 namespace astro {
 
@@ -245,7 +246,4 @@ static zx_driver_ops_t astro_driver_ops = []() {
 
 }  // namespace astro
 
-ZIRCON_DRIVER_BEGIN(aml_bus, astro::astro_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO), ZIRCON_DRIVER_END(astro)
+ZIRCON_DRIVER(aml_bus, astro::astro_driver_ops, "zircon", "0.1");

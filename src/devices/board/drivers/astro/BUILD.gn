@@ -2,16 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("astro-bind") {
+  rules = "astro.bind"
+  output = "astro-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("astro") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "astro-audio.cc",
     "astro-backlight.cc",
@@ -43,6 +51,7 @@ driver_module("astro") {
     "astro.cc",
   ]
   deps = [
+    ":astro-bind",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
@@ -76,4 +85,9 @@ driver_module("astro") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":astro-bind_test" ]
 }
