@@ -29,11 +29,12 @@ import (
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
-	"fidl/fuchsia/hardware/ethernet"
+	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -1056,7 +1057,7 @@ func makeEndpointName(prefix, config_name string) func(nicid tcpip.NICID) string
 	}
 }
 
-func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, device ethernet.DeviceWithCtx) (*ifState, error) {
+func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, device fidlethernet.DeviceWithCtx) (*ifState, error) {
 	client, err := eth.NewClient("netstack", topopath, config.Filepath, device)
 	if err != nil {
 		return nil, err
@@ -1064,7 +1065,7 @@ func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, dev
 
 	return ns.addEndpoint(
 		makeEndpointName("eth", config.Name),
-		eth.NewLinkEndpoint(client),
+		ethernet.New(client),
 		client,
 		client,
 		true, /* doFilter */

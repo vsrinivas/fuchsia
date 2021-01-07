@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -77,7 +77,7 @@ func BenchmarkWritePacket(b *testing.B) {
 					udp.NewProtocol,
 				},
 			})
-			if err := stk.CreateNIC(nicid, eth.NewLinkEndpoint(test.ep)); err != nil {
+			if err := stk.CreateNIC(nicid, ethernet.New(test.ep)); err != nil {
 				b.Fatal(err)
 			}
 			wq := new(waiter.Queue)

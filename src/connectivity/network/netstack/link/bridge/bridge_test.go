@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
+	"gvisor.dev/gvisor/pkg/tcpip/link/pipe"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -529,9 +529,9 @@ func TestBridge(t *testing.T) {
 			//
 			// Included are several additional endpoints to ensure bridging N > 2
 			// endpoints works.
-			ep1, ep2 := pipe(linkAddr1, linkAddr2)
-			ep3, ep4 := pipe(linkAddr3, linkAddr4)
-			ep5, ep6 := pipe(linkAddr5, linkAddr6)
+			ep1, ep2 := makePipe(linkAddr1, linkAddr2)
+			ep3, ep4 := makePipe(linkAddr3, linkAddr4)
+			ep5, ep6 := makePipe(linkAddr5, linkAddr6)
 			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
 			s1subnet := util.PointSubnet(s1addr)
 			s1, err := makeStackWithEndpoint(s1NICID, ep1, testCase.protocolFactory, testCase.protocolNumber, s1addr)
@@ -789,12 +789,10 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 	}
 }
 
-// pipe mints two linked endpoints with the given link addresses.
-func pipe(addr1, addr2 tcpip.LinkAddress) (*endpoint, *endpoint) {
-	ep1, ep2 := &endpoint{linkAddr: addr1}, &endpoint{linkAddr: addr2}
-	ep1.linked = ep2
-	ep2.linked = ep1
-	return ep1, ep2
+// makePipe mints two linked endpoints with the given link addresses.
+func makePipe(addr1, addr2 tcpip.LinkAddress) (*endpoint, *endpoint) {
+	ep1, ep2 := pipe.New(addr1, addr2)
+	return &endpoint{LinkEndpoint: ep1}, &endpoint{LinkEndpoint: ep2}
 }
 
 var _ stack.LinkEndpoint = (*endpoint)(nil)
@@ -804,80 +802,21 @@ var _ stack.LinkEndpoint = (*endpoint)(nil)
 //
 // `endpoint` cannot be copied.
 //
-// Make endpoints using `pipe()`, not using endpoint literals.
+// Make endpoints using `makePipe()`, not using endpoint literals.
 type endpoint struct {
-	linkAddr      tcpip.LinkAddress
-	dispatcher    stack.NetworkDispatcher
-	linked        *endpoint
+	stack.LinkEndpoint
 	onWritePacket func(*stack.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
-	if e.linked == nil {
-		panic(fmt.Sprintf("ep %+v has not been linked to another endpoint; create endpoints with `pipe()`", e))
-	}
-	if !e.linked.IsAttached() {
-		panic(fmt.Sprintf("ep: %+v linked endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, e.linked))
-	}
-
+func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if fn := e.onWritePacket; fn != nil {
 		fn(pkt)
 	}
-	// the "remote" address for `other` is our local address and vice versa.
-	e.linked.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, packetbuffer.OutboundToInbound(pkt))
-	return nil
+	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	panic("not implemented")
-}
-
-func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
-	e.dispatcher = dispatcher
-}
-
-func (e *endpoint) IsAttached() bool {
-	return e.dispatcher != nil
-}
-
-func (*endpoint) Wait() {}
-
-func (*endpoint) MTU() uint32 {
-	// As per RFC 8200 section 5:
-	//
-	//  IPv6 requires that every link in the Internet have an MTU of 1280
-	//  octets or greater. This is known as the IPv6 minimum link MTU. On
-	//  any link that cannot convey a 1280-octet packet in one piece, link-
-	//  specific fragmentation and reassembly must be provided at a layer
-	//  below IPv6.
-	//
-	// RFC 791 section 3.2 also has a minimum MTU requirement for IPv4:
-	//
-	//  Every internet module must be able to forward a datagram of 68
-	//  octets without further fragmentation. This is because an internet
-	//  header may be up to 60 octets, and the minimum fragment is 8 octets.
-	//
-	// Since the IPv6 minimum MTU is the greater value, we use that.
-	return header.IPv6MinimumMTU
-}
-
-func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
-	return stack.CapabilityResolutionRequired
-}
-
-func (*endpoint) MaxHeaderLength() uint16 {
-	return 0
-}
-
-func (e *endpoint) LinkAddress() tcpip.LinkAddress {
-	return e.linkAddr
-}
-
-func (*endpoint) ARPHardwareType() header.ARPHardwareType {
-	return header.ARPHardwareEther
-}
-
-func (*endpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+func (e *endpoint) Capabilities() stack.LinkEndpointCapabilities {
+	return stack.CapabilityResolutionRequired | e.LinkEndpoint.Capabilities()
 }
 
 func makeStackWithEndpoint(nicID tcpip.NICID, ep stack.LinkEndpoint, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address) (*stack.Stack, error) {

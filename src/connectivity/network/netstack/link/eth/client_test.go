@@ -23,13 +23,12 @@ import (
 	fifotestutil "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 
-	"fidl/fuchsia/hardware/ethernet"
+	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/hardware/network"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -114,13 +113,13 @@ func checkTXDone(txFifo zx.Handle) error {
 	return fmt.Errorf("got zxwait.Wait(txFifo, ...) = %v, want %s", err, zx.ErrTimedOut)
 }
 
-func TestEndpoint(t *testing.T) {
+func TestClient(t *testing.T) {
 	const maxDepth = eth_gen.FifoMaxSize / uint(unsafe.Sizeof(eth_gen.FifoEntry{}))
 
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			deviceImpl, deviceFifos := fifotestutil.MakeEthernetDevice(t, ethernet.Info{}, depth)
+			deviceImpl, deviceFifos := fifotestutil.MakeEthernetDevice(t, fidlethernet.Info{}, depth)
 
 			var device struct {
 				iob       eth.IOBuffer
@@ -156,9 +155,8 @@ func TestEndpoint(t *testing.T) {
 				t.Fatal("eth.NewClient didn't call device.SetIoBuffer")
 			}
 
-			endpoint := eth.NewLinkEndpoint(client)
 			ch := make(dispatcherChan, 1)
-			endpoint.Attach(&ch)
+			client.Attach(&ch)
 
 			// Attaching a dispatcher to the client should cause it to fill the device's RX buffer pool.
 			{
@@ -204,12 +202,11 @@ func TestEndpoint(t *testing.T) {
 						var pkts stack.PacketBufferList
 						for i := uint32(0); i < writeSize; i++ {
 							pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
-								ReserveHeaderBytes: int(endpoint.MaxHeaderLength()),
+								ReserveHeaderBytes: int(client.MaxHeaderLength()),
 							}))
 						}
 
-						// Simulate zero-sized incoming packets; zero-sized packets will increment fifo stats
-						// without dispatching up the stack.
+						// Simulate zero-sized incoming packets.
 						for toWrite := writeSize; toWrite != 0; {
 							b := device.rxEntries
 							if toWrite < uint32(len(b)) {
@@ -231,6 +228,21 @@ func TestEndpoint(t *testing.T) {
 								t.Fatalf("got eth_gen.FifoWrite(...) = %d, want = %d", count, l)
 							}
 							toWrite -= count
+
+							timeout := make(chan struct{})
+							time.AfterFunc(5*time.Second, func() { close(timeout) })
+							for i := uint32(0); i < count; i++ {
+								select {
+								case <-timeout:
+									t.Fatal("timeout waiting for ethernet packet")
+								case args := <-ch:
+									if diff := cmp.Diff(DeliverNetworkPacketArgs{
+										Pkt: stack.NewPacketBuffer(stack.PacketBufferOptions{}),
+									}, args, testutil.PacketBufferCmpTransformer); diff != "" {
+										t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
+									}
+								}
+							}
 							for len(b) != 0 {
 								if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 									t.Fatal(err)
@@ -264,7 +276,7 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						// Use WritePackets to get deterministic batch sizes.
-						count, err := endpoint.WritePackets(
+						count, err := client.WritePackets(
 							&stack.Route{},
 							nil,
 							pkts,
@@ -326,106 +338,34 @@ func TestEndpoint(t *testing.T) {
 				}
 			})
 
-			const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
-			const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
-			const protocol = tcpip.NetworkProtocolNumber(45)
-
 			// Test that we build the ethernet frame correctly.
 			// Test that we don't accidentally put unused bytes on the wire.
 			const packetHeader = "foo"
 			const body = "bar"
-			var route stack.Route
-			route.LocalLinkAddress = localLinkAddress
-			route.ResolveWith(remoteLinkAddress)
-			want := DeliverNetworkPacketArgs{
-				SrcLinkAddr: localLinkAddress,
-				DstLinkAddr: remoteLinkAddress,
-				Protocol:    protocol,
-				Pkt: &stack.PacketBuffer{
-					Data: buffer.View(packetHeader + body).ToVectorisedView(),
-				},
-			}
 
-			data := buffer.View(body).ToVectorisedView()
+			want := []byte(packetHeader + body)
 
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
 					pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-						ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
-						Data:               data,
+						ReserveHeaderBytes: int(client.MaxHeaderLength()) + len(packetHeader) + 5,
+						Data:               buffer.View(body).ToVectorisedView(),
 					})
 					hdr := pkt.NetworkHeader().Push(len(packetHeader))
 					if n := copy(hdr, packetHeader); n != len(packetHeader) {
 						t.Fatalf("copied %d bytes, expected %d bytes", n, len(packetHeader))
 					}
-					if err := endpoint.WritePacket(&route, nil, protocol, pkt); err != nil {
+					if err := client.WritePacket(nil, nil, 1337, pkt); err != nil {
 						t.Fatal(err)
 					}
 
 					if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
-						if len(b) < header.EthernetMinimumSize {
-							t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
-						}
-						h := header.Ethernet(b)
-						if diff := cmp.Diff(want, DeliverNetworkPacketArgs{
-							SrcLinkAddr: h.SourceAddress(),
-							DstLinkAddr: h.DestinationAddress(),
-							Protocol:    h.Type(),
-							Pkt: &stack.PacketBuffer{
-								Data: buffer.View(b[header.EthernetMinimumSize:]).ToVectorisedView(),
-							},
-						}, testutil.PacketBufferCmpTransformer); diff != "" {
+						if diff := cmp.Diff(want, b); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}); err != nil {
 						t.Fatal(err)
 					}
-				}
-				if err := checkTXDone(deviceFifos.Tx); err != nil {
-					t.Fatal(err)
-				}
-			})
-
-			t.Run("WritePacketWithExistingLinkHeader", func(t *testing.T) {
-				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-					ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
-					Data:               data,
-				})
-				pkt.LinkHeader().Push(header.EthernetMinimumSize)
-				if err := endpoint.WritePacket(&route, nil, protocol, pkt); err != nil {
-					t.Fatal(err)
-				}
-
-				if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
-					if len(b) < header.EthernetMinimumSize {
-						t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
-					}
-				}); err != nil {
-					t.Fatal(err)
-				}
-				if err := checkTXDone(deviceFifos.Tx); err != nil {
-					t.Fatal(err)
-				}
-			})
-
-			t.Run("WritePacketsWithExistingLinkHeader", func(t *testing.T) {
-				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-					ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
-					Data:               data,
-				})
-				pkt.LinkHeader().Push(header.EthernetMinimumSize)
-				var pkts stack.PacketBufferList
-				pkts.PushBack(pkt)
-				if _, err := endpoint.WritePackets(&stack.Route{}, nil, pkts, 1337); err != nil {
-					t.Fatal(err)
-				}
-
-				if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
-					if len(b) < header.EthernetMinimumSize {
-						t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
-					}
-				}); err != nil {
-					t.Fatal(err)
 				}
 				if err := checkTXDone(deviceFifos.Tx); err != nil {
 					t.Fatal(err)
@@ -438,20 +378,11 @@ func TestEndpoint(t *testing.T) {
 			t.Run("ReceivePacket", func(t *testing.T) {
 				const payload = "foobarbaz"
 
-				ethFields := header.EthernetFields{
-					SrcAddr: localLinkAddress,
-					DstAddr: remoteLinkAddress,
-					Type:    protocol,
-				}
-				wantLinkHdr := make(buffer.View, header.EthernetMinimumSize)
-				header.Ethernet(wantLinkHdr).Encode(&ethFields)
-
 				// Send the first sendSize bytes of a frame.
 				send := func(sendSize int) {
 					entry := &device.rxEntries[0]
 					buf := device.iob.BufferFromEntry(*entry)
-					header.Ethernet(buf).Encode(&ethFields)
-					if got, want := copy(buf[header.EthernetMinimumSize:], payload), len(payload); got != want {
+					if got, want := copy(buf, payload), len(payload); got != want {
 						t.Fatalf("got copy() = %d, want %d", got, want)
 					}
 					entry.SetLength(sendSize)
@@ -478,15 +409,7 @@ func TestEndpoint(t *testing.T) {
 					}
 				}
 
-				// Test receiving a frame that is too small.
-				send(header.EthernetMinimumSize - 1)
-				select {
-				case <-time.After(10 * time.Millisecond):
-				case args := <-ch:
-					t.Fatalf("unexpected packet received: %+v", args)
-				}
-
-				for _, extra := range []int{
+				for _, size := range []int{
 					// Test receiving a frame that is equal to the minimum frame size.
 					0,
 					// Test receiving a frame that is just greater than the minimum frame size.
@@ -494,7 +417,7 @@ func TestEndpoint(t *testing.T) {
 					// Test receiving the full frame.
 					len(payload),
 				} {
-					send(header.EthernetMinimumSize + extra)
+					send(size)
 
 					// Wait for a packet to be delivered on ch and validate the delivered
 					// network packet parameters. The packet should be delivered within 5s.
@@ -503,21 +426,9 @@ func TestEndpoint(t *testing.T) {
 						t.Fatal("timeout waiting for ethernet packet")
 					case args := <-ch:
 						if diff := cmp.Diff(DeliverNetworkPacketArgs{
-							SrcLinkAddr: localLinkAddress,
-							DstLinkAddr: remoteLinkAddress,
-							Protocol:    protocol,
-							Pkt: func() *stack.PacketBuffer {
-								vv := wantLinkHdr.ToVectorisedView()
-								vv.AppendView(buffer.View(payload[:extra]))
-								pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-									Data: vv,
-								})
-								_, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize)
-								if !ok {
-									t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
-								}
-								return pkt
-							}(),
+							Pkt: stack.NewPacketBuffer(stack.PacketBufferOptions{
+								Data: buffer.View(payload[:size]).ToVectorisedView(),
+							}),
 						}, args, testutil.PacketBufferCmpTransformer); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
@@ -530,7 +441,7 @@ func TestEndpoint(t *testing.T) {
 
 func TestDeviceClass(t *testing.T) {
 	tests := []struct {
-		features    ethernet.Features
+		features    fidlethernet.Features
 		expectClass network.DeviceClass
 	}{
 		{
@@ -538,13 +449,13 @@ func TestDeviceClass(t *testing.T) {
 			expectClass: network.DeviceClassEthernet,
 		},
 		{
-			features:    ethernet.FeaturesWlan,
+			features:    fidlethernet.FeaturesWlan,
 			expectClass: network.DeviceClassWlan,
 		},
 	}
 	for _, test := range tests {
 		c := eth.Client{
-			Info: ethernet.Info{
+			Info: fidlethernet.Info{
 				Features: test.features,
 			},
 		}

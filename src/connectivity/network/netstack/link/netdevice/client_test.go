@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -31,6 +30,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -265,7 +265,7 @@ func TestClient_WritePacket(t *testing.T) {
 		client.Wait()
 	}()
 
-	linkEndpoint := eth.NewLinkEndpoint(client)
+	linkEndpoint := ethernet.New(client)
 
 	client.SetOnLinkClosed(func() {})
 	client.SetOnLinkOnlineChanged(func(bool) {})
@@ -306,7 +306,7 @@ func TestWritePacket(t *testing.T) {
 	client.SetOnLinkClosed(func() {})
 	client.SetOnLinkOnlineChanged(func(bool) {})
 
-	linkEndpoint := eth.NewLinkEndpoint(client)
+	linkEndpoint := ethernet.New(client)
 
 	dispatcher := make(dispatcherChan)
 	linkEndpoint.Attach(&dispatcher)
@@ -375,7 +375,7 @@ func TestReceivePacket(t *testing.T) {
 	client.SetOnLinkClosed(func() {})
 	client.SetOnLinkOnlineChanged(func(bool) {})
 
-	linkEndpoint := eth.NewLinkEndpoint(client)
+	linkEndpoint := ethernet.New(client)
 
 	if err := client.Up(); err != nil {
 		t.Fatalf("failed to start client %s", err)

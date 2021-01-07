@@ -22,7 +22,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
-	"fidl/fuchsia/hardware/ethernet"
+	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net"
@@ -31,6 +31,7 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -68,9 +69,9 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		})
 	}
 
-	var features ethernet.Features
+	var features fidlethernet.Features
 	if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
-		features |= ethernet.FeaturesLoopback
+		features |= fidlethernet.FeaturesLoopback
 	}
 
 	var topopath, filepath string
@@ -80,7 +81,7 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		features |= client.Info.Features
 	}
 
-	mac := &ethernet.MacAddress{}
+	mac := &fidlethernet.MacAddress{}
 	copy(mac.Octets[:], ifs.endpoint.LinkAddress())
 
 	return stack.InterfaceInfo{
@@ -130,7 +131,7 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 			_ = syslog.Warnf("failed to create network device client for Ethernet interface: %s", err)
 			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
 		}
-		ep = eth.NewLinkEndpoint(client)
+		ep = ethernet.New(client)
 		controller = client
 		observer = client
 		namePrefix = "eth"
@@ -388,7 +389,7 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 	return result
 }
 
-func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device ethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
+func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device fidlethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
 	var result stack.StackAddEthernetInterfaceResult
 	if ifs, err := ni.ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device); err != nil {
 		var tcpipErr TcpIpError
