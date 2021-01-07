@@ -41,6 +41,10 @@ if (current_toolchain == default_toolchain) {
           "$zx/kernel/arch/$kernel_cpu:abi",
           ":defines",
 
+          # Don't emit extra code making static initializers thread-safe (we don't
+          # have threads or any of the corresponding library support.)
+          "$zx_build_config:no_threadsafe_statics",
+
           # All physmem code is inherently sensitive and in a position for
           # any bug to be unusually dangerous.  So compile with minimal
           # undefined behavior checking in all builds, regardless of variant.
@@ -113,6 +117,10 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel:warnings",
       "$zx/kernel/arch/$kernel_cpu:abi",
       ":defines",
+
+      # Don't emit extra code making static initializers thread-safe (we don't
+      # have threads or any of the corresponding library support.)
+      "$zx_build_config:no_threadsafe_statics",
 
       # All physmem code is inherently sensitive and in a position for
       # any bug to be unusually dangerous.  So compile with minimal

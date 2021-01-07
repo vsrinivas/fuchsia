@@ -357,7 +357,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_template_backtrace_limit",
     "//build/config/zircon:no_exceptions",
     "//build/config/zircon:no_rtti",
-    "//build/config/zircon:no_threadsafe_statics",
     "//build/config/zircon:thread_safety_annotations",
     "//build/config/zircon:warn-implicit-fallthrough",
     "//build/config/zircon:visibility_hidden",

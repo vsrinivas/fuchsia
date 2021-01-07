@@ -87,7 +87,6 @@ standard_configs = [
   "$zx_build_config:default_template_backtrace_limit",
   "$zx_build_config:no_exceptions",
   "$zx_build_config:no_rtti",
-  "$zx_build_config:no_threadsafe_statics",
   "$zx_build_config:thread_safety_annotations",
   "$zx_build_config:warn-implicit-fallthrough",
   "$zx_build_config:visibility_hidden",
