@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("onet_tool") {
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//src/connectivity/overnet/lib/core",
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  non_rust_deps = []
+  if (!is_fuchsia) {
+    non_rust_deps += [ "//third_party/boringssl" ]
+  }
+
+  sources = [
+    "src/generator.rs",
+    "src/host_pipe.rs",
+    "src/lib.rs",
+    "src/list_peers.rs",
+    "src/probe_node.rs",
+    "src/probe_reports.rs",
+  ]
+}

@@ -4,5 +4,5 @@
 
 #[fuchsia::component]
 async fn main() -> Result<(), anyhow::Error> {
-    onet_lib::run_onet(argh::from_env()).await
+    onet_tool::run_onet(argh::from_env()).await
 }

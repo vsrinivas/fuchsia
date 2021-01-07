@@ -7,47 +7,12 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("lib") {
-  name = "onet-lib"
-  edition = "2018"
-
-  deps = [
-    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-    "//src/connectivity/overnet/lib/core",
-    "//src/connectivity/overnet/lib/hoist",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  non_rust_deps = []
-  if (!is_fuchsia) {
-    non_rust_deps += [ "//third_party/boringssl" ]
-  }
-
-  sources = [
-    "src/generator.rs",
-    "src/host_pipe.rs",
-    "src/lib.rs",
-    "src/list_peers.rs",
-    "src/probe_node.rs",
-    "src/probe_reports.rs",
-  ]
-}
-
 rustc_binary("bin") {
   name = "onet"
   edition = "2018"
 
   deps = [
-    ":lib",
+    "//src/connectivity/overnet/lib/onet_tool",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",

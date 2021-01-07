@@ -9,5 +9,5 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(subcommand, name = "overnet", description = "Interact with the Overnet mesh")]
 pub struct OvernetCommand {
     #[argh(subcommand)]
-    pub command: onet_lib::Command,
+    pub command: onet_tool::Command,
 }

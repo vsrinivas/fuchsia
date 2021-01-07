@@ -6,5 +6,5 @@ use anyhow::Error;
 
 #[ffx_core::ffx_plugin()]
 pub async fn debug(cmd: ffx_overnet_plugin_args::OvernetCommand) -> Result<(), Error> {
-    onet_lib::run_onet(onet_lib::Opts { command: cmd.command }).await
+    onet_tool::run_onet(onet_tool::Opts { command: cmd.command }).await
 }
