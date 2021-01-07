@@ -16,12 +16,14 @@ tests_image = "tests.img"
 linux_image = "vmlinuz"
 
 guest_prebuilt("initrd") {
-  source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${initrd_image}"
+  #source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${initrd_image}"
+  source = "//src/virtualization/packages/debian_guest/images/${target_cpu}/${initrd_image}"
   output = "${target_out_dir}/debian/${initrd_image}"
 }
 
 guest_prebuilt("rootfs") {
-  source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${rootfs_image}"
+  #source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${rootfs_image}"
+  source = "//src/virtualization/packages/debian_guest/images/${target_cpu}/${rootfs_image}"
   output = "${target_out_dir}/debian/${rootfs_image}"
 }
 
@@ -31,7 +33,8 @@ guest_prebuilt("tests") {
 }
 
 guest_prebuilt("kernel") {
-  source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${linux_image}"
+  #source = "//prebuilt/virtualization/packages/debian_guest/images/${target_cpu}/${linux_image}"
+  source = "//src/virtualization/packages/debian_guest/images/${target_cpu}/${linux_image}"
   output = "${target_out_dir}/debian/${linux_image}"
 }
 
@@ -39,7 +42,6 @@ guest_package("debian_guest") {
   deps = [
     ":initrd",
     ":kernel",
-    ":tests",
   ]
 
   cmdline = "root=/dev/vda rw"
@@ -72,15 +74,6 @@ guest_package("debian_guest") {
     },
   ]
   block_devices = [ "data/${disk_name},${disk_options}" ]
-
-  tests_filename = "tests.img"
-  resources += [
-    {
-      path = rebase_path("${target_out_dir}/debian/${tests_image}")
-      dest = "${tests_filename}"
-    },
-  ]
-  block_devices += [ "data/${tests_filename},ro" ]
 
   deps += [ "//src/virtualization/lib/guest_interaction:extras" ]
   gis_out_dir =

@@ -27,9 +27,13 @@ zx_status_t VirtioNet::Start(const zx::guest& guest,
   if (status != ZX_OK) {
     return status;
   }
-  status = net_->Start(std::move(start_info), mac_address);
-  if (status != ZX_OK) {
-    return status;
+  {
+    fuchsia::hardware::ethernet::MacAddress m = mac_address;
+    m.octets.back()++;
+    status = net_->Start(std::move(start_info), m);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   std::lock_guard<std::mutex> lock(device_config_.mutex);

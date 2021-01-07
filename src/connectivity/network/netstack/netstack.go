@@ -1029,7 +1029,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		ifs := nicInfo.Context.(*ifState)
 		if controller := ifs.controller; controller != nil {
 			if err := controller.SetPromiscuousMode(true); err != nil {
-				return nil, err
+				//return nil, err
 			}
 		}
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {

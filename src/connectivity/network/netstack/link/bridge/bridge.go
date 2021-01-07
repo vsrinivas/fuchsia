@@ -209,11 +209,6 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 		case ep.linkAddress:
 			ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
 			return
-		default:
-			if l, ok := ep.links[dstLinkAddr]; ok {
-				l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
-				return
-			}
 		}
 	}
 
@@ -241,9 +236,6 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 
 	// TODO(fxbug.dev/20778): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
-		if flood {
-			l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
-		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if l != rxEP {
