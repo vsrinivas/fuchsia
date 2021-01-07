@@ -5,10 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_ISP_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_ISP_H_
 
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <ddktl/protocol/isp.h>
 
 class FakeIsp {
  public:

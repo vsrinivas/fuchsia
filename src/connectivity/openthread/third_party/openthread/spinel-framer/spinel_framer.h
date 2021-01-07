@@ -5,9 +5,8 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_SPINEL_FRAMER_SPINEL_FRAMER_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_SPINEL_FRAMER_SPINEL_FRAMER_H_
 
+#include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <zircon/types.h>
-
-#include <ddktl/protocol/spi.h>
 
 namespace ot {
 

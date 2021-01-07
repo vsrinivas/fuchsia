@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/volume/c/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/debug.h>
@@ -12,8 +14,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/volume.h>
 #include <fbl/alloc_checker.h>
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>

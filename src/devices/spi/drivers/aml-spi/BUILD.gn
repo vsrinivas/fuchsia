@@ -14,9 +14,9 @@ driver_module("aml-spi") {
   }
   sources = [ "aml-spi.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",

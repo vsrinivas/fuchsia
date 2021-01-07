@@ -12,12 +12,12 @@ driver_module("dsi-mt") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dsi-mt.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.dsiimpl",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.dsiimpl",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",

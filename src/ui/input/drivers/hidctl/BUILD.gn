@@ -14,7 +14,7 @@ driver_module("hidctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hidctl.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -37,7 +37,7 @@ executable("hidctl-test") {
     "hidctl.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

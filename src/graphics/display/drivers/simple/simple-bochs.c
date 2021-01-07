@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
@@ -10,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
 #include "simple-display.h"

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -27,7 +28,6 @@
 
 #include <variant>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
 
 #include "src/lib/fsl/handles/object_info.h"

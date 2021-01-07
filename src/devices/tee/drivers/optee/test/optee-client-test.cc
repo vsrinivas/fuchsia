@@ -5,6 +5,8 @@
 #include "src/devices/tee/drivers/optee/optee-client.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -20,8 +22,6 @@
 #include <stdlib.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
 #include <ddktl/suspend-txn.h>
 #include <zxtest/zxtest.h>
 

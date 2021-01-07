@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_MAX98373_MAX98373_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_MAX98373_MAX98373_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -15,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

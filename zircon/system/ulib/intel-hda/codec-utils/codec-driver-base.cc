@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/intelhda/codec/cpp/banjo.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -10,7 +11,6 @@
 #include <iterator>
 #include <utility>
 
-#include <ddktl/protocol/intelhda/codec.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

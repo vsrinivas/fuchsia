@@ -4,6 +4,7 @@
 
 #include "usb-dfu.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/zx/vmo.h>
@@ -13,7 +14,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

@@ -4,6 +4,7 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_AAL_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_AAL_H_
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 

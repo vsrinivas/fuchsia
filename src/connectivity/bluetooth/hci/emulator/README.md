@@ -13,7 +13,7 @@ accomplishes this by publishing two distinct devices:
   [fuchsia.bluetooth.hardware.bluetooth.Emulator](//zircon/system/fidl/fuchsia-hardware-bluetooth/hci.fidl)).
 * A device of class "bt-hci". See
   [fuchsia.hardware.bluetooth.Hci](//zircon/system/fidl/fuchsia-hardware-bluetooth/hci.fidl)
-  and [ddk.protocol.bt-hci](//zircon/system/banjo/ddk.protocol.bt.hci/bt-hci.banjo).
+  and [fuchsia.hardware.bt-hci](//zircon/system/banjo/fuchsia.hardware.bt.hci/bt-hci.banjo).
 
 ## Usage
 TODO(fxbug.dev/822): Document the driver's device publishing behavior once implement,

@@ -4,14 +4,14 @@
 
 #include "usb-device.h"
 
+#include <fuchsia/hardware/usb/bus/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <zircon/hw/usb.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/bus.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <utf_conversion/utf_conversion.h>

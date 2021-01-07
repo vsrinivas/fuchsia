@@ -5,16 +5,15 @@
 #ifndef SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_USB_H_
 #define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_USB_H_
 
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/composite/c/banjo.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
-
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/composite.h>
 #ifdef __cplusplus
-#include <optional>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
 
-#include <ddktl/protocol/usb.h>
+#include <optional>
 #endif
 
 __BEGIN_CDECLS

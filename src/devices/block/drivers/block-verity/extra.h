@@ -5,12 +5,11 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_EXTRA_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_EXTRA_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/block.h>
 
 #include "src/devices/block/drivers/block-verity/block-loader-interface.h"
 

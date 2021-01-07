@@ -6,8 +6,7 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_GDC_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-
-#include <ddktl/protocol/gdc.h>
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
 
 #include "src/camera/drivers/controller/configs/product_config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"

@@ -24,7 +24,7 @@ zx_library("framebuffer") {
   sdk_headers = [ "lib/framebuffer/framebuffer.h" ]
   sources = [ "framebuffer.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",

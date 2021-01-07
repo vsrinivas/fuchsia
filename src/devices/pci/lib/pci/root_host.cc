@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/pci/pciroot.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/object.h>
@@ -23,8 +24,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <region-alloc/region-alloc.h>
-
-#include "ddk/protocol/pciroot.h"
 
 // RootHost monitors eventpairs handed out across the PcirootProtocol to
 // be kept aware of resource allocations to downstream processes that have

@@ -4,10 +4,10 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/hw/pci.h>
 
-#include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
 
 #include "../../common.h"

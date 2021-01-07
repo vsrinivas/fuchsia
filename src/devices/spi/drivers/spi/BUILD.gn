@@ -34,8 +34,8 @@ driver_module("spi") {
   ]
   deps = [
     ":spi_bind",
-    "//sdk/banjo/ddk.protocol.spi",
-    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.spi",
+    "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -57,9 +57,9 @@ test("spi-test-bin") {
   ]
   deps = [
     ":spi_bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.spi",
-    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.spi",
+    "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

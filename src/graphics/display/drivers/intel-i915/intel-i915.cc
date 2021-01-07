@@ -5,6 +5,9 @@
 #include "intel-i915.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/intelgpucore/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
@@ -25,9 +28,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intelgpucore.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sysmem.h>
 #include <fbl/vector.h>
 #include <hw/inout.h>
 

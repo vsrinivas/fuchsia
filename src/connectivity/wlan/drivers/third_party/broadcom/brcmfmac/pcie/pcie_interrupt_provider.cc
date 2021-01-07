@@ -3,6 +3,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_provider.h"
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -10,8 +11,6 @@
 #include <zircon/time.h>
 
 #include <algorithm>
-
-#include <ddktl/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"

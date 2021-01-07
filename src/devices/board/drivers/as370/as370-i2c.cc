@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpioimpl/c/banjo.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpioimpl.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <soc/as370/as370-i2c.h>
 
 #include "as370.h"

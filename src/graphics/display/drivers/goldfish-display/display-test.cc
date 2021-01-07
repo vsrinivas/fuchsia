@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 #include "display.h"
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <stdio.h>
 
 #include <array>
 #include <memory>
 
 #include <ddk/device.h>
-#include <ddk/protocol/display/controller.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>

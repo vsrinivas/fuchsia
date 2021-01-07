@@ -3,6 +3,13 @@
 // found in the LICENSE file.
 #include "amlogic-display.h"
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
@@ -23,13 +30,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/display/capture.h>
-#include <ddktl/protocol/display/clamprgb.h>
-#include <ddktl/protocol/display/controller.h>
-#include <ddktl/protocol/dsiimpl.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

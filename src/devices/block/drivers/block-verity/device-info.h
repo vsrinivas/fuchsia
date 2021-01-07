@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_INFO_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_INFO_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <ddktl/protocol/block.h>
 #include <fbl/macros.h>
 
 #include "geometry.h"

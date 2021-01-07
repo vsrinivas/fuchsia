@@ -5,6 +5,13 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/iommu/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -21,17 +28,10 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/powerimpl.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
-#include "ddk/protocol/platform/bus.h"
 #include "platform-device.h"
 #include "proxy-protocol.h"
 

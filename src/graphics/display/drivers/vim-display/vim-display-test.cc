@@ -4,13 +4,13 @@
 
 #include "vim-display.h"
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
-#include <ddk/protocol/display/controller.h>
 #include <zxtest/zxtest.h>
 
 namespace sysmem = llcpp::fuchsia::sysmem;

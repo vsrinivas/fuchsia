@@ -14,12 +14,12 @@ driver_module("goodix") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gt92xx.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
@@ -52,10 +52,10 @@ test("gt92xx-test") {
     "gt92xx.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",

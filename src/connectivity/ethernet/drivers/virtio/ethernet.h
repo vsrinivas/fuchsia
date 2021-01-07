@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_VIRTIO_ETHERNET_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_VIRTIO_ETHERNET_H_
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -17,9 +19,7 @@
 #include <memory>
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/ethernet.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
 #include <fbl/macros.h>
 #include <virtio/net.h>
 
@@ -45,7 +45,7 @@ class EthernetDevice : public Device,
   void IrqRingUpdate() override TA_EXCL(state_lock_);
   void IrqConfigChange() override TA_EXCL(state_lock_);
 
-  // DDK protocol hooks; see ddk/protocol/ethernet.h
+  // DDK protocol hooks; see fuchsia/hardware/ethernet/c/banjo.h
   zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info) TA_EXCL(state_lock_);
   void EthernetImplStop() TA_EXCL(state_lock_);
   zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) TA_EXCL(state_lock_);
@@ -94,7 +94,7 @@ class EthernetDevice : public Device,
   virtio_net_config_t config_ TA_GUARDED(state_lock_);
   size_t virtio_hdr_len_;
 
-  // Ethernet callback interface; see ddk/protocol/ethernet.h
+  // Ethernet callback interface; see fuchsia/hardware/ethernet/c/banjo.h
   ethernet_ifc_protocol_t ifc_ TA_GUARDED(state_lock_);
 };
 

@@ -4,6 +4,7 @@
 
 #include "src/storage/fvm/driver/vpartition_manager.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -30,7 +31,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/block.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

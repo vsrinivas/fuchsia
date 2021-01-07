@@ -12,7 +12,7 @@
 #include <cstdio>
 #include <optional>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>

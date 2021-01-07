@@ -26,11 +26,11 @@ driver_module("aml-sdmmc") {
   sources = [ "aml-sdmmc.cc" ]
   deps = [
     ":aml-sdmmc-bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sdmmc",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
@@ -55,10 +55,10 @@ test("aml-sdmmc-test-bin") {
   ]
   deps = [
     ":aml-sdmmc-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sdmmc",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",

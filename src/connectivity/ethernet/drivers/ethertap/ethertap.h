@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
 
 namespace eth {

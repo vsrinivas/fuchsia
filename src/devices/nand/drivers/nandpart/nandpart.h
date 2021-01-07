@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_
-#define SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_NANDPART_NANDPART_H_
+#define SRC_DEVICES_NAND_DRIVERS_NANDPART_NANDPART_H_
 
+#include <fuchsia/hardware/badblock/cpp/banjo.h>
+#include <fuchsia/hardware/nand/c/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <zircon/types.h>
 
 #include <utility>
 
 #include <ddk/device.h>
-#include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/badblock.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
@@ -90,4 +90,4 @@ class NandPartDevice : public DeviceType,
 
 }  // namespace nand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_NANDPART_NANDPART_H_

@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_H_
 #define SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <zircon/hw/usb/hid.h>
 
@@ -12,8 +14,6 @@
 #include <thread>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/usb.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <usb/usb.h>

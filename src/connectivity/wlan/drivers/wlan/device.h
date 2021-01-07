@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
@@ -17,8 +19,6 @@
 #include <unordered_set>
 
 #include <ddk/driver.h>
-#include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/wlan/mac.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>

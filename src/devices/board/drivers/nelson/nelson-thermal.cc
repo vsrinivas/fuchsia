@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <zircon/syscalls/smc.h>
 
@@ -10,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/sm1-clk.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>

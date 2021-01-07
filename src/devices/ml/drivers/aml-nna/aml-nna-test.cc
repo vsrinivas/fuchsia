@@ -4,11 +4,11 @@
 
 #include "aml-nna.h"
 
+#include <fuchsia/hardware/registers/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 
 #include <mock-mmio-reg/mock-mmio-reg.h>
-#include <mock/ddktl/protocol/registers.h>
 
 #include "s905d3-nna-regs.h"
 #include "src/devices/registers/testing/mock-registers/mock-registers.h"

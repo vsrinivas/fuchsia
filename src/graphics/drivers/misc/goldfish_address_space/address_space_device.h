@@ -5,7 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_ADDRESS_SPACE_ADDRESS_SPACE_DEVICE_H_
 
+#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -17,8 +19,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/addressspace.h>
-#include <ddktl/protocol/pci.h>
 #include <fbl/mutex.h>
 
 namespace goldfish {
@@ -50,7 +50,7 @@ class AddressSpaceDevice
   uint32_t DestroyChildDriver(uint32_t handle);
   uint32_t ChildDriverPing(uint32_t handle);
 
-  // |ddk.protocol.GoldfishAddressSpace|
+  // |fuchsia.hardware.GoldfishAddressSpace|
   zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
                                                   zx::channel request) {
     return OpenChildDriver(

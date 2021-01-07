@@ -6,11 +6,10 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_INTERNAL_CONFIG_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 
 #include <vector>
-
-#include <ddktl/protocol/ge2d.h>
 
 namespace camera {
 

@@ -5,11 +5,10 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_LIB_DEVICE_PROTOCOL_BT_GATT_SVC_INCLUDE_LIB_DEVICE_PROTOCOL_BT_GATT_SVC_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_LIB_DEVICE_PROTOCOL_BT_GATT_SVC_INCLUDE_LIB_DEVICE_PROTOCOL_BT_GATT_SVC_H_
 
+#include <fuchsia/hardware/bt/gattsvc/c/banjo.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/bt/gattsvc.h>
 
 __BEGIN_CDECLS
 

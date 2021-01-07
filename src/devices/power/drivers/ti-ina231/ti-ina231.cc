@@ -5,11 +5,11 @@
 #include "ti-ina231.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-bind.h"
 

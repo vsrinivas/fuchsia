@@ -4,6 +4,7 @@
 
 #include "tcs3400.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
@@ -19,7 +20,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/metadata/light-sensor.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

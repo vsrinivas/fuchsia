@@ -5,6 +5,8 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_LIGHT_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <lib/device-protocol/i2c.h>
 #include <threads.h>
@@ -13,8 +15,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/array.h>
 
 namespace lp50xx_light {

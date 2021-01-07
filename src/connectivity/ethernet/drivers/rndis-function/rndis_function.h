@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_FUNCTION_RNDIS_FUNCTION_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_FUNCTION_RNDIS_FUNCTION_H_
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -17,10 +20,7 @@
 #include <queue>
 #include <thread>
 
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

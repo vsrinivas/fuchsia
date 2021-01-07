@@ -4,13 +4,13 @@
 
 #include "wlantap-mac.h"
 
+#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 
 #include <mutex>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddktl/protocol/wlan/mac.h>
 #include <wlan/common/channel.h>
 
 #include "utils.h"

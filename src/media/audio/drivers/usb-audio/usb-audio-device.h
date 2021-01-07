@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DEVICE_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DEVICE_H_
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>

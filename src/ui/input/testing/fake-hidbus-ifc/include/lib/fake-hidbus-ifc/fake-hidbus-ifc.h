@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
 #include <vector>
 
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

@@ -13,7 +13,7 @@
 // For now, this header serves the role of "some other means".
 
 #if defined(__x86_64__)
-// IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
+// IMAGE_TYPE_X_TILED from fuchsia/hardware/intelgpucore/c/banjo.h
 constexpr uint32_t IMAGE_TYPE_PREFERRED_SCANOUT = 1;
 #elif defined(__aarch64__)
 // TYPE_SIMPLE from fuchsia.hardware.display/display-controller.fidl

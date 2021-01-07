@@ -21,9 +21,9 @@ zx_library("usb") {
     "usb.c",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
 
-    # <ddk/usb/usb.h> has #include <ddk/protocol/usb.h>.
+    # <ddk/usb/usb.h> has #include <fuchsia/hardware/usb/c/banjo.h>.
     "//src/lib/ddk",
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
@@ -31,9 +31,9 @@ zx_library("usb") {
     "//zircon/public/lib/fit",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",

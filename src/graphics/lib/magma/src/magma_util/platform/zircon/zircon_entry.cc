@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -14,7 +15,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>

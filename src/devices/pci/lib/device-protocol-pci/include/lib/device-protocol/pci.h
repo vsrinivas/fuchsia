@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_PCI_LIB_DEVICE_PROTOCOL_PCI_INCLUDE_LIB_DEVICE_PROTOCOL_PCI_H_
 #define SRC_DEVICES_PCI_LIB_DEVICE_PROTOCOL_PCI_INCLUDE_LIB_DEVICE_PROTOCOL_PCI_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/pci.h>
 
 __BEGIN_CDECLS
 
@@ -39,9 +39,9 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <optional>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 
-#include <ddktl/protocol/pci.h>
+#include <optional>
 
 namespace ddk {
 

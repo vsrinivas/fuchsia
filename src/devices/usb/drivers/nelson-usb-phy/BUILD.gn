@@ -12,8 +12,8 @@ driver_module("nelson-usb-phy") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nelson-usb-phy.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.usb.phy",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.usb.phy",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",

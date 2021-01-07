@@ -4,15 +4,15 @@
 
 #include "aml-power.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <algorithm>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/pwm.h>
 #include <fbl/alloc_checker.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 

@@ -4,9 +4,9 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSI_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSI_H_
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <zircon/assert.h>
 
-#include <ddktl/protocol/pci.h>
 #include <hwreg/bitfields.h>
 
 #include "../capabilities.h"

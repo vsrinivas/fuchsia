@@ -33,7 +33,7 @@ test("mipidsi") {
   }
   sources = [ "mipi-dsi-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.dsiimpl",
+    "//sdk/banjo/fuchsia.hardware.dsiimpl",
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",

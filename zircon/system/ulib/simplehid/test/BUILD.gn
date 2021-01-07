@@ -34,7 +34,7 @@ test("simplehid") {
   configs += [ "//build/config:all_source" ]
   sources = [ "simplehid-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/testing/no_ddk",

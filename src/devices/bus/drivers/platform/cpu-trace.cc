@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,7 +10,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 
 typedef struct cpu_trace_dev {
   zx_device_t* zxdev;

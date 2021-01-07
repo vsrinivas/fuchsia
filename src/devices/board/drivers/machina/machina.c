@@ -5,6 +5,7 @@
 #include "machina.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 
 static zx_status_t machina_pci_init(void) {
   zx_status_t status;

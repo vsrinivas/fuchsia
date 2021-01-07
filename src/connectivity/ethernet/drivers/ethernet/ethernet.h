@@ -5,7 +5,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_ETHERNET_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_ETHERNET_H_
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/operation/ethernet.h>
@@ -31,10 +33,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/ethernet.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>

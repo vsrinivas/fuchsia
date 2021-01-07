@@ -4,6 +4,8 @@
 
 #include "skip-block.h"
 
+#include <fuchsia/hardware/badblock/cpp/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -11,8 +13,6 @@
 
 #include <optional>
 
-#include <ddktl/protocol/badblock.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 

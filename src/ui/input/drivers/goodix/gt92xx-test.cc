@@ -4,6 +4,8 @@
 
 #include "gt92xx.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
@@ -11,9 +13,7 @@
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
-#include <ddktl/protocol/gpio.h>
 #include <hid/gt92xx.h>
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace goodix {

@@ -20,8 +20,8 @@ driver_module("c18") {
     "c18.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.gpioimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",

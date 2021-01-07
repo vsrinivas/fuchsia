@@ -4,6 +4,9 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async/default.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
@@ -15,9 +18,6 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
 
 #include "log.h"
 #include "src/devices/securemem/drivers/aml-securemem/aml-securemem-bind.h"
@@ -49,7 +49,7 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
   }
 
   status = ddk::PDevProtocolClient::CreateFromComposite(
-      composite, "ddk.protocol.platform.device.PDev", &pdev_proto_client_);
+      composite, "fuchsia.hardware.platform.device.PDev", &pdev_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get pdev protocol - status: %d", status);
     return status;

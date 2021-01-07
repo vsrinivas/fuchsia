@@ -51,10 +51,10 @@ source_set("common") {
     "oob_doubler.cc",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.badblock",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.block.partition",
-    "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/banjo/fuchsia.hardware.badblock",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block.partition",
+    "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",

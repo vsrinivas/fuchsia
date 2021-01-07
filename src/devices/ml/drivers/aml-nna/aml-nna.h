@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_ML_DRIVERS_AML_NNA_AML_NNA_H_
 #define SRC_DEVICES_ML_DRIVERS_AML_NNA_AML_NNA_H_
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -13,11 +16,8 @@
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/registers.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-registers.h>
 

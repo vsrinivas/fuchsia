@@ -14,8 +14,8 @@ test("nand-unittest-bin") {
   output_name = "nand-unittest"
   sources = [ "nand-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.nand",
-    "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/banjo/fuchsia.hardware.nand",
+    "//sdk/banjo/fuchsia.hardware.rawnand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/nand/drivers/nand:common",

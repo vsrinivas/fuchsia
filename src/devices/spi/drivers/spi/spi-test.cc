@@ -4,12 +4,12 @@
 
 #include "spi.h"
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/spi/spi.h>
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <zxtest/zxtest.h>
 
 namespace spi {

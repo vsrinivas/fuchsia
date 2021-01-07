@@ -4,12 +4,12 @@
 
 #include "aml-thermal.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/scpi/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
-#include <mock/ddktl/protocol/gpio.h>
-#include <mock/ddktl/protocol/scpi.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -29,25 +29,25 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
 
 // vim2 thermal device info.
 constexpr fuchsia_hardware_thermal_ThermalDeviceInfo kDeviceInfo = {
-      .active_cooling = true,
-      .passive_cooling = true,
-      .gpu_throttling = true,
-      .num_trip_points = 8,
-      .big_little = true,
-      .critical_temp_celsius = 81.0f,
-      .trip_point_info =
-          {
-              TripPointInfo(2.0f, 0.0f, 6, 4),
-              TripPointInfo(65.0f, 63.0f, 6, 4),
-              TripPointInfo(70.0f, 68.0f, 6, 4),
-              TripPointInfo(75.0f, 73.0f, 6, 4),
-              TripPointInfo(82.0f, 79.0f, 5, 4),
-              TripPointInfo(87.0f, 84.0f, 4, 4),
-              TripPointInfo(92.0f, 89.0f, 3, 3),
-              TripPointInfo(96.0f, 93.0f, 2, 2),
-          },
-      .opps = {},
-  };
+    .active_cooling = true,
+    .passive_cooling = true,
+    .gpu_throttling = true,
+    .num_trip_points = 8,
+    .big_little = true,
+    .critical_temp_celsius = 81.0f,
+    .trip_point_info =
+        {
+            TripPointInfo(2.0f, 0.0f, 6, 4),
+            TripPointInfo(65.0f, 63.0f, 6, 4),
+            TripPointInfo(70.0f, 68.0f, 6, 4),
+            TripPointInfo(75.0f, 73.0f, 6, 4),
+            TripPointInfo(82.0f, 79.0f, 5, 4),
+            TripPointInfo(87.0f, 84.0f, 4, 4),
+            TripPointInfo(92.0f, 89.0f, 3, 3),
+            TripPointInfo(96.0f, 93.0f, 2, 2),
+        },
+    .opps = {},
+};
 
 }  // namespace
 

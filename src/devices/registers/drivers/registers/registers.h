@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_REGISTERS_DRIVERS_REGISTERS_REGISTERS_H_
 #define SRC_DEVICES_REGISTERS_DRIVERS_REGISTERS_REGISTERS_H_
 
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -18,7 +19,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/registers.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>

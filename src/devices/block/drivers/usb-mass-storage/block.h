@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <stdint.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
 #include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -84,4 +84,4 @@ class UmsBlockDevice : public DeviceType,
 };
 }  // namespace ums
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_

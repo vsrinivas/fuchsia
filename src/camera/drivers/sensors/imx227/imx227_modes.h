@@ -5,10 +5,10 @@
 #ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_MODES_H_
 #define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_MODES_H_
 
-#include <array>
+#include <fuchsia/hardware/camera/c/banjo.h>
+#include <fuchsia/hardware/camera/sensor/c/banjo.h>
 
-#include "ddk/protocol/camera.h"
-#include "ddk/protocol/camera/sensor.h"
+#include <array>
 
 namespace camera {
 

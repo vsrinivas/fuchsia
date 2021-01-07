@@ -5,7 +5,10 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
 
+#include <fuchsia/hardware/dsi/cpp/banjo.h>
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -29,10 +32,7 @@
 #include <optional>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/dsi.h>
-#include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

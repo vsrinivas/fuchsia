@@ -64,14 +64,14 @@ source_set("src") {
   ]
   deps = [
     ":ihda_controller_bind",
-    "//sdk/banjo/ddk.protocol.intelhda.codec",
+    "//sdk/banjo/fuchsia.hardware.intelhda.codec",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/dispatcher-pool",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",

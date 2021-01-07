@@ -5,14 +5,13 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_TEST_STUB_BLOCK_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_TEST_STUB_BLOCK_DEVICE_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <zircon/device/block.h>
 
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
-
-#include <ddk/protocol/block.h>
-#include <ddktl/protocol/block.h>
 
 constexpr uint32_t kBlockSize = 1024;
 constexpr uint64_t kBlockCount = 4096;

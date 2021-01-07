@@ -4,6 +4,7 @@
 
 #include "fragment.h"
 
+#include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -18,7 +19,6 @@
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 
-#include "ddk/protocol/goldfish/addressspace.h"
 #include "proxy-protocol.h"
 
 namespace fragment {

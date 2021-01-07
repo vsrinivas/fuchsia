@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ddk/protocol/power.h"
-
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/power/c/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <zircon/errors.h>
 
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/powerimpl.h>
 
 #include "src/devices/bus/drivers/platform/test/test-power-bind.h"
 

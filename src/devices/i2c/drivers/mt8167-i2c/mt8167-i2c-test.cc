@@ -4,9 +4,10 @@
 
 #include "mt8167-i2c.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace mt8167_i2c {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -20,7 +21,6 @@
 #include <ddk/metadata/test.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 

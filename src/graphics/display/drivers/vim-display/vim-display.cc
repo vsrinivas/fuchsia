@@ -5,6 +5,13 @@
 #include "vim-display.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/image-format/image_format.h>
@@ -24,13 +31,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/arch_ops.h>

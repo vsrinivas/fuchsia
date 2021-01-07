@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
 
+#include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <threads.h>
 
 #include <atomic>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/sdmmc.h>
 
 #include "sdio-controller-device.h"
 #include "sdmmc-block-device.h"
@@ -41,4 +41,4 @@ class SdmmcRootDevice : public SdmmcRootDeviceType {
 
 }  // namespace sdmmc
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_

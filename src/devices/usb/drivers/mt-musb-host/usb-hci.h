@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_HCI_H_
 #define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_HCI_H_
 
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
@@ -15,8 +17,6 @@
 #include <thread>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hci.h>
 
 #include "usb-device.h"
 #include "usb-root-hub.h"

@@ -33,8 +33,9 @@
  *
  *****************************************************************************/
 
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlan/info.h>
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"

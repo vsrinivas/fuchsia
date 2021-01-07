@@ -104,7 +104,7 @@ protocol Isp {
     ///                          MANUAL_GAIN.
     ///
     /// * See [`camera-sensor.banjo`] for more information on these params:
-    ///     //sdk/banjo/ddk.protocol.camera.sensor/camera-sensor.banjo
+    ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
     SetExposure(float32 integration_time, float32 analog_gain, float32 digital_gain)
         -> ();
 
@@ -114,7 +114,7 @@ protocol Isp {
     ///                  etc).
     ///
     /// * See [`camera-sensor.banjo`] for more information on this param:
-    ///     //sdk/banjo/ddk.protocol.camera.sensor/camera-sensor.banjo
+    ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
     SetSensorMode(uint32 mode) -> ();
 
     /// Selects the sensor test pattern mode.
@@ -122,7 +122,7 @@ protocol Isp {
     /// + request `mode` One of the predefined sensor test pattern modes.
     ///
     /// * See [`camera-sensor.banjo`] for more information on this param:
-    ///     //sdk/banjo/ddk.protocol.camera.sensor/camera-sensor.banjo
+    ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
     SetTestPatternMode(uint16 mode) -> ();
 
     /// Sets the bypass mode.

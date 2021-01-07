@@ -4,7 +4,11 @@
 
 #include "aml-uart.h"
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <fuchsia/hardware/serialimpl/async/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/event.h>
@@ -13,10 +17,6 @@
 
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/serial.h>
-#include <ddk/protocol/serialimpl/async.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

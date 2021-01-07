@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "fake-display.h"

@@ -17,8 +17,8 @@ bind_rules("goldfish-bind") {
 
 common_deps = [
   ":goldfish-bind",
-  "//sdk/banjo/ddk.protocol.acpi",
-  "//sdk/banjo/ddk.protocol.goldfish.pipe",
+  "//sdk/banjo/fuchsia.hardware.acpi",
+  "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",
@@ -75,7 +75,7 @@ test("goldfish-pipe-device-test") {
   ]
   deps = common_deps + [
            "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-           "//sdk/banjo/ddk.protocol.acpi:ddk.protocol.acpi_mock",
+           "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake_ddk",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",

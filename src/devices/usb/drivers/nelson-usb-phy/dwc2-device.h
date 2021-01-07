@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_DWC2_DEVICE_H_
 #define SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_DWC2_DEVICE_H_
 
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/phy.h>
 
 namespace nelson_usb_phy {
 

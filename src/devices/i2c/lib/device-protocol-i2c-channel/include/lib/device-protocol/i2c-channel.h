@@ -5,12 +5,11 @@
 #ifndef SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_H_
 #define SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_H_
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
-
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/i2c.h>
 
 namespace ddk {
 

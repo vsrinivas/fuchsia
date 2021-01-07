@@ -35,7 +35,7 @@
 
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 // TODO(29700): This will be deprecated in favor of the banjo ieee80211.h
 #include <wlan/protocol/ieee80211.h>

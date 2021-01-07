@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_MACHINA_MACHINA_H_
 #define SRC_DEVICES_BOARD_DRIVERS_MACHINA_MACHINA_H_
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/platform/bus.h>
 
 // BTI IDs for our devices
 enum {

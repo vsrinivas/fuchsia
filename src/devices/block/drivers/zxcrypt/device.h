@@ -5,6 +5,10 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <fuchsia/hardware/block/volume/cpp/banjo.h>
 #include <lib/zx/port.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -18,11 +22,7 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <ddk/device.h>
-#include <ddk/protocol/block.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
-#include <ddktl/protocol/block/volume.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
@@ -62,16 +62,16 @@ class Device final : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // ddk::BlockProtocol methods; see ddktl/protocol/block.h
+  // ddk::BlockProtocol methods; see fuchsia/hardware/block/cpp/banjo.h
   void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
   void BlockImplQueue(block_op_t* block, block_impl_queue_callback completion_cb, void* cookie)
       __TA_EXCLUDES(mtx_);
 
-  // ddk::PartitionProtocol methods; see ddktl/protocol/block/partition.h
+  // ddk::PartitionProtocol methods; see fuchsia/hardware/block/partition/cpp/banjo.h
   zx_status_t BlockPartitionGetGuid(guidtype_t guidtype, guid_t* out_guid);
   zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
-  // ddk:::VolumeProtocol methods; see ddktl/protocol/block/volume.h
+  // ddk:::VolumeProtocol methods; see fuchsia/hardware/block/volume/cpp/banjo.h
   zx_status_t BlockVolumeExtend(const slice_extent_t* extent);
   zx_status_t BlockVolumeShrink(const slice_extent_t* extent);
   zx_status_t BlockVolumeQuery(parent_volume_info_t* out_info);

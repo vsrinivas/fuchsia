@@ -39,7 +39,7 @@
 
 #include <stdint.h>
 
-#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 

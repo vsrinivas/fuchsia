@@ -4,6 +4,8 @@
 
 #include "aml-cpu.h"
 
+#include <fuchsia/hardware/clock/cpp/banjo-mock.h>
+#include <fuchsia/hardware/power/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fidl-helper.h>
 
 #include <memory>
@@ -11,8 +13,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <mock/ddktl/protocol/clock.h>
-#include <mock/ddktl/protocol/power.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 

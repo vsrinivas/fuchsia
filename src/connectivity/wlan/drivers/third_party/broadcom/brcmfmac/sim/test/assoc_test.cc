@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <zircon/errors.h>
 
-#include <ddk/protocol/wlanif.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>

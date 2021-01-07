@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <ddk/driver.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 

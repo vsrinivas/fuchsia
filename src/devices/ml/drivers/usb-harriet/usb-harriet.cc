@@ -4,10 +4,11 @@
 
 #include "usb-harriet.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/alloc_checker.h>
 
 namespace {

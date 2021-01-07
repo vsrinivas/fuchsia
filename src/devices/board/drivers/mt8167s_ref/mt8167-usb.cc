@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
 #include <zircon/device/usb-peripheral.h>
@@ -13,9 +16,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/clockimpl.h>
-#include <ddktl/protocol/power.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>
 #include <soc/mt8167/mt8167-clk.h>

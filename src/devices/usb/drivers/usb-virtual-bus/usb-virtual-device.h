@@ -5,9 +5,10 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_DEVICE_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_DEVICE_H_
 
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 
 namespace usb_virtual_bus {

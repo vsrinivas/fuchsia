@@ -37,7 +37,7 @@
 
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
@@ -239,7 +239,7 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_rx_agg_session_expired(struct timer_list* t) {
   struct iwl_mvm_baid_data* data = from_timer(data, t, session_timer);
   struct iwl_mvm_baid_data __rcu** rcu_ptr = data->rcu_ptr;
@@ -742,7 +742,7 @@ static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, int minq
   return -1;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_tvqm_enable_txq(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t tid,
                                    unsigned int timeout) {
   int queue, size = IWL_DEFAULT_QUEUE_SIZE;
@@ -873,7 +873,7 @@ bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int txq_id
   return inc_ssn;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_change_queue_tid(struct iwl_mvm* mvm, int queue) {
   struct iwl_scd_txq_cfg_cmd cmd = {
       .scd_queue = queue,
@@ -1195,7 +1195,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
 
   iwl_assert_lock_held(&mvm->mutex);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   if (iwl_mvm_has_new_tx_api(mvm)) {
     return iwl_mvm_sta_alloc_queue_tvqm(mvm, sta, ac, tid);
   }
@@ -1228,7 +1228,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
                                     IWL_MVM_DQA_MAX_DATA_QUEUE);
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(49529): check inactive Tx queue
   if (queue < 0) {
     /* try harder - perhaps kill an inactive queue */
@@ -1273,7 +1273,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
   IWL_DEBUG_TX_QUEUES(mvm, "Allocating %squeue #%d to sta %d on tid %d\n",
                       shared_queue ? "shared " : "", queue, mvmsta->sta_id, tid);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(49530): supports shared Tx queue
   if (shared_queue) {
     // TODO(49528): disable Tx aggregations
@@ -1289,7 +1289,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
 
   inc_ssn = iwl_mvm_enable_txq(mvm, mvmsta, queue, ssn, &cfg, wdg_timeout);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(49530): supports shared Tx queue
   /*
    * Mark queue as shared in transport if shared
@@ -1323,7 +1323,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
       goto out_err;
     }
 
-#if 0  // NEED_PORTING
+#if 0   // NEED_PORTING
     // TODO(49528): enable Tx aggregations
     /* If we need to re-enable aggregations... */
     if (queue_state == IWL_AGG_ON) {
@@ -1334,7 +1334,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
     }
 #endif  // NEEDS_PORTING
   } else {
-#if 0  // NEED_PORTING
+#if 0   // NEED_PORTING
     // TODO(49530): supports shared Tx queue
     /* Redirect queue, if needed */
     unsigned int wdg_timeout = iwl_mvm_get_wd_timeout(mvm, mvmsta->vif, false, false);
@@ -1349,7 +1349,7 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
   return ZX_OK;
 
 out_err:
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(49531): implement iwl_mvm_disable_txq()
   iwl_mvm_disable_txq(mvm, sta, queue, tid, 0);
 #endif  // NEEDS_PORTING
@@ -1357,7 +1357,7 @@ out_err:
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline uint8_t iwl_mvm_tid_to_ac_queue(int tid) {
   if (tid == IWL_MAX_TID_COUNT) {
     return IEEE80211_AC_VO; /* MGMT */
@@ -1556,7 +1556,7 @@ zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_
 
   mtx_init(&mvm_sta->lock, mtx_plain);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   /* if this is a HW restart re-alloc existing queues */
   if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
     struct iwl_mvm_int_sta tmp_sta = {
@@ -1592,7 +1592,7 @@ zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_
   mvm_sta->tt_tx_protection = false;
 #if 1  // NEEDS_PORTING
   mvm_sta->sta_type = IWL_STA_LINK;
-#else  // NEEDS_PORTING
+#else   // NEEDS_PORTING
   mvm_sta->sta_type = sta->tdls ? IWL_STA_TDLS_LINK : IWL_STA_LINK;
 #endif  // NEEDS_PORTING
 
@@ -1623,7 +1623,7 @@ zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_
 
   mvm_sta->agg_tids = 0;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   if (iwl_mvm_has_new_rx_api(mvm) && !test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
     int q;
 
@@ -1665,7 +1665,7 @@ zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_
 
   iwl_mvm_toggle_tx_ant(mvmvif->mvm, &mvm_sta->tx_ant);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 update_fw:
 #endif  // NEEDS_PORTING
 
@@ -2614,7 +2614,7 @@ const uint8_t tid_to_mac80211_ac[] = {
                                                                            which is set as AC_VO */
 };
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static const uint8_t tid_to_ucode_ac[] = {
     AC_BE, AC_BK, AC_BK, AC_BE, AC_VI, AC_VI, AC_VO, AC_VO,
 };
@@ -3632,7 +3632,7 @@ void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvms
   }
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                       bool disable) {
   struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);

@@ -4,6 +4,7 @@
 
 #include "aml-tsensor.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -15,7 +16,6 @@
 #include <cmath>
 
 #include <ddk/debug.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
 

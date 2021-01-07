@@ -5,6 +5,10 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/tee/cpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/handle.h>
@@ -21,10 +25,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/sysmem.h>
-#include <ddktl/protocol/tee.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "decoder_core.h"

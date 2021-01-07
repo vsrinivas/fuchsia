@@ -36,6 +36,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/task.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/condition.h>
@@ -44,7 +45,6 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"

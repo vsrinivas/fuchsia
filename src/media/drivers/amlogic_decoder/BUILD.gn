@@ -141,11 +141,11 @@ if (target_cpu == "arm64") {
     ]
     public_deps = [
       "h264:h264_parser",
-      "//sdk/banjo/ddk.protocol.amlogiccanvas",
-      "//sdk/banjo/ddk.protocol.composite",
-      "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/banjo/ddk.protocol.sysmem",
-      "//sdk/banjo/ddk.protocol.tee",
+      "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+      "//sdk/banjo/fuchsia.hardware.composite",
+      "//sdk/banjo/fuchsia.hardware.platform.device",
+      "//sdk/banjo/fuchsia.hardware.sysmem",
+      "//sdk/banjo/fuchsia.hardware.tee",
       "//sdk/fidl/fuchsia.tee",
       "//src/devices/bus/lib/device-protocol-pdev",
       "//src/devices/lib/driver",
@@ -174,7 +174,7 @@ if (target_cpu == "arm64") {
     deps = [
       ":test_support",
       "third_party/libvpx",
-      "//sdk/banjo/ddk.protocol.clock",
+      "//sdk/banjo/fuchsia.hardware.clock",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fdio",

@@ -295,7 +295,7 @@ the other half in
 [fragment-proxy.cc]: /src/devices/internal/drivers/fragment/fragment-proxy.cc
 [fragment.cc]: /src/devices/internal/drivers/fragment/fragment.cc
 [fragment]: /src/devices/internal/drivers/fragment/
-[composite.banjo]: /zircon/system/banjo/ddk.protocol.composite/composite.banjo
+[composite.banjo]: /zircon/system/banjo/fuchsia.hardware.composite/composite.banjo
 [driver.h]: /src/lib/ddk/include/ddk/driver.h
 [isolate]: driver-development.md#isolate-devices
 

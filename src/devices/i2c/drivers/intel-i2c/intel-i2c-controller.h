@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -21,8 +23,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2cimpl.h>
-#include <ddktl/protocol/pci.h>
 
 #include "intel-i2c-subordinate.h"
 
@@ -130,8 +130,7 @@ inline constexpr uint32_t kDataCmdCmdRead = 1;
 inline constexpr uint32_t kDataCmdDat = 0;
 
 class IntelI2cController;
-using IntelI2cControllerType =
-    ddk::Device<IntelI2cController, ddk::Initializable, ddk::Unbindable>;
+using IntelI2cControllerType = ddk::Device<IntelI2cController, ddk::Initializable, ddk::Unbindable>;
 
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {

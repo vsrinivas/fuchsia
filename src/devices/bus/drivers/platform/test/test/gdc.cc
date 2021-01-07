@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gdc.h>
 
 #include "src/devices/bus/drivers/platform/test/test-gdc-bind.h"
 #include "zircon/errors.h"

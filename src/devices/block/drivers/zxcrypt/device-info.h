@@ -5,15 +5,15 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <fuchsia/hardware/block/volume/cpp/banjo.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
-#include <ddktl/protocol/block/volume.h>
 #include <fbl/macros.h>
 #include <zxcrypt/ddk-volume.h>
 

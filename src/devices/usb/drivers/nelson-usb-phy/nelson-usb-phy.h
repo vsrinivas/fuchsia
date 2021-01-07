@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_NELSON_USB_PHY_H_
 #define SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_NELSON_USB_PHY_H_
 
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -12,7 +13,6 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>
 
 #include "dwc2-device.h"

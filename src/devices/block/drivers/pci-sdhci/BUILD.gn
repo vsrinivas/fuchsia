@@ -21,9 +21,9 @@ driver_module("pci-sdhci") {
   sources = [ "pci-sdhci.c" ]
   deps = [
     ":pci-sdhci-bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.sdhci",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.sdhci",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

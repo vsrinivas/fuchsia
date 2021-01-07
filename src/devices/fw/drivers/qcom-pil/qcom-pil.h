@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_FW_DRIVERS_QCOM_PIL_QCOM_PIL_H_
 #define SRC_DEVICES_FW_DRIVERS_QCOM_PIL_QCOM_PIL_H_
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <threads.h>
@@ -12,11 +15,8 @@
 #include <zircon/types.h>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/fw.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 
 namespace qcom_pil {

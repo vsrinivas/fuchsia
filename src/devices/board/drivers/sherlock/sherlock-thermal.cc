@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 
 #include <ddk/binding.h>
@@ -10,7 +11,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12b-clk.h>

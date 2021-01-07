@@ -5,6 +5,7 @@
 #include "gpio-light.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/ui/light/drivers/gpio-light/gpio-light-bind.h"

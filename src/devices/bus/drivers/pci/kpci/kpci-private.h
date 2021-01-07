@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_KPCI_KPCI_PRIVATE_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_KPCI_KPCI_PRIVATE_H_
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/pciroot.h>
-#include <ddk/protocol/platform/device.h>
 
 typedef struct kpci_device {
   zx_device_t* zxdev;

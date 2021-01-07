@@ -6,6 +6,10 @@
 #define SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
 
 #include <fuchsia/buttons/llcpp/fidl.h>
+#include <fuchsia/hardware/buttons/c/banjo.h>
+#include <fuchsia/hardware/buttons/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
@@ -22,12 +26,8 @@
 #include <vector>
 
 #include <ddk/metadata/buttons.h>
-#include <ddk/protocol/buttons.h>
-#include <ddk/protocol/gpio.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/buttons.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

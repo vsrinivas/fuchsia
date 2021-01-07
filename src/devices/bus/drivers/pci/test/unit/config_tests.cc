@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/status.h>
 #include <zircon/limits.h>
 
-#include <ddktl/protocol/pciroot.h>
 #include <zxtest/zxtest.h>
 
 #include "../../config.h"

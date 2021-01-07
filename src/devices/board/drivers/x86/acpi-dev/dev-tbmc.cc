@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
@@ -13,7 +14,6 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

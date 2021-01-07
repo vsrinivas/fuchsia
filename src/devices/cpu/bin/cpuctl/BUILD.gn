@@ -33,7 +33,7 @@ test("cpuctl-test-bin") {
   ]
   include_dirs = [ "." ]
   deps = [
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
     "//sdk/lib/fdio",

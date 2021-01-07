@@ -5,6 +5,9 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HID_HID_H_
 #define SRC_UI_INPUT_DRIVERS_HID_HID_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fuchsia/hardware/hiddevice/cpp/banjo.h>
+
 #include <array>
 #include <memory>
 #include <vector>
@@ -16,8 +19,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <hid-parser/item.h>

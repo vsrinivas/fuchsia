@@ -23,9 +23,9 @@ source_set("common") {
   ]
   public_deps = [
     ":usb-virtual-bus-bind",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.dci",
-    "//sdk/banjo/ddk.protocol.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.hci",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
@@ -71,9 +71,9 @@ driver_module("virtual-bus-tester") {
   deps = [
     ":fuchsia.hardware.usb.virtualbustest_llcpp",
     ":usb-virtual-bus-tester-bind",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
@@ -102,9 +102,9 @@ driver_module("virtual-bus-tester-function") {
   sources = [ "peripheral.cc" ]
   deps = [
     ":usb-virtual-bus-tester-function-bind",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.function",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
@@ -153,7 +153,7 @@ test("usb-virtual-bus-unit-test-bin") {
   output_name = "usb-virtual-bus-unit-test"
   deps = [
     ":common",
-    "//sdk/banjo/ddk.protocol.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.dci",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]

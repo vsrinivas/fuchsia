@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_H_
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 

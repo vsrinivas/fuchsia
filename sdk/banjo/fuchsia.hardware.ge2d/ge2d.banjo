@@ -1,0 +1,122 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.ge2d;
+using zx;
+using zircon.device.sysmem;
+using fuchsia.hardware.camera;
+using fuchsia.hardware.camerahwaccel;
+
+enum Ge2dRotation : uint8 {
+    ROTATION_0 = 0;
+    ROTATION_90 = 1;
+    ROTATION_180 = 2;
+    ROTATION_270 = 3;
+    MAX = 4;
+};
+
+struct ResizeInfo {
+    // TODO (jsasinowski): Determine if this is a src or dst rect & document accordingly.
+    fuchsia.hardware.camera.Rect crop; // Initially this will be the same size as the canvas.
+    // Rotation is needed for video playback
+    Ge2dRotation output_rotation;
+};
+
+struct WaterMarkInfo {
+    // Where to place WaterMark on the input image
+    uint32 loc_x;
+    uint32 loc_y;
+    // Watermark Image Format - must be R8G8B8A8
+    zircon.device.sysmem.ImageFormat_2 wm_image_format;
+    // Watermark VMO must have non-premultiplied alpha.
+    handle<vmo> watermark_vmo;
+    // The global alpha is multiplied with the input watermark per-pixel alpha to get the
+    // watermark's actual alpha value.
+    float32 global_alpha;
+};
+
+[Layout = "ddk-protocol"]
+protocol Ge2d {
+    // Registers the buffer collections and configuration which the GE2D will be using
+    // for this task and also the callback functions for a particular task and
+    // returns a task index.
+    // |input_buffer_collection| : Pool of VMOs as input to the GE2D.
+    // |output_buffer_collection| : Pool of VMOs as output to the GE2D.
+    // [info] : Resize Info
+    // [input_image_format] : Input Image format
+    // [output_image_format_table] : Output Image format
+    // [output_image_format_index] : Initialize with this output image format.
+    // |frame_callback| : Called when GE2D is done processing the frame.
+    // |res_callback|   : Called when GE2D is done changing the resoultion.
+    // |task_remove_callback| : Called when GE2D is done removing a task.
+    // @Returns: |task_index| : Task ID for this task.
+    //
+    // The resize task only supports dynamically changing the output resolution
+    // (not the input resolution). Since the input resolution never changes after
+    // Init, we just pass a single input ImageFormat.
+    InitTaskResize(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                   zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+                   ResizeInfo info,
+                   zircon.device.sysmem.ImageFormat_2 image_format,
+                   vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
+                   uint32 output_image_format_index,
+                   fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
+                   fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
+                   fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
+                        -> (zx.status s, uint32 task_index);
+
+    // The WaterMark task only supports changing the Input And Output resolution
+    // together. Moreover this operation changes both the input and output
+    // resolution, setting them to the same new resolution. Therefore we pass
+    // a single ImageFormat table, with a single ImageFormat table index, which
+    // applies to both input and output frames. Watermark info is per-resolution.
+    InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                      zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+                      vector<WaterMarkInfo> info,
+                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      uint32 image_format_index,
+                      fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
+                      fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
+                      fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
+                        -> (zx.status s, uint32 task_index);
+
+    // This watermark task modifies the images in the input buffer collection.  The output image
+    // index will be identical with the input image index, so the caller must manage the output
+    // buffer lifetimes.  Watermark info is per-resolution.
+    InitTaskInPlaceWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 buffer_collection,
+                      vector<WaterMarkInfo> info,
+                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      uint32 image_format_index,
+                      fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
+                      fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
+                      fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
+                        -> (zx.status s, uint32 task_index);
+
+    // De-registers the task.
+    RemoveTask(uint32 task_index);
+
+    // Processes the frame at |input_buffer_index| within |input_buffer_collection|
+    // in the task corresponding to |task_index| and stores the ouput in the
+    // |output_buffer_collection| after applying the correct configuration.
+    // After processing we call the callback registered for this task with the
+    // output buffer index. |capture_timestamp| is forwarded to derived frames.
+    ProcessFrame(uint32 task_index, uint32 input_buffer_index, uint64 capture_timestamp) -> (zx.status s);
+
+    // Releases the frame |buffer_index| from the |output_buffer_collection| to be
+    // used again by the GE2D driver again. Not valid for in-place watermark tasks.
+    ReleaseFrame(uint32 task_index, uint32 buffer_index);
+
+    // Set the output resolution. This call sets the resolution on all the output canvas
+    // ids, for the specified task. This operation is queued to the worker thread to be
+    // performed in sequence.
+    SetOutputResolution(uint32 task_index, uint32 new_output_image_format_index) -> (zx.status s);
+
+    // Similar to SetOutputResolution, this call sets the input and output resolution on all
+    // input and output canvas ids.
+    SetInputAndOutputResolution(uint32 task_index, uint32 new_image_format_index) ->  (zx.status s);
+
+    // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
+    // the camera controller is notified by Smart Framing to crop and resize.
+    SetCropRect(uint32 task_index, fuchsia.hardware.camera.Rect crop);
+};

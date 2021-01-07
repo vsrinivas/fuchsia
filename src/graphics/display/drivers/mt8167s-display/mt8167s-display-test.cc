@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "mt8167s-display.h"
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -14,7 +15,6 @@
 
 #include <memory>
 
-#include <ddktl/protocol/platform/device.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

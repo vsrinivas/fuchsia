@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_DRIVERS_TEST_UTILS_DDK_MOCK_OPERATORS_H_
 #define SRC_CAMERA_DRIVERS_TEST_UTILS_DDK_MOCK_OPERATORS_H_
 
-#include <ddk/protocol/camera/sensor.h>
+#include <fuchsia/hardware/camera/sensor/c/banjo.h>
 
 // The following equality operators are necessary for ddk mocks.
 

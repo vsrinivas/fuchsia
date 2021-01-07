@@ -4,6 +4,8 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -15,8 +17,6 @@
 #include <zircon/device/sysmem.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/platform/device.h>
 #include <zxtest/zxtest.h>
 
 #include "../buffer_collection.h"

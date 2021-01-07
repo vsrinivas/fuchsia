@@ -29,8 +29,8 @@ source_set("common") {
   sources = [ "serial.cc" ]
   public_deps = [
     ":serial_bind",
-    "//sdk/banjo/ddk.protocol.serial",
-    "//sdk/banjo/ddk.protocol.serialimpl",
+    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/fuchsia.hardware.serialimpl",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//src/lib/ddk",

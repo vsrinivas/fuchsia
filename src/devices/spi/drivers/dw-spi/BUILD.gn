@@ -23,9 +23,9 @@ driver_module("dw-spi") {
   sources = [ "dw-spi.cc" ]
   deps = [
     ":dw_spi-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",

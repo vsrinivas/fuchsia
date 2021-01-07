@@ -4,14 +4,14 @@
 
 #include "zircon_platform_device.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/composite.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -125,7 +125,7 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
     if (device_get_protocol(zx_device, ZX_PROTOCOL_COMPOSITE, &composite) == ZX_OK) {
       zx_device_t* pdev_device;
       bool found =
-          composite_get_fragment(&composite, "ddk.protocol.platform.device.PDev", &pdev_device);
+          composite_get_fragment(&composite, "fuchsia.hardware.platform.device.PDev", &pdev_device);
       if (found) {
         status = device_get_protocol(pdev_device, ZX_PROTOCOL_PDEV, &pdev);
       }

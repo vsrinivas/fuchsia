@@ -52,8 +52,8 @@ driver_module("test-board") {
   ]
   deps = [
     ":test-board-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -79,10 +79,10 @@ driver_module("test-gpio") {
   sources = [ "test/gpio.cc" ]
   deps = [
     ":test-gpio-bind",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpioimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -105,10 +105,10 @@ driver_module("test-power") {
   sources = [ "test/power.cc" ]
   deps = [
     ":test-power-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.power",
-    "//sdk/banjo/ddk.protocol.powerimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.power",
+    "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -131,9 +131,9 @@ driver_module("test-goldfish-address-space") {
   sources = [ "test/goldfish_address_space.cc" ]
   deps = [
     ":test-goldfish-address-space-bind",
-    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -156,9 +156,9 @@ driver_module("test-goldfish-pipe") {
   sources = [ "test/goldfish_pipe.cc" ]
   deps = [
     ":test-goldfish-pipe-bind",
-    "//sdk/banjo/ddk.protocol.goldfish.pipe",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -181,10 +181,10 @@ driver_module("test-clock") {
   sources = [ "test/clock.cc" ]
   deps = [
     ":test-clock-bind",
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.clockimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -207,10 +207,10 @@ driver_module("test-i2c") {
   sources = [ "test/i2c.cc" ]
   deps = [
     ":test-i2c-bind",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.i2cimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -233,10 +233,10 @@ driver_module("test-spi") {
   sources = [ "test/spi.cc" ]
   deps = [
     ":test-spi-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.spi",
-    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.spi",
+    "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -259,9 +259,9 @@ driver_module("test-pwm") {
   sources = [ "test/pwm.cc" ]
   deps = [
     ":test-pwm-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.pwm",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.pwm",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -284,9 +284,9 @@ driver_module("test-rpmb") {
   sources = [ "test/rpmb.cc" ]
   deps = [
     ":test-rpmb-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.rpmb",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.rpmb",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -309,9 +309,9 @@ driver_module("test-vreg") {
   sources = [ "test/vreg.cc" ]
   deps = [
     ":test-vreg-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.vreg",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.vreg",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
@@ -335,18 +335,18 @@ driver_module("test-composite") {
   sources = [ "test/composite.c" ]
   deps = [
     ":test-composite-bind",
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
-    "//sdk/banjo/ddk.protocol.goldfish.pipe",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.power",
-    "//sdk/banjo/ddk.protocol.pwm",
-    "//sdk/banjo/ddk.protocol.rpmb",
-    "//sdk/banjo/ddk.protocol.spi",
-    "//sdk/banjo/ddk.protocol.vreg",
+    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.power",
+    "//sdk/banjo/fuchsia.hardware.pwm",
+    "//sdk/banjo/fuchsia.hardware.rpmb",
+    "//sdk/banjo/fuchsia.hardware.spi",
+    "//sdk/banjo/fuchsia.hardware.vreg",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -391,7 +391,7 @@ foreach(driver, simple_drivers) {
     sources = [ "test/$driver.c" ]
     deps = [
       ":test-${driver}-bind",
-      "//sdk/banjo/ddk.protocol.platform.device",
+      "//sdk/banjo/fuchsia.hardware.platform.device",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
 
@@ -450,7 +450,7 @@ driver_module("test-bti-board") {
   sources = [ "test-bti-board.cc" ]
   deps = [
     ":test-bti-board-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
 
@@ -472,7 +472,7 @@ driver_module("test-bti") {
   deps = [
     ":fuchsia.hardware.btitest_llcpp",
     ":test-bti-bind",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

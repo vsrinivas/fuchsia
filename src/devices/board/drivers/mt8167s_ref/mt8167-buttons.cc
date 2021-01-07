@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"

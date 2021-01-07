@@ -36,10 +36,10 @@ driver_module("control_driver") {
 
   deps = [
     ":goldfish_control_composite-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
-    "//sdk/banjo/ddk.protocol.goldfish.control",
-    "//sdk/banjo/ddk.protocol.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+    "//sdk/banjo/fuchsia.hardware.goldfish.control",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

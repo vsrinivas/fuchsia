@@ -4,6 +4,11 @@
 
 #include "usb-hub.h"
 
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hub/c/banjo.h>
+#include <fuchsia/hardware/usb/hub/cpp/banjo.h>
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/executor.h>
@@ -32,12 +37,7 @@
 #include <thread>
 #include <variant>
 
-#include <ddk/protocol/usb/hub.h>
-#include <ddk/protocol/usb/request.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hub.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -14,9 +16,7 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/mutex.h>
 
 #include "mtk-thermal-reg.h"

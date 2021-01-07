@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_PL061_INCLUDE_GPIO_PL061_PL061_H_
 #define SRC_DEVICES_GPIO_DRIVERS_PL061_INCLUDE_GPIO_PL061_PL061_H_
 
+#include <fuchsia/hardware/gpioimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/gpioimpl.h>
-#include <ddk/protocol/platform/device.h>
 
 typedef struct {
   list_node_t node;

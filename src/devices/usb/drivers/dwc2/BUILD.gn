@@ -14,12 +14,12 @@ driver_module("dwc2") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dwc2.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.dci",
-    "//sdk/banjo/ddk.protocol.usb.phy",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.phy",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -49,12 +49,12 @@ test("dwc2-test-bin") {
   ]
   output_name = "dwc2-test"
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.dci",
-    "//sdk/banjo/ddk.protocol.usb.phy",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.dci",
+    "//sdk/banjo/fuchsia.hardware.usb.phy",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",

@@ -4,6 +4,9 @@
 
 #include "usb-peripheral.h"
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/usb/dci/c/banjo.h>
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -20,10 +23,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/usb/dci.h>
 #include <ddk/usb-peripheral-config.h>
-#include <ddktl/protocol/usb/dci.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

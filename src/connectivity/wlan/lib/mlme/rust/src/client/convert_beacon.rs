@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     wlan_common::{
         channel::derive_channel,
         ie,
@@ -81,7 +81,7 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssTypes {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, banjo_ddk_protocol_wlan_info as banjo_wlan_info,
+        super::*, banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
         fidl_fuchsia_wlan_common as fidl_common,
     };
 

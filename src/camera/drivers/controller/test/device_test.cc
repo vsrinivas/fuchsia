@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/camera/cpp/fidl.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <ddktl/protocol/sysmem.h>
 
 #include "src/camera/drivers/controller/controller_device.h"
 #include "src/camera/drivers/controller/controller_protocol.h"

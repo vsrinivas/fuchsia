@@ -5,14 +5,14 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_ASTRO_ASTRO_H_
 #define SRC_DEVICES_BOARD_DRIVERS_ASTRO_ASTRO_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/iommu/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 

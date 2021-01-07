@@ -38,6 +38,7 @@ rustc_binary("banjo_bin") {
     "src/backends/ast.rs",
     "src/backends/c.rs",
     "src/backends/cpp.rs",
+    "src/backends/legacy.rs",
     "src/backends/mod.rs",
     "src/backends/rust.rs",
     "src/backends/templates/rust/body.rs",
@@ -74,6 +75,9 @@ rustc_binary("banjo_bin") {
     "src/backends/templates/c/body.h",
     "src/backends/templates/cpp/internal_static_assert.h",
     "src/backends/templates/cpp/internal_decl.h",
+    "src/backends/templates/legacy/ddk.h",
+    "src/backends/templates/legacy/ddktl.h",
+    "src/backends/templates/legacy/ddktl_mock.h",
   ]
 }
 
@@ -98,6 +102,7 @@ rustc_library("banjo_lib") {
     "src/backends/ast.rs",
     "src/backends/c.rs",
     "src/backends/cpp.rs",
+    "src/backends/legacy.rs",
     "src/backends/mod.rs",
     "src/backends/rust.rs",
     "src/backends/templates/rust/body.rs",
@@ -133,6 +138,9 @@ rustc_library("banjo_lib") {
     "src/backends/templates/cpp/protocol.h",
     "src/backends/templates/cpp/proto_transform.h",
     "src/backends/templates/c/callback.h",
+    "src/backends/templates/legacy/ddk.h",
+    "src/backends/templates/legacy/ddktl.h",
+    "src/backends/templates/legacy/ddktl_mock.h",
   ]
 }
 

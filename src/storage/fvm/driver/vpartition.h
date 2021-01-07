@@ -5,6 +5,9 @@
 #ifndef SRC_STORAGE_FVM_DRIVER_VPARTITION_H_
 #define SRC_STORAGE_FVM_DRIVER_VPARTITION_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <fuchsia/hardware/block/volume/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -13,9 +16,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
-#include <ddktl/protocol/block/volume.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 

@@ -49,7 +49,7 @@ test("libhwreg-i2c") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hwreg-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/lib/fdio",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/lib/ddk",

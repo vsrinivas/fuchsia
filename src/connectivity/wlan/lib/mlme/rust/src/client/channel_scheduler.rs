@@ -10,7 +10,7 @@ use {
         },
         timer::EventId,
     },
-    banjo_ddk_protocol_wlan_info::*,
+    banjo_fuchsia_hardware_wlan_info::*,
     fuchsia_zircon as zx,
     log::{debug, error},
     std::collections::VecDeque,

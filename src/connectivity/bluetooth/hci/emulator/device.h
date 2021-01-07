@@ -7,6 +7,8 @@
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -20,8 +22,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/test.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/hci/emulator/peer.h"

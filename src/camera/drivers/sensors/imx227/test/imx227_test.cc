@@ -5,12 +5,12 @@
 #include "src/camera/drivers/sensors/imx227/imx227.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/clock/cpp/banjo-mock.h>
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/mipicsi/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <mock/ddktl/protocol/clock.h>
-#include <mock/ddktl/protocol/gpio.h>
-#include <mock/ddktl/protocol/mipicsi.h>
 #include <zxtest/zxtest.h>
 
 #include "src/camera/drivers/sensors/imx227/constants.h"

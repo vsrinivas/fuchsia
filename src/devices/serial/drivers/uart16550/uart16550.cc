@@ -4,7 +4,9 @@
 
 #include "uart16550.h"
 
+#include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <fuchsia/hardware/serialimpl/c/banjo.h>
 #include <lib/uart/ns8250.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -14,8 +16,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/serial.h>
-#include <ddk/protocol/serialimpl.h>
 #include <hw/inout.h>
 
 // The register types and constants are defined in the uart library.

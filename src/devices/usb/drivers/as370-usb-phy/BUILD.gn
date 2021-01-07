@@ -14,7 +14,7 @@ driver_module("as370-usb-phy") {
   }
   sources = [ "as370-usb-phy.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",

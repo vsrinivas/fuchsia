@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 
-#include <ddktl/protocol/pci.h>
 #include <zxtest/zxtest.h>
 
 namespace {

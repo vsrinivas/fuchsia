@@ -5,6 +5,8 @@
 #include "sdmmc-device.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/sdio/c/banjo.h>
+#include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -12,8 +14,6 @@
 #include <string.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/sdio.h>
-#include <ddk/protocol/sdmmc.h>
 #include <hw/sdio.h>
 #include <pretty/hexdump.h>
 

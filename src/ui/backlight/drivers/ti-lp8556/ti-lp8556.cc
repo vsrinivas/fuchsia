@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "ti-lp8556.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
 
@@ -12,7 +13,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

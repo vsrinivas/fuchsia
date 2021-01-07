@@ -5,12 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <cstdint>
 #include <string>
 
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlan/info.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs);
 bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs);

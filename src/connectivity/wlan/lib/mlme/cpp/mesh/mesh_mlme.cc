@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
 #include <wlan/mlme/device_caps.h>

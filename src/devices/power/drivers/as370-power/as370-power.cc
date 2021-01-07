@@ -4,13 +4,13 @@
 
 #include "as370-power.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-power.h>
 

@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/banjo/banjo.gni")
+
+banjo("fuchsia.hardware.usb.bus") {
+  sources = [ "usb-bus.banjo" ]
+  deps = [
+    "//sdk/banjo/ddk.driver",
+    "//sdk/banjo/fuchsia.hardware.usb.hub",
+    "//sdk/banjo/zircon.hw.usb",
+    "//sdk/banjo/zircon.hw.usb.hub",
+  ]
+}

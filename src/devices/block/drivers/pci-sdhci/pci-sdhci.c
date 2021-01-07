@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/sdhci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
@@ -13,8 +15,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sdhci.h>
 
 #include "src/devices/block/drivers/pci-sdhci/pci-sdhci-bind.h"
 

@@ -4,6 +4,7 @@
 
 #include "aml-light.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <string.h>
 
 #include <cmath>
@@ -12,7 +13,6 @@
 #include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/ui/light/drivers/aml-light/aml_light_bind.h"

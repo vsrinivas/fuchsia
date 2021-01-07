@@ -1,10 +1,12 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
+group("ddk.protocol.camera.sensor") {
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.camera.sensor" ]
+}
 
-banjo("ddk.protocol.camera.sensor") {
-  sources = [ "camera-sensor.banjo" ]
-  public_deps = [ "//sdk/banjo/ddk.protocol.camera" ]
+group("ddk.protocol.camera.sensor_mock") {
+  testonly = true
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.camera.sensor:fuchsia.hardware.camera.sensor_mock" ]
 }

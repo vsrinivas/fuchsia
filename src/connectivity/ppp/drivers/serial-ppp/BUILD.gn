@@ -28,8 +28,8 @@ source_set("driver") {
   include_dirs = [ "//src/connectivity/ppp" ]
 
   public_deps = [
-    "//sdk/banjo/ddk.protocol.network.device",
-    "//sdk/banjo/ddk.protocol.serial",
+    "//sdk/banjo/fuchsia.hardware.network.device",
+    "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/connectivity/ppp/lib/common",
     "//src/connectivity/ppp/lib/hdlc:frame",

@@ -19,8 +19,8 @@ driver_module("intel-serialio") {
   ]
   include_dirs = [ "intel-serialio-include" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.serial",
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.serial",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

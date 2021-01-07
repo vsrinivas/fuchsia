@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -10,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/addressspace.h>
 
 #include "src/devices/bus/drivers/platform/test/test-goldfish-address-space-bind.h"
 
@@ -36,7 +36,7 @@ class TestGoldfishAddressSpaceDevice
   // Methods required by the ddk mixins
   void DdkRelease();
 
-  // |ddk.protocol.goldfish.addressspace.GoldfishAddressSpace|
+  // |fuchsia.hardware.goldfish.addressspace.GoldfishAddressSpace|
   zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
                                                   zx::channel request);
 };

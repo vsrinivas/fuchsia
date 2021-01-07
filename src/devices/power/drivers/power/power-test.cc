@@ -4,15 +4,14 @@
 
 #include "power.h"
 
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/c/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <memory>
 
 #include <zxtest/zxtest.h>
-
-#include "ddk/protocol/powerimpl.h"
-#include "ddktl/protocol/power.h"
-#include "ddktl/protocol/powerimpl.h"
 
 namespace power {
 

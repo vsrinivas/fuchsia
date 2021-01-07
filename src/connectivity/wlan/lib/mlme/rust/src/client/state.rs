@@ -18,7 +18,7 @@ use {
         key::KeyConfig,
         timer::*,
     },
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
     static_assertions::assert_eq_size,
@@ -1233,7 +1233,8 @@ mod tests {
             device::{Device, FakeDevice},
         },
         akm::AkmAlgorithm,
-        banjo_ddk_protocol_wlan_info as banjo_wlan_info, fidl_fuchsia_wlan_common as fidl_common,
+        banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+        fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::{
             assert_variant,
@@ -2781,7 +2782,7 @@ mod tests {
         let assoc_ctx = m.fake_device.assocs.get(&BSSID.0).unwrap();
 
         assert_eq!(assoc_ctx.aid, 0);
-        assert_eq!(assoc_ctx.phy, banjo_ddk_protocol_wlan_info::WlanPhyType::VHT);
+        assert_eq!(assoc_ctx.phy, banjo_fuchsia_hardware_wlan_info::WlanPhyType::VHT);
         assert_eq!(assoc_ctx.qos, true);
         assert_eq!(assoc_ctx.rates_cnt, 6);
         assert_eq!(assoc_ctx.rates[..6], [125, 126, 127, 128, 129, 130]);

@@ -4,6 +4,7 @@
 
 #include "driver.h"
 
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
@@ -12,7 +13,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 
 #include "phy-device.h"
 #include "src/connectivity/wlan/drivers/testing/wlanphy_test_bind.h"

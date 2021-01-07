@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PROXY_PROTOCOL_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PROXY_PROTOCOL_H_
 
-#include <ddk/protocol/platform/device.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 
 namespace platform_bus {
 

@@ -4,6 +4,7 @@
 
 #include "client.h"
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -27,7 +28,6 @@
 #include <vector>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/display/controller.h>
 #include <ddk/trace/event.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

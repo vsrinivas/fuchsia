@@ -4,14 +4,14 @@
 
 #include "usb-interface.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/composite/c/banjo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 
 #include "usb-composite.h"

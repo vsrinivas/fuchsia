@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -17,7 +18,6 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
 #include <soc/aml-common/aml-pdm-audio.h>
 
 namespace audio::aml_g12 {

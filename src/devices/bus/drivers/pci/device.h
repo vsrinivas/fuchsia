@@ -5,6 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <sys/types.h>
@@ -15,7 +16,6 @@
 #include <limits>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>

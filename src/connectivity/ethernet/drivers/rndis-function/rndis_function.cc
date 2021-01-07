@@ -4,13 +4,13 @@
 
 #include "src/connectivity/ethernet/drivers/rndis-function/rndis_function.h"
 
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddktl/protocol/usb/function.h>
 #include <usb/request-cpp.h>
 
 #include "src/connectivity/ethernet/drivers/rndis-function/rndis_function_bind.h"

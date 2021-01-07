@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MIPI_DSI_MIPI_DSI_H_
+#define LIB_MIPI_DSI_MIPI_DSI_H_
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
+#include <fuchsia/hardware/dsiimpl/c/banjo.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,8 +14,6 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/dsiimpl.h>
 
 // Assigned Virtual Channel ID
 // TODO(payamm): Will need to generate and maintain VCID for multi-display
@@ -83,3 +83,5 @@ class MipiDsi {
 };
 
 }  // namespace mipi_dsi
+
+#endif  // LIB_MIPI_DSI_MIPI_DSI_H_

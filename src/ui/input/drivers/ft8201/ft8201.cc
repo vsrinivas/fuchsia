@@ -5,6 +5,7 @@
 #include "ft8201.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
@@ -12,7 +13,6 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/auto_lock.h>
 
 #include "src/ui/input/drivers/ft8201/ft8201-bind.h"

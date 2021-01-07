@@ -4,6 +4,8 @@
 
 #include "aml-uart.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
@@ -17,9 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

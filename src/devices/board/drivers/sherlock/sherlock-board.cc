@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+
 #include <ddk/debug.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-t931/t931-gpio.h>
 
 #include "sherlock.h"

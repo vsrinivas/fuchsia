@@ -4,6 +4,9 @@
 
 #include "fake-display.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format/image_format.h>
@@ -20,10 +23,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/display/capture.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

@@ -26,7 +26,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
 
@@ -78,7 +78,7 @@ typedef char* acpi_string;
 #define __force
 #define __must_check __attribute__((warn_unused_result))
 #define __packed __PACKED
-#define __rcu  // NEEDS_PORTING
+#define __rcu                         // NEEDS_PORTING
 #define ____cacheline_aligned_in_smp  // NEEDS_PORTING
 
 // NEEDS_PORTING: Need to check if 'x' is static array.

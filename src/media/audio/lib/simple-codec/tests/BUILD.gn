@@ -9,7 +9,7 @@ test("simple-codec-unittest-bin") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.audio",
+    "//sdk/banjo/fuchsia.hardware.audio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",

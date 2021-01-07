@@ -7,6 +7,11 @@
 
 #if __cplusplus
 
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+#include <fuchsia/hardware/intelgpucore/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
@@ -15,11 +20,6 @@
 #include <optional>
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/intelgpucore.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sysmem.h>
-#include <ddktl/protocol/display/controller.h>
 #include <fbl/vector.h>
 #include <hw/pci.h>
 

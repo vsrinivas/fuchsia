@@ -5,6 +5,7 @@
 #include "src/devices/usb/drivers/usb-virtual-bus/host.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

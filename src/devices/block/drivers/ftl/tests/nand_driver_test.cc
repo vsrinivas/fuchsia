@@ -4,12 +4,13 @@
 
 #include "nand_driver.h"
 
+#include <fuchsia/hardware/badblock/cpp/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
+
 #include <memory>
 #include <vector>
 
 #include <ddk/driver.h>
-#include <ddktl/protocol/badblock.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

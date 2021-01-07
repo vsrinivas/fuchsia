@@ -4,6 +4,7 @@
 
 #include "aml-thermal.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
@@ -12,7 +13,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
 
@@ -94,8 +94,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio, fan1_gpio, scpi,
-                                              sensor_id, std::move(port), scpi_dev);
+  auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio, fan1_gpio, scpi, sensor_id,
+                                              std::move(port), scpi_dev);
 
   status = thermal->DdkAdd("vim-thermal");
   if (status != ZX_OK) {

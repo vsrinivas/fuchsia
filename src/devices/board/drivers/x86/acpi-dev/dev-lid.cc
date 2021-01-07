@@ -4,6 +4,7 @@
 
 #include "dev-lid.h"
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "audio-stream-in.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/clock.h>
 #include <limits.h>
 
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
 namespace audio {

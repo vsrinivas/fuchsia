@@ -12,6 +12,13 @@
 #endif
 
 #include <fuchsia/hardware/camera/c/fidl.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
+#include <fuchsia/hardware/isp/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -20,15 +27,8 @@
 #include <lib/fidl-utils/bind.h>
 #include <zircon/fidl.h>
 
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gdc.h>
-#include <ddktl/protocol/ge2d.h>
-#include <ddktl/protocol/isp.h>
-#include <ddktl/protocol/sysmem.h>
 
 #include "src/camera/drivers/controller/controller_protocol.h"
 

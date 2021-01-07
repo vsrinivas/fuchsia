@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_BACKEND_H_
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_BACKEND_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/port.h>
@@ -11,7 +12,6 @@
 
 #include <vector>
 
-#include <ddk/protocol/pci.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
 

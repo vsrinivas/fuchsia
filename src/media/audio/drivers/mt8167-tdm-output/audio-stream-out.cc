@@ -4,6 +4,7 @@
 
 #include "audio-stream-out.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/clock.h>
 
 #include <optional>
@@ -15,7 +16,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 

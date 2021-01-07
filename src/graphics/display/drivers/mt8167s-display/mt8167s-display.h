@@ -5,6 +5,12 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/display-panel.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -19,13 +25,7 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/controller.h>
-#include <ddktl/protocol/dsiimpl.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/power.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>

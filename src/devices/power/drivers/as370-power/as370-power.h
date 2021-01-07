@@ -5,15 +5,15 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_AS370_POWER_AS370_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_AS370_POWER_AS370_POWER_H_
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <threads.h>
 
 #include <array>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <soc/as370/as370-power-regs.h>
 #include <soc/as370/as370-power.h>
 

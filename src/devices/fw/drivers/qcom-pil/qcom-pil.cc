@@ -5,6 +5,7 @@
 #include "qcom-pil.h"
 
 #include <elf.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>

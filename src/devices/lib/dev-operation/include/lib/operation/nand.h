@@ -5,11 +5,10 @@
 #ifndef SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
 #define SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
 
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/operation/operation.h>
 
 #include <memory>
-
-#include <ddk/protocol/nand.h>
 
 // namespace nand is used because this library will inevitably move to
 // dev/lib/nand. In an effort to reduce dependencies (make doesn't support

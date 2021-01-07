@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
 
+#include <fuchsia/hardware/sdhci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/sdhci.h>
 
 namespace sdhci {
 
@@ -50,4 +50,4 @@ class Msm8x53Sdhci : public DeviceType,
 
 }  // namespace sdhci
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_

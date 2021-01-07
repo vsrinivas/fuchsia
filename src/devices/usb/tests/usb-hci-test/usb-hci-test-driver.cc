@@ -4,6 +4,7 @@
 
 #include "usb-hci-test-driver.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -16,7 +17,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <usb/request-cpp.h>
@@ -200,30 +200,31 @@ void HciTest::TestThread(RunCompleter::Async completer) {
   // We batch 5 1 millisecond transfers at a time.
   for (size_t i = 0; i < 8 * 5; i++) {
     std::optional<Request> request;
-    Request::Alloc(&request, isoch_in_.wMaxPacketSize, isoch_in_.bEndpointAddress, parent_size,
-                   [&isoch_packets, &clock_val, &dropped_packets, &timestamp, &running,
-                    this](Request request) {
-                     if (!running) {
-                       return;
-                     }
-                     isoch_packets++;
-                     if (clock_val == 0) {
-                       __UNUSED auto copy_result = request.CopyFrom(&clock_val, sizeof(clock_val), 0);
-                     } else {
-                       uint64_t device_val = 0;
-                       __UNUSED auto copy_result = request.CopyFrom(&device_val, sizeof(device_val), 0);
-                       if (clock_val > device_val) {
-                         return;
-                       }
-                       if (clock_val + 1 != device_val) {
-                         dropped_packets = device_val - clock_val;
-                       }
-                       clock_val = device_val;
-                     }
-                     request.request()->header.frame = timestamp / 8;
-                     timestamp++;
-                     Request::Queue(std::move(request), usb_);
-                   });
+    Request::Alloc(
+        &request, isoch_in_.wMaxPacketSize, isoch_in_.bEndpointAddress, parent_size,
+        [&isoch_packets, &clock_val, &dropped_packets, &timestamp, &running,
+         this](Request request) {
+          if (!running) {
+            return;
+          }
+          isoch_packets++;
+          if (clock_val == 0) {
+            __UNUSED auto copy_result = request.CopyFrom(&clock_val, sizeof(clock_val), 0);
+          } else {
+            uint64_t device_val = 0;
+            __UNUSED auto copy_result = request.CopyFrom(&device_val, sizeof(device_val), 0);
+            if (clock_val > device_val) {
+              return;
+            }
+            if (clock_val + 1 != device_val) {
+              dropped_packets = device_val - clock_val;
+            }
+            clock_val = device_val;
+          }
+          request.request()->header.frame = timestamp / 8;
+          timestamp++;
+          Request::Queue(std::move(request), usb_);
+        });
     (*request).request()->header.frame = timestamp / 8;
     timestamp++;
     request->request()->direct = true;

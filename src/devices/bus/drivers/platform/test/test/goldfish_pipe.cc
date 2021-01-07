@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/zx/event.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 
 #include "src/devices/bus/drivers/platform/test/test-goldfish-pipe-bind.h"
 
@@ -62,7 +62,7 @@ class TestGoldfishPipeDevice
   // Methods required by the ddk mixins
   void DdkRelease();
 
-  // |ddk.protocol.goldfish.pipe.GoldfishPipe|
+  // |fuchsia.hardware.goldfish.pipe.GoldfishPipe|
   zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo);
   zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event);
   void GoldfishPipeDestroy(int32_t id);

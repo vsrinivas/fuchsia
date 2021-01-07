@@ -23,6 +23,7 @@ mod parser;
 enum BackendName {
     C,
     Cpp(backends::CppSubtype),
+    Legacy(backends::LegacySubtype),
     Rust,
     Json,
     Ast,
@@ -37,6 +38,9 @@ impl FromStr for BackendName {
             "cpp" => Ok(BackendName::Cpp(backends::CppSubtype::Base)),
             "cpp_mock" => Ok(BackendName::Cpp(backends::CppSubtype::Mock)),
             "cpp_i" => Ok(BackendName::Cpp(backends::CppSubtype::Internal)),
+            "ddk" => Ok(BackendName::Legacy(backends::LegacySubtype::Ddk)),
+            "ddktl" => Ok(BackendName::Legacy(backends::LegacySubtype::Ddktl)),
+            "ddktl_mock" => Ok(BackendName::Legacy(backends::LegacySubtype::Mock)),
             "rust" => Ok(BackendName::Rust),
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
@@ -169,6 +173,7 @@ fn main() -> Result<(), Error> {
     let mut backend: Box<dyn Backend<'_, _>> = match opt.backend {
         BackendName::C => Box::new(CBackend::new(&mut output)),
         BackendName::Cpp(subtype) => Box::new(CppBackend::new(&mut output, subtype)),
+        BackendName::Legacy(subtype) => Box::new(LegacyBackend::new(&mut output, subtype)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
         BackendName::Rust => Box::new(RustBackend::new(&mut output)),
         e => {

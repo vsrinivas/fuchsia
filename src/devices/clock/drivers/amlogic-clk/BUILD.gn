@@ -22,9 +22,9 @@ driver_module("amlogic-clk") {
     "aml-fclk-rates.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clockimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -54,9 +54,9 @@ test("amlogic-clk-test-bin") {
     "aml-fclk-rates.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clockimpl",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.clockimpl",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",

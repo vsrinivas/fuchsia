@@ -5,7 +5,14 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_BASE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TESTS_BASE_H_
 
+#include <fuchsia/hardware/composite/c/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/bti.h>
 
@@ -13,14 +20,7 @@
 #include <vector>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

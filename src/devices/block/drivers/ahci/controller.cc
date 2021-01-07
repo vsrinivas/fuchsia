@@ -4,6 +4,7 @@
 
 #include "controller.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/clock.h>
@@ -24,7 +25,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/pci.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

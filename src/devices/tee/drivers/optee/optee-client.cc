@@ -5,6 +5,7 @@
 #include "optee-client.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/tee/manager/llcpp/fidl.h>
@@ -31,7 +32,6 @@
 
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/rpmb.h>
 #include <fbl/string_buffer.h>
 #include <tee-client-api/tee-client-types.h>
 

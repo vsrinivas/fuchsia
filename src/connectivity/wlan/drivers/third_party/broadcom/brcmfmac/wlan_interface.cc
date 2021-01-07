@@ -19,7 +19,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/logging.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"

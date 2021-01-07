@@ -64,8 +64,8 @@ driver_module("driver") {
   sources = [ "usb-hci-test-driver.cc" ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.hcitest:fuchsia.hardware.usb.hcitest_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

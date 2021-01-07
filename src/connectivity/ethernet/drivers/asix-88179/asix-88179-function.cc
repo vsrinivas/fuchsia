@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ax88179/llcpp/fidl.h>
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/device/usb-peripheral.h>
@@ -21,8 +23,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

@@ -6,13 +6,13 @@
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
 
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/bt/hci/cpp/banjo.h>
 
 #include <optional>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/bt/hci.h>
 
 #include "vendor_hci.h"
 

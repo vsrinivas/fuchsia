@@ -21,8 +21,8 @@ driver_module("msm8x53-som") {
     "msm8x53.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/devices/lib/msm8x53",
     "//src/lib/ddk",

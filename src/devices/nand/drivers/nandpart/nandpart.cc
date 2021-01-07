@@ -4,6 +4,7 @@
 #include "src/devices/nand/drivers/nandpart/nandpart.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/badblock/c/banjo.h>
 #include <inttypes.h>
 #include <lib/operation/nand.h>
 #include <lib/sync/completion.h>
@@ -21,7 +22,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
-#include <ddk/protocol/badblock.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

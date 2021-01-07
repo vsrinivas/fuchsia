@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -15,7 +16,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
-#include "ddk/protocol/pciroot.h"
 #include "qemu-bus.h"
 #include "qemu-pciroot.h"
 #include "qemu-virt.h"

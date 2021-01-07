@@ -45,7 +45,7 @@ test("pwm-test-bin") {
 group("common") {
   public_deps = [
     ":pwm-bind",
-    "//sdk/banjo/ddk.protocol.pwm",
+    "//sdk/banjo/fuchsia.hardware.pwm",
     "//src/devices/lib/amlogic",
     "//src/lib/ddk",
     "//src/lib/ddktl",

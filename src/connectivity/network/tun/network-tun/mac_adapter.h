@@ -28,8 +28,8 @@ class MacAdapterParent {
 };
 
 // An entity that instantiates a MacAddrDeviceInterface and provides an implementations of
-// `ddk.protocol.network.device.MacAddrImpl` that grants access to the requested operating state of
-// its interface.
+// `fuchsia.hardware.network.device.MacAddrImpl` that grants access to the requested operating state
+// of its interface.
 //
 // `MacAdapter` is used to provide the business logic of virtual MacAddr implementations both for
 // `tun.Device` and `tun.DevicePair` device classes.

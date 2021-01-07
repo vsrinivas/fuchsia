@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_MANAGER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_MANAGER_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <threads.h>
@@ -12,8 +13,6 @@
 
 #include <condition_variable>
 #include <mutex>
-
-#include <ddktl/protocol/block.h>
 
 #include "server.h"
 
@@ -88,4 +87,4 @@ class Manager {
   std::unique_ptr<Server> server_;
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_MANAGER_H_

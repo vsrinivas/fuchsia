@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_MSM8X53_POWER_MSM8X53_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_MSM8X53_POWER_MSM8X53_POWER_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <soc/msm8x53/msm8x53-power-regs.h>
 
 namespace power {

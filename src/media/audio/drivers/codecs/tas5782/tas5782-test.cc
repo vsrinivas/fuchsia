@@ -4,12 +4,12 @@
 
 #include "tas5782.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/sync/completion.h>
 
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {

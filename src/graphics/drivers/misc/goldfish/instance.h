@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_INSTANCE_H_
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <threads.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 
 namespace goldfish {
 

@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -13,7 +14,6 @@
 
 #include <atomic>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 

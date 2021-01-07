@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_UTILS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_UTILS_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
@@ -13,7 +14,6 @@
 
 #include <utility>
 
-#include <ddk/protocol/platform/device.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

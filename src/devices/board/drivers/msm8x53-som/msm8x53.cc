@@ -4,14 +4,15 @@
 
 #include "msm8x53.h"
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/alloc_checker.h>
 
 namespace board_msm8x53 {

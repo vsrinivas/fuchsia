@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_H_
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_H_
 
+#include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/simple-codec/simple-codec-server-internal.h>
@@ -18,7 +19,6 @@
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/audio.h>
 
 namespace audio {
 

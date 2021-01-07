@@ -4,6 +4,8 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
@@ -23,8 +25,6 @@
 
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddktl/protocol/platform/bus.h>
 
 #include "allocator.h"
 #include "buffer_collection_token.h"

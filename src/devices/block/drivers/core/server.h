@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/fzl/fifo.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -18,9 +20,7 @@
 #include <new>
 #include <utility>
 
-#include <ddk/protocol/block.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>

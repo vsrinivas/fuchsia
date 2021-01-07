@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
+
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/hidbus.h>
 #include <fbl/auto_call.h>
 #include <hid/boot.h>
 #include <virtio/input.h>

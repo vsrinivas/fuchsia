@@ -5,7 +5,12 @@
 #ifndef SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
 #define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/securemem/llcpp/fidl.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/zx/bti.h>
 #include <threads.h>
@@ -13,13 +18,8 @@
 
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
-#include <ddktl/protocol/tee.h>
 
 #include "sysmem-secure-mem-server.h"
 

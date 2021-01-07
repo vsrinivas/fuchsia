@@ -4,6 +4,8 @@
 
 #include "rtl8111.h"
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +18,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/pci.h>
 #include <hw/reg.h>
 
 #include "src/connectivity/ethernet/drivers/realtek-8111/realtek_rtl8111-bind.h"

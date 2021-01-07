@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_INPUT_TLV320ADC_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_INPUT_TLV320ADC_H_
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 
 #include <memory>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/i2c.h>
 
 namespace audio {
 namespace mt8167 {

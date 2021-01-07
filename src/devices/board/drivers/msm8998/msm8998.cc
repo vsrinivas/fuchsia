@@ -4,6 +4,9 @@
 
 #include "msm8998.h"
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -11,9 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 
 namespace board_msm8998 {
 

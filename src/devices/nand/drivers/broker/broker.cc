@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/nand/c/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -13,9 +15,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/alloc_checker.h>
 
 namespace {

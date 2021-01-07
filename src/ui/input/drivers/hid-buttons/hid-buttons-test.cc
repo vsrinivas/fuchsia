@@ -4,6 +4,9 @@
 
 #include "hid-buttons.h"
 
+#include <fuchsia/hardware/buttons/c/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -13,9 +16,6 @@
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
-#include <ddk/protocol/buttons.h>
-#include <ddktl/protocol/gpio.h>
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 #include "zircon/errors.h"

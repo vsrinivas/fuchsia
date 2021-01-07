@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5720_TAS5720_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5720_TAS5720_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/simple-codec/simple-codec-server.h>
 
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
 
 namespace audio {
 

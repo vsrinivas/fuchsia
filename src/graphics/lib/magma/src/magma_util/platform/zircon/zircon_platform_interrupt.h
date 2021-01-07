@@ -5,6 +5,7 @@
 #ifndef ZIRCON_PLATFORM_INTERRUPT_H
 #define ZIRCON_PLATFORM_INTERRUPT_H
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
@@ -12,7 +13,6 @@
 #include <utility>
 
 #include <ddk/device.h>
-#include <ddk/protocol/pci.h>
 
 #include "platform_interrupt.h"
 

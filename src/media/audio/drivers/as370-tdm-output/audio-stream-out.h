@@ -5,6 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AS370_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AS370_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -18,11 +21,8 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/mutex.h>
 #include <soc/as370/syn-audio-out.h>
 

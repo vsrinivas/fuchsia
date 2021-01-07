@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 #include <soc/synaptics/gpio.h>

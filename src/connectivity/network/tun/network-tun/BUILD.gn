@@ -24,7 +24,7 @@ source_set("src") {
     "util.h",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.network.device",
+    "//sdk/banjo/fuchsia.hardware.network.device",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//sdk/fidl/fuchsia.net.tun",
     "//sdk/lib/sys/cpp",

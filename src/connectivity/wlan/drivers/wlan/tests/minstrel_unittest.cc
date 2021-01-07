@@ -4,12 +4,12 @@
 
 #include "../minstrel.h"
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <lib/timekeeper/test_clock.h>
 #include <test_timer.h>
 
 #include <iterator>
 
-#include <ddk/protocol/wlan/info.h>
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 #include <wlan/mlme/timer.h>

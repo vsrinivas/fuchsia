@@ -5,10 +5,10 @@
 #ifndef SRC_UI_INPUT_TESTING_MOCK_HIDBUS_IFC_INCLUDE_LIB_MOCK_HIDBUS_IFC_MOCK_HIDBUS_IFC_H_
 #define SRC_UI_INPUT_TESTING_MOCK_HIDBUS_IFC_INCLUDE_LIB_MOCK_HIDBUS_IFC_MOCK_HIDBUS_IFC_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>

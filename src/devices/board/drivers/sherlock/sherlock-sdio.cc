@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 
@@ -12,7 +13,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>

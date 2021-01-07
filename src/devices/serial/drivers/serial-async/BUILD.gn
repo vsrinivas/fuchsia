@@ -31,8 +31,8 @@ source_set("common") {
   ]
   public_deps = [
     ":serial_async_bind",
-    "//sdk/banjo/ddk.protocol.serial",
-    "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/fuchsia.hardware.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",

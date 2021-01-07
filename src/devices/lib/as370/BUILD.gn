@@ -37,7 +37,7 @@ zx_library("as370") {
     "syn-audio-out.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.shareddma",
+    "//sdk/banjo/fuchsia.hardware.shareddma",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",

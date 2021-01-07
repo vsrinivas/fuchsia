@@ -6,15 +6,15 @@
 #define SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
 #include <lib/inspect/cpp/inspector.h>
 
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/power.h>
 #include <soc/aml-common/aml-cpu-metadata.h>
 
 namespace amlogic_cpu {

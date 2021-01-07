@@ -33,6 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdint.h>
 #include <threads.h>
@@ -40,7 +41,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
-#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"

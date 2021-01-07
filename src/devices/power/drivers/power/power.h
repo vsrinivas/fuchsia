@@ -5,14 +5,15 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_POWER_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_POWER_POWER_H_
 
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+
 #include <memory>
 #include <vector>
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/power.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <fbl/mutex.h>
 
 namespace power {

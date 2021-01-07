@@ -4,6 +4,9 @@
 
 #include "../optee-controller.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
@@ -11,9 +14,6 @@
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
 #include <ddktl/suspend-txn.h>
 #include <zxtest/zxtest.h>
 

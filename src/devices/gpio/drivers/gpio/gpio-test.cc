@@ -4,6 +4,7 @@
 
 #include "gpio.h"
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -11,7 +12,6 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <mock/ddktl/protocol/gpioimpl.h>
 
 namespace gpio {
 

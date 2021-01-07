@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_AML_SDMMC_AML_SDMMC_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_AML_SDMMC_AML_SDMMC_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -16,9 +19,6 @@
 
 #include <ddk/phys-iter.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/span.h>

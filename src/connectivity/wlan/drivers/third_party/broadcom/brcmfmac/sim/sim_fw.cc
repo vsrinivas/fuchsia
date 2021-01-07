@@ -17,6 +17,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_fw.h"
 
 #include <arpa/inet.h>
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -28,8 +30,6 @@
 #include <third_party/bcmdhd/crossdriver/wlioctl.h>
 #include <wlan/common/mac_frame.h>
 
-#include "ddk/protocol/wlan/info.h"
-#include "ddk/protocol/wlanif.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"

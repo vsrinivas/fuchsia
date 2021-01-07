@@ -5,13 +5,13 @@
 
 #include "cy8cmbr3108.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <ddk/metadata.h>
-#include <ddktl/protocol/gpio.h>
 #include <hid/visalia-touch.h>
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace {

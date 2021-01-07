@@ -4,13 +4,13 @@
 
 #include "as370-thermal.h"
 
+#include <fuchsia/hardware/clock/cpp/banjo-mock.h>
+#include <fuchsia/hardware/power/cpp/banjo-mock.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fake_ddk/fidl-helper.h>
 
 #include <fbl/algorithm.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
-#include <mock/ddktl/protocol/clock.h>
-#include <mock/ddktl/protocol/power.h>
 #include <zxtest/zxtest.h>
 
 namespace {

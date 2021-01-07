@@ -6,10 +6,9 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_GE2D_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
 
 #include <utility>
-
-#include <ddktl/protocol/ge2d.h>
 
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/processing_node.h"

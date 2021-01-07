@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <fuchsia/hardware/usb/function/c/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
@@ -28,8 +30,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

@@ -1,14 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
-
-banjo("ddk.protocol.usb.dci") {
-  sources = [ "usb-dci.banjo" ]
-  deps = [
-    "//sdk/banjo/ddk.physiter",
-    "//sdk/banjo/ddk.protocol.usb.request",
-    "//sdk/banjo/zircon.hw.usb",
-  ]
+group("ddk.protocol.usb.dci") {
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.usb.dci" ]
 }

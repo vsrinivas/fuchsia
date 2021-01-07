@@ -14,9 +14,9 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <ddktl/protocol/composite.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 
-#include "simple-internal.h"
+#include "banjo-internal.h"
 
 // DDK simple-protocol support
 //

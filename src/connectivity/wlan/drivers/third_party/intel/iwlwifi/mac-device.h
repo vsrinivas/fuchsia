@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/wlan/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 

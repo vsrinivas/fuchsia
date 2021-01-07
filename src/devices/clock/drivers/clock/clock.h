@@ -5,10 +5,11 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_CLOCK_CLOCK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_CLOCK_CLOCK_H_
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/clockimpl.h>
 
 class ClockDevice;
 using ClockDeviceType = ddk::Device<ClockDevice, ddk::Unbindable>;

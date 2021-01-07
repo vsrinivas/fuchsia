@@ -14,8 +14,8 @@ driver_module("alc5514") {
   }
   sources = [ "alc5514.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

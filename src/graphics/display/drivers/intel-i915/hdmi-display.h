@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_HDMI_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_HDMI_DISPLAY_H_
 
-#include <ddk/protocol/i2cimpl.h>
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
 
 #include "display-device.h"
 

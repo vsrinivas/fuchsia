@@ -4,14 +4,14 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_PROXY_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_PROXY_H_
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/errors.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/pci.h>
-#include <ddktl/protocol/sysmem.h>
 
 #include "device_rpc.h"
 

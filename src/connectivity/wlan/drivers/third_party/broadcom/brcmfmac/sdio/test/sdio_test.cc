@@ -16,6 +16,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/sdio/c/banjo.h>
+#include <fuchsia/hardware/sdio/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/types.h>
 
@@ -24,10 +28,6 @@
 
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/sdio.h>
-#include <mock/ddktl/protocol/gpio.h>
-#include <mock/ddktl/protocol/sdio.h>
 #include <wifi/wifi-config.h>
 #include <zxtest/zxtest.h>
 

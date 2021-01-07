@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <limits.h>
 
 #include <ddk/binding.h>
@@ -10,7 +11,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-s905x/s905x-gpio.h>
 #include <soc/aml-s912/s912-gpio.h>

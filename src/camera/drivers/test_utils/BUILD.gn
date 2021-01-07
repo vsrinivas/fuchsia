@@ -55,5 +55,5 @@ source_set("button_checker") {
 source_set("ddk_mock_operators") {
   visibility = [ ":*" ]
   sources = [ "ddk_mock_operators.h" ]
-  public_deps = [ "//sdk/banjo/ddk.protocol.camera.sensor" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.camera.sensor" ]
 }

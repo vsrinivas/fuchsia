@@ -22,10 +22,10 @@ driver_module("driver") {
     "rndis_host.h",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.ethernet",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/connectivity/ethernet/lib/rndis",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_LID_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_LID_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -15,7 +16,6 @@
 
 #include <acpica/acpi.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

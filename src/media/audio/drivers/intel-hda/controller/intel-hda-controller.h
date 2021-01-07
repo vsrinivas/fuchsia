@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_CONTROLLER_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -21,7 +22,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-interrupt.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>

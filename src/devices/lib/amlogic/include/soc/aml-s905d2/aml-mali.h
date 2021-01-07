@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_AML_MALI_H_
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_AML_MALI_H_
 
-#include <ddk/protocol/platform/bus.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 
 zx_status_t aml_mali_init(pbus_protocol_t* pbus, uint32_t bti_index);
 

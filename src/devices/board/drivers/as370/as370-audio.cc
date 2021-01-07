@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/shareddma/c/banjo.h>
 #include <limits.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/shareddma.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
 #include <soc/as370/as370-clk.h>

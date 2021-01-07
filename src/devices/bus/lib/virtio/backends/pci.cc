@@ -5,6 +5,7 @@
 #include "../include/lib/virtio/backends/pci.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
@@ -14,7 +15,6 @@
 #include <algorithm>
 
 #include <ddk/debug.h>
-#include <ddktl/protocol/pci.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>

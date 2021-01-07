@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
 #include <wlan/common/action_frame.h>

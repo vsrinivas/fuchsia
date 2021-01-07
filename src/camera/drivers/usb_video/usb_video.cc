@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/usb_video/usb_video.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <stdlib.h>
 #include <zircon/hw/usb/video.h>
 
@@ -11,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
 #include <usb/usb.h>
 

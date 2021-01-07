@@ -4,13 +4,14 @@
 
 #include "sgm37603a.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+
 #include <algorithm>
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

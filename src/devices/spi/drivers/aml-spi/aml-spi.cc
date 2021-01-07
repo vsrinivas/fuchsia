@@ -4,6 +4,8 @@
 
 #include "aml-spi.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/spiimpl/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -14,8 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/spiimpl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>

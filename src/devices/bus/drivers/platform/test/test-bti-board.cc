@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
@@ -10,7 +11,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 
 #include "src/devices/bus/drivers/platform/test/test-bti-board-bind.h"
 

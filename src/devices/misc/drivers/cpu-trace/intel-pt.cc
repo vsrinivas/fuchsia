@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <cpuid.h>
 #include <fuchsia/hardware/cpu/insntrace/llcpp/fidl.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <inttypes.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
@@ -30,7 +31,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

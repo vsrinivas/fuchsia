@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <librtc.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2c.h>
 
 #include "src/devices/rtc/drivers/nxp/pcf8563_rtc_bind.h"
 

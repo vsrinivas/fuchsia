@@ -4,6 +4,7 @@
 
 #include "ft_device.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
@@ -25,7 +26,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

@@ -4,7 +4,8 @@
 
 #include "test_utils.h"
 
-#include <ddk/protocol/wlan/info.h>
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+
 #include <wlan/common/channel.h>
 #include <wlan/protocol/mac.h>
 

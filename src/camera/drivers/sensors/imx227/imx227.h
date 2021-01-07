@@ -5,6 +5,11 @@
 #ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_
 #define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_
 
+#include <fuchsia/hardware/camera/sensor/cpp/banjo.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/mipicsi/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/result.h>
@@ -14,12 +19,7 @@
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/camera/sensor.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/mipicsi.h>
 
 namespace camera {
 

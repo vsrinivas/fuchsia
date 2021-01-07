@@ -5,7 +5,8 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_DEVICE_RESOURCES_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_DEVICE_RESOURCES_H_
 
-#include <ddk/protocol/platform/bus.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+
 #include <fbl/array.h>
 #include <fbl/vector.h>
 

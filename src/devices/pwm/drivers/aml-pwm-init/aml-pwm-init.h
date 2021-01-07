@@ -5,11 +5,12 @@
 #ifndef SRC_DEVICES_PWM_DRIVERS_AML_PWM_INIT_AML_PWM_INIT_H_
 #define SRC_DEVICES_PWM_DRIVERS_AML_PWM_INIT_AML_PWM_INIT_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
+
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/pwm.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 
 namespace pwm_init {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <limits.h>
 
@@ -10,9 +12,7 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>

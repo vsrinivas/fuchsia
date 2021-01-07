@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
 
+#include <fuchsia/hardware/sdhci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/sdhci.h>
 
 namespace sdhci {
 
@@ -51,4 +51,4 @@ class As370Sdhci : public DeviceType, public ddk::SdhciProtocol<As370Sdhci, ddk:
 
 }  // namespace sdhci
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_

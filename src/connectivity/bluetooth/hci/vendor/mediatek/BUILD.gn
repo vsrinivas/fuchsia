@@ -26,8 +26,8 @@ driver_module("bt-hci-mediatek") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-hci-mediatek.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//sdk/banjo/ddk.protocol.sdio",
+    "//sdk/banjo/fuchsia.hardware.bt.hci",
+    "//sdk/banjo/fuchsia.hardware.sdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -57,8 +57,8 @@ test("bt-hci-mediatek-test") {
     "bt-hci-mediatek.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//sdk/banjo/ddk.protocol.sdio",
+    "//sdk/banjo/fuchsia.hardware.bt.hci",
+    "//sdk/banjo/fuchsia.hardware.sdio",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/testing/mock-sdio",

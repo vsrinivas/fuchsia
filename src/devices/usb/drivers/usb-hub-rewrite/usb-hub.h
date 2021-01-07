@@ -4,6 +4,9 @@
 
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_USB_HUB_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_USB_HUB_H_
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hub/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/executor.h>
@@ -23,9 +26,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hub.h>
 #include <fbl/array.h>
 #include <fbl/hard_int.h>
 #include <fbl/intrusive_double_list.h>

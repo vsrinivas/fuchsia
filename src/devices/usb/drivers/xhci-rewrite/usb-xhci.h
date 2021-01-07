@@ -5,6 +5,12 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/device-protocol/pci.h>
@@ -24,12 +30,6 @@
 #include <thread>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/pci.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hci.h>
-#include <ddktl/protocol/usb/phy.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

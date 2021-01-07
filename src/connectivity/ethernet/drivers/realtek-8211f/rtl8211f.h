@@ -4,8 +4,9 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_RTL8211F_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_RTL8211F_H_
 
+#include <fuchsia/hardware/ethernet/mac/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet/mac.h>
 
 namespace phy {
 

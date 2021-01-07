@@ -17,9 +17,9 @@ source_set("common") {
   sources = [ "nand.cc" ]
   deps = [
     ":nand-bind",
-    "//sdk/banjo/ddk.protocol.nand",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/banjo/fuchsia.hardware.nand",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.rawnand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddk",

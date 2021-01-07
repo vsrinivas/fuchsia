@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,7 +11,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 
 #include "test.h"
 

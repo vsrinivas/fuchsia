@@ -4,6 +4,9 @@
 
 #include "as370-sdhci.h"
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 
@@ -11,9 +14,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hwreg/bitfields.h>

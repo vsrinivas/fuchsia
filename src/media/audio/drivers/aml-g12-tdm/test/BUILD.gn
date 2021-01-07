@@ -16,9 +16,9 @@ executable("aml-g12-tdm-test-bin") {
   ]
   deps = [
     "../:aml-g12-tdm-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -57,9 +57,9 @@ executable("aml-g12-tdm-dai-test-bin") {
   ]
   deps = [
     "../:aml-g12-tdm-dai-bind",
-    "//sdk/banjo/ddk.protocol.audio",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.audio",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",

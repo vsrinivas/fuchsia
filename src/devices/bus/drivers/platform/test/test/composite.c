@@ -2,6 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/clock/c/banjo.h>
+#include <fuchsia/hardware/composite/c/banjo.h>
+#include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
+#include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/power/c/banjo.h>
+#include <fuchsia/hardware/pwm/c/banjo.h>
+#include <fuchsia/hardware/rpmb/c/banjo.h>
+#include <fuchsia/hardware/spi/c/banjo.h>
+#include <fuchsia/hardware/vreg/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,18 +28,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clock.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/goldfish/addressspace.h>
-#include <ddk/protocol/goldfish/pipe.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/power.h>
-#include <ddk/protocol/pwm.h>
-#include <ddk/protocol/rpmb.h>
-#include <ddk/protocol/spi.h>
-#include <ddk/protocol/vreg.h>
 
 #include "src/devices/bus/drivers/platform/test/test-composite-bind.h"
 #include "src/devices/bus/drivers/platform/test/test-metadata.h"
@@ -511,7 +511,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   }
 
   pdev_protocol_t pdev;
-  if (strncmp(fragments[FRAGMENT_PDEV_1].name, "ddk.protocol.platform.device.PDev", 32)) {
+  if (strncmp(fragments[FRAGMENT_PDEV_1].name, "fuchsia.hardware.platform.device.PDev", 32)) {
     zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PDEV_1].name);
     return ZX_ERR_INTERNAL;
   }

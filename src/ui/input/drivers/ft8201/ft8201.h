@@ -5,6 +5,7 @@
 #ifndef SRC_UI_INPUT_DRIVERS_FT8201_FT8201_H_
 #define SRC_UI_INPUT_DRIVERS_FT8201_FT8201_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,7 +18,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/spiimpl.h>
 #include <fbl/vector.h>
 #include <soc/aml-common/aml-spi.h>
 

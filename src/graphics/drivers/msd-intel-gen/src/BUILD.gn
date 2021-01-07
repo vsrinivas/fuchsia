@@ -76,5 +76,5 @@ source_set("src") {
     "//src/lib/ddktl",
   ]
 
-  public_deps = [ "//sdk/banjo/ddk.protocol.intelgpucore" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.intelgpucore" ]
 }

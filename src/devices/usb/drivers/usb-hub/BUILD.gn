@@ -12,11 +12,11 @@ driver_module("usb-hub") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hub.c" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.hub",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.hub",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

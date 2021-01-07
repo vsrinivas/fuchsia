@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_SPI_DRIVERS_SPI_SPI_H_
 #define SRC_DEVICES_SPI_DRIVERS_SPI_SPI_H_
 
+#include <fuchsia/hardware/spiimpl/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/spiimpl.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 

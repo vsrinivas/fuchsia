@@ -4,6 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_BUSCORE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_BUSCORE_H_
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -13,7 +14,6 @@
 #include <mutex>
 
 #include <ddk/device.h>
-#include <ddktl/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/backplane.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_interfaces.h"

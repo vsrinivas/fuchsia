@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_
-#define SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_
+#define SRC_DEVICES_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_
 
+#include <fuchsia/hardware/rawnand/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -12,7 +13,6 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/rawnand.h>
 #include <fbl/mutex.h>
 
 namespace rawnand {
@@ -83,4 +83,4 @@ class CadenceHpnfc : public DeviceType,
 
 }  // namespace rawnand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_H_

@@ -23,8 +23,8 @@ driver_module("i2c-hid") {
   sources = [ "i2c-hid.cc" ]
   deps = [
     ":i2c_hid_bind",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
@@ -47,8 +47,8 @@ test("i2c-hid-test") {
   ]
   deps = [
     ":i2c_hid_bind",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/fake-i2c",

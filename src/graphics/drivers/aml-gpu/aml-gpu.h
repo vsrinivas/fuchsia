@@ -4,7 +4,10 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 
@@ -13,9 +16,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/registers.h>
-#include <ddktl/protocol/sysmem.h>
 #include <soc/aml-common/aml-registers.h>
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

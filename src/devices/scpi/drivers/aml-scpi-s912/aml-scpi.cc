@@ -4,6 +4,8 @@
 
 #include "aml-scpi.h"
 
+#include <fuchsia/hardware/mailbox/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/mailbox.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

@@ -5,9 +5,10 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_BUS_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_BUS_H_
 
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hci.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 

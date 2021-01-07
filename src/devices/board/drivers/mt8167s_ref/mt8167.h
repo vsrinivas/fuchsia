@@ -5,14 +5,14 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_MT8167S_REF_MT8167_H_
 #define SRC_DEVICES_BOARD_DRIVERS_MT8167S_REF_MT8167_H_
 
+#include <fuchsia/hardware/gpioimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpioimpl.h>
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 #include <soc/mt8167/mt8167-power.h>
 

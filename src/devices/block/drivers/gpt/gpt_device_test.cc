@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -14,10 +17,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/block.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

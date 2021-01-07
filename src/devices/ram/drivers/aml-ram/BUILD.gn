@@ -44,7 +44,7 @@ test("aml-ram-test-bin") {
   deps = [
     ":aml_ram_bind",
     ":common",
-    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",

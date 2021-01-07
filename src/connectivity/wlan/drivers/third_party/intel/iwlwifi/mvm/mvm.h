@@ -37,6 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <threads.h>
@@ -44,9 +45,8 @@
 #include <zircon/time.h>
 
 #include <ddk/driver.h>
-#include <ddk/hw/wlan/ieee80211.h>
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlan/info.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"

@@ -5,13 +5,13 @@
 #include "ftdi-i2c.h"
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 
 #include <list>
 
 #include <ddk/debug.h>
-#include <ddktl/protocol/serialimpl.h>
 #include <zxtest/zxtest.h>
 
 #include "ftdi.h"

@@ -4,6 +4,7 @@
 
 #include "aml-thermal.h"
 
+#include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <stdint.h>
@@ -19,7 +20,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
-#include <mock/ddktl/protocol/pwm.h>
 #include <zxtest/zxtest.h>
 
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {

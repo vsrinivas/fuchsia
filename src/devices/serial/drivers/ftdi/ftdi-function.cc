@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

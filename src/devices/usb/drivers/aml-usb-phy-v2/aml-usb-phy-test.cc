@@ -4,6 +4,7 @@
 
 #include "aml-usb-phy.h"
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -19,7 +20,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>

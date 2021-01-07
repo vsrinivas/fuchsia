@@ -5,9 +5,10 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
 
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+
 #include <vector>
 
-#include <ddktl/protocol/gdc.h>
 #include <fbl/array.h>
 
 #include "src/camera/drivers/hw_accel/task/task.h"

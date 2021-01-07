@@ -16,7 +16,7 @@ executable("display_detect") {
   }
   sources = [ "display-detect.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",

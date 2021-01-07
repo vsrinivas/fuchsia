@@ -160,7 +160,7 @@ struct SnrHistogram {
 /// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
 /// antennas used by the interface.
 const uint8 MAX_HISTOGRAMS_PER_TYPE = 8;
-// LINT.ThenChange(//sdk/banjo/ddk.protocol.wlanif/wlanif.banjo)
+// LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlanif/wlanif.banjo)
 
 struct ClientMlmeStats {
     PacketCounter svc_msg;

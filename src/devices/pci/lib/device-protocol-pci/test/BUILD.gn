@@ -9,7 +9,7 @@ test("device-protocol-pci") {
   sources = [ "pci-test.cc" ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/lib/fdio",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",

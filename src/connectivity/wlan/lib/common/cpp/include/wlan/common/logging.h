@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <cstdio>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 // TODO(hahnr): Allow change of logging prefix.
 // TODO(tkilbourn): use standard logging infrastructure

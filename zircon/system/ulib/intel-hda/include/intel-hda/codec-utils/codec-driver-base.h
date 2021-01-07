@@ -5,11 +5,11 @@
 #ifndef INTEL_HDA_CODEC_UTILS_CODEC_DRIVER_BASE_H_
 #define INTEL_HDA_CODEC_UTILS_CODEC_DRIVER_BASE_H_
 
+#include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/zx/handle.h>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intelhda/codec.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/pci/pciroot.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
@@ -14,7 +15,6 @@
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <ddk/device.h>
-#include <ddk/protocol/pciroot.h>
 
 #include "acpi-private.h"
 

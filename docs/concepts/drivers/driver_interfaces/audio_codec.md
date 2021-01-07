@@ -82,7 +82,7 @@ The codec protocol is defined in FIDL at
 Note that because the DDK does not currently provide a way to directly get a FIDL
 channel for communication, we define a way to get a channel via
 [Banjo](/docs/development/drivers/banjo-tutorial.md) at
-[ddk.protocol.audio](/sdk/banjo/ddk.protocol.audio/audio.banjo).
+[fuchsia.hardware.audio](/sdk/banjo/fuchsia.hardware.audio/audio.banjo).
 
 Many codec protocol operations are "fire-and-forget", i.e. they do not expect a
 reply. Codec protocol operations with a reply are not considered completed until

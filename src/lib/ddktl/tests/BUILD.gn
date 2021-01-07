@@ -18,8 +18,8 @@ test("ddktl-test") {
     "ethernet-tests.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.ethernet",
-    "//sdk/banjo/ddk.protocol.test",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.test",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

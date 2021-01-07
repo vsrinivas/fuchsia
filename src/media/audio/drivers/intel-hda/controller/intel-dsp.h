@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 
+#include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/mmio/mmio.h>
 #include <limits.h>
@@ -16,7 +17,6 @@
 #include <optional>
 
 #include <ddk/device.h>
-#include <ddk/protocol/intelhda/codec.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>

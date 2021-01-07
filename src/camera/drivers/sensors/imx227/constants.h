@@ -5,9 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_CONSTANTS_H_
 #define SRC_CAMERA_DRIVERS_SENSORS_IMX227_CONSTANTS_H_
 
-#include <cstdint>
+#include <fuchsia/hardware/camera/sensor/c/banjo.h>
 
-#include "ddk/protocol/camera/sensor.h"
+#include <cstdint>
 
 namespace camera {
 

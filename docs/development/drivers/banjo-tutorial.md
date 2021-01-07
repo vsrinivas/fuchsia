@@ -25,7 +25,7 @@ and the protocol user.
 ## A simple example
 
 As a first step, let's take a look at a relatively simple Banjo specification.
-This is the file [`//sdk/banjo/ddk.protocol.i2c/i2c.banjo`](/sdk/banjo/ddk.protocol.i2c/i2c.banjo):
+This is the file [`//sdk/banjo/fuchsia.hardware.i2c/i2c.banjo`](/sdk/banjo/fuchsia.hardware.i2c/i2c.banjo):
 
 > Note that the line numbers in the code samples throughout this tutorial are not part of the files.
 
@@ -34,7 +34,7 @@ This is the file [`//sdk/banjo/ddk.protocol.i2c/i2c.banjo`](/sdk/banjo/ddk.proto
 [02] // Use of this source code is governed by a BSD-style license that can be
 [03] // found in the LICENSE file.
 [04]
-[05] library ddk.protocol.i2c;
+[05] library fuchsia.hardware.i2c;
 [06]
 [07] using zx;
 [08]
@@ -133,7 +133,7 @@ The C implementation is relatively straightforward:
 * Some helper functions are also generated.
 
 The C version is generated into
-`$BUILD_DIR/banjoing/gen/ddk/protocol/i2c.h`,
+`$BUILD_DIR/banjoing/gen/fuchisia/hardware/i2c/c/banjo.h`,
 where _TARGET_ is the target architecture, e.g., `arm64`.
 
 The file is relatively long, so we'll look at it in several parts.
@@ -148,7 +148,7 @@ The first part has some boilerplate which we'll show without further comment:
 [03] // found in the LICENSE file.
 [04]
 [05] // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-[06] //          MODIFY sdk/banjo/ddk.protocol.i2c/i2c.banjo INSTEAD.
+[06] //          MODIFY sdk/banjo/fuchsia.hardware.i2c/i2c.banjo INSTEAD.
 [07]
 [08] #pragma once
 [09]
@@ -288,7 +288,7 @@ got added to the method names; thus, `Transact` became `i2c_transact`, and so on
 This is part of the mapping between `.banjo` names and their C equivalents.
 
 Also, the `library` name (line `[05]` in the `.banjo` file) is transformed into the
-include path: so `library ddk.protocol.i2c` implies a path of `<ddk/protocol/i2c.h>`.
+include path: so `library fuchsia.hardware.i2c` implies a path of `<fuchsia/hardware/i2c/c/banjo.h>`.
 
 ## C++
 
@@ -297,7 +297,7 @@ Let's take a look.
 
 The Banjo transpiler generates three files:
 the first is the C file discussed above, and the other two are under
-`$BUILD_DIR/banjoing/gen/ddktl/protocol/i2c.h`:
+`$BUILD_DIR/banjoing/gen/fuchsia/hardware/i2c/cpp/banjo.h`:
 
 * `i2c.h` &mdash; the file your program should include, and
 * `i2c-internal.h` &mdash; an internal file, included by `i2c.h`
@@ -327,12 +327,12 @@ The boilerplate is pretty much what you'd expect:
 [003] // found in the LICENSE file.
 [004]
 [005] // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-[006] //          MODIFY sdk/banjo/ddk.protocol.i2c/i2c.banjo INSTEAD.
+[006] //          MODIFY sdk/banjo/fuchsia.hardware.i2c/i2c.banjo INSTEAD.
 [007]
 [008] #pragma once
 [009]
 [010] #include <ddk/driver.h>
-[011] #include <ddk/protocol/i2c.h>
+[011] #include <fuchsia/hardware/i2c/c/banjo.h>
 [012] #include <ddktl/device-internal.h>
 [013] #include <zircon/assert.h>
 [014] #include <zircon/compiler.h>
@@ -822,12 +822,12 @@ tests.
 
 Tests in Zircon get the mock headers automatically. Tests outsize of Zircon must depend on the
 protocol target with a `_mock` suffix, e.g.
-`//zircon/public/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock`.
+`//zircon/public/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock`.
 
 ## Using the mocks
 
 Test code must include the protocol header with a `mock/` prefix, e.g.
-`#include <mock/ddktl/protocol/gpio.h>`.
+`#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>`.
 
 Consider the following Banjo protocol snippet:
 

@@ -5,7 +5,9 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
 
+#include <fuchsia/hardware/serial/cpp/banjo.h>
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -16,8 +18,6 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/serial.h>
-#include <ddktl/protocol/serialimpl/async.h>
 #include <fbl/mutex.h>
 
 namespace serial {

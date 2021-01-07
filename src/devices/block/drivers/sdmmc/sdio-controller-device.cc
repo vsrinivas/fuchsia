@@ -4,6 +4,8 @@
 
 #include "sdio-controller-device.h"
 
+#include <fuchsia/hardware/sdio/c/banjo.h>
+#include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
@@ -16,8 +18,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/sdio.h>
-#include <ddk/protocol/sdmmc.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/sdio.h>

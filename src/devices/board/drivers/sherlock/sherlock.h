@@ -5,15 +5,15 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_SHERLOCK_SHERLOCK_H_
 #define SRC_DEVICES_BOARD_DRIVERS_SHERLOCK_SHERLOCK_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/iommu/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 #include <soc/aml-t931/t931-hw.h>
 

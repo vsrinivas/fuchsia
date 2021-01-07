@@ -6,6 +6,10 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -20,11 +24,7 @@
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/capture.h>
-#include <ddktl/protocol/display/clamprgb.h>
-#include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>

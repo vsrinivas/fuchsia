@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
 #include <zxtest/zxtest.h>
 
 namespace {

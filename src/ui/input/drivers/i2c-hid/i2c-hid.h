@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 #define SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
 #include <threads.h>
@@ -13,8 +15,6 @@
 #include <optional>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 

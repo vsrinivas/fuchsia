@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_VS680_POWER_VS680_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_VS680_POWER_VS680_POWER_H_
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <fbl/mutex.h>
 
 namespace power {

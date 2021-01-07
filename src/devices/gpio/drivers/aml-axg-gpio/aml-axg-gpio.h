@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -12,9 +14,7 @@
 #include <array>
 #include <cstdint>
 
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>

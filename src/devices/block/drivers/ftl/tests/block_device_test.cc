@@ -4,6 +4,8 @@
 
 #include "block_device.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/ftl/volume.h>
@@ -15,8 +17,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/protocol/block.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

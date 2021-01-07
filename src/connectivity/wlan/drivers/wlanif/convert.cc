@@ -8,7 +8,7 @@
 #include <bitset>
 #include <memory>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/logging.h>
 

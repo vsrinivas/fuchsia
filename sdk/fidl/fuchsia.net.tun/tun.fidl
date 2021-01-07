@@ -10,7 +10,7 @@ using fuchsia.net;
 
 /// Maximum number of multicast filters that a device will hold in `MacState`.
 // NOTE: this number mirrors the number in the low level banjo definition in
-// [`ddk.protocol.network.mac/MAX_MAC_FILTER`] which was chosen, in turn, based on common maximum
+// [`fuchsia.hardware.network.mac/MAX_MAC_FILTER`] which was chosen, in turn, based on common maximum
 // number of multicast groups supported in established OSes.
 const uint32 MAX_MULTICAST_FILTERS = 64;
 

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_H_
 #define SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_H_
 
+#include <fuchsia/hardware/mailbox/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -17,9 +19,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/mailbox.h>
 #include <hw/reg.h>
 
 #define GET_NUM_WORDS(x) ((x) / 4 + (((x) % 4) ? 1 : 0))

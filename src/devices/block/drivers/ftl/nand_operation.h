@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
 
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/protocol/nand.h>
 #include <fbl/macros.h>
 #include <fbl/span.h>
 

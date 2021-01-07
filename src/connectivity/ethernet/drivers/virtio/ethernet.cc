@@ -5,6 +5,7 @@
 #include "ethernet.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <lib/operation/ethernet.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/align.h>
@@ -22,7 +23,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/ethernet.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

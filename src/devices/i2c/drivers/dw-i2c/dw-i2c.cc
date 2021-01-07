@@ -4,6 +4,9 @@
 
 #include "dw-i2c.h"
 
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -20,9 +23,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_PROFILES_BT_HOG_HOG_H_
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <lib/device-protocol/bt-gatt-svc.h>
 #include <stdbool.h>
 #include <threads.h>
@@ -12,7 +13,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/hidbus.h>
 
 // org.bluetooth.characteristic.protocol_mode
 #define BT_HOG_PROTOCOL_MODE 0x2A4E

@@ -26,9 +26,9 @@ executable("test") {
   testonly = true
   sources = [ "task_test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.amlogiccanvas",
-    "//sdk/banjo/ddk.protocol.ge2d",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+    "//sdk/banjo/fuchsia.hardware.ge2d",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/hw_accel/ge2d:ge2d_bind",

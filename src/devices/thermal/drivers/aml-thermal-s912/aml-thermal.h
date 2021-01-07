@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/port.h>
@@ -13,9 +16,6 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/scpi.h>
-#include <ddktl/protocol/thermal.h>
 
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S912_AML_THERMAL_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S912_AML_THERMAL_H_

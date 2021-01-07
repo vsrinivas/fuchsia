@@ -5,6 +5,7 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_TASK_TASK_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_TASK_TASK_H_
 
+#include <fuchsia/hardware/camerahwaccel/cpp/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
@@ -13,7 +14,6 @@
 
 #include <deque>
 
-#include <ddktl/protocol/camerahwaccel.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

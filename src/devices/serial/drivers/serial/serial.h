@@ -5,7 +5,9 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_SERIAL_SERIAL_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_SERIAL_SERIAL_H_
 
+#include <fuchsia/hardware/serial/cpp/banjo.h>
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
@@ -14,8 +16,6 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/serial.h>
-#include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
 
 namespace serial {

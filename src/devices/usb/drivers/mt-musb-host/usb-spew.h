@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_SPEW_H_
 #define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_SPEW_H_
 
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <zircon/hw/usb.h>
-
-#include <ddk/protocol/usb/request.h>
 
 namespace mt_usb_hci {
 

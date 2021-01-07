@@ -24,8 +24,8 @@ driver_module("driver") {
 
   deps = [
     ":bt_hog_bind",
-    "//sdk/banjo/ddk.protocol.bt.gattsvc",
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.bt.gattsvc",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

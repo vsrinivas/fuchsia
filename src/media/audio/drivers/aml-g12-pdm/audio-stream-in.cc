@@ -4,6 +4,7 @@
 
 #include "audio-stream-in.h"
 
+#include <fuchsia/hardware/composite/c/banjo.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 
 #include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
 

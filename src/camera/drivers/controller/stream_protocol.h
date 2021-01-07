@@ -6,11 +6,10 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_STREAM_PROTOCOL_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/thread_checker.h>
 #include <zircon/compiler.h>
-
-#include <ddktl/protocol/isp.h>
 
 namespace camera {
 

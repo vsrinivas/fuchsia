@@ -4,6 +4,7 @@
 
 #include "asix-88179.h"
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <lib/zircon-internal/align.h>
@@ -18,7 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
 
 #include "asix-88179-regs.h"

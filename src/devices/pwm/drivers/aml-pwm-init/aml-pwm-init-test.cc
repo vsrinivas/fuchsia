@@ -4,9 +4,10 @@
 
 #include "aml-pwm-init.h"
 
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
+
 #include <fbl/alloc_checker.h>
-#include <mock/ddktl/protocol/gpio.h>
-#include <mock/ddktl/protocol/pwm.h>
 
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {
   return (lhs.polarity == rhs.polarity) && (lhs.period_ns == rhs.period_ns) &&

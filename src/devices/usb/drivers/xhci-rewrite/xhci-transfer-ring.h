@@ -4,11 +4,11 @@
 
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/zx/status.h>
 
 #include <map>
 
-#include <ddk/protocol/usb/request.h>
 #include <fbl/span.h>
 
 #include "registers.h"

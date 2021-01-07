@@ -5,6 +5,7 @@
 #include "ot_radio.h"
 
 #include <ctype.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
@@ -25,7 +26,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -233,7 +233,7 @@ zx_status_t OtRadioDevice::Init() {
   }
 
   zx_device_t* pdev_fragment = nullptr;
-  bool found = composite.GetFragment("ddk.protocol.platform.device.PDev", &pdev_fragment);
+  bool found = composite.GetFragment("fuchsia.hardware.platform.device.PDev", &pdev_fragment);
   if (!found) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire pdev fragment", __func__);
     return ZX_ERR_NO_RESOURCES;

@@ -5,6 +5,10 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_AML_MESON_POWER_AML_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_AML_MESON_POWER_AML_POWER_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <fuchsia/hardware/vreg/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <threads.h>
 
@@ -13,10 +17,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/powerimpl.h>
-#include <ddktl/protocol/pwm.h>
-#include <ddktl/protocol/vreg.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-s905d2/s905d2-power.h>
 #include <soc/aml-s905d3/s905d3-power.h>
@@ -32,11 +32,9 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
   static constexpr int kInvalidIndex = -1;
 
  public:
-
   // Constructor for Astro.
   AmlPower(zx_device_t* parent, ddk::PwmProtocolClient big_cluster_pwm,
-                    const std::vector<aml_voltage_table_t> voltage_table,
-                    voltage_pwm_period_ns_t pwm_period)
+           const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(big_cluster_pwm),
         big_cluster_vreg_(std::nullopt),
@@ -49,9 +47,8 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
 
   // Constructor for Sherlock.
   AmlPower(zx_device_t* parent, ddk::PwmProtocolClient big_cluster_pwm,
-                    ddk::PwmProtocolClient little_cluster_pwm,
-                    const std::vector<aml_voltage_table_t> voltage_table,
-                    voltage_pwm_period_ns_t pwm_period)
+           ddk::PwmProtocolClient little_cluster_pwm,
+           const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(big_cluster_pwm),
         big_cluster_vreg_(std::nullopt),
@@ -63,9 +60,8 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
         num_domains_(2) {}
 
   AmlPower(zx_device_t* parent, ddk::VregProtocolClient big_cluster_vreg,
-                    ddk::PwmProtocolClient little_cluster_pwm,
-                    const std::vector<aml_voltage_table_t> voltage_table,
-                    voltage_pwm_period_ns_t pwm_period)
+           ddk::PwmProtocolClient little_cluster_pwm,
+           const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(std::nullopt),
         big_cluster_vreg_(big_cluster_vreg),

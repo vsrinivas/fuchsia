@@ -17,6 +17,7 @@
 
 #include "pci.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
@@ -28,8 +29,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/hw/wlan/ieee80211.h>
-#include <ddk/protocol/pci.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wlan/protocol/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/ath10k_pci-bind.h"

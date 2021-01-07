@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 
-#include <ddktl/protocol/platform/bus.h>
 #include <src/devices/sysmem/drivers/sysmem/device.h>
 #include <src/devices/sysmem/drivers/sysmem/driver.h>
 

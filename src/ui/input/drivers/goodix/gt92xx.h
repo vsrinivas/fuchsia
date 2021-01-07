@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_GOODIX_GT92XX_H_
 #define SRC_UI_INPUT_DRIVERS_GOODIX_GT92XX_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -15,8 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <hid/gt92xx.h>

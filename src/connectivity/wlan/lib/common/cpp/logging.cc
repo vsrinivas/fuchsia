@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/logging.h>
 
 static std::map<wlan_info_driver_feature_t, std::string> driver_feature_flags_string_map = {

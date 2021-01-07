@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -20,8 +22,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/acpi.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/mutex.h>
 
 namespace goldfish {

@@ -19,8 +19,8 @@ zx_library("simplehid") {
   sdk_headers = [ "lib/simplehid/simplehid.h" ]
   sources = []
   public_deps = [
-    # <lib/simplehid/simplehid.h> has #include <ddktl/protocol/hidbus.h>.
-    "//sdk/banjo/ddk.protocol.hidbus",
+    # <lib/simplehid/simplehid.h> has #include <fuchsia/hardware/hidbus/cpp/banjo.h>.
+    "//sdk/banjo/fuchsia.hardware.hidbus",
 
     # <lib/simplehid/simplehid.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/public/lib/zircon-internal",

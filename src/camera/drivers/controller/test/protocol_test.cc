@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/camerahwaccel/c/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/result.h>
@@ -13,7 +14,6 @@
 
 #include <utility>
 
-#include "ddk/protocol/camerahwaccel.h"
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"

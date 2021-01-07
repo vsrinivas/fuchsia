@@ -1,0 +1,27 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.rawnand;
+
+using zircon.device.nand;
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol RawNand {
+    /// Read one NAND page and its out-of-band data with hardware ECC.
+    ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
+                                       uint32 ecc_correct);
+
+    /// Write one NAND page and its out-of-band data with hardware ECC.
+    ///
+    /// Should return ZX_ERR_IO *only* when an error ocurred due to underlying hardware.
+    WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
+
+    /// Erase NAND block.
+    ///
+    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
+    EraseBlock(uint32 nandpage) -> (zx.status s);
+
+    GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
+};

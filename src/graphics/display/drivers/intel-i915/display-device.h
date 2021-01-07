@@ -6,10 +6,10 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_DISPLAY_DEVICE_H_
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
-#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 

@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_DWC2_DWC2_H_
 #define SRC_DEVICES_USB_DRIVERS_DWC2_DWC2_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -18,9 +21,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/usb/dci.h>
-#include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>
 #include <usb/dwc2/metadata.h>
 #include <usb/request-cpp.h>

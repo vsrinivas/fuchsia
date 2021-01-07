@@ -4,6 +4,7 @@
 
 #include "dwc2.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
@@ -15,7 +16,6 @@
 
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>

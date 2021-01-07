@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_PROXY_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_PROXY_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/vector.h>
 
 #include "proxy-protocol.h"

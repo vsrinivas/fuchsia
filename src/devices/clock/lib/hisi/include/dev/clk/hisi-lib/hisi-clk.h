@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_CLK_H_
 #define SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_CLK_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
 
 namespace hisi_clock {

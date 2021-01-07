@@ -5,16 +5,16 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_MT_8167_MT8167_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_MT_8167_MT8167_GPIO_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 #include <threads.h>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/array.h>
 
 #include "mt8167-gpio-regs.h"

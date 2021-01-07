@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_USB_REQUEST_H_
 #define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_USB_REQUEST_H_
 
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <threads.h>
@@ -13,7 +14,6 @@
 #include <zircon/listnode.h>
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/usb/request.h>
 
 __BEGIN_CDECLS
 

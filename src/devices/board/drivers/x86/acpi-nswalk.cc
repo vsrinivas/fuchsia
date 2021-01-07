@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/acpi/c/banjo.h>
+#include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <sys/types.h>
@@ -18,9 +21,6 @@
 
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/acpi.h>
-#include <ddk/protocol/pciroot.h>
-#include <ddk/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 
 #include "acpi-private.h"

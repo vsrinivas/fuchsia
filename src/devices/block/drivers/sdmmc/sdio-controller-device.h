@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
 
+#include <fuchsia/hardware/sdio/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
@@ -13,7 +14,6 @@
 #include <atomic>
 #include <memory>
 
-#include <ddk/protocol/sdio.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -154,4 +154,4 @@ class SdioControllerDevice : public SdioControllerDeviceType,
 
 }  // namespace sdmmc
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_

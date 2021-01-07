@@ -5,9 +5,10 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_SILERGY_SY_BUCK_H_
 #define SRC_DEVICES_POWER_DRIVERS_SILERGY_SY_BUCK_H_
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fuchsia/hardware/vreg/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/vreg.h>
 
 #include "sy-buck-regs.h"
 

@@ -5,15 +5,15 @@
 #ifndef SRC_UI_INPUT_DRIVERS_USB_HID_FUNCTION_ONE_ENDPOINT_HID_FUNCTION_H_
 #define SRC_UI_INPUT_DRIVERS_USB_HID_FUNCTION_ONE_ENDPOINT_HID_FUNCTION_H_
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <vector>
 
 #include <ddk/device.h>
-#include <ddk/protocol/hidbus.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/function.h>
 
 namespace one_endpoint_hid_function {
 

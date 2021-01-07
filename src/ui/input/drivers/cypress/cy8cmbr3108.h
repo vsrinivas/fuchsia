@@ -5,13 +5,13 @@
 #ifndef SRC_UI_INPUT_DRIVERS_CYPRESS_CY8CMBR3108_H_
 #define SRC_UI_INPUT_DRIVERS_CYPRESS_CY8CMBR3108_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
 #include <ddktl/metadata/touch-buttons.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 

@@ -5,7 +5,9 @@
 #ifndef SRC_CONNECTIVITY_PPP_DRIVERS_SERIAL_PPP_SERIAL_PPP_H_
 #define SRC_CONNECTIVITY_PPP_DRIVERS_SERIAL_PPP_SERIAL_PPP_H_
 
+#include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fuchsia/hardware/serial/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -25,8 +27,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/network/device.h>
-#include <ddktl/protocol/serial.h>
 #include <fbl/auto_lock.h>
 #include <fbl/span.h>
 

@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <zircon/device/block.h>
 
-#include <ddk/protocol/block.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 

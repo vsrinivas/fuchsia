@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/serialimpl/async/c/banjo.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <zircon/status.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/serialimpl/async.h>
 
 extern "C" {
 // defined in rust

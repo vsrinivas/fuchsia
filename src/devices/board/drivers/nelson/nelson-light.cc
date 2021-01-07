@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d3/s905d3-pwm.h>
@@ -50,9 +51,9 @@ static const device_fragment_t fragments[] = {
 };
 
 using LightName = char[ZX_MAX_NAME_LEN];
-constexpr LightName kLightNames[] = { "AMBER_LED" };
+constexpr LightName kLightNames[] = {"AMBER_LED"};
 constexpr LightsConfig kConfigs[] = {
-    { .brightness = true, .rgb = false, .init_on = true, .group_id = -1 },
+    {.brightness = true, .rgb = false, .init_on = true, .group_id = -1},
 };
 
 static constexpr pbus_metadata_t light_metadata[] = {
@@ -77,27 +78,27 @@ constexpr zx_bind_inst_t amber_led_pwm_match[] = {
     BI_MATCH_IF(EQ, BIND_PWM_ID, S905D3_PWM_AO_A),
 };
 constexpr device_fragment_part_t amber_led_gpio_fragment[] = {
-    { countof(root_match), root_match },
-    { countof(amber_led_gpio_match), amber_led_gpio_match },
+    {countof(root_match), root_match},
+    {countof(amber_led_gpio_match), amber_led_gpio_match},
 };
 constexpr device_fragment_part_t amber_led_pwm_fragment[] = {
-    { countof(root_match), root_match },
-    { countof(amber_led_pwm_match), amber_led_pwm_match },
+    {countof(root_match), root_match},
+    {countof(amber_led_pwm_match), amber_led_pwm_match},
 };
 const device_fragment_t light_fragments[] = {
-    { "gpio", countof(amber_led_gpio_fragment), amber_led_gpio_fragment },
-    { "pwm", countof(amber_led_pwm_fragment), amber_led_pwm_fragment },
+    {"gpio", countof(amber_led_gpio_fragment), amber_led_gpio_fragment},
+    {"pwm", countof(amber_led_pwm_fragment), amber_led_pwm_fragment},
 };
 
 static const pbus_dev_t light_dev = []() {
-    pbus_dev_t result = {};
-    result.name = "gpio-light";
-    result.vid = PDEV_VID_AMLOGIC;
-    result.pid = PDEV_PID_GENERIC;
-    result.did = PDEV_DID_GPIO_LIGHT;
-    result.metadata_list = light_metadata;
-    result.metadata_count = countof(light_metadata);
-    return result;
+  pbus_dev_t result = {};
+  result.name = "gpio-light";
+  result.vid = PDEV_VID_AMLOGIC;
+  result.pid = PDEV_PID_GENERIC;
+  result.did = PDEV_DID_GPIO_LIGHT;
+  result.metadata_list = light_metadata;
+  result.metadata_count = countof(light_metadata);
+  return result;
 }();
 
 zx_status_t Nelson::LightInit() {
@@ -148,7 +149,8 @@ zx_status_t Nelson::LightInit() {
     zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
+  status =
+      pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

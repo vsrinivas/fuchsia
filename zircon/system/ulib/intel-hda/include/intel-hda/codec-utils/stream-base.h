@@ -6,6 +6,7 @@
 #define INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
@@ -13,7 +14,6 @@
 #include <audio-proto/audio-proto.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intelhda/codec.h>
 #include <ddktl/fidl.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>

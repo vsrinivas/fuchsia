@@ -5,6 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
 
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/pmt.h>
 #include <threads.h>
@@ -15,9 +18,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/controller.h>
-#include <ddktl/protocol/goldfish/control.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

@@ -4,6 +4,8 @@
 
 #include "aml-ethernet.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,8 +17,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

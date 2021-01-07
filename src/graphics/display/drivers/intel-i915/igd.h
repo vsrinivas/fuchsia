@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -12,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/pci.h>
 #include <hwreg/bitfields.h>
 
 #include "registers-ddi.h"

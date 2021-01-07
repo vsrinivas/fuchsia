@@ -17,11 +17,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
 
+#include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <zircon/compiler.h>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
 
-#include "ddk/protocol/wlanif.h"
 #include "netbuf.h"
 
 /*
@@ -190,7 +190,7 @@ static inline void* brcmu_alloc_and_copy(const void* buf, size_t size) {
 /* format/print */
 #if !defined(NDEBUG)
 __PRINTFLIKE(3, 4) void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...);
-#else  // !defined(NDEBUG)
+#else   // !defined(NDEBUG)
 __PRINTFLIKE(3, 4)
 static inline void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {}
 #endif  // !defined(NDEBUG)

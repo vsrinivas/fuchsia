@@ -4,6 +4,8 @@
 
 #include "amlogic-video.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <memory.h>
@@ -22,8 +24,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/composite.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>

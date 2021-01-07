@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_DRIVER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_DRIVER_H_
 
+#include <fuchsia/hardware/badblock/c/banjo.h>
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
 #include <lib/ftl/ndm-driver.h>
@@ -12,9 +14,6 @@
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <ddk/protocol/badblock.h>
-#include <ddk/protocol/nand.h>
 
 namespace ftl {
 

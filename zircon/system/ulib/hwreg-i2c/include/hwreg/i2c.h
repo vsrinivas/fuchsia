@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYSTEM_ULIB_HWREG_INCLUDE_HWREG_I2C_H_
-#define SYSTEM_ULIB_HWREG_INCLUDE_HWREG_I2C_H_
+#ifndef HWREG_I2C_H_
+#define HWREG_I2C_H_
 
 #include <endian.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <zircon/types.h>
 
-#include <ddktl/protocol/i2c.h>
 #include <hwreg/bitfields.h>
 
 namespace hwreg {
@@ -159,4 +159,4 @@ class I2cRegisterAddr : public RegisterAddr<RegType> {
 };
 }  // namespace hwreg
 
-#endif  // SYSTEM_ULIB_HWREG_INCLUDE_HWREG_I2C_H_
+#endif  // HWREG_I2C_H_

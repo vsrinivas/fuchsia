@@ -6,10 +6,10 @@
 #define SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_
 
 #include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 
 namespace clk {
 

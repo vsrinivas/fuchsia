@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/common/dispatcher.h>
 
 namespace wlanphy {

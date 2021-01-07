@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PHY_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PHY_H_
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+
 #include <array>
 #include <string>
 
-#include <ddk/protocol/wlanphyimpl.h>
 #include <fbl/span.h>
 
 namespace wlan {

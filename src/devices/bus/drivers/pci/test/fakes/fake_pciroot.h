@@ -4,9 +4,8 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <zircon/errors.h>
-
-#include <ddktl/protocol/pciroot.h>
 
 #include "fake_ecam.h"
 

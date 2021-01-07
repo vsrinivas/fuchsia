@@ -5,6 +5,7 @@
 #include "ot_radio_bootloader.h"
 
 #include <ctype.h>
+#include <fuchsia/hardware/composite/c/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
@@ -20,7 +21,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

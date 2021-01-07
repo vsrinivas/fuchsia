@@ -26,10 +26,10 @@ driver_module("bma253") {
   sources = [ "bma253.cc" ]
   deps = [
     ":bma253-bind",
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -56,8 +56,8 @@ test("bma253-test") {
   ]
   deps = [
     ":bma253-bind",
-    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c",

@@ -5,6 +5,12 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 
+#include <fuchsia/hardware/badblock/c/banjo.h>
+#include <fuchsia/hardware/badblock/cpp/banjo.h>
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/ftl/volume.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
@@ -16,13 +22,7 @@
 
 #include <memory>
 
-#include <ddk/protocol/badblock.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/badblock.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 

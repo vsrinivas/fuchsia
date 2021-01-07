@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <lib/fitx/result.h>
 
 #include <vector>
 
 #include <ddk/binding.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/acpi.h>
 #include <fbl/mutex.h>
 
 #include "resources.h"

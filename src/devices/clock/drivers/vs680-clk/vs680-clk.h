@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_VS680_CLK_VS680_CLK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_VS680_CLK_VS680_CLK_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
 #include <soc/vs680/vs680-clk.h>
 

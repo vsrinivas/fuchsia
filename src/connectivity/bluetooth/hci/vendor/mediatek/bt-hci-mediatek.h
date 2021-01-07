@@ -5,16 +5,16 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_MEDIATEK_BT_HCI_MEDIATEK_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_MEDIATEK_BT_HCI_MEDIATEK_H_
 
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/vmo.h>
 #include <threads.h>
 
-#include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/sdio.h>
 #include <fbl/auto_lock.h>
 
 namespace bluetooth {

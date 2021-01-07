@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_TEST_GPIO_TEST_H_
 #define SRC_DEVICES_GPIO_DRIVERS_GPIO_TEST_GPIO_TEST_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
 #include <fbl/array.h>
 
 namespace gpio_test {

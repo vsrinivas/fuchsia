@@ -4,6 +4,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_VIRTIO_INPUT_H_
 #define SRC_UI_INPUT_DRIVERS_VIRTIO_INPUT_H_
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <stdlib.h>
@@ -11,9 +13,7 @@
 #include <memory>
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/hidbus.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
 #include <hid/boot.h>
 #include <virtio/input.h>
 

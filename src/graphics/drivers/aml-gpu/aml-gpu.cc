@@ -5,6 +5,9 @@
 #include "aml-gpu.h"
 
 #include <fuchsia/hardware/gpu/clock/c/fidl.h>
+#include <fuchsia/hardware/iommu/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <stdint.h>
@@ -20,9 +23,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/iommu.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 

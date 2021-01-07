@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
 
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -14,9 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/dci.h>
-#include <ddktl/protocol/usb/hci.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>

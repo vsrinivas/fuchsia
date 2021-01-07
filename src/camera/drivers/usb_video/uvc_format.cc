@@ -4,11 +4,11 @@
 
 #include "src/camera/drivers/usb_video/uvc_format.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <stdlib.h>
 #include <zircon/hw/usb/video.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
 #include <usb/usb.h>
 

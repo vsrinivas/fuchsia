@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_HDMITX_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform/device.h>
 
 #include "dwc-hdmi.h"
 #include "vpu.h"

@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AS370_PDM_INPUT_AUDIO_STREAM_IN_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AS370_PDM_INPUT_AUDIO_STREAM_IN_H_
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -14,7 +15,6 @@
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
-#include <ddktl/protocol/clock.h>
 #include <soc/as370/syn-audio-in.h>
 
 namespace audio {

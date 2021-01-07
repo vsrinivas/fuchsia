@@ -13,8 +13,8 @@ driver_module("mt8167-tdm-output") {
   sources = [ "audio-stream-out.cc" ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",

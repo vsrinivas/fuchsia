@@ -23,8 +23,8 @@ test("device-protocol-pdev-test") {
   output_name = "device-protocol-pdev-test"
   sources = [ "pdev-test.cc" ]
   public_deps = [
-    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
-    "//sdk/banjo/ddk.protocol.platform.device",
+    # <lib/device-protocol/pdev.h> has #include <fuchsia/hardware/platform/device/cpp/banjo.h>.
+    "//sdk/banjo/fuchsia.hardware.platform.device",
 
     # Banjo protocols have #include <ddk/driver.h>.
     "//src/lib/ddk",

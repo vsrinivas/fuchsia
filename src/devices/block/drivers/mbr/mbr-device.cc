@@ -4,6 +4,8 @@
 
 #include "mbr-device.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/partition/c/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -25,8 +27,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/partition.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

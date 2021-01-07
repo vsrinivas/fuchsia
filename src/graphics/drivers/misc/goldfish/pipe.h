@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
@@ -15,7 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 

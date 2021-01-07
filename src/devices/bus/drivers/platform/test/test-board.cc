@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,7 +19,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 
 #include "src/devices/bus/drivers/platform/test/test-board-bind.h"

@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_MAC_MAC_INTERFACE_H_
 
 #include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>
 
 #include <unordered_set>
 
-#include <ddktl/protocol/network/mac.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>

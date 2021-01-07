@@ -4,7 +4,9 @@
 
 #include "controller.h"
 
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/display/capture/c/banjo.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <threads.h>
 #include <zircon/threads.h>
@@ -19,12 +21,9 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/display/capture.h>
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/display/capture.h>
-#include <ddktl/protocol/display/clamprgb.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>

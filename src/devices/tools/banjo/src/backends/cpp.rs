@@ -857,7 +857,13 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             "zircon/types".to_string(),
         ]
         .into_iter()
-        .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| n.0.replace('.', "/")))
+        .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| {
+            if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+                n.0.replace('.', "/") + "/c/banjo"
+            } else {
+                n.0.replace('.', "/")
+            }
+        }))
         .map(|n| format!("#include <{}.h>", n))
         .chain(
             // Include handle headers for zx_handle_t wrapper types used in protocols.
@@ -1289,12 +1295,13 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
         let mut includes = vec!["lib/mock-function/mock-function".to_string()]
             .into_iter()
-            .chain(
-                ast.namespaces
-                    .iter()
-                    .filter(|n| n.0 != "zx")
-                    .map(|n| n.0.replace('.', "/").replace("ddk", "ddktl")),
-            )
+            .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| {
+                if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+                    n.0.replace('.', "/") + "/cpp/banjo"
+                } else {
+                    n.0.replace('.', "/")
+                }
+            }))
             .map(|n| format!("#include <{}.h>", n))
             .collect::<Vec<_>>();
         includes.sort();

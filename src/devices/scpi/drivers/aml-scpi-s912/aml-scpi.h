@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_SCPI_H_
 #define SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_SCPI_H_
 
+#include <fuchsia/hardware/mailbox/cpp/banjo.h>
+#include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -17,8 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/mailbox.h>
-#include <ddktl/protocol/scpi.h>
 #include <hw/reg.h>
 
 #define SCPI_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

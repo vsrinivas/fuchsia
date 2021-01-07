@@ -1,9 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fuchsia/hardware/dsiimpl/c/banjo.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/dsiimpl.h>
 
 // Supported panel types
 #define PANEL_TV070WSM_FT UINT8_C(0x00)

@@ -18,6 +18,8 @@
 
 #include "cfg80211.h"
 
+#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/errors.h>
@@ -28,10 +30,8 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/wlanif.h>
-#include <ddk/protocol/wlanphyimpl.h>
 #include <wifi/wifi-config.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/phy.h>

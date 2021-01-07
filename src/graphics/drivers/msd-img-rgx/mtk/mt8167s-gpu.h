@@ -6,6 +6,8 @@
 #define SRC_GRAPHICS_DRIVERS_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
@@ -18,9 +20,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <hw/reg.h>
 

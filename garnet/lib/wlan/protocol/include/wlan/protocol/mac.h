@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_
 #define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_MAC_H_
 
-#include <ddk/protocol/wlan/info.h>
-#include <ddk/protocol/wlan/mac.h>
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS

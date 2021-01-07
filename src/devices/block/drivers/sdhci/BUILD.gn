@@ -23,9 +23,9 @@ driver_module("sdhci") {
   sources = [ "sdhci.cc" ]
   deps = [
     ":sdhci-bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.sdhci",
-    "//sdk/banjo/ddk.protocol.sdmmc",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.sdhci",
+    "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
@@ -47,10 +47,10 @@ test("sdhci-test-bin") {
   ]
   deps = [
     ":sdhci-bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.sdhci",
-    "//sdk/banjo/ddk.protocol.sdhci:ddk.protocol.sdhci_mock",
-    "//sdk/banjo/ddk.protocol.sdmmc",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.sdhci",
+    "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_mock",
+    "//sdk/banjo/fuchsia.hardware.sdmmc",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",

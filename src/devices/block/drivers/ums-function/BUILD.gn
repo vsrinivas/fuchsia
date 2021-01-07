@@ -12,10 +12,10 @@ driver_module("ums-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ums-function.c" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.function",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_c",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

@@ -6,12 +6,12 @@
 #define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <threads.h>
 
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2cimpl.h>
 
 #include "ftdi-mpsse.h"
 

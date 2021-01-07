@@ -19,13 +19,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <ddk/hw/wlan/ieee80211.h>
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlan/info.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 // The below constants are not defined in the 802.11-2016 Std.
 #define IEEE80211_MAX_CHAINS 4

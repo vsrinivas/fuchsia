@@ -27,8 +27,8 @@ driver_module("i2c") {
   ]
   deps = [
     ":i2c_bind",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.i2cimpl",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
@@ -53,8 +53,8 @@ test("i2c-test-bin") {
   ]
   deps = [
     ":i2c_bind",
-    "//sdk/banjo/ddk.protocol.i2c",
-    "//sdk/banjo/ddk.protocol.i2cimpl",
+    "//sdk/banjo/fuchsia.hardware.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/testing/fake_ddk",

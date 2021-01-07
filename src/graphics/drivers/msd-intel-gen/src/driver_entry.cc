@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intelgpucore.h>
 #include <ddktl/fidl.h>
 
 #include "magma_util/dlog.h"

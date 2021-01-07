@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/usb/bus/c/banjo.h>
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
@@ -20,9 +23,6 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/usb/bus.h>
-#include <ddk/protocol/usb/request.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <usb/usb-request.h>

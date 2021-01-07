@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -23,8 +24,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/usb/modeswitch.h>
 
 #define DEV_USB_PERIPHERAL_DIR "/dev/class/usb-peripheral"
 

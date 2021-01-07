@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -9,7 +10,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 
 extern zx_status_t test_amlogic_video_bind(void* ctx, zx_device_t* parent);
 

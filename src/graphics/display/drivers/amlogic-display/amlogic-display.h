@@ -5,6 +5,13 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/display-panel.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -21,13 +28,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/display/capture.h>
-#include <ddktl/protocol/display/clamprgb.h>
-#include <ddktl/protocol/display/controller.h>
-#include <ddktl/protocol/dsiimpl.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>

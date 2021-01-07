@@ -1,14 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
-
-banjo("ddk.protocol.isp") {
-  sources = [ "isp.banjo" ]
-  deps = [
-    "//sdk/banjo/ddk.protocol.camera",
-    "//sdk/banjo/ddk.protocol.camerahwaccel",
-    "//sdk/banjo/zircon.device.sysmem",
-  ]
+group("ddk.protocol.isp") {
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.isp" ]
 }

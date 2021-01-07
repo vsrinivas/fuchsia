@@ -5,6 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_AUDIO_STREAM_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_AUDIO_STREAM_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -16,12 +19,9 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/protocol/gpio.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 

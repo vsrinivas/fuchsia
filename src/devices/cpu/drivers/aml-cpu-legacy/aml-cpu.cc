@@ -4,6 +4,9 @@
 
 #include "aml-cpu.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
@@ -16,9 +19,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/thermal.h>
 
 #include "fuchsia/hardware/thermal/llcpp/fidl.h"
 

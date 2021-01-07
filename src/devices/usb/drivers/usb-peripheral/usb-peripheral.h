@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
 
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
@@ -12,9 +15,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/usb/dci.h>
-#include <ddktl/protocol/usb/function.h>
-#include <ddktl/protocol/usb/modeswitch.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>

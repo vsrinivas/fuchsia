@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_MSM8X53_SOM_MSM8X53_H_
 #define SRC_DEVICES_BOARD_DRIVERS_MSM8X53_SOM_MSM8X53_H_
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 
 namespace board_msm8x53 {
 

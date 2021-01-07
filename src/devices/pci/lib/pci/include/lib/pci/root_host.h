@@ -4,15 +4,16 @@
 #ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
 #define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <zircon/compiler.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/pciroot.h>
 
 // Userspace ACPI/PCI support is entirely in C++, but the legacy kernel pci support
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the
 // DDKTL usage away from it until we can remove it entirely.
 #ifdef __cplusplus
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/msi.h>
@@ -31,7 +32,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/pciroot.h>
 #include <fbl/mutex.h>
 #include <region-alloc/region-alloc.h>
 

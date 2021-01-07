@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -18,8 +20,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

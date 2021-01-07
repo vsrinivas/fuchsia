@@ -5,7 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_DAI_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_DAI_H_
 
+#include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -16,11 +18,9 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/protocol/audio.h>
 #include <sdk/lib/fidl/cpp/binding.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 

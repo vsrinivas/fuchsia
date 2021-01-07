@@ -4,13 +4,13 @@
 
 #include "aml-bad-block.h"
 
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <utility>
 
-#include <ddk/protocol/nand.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_hash_table.h>

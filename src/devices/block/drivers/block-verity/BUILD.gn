@@ -146,7 +146,7 @@ driver_module("block-verity") {
     ":config",
     ":geometry",
     ":sealer",
-    "//sdk/banjo/ddk.protocol.block",
+    "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

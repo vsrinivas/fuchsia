@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_LIB_BINDINGS_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_LIB_BINDINGS_H_
 
-#include <ddk/protocol/serialimpl/async.h>
+#include <fuchsia/hardware/serialimpl/async/c/banjo.h>
 
 typedef struct bt_hci_transport_handle* bt_hci_transport_handle_t;
 

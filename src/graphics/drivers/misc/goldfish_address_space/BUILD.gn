@@ -17,8 +17,8 @@ bind_rules("goldfish_address_space-bind") {
 
 common_deps = [
   ":goldfish_address_space-bind",
-  "//sdk/banjo/ddk.protocol.goldfish.addressspace",
-  "//sdk/banjo/ddk.protocol.pci",
+  "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
+  "//sdk/banjo/fuchsia.hardware.pci",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",
@@ -63,7 +63,7 @@ test("goldfish-address-space-test") {
     "address_space_device_test.cc",
   ]
   deps = common_deps + [
-           "//sdk/banjo/ddk.protocol.pci:ddk.protocol.pci_mock",
+           "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake_ddk",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",

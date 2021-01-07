@@ -17,13 +17,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
 #include <atomic>
-
-#include <ddk/protocol/wlanphyimpl.h>
 
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 

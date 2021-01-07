@@ -15,7 +15,7 @@ use {
         logger,
         timer::{EventId, Scheduler, Timer},
     },
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, log},
     std::fmt,
@@ -353,7 +353,7 @@ mod tests {
             key::{KeyConfig, KeyType, Protection},
             timer::FakeScheduler,
         },
-        banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
+        banjo_fuchsia_hardware_wlan_info::{WlanChannel, WlanChannelBandwidth},
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,

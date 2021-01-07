@@ -5,9 +5,10 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_
 
+#include <fuchsia/hardware/usb/cpp/banjo.h>
+
 #include <ddk/binding.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>

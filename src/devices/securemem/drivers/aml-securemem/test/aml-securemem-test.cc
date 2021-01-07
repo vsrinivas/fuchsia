@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/composite/c/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -11,12 +17,6 @@
 #include <lib/zx/resource.h>
 #include <zircon/limits.h>
 
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

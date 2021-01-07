@@ -12,9 +12,9 @@ used on all platforms.
 Bringing up an SoC with a new SDMMC controller requires writing a new platform
 driver. If the controller implements the SDHCI specification then this driver
 should implement
-[ddk.protocol.sdhci](/sdk/banjo/ddk.protocol.sdhci/sdhci.banjo), otherwise it
+[fuchsia.hardware.sdhci](/sdk/banjo/fuchsia.hardware.sdhci/sdhci.banjo), otherwise it
 should implement
-[ddk.protocol.sdmmc](/sdk/banjo/ddk.protocol.sdmmc/sdmmc.banjo). It may be
+[fuchsia.hardware.sdmmc](/sdk/banjo/fuchsia.hardware.sdmmc/sdmmc.banjo). It may be
 helpful to disable DMA and higher speed modes through `SdmmcHostInfo` and
 `SdmmcHostPrefs` until the basic functionality of the hardware has been
 validated. See the SDHCI and SDMMC protocol definitions for more information.
@@ -22,17 +22,17 @@ validated. See the SDHCI and SDMMC protocol definitions for more information.
 ## SD/eMMC core driver
 
 The SD/eMMC block driver creates a device that implements
-[ddk.protocol.block.BlockImpl](/sdk/banjo/ddk.protocol.block/block.banjo) and
-[ddk.protocol.block.partition](/sdk/banjo/ddk.protocol.block.partition/partition.banjo)
+[fuchsia.hardware.block.BlockImpl](/sdk/banjo/fuchsia.hardware.block/block.banjo) and
+[fuchsia.hardware.block.partition](/sdk/banjo/fuchsia.hardware.block.partition/partition.banjo)
 for the user data partition, as well as devices for the boot0 and boot1
 partitions if enabled (eMMC only). A device implementing
-[ddk.protocol.rpmb](/sdk/banjo/ddk.protocol.rpmb/rpmb.banjo) is created if the
+[fuchsia.hardware.rpmb](/sdk/banjo/fuchsia.hardware.rpmb/rpmb.banjo) is created if the
 device supports it (eMMC only, based on JEDEC standard JESD84-B51 section 6.6.22).
 
 ## SDIO core driver
 
 The SDIO core driver creates devices that implement
-[ddk.protocol.sdio](/sdk/banjo/ddk.protocol.sdio/sdio.banjo), one for
+[fuchsia.hardware.sdio](/sdk/banjo/fuchsia.hardware.sdio/sdio.banjo), one for
 each IO function. Whereas the only expected client of the SD/eMMC block driver
 is the storage stack, the SDIO driver will have different clients depending on
 what kind of SDIO card is detected. Client drivers bind to the SDIO core driver

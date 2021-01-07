@@ -4,6 +4,7 @@
 
 #include "sdhci.h"
 
+#include <fuchsia/hardware/sdhci/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
@@ -14,7 +15,6 @@
 #include <vector>
 
 #include <mmio-ptr/fake.h>
-#include <mock/ddktl/protocol/sdhci.h>
 #include <zxtest/zxtest.h>
 
 namespace {

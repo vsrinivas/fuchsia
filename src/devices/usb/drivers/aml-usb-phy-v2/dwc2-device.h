@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_DWC2_DEVICE_H_
 #define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_DWC2_DEVICE_H_
 
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
+
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/phy.h>
 
 namespace aml_usb_phy {
 

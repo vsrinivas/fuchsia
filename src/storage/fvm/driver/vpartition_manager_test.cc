@@ -9,7 +9,6 @@
 
 #include <vector>
 
-#include <ddktl/protocol/block.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/driver/vpartition.h"

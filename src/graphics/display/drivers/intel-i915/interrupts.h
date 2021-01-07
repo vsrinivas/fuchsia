@@ -5,11 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTERRUPTS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTERRUPTS_H_
 
+#include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <lib/zx/handle.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/intelgpucore.h>
 #include <fbl/macros.h>
 
 #include "registers-pipe.h"

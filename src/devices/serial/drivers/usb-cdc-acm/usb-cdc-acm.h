@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_USB_CDC_ACM_USB_CDC_ACM_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_USB_CDC_ACM_USB_CDC_ACM_H_
 
+#include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +14,6 @@
 #include <thread>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/serialimpl.h>
 #include <fbl/auto_lock.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

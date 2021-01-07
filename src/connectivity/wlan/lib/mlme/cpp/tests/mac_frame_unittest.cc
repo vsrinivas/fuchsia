@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_frame.h>

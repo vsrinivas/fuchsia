@@ -4,6 +4,10 @@
 
 #include "aml-sdmmc.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -26,10 +30,6 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sdmmc.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>

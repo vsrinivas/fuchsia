@@ -6,6 +6,10 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_DISPLAY_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/amlogiccanvas/c/banjo.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -18,10 +22,6 @@
 #include <optional>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/sysmem.h>
 
 #include "edid.h"
 #include "vim-audio.h"

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <inttypes.h>
 
 #include <cstdint>
 
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/pci.h>
-#include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>

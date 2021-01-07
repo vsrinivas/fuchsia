@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <assert.h>
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/fitx/result.h>
 #include <lib/pci/pciroot.h>
 #include <stdio.h>
@@ -11,7 +12,6 @@
 #include <optional>
 
 #include <acpica/acpi.h>
-#include <ddk/protocol/pciroot.h>
 
 #include "acpi-buffer.h"
 #include "acpi-private.h"

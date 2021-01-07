@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_
-#define SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_NAND_NAND_H_
+#define SRC_DEVICES_NAND_DRIVERS_NAND_NAND_H_
 
+#include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <fuchsia/hardware/rawnand/cpp/banjo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/operation/nand.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -13,8 +15,6 @@
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/nand.h>
-#include <ddktl/protocol/rawnand.h>
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -85,4 +85,4 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
 }  // namespace nand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_NAND_NAND_H_

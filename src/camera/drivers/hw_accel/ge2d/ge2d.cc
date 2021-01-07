@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
@@ -17,7 +18,6 @@
 #include <ddk/driver.h>
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/auto_lock.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d_regs.h"

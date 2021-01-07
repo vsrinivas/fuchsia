@@ -5,6 +5,12 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
 
+#include <fuchsia/hardware/display/capture/c/banjo.h>
+#include <fuchsia/hardware/display/capture/cpp/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/c/banjo.h>
+#include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <sys/types.h>
@@ -19,17 +25,10 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/display/capture.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/capture.h>
-#include <ddktl/protocol/display/clamprgb.h>
-#include <ddktl/protocol/display/controller.h>
-#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-
-#include "ddk/protocol/display/clamprgb.h"
 
 namespace fake_display {
 

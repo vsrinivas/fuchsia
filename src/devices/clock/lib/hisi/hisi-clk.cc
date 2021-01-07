@@ -1,6 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fuchsia/hardware/clockimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
@@ -14,9 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clockimpl.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <dev/clk/hisi-lib/hisi-clk.h>
 #include <dev/clk/hisi-lib/hisi-gate.h>
 #include <fbl/auto_call.h>

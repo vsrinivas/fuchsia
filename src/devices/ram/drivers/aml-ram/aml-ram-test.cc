@@ -4,6 +4,8 @@
 
 #include "aml-ram.h"
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -14,8 +16,6 @@
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 
 namespace amlogic_ram {

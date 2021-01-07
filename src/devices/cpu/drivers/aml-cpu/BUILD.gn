@@ -16,10 +16,10 @@ driver_module("aml-cpu") {
   }
   sources = [ "aml-cpu.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.thermal",
+    "//sdk/banjo/fuchsia.hardware.clock",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -48,11 +48,11 @@ test("aml-cpu-test-bin") {
   ]
   output_name = "aml-cpu-test"
   deps = [
-    "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.power:ddk.protocol.power_mock",
-    "//sdk/banjo/ddk.protocol.thermal",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_mock",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_mock",
+    "//sdk/banjo/fuchsia.hardware.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",

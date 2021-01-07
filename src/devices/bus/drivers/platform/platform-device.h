@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/vector.h>
 
 #include "device-resources.h"

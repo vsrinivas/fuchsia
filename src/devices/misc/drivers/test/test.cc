@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/hardware/test/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -16,7 +17,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/test.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

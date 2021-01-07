@@ -4,6 +4,7 @@
 
 #include "xhci-transfer.h"
 
+#include <fuchsia/hardware/usb/hci/c/banjo.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
@@ -12,7 +13,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/usb/hci.h>
 #include <fbl/auto_lock.h>
 
 #include "xhci-trb.h"

@@ -5,13 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DESCRIPTORS_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DESCRIPTORS_H_
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/usb.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 

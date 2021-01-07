@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::{
         ie::{
             parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,

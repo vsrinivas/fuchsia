@@ -119,12 +119,12 @@ driver_module("platform-bus-x86") {
   deps = [
     ":iommu",
     ":smbios",
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.pciroot",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.pciroot",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
@@ -169,12 +169,12 @@ test("x86-battery-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.pciroot",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.pciroot",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/lib/fdio",
@@ -212,8 +212,8 @@ test("x86-lid-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
 
@@ -252,11 +252,11 @@ test("x86-pwrsrc-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
@@ -323,7 +323,7 @@ test("x86-thermal-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/fuchsia.hardware.acpi",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
@@ -367,8 +367,8 @@ test("x86-cros-ec-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.acpi",
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
 

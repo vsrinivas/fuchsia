@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 
 #include <map>
 #include <queue>
-
-#include <ddktl/protocol/registers.h>
 
 namespace mock_registers {
 

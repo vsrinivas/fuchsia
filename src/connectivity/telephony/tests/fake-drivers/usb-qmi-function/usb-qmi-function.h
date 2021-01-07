@@ -5,13 +5,14 @@
 #ifndef SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_USB_QMI_FUNCTION_USB_QMI_FUNCTION_H_
 #define SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_USB_QMI_FUNCTION_USB_QMI_FUNCTION_H_
 
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
+
 #include <memory>
 #include <optional>
 #include <vector>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/function.h>
 
 namespace usb_qmi_function {
 constexpr size_t kUsbIntfDummySize = 8;

@@ -39,7 +39,7 @@
 #include <net/ipv6.h>
 #include <net/tcp.h>
 
-#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <linux/etherdevice.h>
 #include <linux/fs.h>
 #include <linux/ip.h>

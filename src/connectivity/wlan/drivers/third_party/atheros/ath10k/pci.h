@@ -18,10 +18,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/wlan/mac.h>
-#include <ddk/protocol/wlanphyimpl.h>
 
 #include "ce.h"
 #include "hw.h"

@@ -21,8 +21,8 @@ driver_module("integration-test") {
   sources = [ "test.cc" ]
   deps = [
     ":test-bus-bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

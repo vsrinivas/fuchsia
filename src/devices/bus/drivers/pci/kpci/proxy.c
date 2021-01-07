@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +16,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sysmem.h>
 #include <hw/pci.h>
 
 #include "kpci-private.h"

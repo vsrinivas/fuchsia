@@ -14,7 +14,7 @@ source_set("common") {
     "parent.cc",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",

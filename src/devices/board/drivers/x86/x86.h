@@ -6,13 +6,13 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_X86_H_
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <memory>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 

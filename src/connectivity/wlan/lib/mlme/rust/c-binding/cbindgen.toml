@@ -14,8 +14,8 @@ language = "C"
 
 sys_includes = [
     # Banjo types.
-    "ddk/protocol/wlan/info.h",  # wlan_channel_t
-    "ddk/protocol/wlan/mac.h",   # wlanmac_info_t, wlan_hw_scan_config_t, wlan_rx_info_t
+    "fuchsia/hardware/wlan/info/c/banjo.h",  # wlan_channel_t
+    "fuchsia/hardware/wlan/mac/c/banjo.h",   # wlanmac_info_t, wlan_hw_scan_config_t, wlan_rx_info_t
 
     # Other existing types.
     "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h",  # wlan_key_config_t

@@ -4,11 +4,15 @@
 
 use {crate::ast::BanjoAst, anyhow::Error, std::io};
 
-pub use self::{ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, rust::RustBackend};
+pub use self::{
+    ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, legacy::LegacyBackend,
+    legacy::LegacySubtype, rust::RustBackend,
+};
 
 mod ast;
 mod c;
 mod cpp;
+mod legacy;
 mod rust;
 mod util;
 

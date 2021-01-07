@@ -20,9 +20,9 @@ test("usb-request-test-bin") {
     "request-cpp-test.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.function",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
@@ -41,9 +41,9 @@ test("usb-wrapper-test-bin") {
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
@@ -62,8 +62,8 @@ test("usb-desc-lib-test-bin") {
   output_name = "usb-desc-lib-test"
   sources = [ "usb-desc-lib-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
     "//sdk/lib/fdio",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/zxtest",

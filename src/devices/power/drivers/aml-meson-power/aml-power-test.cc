@@ -4,11 +4,12 @@
 
 #include "aml-power.h"
 
+#include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
+#include <fuchsia/hardware/vreg/cpp/banjo-mock.h>
+
 #include <optional>
 
 #include <ddk/platform-defs.h>
-#include <mock/ddktl/protocol/pwm.h>
-#include <mock/ddktl/protocol/vreg.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 #include <zxtest/zxtest.h>
 
@@ -39,19 +40,18 @@ class AmlPowerTestWrapper : public AmlPower {
   AmlPowerTestWrapper(ddk::MockPwm& mock_big_pwm, ddk::MockPwm& mock_little_pwm,
                       std::vector<aml_voltage_table_t> voltage_table,
                       voltage_pwm_period_ns_t pwm_period)
-      : AmlPower(nullptr, mock_big_pwm.GetProto(), mock_little_pwm.GetProto(),
-                 voltage_table, pwm_period) {}
+      : AmlPower(nullptr, mock_big_pwm.GetProto(), mock_little_pwm.GetProto(), voltage_table,
+                 pwm_period) {}
 
   AmlPowerTestWrapper(ddk::MockVreg& mock_big_vreg, ddk::MockPwm& mock_little_pwm,
                       std::vector<aml_voltage_table_t> voltage_table,
                       voltage_pwm_period_ns_t pwm_period)
-      : AmlPower(nullptr, mock_big_vreg.GetProto(), mock_little_pwm.GetProto(),
-                 voltage_table, pwm_period) {}
+      : AmlPower(nullptr, mock_big_vreg.GetProto(), mock_little_pwm.GetProto(), voltage_table,
+                 pwm_period) {}
 
   AmlPowerTestWrapper(ddk::MockPwm& mock_big_pwm, std::vector<aml_voltage_table_t> voltage_table,
                       voltage_pwm_period_ns_t pwm_period)
-      : AmlPower(nullptr, mock_big_pwm.GetProto(), voltage_table,
-                 pwm_period) {}
+      : AmlPower(nullptr, mock_big_pwm.GetProto(), voltage_table, pwm_period) {}
 
   static std::unique_ptr<AmlPowerTestWrapper> Create(ddk::MockPwm& mock_big_pwm,
                                                      std::vector<aml_voltage_table_t> voltage_table,

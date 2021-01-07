@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/protocol/ieee80211.h>
 
 #include "core.h"
@@ -1483,18 +1483,13 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
   // Check for unsupported channel + CBW combinations
   if (new_center_freq == 0) {
     ath10k_err("unsupported channel/CBW combination (%d @ %s MHz)\n", primary_chan,
-               cbw == WLAN_CHANNEL_BANDWIDTH__20
-                   ? "20"
-                   : cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE
-                         ? "40+"
-                         : cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW
-                               ? "40-"
-                               : cbw == WLAN_CHANNEL_BANDWIDTH__80
-                                     ? "80"
-                                     : cbw == WLAN_CHANNEL_BANDWIDTH__160
-                                           ? "160"
-                                           : cbw == WLAN_CHANNEL_BANDWIDTH__80P80 ? "80 + 80"
-                                                                                  : "unrecognized");
+               cbw == WLAN_CHANNEL_BANDWIDTH__20        ? "20"
+               : cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE ? "40+"
+               : cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW ? "40-"
+               : cbw == WLAN_CHANNEL_BANDWIDTH__80      ? "80"
+               : cbw == WLAN_CHANNEL_BANDWIDTH__160     ? "160"
+               : cbw == WLAN_CHANNEL_BANDWIDTH__80P80   ? "80 + 80"
+                                                        : "unrecognized");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -2792,8 +2787,10 @@ static zx_status_t ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ath10k_info("setting peer smps mode to %s\n",
-              smps == 0 ? "static" : smps == 1 ? "dynamic" : smps == 3 ? "none" : "invalid");
+  ath10k_info("setting peer smps mode to %s\n", smps == 0   ? "static"
+                                                : smps == 1 ? "dynamic"
+                                                : smps == 3 ? "none"
+                                                            : "invalid");
 
   return ath10k_wmi_peer_set_param(ar, arvif->vdev_id, assoc->bssid, WMI_PEER_SMPS_STATE,
                                    ath10k_smps_map[smps]);

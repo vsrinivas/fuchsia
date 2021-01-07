@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <zircon/status.h>
 
 #include <cstdio>
@@ -11,7 +12,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 
 #include "device.h"
 #include "src/connectivity/bluetooth/hci/emulator/bt-hci-emulator-bind.h"

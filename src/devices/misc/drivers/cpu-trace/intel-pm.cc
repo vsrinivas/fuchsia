@@ -6,9 +6,9 @@
 
 #include <assert.h>
 #include <cpuid.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/alloc_checker.h>
 
 #include "perf-mon.h"

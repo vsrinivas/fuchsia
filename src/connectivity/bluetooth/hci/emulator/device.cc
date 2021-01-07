@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -11,8 +12,6 @@
 #include <cstdio>
 #include <future>
 #include <thread>
-
-#include <ddk/protocol/bt/hci.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"

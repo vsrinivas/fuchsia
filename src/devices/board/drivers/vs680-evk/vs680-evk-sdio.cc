@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2cimpl.h>
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>

@@ -17,12 +17,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/sdio/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/sdio.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"

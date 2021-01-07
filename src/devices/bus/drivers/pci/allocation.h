@@ -4,12 +4,12 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_ALLOCATION_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_ALLOCATION_H_
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/resource.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
-#include <ddktl/protocol/pciroot.h>
 #include <fbl/macros.h>
 #include <region-alloc/region-alloc.h>
 

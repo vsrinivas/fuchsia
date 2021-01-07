@@ -30,7 +30,7 @@ zx_library("storage-metrics") {
     "//zircon/public/lib/fbl",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.block",
+    "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",

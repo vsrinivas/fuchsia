@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_FUNCTION_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_FUNCTION_H_
 
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/dci.h>
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/array.h>
 #include <fbl/ref_counted.h>
 

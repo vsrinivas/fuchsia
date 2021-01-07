@@ -4,6 +4,8 @@
 
 #include "asix-88772b.h"
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +18,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
 
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <zircon/hw/usb/hub.h>
 #include <zircon/listnode.h>
 
-#include <ddk/protocol/usb/request.h>
 #include <fbl/array.h>
 
 #include "xhci-trb.h"

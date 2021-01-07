@@ -5,6 +5,7 @@
 #include "vc-display.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
@@ -26,7 +27,6 @@
 #include <list>
 #include <unordered_map>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 

@@ -81,10 +81,10 @@ appears as `/dev/sys/pci/00:02:00/e1000`.
 
 Devices may implement Protocols, which are Banjo ABIs used by child devices
 to interact with parent devices in a device-specific manner. The
-[PCI Protocol](/sdk/banjo/ddk.protocol.pci/pci.banjo),
-[USB Protocol](/sdk/banjo/ddk.protocol.usb/usb.banjo),
-[Block Core Protocol](/sdk/banjo/ddk.protocol.block/block.banjo), and
-[Ethernet Protocol](/sdk/banjo/ddk.protocol.ethernet/ethernet.banjo), are
+[PCI Protocol](/sdk/banjo/fuchsia.hardware.pci/pci.banjo),
+[USB Protocol](/sdk/banjo/fuchsia.hardware.usb/usb.banjo),
+[Block Core Protocol](/sdk/banjo/fuchsia.hardware.block/block.banjo), and
+[Ethernet Protocol](/sdk/banjo/fuchsia.hardware.ethernet/ethernet.banjo), are
 examples of these.  Protocols are usually in-process interactions between
 devices in the same devhost, but in cases of driver isolation, they may take
 place via RPC to a "higher" devhost (via proxy).

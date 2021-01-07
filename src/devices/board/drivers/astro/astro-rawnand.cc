@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <unistd.h>
 #include <zircon/hw/gpt.h>
 
@@ -11,8 +13,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-guid.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

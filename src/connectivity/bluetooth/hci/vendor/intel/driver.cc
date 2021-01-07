@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <zircon/status.h>
 
 #include <cstdint>
@@ -11,8 +13,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/usb.h>
 
 #include "device.h"
 #include "logging.h"

@@ -18,14 +18,14 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/status.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/protocol/mac.h>
 
 extern "C" {
@@ -172,7 +172,7 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
     .suspend = iwl_trans_sim_suspend,
     .resume = iwl_trans_sim_resume,
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     void (*d3_suspend)(struct iwl_trans* trans, bool test, bool reset);
     int (*d3_resume)(struct iwl_trans* trans, enum iwl_d3_status* status, bool test, bool reset);
 

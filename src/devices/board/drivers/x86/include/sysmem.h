@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SYSMEM_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SYSMEM_H_
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <zircon/compiler.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform/bus.h>
 
 zx_status_t publish_sysmem(pbus_protocol_t* pbus);
 

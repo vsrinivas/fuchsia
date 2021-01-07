@@ -5,6 +5,10 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/serial/c/banjo.h>
+#include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
@@ -15,11 +19,7 @@
 
 #include <utility>
 
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/serial.h>
-#include <ddk/protocol/serialimpl/async.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/serialimpl/async.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-pwm-regs.h>

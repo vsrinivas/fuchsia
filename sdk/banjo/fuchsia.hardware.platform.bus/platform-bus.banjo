@@ -1,0 +1,129 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.platform.bus;
+
+using ddk.driver;
+using fuchsia.hardware.platform.device;
+using zx;
+
+struct PbusMmio {
+    /// Physical address of MMIO region.
+    /// Does not need to be page aligned.
+    zx.paddr base;
+    /// Length of MMIO region in bytes.
+    /// Does not need to be page aligned.
+    usize length;
+};
+
+struct PbusIrq {
+    uint32 irq;
+    /// `ZX_INTERRUPT_MODE_*` flags
+    uint32 mode;
+};
+
+struct PbusBti {
+    uint32 iommu_index;
+    uint32 bti_id;
+};
+
+struct PbusSmc {
+    /// The device is granted the ability to make SMC calls with service call numbers ranging from
+    /// service_call_num_base to service_call_num_base + count - 1.
+    uint32 service_call_num_base;
+    uint32 count;
+    /// The device has exclusive access to this smc range.
+    bool exclusive;
+};
+
+/// Device metadata.
+struct PbusMetadata {
+    /// Metadata type.
+    uint32 type;
+    /// Pointer to metadata.
+    vector<voidptr> data;
+};
+
+/// Device metadata to be passed from bootloader via a ZBI record.
+struct PbusBootMetadata {
+    /// Metadata type (matches `zbi_header_t.type` for bootloader metadata).
+    uint32 zbi_type;
+    /// Matches `zbi_header_t.extra` for bootloader metadata.
+    /// Used in cases where bootloader provides multiple metadata records of the same type.
+    uint32 zbi_extra;
+};
+
+struct PbusDev {
+    string name;
+    /// `BIND_PLATFORM_DEV_VID`
+    uint32 vid;
+    /// `BIND_PLATFORM_DEV_PID`
+    uint32 pid;
+    /// `BIND_PLATFORM_DEV_DID`
+    uint32 did;
+    /// Instance ID. Contributes to device-name if non-zero.
+    /// `BIND_PLATFORM_DEV_INSTANCE_ID`
+    uint32 instance_id;
+    vector<PbusMmio> mmio;
+    vector<PbusIrq> irq;
+    vector<PbusBti> bti;
+    vector<PbusSmc> smc;
+    vector<PbusMetadata> metadata;
+    vector<PbusBootMetadata> boot_metadata;
+};
+
+/// Subset of pdev_board_info_t to be set by the board driver.
+struct PbusBoardInfo {
+    /// Board name from the boot image platform ID record,
+    /// (or from the BIOS on x86 platforms).
+    string:32 board_name;
+    /// Board specific revision number.
+    uint32 board_revision;
+};
+
+struct PbusBootloaderInfo {
+    string:32 vendor;
+};
+
+[Layout = "ddk-callback"]
+protocol PbusSysSuspend {
+    Callback(uint8 requested_state, bool enable_wake,
+             uint8 suspend_reason) -> (zx.status out_status, uint8 out_state);
+};
+
+
+[Layout="ddk-protocol", DefaultProtocol]
+protocol PBus {
+    /// Adds a new platform device to the bus, using configuration provided by |dev|.
+    /// Platform devices are created in their own separate devhosts.
+    DeviceAdd(PbusDev dev) -> (zx.status s);
+    /// Adds a device for binding a protocol implementation driver.
+    /// These devices are added in the same devhost as the platform bus.
+    /// After the driver binds to the device it calls `pbus_register_protocol()`
+    /// to register its protocol with the platform bus.
+    /// `pbus_protocol_device_add()` blocks until the protocol implementation driver
+    /// registers its protocol (or times out).
+    ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
+    /// Called by protocol implementation drivers to register their protocol
+    /// with the platform bus.
+    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol) -> (zx.status s);
+    /// Board drivers may use this to get information about the board, and to
+    /// differentiate between multiple boards that they support.
+    GetBoardInfo() -> (zx.status s, fuchsia.hardware.platform.device.PdevBoardInfo info);
+    /// Board drivers may use this to set information about the board
+    /// (like the board revision number).
+    /// Platform device drivers can access this via `pdev_get_board_info()`.
+    SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
+    /// Board drivers may use this to set information about the bootloader.
+    SetBootloaderInfo(PbusBootloaderInfo info) -> (zx.status s);
+    RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
+    /// Adds a composite platform device to the bus. The platform device specified by |dev|
+    /// is the zeroth fragment and the |fragments| array specifies fragments 1 through n.
+    /// The composite device is started in a the devhost of the fragment with index
+    /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
+    /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
+    /// drivers running in the platform bus's devhost. 
+    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
+                       uint32 coresident_device_index) -> (zx.status s);
+};

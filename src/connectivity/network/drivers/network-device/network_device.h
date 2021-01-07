@@ -6,13 +6,13 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_NETWORK_DEVICE_H_
 
 #include <fuchsia/hardware/network/llcpp/fidl.h>
+#include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/network/mac.h>
 
 #include "device/public/network_device.h"
 #include "mac/public/network_mac.h"

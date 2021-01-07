@@ -4,6 +4,7 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -13,7 +14,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 

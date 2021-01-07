@@ -26,7 +26,7 @@ driver_module("qmi_function") {
     "usb-qmi-function.h",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/fuchsia.hardware.usb.function",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",

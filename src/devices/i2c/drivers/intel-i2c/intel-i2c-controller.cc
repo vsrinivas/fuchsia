@@ -7,7 +7,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/fidl.h>
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,9 +33,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/pci.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hw/pci.h>

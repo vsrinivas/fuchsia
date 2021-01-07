@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_MT_DSI_MT_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_MT_DSI_MT_H_
 
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
@@ -16,9 +18,7 @@
 #include <optional>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/dsiimpl.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

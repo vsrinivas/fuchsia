@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_
 #define SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 
-#include <ddktl/protocol/platform/bus.h>
 #include <src/devices/sysmem/drivers/sysmem/device.h>
 #include <src/devices/sysmem/drivers/sysmem/driver.h>
 

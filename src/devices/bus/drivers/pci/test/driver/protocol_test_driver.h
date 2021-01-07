@@ -5,10 +5,10 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
 
 #include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/pci.h>
 #include <pretty/hexdump.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/zxtest.h>

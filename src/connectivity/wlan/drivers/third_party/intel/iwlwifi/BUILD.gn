@@ -87,7 +87,7 @@ source_set("core") {
   ]
 
   public_deps = [
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/backtrace-request",
@@ -124,7 +124,7 @@ source_set("pcie") {
   ]
 
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
   ]

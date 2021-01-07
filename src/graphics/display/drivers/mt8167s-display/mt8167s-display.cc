@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "mt8167s-display.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zircon-internal/align.h>
@@ -13,7 +14,6 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 
@@ -624,7 +624,7 @@ zx_status_t Mt8167sDisplay::Bind() {
   display_panel_t display_info;
   size_t actual;
   status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
-                                           sizeof(display_info), &actual);
+                               sizeof(display_info), &actual);
   if (status != ZX_OK || actual != sizeof(display_panel_t)) {
     DISP_ERROR("Could not get display panel metadata %d\n", status);
     return status;

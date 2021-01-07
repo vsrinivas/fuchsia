@@ -30,8 +30,8 @@ source_set("qmi_driver_src") {
   ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.ethernet",
-    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_llcpp",
     "//src/devices/lib/driver",

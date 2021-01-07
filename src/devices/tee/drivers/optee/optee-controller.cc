@@ -4,6 +4,7 @@
 
 #include "optee-controller.h"
 
+#include <fuchsia/hardware/composite/c/banjo.h>
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
 #include <string.h>
@@ -16,7 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <tee-client-api/tee-client-types.h>
 

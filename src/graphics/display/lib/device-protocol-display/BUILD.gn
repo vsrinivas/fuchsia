@@ -8,5 +8,5 @@ zx_library("device-protocol-display") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/display-panel.h" ]
   sources = []
-  public_deps = [ "//sdk/banjo/ddk.protocol.dsiimpl" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.dsiimpl" ]
 }

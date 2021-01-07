@@ -5,11 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_PIPE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_PIPE_H_
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/edid/edid.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
-#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 

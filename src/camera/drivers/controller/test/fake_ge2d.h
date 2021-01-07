@@ -5,10 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GE2D_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GE2D_H_
 
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <ddktl/protocol/ge2d.h>
 class FakeGe2d;
 
 class FakeGe2d {

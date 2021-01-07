@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/i2cimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,8 +23,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/trace/event.h>
 #include <hw/reg.h>
 

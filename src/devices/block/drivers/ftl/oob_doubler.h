@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
+
+#include <fuchsia/hardware/nand/c/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/nand.h>
-#include <ddktl/protocol/nand.h>
 
 namespace ftl {
 
@@ -29,4 +30,4 @@ class OobDoubler {
 
 }  // namespace ftl.
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_

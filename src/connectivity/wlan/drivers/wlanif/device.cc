@@ -4,18 +4,18 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
 #include <ddk/device.h>
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/logging.h>
 
 #include "convert.h"
-#include "ddk/protocol/wlanif.h"
 #include "driver.h"
-#include "fuchsia/wlan/mlme/cpp/fidl.h"
 
 namespace wlanif {
 

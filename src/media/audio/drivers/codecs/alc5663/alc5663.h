@@ -5,15 +5,15 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_H_
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/alloc_checker.h>
 
 #include "i2c_client.h"

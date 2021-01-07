@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 
 namespace board_test {

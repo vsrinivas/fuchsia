@@ -26,9 +26,9 @@ driver_module("aml-pwm-init") {
   sources = [ "aml-pwm-init.cc" ]
   deps = [
     ":aml-pwm-init-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.pwm",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.pwm",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -47,11 +47,11 @@ test("aml-pwm-init-test-bin") {
   ]
   deps = [
     ":aml-pwm-init-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//sdk/banjo/ddk.protocol.pwm",
-    "//sdk/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.pwm",
+    "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_mock",
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

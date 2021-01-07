@@ -4,6 +4,7 @@
 #include "protocol_test_driver.h"
 
 #include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
@@ -19,7 +20,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/pci.h>
 #include <zxtest/zxtest.h>
 
 #include "../../capabilities/msi.h"

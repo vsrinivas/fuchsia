@@ -34,7 +34,7 @@ test("vim3-mcu-test-bin") {
     "vim3-mcu.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",

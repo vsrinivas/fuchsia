@@ -14,8 +14,8 @@ driver_module("gpio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpio.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -37,9 +37,9 @@ test("gpio-test-bin") {
     "gpio.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpioimpl",
-    "//sdk/banjo/ddk.protocol.gpioimpl:ddk.protocol.gpioimpl_mock",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_mock",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",

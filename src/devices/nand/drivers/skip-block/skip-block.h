@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 #define SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 
+#include <fuchsia/hardware/badblock/cpp/banjo.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/operation/nand.h>
@@ -12,9 +14,7 @@
 #include <zircon/types.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>

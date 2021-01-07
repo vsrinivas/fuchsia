@@ -4,9 +4,10 @@
 
 #include "composite_device.h"
 
+#include <fuchsia/hardware/composite/c/banjo.h>
+
 #include <algorithm>
 
-#include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

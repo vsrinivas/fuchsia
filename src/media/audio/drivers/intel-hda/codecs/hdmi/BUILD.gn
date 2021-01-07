@@ -25,8 +25,8 @@ driver_module("hdmi-audio-codec") {
   sources = [ "hdmi-codec.cc" ]
   deps = [
     ":ihda_codecs_hdmi_bind",
-    "//sdk/banjo/ddk.protocol.intelhda.codec",
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.intelhda.codec",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",

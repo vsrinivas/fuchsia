@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
+#include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <net/ethernet.h>
 
-#include <ddk/protocol/wlanif.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlanif {

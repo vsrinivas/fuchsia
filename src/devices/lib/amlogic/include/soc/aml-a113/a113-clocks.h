@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_CLOCKS_H_
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_CLOCKS_H_
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/platform/bus.h>
 #include <mmio-ptr/mmio-ptr.h>
 
 #define SDM_FRACTIONALITY ((uint32_t)16384)

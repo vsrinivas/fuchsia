@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
 
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
@@ -13,7 +14,6 @@
 #include <optional>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/dsiimpl.h>
 
 #include "aml-dsi.h"
 #include "common.h"

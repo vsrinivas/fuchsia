@@ -6,6 +6,7 @@
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_THERMAL_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/thermal.h>
 
 #include "aml-cpufreq.h"
 #include "aml-tsensor.h"

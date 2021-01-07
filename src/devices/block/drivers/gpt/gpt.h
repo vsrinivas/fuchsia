@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_GPT_GPT_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_GPT_GPT_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_GPT_GPT_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_GPT_GPT_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/c/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
@@ -12,11 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/partition.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
@@ -94,4 +94,4 @@ class PartitionTable : public fbl::RefCounted<PartitionTable> {
 
 }  // namespace gpt
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_GPT_GPT_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_GPT_GPT_H_

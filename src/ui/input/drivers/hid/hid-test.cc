@@ -4,13 +4,13 @@
 
 #include "hid.h"
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <unistd.h>
 
 #include <thread>
 #include <vector>
 
-#include <ddktl/protocol/hidbus.h>
 #include <hid/ambient-light.h>
 #include <hid/boot.h>
 #include <hid/paradise.h>

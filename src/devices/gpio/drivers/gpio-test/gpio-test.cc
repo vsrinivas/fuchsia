@@ -4,6 +4,7 @@
 
 #include "gpio-test.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 namespace gpio_test {

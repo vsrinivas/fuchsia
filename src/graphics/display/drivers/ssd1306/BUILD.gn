@@ -15,8 +15,8 @@ driver_module("ssd1306_driver") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ssd1306.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.dotmatrixdisplay",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -52,8 +52,8 @@ test("ssd1306-test") {
   ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.dotmatrixdisplay",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",

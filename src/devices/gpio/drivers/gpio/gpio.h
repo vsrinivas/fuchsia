@@ -5,14 +5,14 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/llcpp/fidl.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fbl/mutex.h>
 
 namespace gpio {

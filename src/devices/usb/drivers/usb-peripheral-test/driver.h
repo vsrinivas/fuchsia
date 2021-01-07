@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
+
 #include <atomic>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/function.h>
 #include <ddktl/suspend-txn.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

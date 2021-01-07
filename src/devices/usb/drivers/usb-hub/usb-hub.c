@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/usb/bus/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/hub/c/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -16,9 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/bus.h>
-#include <ddk/protocol/usb/hub.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 
@@ -368,7 +368,7 @@ static int usb_hub_thread(void* arg) {
       zxlogf(ERROR, "get device descriptor failed: %d", result);
       device_init_reply(hub->zxdev, result, NULL);
       return result;
-    } else if(dev_desc.bLength != out_length) {
+    } else if (dev_desc.bLength != out_length) {
       zxlogf(ERROR, "usb_device_descriptor_t.bLength != out_length");
       result = ZX_ERR_BAD_STATE;
       device_init_reply(hub->zxdev, result, NULL);

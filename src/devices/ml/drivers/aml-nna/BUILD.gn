@@ -27,8 +27,8 @@ driver_module("aml-nna") {
   sources = [ "aml-nna.cc" ]
   deps = [
     ":aml_nna_bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.registers",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.registers",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -49,9 +49,9 @@ test("aml-nna-test-bin") {
   ]
   deps = [
     ":aml_nna_bind",
-    "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.registers",
-    "//sdk/banjo/ddk.protocol.registers:ddk.protocol.registers_mock",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.registers",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_mock",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",

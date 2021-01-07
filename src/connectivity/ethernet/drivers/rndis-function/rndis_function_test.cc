@@ -4,10 +4,10 @@
 
 #include "rndis_function.h"
 
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
-#include <ddktl/protocol/usb/function.h>
 #include <zxtest/zxtest.h>
 
 class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_protocol> {

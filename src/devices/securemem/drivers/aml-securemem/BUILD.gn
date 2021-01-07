@@ -42,10 +42,10 @@ driver_module("aml-securemem") {
 
   deps = [
     ":aml-securemem-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/banjo/ddk.protocol.tee",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.tee",
     "//sdk/fidl/fuchsia.hardware.securemem:fuchsia.hardware.securemem_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.tee",
@@ -80,10 +80,10 @@ test("aml-securemem-test-bin") {
   include_dirs = [ "." ]
   deps = [
     ":aml-securemem-bind",
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/banjo/ddk.protocol.tee",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
+    "//sdk/banjo/fuchsia.hardware.tee",
     "//sdk/fidl/fuchsia.hardware.securemem:fuchsia.hardware.securemem_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.tee",

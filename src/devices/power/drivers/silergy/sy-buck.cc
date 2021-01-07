@@ -4,13 +4,14 @@
 
 #include "sy-buck.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <hwreg/i2c.h>
 
 #include "src/devices/power/drivers/silergy/sy-buck-bind.h"

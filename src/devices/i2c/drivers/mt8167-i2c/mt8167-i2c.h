@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_MT8167_I2C_MT8167_I2C_H_
 #define SRC_DEVICES_I2C_DRIVERS_MT8167_I2C_MT8167_I2C_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
@@ -15,8 +17,6 @@
 #include <optional>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
 

@@ -5,6 +5,7 @@
 #include "mt-usb.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -250,8 +250,7 @@ zx_status_t MtUsb::HandleEp0() {
             configuration_ = 0;
             auto status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, &actual);
             if (status != ZX_OK) {
-              zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION Control returned %d", __func__,
-                     status);
+              zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION Control returned %d", __func__, status);
               return status;
             }
             configuration_ = static_cast<uint8_t>(setup->wValue);

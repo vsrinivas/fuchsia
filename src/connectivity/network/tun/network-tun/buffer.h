@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_BUFFER_H_
 #define SRC_CONNECTIVITY_NETWORK_TUN_NETWORK_TUN_BUFFER_H_
 
+#include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <fuchsia/net/tun/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 
 #include <array>
 
-#include <ddktl/protocol/network/device.h>
 #include <fbl/span.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
@@ -26,7 +26,7 @@ class Buffer;
 // `MAX_VMOS`). `VmoStore` can be used to allocate buffers backed by the VMOs it contains.
 //
 // This class is used to fulfill the VMO registration mechanism used by
-// `ddk.protocol.network.device`.
+// `fuchsia.hardware.network.device`.
 class VmoStore {
  public:
   VmoStore()

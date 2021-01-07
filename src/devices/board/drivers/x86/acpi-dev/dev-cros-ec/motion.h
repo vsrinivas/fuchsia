@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_MOTION_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_MOTION_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -13,7 +14,6 @@
 #include <acpica/acpi.h>
 #include <chromiumos-platform-ec/ec_commands.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/hidbus.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>

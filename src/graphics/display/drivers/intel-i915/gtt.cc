@@ -4,6 +4,7 @@
 
 #include "gtt.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/protocol/pci.h>
 #include <fbl/algorithm.h>
 
 #include "intel-i915.h"

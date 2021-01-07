@@ -4,6 +4,9 @@
 
 #include "aml-cpu.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -14,9 +17,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/thermal.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/array.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88179_ASIX_88179_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88179_ASIX_88179_H_
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <lib/operation/ethernet.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -15,7 +16,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
 #include <fbl/auto_lock.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

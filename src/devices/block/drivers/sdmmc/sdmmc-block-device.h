@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -19,10 +22,7 @@
 
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/rpmb.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <hw/sdmmc.h>

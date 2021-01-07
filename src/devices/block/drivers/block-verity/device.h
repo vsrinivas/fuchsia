@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <zircon/device/block.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
 #include <fbl/mutex.h>
 
 #include "src/devices/block/drivers/block-verity/device-info.h"
@@ -40,7 +40,7 @@ class Device : public DeviceType, public ddk::BlockImplProtocol<Device, ddk::bas
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // ddk::BlockProtocol methods; see ddktl/protocol/block.h
+  // ddk::BlockProtocol methods; see fuchsia/hardware/block/cpp/banjo.h
   void BlockImplQuery(block_info_t* out_info, size_t* out_op_size);
   void BlockImplQueue(block_op_t* block_op, block_impl_queue_callback completion_cb, void* cookie)
       __TA_EXCLUDES(mtx_);

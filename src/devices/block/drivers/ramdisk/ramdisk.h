@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -21,8 +23,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/mutex.h>
 
 namespace ramdisk {

@@ -4,6 +4,7 @@
 
 #include "audio-stream-in.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <math.h>
 
 #include <optional>
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 
 namespace audio {
 namespace as370 {

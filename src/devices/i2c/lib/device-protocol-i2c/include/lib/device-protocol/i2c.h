@@ -5,13 +5,12 @@
 #ifndef SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
 #define SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/i2c.h>
 
 __BEGIN_CDECLS
 

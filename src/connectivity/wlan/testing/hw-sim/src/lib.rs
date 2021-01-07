@@ -75,7 +75,7 @@ pub fn wlantap_config_ap(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
 }
 
 pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
-    // should match enum WlanRxInfoValid::RSSI in zircon/system/banjo/ddk.protocol.wlan.info/info.banjo
+    // should match enum WlanRxInfoValid::RSSI in zircon/system/banjo/fuchsia.hardware.wlan.info/info.banjo
     const WLAN_RX_INFO_VALID_RSSI: u32 = 0x10;
     WlanRxInfo {
         rx_flags: 0,

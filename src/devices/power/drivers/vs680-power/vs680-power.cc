@@ -4,11 +4,12 @@
 
 #include "vs680-power.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

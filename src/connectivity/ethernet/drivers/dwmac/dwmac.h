@@ -5,6 +5,10 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DWMAC_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DWMAC_H_
 
+#include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/mac/cpp/banjo.h>
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -18,11 +22,7 @@
 #include <optional>
 
 #include <ddk/device.h>
-#include <ddk/protocol/test.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
-#include <ddktl/protocol/ethernet/board.h>
-#include <ddktl/protocol/ethernet/mac.h>
 #include <fbl/mutex.h>
 
 #include "pinned-buffer.h"

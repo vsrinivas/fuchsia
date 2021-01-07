@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BUS_TESTING_MOCK_SDIO_INCLUDE_LIB_MOCK_SDIO_MOCK_SDIO_H_
 #define SRC_DEVICES_BUS_TESTING_MOCK_SDIO_INCLUDE_LIB_MOCK_SDIO_MOCK_SDIO_H_
 
+#include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <lib/fzl/vmo-mapper.h>
 
-#include <ddktl/protocol/sdio.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 

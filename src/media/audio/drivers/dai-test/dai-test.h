@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_DAI_TEST_DAI_TEST_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_DAI_TEST_DAI_TEST_H_
 
+#include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -14,7 +15,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/audio.h>
 #include <sdk/lib/fidl/cpp/binding.h>
 
 namespace audio::daitest {

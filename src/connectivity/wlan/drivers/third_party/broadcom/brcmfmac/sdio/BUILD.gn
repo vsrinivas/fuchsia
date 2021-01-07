@@ -26,7 +26,7 @@ source_set("sdio") {
   ]
   public = [ "sdio_device.h" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/fuchsia.hardware.composite",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
@@ -39,8 +39,8 @@ source_set("sdio") {
     "//zircon/system/ulib/trace:trace-driver",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.sdio",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.sdio",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/ddk",

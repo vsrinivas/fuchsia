@@ -4,6 +4,7 @@
 
 #include "alc5663.h"
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/errors.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/i2c.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

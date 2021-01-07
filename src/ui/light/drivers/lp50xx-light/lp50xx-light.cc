@@ -5,6 +5,7 @@
 #include "lp50xx-light.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,7 +25,6 @@
 #include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "lp50xx-regs.h"

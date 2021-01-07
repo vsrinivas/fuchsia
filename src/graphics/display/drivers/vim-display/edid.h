@@ -5,9 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_EDID_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_EDID_H_
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/display/controller.h>
 
 #include "hdmitx.h"
 

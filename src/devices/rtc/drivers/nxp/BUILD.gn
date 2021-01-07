@@ -21,7 +21,7 @@ driver_module("nxp") {
   sources = [ "pcf8563-rtc.c" ]
   deps = [
     ":pcf8563_rtc_bind",
-    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/rtc/lib/rtc",

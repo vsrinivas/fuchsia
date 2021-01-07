@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 //
 #include <endian.h>
+#include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <inttypes.h>
 #include <lib/pci/pio.h>
 #include <zircon/compiler.h>
@@ -15,8 +17,6 @@
 
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/pciroot.h>
-#include <ddk/protocol/sysmem.h>
 
 #include "acpi-private.h"
 #include "dev.h"

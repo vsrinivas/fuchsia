@@ -12,7 +12,7 @@ driver_module("test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.test",
+    "//sdk/banjo/fuchsia.hardware.test",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

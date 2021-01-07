@@ -263,7 +263,7 @@ separate repositories that are mapped into the directory structure using `jiri`
  * `PATENTS`
  * `README.md`
  * `rustfmt.toml`
- * `sdk/banjo/ddk.protocol.gpio/`
+ * `sdk/banjo/fuchsia.hardware.gpio/`
  * `sdk/banjo/...`
  * `sdk/fidl/fuchsia.media/`
  * `sdk/fidl/fuchsia.mediacodec/`

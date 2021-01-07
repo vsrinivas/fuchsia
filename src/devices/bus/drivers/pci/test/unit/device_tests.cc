@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/limits.h>
 
-#include <ddktl/protocol/pciroot.h>
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 

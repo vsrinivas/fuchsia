@@ -300,7 +300,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       {countof(pdev_match), pdev_match},
   };
 
-  fragments[0].name = "ddk.protocol.platform.device.PDev";
+  fragments[0].name = "fuchsia.hardware.platform.device.PDev";
   fragments[0].parts_count = std::size(pdev_fragment);
   fragments[0].parts = pdev_fragment;
 

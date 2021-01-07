@@ -5,6 +5,7 @@
 #include "imx227.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/camera/sensor/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/result.h>
@@ -15,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
-#include <ddk/protocol/camera/sensor.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>

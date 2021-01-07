@@ -13,7 +13,7 @@ use {
         timer::EventId,
     },
     banjo_ddk_hw_wlan_ieee80211::*,
-    banjo_ddk_protocol_wlan_info::*,
+    banjo_fuchsia_hardware_wlan_info::*,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::VecDeque,
     wlan_common::{

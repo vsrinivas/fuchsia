@@ -5,13 +5,13 @@
 #include "device.h"
 
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 
 #include <future>
 
-#include <ddk/protocol/usb.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 #include <usb/usb-request.h>

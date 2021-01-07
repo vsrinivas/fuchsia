@@ -71,7 +71,7 @@ entry_deps = [
   "..:trace",
   "..:trace_provider",
   "..:trace_provider_with_fdio",
-  "//sdk/banjo/ddk.protocol.platform.device",
+  "//sdk/banjo/fuchsia.hardware.platform.device",
   "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
   "//src/devices/lib/driver",
   "//src/graphics/lib/magma/src/magma_util:macros",
@@ -115,8 +115,8 @@ source_set("device") {
   ]
 
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
@@ -130,7 +130,7 @@ source_set("device") {
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
-    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/fuchsia.hardware.composite",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",

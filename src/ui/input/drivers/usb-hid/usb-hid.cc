@@ -4,6 +4,8 @@
 
 #include "usb-hid.h"
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,8 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <usb/usb-request.h>

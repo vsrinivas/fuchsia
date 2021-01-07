@@ -22,7 +22,7 @@ source_set("virtio_ethernet_lib") {
   ]
   deps = [
     ":virtio_ethernet_bind",
-    "//sdk/banjo/ddk.protocol.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddktl",

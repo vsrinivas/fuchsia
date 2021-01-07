@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_INPUT_AUDIO_STREAM_IN_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_INPUT_AUDIO_STREAM_IN_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -15,7 +16,6 @@
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
-#include <ddktl/protocol/gpio.h>
 #include <soc/mt8167/mt8167-audio-in.h>
 
 #include "tlv320adc.h"

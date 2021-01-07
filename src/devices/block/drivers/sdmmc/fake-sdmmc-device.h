@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_FAKE_SDMMC_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_FAKE_SDMMC_DEVICE_H_
 
+#include <fuchsia/hardware/sdio/cpp/banjo.h>
+#include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <array>
@@ -13,8 +15,6 @@
 
 #include <ddk/binding.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/sdio.h>
-#include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
 
 #include "src/lib/vmo_store/vmo_store.h"

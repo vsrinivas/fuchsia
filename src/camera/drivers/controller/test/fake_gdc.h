@@ -5,10 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GDC_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GDC_H_
 
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <ddktl/protocol/gdc.h>
 
 class FakeGdc {
  public:

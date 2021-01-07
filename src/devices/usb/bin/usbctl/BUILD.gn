@@ -6,7 +6,7 @@ executable("usbctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usbctl.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb.modeswitch",
+    "//sdk/banjo/fuchsia.hardware.usb.modeswitch",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_c",
     "//sdk/lib/fdio",

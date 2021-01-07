@@ -12,13 +12,13 @@
 
 #if __cplusplus
 
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/controller.h>
 
 class SimpleDisplay;
 using DeviceType = ddk::Device<SimpleDisplay, ddk::Unbindable>;

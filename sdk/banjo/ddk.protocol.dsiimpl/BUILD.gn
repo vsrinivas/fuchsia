@@ -1,9 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
-
-banjo("ddk.protocol.dsiimpl") {
-  sources = [ "dsiimpl.banjo" ]
+group("ddk.protocol.dsiimpl") {
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.dsiimpl" ]
 }

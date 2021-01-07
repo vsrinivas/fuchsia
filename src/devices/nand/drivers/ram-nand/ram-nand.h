@@ -5,7 +5,9 @@
 #ifndef SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 #define SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -18,9 +20,7 @@
 #include <optional>
 
 #include <ddk/metadata/nand.h>
-#include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>

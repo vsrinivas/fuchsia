@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <zircon/listnode.h>
@@ -9,7 +10,6 @@
 #include <zircon/types.h>
 
 #include <ddk/binding.h>
-#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 #include <intel-serialio/serialio.h>
 

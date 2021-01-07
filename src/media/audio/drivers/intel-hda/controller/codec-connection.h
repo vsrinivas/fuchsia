@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
+#include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/handle.h>
 #include <stdint.h>
@@ -15,7 +16,6 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <ddk/protocol/intelhda/codec.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/mutex.h>

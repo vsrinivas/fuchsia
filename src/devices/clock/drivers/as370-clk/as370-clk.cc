@@ -4,16 +4,16 @@
 
 #include "as370-clk.h"
 
+#include <fuchsia/hardware/clockimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <numeric>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clockimpl.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 #include <soc/as370/as370-audio-regs.h>

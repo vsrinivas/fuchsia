@@ -13,7 +13,7 @@ driver_module("hid-input-report") {
     "input-reports-reader.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hiddevice",
+    "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
@@ -41,7 +41,7 @@ test("hid-input-report-test-bin") {
     "test.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hiddevice",
+    "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",

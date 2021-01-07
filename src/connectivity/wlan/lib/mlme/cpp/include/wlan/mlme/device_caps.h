@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
+
 #include <cstddef>
 
-#include <ddk/protocol/wlan/mac.h>
 #include <fbl/span.h>
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_CAPS_H_

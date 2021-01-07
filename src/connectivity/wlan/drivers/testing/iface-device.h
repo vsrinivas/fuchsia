@@ -10,7 +10,7 @@
 #include <mutex>
 
 #include <ddk/device.h>
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {

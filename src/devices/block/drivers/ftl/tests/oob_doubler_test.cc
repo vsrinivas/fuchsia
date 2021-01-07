@@ -4,7 +4,8 @@
 
 #include "oob_doubler.h"
 
-#include <ddktl/protocol/nand.h>
+#include <fuchsia/hardware/nand/cpp/banjo.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {

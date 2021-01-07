@@ -6,10 +6,10 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_PIPE_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <zircon/pixelformat.h>
 
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/intelgpucore.h>
 #include <hwreg/bitfields.h>
 
 namespace registers {

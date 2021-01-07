@@ -5,6 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CONFIG_H_
 
 #include <endian.h>
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 #include <zircon/types.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
 
 namespace pci {

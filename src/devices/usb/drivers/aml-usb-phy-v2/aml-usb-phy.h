@@ -5,16 +5,16 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 #define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
+#include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/registers.h>
-#include <ddktl/protocol/usb/modeswitch.h>
-#include <ddktl/protocol/usb/phy.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-registers.h>

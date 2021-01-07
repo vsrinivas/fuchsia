@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 
+#include <fuchsia/hardware/rpmb/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -17,9 +20,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/rpmb.h>
-#include <ddktl/protocol/sysmem.h>
-#include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -70,7 +70,7 @@ class OpteeController : public OpteeControllerBase,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // ddk.protocol.Tee
+  // fuchsia.hardware.Tee
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
 
   // `DeviceConnector` FIDL protocol

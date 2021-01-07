@@ -8,7 +8,7 @@ use {
         device::Device,
         timer::Timer,
     },
-    banjo_ddk_protocol_wlan_info as banjo_wlan_info,
+    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
     log::{debug, error, warn},
 };
 

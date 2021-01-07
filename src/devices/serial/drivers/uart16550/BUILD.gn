@@ -35,9 +35,9 @@ template("define_common_lib") {
     sources = [ "uart16550.cc" ]
     deps = [ "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c" ]
     public_deps = [
-      "//sdk/banjo/ddk.protocol.acpi",
-      "//sdk/banjo/ddk.protocol.serial",
-      "//sdk/banjo/ddk.protocol.serialimpl",
+      "//sdk/banjo/fuchsia.hardware.acpi",
+      "//sdk/banjo/fuchsia.hardware.serial",
+      "//sdk/banjo/fuchsia.hardware.serialimpl",
       "//src/lib/ddk",
 
       # TODO(fxb/38132): Migrate to the new bind rules and delete the below

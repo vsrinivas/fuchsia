@@ -4,12 +4,12 @@
 
 #include "nand_operation.h"
 
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
 
 #include <iostream>
 
-#include <ddktl/protocol/nand.h>
 #include <zxtest/zxtest.h>
 
 namespace {

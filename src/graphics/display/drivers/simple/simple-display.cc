@@ -5,6 +5,8 @@
 #include "simple-display.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +23,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-#include <ddktl/protocol/display/controller.h>
 #include <fbl/alloc_checker.h>
 #include <hw/pci.h>
 

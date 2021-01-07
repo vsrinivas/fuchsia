@@ -14,7 +14,7 @@ driver_module("pc-ps2") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i8042.c" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

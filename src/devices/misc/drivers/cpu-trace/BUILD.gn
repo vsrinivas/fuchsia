@@ -26,7 +26,7 @@ source_set("perf-mon") {
   ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -47,7 +47,7 @@ driver_module("cpu-trace") {
 
   deps = [
     ":perf-mon",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.cpu.insntrace:fuchsia.hardware.cpu.insntrace_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

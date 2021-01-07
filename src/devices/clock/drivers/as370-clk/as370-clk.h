@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_AS370_CLK_AS370_CLK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_AS370_CLK_AS370_CLK_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
 #include <soc/as370/as370-clk.h>
 

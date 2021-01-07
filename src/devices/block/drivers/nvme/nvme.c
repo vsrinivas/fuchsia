@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
@@ -20,8 +22,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/pci.h>
 #include <hw/pci.h>
 #include <hw/reg.h>
 

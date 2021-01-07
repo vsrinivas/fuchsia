@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <string.h>
@@ -14,8 +16,6 @@
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -26,8 +26,7 @@
 namespace mbr {
 
 class MbrDevice;
-using DeviceType =
-    ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
 
 class MbrDevice final : public DeviceType,
                         public ddk::BlockImplProtocol<MbrDevice, ddk::base_protocol>,

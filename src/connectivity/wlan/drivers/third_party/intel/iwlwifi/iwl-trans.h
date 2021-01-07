@@ -36,10 +36,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <lib/async-loop/loop.h>
 
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/wlan/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -239,7 +239,7 @@ struct iwl_host_cmd {
 
 static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
   IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
 #endif  // NEEDS_PORTING
 }
@@ -258,13 +258,13 @@ static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
 static inline struct page* rxb_steal_page(struct iwl_rx_cmd_buffer* r) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     get_page(r->_page);
 #endif  // NEEDS_PORTING
   return r->_page;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer* r) {
     __free_pages(r->_page, r->_rx_page_order);
 }
@@ -918,7 +918,7 @@ static inline void iwl_trans_reclaim(struct iwl_trans* trans, int queue, int ssn
   trans->ops->reclaim(trans, queue, ssn);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 // TODO(49531): supports txq disable.
 static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
         bool configure_scd) {
@@ -937,7 +937,7 @@ static inline bool iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, 
   return trans->ops->txq_enable(trans, queue, ssn, cfg, queue_wdg_timeout);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline int
 iwl_trans_get_rxq_dma_data(struct iwl_trans* trans, int queue,
                            struct iwl_trans_rxq_dma_data* data) {
@@ -1011,7 +1011,7 @@ static inline void iwl_trans_ac_txq_enable(struct iwl_trans* trans, int queue, u
   iwl_trans_txq_enable_cfg(trans, queue, 0, &cfg, queue_wdg_timeout);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline void iwl_trans_freeze_txq_timer(struct iwl_trans* trans,
         unsigned long txqs,
         bool freeze) {

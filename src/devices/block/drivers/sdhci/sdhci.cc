@@ -11,6 +11,7 @@
 
 #include "sdhci.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/pmt.h>
@@ -18,12 +19,10 @@
 
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
-#include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "sdhci-reg.h"
-
 #include "src/devices/block/drivers/sdhci/sdhci-bind.h"
 
 namespace {
@@ -38,7 +37,7 @@ constexpr uint32_t Hi32(zx_paddr_t val) { return static_cast<uint32_t>((val >> 3
 constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
 
 // for 2M max transfer size for fully discontiguous
-// also see SDMMC_PAGES_COUNT in ddk/protocol/sdmmc.h
+// also see SDMMC_PAGES_COUNT in fuchsia/hardware/sdmmc/c/banjo.h
 constexpr int kDmaDescCount = 512;
 
 // 64k max per descriptor

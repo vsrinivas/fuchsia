@@ -4,6 +4,7 @@
 
 #include "as370-thermal.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 
@@ -11,7 +12,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "as370-thermal-reg.h"

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +27,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
@@ -121,7 +121,8 @@ void FakeUsbCdcAcmFunction::DataOutComplete() {
     return;
   }
   std::vector<uint8_t> data(data_out_req_->request()->response.actual);
-  __UNUSED size_t copied = usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
+  __UNUSED size_t copied =
+      usb_request_copy_from(data_out_req_->request(), data.data(), data.size(), 0);
 
   usb_request_complete_t complete = {
       .callback =

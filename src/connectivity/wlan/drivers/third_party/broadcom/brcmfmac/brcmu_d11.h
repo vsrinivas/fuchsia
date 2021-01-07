@@ -17,9 +17,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_D11_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_D11_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/wlan/info.h>
 
 /* d11 io type */
 #define BRCMU_D11N_IOTYPE 1

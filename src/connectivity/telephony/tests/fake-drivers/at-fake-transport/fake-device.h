@@ -1,8 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_CONNECTIVITY_TELEPHONY_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_
-#define SRC_CONNECTIVITY_TELEPHONY_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_
+#define SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -10,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 
 #define _ALL_SOURCE
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>
@@ -33,4 +33,4 @@ class AtDevice : public tel_fake::Device {
 
 }  // namespace at_fake
 
-#endif  // SRC_CONNECTIVITY_TELEPHONY_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_AT_FAKE_TRANSPORT_FAKE_DEVICE_H_

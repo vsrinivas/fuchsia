@@ -4,6 +4,7 @@
 
 #include "aml-cpu.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
@@ -15,7 +16,6 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/string_buffer.h>
 
 namespace amlogic_cpu {

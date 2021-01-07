@@ -5,12 +5,12 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_GE2D_TASK_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_GE2D_TASK_H_
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
+
 #include <deque>
 #include <unordered_map>
 #include <vector>
-
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/ge2d.h>
 
 #include "src/camera/drivers/hw_accel/task/task.h"
 

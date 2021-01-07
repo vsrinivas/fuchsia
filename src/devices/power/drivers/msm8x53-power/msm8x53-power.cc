@@ -4,12 +4,12 @@
 
 #include "msm8x53-power.h"
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <soc/msm8x53/msm8x53-power-regs.h>
 #include <soc/msm8x53/msm8x53-power.h>

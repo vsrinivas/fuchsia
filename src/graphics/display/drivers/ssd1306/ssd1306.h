@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/dotmatrixdisplay/c/fidl.h>
+#include <fuchsia/hardware/dotmatrixdisplay/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -11,8 +13,6 @@
 #include <array>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/dotmatrixdisplay.h>
-#include <ddktl/protocol/i2c.h>
 
 namespace ssd1306 {
 

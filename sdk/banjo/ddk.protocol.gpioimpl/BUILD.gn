@@ -1,10 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/banjo/banjo.gni")
-
-banjo("ddk.protocol.gpioimpl") {
-  sources = [ "gpio-impl.banjo" ]
-  deps = [ "//sdk/banjo/ddk.protocol.gpio" ]
+group("ddk.protocol.gpioimpl") {
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.gpioimpl" ]
 }

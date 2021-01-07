@@ -10,6 +10,10 @@
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #include <threads.h>
 #endif
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -19,11 +23,7 @@
 #include <deque>
 #include <unordered_map>
 
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/gdc.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 

@@ -5,11 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_LCD_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_LCD_H_
 
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
-#include <ddktl/protocol/dsiimpl.h>
-#include <ddktl/protocol/gpio.h>
 #include <hwreg/mmio.h>
 
 namespace amlogic_display {

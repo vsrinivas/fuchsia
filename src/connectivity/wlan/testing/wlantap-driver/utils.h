@@ -8,9 +8,9 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
 
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlan/mac.h>
-#include <ddk/protocol/wlanphyimpl.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "utils.h"
 

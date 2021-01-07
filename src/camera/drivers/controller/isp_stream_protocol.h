@@ -5,9 +5,8 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_ISP_STREAM_PROTOCOL_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_ISP_STREAM_PROTOCOL_H_
 
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <zircon/assert.h>
-
-#include <ddktl/protocol/isp.h>
 
 namespace camera {
 

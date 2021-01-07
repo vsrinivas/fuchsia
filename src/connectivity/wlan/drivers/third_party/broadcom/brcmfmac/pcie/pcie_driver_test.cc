@@ -3,6 +3,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_driver_test.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"

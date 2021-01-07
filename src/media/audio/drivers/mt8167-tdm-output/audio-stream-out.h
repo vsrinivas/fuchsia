@@ -5,6 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_MT8167_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -17,11 +20,8 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/mutex.h>
 #include <soc/mt8167/mt8167-audio-out.h>
 

@@ -5,15 +5,15 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/pci.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/usb/hci.h>
 #include <fbl/array.h>
 
 #include "xhci.h"

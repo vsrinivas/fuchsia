@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/pci/pciroot.h>
 #include <lib/zx/bti.h>
 #include <zircon/status.h>
@@ -9,7 +10,6 @@
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/pciroot.h>
 
 namespace board_qemu_arm64 {
 class QemuArm64Pciroot : public PcirootBase {

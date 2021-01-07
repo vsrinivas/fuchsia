@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <inttypes.h>
@@ -36,7 +37,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/protocol/ethernet.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>

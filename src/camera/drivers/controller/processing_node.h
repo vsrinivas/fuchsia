@@ -6,6 +6,8 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_PROCESSING_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/thread_checker.h>
 #include <zircon/assert.h>
@@ -13,8 +15,6 @@
 #include <queue>
 #include <vector>
 
-#include <ddktl/protocol/gdc.h>
-#include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/hidbus.h>
 #include <hid/boot.h>
 #include <hid/usages.h>
 #include <hw/inout.h>

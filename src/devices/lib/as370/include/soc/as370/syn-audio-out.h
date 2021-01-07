@@ -6,14 +6,13 @@
 #define SRC_DEVICES_LIB_AS370_INCLUDE_SOC_AS370_SYN_AUDIO_OUT_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/shareddma/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 #include <zircon/syscalls/port.h>
 
 #include <memory>
 #include <utility>
-
-#include <ddktl/protocol/shareddma.h>
 
 class SynAudioOutDevice {
  public:

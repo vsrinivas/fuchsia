@@ -4,14 +4,13 @@
 
 #include "include/lib/virtio/driver_utils.h"
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddktl/protocol/pci.h>
 
 #include "include/lib/virtio/backends/pci.h"
 

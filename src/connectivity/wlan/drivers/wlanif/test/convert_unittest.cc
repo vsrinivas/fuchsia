@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 
 #include <vector>
 
-#include <ddk/protocol/wlanif.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
-
-#include "ddk/protocol/wlan/info.h"
-#include "ddk/protocol/wlanif.h"
-#include "fuchsia/wlan/common/cpp/fidl.h"
 
 namespace wlanif {
 namespace {

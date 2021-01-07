@@ -9,8 +9,8 @@ source_set("shared") {
   visibility = [ ":*" ]
   sources = [ "simple-display.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.display.controller",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
@@ -49,8 +49,8 @@ foreach(driver, simple_drivers) {
     deps = [
       ":shared",
       ":simple-$driver-bind",
-      "//sdk/banjo/ddk.protocol.display.controller",
-      "//sdk/banjo/ddk.protocol.pci",
+      "//sdk/banjo/fuchsia.hardware.display.controller",
+      "//sdk/banjo/fuchsia.hardware.pci",
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/lib/ddk",
     ]

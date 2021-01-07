@@ -8,6 +8,8 @@
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/lowpan/spinel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sync/completion.h>
@@ -22,8 +24,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/spi.h>
 #include <fbl/mutex.h>
 
 #include "spinel_framer.h"

@@ -4,11 +4,11 @@
 
 #include "lcd.h"
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/display-panel.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 
 #include "common.h"

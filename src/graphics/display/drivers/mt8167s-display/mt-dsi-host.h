@@ -5,6 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_DSI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_DSI_HOST_H_
 
+#include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -15,9 +18,6 @@
 #include <optional>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/dsiimpl.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/power.h>
 #include <hwreg/mmio.h>
 
 #include "common.h"

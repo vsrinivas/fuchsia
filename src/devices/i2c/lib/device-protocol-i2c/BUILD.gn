@@ -19,8 +19,8 @@ zx_library("device-protocol-i2c") {
   sdk_headers = [ "lib/device-protocol/i2c.h" ]
   sources = []
   public_deps = [
-    # <lib/device-protocol-i2c/i2c.h> has #include <ddk/protocol/i2c.h>
-    "//sdk/banjo/ddk.protocol.i2c",
+    # <lib/device-protocol-i2c/i2c.h> has #include <fuchsia/hardware/i2c/c/banjo.h>
+    "//sdk/banjo/fuchsia.hardware.i2c",
 
     # <lib/device-protocol-i2c/i2c.h> has #include <lib/sync/completion.h>
     "//zircon/public/lib/sync",

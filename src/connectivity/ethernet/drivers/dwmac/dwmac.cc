@@ -4,6 +4,8 @@
 
 #include "dwmac.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/mac/c/banjo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
 #include <lib/zircon-internal/align.h>
@@ -16,8 +18,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/ethernet/mac.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -183,7 +183,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   mac_device->eth_board_.ResetPhy();
 
   zx_device_t* pdev_fragment;
-  composite.GetFragment("ddk.protocol.platform.device.PDev", &pdev_fragment);
+  composite.GetFragment("fuchsia.hardware.platform.device.PDev", &pdev_fragment);
 
   // Get and cache the mac address.
   mac_device->GetMAC(pdev_fragment);

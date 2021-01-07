@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_SPI_DRIVERS_MTK_SPI_MTK_SPI_H_
 #define SRC_DEVICES_SPI_DRIVERS_MTK_SPI_MTK_SPI_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/spiimpl.h>
 #include <fbl/span.h>
 
 namespace spi {

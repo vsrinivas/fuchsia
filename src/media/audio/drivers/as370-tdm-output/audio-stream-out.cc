@@ -4,6 +4,7 @@
 
 #include "audio-stream-out.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/clock.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/array.h>
 #include <soc/as370/as370-audio-regs.h>
 

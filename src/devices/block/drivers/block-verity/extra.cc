@@ -4,6 +4,7 @@
 
 #include "src/devices/block/drivers/block-verity/extra.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -13,7 +14,6 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/block.h>
 
 #include "src/devices/block/drivers/block-verity/debug.h"
 

@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_SPI_DRIVERS_SPI_SPI_CHILD_H_
 #define SRC_DEVICES_SPI_DRIVERS_SPI_SPI_CHILD_H_
 
+#include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/fidl-utils/bind.h>
 
 #include <ddk/metadata/spi.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/spi.h>
-#include <ddktl/protocol/spiimpl.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 

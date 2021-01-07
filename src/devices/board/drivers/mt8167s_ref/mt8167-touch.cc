@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/focaltech/focaltech.h>
 
 #include <ddk/binding.h>
@@ -9,7 +10,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-power.h>

@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_I2C_TESTING_MOCK_I2C_INCLUDE_LIB_MOCK_I2C_MOCK_I2C_H_
 #define SRC_DEVICES_I2C_TESTING_MOCK_I2C_INCLUDE_LIB_MOCK_I2C_MOCK_I2C_H_
 
-#include <ddk/protocol/i2c.h>
-#include <ddktl/protocol/i2c.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
@@ -95,7 +96,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
     zx_status_t status;
   };
 
-  void CheckI2cOp(const i2c_op_t& op, fbl::Vector<i2c_op_t>* read_ops, zx_status_t *status) {
+  void CheckI2cOp(const i2c_op_t& op, fbl::Vector<i2c_op_t>* read_ops, zx_status_t* status) {
     ASSERT_FALSE(expectations_.is_empty(), "No more transactions are expected");
     ASSERT_LT(expectations_index_, expectations_.size(), "No more transactions are expected");
 

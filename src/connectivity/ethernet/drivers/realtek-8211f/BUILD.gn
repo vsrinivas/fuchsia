@@ -21,7 +21,7 @@ driver_module("realtek-8211f") {
   sources = [ "rtl8211f.cc" ]
   deps = [
     ":rtl8211f_bind",
-    "//sdk/banjo/ddk.protocol.ethernet.mac",
+    "//sdk/banjo/fuchsia.hardware.ethernet.mac",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

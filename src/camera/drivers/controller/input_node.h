@@ -6,10 +6,9 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_INPUT_NODE_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/trace/event.h>
 #include <zircon/assert.h>
-
-#include <ddktl/protocol/isp.h>
 
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/memory_allocation.h"

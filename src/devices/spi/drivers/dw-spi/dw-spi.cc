@@ -4,6 +4,9 @@
 
 #include "dw-spi.h"
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/spiimpl/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <string.h>
@@ -14,9 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/spiimpl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>

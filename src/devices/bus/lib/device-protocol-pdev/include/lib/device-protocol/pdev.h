@@ -5,14 +5,13 @@
 #ifndef SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
 #define SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/types.h>
 
 #include <optional>
-
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
 
 namespace ddk {
 
@@ -28,7 +27,7 @@ class PDev : public PDevProtocolClient {
   PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
 
   PDev(ddk::CompositeProtocolClient& composite)
-      : PDevProtocolClient(composite, "ddk.protocol.platform.device.PDev") {}
+      : PDevProtocolClient(composite, "fuchsia.hardware.platform.device.PDev") {}
 
   ~PDev() = default;
 

@@ -8,9 +8,9 @@
 #pragma once
 
 {includes}
-#include <ddktl/protocol/composite.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 
-#include "{primary_namespace}-internal.h"
+#include "banjo-internal.h"
 
 // DDK {primary_namespace}-protocol support
 //

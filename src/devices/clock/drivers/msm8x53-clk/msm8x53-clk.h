@@ -6,11 +6,11 @@
 #define SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_H_
 
 #include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
 #include <soc/msm8x53/msm8x53-clock.h>
 

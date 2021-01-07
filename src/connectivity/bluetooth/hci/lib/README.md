@@ -63,7 +63,7 @@ bind operation, `bt_hci_transport_unbind` is called from the unbind operation, a
 `bt_hci_transport_shutdown` from the release operation.
 
 The FFI has one function per bt-hci protocol message. See the [banjo protocol
-documentation](//sdk/banjo/ddk.protocol.bt.hci/bt-hci.banjo) for more information.
+documentation](//sdk/banjo/fuchsia.hardware.bt.hci/bt-hci.banjo) for more information.
 
 The Bluetooth core specification defines HCI support for three transport protocols: USB, UART, and
 SDIO. Each requires separate FFI functions to interact with drivers providing the given transport

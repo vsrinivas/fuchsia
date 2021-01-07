@@ -4,6 +4,10 @@
 
 #include "power.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/power/c/banjo.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -15,14 +19,10 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
-#include "ddk/protocol/power.h"
-#include "ddktl/protocol/power.h"
-#include "fbl/auto_lock.h"
 #include "src/devices/power/drivers/power/power-bind.h"
 
 void GetUniqueId(uint64_t* id) {

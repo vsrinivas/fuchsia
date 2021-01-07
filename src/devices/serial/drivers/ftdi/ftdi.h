@@ -6,13 +6,13 @@
 #define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fuchsia/hardware/serialimpl/cpp/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 
 #include <thread>
 
 #include <ddk/device.h>
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

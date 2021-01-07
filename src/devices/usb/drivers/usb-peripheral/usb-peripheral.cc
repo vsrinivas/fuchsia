@@ -5,6 +5,9 @@
 #include "usb-peripheral.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/usb/dci/c/banjo.h>
+#include <fuchsia/hardware/usb/function/c/banjo.h>
+#include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,9 +23,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/usb/dci.h>
-#include <ddk/protocol/usb/function.h>
-#include <ddk/protocol/usb/modeswitch.h>
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

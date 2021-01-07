@@ -4,6 +4,7 @@
 
 #include "usb-request-queue.h"
 
+#include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zx/vmo.h>
@@ -11,7 +12,6 @@
 
 #include <array>
 
-#include <ddk/protocol/usb/request.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

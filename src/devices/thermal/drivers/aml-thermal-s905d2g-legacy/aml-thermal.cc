@@ -4,6 +4,7 @@
 
 #include "aml-thermal.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -182,8 +182,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   zx_device_prop_t props[] = {
-    {.id = BIND_PLATFORM_DEV_DID, .reserved = 0, .value = device_info.did}
-  };
+      {.id = BIND_PLATFORM_DEV_DID, .reserved = 0, .value = device_info.did}};
   status = thermal_device->DdkAdd(
       ddk::DeviceAddArgs("thermal").set_props(props).set_proto_id(ZX_PROTOCOL_THERMAL));
   if (status != ZX_OK) {

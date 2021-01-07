@@ -4,10 +4,10 @@
 
 #include "uart16550.h"
 
+#include <fuchsia/hardware/serial/c/banjo.h>
+#include <fuchsia/hardware/serialimpl/c/banjo.h>
 #include <lib/zx/event.h>
 
-#include <ddk/protocol/serial.h>
-#include <ddk/protocol/serialimpl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/zx/interrupt.h>
-
-#include <ddktl/protocol/i2c.h>
 
 #ifndef SRC_DEVICES_I2C_TESTING_FAKE_I2C_INCLUDE_LIB_FAKE_I2C_FAKE_I2C_H_
 #define SRC_DEVICES_I2C_TESTING_FAKE_I2C_INCLUDE_LIB_FAKE_I2C_FAKE_I2C_H_

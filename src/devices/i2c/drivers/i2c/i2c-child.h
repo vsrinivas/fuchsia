@@ -5,14 +5,14 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 
 #include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 

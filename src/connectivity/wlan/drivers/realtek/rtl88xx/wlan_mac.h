@@ -4,7 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_MAC_H_
 
-#include <ddk/protocol/wlanphyimpl.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <zircon/types.h>
 
 #include <memory>

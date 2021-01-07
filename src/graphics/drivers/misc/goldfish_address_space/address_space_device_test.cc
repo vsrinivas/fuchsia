@@ -4,7 +4,9 @@
 
 #include "src/graphics/drivers/misc/goldfish_address_space/address_space_device.h"
 
+#include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
@@ -21,9 +23,7 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/protocol/goldfish/addressspace.h>
 #include <mmio-ptr/fake.h>
-#include <mock/ddktl/protocol/pci.h>
 #include <zxtest/zxtest.h>
 
 namespace goldfish {

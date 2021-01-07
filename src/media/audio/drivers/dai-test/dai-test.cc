@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "dai-test.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
@@ -15,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 
 #include "src/media/audio/drivers/dai-test/dai_test_bind.h"
 

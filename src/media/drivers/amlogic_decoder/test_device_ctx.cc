@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/mediacodec/llcpp/fidl.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 
@@ -10,7 +11,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/platform/device.h>
 
 #include "macros.h"
 #include "tests/test_support.h"

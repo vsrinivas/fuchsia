@@ -9,7 +9,7 @@ static_library("testing") {
     "virtual-layer.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/partition/c/banjo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +18,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/partition.h>
 
 #define GUID_STRLEN 40
 

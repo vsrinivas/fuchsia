@@ -30,9 +30,9 @@ driver_module("zxcrypt") {
   # libdriver safe to depend on dynamically here.
   deps = [
     ":bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.block.partition",
-    "//sdk/banjo/ddk.protocol.block.volume",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.block.partition",
+    "//sdk/banjo/fuchsia.hardware.block.volume",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

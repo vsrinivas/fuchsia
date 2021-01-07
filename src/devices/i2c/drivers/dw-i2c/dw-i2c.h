@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_DW_I2C_DW_I2C_H_
 #define SRC_DEVICES_I2C_DRIVERS_DW_I2C_DW_I2C_H_
 
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
@@ -14,7 +15,6 @@
 #include <thread>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/i2cimpl.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 

@@ -18,7 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 
-#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wlan/protocol/mac.h>
 
 #include "core.h"
@@ -89,7 +89,8 @@ int ath10k_mac_register(struct ath10k* ar);
 void ath10k_mac_unregister(struct ath10k* ar);
 #endif  // NEEDS PORTING
 struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id);
-zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
+zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
+                         zx_handle_t* out_sme_channel);
 zx_status_t ath10k_mac_hw_scan(struct ath10k* ar, const wlan_hw_scan_config_t* scan_config);
 void __ath10k_scan_finish(struct ath10k* ar);
 void ath10k_scan_finish(struct ath10k* ar);

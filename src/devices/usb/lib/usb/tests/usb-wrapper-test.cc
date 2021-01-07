@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <zircon/hw/usb/hid.h>
 
-#include <ddk/protocol/hidbus.h>
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 

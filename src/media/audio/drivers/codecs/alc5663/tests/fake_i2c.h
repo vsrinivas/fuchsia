@@ -6,15 +6,15 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_TESTS_FAKE_I2C_H_
 
 #include <endian.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/i2c.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>

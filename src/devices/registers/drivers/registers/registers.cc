@@ -4,12 +4,12 @@
 
 #include "registers.h"
 
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/epitaph.h>
 
 #include <ddk/metadata.h>
-#include <ddk/protocol/platform/bus.h>
 
 #include "src/devices/registers/drivers/registers/registers-bind.h"
 

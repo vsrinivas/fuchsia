@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/wlanphyimpl.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
@@ -38,9 +39,7 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
   // Intended for only unit test overriding.
-  void override_iwl_trans(struct iwl_trans* iwl_trans) {
-    iwl_trans_ = iwl_trans;
-  };
+  void override_iwl_trans(struct iwl_trans* iwl_trans) { iwl_trans_ = iwl_trans; };
 
  protected:
   // Only derived classes are allowed to create this object.

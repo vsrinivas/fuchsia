@@ -5,7 +5,10 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
+#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
@@ -15,9 +18,6 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/addressspace.h>
-#include <ddktl/protocol/goldfish/control.h>
-#include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>

@@ -9,10 +9,10 @@ zx_library("device-protocol-pdev") {
   sdk_headers = [ "lib/device-protocol/pdev.h" ]
   sources = [ "pdev.cc" ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/fuchsia.hardware.composite",
 
-    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
-    "//sdk/banjo/ddk.protocol.platform.device",
+    # <lib/device-protocol/pdev.h> has #include <fuchsia/hardware/platform/device/cpp/banjo.h>.
+    "//sdk/banjo/fuchsia.hardware.platform.device",
 
     # Banjo protocols have #include <ddk/driver.h>.
     "//src/lib/ddk",

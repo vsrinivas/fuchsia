@@ -3,6 +3,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -14,8 +15,6 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
-
-#include <ddk/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"

@@ -1,13 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#include <ddk/protocol/pci.h>
-#include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 
 #include "capabilities/msi.h"

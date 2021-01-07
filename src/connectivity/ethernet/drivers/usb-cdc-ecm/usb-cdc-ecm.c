@@ -1,6 +1,8 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/composite/c/banjo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +11,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/ethernet/drivers/usb-cdc-ecm/ethernet_usb_cdc_ecm-bind.h"

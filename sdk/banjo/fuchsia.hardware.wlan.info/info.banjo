@@ -1,0 +1,232 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library fuchsia.hardware.wlan.info;
+
+using ddk.hw.wlan.ieee80211;
+using zx;
+
+// LINT.IfChange
+enum WlanKeyType : uint8 {
+    PAIRWISE = 1;
+    GROUP = 2;
+    IGTK = 3;
+    PEER = 4;
+};
+// LINT.ThenChange(//src/connectivity/wlan/lib/mlme/rust/src/key.rs)
+
+/// IEEE Std 802.11-2016, 9.4.2.2
+const uint32 WLAN_MAX_SSID_LEN = 32;
+
+struct WlanSsid {
+    uint8 len;
+    array<uint8>:WLAN_MAX_SSID_LEN ssid;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.57
+[Packed]
+struct WlanHtOp {
+    uint8 primary_chan;
+
+    /// First 8 bits of HT Operation:
+    /// - Secondary Channel Offset: 2 bits
+    /// - STA Channel Width: 1 bit
+    /// - RIFS Mode: 1 bit
+    /// - Reserved: 4 bits
+    /// - HT Protection: 2 bits
+    /// - Nongreenfield HT STAs Present: 1 bit
+    /// - Reserved: 1 bit
+    /// - OBSS Non-HT STAs Present: 1 bit
+    /// - Channel Center Frequency Segment 2: 8 bits (spec says "11 bits": that can't be correct)
+    /// - Reserved: 3 bits (spec says "2 bits": can't be correct either)
+    /// - Reserved: 6 bits
+    /// - Dual Beacon: 1 bit
+    /// - Dual CTS Protection: 1 bit
+    uint32 head;
+
+    /// Next 8 bits of HT Operation:
+    /// - STBC Beacon: 1 bit
+    /// - L-SIG TXOP Protection Full Support: 1 bit
+    /// - PCO Active: 1 bit
+    /// - PCO Phase: 1 bit
+    /// - Reserved: 4 bits
+    uint8 tail;
+
+    uint64 rx_mcs_head;
+    uint32 rx_mcs_tail;
+    uint32 tx_mcs;
+};
+
+[Packed]
+struct WlanVhtOp {
+    uint8 vht_cbw;
+    uint8 center_freq_seg0;
+    uint8 center_freq_seg1;
+    uint16 basic_mcs;
+};
+
+/// Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
+/// VHT notation
+enum WlanChannelBandwidth : uint8 {
+    /// Default. Corresponds to SecondaryChannelOffset-None
+    _20 = 0;
+    _40 = 1;
+    /// Corresponds to SecondaryChannelOffset-Above
+    _40ABOVE = 1;
+    /// Corresponds to SecondaryChannelOffset-Below
+    _40BELOW = 2;
+    _80 = 3;
+    _160 = 4;
+    /// Non-contiguous frequency segments
+    _80P80 = 5;
+};
+
+struct WlanChannel {
+    /// Channel index used for the primary channel
+    uint8 primary;
+    /// Channel Bandwidth
+    WlanChannelBandwidth cbw;
+    // Channel index corresponding to the center frequency
+    // of the secondary frequency segment
+    uint8 secondary80;
+};
+
+enum WlanRxInfoValid : uint32 {
+    /// Bits 6-31 reserved
+    PHY = 0x1;
+    DATA_RATE = 0x2;
+    CHAN_WIDTH = 0x4;
+    MCS = 0x8;
+    RSSI = 0x10;
+    SNR = 0x20;
+};
+
+/// Guard Interval
+enum WlanGi : uint8 {
+    /// all 802.11 phy
+    _800NS = 0x1;
+    /// 802.11n/ac
+    _400NS = 0x2;
+    /// 802.11n/ac
+    _200NS = 0x4;
+    /// 802.11ax
+    _3200NS = 0x10;
+    /// 802.11ax
+    _1600NS = 0x20;
+};
+
+enum WlanBssType : uint8 {
+    INFRASTRUCTURE = 1;
+    /// Independent BSS
+    IBSS = 2;
+    PERSONAL = 3;
+    MESH = 4;
+    ANY_BSS = 5;
+};
+
+enum WlanPhyType : uint8 {
+    /// IEEE 802.11 for 1, 2 Mbps.
+    DSSS = 0x01;
+
+    /// IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
+    CCK = 0x02;
+
+    /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
+    ERP = 0x04;
+
+    /// IEEE 802.11a/g.
+    OFDM = 0x4;
+
+    /// IEEE 802.11n.
+    HT = 0x08;
+
+    /// IEEE 802.11ac.
+    VHT = 0x10;
+
+    /// IEEE 802.11ax.
+    HEW = 0x20;
+};
+
+struct WlanBssConfig {
+    array<uint8>:6 bssid;
+    /// Whether this BSS is an infrastructure or independent BSS.
+    WlanBssType bss_type;
+    /// If 'remote' is 'true', the BSS is *not* managed by this device.
+    bool remote;
+};
+
+/// Access category
+/// WFA WMM v1.2, 2.2.2 Table 6
+enum WlanAc {
+    BACKGROUND = 1;
+    BEST_EFFORT = 2;
+    VIDEO = 3;
+    VOICE = 4;
+};
+
+/// WFA WMM v1.2, 2.2.2
+struct WlanWmmParams {
+    /// Lower bound of contention window in exponential form
+    /// `cw_min = 2^(ecw_min) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_min;
+    /// Upper bound of contention window in exponential form
+    /// `cw_max = 2^(ecw_max) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_max;
+    /// Arbitration Interframe Spacing Number (control wait time between sending each frame)
+    uint8 aifsn;
+    /// TXOP limit in unit of 32 microseconds
+    uint16 txop_limit;
+    /// Whether admission control is mandatory
+    bool acm;
+};
+
+/// Information defined only within a context of association
+/// Beware the subtle interpretation of each field: they are designed to
+/// reflect the parameters safe to use within an association
+/// Many parameters do not distinguish Rx capability from Tx capability.
+/// In those cases, a capability is commonly applied to both Rx and Tx.
+/// Some parameters are distinctively for Rx only, and some are Tx only.
+const uint32 WLAN_MAC_MAX_SUPP_RATES = 8;
+const uint32 WLAN_MAC_MAX_EXT_RATES = 255;
+const uint32 WLAN_MAC_MAX_RATES = 263; // (8 + 255)
+
+struct WlanAssocCtx {
+    array<uint8>:6 bssid;
+    uint16 aid;
+    uint16 listen_interval;
+    WlanPhyType phy;
+    WlanChannel chan;
+
+    /// QoS capable and parameters
+    bool qos;
+    /// WFA WMM v1.2, 2.2.2
+    WlanWmmParams ac_be_params;
+    WlanWmmParams ac_bk_params;
+    WlanWmmParams ac_vi_params;
+    WlanWmmParams ac_vo_params;
+
+    /// Coincatenation of SupportedRates and ExtendedSupportedRates
+    /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
+    uint16 rates_cnt;
+    array<uint8>:WLAN_MAC_MAX_RATES rates;
+
+    /// IEEE Std 802.11-2016, 9.4.1.4
+    uint16 cap_info;
+
+    /// IEEE Std 802.11-2016, 9.4.2.56, 57
+    /// Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
+    /// the peer can receive at from this device, considering this device's Tx capability.
+    bool has_ht_cap;
+    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_cap;
+    bool has_ht_op;
+    WlanHtOp ht_op;
+
+    /// IEEE Std 802.11-2016, 9.4.2.158, 159
+    bool has_vht_cap;
+    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_cap;
+    bool has_vht_op;
+    WlanVhtOp vht_op;
+};

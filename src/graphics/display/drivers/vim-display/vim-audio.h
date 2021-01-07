@@ -5,10 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/platform/device.h>
 
 __BEGIN_CDECLS
 struct vim2_display;  // fwd decl

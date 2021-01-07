@@ -4,10 +4,10 @@
 
 #include "aml-pwm-init.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <unistd.h>
 
 #include <ddk/metadata/init-step.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/pwm/drivers/aml-pwm-init/aml-pwm-init-bind.h"

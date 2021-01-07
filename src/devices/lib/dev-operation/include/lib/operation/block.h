@@ -5,11 +5,10 @@
 #ifndef SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
 #define SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <lib/operation/operation.h>
 
 #include <memory>
-
-#include <ddk/protocol/block.h>
 
 namespace block {
 

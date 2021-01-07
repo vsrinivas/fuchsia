@@ -5,14 +5,14 @@
 #include "msm8x53-clk.h"
 
 #include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clockimpl/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/clockimpl.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

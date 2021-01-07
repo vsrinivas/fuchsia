@@ -5,6 +5,8 @@
 #include "src/devices/board/drivers/astro/astro.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/gpio/c/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

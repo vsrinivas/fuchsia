@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/pci.h>
 
 #include "bus.h"
 
@@ -42,4 +41,4 @@ class PciBus : public Bus {
 
 }  // namespace ahci
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AHCI_PCI_BUS_H_

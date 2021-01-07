@@ -4,13 +4,13 @@
 
 #include "wlantap-phy.h"
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <zircon/status.h>
 
 #include <array>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/common/dispatcher.h>
 #include <wlan/common/phy.h>
 #include <wlan/protocol/mac.h>

@@ -23,8 +23,8 @@ source_set("config") {
     "video_conferencing_config.h",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.ge2d",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.ge2d",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//src/camera/drivers/controller/configs",

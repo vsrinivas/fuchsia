@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_PERIPHERAL_MT_USB_H_
 #define SRC_DEVICES_USB_DRIVERS_MT_MUSB_PERIPHERAL_MT_USB_H_
 
+#include <fuchsia/hardware/usb/dci/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
@@ -13,7 +14,6 @@
 #include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>

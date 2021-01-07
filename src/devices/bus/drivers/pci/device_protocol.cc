@@ -12,10 +12,9 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 // TODO(fxbug.dev/33713): Stop depending on the types in this file.
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/types.h>
-
-#include <ddk/protocol/pci.h>
 
 #include "common.h"
 #include "device.h"

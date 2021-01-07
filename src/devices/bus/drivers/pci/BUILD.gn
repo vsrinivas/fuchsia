@@ -34,8 +34,8 @@ source_set("user_pci") {
     "upstream_node.cc",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.pciroot",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -61,8 +61,8 @@ source_set("user_pci") {
 source_set("user_pci.proxy") {
   sources = [ "device_proxy.cc" ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.pci",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
 
@@ -111,10 +111,10 @@ if (platform_enable_user_pci) {
     }
     sources = [ "kpci/kpci.c" ]
     deps = [
-      "//sdk/banjo/ddk.protocol.pci",
-      "//sdk/banjo/ddk.protocol.pciroot",
-      "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/banjo/ddk.protocol.sysmem",
+      "//sdk/banjo/fuchsia.hardware.pci",
+      "//sdk/banjo/fuchsia.hardware.pciroot",
+      "//sdk/banjo/fuchsia.hardware.platform.device",
+      "//sdk/banjo/fuchsia.hardware.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
 
@@ -135,10 +135,10 @@ if (platform_enable_user_pci) {
     }
     sources = [ "kpci/proxy.c" ]
     deps = [
-      "//sdk/banjo/ddk.protocol.pci",
-      "//sdk/banjo/ddk.protocol.pciroot",
-      "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/banjo/ddk.protocol.sysmem",
+      "//sdk/banjo/fuchsia.hardware.pci",
+      "//sdk/banjo/fuchsia.hardware.pciroot",
+      "//sdk/banjo/fuchsia.hardware.platform.device",
+      "//sdk/banjo/fuchsia.hardware.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
 

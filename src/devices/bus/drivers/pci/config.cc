@@ -5,10 +5,10 @@
 #include "config.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <inttypes.h>
 
 #include <ddk/debug.h>
-#include <ddktl/protocol/pciroot.h>
 #include <pretty/hexdump.h>
 
 #include "common.h"

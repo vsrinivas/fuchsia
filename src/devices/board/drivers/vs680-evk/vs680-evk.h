@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_VS680_EVK_VS680_EVK_H_
 #define SRC_DEVICES_BOARD_DRIVERS_VS680_EVK_VS680_EVK_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/platform/bus.h>
 
 namespace board_vs680_evk {
 
@@ -24,7 +24,7 @@ enum {
 class Vs680Evk : public ddk::Device<Vs680Evk> {
  public:
   Vs680Evk(zx_device_t* parent, const ddk::PBusProtocolClient& pbus,
-       const pdev_board_info_t& board_info)
+           const pdev_board_info_t& board_info)
       : ddk::Device<Vs680Evk>(parent), pbus_(pbus), board_info_(board_info) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);

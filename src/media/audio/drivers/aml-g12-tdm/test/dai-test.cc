@@ -4,6 +4,7 @@
 
 #include "../dai.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -11,7 +12,6 @@
 
 #include <thread>
 
-#include <ddktl/protocol/composite.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zxtest/zxtest.h>

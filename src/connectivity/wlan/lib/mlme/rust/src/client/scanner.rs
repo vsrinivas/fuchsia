@@ -17,9 +17,9 @@ use {
     },
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
-    banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     thiserror::Error,
     wlan_common::{

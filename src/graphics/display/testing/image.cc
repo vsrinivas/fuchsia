@@ -4,6 +4,7 @@
 
 #include "image.h"
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -24,7 +25,6 @@
 #include <algorithm>
 #include <limits>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 
 #include "utils.h"

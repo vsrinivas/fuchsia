@@ -7,11 +7,10 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/hardware/gdc/cpp/banjo.h>
+#include <fuchsia/hardware/ge2d/cpp/banjo.h>
+#include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/fidl/cpp/binding.h>
-
-#include <ddktl/protocol/gdc.h>
-#include <ddktl/protocol/ge2d.h>
-#include <ddktl/protocol/isp.h>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
 #include "src/camera/drivers/controller/configs/product_config.h"

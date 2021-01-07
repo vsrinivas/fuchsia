@@ -4,6 +4,8 @@
 
 #include "src/devices/nand/drivers/skip-block/skip-block.h"
 
+#include <fuchsia/hardware/badblock/c/banjo.h>
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -20,8 +22,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/badblock.h>
-#include <ddk/protocol/nand.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

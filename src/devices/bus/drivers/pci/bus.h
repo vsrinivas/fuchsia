@@ -5,6 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
 #include <fuchsia/hardware/pci/llcpp/fidl.h>
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/msi.h>
 #include <zircon/compiler.h>
 
@@ -15,7 +16,6 @@
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
 

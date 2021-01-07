@@ -5,12 +5,12 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>
 #include <region-alloc/region-alloc.h>

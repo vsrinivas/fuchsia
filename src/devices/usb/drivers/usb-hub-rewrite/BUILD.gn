@@ -23,11 +23,11 @@ driver_module("usb-hub-rewrite") {
   sources = [ "usb-hub.cc" ]
   deps = [
     ":bind",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.hub",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.hub",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/lib/synchronous-executor",
     "//src/devices/usb/lib/usb",
@@ -50,11 +50,11 @@ test("usb-hub-test") {
   defines = [ "UNITTEST" ]
   deps = [
     ":bind",
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.hub",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.hub",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/lib/fdio",
     "//src/devices/lib/synchronous-executor",
     "//src/devices/testing/fake-bti",

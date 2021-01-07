@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #ifndef SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_FAKE_TRANSPORT_BASE_FAKE_TRANSPORT_BASE_H_
 #define SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_FAKE_TRANSPORT_BASE_FAKE_TRANSPORT_BASE_H_
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -10,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 
 #define _ALL_SOURCE
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>

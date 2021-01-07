@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
-#include <ddktl/protocol/usb.h>
 #include <usb/request-cpp.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>

@@ -1,0 +1,127 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.sdio;
+
+using fuchsia.hardware.sdmmc;
+using zx;
+
+const uint8 SDIO_FN_1 = 1;
+const uint8 SDIO_FN_2 = 2;
+/// Including func 0
+const uint8 SDIO_MAX_FUNCS = 8;
+
+struct SdioFuncHwInfo {
+    uint32 manufacturer_id;
+    uint32 product_id;
+    uint32 max_blk_size;
+    uint32 max_tran_speed;
+    uint8 fn_intf_code;
+};
+
+enum SDIO_CARD : uint32 {
+    MULTI_BLOCK = 0x1;
+    SRW = 0x2;
+    DIRECT_COMMAND = 0x4;
+    SUSPEND_RESUME = 0x8;
+    LOW_SPEED = 0x10;
+    HIGH_SPEED = 0x20;
+    HIGH_POWER = 0x40;
+    FOUR_BIT_BUS = 0x80;
+    HS_SDR12 = 0x100;
+    HS_SDR25 = 0x200;
+    UHS_SDR50 = 0x400;
+    UHS_SDR104 = 0x800;
+    UHS_DDR50 = 0x1000;
+    TYPE_A = 0x2000;
+    TYPE_B = 0x4000;
+    TYPE_C = 0x8000;
+    TYPE_D = 0x10000;
+};
+
+struct SdioDeviceHwInfo {
+    /// number of sdio funcs including func 0
+    uint32 num_funcs;
+    uint32 sdio_vsn;
+    uint32 cccr_vsn;
+    uint32 caps;
+};
+
+struct SdioHwInfo {
+    SdioDeviceHwInfo dev_hw_info;
+    array<SdioFuncHwInfo>:SDIO_MAX_FUNCS funcs_hw_info;
+    uint32 host_max_transfer_size;
+};
+
+struct SdioRwTxnNew {
+    uint32 addr;
+    bool incr;
+    bool write;
+
+    vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion> buffers;
+};
+
+struct SdioRwTxn {
+    uint32 addr;
+    uint32 data_size;
+    bool incr;
+    bool write;
+    bool use_dma;
+    /// Used if use_dma is true
+    handle<vmo> dma_vmo;
+    /// Used if use_dma is false
+    vector<voidptr>? virt;
+    /// offset into dma_vmo or virt
+    uint64 buf_offset;
+};
+
+[Layout = "ddk-protocol"]
+protocol Sdio {
+    GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
+    EnableFn() -> (zx.status s);
+    DisableFn() -> (zx.status s);
+    EnableFnIntr() -> (zx.status s);
+    DisableFnIntr() -> (zx.status s);
+    UpdateBlockSize(uint16 blk_sz, bool deflt) -> (zx.status s);
+    GetBlockSize() -> (zx.status s, uint16 cur_blk_size);
+    DoRwTxn(SdioRwTxn? txn) -> (zx.status s);
+    DoRwByte(bool write, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+    GetInBandIntr() -> (zx.status s, handle<interrupt> irq);
+    /// The following functions access the card common control registers (CCCR) on function 0.
+    /// Aborts an I/O operation occurring on the specified function.
+    IoAbort() -> (zx.status s);
+    /// Returns true if an interrupt is pending for function fn_idx, false otherwise.
+    IntrPending() -> (zx.status s, bool pending);
+    /// Reads or writes to a vendor CCCR register. addr must be in [0xF0, 0xFF].
+    DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+
+    // See fuchsia.hardware.sdmmc.
+    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size, uint32 vmo_rights)
+        -> (zx.status status);
+    UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
+
+    /// Clients are responsible for performing the following cache operations:
+    ///
+    /// After read requests:
+    /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE on buffers that
+    ///   have been mapped by the client.
+    /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN_INVALIDATE on all other buffers.
+    ///
+    /// Note that writing to any portion of a buffer before DoRwTxnNew has returned can corrupt the
+    /// received data.
+    ///
+    /// Before write requests:
+    /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA on buffers that have been mapped by the
+    ///   client.
+    /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN on all other buffers.
+    DoRwTxnNew(SdioRwTxnNew txn) -> (zx.status status);
+
+    /// Runs tests and logs the results in order to diagnose issues with the bus. Clients should
+    /// call this before shutting down due to unrecoverable errors. This method may block for some
+    /// time to send commands to the card, so it should be the last call made by the client.
+    /// Note: SDIO devices may have different drivers bound to different functions. Clients must not
+    /// call RunDiagnostics in these cases, since doing so could interfere with other clients.
+    /// TODO(fxbug.dev/64166): Remove this when the SDIO issues have been investigated.
+    RunDiagnostics();
+};

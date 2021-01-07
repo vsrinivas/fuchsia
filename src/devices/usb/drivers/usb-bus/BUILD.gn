@@ -28,8 +28,8 @@ source_set("common") {
   configs += [ "//build/config:all_source" ]
   sources = [ "usb-device.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb.composite",
-    "//sdk/banjo/ddk.protocol.usb.hub",
+    "//sdk/banjo/fuchsia.hardware.usb.composite",
+    "//sdk/banjo/fuchsia.hardware.usb.hub",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/utf_conversion",
@@ -38,10 +38,10 @@ source_set("common") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.usb",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.hci",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddktl",

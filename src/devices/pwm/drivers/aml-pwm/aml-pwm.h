@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_H_
 #define SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_H_
 
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
@@ -14,7 +15,6 @@
 #include <ddk/metadata/pwm.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/pwm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

@@ -5,11 +5,10 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DEFINITIONS_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DEFINITIONS_H_
 
+#include <fuchsia/hardware/network/device/c/banjo.h>
 #include <fuchsia/hardware/network/llcpp/fidl.h>
 
 #include <array>
-
-#include <ddk/protocol/network/device.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
 

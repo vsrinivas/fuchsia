@@ -4,6 +4,7 @@
 
 #include "server.h"
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <lib/zx/fifo.h>
 #include <string.h>
 #include <unistd.h>
@@ -20,7 +21,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

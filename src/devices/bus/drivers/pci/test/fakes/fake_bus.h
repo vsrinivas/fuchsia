@@ -4,12 +4,12 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_BUS_H_
 
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/resource.h>
 #include <zircon/hw/pci.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
 
 #include "../../bus.h"

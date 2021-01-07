@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -21,7 +22,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>

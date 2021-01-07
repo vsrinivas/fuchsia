@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_TESTS_USB_HCI_TEST_USB_HCI_TEST_DRIVER_H_
 #define SRC_DEVICES_USB_TESTS_USB_HCI_TEST_USB_HCI_TEST_DRIVER_H_
 
+#include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hcitest/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 
@@ -14,7 +15,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/usb.h>
 #include <usb/usb.h>
 
 namespace usb {

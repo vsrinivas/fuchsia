@@ -43,8 +43,8 @@ source_set("common") {
   ]
   public_deps = [
     ":mt_musb_host_bind",
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//sdk/banjo/ddk.protocol.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.hci",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
@@ -105,8 +105,8 @@ test("mt-hci-request-queue-test-bin") {
   ]
   output_name = "mt-hci-request-queue-test"
   deps = [
-    "//sdk/banjo/ddk.protocol.usb.hci",
-    "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/fuchsia.hardware.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",

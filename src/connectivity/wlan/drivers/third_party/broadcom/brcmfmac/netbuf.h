@@ -12,13 +12,13 @@
 
 // Includes for Netbuf.
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <zircon/types.h>
 
 #include <limits>
 #include <memory>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
 
 // Additional includes for brcmf_netbuf.
 

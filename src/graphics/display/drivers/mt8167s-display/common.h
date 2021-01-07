@@ -4,9 +4,9 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_COMMON_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_COMMON_H_
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <zircon/pixelformat.h>
 
-#include <ddk/protocol/display/controller.h>
 #include <hwreg/mmio.h>
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fuchsia/hardware/usb/function/c/banjo.h>
 #include <fuchsia/hardware/usb/peripheral/block/c/fidl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/usb/function.h>
 #include <usb/usb-request.h>
 
 #define BLOCK_SIZE 512L

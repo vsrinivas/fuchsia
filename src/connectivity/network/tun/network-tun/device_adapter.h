@@ -40,8 +40,8 @@ class DeviceAdapterParent {
 };
 
 // An entity that instantiates a `NetworkDeviceInterface` and provides an implementations of
-// `ddk.protocol.network.device.NetworkDeviceImpl` that grants access to the buffers exchanged with
-// the interface.
+// `fuchsia.hardware.network.device.NetworkDeviceImpl` that grants access to the buffers exchanged
+// with the interface.
 //
 // `DeviceAdapter` is used to provide the business logic of virtual NetworkDevice implementations
 // both for `tun.Device` and `tun.DevicePair` device classes.

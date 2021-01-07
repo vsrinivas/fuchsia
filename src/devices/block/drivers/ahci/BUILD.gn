@@ -33,7 +33,7 @@ test("ahci-unittest-bin") {
   ]
   deps = [
     ":shared",
-    "//sdk/banjo/ddk.protocol.block",
+    "//sdk/banjo/fuchsia.hardware.block",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
@@ -58,8 +58,8 @@ source_set("shared") {
     "sata.cc",
   ]
   deps = [
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

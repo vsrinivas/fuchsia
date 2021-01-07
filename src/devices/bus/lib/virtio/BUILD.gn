@@ -23,7 +23,7 @@ zx_library("virtio") {
     "ring.cc",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

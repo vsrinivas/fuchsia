@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 
-#include <ddk/protocol/block.h>
 #include <zxtest/zxtest.h>
 
 #include "manager.h"

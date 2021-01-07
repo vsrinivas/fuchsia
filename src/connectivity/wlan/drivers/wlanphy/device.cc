@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/device/llcpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
@@ -13,8 +14,7 @@
 #include <iterator>
 
 #include <ddk/device.h>
-#include <ddk/hw/wlan/wlaninfo.h>
-#include <ddk/protocol/wlanphyimpl.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>

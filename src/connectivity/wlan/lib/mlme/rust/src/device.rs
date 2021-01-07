@@ -5,8 +5,8 @@
 use {
     crate::{buffer::OutBuf, error::Error, key},
     anyhow::format_err,
-    banjo_ddk_protocol_wlan_info::*,
-    banjo_ddk_protocol_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
+    banjo_fuchsia_hardware_wlan_info::*,
+    banjo_fuchsia_hardware_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
     wlan_common::{mac::MacAddr, TimeUnit},
@@ -547,7 +547,7 @@ mod test_utils {
 mod tests {
     use {
         super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_ddk_hw_wlan_wlaninfo::*, banjo_ddk_protocol_wlan_mac::WlanHwScanType,
+        banjo_ddk_hw_wlan_wlaninfo::*, banjo_fuchsia_hardware_wlan_mac::WlanHwScanType,
         wlan_common::assert_variant,
     };
 

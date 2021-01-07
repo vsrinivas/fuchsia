@@ -4,8 +4,8 @@
 
 #include "ftdi-mpsse.h"
 
-#include "ddk/protocol/serialimpl.h"
-#include "zircon/types.h"
+#include <fuchsia/hardware/serialimpl/c/banjo.h>
+#include <zircon/types.h>
 
 namespace ftdi_mpsse {
 

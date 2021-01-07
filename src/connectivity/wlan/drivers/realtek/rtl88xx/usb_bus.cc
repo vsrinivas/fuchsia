@@ -3,6 +3,7 @@
 
 #include "usb_bus.h"
 
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -13,7 +14,6 @@
 #include <iterator>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <usb/usb.h>
 
@@ -81,7 +81,7 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
                            std::unique_ptr<Bus>* bus) {
   zx_status_t status = ZX_OK;
 
-#if 0  // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
+#if 0   // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
     status = usb_set_interface(usb_protocol, usb_iface_desc.bInterfaceNumber,
                                usb_iface_desc.bAlternateSetting);
     if (status != ZX_OK) {

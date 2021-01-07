@@ -22,7 +22,7 @@
 #include <utility>
 
 #include <ddk/device.h>
-#include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>

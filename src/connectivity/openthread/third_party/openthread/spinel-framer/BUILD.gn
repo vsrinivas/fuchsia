@@ -4,5 +4,5 @@
 
 source_set("spinel-framer") {
   sources = [ "spinel_framer.cc" ]
-  deps = [ "//sdk/banjo/ddk.protocol.spi" ]
+  deps = [ "//sdk/banjo/fuchsia.hardware.spi" ]
 }

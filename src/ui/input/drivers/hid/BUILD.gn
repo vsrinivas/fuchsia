@@ -28,8 +28,8 @@ driver_module("hid") {
   ]
   deps = [
     ":hid_bind",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.hiddevice",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -55,8 +55,8 @@ test("hid-test") {
   ]
   deps = [
     ":hid_bind",
-    "//sdk/banjo/ddk.protocol.hidbus",
-    "//sdk/banjo/ddk.protocol.hiddevice",
+    "//sdk/banjo/fuchsia.hardware.hidbus",
+    "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

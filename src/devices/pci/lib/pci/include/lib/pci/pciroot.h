@@ -1,12 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_
-#define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_
+#ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_PCIROOT_H_
+#define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_PCIROOT_H_
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <string.h>
 #include <zircon/compiler.h>
-
-#include <ddk/protocol/pciroot.h>
 
 pciroot_protocol_ops_t* get_pciroot_ops(void);
 
@@ -14,6 +13,7 @@ pciroot_protocol_ops_t* get_pciroot_ops(void);
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the
 // DDKTL usage away from it until we can remove it entirely.
 #ifdef __cplusplus
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/msi.h>
 #include <stdint.h>
@@ -23,7 +23,6 @@ pciroot_protocol_ops_t* get_pciroot_ops(void);
 #include <memory>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/pciroot.h>
 
 // PcirootBase is the interface between a platform's PCI RootHost, and the PCI Bus Driver instances.
 // It is templated on |PlatformContextType| so that platform specific context can be provided to
@@ -148,4 +147,4 @@ class PcirootBase : public ddk::Device<PcirootBase>,
 };
 
 #endif  // ifndef __cplusplus
-#endif  // SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_
+#endif  // SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_PCIROOT_H_

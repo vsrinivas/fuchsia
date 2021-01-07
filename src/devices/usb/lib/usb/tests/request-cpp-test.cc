@@ -4,11 +4,11 @@
 
 #include "usb/request-cpp.h"
 
+#include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
-#include <ddktl/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>

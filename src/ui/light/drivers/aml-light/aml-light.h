@@ -5,7 +5,9 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_AML_LIGHT_AML_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_AML_LIGHT_AML_LIGHT_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/light/llcpp/fidl.h>
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <threads.h>
 
 #include <optional>
@@ -15,8 +17,6 @@
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/pwm.h>
 #include <fbl/array.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 

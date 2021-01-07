@@ -4,15 +4,15 @@
 
 #include "ft8201.h"
 
+#include <fuchsia/hardware/composite/c/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 
-#include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace touch {

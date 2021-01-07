@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_
 #define SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_
 
+#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fuchsia/hardware/hiddevice/cpp/banjo.h>
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,8 +22,6 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>

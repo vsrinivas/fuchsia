@@ -5,16 +5,16 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_AML_GXL_GPIO_AML_GXL_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_AML_GXL_GPIO_AML_GXL_GPIO_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
 
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>

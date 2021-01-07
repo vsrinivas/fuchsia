@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     log::error,
     wlan_common::mac::Bssid,

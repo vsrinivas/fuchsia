@@ -12,9 +12,9 @@ driver_module("bt-transport-uart") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-transport-uart.c" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//sdk/banjo/ddk.protocol.serial",
-    "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/banjo/fuchsia.hardware.bt.hci",
+    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/fuchsia.hardware.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

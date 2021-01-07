@@ -79,7 +79,7 @@ source_set("linuxisms") {
     "//zircon/public/lib/zircon-internal",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.ethernet",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
     "//zircon/system/public",
   ]
 }
@@ -181,8 +181,8 @@ source_set("core") {
   public_deps = [
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/ddk.protocol.ethernet",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/banjo/fuchsia.hardware.ethernet",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
     "//src/devices/lib/broadcom",

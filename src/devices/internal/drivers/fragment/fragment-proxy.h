@@ -5,32 +5,32 @@
 #ifndef SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
 #define SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
 
+#include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
+#include <fuchsia/hardware/audio/cpp/banjo.h>
+#include <fuchsia/hardware/buttons/cpp/banjo.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/dsi/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <fuchsia/hardware/registers/cpp/banjo.h>
+#include <fuchsia/hardware/rpmb/cpp/banjo.h>
+#include <fuchsia/hardware/spi/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <fuchsia/hardware/tee/cpp/banjo.h>
+#include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
+#include <fuchsia/hardware/vreg/cpp/banjo.h>
 #include <lib/zx/channel.h>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
-#include <ddktl/protocol/audio.h>
-#include <ddktl/protocol/buttons.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/dsi.h>
-#include <ddktl/protocol/ethernet/board.h>
-#include <ddktl/protocol/goldfish/addressspace.h>
-#include <ddktl/protocol/goldfish/pipe.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/power.h>
-#include <ddktl/protocol/pwm.h>
-#include <ddktl/protocol/registers.h>
-#include <ddktl/protocol/rpmb.h>
-#include <ddktl/protocol/spi.h>
-#include <ddktl/protocol/sysmem.h>
-#include <ddktl/protocol/tee.h>
-#include <ddktl/protocol/usb/modeswitch.h>
-#include <ddktl/protocol/vreg.h>
 
 #include "proxy-protocol.h"
 

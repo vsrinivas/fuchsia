@@ -11,7 +11,7 @@ static_library("fake-transport-base") {
   ]
 
   deps = [
-    "//sdk/banjo/ddk.protocol.test",
+    "//sdk/banjo/fuchsia.hardware.test",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_llcpp",
     "//sdk/lib/fdio",

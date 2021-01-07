@@ -5,14 +5,14 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_MTK_POWER_MTK_POWER_H_
 #define SRC_DEVICES_POWER_DRIVERS_MTK_POWER_MTK_POWER_H_
 
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <array>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <fbl/vector.h>
 #include <soc/mt8167/mt8167-power-regs.h>
 #include <soc/mt8167/mt8167-power.h>

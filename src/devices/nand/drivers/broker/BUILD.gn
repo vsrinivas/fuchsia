@@ -18,7 +18,7 @@ driver_module("nand-broker") {
   }
   sources = [ "broker.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/banjo/fuchsia.hardware.nand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//src/devices/lib/driver",

@@ -5,7 +5,11 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
 #define SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
 
+#include <fuchsia/hardware/usb/bus/cpp/banjo.h>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <fuchsia/hardware/usb/device/llcpp/fidl.h>
+#include <fuchsia/hardware/usb/hci/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hub/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
@@ -13,10 +17,6 @@
 #include <optional>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hci.h>
-#include <ddktl/protocol/usb/hub.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>

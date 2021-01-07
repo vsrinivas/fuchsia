@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_FVM_DRIVER_VPARTITION_MANAGER_H_
 #define SRC_STORAGE_FVM_DRIVER_VPARTITION_MANAGER_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -24,8 +26,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

@@ -5,6 +5,7 @@
 #include "hid.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -16,7 +17,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/hidbus.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

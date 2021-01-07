@@ -4,7 +4,9 @@
 
 #include "src/graphics/drivers/misc/goldfish/pipe_device.h"
 
+#include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -21,8 +23,6 @@
 #include <thread>
 #include <vector>
 
-#include <ddk/protocol/goldfish/pipe.h>
-#include <mock/ddktl/protocol/acpi.h>
 #include <zxtest/zxtest.h>
 namespace goldfish {
 

@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -26,7 +27,6 @@
 #include <memory>
 #include <string_view>
 
-#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>

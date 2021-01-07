@@ -5,6 +5,8 @@
 #include "i2c-hid.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/fake-i2c/fake-i2c.h>
@@ -27,8 +29,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/hidbus.h>
-#include <ddk/protocol/i2c.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

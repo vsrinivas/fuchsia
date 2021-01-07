@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
+#include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
 #include <inttypes.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -23,10 +26,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
 #include <fbl/array.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

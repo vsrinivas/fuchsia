@@ -14,9 +14,9 @@ driver_module("gpio-test") {
   # TODO: testonly = true
   sources = [ "gpio-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.composite",
-    "//sdk/banjo/ddk.protocol.gpio",
-    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/fuchsia.hardware.composite",
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
 

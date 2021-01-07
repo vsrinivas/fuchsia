@@ -4,6 +4,7 @@
 
 #include "bus.h"
 
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <zircon/hw/pci.h>
 #include <zircon/status.h>
 
@@ -13,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/pciroot.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

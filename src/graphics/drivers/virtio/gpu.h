@@ -5,6 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 
+#include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <semaphore.h>
@@ -14,10 +17,7 @@
 
 #include <memory>
 
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/display/controller.h>
 
 #include "virtio_gpu.h"
 

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
 
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/zx/fifo.h>
 #include <zircon/compiler.h>
 
@@ -14,8 +16,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/acpi.h>
-#include <ddktl/protocol/serialimpl.h>
 #include <fbl/function.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/pio.h>

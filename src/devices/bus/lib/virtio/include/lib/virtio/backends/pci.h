@@ -5,14 +5,13 @@
 #ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/virtio/backends/backend.h>
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
 
 #include <optional>
-
-#include <ddktl/protocol/pci.h>
 
 namespace virtio {
 

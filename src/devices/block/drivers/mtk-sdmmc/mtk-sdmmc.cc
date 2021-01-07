@@ -4,6 +4,7 @@
 
 #include "mtk-sdmmc.h"
 
+#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <unistd.h>
@@ -16,7 +17,6 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <endian.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <fuchsia/hardware/bt/vendor/c/banjo.h>
+#include <fuchsia/hardware/serialimpl/async/c/banjo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,9 +23,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/bt/vendor.h>
-#include <ddk/protocol/serialimpl/async.h>
 
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE 2000000

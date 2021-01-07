@@ -5,11 +5,12 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_HOST_RNDIS_HOST_H_
 
+#include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/usb/c/banjo.h>
+
 #include <optional>
 
-#include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

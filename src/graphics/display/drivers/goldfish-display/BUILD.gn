@@ -24,10 +24,10 @@ source_set("common") {
   configs += [ "//build/config:all_source" ]
   sources = []
   public_deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
-    "//sdk/banjo/ddk.protocol.goldfish.control",
-    "//sdk/banjo/ddk.protocol.goldfish.pipe",
-    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/fuchsia.hardware.display.controller",
+    "//sdk/banjo/fuchsia.hardware.goldfish.control",
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",
@@ -53,7 +53,7 @@ test("goldfish-unittests") {
   ]
   deps = [
     ":common",
-    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/lib/fdio",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",

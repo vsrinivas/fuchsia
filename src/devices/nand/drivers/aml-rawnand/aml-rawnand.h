@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
 #define SRC_DEVICES_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
 
+#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/rawnand/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -22,9 +24,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/rawnand.h>
 #include <fbl/bits.h>
 #include <fbl/mutex.h>
 #include <hw/reg.h>

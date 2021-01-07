@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
 #include <fbl/array.h>
 
 namespace gpio_light {

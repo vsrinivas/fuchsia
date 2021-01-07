@@ -5,6 +5,9 @@
 #include "mt8167s-gpu.h"
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/composite/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -19,11 +22,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/algorithm.h>
 #include <hw/reg.h>

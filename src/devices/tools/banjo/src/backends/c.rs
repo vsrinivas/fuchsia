@@ -833,7 +833,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .iter()
             .filter(|n| *n.0 != ast.primary_namespace)
             .filter(|n| *n.0 != "zx")
-            .map(|n| format!("#include <{}.h>", n.0.replace('.', "/")))
+            .map(|n| {
+                if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+                    n.0.replace('.', "/") + "/c/banjo"
+                } else {
+                    n.0.replace('.', "/")
+                }
+            })
+            .map(|n| format!("#include <{}.h>", n))
             .collect::<Vec<_>>()
             .join("\n"))
     }

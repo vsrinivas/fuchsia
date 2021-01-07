@@ -4,6 +4,8 @@
 
 #include "device_proxy.h"
 
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/zx/bti.h>
 #include <zircon/types.h>
 
@@ -11,8 +13,6 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/pci.h>
-#include <ddk/protocol/sysmem.h>
 
 #include "common.h"
 
