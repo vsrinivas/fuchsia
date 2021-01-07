@@ -17,12 +17,12 @@
 ## If all the target arguments are `zircon/TARGET`, Fuchsia Ninja is not run.
 ##
 ## optional arguments:
-##   --log LOGFILE    Print debug information to LOGFILE. Please attach the
-##                    resulting file when reporting bugs.
-##   --no-zircon      Skip building zircon (ignoring any zircon targets that
-##                    may have been passed). This is useful for efficiently
-##                    building host-side targets that have no zircon
-##                    dependencies.
+##   --log LOGFILE     Print debug information to LOGFILE. Please attach the
+##                     resulting file when reporting bugs.
+##   --no-zircon       Skip building zircon (ignoring any zircon targets that
+##                     may have been passed). This is useful for efficiently
+##                     building host-side targets that have no zircon
+##                     dependencies.
 ##
 ## Other arguments are passed through to Ninja (same switches for both Zircon
 ## and Fuchsia).
@@ -144,11 +144,12 @@ function main {
     echo -e "\\n------ RUNNING ninja ------"
   fi
 
-  if $build_zircon ; then 
+  if $build_zircon ; then
     (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${ZIRCON_BUILDROOT}" \
       "${switches[@]}" "${zircon_targets[@]}")
     status=$?
     if [[ "${status}" -ne 0 && "$continue_on_error" = false ]]; then
+      goma-check
       exit-with-message
     fi
   fi
@@ -166,9 +167,20 @@ function main {
     if [[ "${status}" -eq 0 ]]; then
       status="${fuchsia_status}"
     fi
+    if [[ "${fuchsia_status}" -ne 0 ]]; then
+      goma-check
+    fi
   fi
 
   exit-with-message
+}
+
+function goma-check {
+  if grep -q "^ *use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
+    if ! fx-command-run goma_ctl status >/dev/null 2>&1; then
+      fx-error "Goma is enabled but not started. Please run 'fx goma' first."
+    fi
+  fi
 }
 
 function exit-with-message {
