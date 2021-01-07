@@ -2,13 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
-
-assert(current_cpu == "x64")
 
 group("x86") {
   deps = [ ":platform-bus-x86" ]
@@ -36,9 +35,6 @@ source_set("smbios") {
 
   deps = [
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
@@ -55,13 +51,20 @@ source_set("iommu") {
 
   deps = [
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+  ]
+}
+
+bind_rules("x64-bind") {
+  rules = "x64.bind"
+  output = "x64-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.intel.platform",
+    "//src/devices/bind/fuchsia.platform",
   ]
 }
 
@@ -70,9 +73,6 @@ driver_module("platform-bus-x86") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
 
   sources = [
     "acpi-dev/dev-battery.cc",
@@ -119,6 +119,7 @@ driver_module("platform-bus-x86") {
   deps = [
     ":iommu",
     ":smbios",
+    ":x64-bind",
     "//sdk/banjo/fuchsia.hardware.acpi",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.pciroot",
@@ -153,16 +154,6 @@ driver_module("platform-bus-x86") {
 }
 
 test("x86-battery-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "x86-battery-test"
   sources = [
     "acpi-dev/dev-battery-test.cc",
     "acpi-dev/dev-battery.cc",
@@ -181,9 +172,6 @@ test("x86-battery-test") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
@@ -195,16 +183,6 @@ test("x86-battery-test") {
 }
 
 test("x86-lid-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "x86-lid-test"
   sources = [
     "acpi-dev/dev-lid-test.cc",
     "acpi-dev/dev-lid.cc",
@@ -216,9 +194,6 @@ test("x86-lid-test") {
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
@@ -236,16 +211,6 @@ bootfs_test("x86-lid-bootfs-test") {
 }
 
 test("x86-pwrsrc-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "x86-pwrsrc-test"
   sources = [
     "acpi-dev/dev-pwrsrc-test.cc",
     "acpi-dev/dev-pwrsrc.cc",
@@ -260,9 +225,6 @@ test("x86-pwrsrc-test") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/zxtest",
@@ -276,15 +238,6 @@ bootfs_test("x86-pwrsrc-bootfs-test") {
 }
 
 test("x86-board-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "iommu-test.cc",
     "smbios-test.cc",
@@ -306,16 +259,6 @@ bootfs_test("x86-board-bootfs-test") {
 }
 
 test("x86-thermal-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "x86-thermal-test"
   sources = [
     "acpi-dev/dev-thermal-test.cc",
     "acpi-dev/dev-thermal.cc",
@@ -328,9 +271,6 @@ test("x86-thermal-test") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
@@ -347,16 +287,6 @@ bootfs_test("x86-thermal-bootfs-test") {
 }
 
 test("x86-cros-ec-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "x86-cros-ec-test"
   sources = [
     "acpi-dev/dev-cros-ec/acpi.cc",
     "acpi-dev/dev-cros-ec/acpi.h",
@@ -371,9 +301,6 @@ test("x86-cros-ec-test") {
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
@@ -394,8 +321,9 @@ fuchsia_unittest_package("x86-battery-test-pkg") {
 
 group("tests") {
   testonly = true
+  deps = [ ":x64-bind_test" ]
   if (target_cpu == "x64") {
-    deps = [
+    deps += [
       ":x86-battery-test-pkg",
       ":x86-cros-ec-test-pkg",
     ]

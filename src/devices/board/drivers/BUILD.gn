@@ -13,6 +13,7 @@ group("tests") {
     "vim2:tests",
     "vim3:tests",
     "vs680-evk:tests",
+    "x86:tests",
   ]
 
   if (target_cpu == "x64") {

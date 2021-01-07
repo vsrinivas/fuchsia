@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "x86.h"
+#include "src/devices/board/drivers/x86/x86.h"
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/driver-unit-test/utils.h>
@@ -11,7 +11,6 @@
 #include <zircon/status.h>
 
 #include <acpica/acpi.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -20,9 +19,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
 
-#include "acpi.h"
-#include "smbios.h"
-#include "sysmem.h"
+#include "src/devices/board/drivers/x86/include/acpi.h"
+#include "src/devices/board/drivers/x86/include/smbios.h"
+#include "src/devices/board/drivers/x86/include/sysmem.h"
+#include "src/devices/board/drivers/x86/x64-bind.h"
 
 using ::llcpp::fuchsia::hardware::acpi::MAX_ACPI_TABLE_ENTRIES;
 using ::llcpp::fuchsia::hardware::acpi::TableInfo;
@@ -282,7 +282,4 @@ static zx_driver_ops_t x86_driver_ops = []() {
 
 }  // namespace x86
 
-ZIRCON_DRIVER_BEGIN(acpi_bus, x86::x86_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_INTEL),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_X86), ZIRCON_DRIVER_END(acpi_bus)
+ZIRCON_DRIVER(acpi_bus, x86::x86_driver_ops, "zircon", "0.1");

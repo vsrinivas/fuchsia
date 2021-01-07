@@ -5,5 +5,9 @@
 library fuchsia.intel.platform;
 
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
-  INTEL = 8,
+  INTEL = 0x8,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  X86 = 0x1,
 };

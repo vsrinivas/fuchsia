@@ -12,7 +12,6 @@
 #include <zircon/types.h>
 
 #include <acpica/acpi.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
