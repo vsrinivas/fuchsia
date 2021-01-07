@@ -21,7 +21,7 @@ use {
         pointer_hack_server::PointerHackServer,
     },
     anyhow::{Context as _, Error},
-    element_management::SimpleElementManager,
+    legacy_element_management::SimpleElementManager,
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_session::{

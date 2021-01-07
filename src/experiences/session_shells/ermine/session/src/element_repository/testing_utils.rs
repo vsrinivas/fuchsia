@@ -7,12 +7,12 @@ use {
         event_handler::EventHandler, ElementEvent, ElementManagerServer, ElementRepository,
     },
     async_trait::async_trait,
-    element_management::{Element, ElementManager, ElementManagerError},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_session::ElementControllerRequestStream,
     fidl_fuchsia_session::ElementSpec,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, lock::Mutex},
+    legacy_element_management::{Element, ElementManager, ElementManagerError},
     std::{cell::RefCell, collections::HashMap, rc::Rc},
 };
 

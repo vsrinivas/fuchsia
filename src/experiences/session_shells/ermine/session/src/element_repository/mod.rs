@@ -10,7 +10,6 @@ mod testing_utils;
 
 use {
     anyhow::{Context as _, Error},
-    element_management::{Element, ElementManager, ElementManagerError},
     fidl_fuchsia_session::{
         ElementControllerMarker, ElementControllerRequestStream, ElementSpec, ProposeElementError,
     },
@@ -19,6 +18,7 @@ use {
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
         StreamExt,
     },
+    legacy_element_management::{Element, ElementManager, ElementManagerError},
     rand::{distributions::Alphanumeric, thread_rng, Rng},
     std::rc::Rc,
 };

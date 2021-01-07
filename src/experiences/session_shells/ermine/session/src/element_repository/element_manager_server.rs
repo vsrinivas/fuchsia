@@ -5,9 +5,9 @@
 use {
     crate::element_repository::{propose_element, ElementEvent},
     anyhow::{Context as _, Error},
-    element_management::ElementManager,
     fidl_fuchsia_session::{ElementManagerRequest, ElementManagerRequestStream},
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
+    legacy_element_management::ElementManager,
     std::rc::Rc,
 };
 

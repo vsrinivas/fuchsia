@@ -1,6 +1,5 @@
 use {
     crate::element_repository::ElementManagerServer,
-    element_management::ElementManager,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_session::{ElementManagerMarker, ElementManagerRequestStream},
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
@@ -11,6 +10,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::StreamExt,
+    legacy_element_management::ElementManager,
     std::sync::Arc,
 };
 

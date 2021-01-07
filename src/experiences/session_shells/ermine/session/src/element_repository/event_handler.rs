@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    element_management::Element,
     fidl::encoding::Decodable,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_session::{
@@ -14,9 +13,10 @@ use {
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fuchsia_async::{self as fasync, DurationExt, Timer},
     fuchsia_scenic as scenic,
-    fuchsia_zircon::{self as zx, Duration},
     fuchsia_zircon::AsHandleRef,
+    fuchsia_zircon::{self as zx, Duration},
     futures::{select, stream::StreamExt, FutureExt, TryStreamExt},
+    legacy_element_management::Element,
     std::{cell::RefCell, rc::Rc},
 };
 
