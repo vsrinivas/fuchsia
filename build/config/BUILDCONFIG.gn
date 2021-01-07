@@ -2014,28 +2014,32 @@ template("executable") {
       ]
 
       if (is_fuchsia) {
-        # Used by the distribution_manifest() template.
-        if (!defined(distribution_entries)) {
-          distribution_entries = [
-            {
-              source = rebased_output_file
-              destination = "bin/$output_name"
-              label =
-                  get_label_info(":$_executable_name", "label_with_toolchain")
-            },
-          ]
-        }
+        # NOTE: executables built in Zircon toolchains are not meant to be
+        # distributed in Fuchsia packages.
+        if (zircon_toolchain == false) {
+          # Used by the distribution_manifest() template.
+          if (!defined(distribution_entries)) {
+            distribution_entries = [
+              {
+                source = rebased_output_file
+                destination = "bin/$output_name"
+                label =
+                    get_label_info(":$_executable_name", "label_with_toolchain")
+              },
+            ]
+          }
 
-        if (!defined(test_component_manifest_program)) {
-          # Used by the fuchsia_test_component_manifest() template.
-          test_component_manifest_program = [
-            {
-              program = {
-                binary = "bin/$output_name"
-              }
-            },
-          ]
-          test_component_manifest_program_barrier = []
+          if (!defined(test_component_manifest_program)) {
+            # Used by the fuchsia_test_component_manifest() template.
+            test_component_manifest_program = [
+              {
+                program = {
+                  binary = "bin/$output_name"
+                }
+              },
+            ]
+            test_component_manifest_program_barrier = []
+          }
         }
       } else {
         tool_paths = [
@@ -2160,15 +2164,19 @@ template("loadable_module") {
         },
       ]
 
-      if (!defined(distribution_entries)) {
-        # Used by the distribution_manifest template.
-        distribution_entries = [
-          {
-            source = rebased_output_file
-            destination = "lib/$output_file_name"
-            label = get_label_info(":$_module_name", "label_with_toolchain")
-          },
-        ]
+      # NOTE: loadable modules built with Zircon toolchains should not go
+      # into Fuchsia packages by default.
+      if (is_fuchsia && zircon_toolchain == false) {
+        if (!defined(distribution_entries)) {
+          # Used by the distribution_manifest template.
+          distribution_entries = [
+            {
+              source = rebased_output_file
+              destination = "lib/$output_file_name"
+              label = get_label_info(":$_module_name", "label_with_toolchain")
+            },
+          ]
+        }
       }
 
       # Used by link_output_rspfile()
