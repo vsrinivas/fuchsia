@@ -155,8 +155,8 @@ impl TestEnvBuilder {
                     .connect_to_service::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
             },
-            _system_update_checker: system_update_checker,
-            _system_update_committer: system_update_committer,
+            system_update_checker,
+            system_update_committer,
         }
     }
 }
@@ -165,8 +165,8 @@ struct TestEnv {
     _env: NestedEnvironment,
     _mounts: Mounts,
     proxies: Proxies,
-    _system_update_checker: App,
-    _system_update_committer: App,
+    system_update_checker: App,
+    system_update_committer: App,
 }
 
 impl TestEnv {
@@ -382,15 +382,15 @@ async fn test_installation_deferred() {
         .build();
 
     env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
-            &env.proxies
-                .resolver
-                .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-                .add_file(
-                    "packages.json",
-                    make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
-                )
-                .add_file("zbi", "fake zbi"),
-        );
+        &env.proxies
+            .resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+    );
 
     // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
     // few enough to guarantee the commit is still pending.
@@ -447,4 +447,33 @@ async fn test_installation_deferred() {
         ],
     )
     .await;
+}
+
+// When the system-update-committer crashes, the system-update-checker should crash as well.
+// TODO(fxbug.dev/66760): remove this since we won't crash the system-update-checker.
+#[fasync::run_singlethreaded(test)]
+async fn test_system_update_checker_crashes_on_commit_status_provider_error() {
+    // Block the paver with a throttle to ensure it never responds to the system-update-committer.
+    // Otherwise, the paver may try to respond (and panic) when the system-update-committer is dead.
+    let (throttle_hook, _throttler) = mphooks::throttle();
+    let mut env = TestEnvBuilder::new()
+        .paver(MockPaverServiceBuilder::new().insert_hook(throttle_hook).build())
+        .build();
+
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update/0").resolve(
+        &env.proxies
+            .resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+    );
+
+    env.system_update_committer.kill().unwrap();
+
+    env.check_now().await;
+
+    assert!(env.system_update_checker.wait().await.unwrap().exited());
 }
