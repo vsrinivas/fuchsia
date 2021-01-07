@@ -142,12 +142,30 @@ zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const 
   zx_vaddr_t entry =
       load(log, filename, vmar, vmo, &interp_off, &interp_len, NULL, stack_size, true);
   if (interp_len > 0) {
-    char interp[sizeof(INTERP_PREFIX) + interp_len];
-    memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
-    zx_status_t status = vmo.read(&interp[sizeof(INTERP_PREFIX) - 1], interp_off, interp_len);
+    // While PT_INTERP names can be arbitrarily large, bootfs entries
+    // have names of bounded length.
+    constexpr size_t kInterpMaxLen = ZBI_BOOTFS_MAX_NAME_LEN;
+    constexpr size_t kInterpPrefixLen = sizeof(INTERP_PREFIX) - 1;
+    static_assert(kInterpMaxLen >= kInterpPrefixLen);
+    constexpr size_t kInterpSuffixLen = kInterpMaxLen - kInterpPrefixLen;
+
+    if (interp_len > kInterpSuffixLen) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Add one for the trailing nul.
+    char interp[kInterpMaxLen + 1];
+
+    // Copy the prefix.
+    memcpy(interp, INTERP_PREFIX, kInterpPrefixLen);
+
+    // Copy the suffix.
+    zx_status_t status = vmo.read(&interp[kInterpPrefixLen], interp_off, interp_len);
     if (status != ZX_OK)
       fail(log, "zx_vmo_read failed: %d", status);
-    interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
+
+    // Copy the nul.
+    interp[kInterpPrefixLen + interp_len] = '\0';
 
     printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
 
