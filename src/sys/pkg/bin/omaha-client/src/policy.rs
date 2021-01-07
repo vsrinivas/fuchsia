@@ -199,23 +199,47 @@ impl Policy for FuchsiaPolicy {
     }
 }
 
+// fuzz_interval deterministically fuzzes `interval` into the range
+// [(1-pct/2)*interval, (1+pct/2)*interval]. For example, a `fuzz_percentage_range`
+// value of 100 (corresponding to a pct value of 1) would fuzz a duration of 10s to
+// [5s, 15s]. Where in this range it falls depends on the `interval_fuzz_seed`, which
+// (in this example) would always be 5s for a value of 0, and always 15s for a value
+// of u64::MAX.
+//
+// This was previously implemented using IEE754 floats, which proved to have
+// error bounds that made reliable testing difficult. This implementation uses
+// integer arithmetic, which, while imprecise, is at least predictably so. To
+// avoid loss of sub-second precision, the formula here is applied to a
+// nanosecond value.
+//
+// The tradeoff is that we cannot reliably fuzz durations longer than about 2^55.7
+// nanoseconds -- a period of about 21.5 months. That seems like a fine tradeoff:
+// this function aims to solve thundering herd problems -- which shouldn't occur
+// on such large timescales (famous last words) -- and expects to fuzz much shorter
+// intervals within smaller bounds.
 fn fuzz_interval(
     interval: Duration,
     interval_fuzz_seed: u64,
     fuzz_percentage_range: u32,
 ) -> Duration {
-    // Check that the interval can be fuzzed without overflowing.
-    if interval.checked_add(interval.mul_f32(fuzz_percentage_range as f32 / 200.0)).is_none() {
-        log::warn!("The interval should never be this large: {:?}", interval);
+    // Percentage range must be clamped as the subtraction in the numerator can result
+    // in integer overflow.
+    if fuzz_percentage_range > 200 {
+        log::warn!("Supplied fuzz range too wide: {:?}", interval);
         return interval;
     }
 
-    let half_fuzzed_interval = interval.mul_f32(fuzz_percentage_range as f32 / 200.0);
-    let fuzzed_interval = interval.mul_f32(fuzz_percentage_range as f32 / 100.0);
+    const M: u128 = u64::MAX as u128;
+    let (d, s, p) =
+        (interval.as_nanos(), interval_fuzz_seed as u128, fuzz_percentage_range as u128);
 
-    let fuzz_percentage = interval_fuzz_seed as f32 / std::u64::MAX as f32;
+    let numerator = 200 * M + 2 * p * s - p * M;
+    if let Some(nanos) = d.checked_mul(numerator) {
+        let nanos = nanos / 200 / M;
+        return Duration::new((nanos / 1_000_000_000) as u64, (nanos % 1_000_000_000) as u32);
+    }
 
-    interval - half_fuzzed_interval + fuzzed_interval.mul_f32(fuzz_percentage)
+    interval
 }
 
 /// FuchsiaPolicyEngine just gathers the current time and hands it off to the FuchsiaPolicy as the
@@ -617,13 +641,11 @@ mod tests {
         }
     }
 
-    // N.B. not using Arbitrary impl for duration here due to potential flake issues.
-    // See also https://fxrev.dev/464538 and https://github.com/AltSysrq/proptest/issues/221
-    // for context.
     prop_compose! {
-        fn arb_duration_up_to_percent_of_max(ratio: f32)
-                                            (secs: u64, nsec in 0..1_000_000_000u32) -> Duration {
-            Duration::new(secs, nsec).mul_f32(ratio)
+        // N.B. not using Arbitrary impl for duration here due to a small potential for
+        // flake issues. Cf https://github.com/AltSysrq/proptest/issues/221.
+        fn arb_fuzzable_duration()(secs: u64, nsec in 0..1_000_000_000u32) -> Duration {
+            Duration::new(secs, nsec)
         }
     }
 
@@ -656,33 +678,94 @@ mod tests {
            );
        }
 
-        #[test]
-        fn test_fuzz_interval_lower_bounds(interval in arb_duration_up_to_percent_of_max(0.50),
-            interval_fuzz_seed: u64,
-            fuzz_percentage_range in 0u32..50u32) {
-            // Account for differences in integer vs single-precision arithmetic.
-            let epsilon = (u64::MAX as f32 * 0.50f32) as u64 - u64::MAX/2;
-            assert!(interval <= Duration::new(u64::MAX / 2 + epsilon, 0));
-            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
+       #[test]
+       fn test_fuzz_interval_lower_bounds(interval in arb_fuzzable_duration(),
+           interval_fuzz_seed: u64,
+           fuzz_percentage_range in 0u32..200u32) {
+           let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
-            let lower_bound_multiplier = 1.0 - fuzz_percentage_range as f32 / 200.0;
-            let lower_bound = interval.mul_f32(lower_bound_multiplier);
-            assert!(fuzzed_interval >= lower_bound);
+           let nanos = interval.as_nanos();
+           let lower_bound = nanos - (nanos * fuzz_percentage_range as u128 / 200);
+           assert!(
+               fuzzed_interval >= lower_bound,
+               "bound exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
+               lower_bound,
+               fuzzed_interval,
+               interval,
+               interval_fuzz_seed,
+               fuzz_percentage_range,
+           );
        }
 
-        #[test]
-        fn test_fuzz_interval_upper_bounds(interval in arb_duration_up_to_percent_of_max(0.75),
-            interval_fuzz_seed: u64,
-            fuzz_percentage_range in 0u32..25u32) {
-            // Account for differences in integer vs single-precision arithmetic.
-            let epsilon = (u64::MAX as f32 * 0.75f32) as u64 - u64::MAX/4*3;
-            assert!(interval <= Duration::new(u64::MAX / 4 * 3 + epsilon, 0));
-            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range);
+       #[test]
+       fn test_fuzz_interval_upper_bounds(interval in arb_fuzzable_duration(),
+           interval_fuzz_seed: u64,
+           fuzz_percentage_range in 0u32..200u32) {
+           let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
-            let upper_bound_multiplier = 1.0 + fuzz_percentage_range as f32 / 200.0;
-            let upper_bound = interval.mul_f32(upper_bound_multiplier);
-            assert!(fuzzed_interval <= upper_bound);
+           let nanos = interval.as_nanos();
+           let upper_bound = nanos + (nanos * fuzz_percentage_range as u128 / 200);
+
+           // The upper bound may overflow u64, but this doesn't mean that the interval itself
+           // would fuzz above u64. To avoid issues with duplicating the fuzz_interval function
+           // into this test, we compare nanos here -- if the function would've overflowed, it
+           // returns the original interval, which would still be within the calculated bounds
+           // after conversion to nanos.
+           assert!(
+               fuzzed_interval <= upper_bound,
+               "bounds exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
+               upper_bound,
+               fuzzed_interval,
+               interval,
+               interval_fuzz_seed,
+               fuzz_percentage_range,
+           );
        }
+    }
+
+    /// The math performed in fuzz_interval can overflow for duration inputs that
+    /// approach 2^64 nanoseconds; this test checks to see that's detected and that
+    /// the function returns its input unmodified in that case.
+    #[test]
+    fn test_fuzz_interval_yields_input_for_large_durations() {
+        let interval = Duration::from_secs(u64::MAX);
+        let fuzzed_interval = fuzz_interval(interval, u64::MAX, 100);
+        assert!(
+            fuzzed_interval == interval,
+            "invariant failed: {:?} != {:?}",
+            fuzzed_interval,
+            interval
+        );
+    }
+
+    /// The fuzz_interval function fuzzes a value to a range around itself such that
+    /// a range of 100% would return a value bounded to within +-50%. Durations don't
+    /// represent negative values, so fuzzing across ranges larger than 200% is
+    /// nonsensical. This test checks that invariant.
+    #[test]
+    fn test_fuzz_interval_rejects_wide_ranges() {
+        let interval = Duration::from_secs(100);
+        let fuzzed_interval = fuzz_interval(interval, 1, 201);
+        assert!(
+            interval == fuzzed_interval,
+            "invariant failed: {:?} != {:?}",
+            fuzzed_interval,
+            interval
+        );
+    }
+
+    /// Ensure that fuzz_interval behaves as expected given deterministic inputs.
+    #[test]
+    fn test_fuzz_interval_determinism() {
+        let d = Duration::from_secs(100);
+        assert!(fuzz_interval(d, 0, 0) == d);
+        assert!(fuzz_interval(d, 0, 50) == Duration::from_secs(75));
+        assert!(fuzz_interval(d, 0, 100) == Duration::from_secs(50));
+        assert!(fuzz_interval(d, 0, 200) == Duration::from_secs(0));
+        assert!(fuzz_interval(d, u64::MAX, 0) == d);
+        assert!(fuzz_interval(d, u64::MAX, 50) == Duration::from_secs(125));
+        assert!(fuzz_interval(d, u64::MAX, 100) == Duration::from_secs(150));
+        assert!(fuzz_interval(d, u64::MAX, 200) == Duration::from_secs(200));
     }
 
     /// Test that the correct next update time is calculated for the normal case where a check was
