@@ -13,10 +13,10 @@ exploring the LLCPP bindings.
 
 This document covers how to complete the following tasks:
 
-* [Write a C++ device test](#write-a-cpp-test).
+* [Write a C++ FIDL LLCPP test](#write-a-cpp-test).
 * [Add the LLCPP bindings of a FIDL library as a build
   dependency](#add-dependency).
-* [Import the LLCPP bindings crate into your code](#include-llcpp-bindings).
+* [Import the LLCPP bindings into your code](#include-llcpp-bindings).
 * [Inspect and use the generated bindings
   code](#inspect-user-generated-bindings).
 
@@ -28,7 +28,7 @@ as you follow this tutorial, you can remove the example code:
 rm -r examples/fidl/llcpp/unittests/*
 ```
 
-## Write a C++ device test {#write-a-cpp-test}
+## Write a C++ FIDL LLCPP test {#write-a-cpp-test}
 
 1. Add a gtest stub to `examples/fidl/llcpp/unittests/main.cc`:
 
@@ -145,7 +145,7 @@ anonymous namespace in `main.cc`:
 To rebuild and rerun the tests, run:
 
 ```
-fx test -vo fidl_crates_test
+fx test -vo fidl_example_llcpp_test
 ```
 
 <!-- xrefs -->
