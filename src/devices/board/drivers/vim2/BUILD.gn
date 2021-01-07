@@ -2,16 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("vim2-bind") {
+  rules = "vim2.bind"
+  output = "vim2-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.khadas.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("vim2") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "vim-canvas.cc",
     "vim-clk.cc",
@@ -32,6 +40,7 @@ driver_module("vim2") {
     "vim.cc",
   ]
   deps = [
+    ":vim2-bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
@@ -57,4 +66,9 @@ driver_module("vim2") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vim2-bind_test" ]
 }

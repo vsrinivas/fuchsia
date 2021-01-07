@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vim.h"
+#include "src/devices/board/drivers/vim2/vim.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -28,6 +28,8 @@
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
+
+#include "src/devices/board/drivers/vim2/vim2-bind.h"
 
 namespace vim {
 
@@ -211,8 +213,4 @@ zx_driver_ops_t vim_driver_ops = []() {
 
 }  // namespace vim
 
-ZIRCON_DRIVER_BEGIN(vim, vim::vim_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2_MACHINA), ZIRCON_DRIVER_END(vim)
+ZIRCON_DRIVER(vim, vim::vim_driver_ops, "zircon", "0.1");
