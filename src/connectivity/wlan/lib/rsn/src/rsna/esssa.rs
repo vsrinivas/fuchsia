@@ -450,12 +450,20 @@ impl EssSa {
         frame: eapol::KeyFrameRx<B>,
     ) -> Result<(), Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
-        let verified_frame = Dot11VerifiedKeyFrame::from_frame(
+        let verified_frame = match Dot11VerifiedKeyFrame::from_frame(
             frame,
             &self.role,
             &self.negotiated_protection,
             self.key_replay_counter,
-        )?;
+        ) {
+            // An invalid key replay counter means we should skip the frame, but may happen under
+            // normal circumstances and should not be logged as an error.
+            Err(e @ Error::InvalidKeyReplayCounter(_, _)) => {
+                info!("Ignoring eapol frame: {}", e);
+                return Ok(());
+            }
+            result => result?,
+        };
 
         // Safe: frame was just verified.
         let raw_frame = verified_frame.unsafe_get_raw();
@@ -692,25 +700,28 @@ mod tests {
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert!(result.is_ok());
+        assert!(!sink.is_empty());
 
         // The just sent third message increased the key replay counter.
         // All successive EAPOL frames are required to have a larger key replay counter.
 
         // Send an invalid message.
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
-        assert!(result.is_err());
+        assert!(result.is_ok());
+        assert!(sink.is_empty());
 
         // Send a valid message.
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
+        assert!(!sink.is_empty());
     }
 
     // Replays the first message of the 4-Way Handshake with an altered ANonce to verify that
