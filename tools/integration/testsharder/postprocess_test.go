@@ -265,6 +265,21 @@ func TestMultiplyShards(t *testing.T) {
 				multShard(env1, "fuchsia", 1, 2, 0),
 			},
 		},
+		{
+			name: "choose less runs if multiple multipliers for same test",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 3),
+				makeTestModifier(1, "fuchsia", 2),
+				makeTestModifier(1, "fuchsia", 5),
+			},
+			expected: []*Shard{
+				shard(env1, "fuchsia", 2),
+				multShard(env1, "fuchsia", 1, 2, 0),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

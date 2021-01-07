@@ -193,12 +193,20 @@ func MultiplyShards(
 			// in an affected shard or not and it's confusing for it to have
 			// two prefixes. So don't include the "affected" prefix.
 			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, affectedShardPrefix)
-			shards = append(shards, &Shard{
-				Name:  multipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
-				Tests: []Test{m.test},
-				Env:   shards[m.shardIdx].Env,
-			})
-			shardIdxToTestIdx[m.shardIdx] = append(shardIdxToTestIdx[m.shardIdx], m.testIdx)
+			// If the test was already multiplied by another modifier, keep the same
+			// multiplier shard but prefer the lower number of runs.
+			alreadyMultiplied := strings.HasPrefix(shardName, multipliedShardPrefix)
+			if alreadyMultiplied {
+				test := shards[m.shardIdx].Tests[m.testIdx]
+				shards[m.shardIdx].Tests[m.testIdx].Runs = min(test.Runs, m.test.Runs)
+			} else {
+				shards = append(shards, &Shard{
+					Name:  multipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
+					Tests: []Test{m.test},
+					Env:   shards[m.shardIdx].Env,
+				})
+				shardIdxToTestIdx[m.shardIdx] = append(shardIdxToTestIdx[m.shardIdx], m.testIdx)
+			}
 		}
 		// Remove the multiplied tests from the other shard. It's wasteful to run it in
 		// different shards.
