@@ -2,16 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("vim3-bind") {
+  rules = "vim3.bind"
+  output = "vim3-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.khadas.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("vim3") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "vim3-clk.cc",
     "vim3-emmc.cc",
@@ -27,6 +35,7 @@ driver_module("vim3") {
     "vim3.cc",
   ]
   deps = [
+    ":vim3-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.ethernet",
@@ -59,4 +68,9 @@ driver_module("vim3") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vim3-bind_test" ]
 }

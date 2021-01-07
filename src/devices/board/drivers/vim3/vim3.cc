@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -19,6 +19,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/board/drivers/vim3/vim3-bind.h"
 
 namespace vim3 {
 
@@ -136,10 +138,5 @@ static constexpr zx_driver_ops_t vim3_driver_ops = []() {
 }();
 
 }  // namespace vim3
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vim3, vim3::vim3_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM3),
-ZIRCON_DRIVER_END(vim3)
-    // clang-format on
+
+ZIRCON_DRIVER(vim3, vim3::vim3_driver_ops, "zircon", "0.1");

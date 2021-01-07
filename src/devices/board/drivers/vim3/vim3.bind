@@ -1,0 +1,10 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.khadas.platform;
+using fuchsia.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3;

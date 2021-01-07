@@ -10,6 +10,7 @@ group("tests") {
     "mt8167s_ref:tests",
     "sherlock:tests",
     "vim2:tests",
+    "vim3:tests",
     "vs680-evk:tests",
   ]
 
