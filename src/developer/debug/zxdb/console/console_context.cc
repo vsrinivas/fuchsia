@@ -615,13 +615,27 @@ void ConsoleContext::DidCreateTarget(Target* target) {
 }
 
 void ConsoleContext::WillDestroyTarget(Target* target) {
-  TargetRecord* record = GetTargetRecord(target);
-  if (!record) {
-    FX_NOTREACHED();
-    return;
+  int deleted_target_id = 0;
+
+  {
+    TargetRecord* record = GetTargetRecord(target);
+    if (!record) {
+      FX_NOTREACHED();
+      return;
+    }
+
+    deleted_target_id = record->target_id;
+
+    // There should be no threads by the time we erase the target mapping.
+    FX_DCHECK(record->id_to_thread.empty());
+    FX_DCHECK(record->thread_to_id.empty());
+
+    target_to_id_.erase(target);
+    id_to_target_.erase(deleted_target_id);
+    // *record is now invalid.
   }
 
-  if (active_target_id_ == record->target_id) {
+  if (active_target_id_ == deleted_target_id) {
     // Need to update the default target ID.
     if (id_to_target_.empty()) {
       // This should only happen in the shutting-down case.
@@ -634,13 +648,6 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
     }
   }
 
-  // There should be no threads by the time we erase the target mapping.
-  FX_DCHECK(record->id_to_thread.empty());
-  FX_DCHECK(record->thread_to_id.empty());
-
-  target_to_id_.erase(target);
-  id_to_target_.erase(record->target_id);
-  // *record is now invalid.
 }
 
 void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new_process) {
