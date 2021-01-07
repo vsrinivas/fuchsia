@@ -2460,8 +2460,6 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -2482,8 +2480,6 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
         final String _name =
@@ -2494,12 +2490,12 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           final List<$fidl.MemberType> $types =
               _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
                   .response!;
-          $decoder.claimMemory(
-              _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                  .decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -2520,12 +2516,12 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           final List<$fidl.MemberType> $types =
               _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
                   .response!;
-          $decoder.claimMemory(
-              _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                  .decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -2586,8 +2582,6 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
         final String _name =
@@ -2598,11 +2592,16 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
           final List<$fidl.MemberType> $types =
               _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
                   .request!;
-          $decoder.claimMemory(
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<
+              StrictBoundedXUnion> $future = $fidl.decodeMessageWithCallback<
+                  $async.Future<StrictBoundedXUnion>>(
+              $message,
               _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                  .decodeRequestInlineSize($decoder));
-          final $async.Future<StrictBoundedXUnion> $future =
-              impl!.strictXUnionHenceResponseMayBeStackAllocated();
+                  .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.strictXUnionHenceResponseMayBeStackAllocated();
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
@@ -2610,7 +2609,7 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                 $message.txid);
             $encoder.alloc(
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                    .encodingResponseInlineSize($encoder));
+                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
                     .response!;
@@ -2637,11 +2636,16 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
           final List<$fidl.MemberType> $types =
               _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
                   .request!;
-          $decoder.claimMemory(
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<
+              OlderSimpleUnion> $future = $fidl.decodeMessageWithCallback<
+                  $async.Future<OlderSimpleUnion>>(
+              $message,
               _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                  .decodeRequestInlineSize($decoder));
-          final $async.Future<OlderSimpleUnion> $future =
-              impl!.flexibleXUnionHenceResponseMustBeHeapAllocated();
+                  .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.flexibleXUnionHenceResponseMustBeHeapAllocated();
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
@@ -2649,7 +2653,7 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                 $message.txid);
             $encoder.alloc(
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                    .encodingResponseInlineSize($encoder));
+                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
                     .response!;

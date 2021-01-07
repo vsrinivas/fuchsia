@@ -677,8 +677,6 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kInterface_OnEvent_Ordinal:
         final String _name = _kInterface_OnEvent_Type.name;
@@ -686,8 +684,6 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kInterface_OnEvent_Type.response!;
-          $decoder.claimMemory(
-              _kInterface_OnEvent_Type.decodeResponseInlineSize($decoder));
           _onEventEventStreamController.add(null);
         } catch (_e) {
           ctrl.proxyError(
@@ -717,8 +713,6 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -774,8 +768,8 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
           $subscriptions.add(_onEvent_stream.listen(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kInterface_OnEvent_Ordinal, 0);
-            $encoder.alloc(
-                _kInterface_OnEvent_Type.encodingResponseInlineSize($encoder));
+            $encoder
+                .alloc(_kInterface_OnEvent_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kInterface_OnEvent_Type.response!;
 
@@ -789,8 +783,6 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kInterface_Method_Ordinal:
         final String _name = _kInterface_Method_Type.name;
@@ -798,9 +790,14 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kInterface_Method_Type.request!;
-          $decoder.claimMemory(
-              _kInterface_Method_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.method();
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message, _kInterface_Method_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.method();
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');

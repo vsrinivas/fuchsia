@@ -304,8 +304,6 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -326,8 +324,6 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kProtocol_RequestStrictResponseFlexible_Ordinal:
         final String _name = _kProtocol_RequestStrictResponseFlexible_Type.name;
@@ -335,11 +331,12 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kProtocol_RequestStrictResponseFlexible_Type.response!;
-          $decoder.claimMemory(_kProtocol_RequestStrictResponseFlexible_Type
-              .decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kProtocol_RequestStrictResponseFlexible_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -357,11 +354,12 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kProtocol_RequestFlexibleResponseStrict_Type.response!;
-          $decoder.claimMemory(_kProtocol_RequestFlexibleResponseStrict_Type
-              .decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kProtocol_RequestFlexibleResponseStrict_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -393,7 +391,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
     $encoder.encodeMessageHeader(
         _kProtocol_RequestStrictResponseFlexible_Ordinal, 0);
     $encoder.alloc(_kProtocol_RequestStrictResponseFlexible_Type
-        .encodingRequestInlineSize($encoder));
+        .encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kProtocol_RequestStrictResponseFlexible_Type.request!;
     $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
@@ -414,7 +412,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
     $encoder.encodeMessageHeader(
         _kProtocol_RequestFlexibleResponseStrict_Ordinal, 0);
     $encoder.alloc(_kProtocol_RequestFlexibleResponseStrict_Type
-        .encodingRequestInlineSize($encoder));
+        .encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kProtocol_RequestFlexibleResponseStrict_Type.request!;
     $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
@@ -429,8 +427,6 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kProtocol_RequestStrictResponseFlexible_Ordinal:
         final String _name = _kProtocol_RequestStrictResponseFlexible_Type.name;
@@ -438,19 +434,24 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kProtocol_RequestStrictResponseFlexible_Type.request!;
-          $decoder.claimMemory(_kProtocol_RequestStrictResponseFlexible_Type
-              .decodeRequestInlineSize($decoder));
-          final $async.Future<FlexibleFoo> $future =
-              impl!.requestStrictResponseFlexible(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<FlexibleFoo> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<FlexibleFoo>>(
+                  $message,
+                  _kProtocol_RequestStrictResponseFlexible_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.requestStrictResponseFlexible(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestStrictResponseFlexible_Ordinal,
                 $message.txid);
             $encoder.alloc(_kProtocol_RequestStrictResponseFlexible_Type
-                .encodingResponseInlineSize($encoder));
+                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kProtocol_RequestStrictResponseFlexible_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
@@ -473,19 +474,24 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kProtocol_RequestFlexibleResponseStrict_Type.request!;
-          $decoder.claimMemory(_kProtocol_RequestFlexibleResponseStrict_Type
-              .decodeRequestInlineSize($decoder));
-          final $async.Future<StrictFoo> $future =
-              impl!.requestFlexibleResponseStrict(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<StrictFoo> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<StrictFoo>>(
+                  $message,
+                  _kProtocol_RequestFlexibleResponseStrict_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.requestFlexibleResponseStrict(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestFlexibleResponseStrict_Ordinal,
                 $message.txid);
             $encoder.alloc(_kProtocol_RequestFlexibleResponseStrict_Type
-                .encodingResponseInlineSize($encoder));
+                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kProtocol_RequestFlexibleResponseStrict_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);

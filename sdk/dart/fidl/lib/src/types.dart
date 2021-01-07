@@ -183,14 +183,14 @@ abstract class FidlType<T, I extends Iterable<T>> {
 
   final int inlineSize;
 
-  int encodingInlineSize(Encoder encoder) => inlineSize;
-  int decodingInlineSize(Decoder decoder) => inlineSize;
+  int encodingInlineSize() => inlineSize;
+  int decodingInlineSize() => inlineSize;
 
   void encode(Encoder encoder, T value, int offset);
 
   void encodeArray(Encoder encoder, Iterable<T> value, int offset) {
     int off = offset;
-    final int stride = encodingInlineSize(encoder);
+    final int stride = encodingInlineSize();
     for (final element in value) {
       encode(encoder, element, off);
       off += stride;
@@ -208,8 +208,8 @@ abstract class SimpleFidlType<T> extends FidlType<T, List<T>> {
 
   @override
   List<T> decodeArray(Decoder decoder, int count, int offset) =>
-      List<T>.generate(count,
-          (int i) => decode(decoder, offset + i * decodingInlineSize(decoder)));
+      List<T>.generate(
+          count, (int i) => decode(decoder, offset + i * decodingInlineSize()));
 }
 
 /// This encodes/decodes the UnknowRawData assuming it is in an envelope, i.e.
@@ -557,6 +557,7 @@ class HandleType extends _BaseHandleType<Handle> {
 
   @override
   Handle wrap(Handle handle) => handle;
+
   @override
   Handle? unwrap(Handle handle) => handle;
 }
@@ -771,7 +772,7 @@ class PointerType<T> extends SimpleFidlType<T?> {
       encoder.encodeUint64(kAllocAbsent, offset);
     } else {
       encoder.encodeUint64(kAllocPresent, offset);
-      int childOffset = encoder.alloc(element.encodingInlineSize(encoder));
+      int childOffset = encoder.alloc(element.encodingInlineSize());
       element.encode(encoder, value, childOffset);
     }
   }
@@ -784,7 +785,7 @@ class PointerType<T> extends SimpleFidlType<T?> {
       return null;
     }
     return element.decode(
-        decoder, decoder.claimMemory(element.decodingInlineSize(decoder)));
+        decoder, decoder.claimMemory(element.decodingInlineSize()));
   }
 
   void validateEncoded(int encoded) {
@@ -836,7 +837,7 @@ const int _kEnvelopeSize = 16;
 void _encodeEnvelopePresent<T, I extends Iterable<T>>(
     Encoder encoder, int offset, T field, FidlType<T, I> fieldType) {
   int numHandles = encoder.countHandles();
-  final fieldOffset = encoder.alloc(fieldType.encodingInlineSize(encoder));
+  final fieldOffset = encoder.alloc(fieldType.encodingInlineSize());
   fieldType.encode(encoder, field, fieldOffset);
   numHandles = encoder.countHandles() - numHandles;
   final numBytes = encoder.nextOffset() - fieldOffset;
@@ -878,8 +879,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
     case kAllocPresent:
       if (isEmpty) throw FidlError('expected empty envelope');
       if (fieldType != null) {
-        final fieldOffset =
-            decoder.claimMemory(fieldType.decodingInlineSize(decoder));
+        final fieldOffset = decoder.claimMemory(fieldType.decodingInlineSize());
         final claimedHandles = decoder.countClaimedHandles();
         final field = fieldType.decode(decoder, fieldOffset);
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
@@ -887,6 +887,9 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
             decoder.countClaimedHandles() - claimedHandles;
         if (header.numBytes != numBytesConsumed)
           throw FidlError('field was mis-sized');
+        if (header.numHandles > numHandlesConsumed)
+          throw FidlError('Envelope contains extra handles',
+              FidlErrorCode.fidlTooManyHandles);
         if (header.numHandles != numHandlesConsumed)
           throw FidlError('handles were mis-sized');
         return field;
@@ -1228,19 +1231,19 @@ class MethodType {
   final int requestInlineSize;
   final int responseInlineSize;
 
-  int encodingRequestInlineSize(Encoder encoder) {
+  int encodingRequestInlineSize() {
     return requestInlineSize;
   }
 
-  int encodingResponseInlineSize(Encoder encoder) {
+  int encodingResponseInlineSize() {
     return responseInlineSize;
   }
 
-  int decodeRequestInlineSize(Decoder decoder) {
+  int decodeRequestInlineSize() {
     return requestInlineSize;
   }
 
-  int decodeResponseInlineSize(Decoder decoder) {
+  int decodeResponseInlineSize() {
     return responseInlineSize;
   }
 }
@@ -1256,7 +1259,7 @@ void _encodeVector<T, I extends Iterable<T>>(
   encoder
     ..encodeUint64(count, offset) // count
     ..encodeUint64(kAllocPresent, offset + 8); // data
-  int childOffset = encoder.alloc(count * element.encodingInlineSize(encoder));
+  int childOffset = encoder.alloc(count * element.encodingInlineSize());
   element.encodeArray(encoder, value, childOffset);
 }
 
@@ -1268,8 +1271,7 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
   if (data == kAllocAbsent) {
     return null;
   }
-  final int base =
-      decoder.claimMemory(count * element.decodingInlineSize(decoder));
+  final int base = decoder.claimMemory(count * element.decodingInlineSize());
   return element.decodeArray(decoder, count, base);
 }
 

@@ -725,8 +725,6 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -747,8 +745,6 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -764,8 +760,6 @@ class SomeProtocolBinding extends $fidl.AsyncBinding<SomeProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         throw $fidl.FidlError(

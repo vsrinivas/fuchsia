@@ -166,6 +166,10 @@ class Decoder {
     return _nextHandle;
   }
 
+  int countUnclaimedHandles() {
+    return handles.length - _nextHandle;
+  }
+
   Handle claimHandle() {
     if (_nextHandle >= handles.length) {
       throw FidlError(

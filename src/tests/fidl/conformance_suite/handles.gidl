@@ -156,7 +156,7 @@ success("MultipleHandleSubtypes") {
 
 decode_failure("TooManyHandles") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [go,dart,rust],
+    bindings_denylist = [go,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -173,28 +173,6 @@ decode_failure("TooManyHandles") {
         ],
     },
     err = EXTRA_HANDLES,
-}
-
-decode_success("TooManyHandlesSuccess") {
-    // TODO(fxbug.dev/59449): Check for extra handles in Dart so that this fails.
-    bindings_allowlist = [dart],
-    handle_defs = {
-        #0 = event(),
-        #1 = event(),
-    },
-    value = SingleHandle {
-        h: #0,
-    },
-    bytes = {
-        v1 = [
-            repeat(0xff):4, padding:4,
-        ],
-    },
-    handles = {
-        v1 = [
-            #0, #1,
-        ],
-    }
 }
 
 decode_failure("TooFewHandles") {

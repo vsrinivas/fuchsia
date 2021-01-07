@@ -69,8 +69,6 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -91,8 +89,6 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -108,8 +104,6 @@ class ChildBinding extends $fidl.AsyncBinding<Child> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         throw $fidl.FidlError(r'Unexpected message name for ChildBinding');
@@ -198,8 +192,6 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -220,8 +212,6 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kParent_GetChild_Ordinal:
         final String _name = _kParent_GetChild_Type.name;
@@ -229,11 +219,9 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kParent_GetChild_Type.response!;
-          $decoder.claimMemory(
-              _kParent_GetChild_Type.decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage($message,
+              _kParent_GetChild_Type.decodeResponseInlineSize(), $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -251,11 +239,11 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kParent_GetChildRequest_Type.response!;
-          $decoder.claimMemory(
-              _kParent_GetChildRequest_Type.decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kParent_GetChildRequest_Type.decodeResponseInlineSize(),
+              $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -315,7 +303,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kParent_TakeChild_Ordinal, 0);
-    $encoder.alloc(_kParent_TakeChild_Type.encodingRequestInlineSize($encoder));
+    $encoder.alloc(_kParent_TakeChild_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kParent_TakeChild_Type.request!;
     $types[0].encode($encoder, c, $fidl.kMessageHeaderSize);
     return $async.Future.sync(() {
@@ -333,8 +321,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kParent_TakeChildRequest_Ordinal, 0);
-    $encoder.alloc(
-        _kParent_TakeChildRequest_Type.encodingRequestInlineSize($encoder));
+    $encoder.alloc(_kParent_TakeChildRequest_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kParent_TakeChildRequest_Type.request!;
     $types[0].encode($encoder, r, $fidl.kMessageHeaderSize);
@@ -349,24 +336,26 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kParent_GetChild_Ordinal:
         final String _name = _kParent_GetChild_Type.name;
         try {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types = _kParent_GetChild_Type.request!;
-          $decoder.claimMemory(
-              _kParent_GetChild_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<$fidl.InterfaceHandle<Child>> $future =
-              impl!.getChild();
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$fidl.InterfaceHandle<Child>> $future = $fidl
+              .decodeMessageWithCallback<
+                      $async.Future<$fidl.InterfaceHandle<Child>>>(
+                  $message, _kParent_GetChild_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.getChild();
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kParent_GetChild_Ordinal, $message.txid);
-            $encoder.alloc(
-                _kParent_GetChild_Type.encodingResponseInlineSize($encoder));
+            $encoder.alloc(_kParent_GetChild_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kParent_GetChild_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
@@ -389,16 +378,21 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kParent_GetChildRequest_Type.request!;
-          $decoder.claimMemory(
-              _kParent_GetChildRequest_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<$fidl.InterfaceRequest<Child>> $future =
-              impl!.getChildRequest();
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$fidl.InterfaceRequest<Child>> $future = $fidl
+              .decodeMessageWithCallback<
+                      $async.Future<$fidl.InterfaceRequest<Child>>>($message,
+                  _kParent_GetChildRequest_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.getChildRequest();
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kParent_GetChildRequest_Ordinal, $message.txid);
-            $encoder.alloc(_kParent_GetChildRequest_Type
-                .encodingResponseInlineSize($encoder));
+            $encoder.alloc(
+                _kParent_GetChildRequest_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kParent_GetChildRequest_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
@@ -421,11 +415,16 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kParent_TakeChild_Type.request!;
-          $decoder.claimMemory(
-              _kParent_TakeChild_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.takeChild(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message, _kParent_TakeChild_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.takeChild(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');
@@ -440,11 +439,16 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kParent_TakeChildRequest_Type.request!;
-          $decoder.claimMemory(
-              _kParent_TakeChildRequest_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.takeChildRequest(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kParent_TakeChildRequest_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.takeChildRequest(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');

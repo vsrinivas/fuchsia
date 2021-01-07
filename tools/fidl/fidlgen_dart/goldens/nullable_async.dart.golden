@@ -617,8 +617,6 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -639,8 +637,6 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kSimpleProtocol_Add_Ordinal:
         final String _name = _kSimpleProtocol_Add_Type.name;
@@ -648,11 +644,9 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kSimpleProtocol_Add_Type.response!;
-          $decoder.claimMemory(
-              _kSimpleProtocol_Add_Type.decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
-          final $response =
-              $types[0].decode($decoder, $fidl.kMessageHeaderSize);
+          final $response = $fidl.decodeMessage($message,
+              _kSimpleProtocol_Add_Type.decodeResponseInlineSize(), $types[0]);
 
           $completer.complete($response);
         } catch (_e) {
@@ -682,8 +676,7 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kSimpleProtocol_Add_Ordinal, 0);
-    $encoder
-        .alloc(_kSimpleProtocol_Add_Type.encodingRequestInlineSize($encoder));
+    $encoder.alloc(_kSimpleProtocol_Add_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kSimpleProtocol_Add_Type.request!;
     $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
     $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
@@ -698,8 +691,6 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kSimpleProtocol_Add_Ordinal:
         final String _name = _kSimpleProtocol_Add_Type.name;
@@ -707,18 +698,23 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kSimpleProtocol_Add_Type.request!;
-          $decoder.claimMemory(
-              _kSimpleProtocol_Add_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<int> $future = impl!.add(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-            $types[1].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
+                  $message, _kSimpleProtocol_Add_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.add(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kSimpleProtocol_Add_Ordinal, $message.txid);
-            $encoder.alloc(
-                _kSimpleProtocol_Add_Type.encodingResponseInlineSize($encoder));
+            $encoder
+                .alloc(_kSimpleProtocol_Add_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kSimpleProtocol_Add_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);

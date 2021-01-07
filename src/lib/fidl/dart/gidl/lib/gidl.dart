@@ -33,7 +33,7 @@ List<T> _reorderList<T>(List<T> data, List<int> order) =>
 
 fidl.Message _encode<T, I extends Iterable<T>>(
     fidl.Encoder encoder, fidl.FidlType<T, I> type, T value) {
-  encoder.alloc(type.encodingInlineSize(encoder));
+  encoder.alloc(type.encodingInlineSize());
   type.encode(encoder, value, 0);
   return encoder.message;
 }
@@ -42,13 +42,22 @@ Uint8List _getMessageBytes(fidl.Message message) {
   return Uint8List.view(message.data.buffer, 0, message.data.lengthInBytes);
 }
 
-T _decode<T, I extends Iterable<T>>(fidl.Decoder decoder,
+T _decode<T, I extends Iterable<T>>(
     fidl.FidlType<T, I> type, Uint8List bytes, List<Handle> handles) {
-  decoder
-    ..data = ByteData.view(bytes.buffer, 0, bytes.length)
-    ..handles = handles
-    ..claimMemory(type.decodingInlineSize(decoder));
-  return type.decode(decoder, 0);
+  // The fidl.decodeMessage function assumes that the passed in FIDL message has
+  // a header, while the passed in byte array does not.  This builder prepends
+  // an empty placeholder "header" to the byte array, allowing it be properly
+  // decoded by the function during tests.
+  BytesBuilder input = BytesBuilder(copy: false)
+    ..add(Uint8List(fidl.kMessageHeaderSize))
+    ..add(bytes);
+  fidl.Message message = fidl.Message(
+      ByteData.view(input.toBytes().buffer, 0, input.length), handles);
+  fidl.MemberType member = fidl.MemberType(
+    type: type,
+    offset: 0,
+  );
+  return fidl.decodeMessage(message, type.decodingInlineSize(), member);
 }
 
 typedef FactoryFromHandles<T> = T Function(List<Handle> handleDefs);
@@ -101,24 +110,22 @@ class EncodeSuccessCase<T, I extends Iterable<T>> {
 }
 
 class DecodeSuccessCase<T, I extends Iterable<T>> {
-  DecodeSuccessCase(this.decoder, this.input, this.type, this.bytes,
+  DecodeSuccessCase(this.input, this.type, this.bytes,
       {this.handles = const []});
 
-  final fidl.Decoder decoder;
   final T input;
   final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final List<Handle> handles;
 
-  static void run<T, I extends Iterable<T>>(fidl.Decoder decoder, String name,
-      T input, fidl.FidlType<T, I> type, Uint8List bytes) {
+  static void run<T, I extends Iterable<T>>(
+      String name, T input, fidl.FidlType<T, I> type, Uint8List bytes) {
     group(name, () {
-      DecodeSuccessCase(decoder, input, type, bytes)._checkDecode();
+      DecodeSuccessCase(input, type, bytes)._checkDecode();
     });
   }
 
   static void runWithHandles<T, I extends Iterable<T>>(
-      fidl.Decoder decoder,
       String name,
       FactoryFromHandles<T> inputFactory,
       fidl.FidlType<T, I> type,
@@ -129,8 +136,7 @@ class DecodeSuccessCase<T, I extends Iterable<T>> {
       [List<int> unusedHandles = const []]) {
     final handleDefs = createHandles(subtypes);
     final inputHandles = _reorderList(handleDefs, handleOrder);
-    final testCase = DecodeSuccessCase(
-        decoder, inputFactory(handleDefs), type, bytes,
+    final testCase = DecodeSuccessCase(inputFactory(handleDefs), type, bytes,
         handles: inputHandles);
     group(name, () {
       testCase._checkDecode();
@@ -150,7 +156,7 @@ class DecodeSuccessCase<T, I extends Iterable<T>> {
 
   void _checkDecode() {
     test('decode', () {
-      expect(_decode(decoder, type, bytes, handles), equals(input));
+      expect(_decode(type, bytes, handles), equals(input));
     });
   }
 }
@@ -207,10 +213,8 @@ class EncodeFailureCase<T, I extends Iterable<T>> {
 }
 
 class DecodeFailureCase<T, I extends Iterable<T>> {
-  DecodeFailureCase(
-      this.decoder, this.type, this.bytes, this.code, this.handles);
+  DecodeFailureCase(this.type, this.bytes, this.code, this.handles);
 
-  final fidl.Decoder decoder;
   final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final fidl.FidlErrorCode code;
@@ -221,14 +225,13 @@ class DecodeFailureCase<T, I extends Iterable<T>> {
   // The two optional parameters can be merged into a single List<HandleSubtype> in the
   // desired order, but it is simpler to reorder here than having special handling
   // for decode failures in the GIDL backend.
-  static void run<T, I extends Iterable<T>>(fidl.Decoder decoder, String name,
+  static void run<T, I extends Iterable<T>>(String name,
       fidl.FidlType<T, I> type, Uint8List bytes, fidl.FidlErrorCode code,
       [List<HandleSubtype> subtypes = const [],
       List<int> handleOrder = const []]) {
     final handles = _reorderList(createHandles(subtypes), handleOrder);
     group(name, () {
-      DecodeFailureCase(decoder, type, bytes, code, handles)
-          ._checkDecodeFails();
+      DecodeFailureCase(type, bytes, code, handles)._checkDecodeFails();
       test('handles are closed', () {
         expect(handles.map(isHandleClosed), equals(handles.map((_) => true)));
       });
@@ -238,7 +241,7 @@ class DecodeFailureCase<T, I extends Iterable<T>> {
   void _checkDecodeFails() {
     test('decode fails', () {
       expect(
-          () => _decode(decoder, type, bytes, handles),
+          () => _decode(type, bytes, handles),
           throwsA(const TypeMatcher<fidl.FidlError>()
               .having((e) => e.code, 'code', equals(code))));
     });

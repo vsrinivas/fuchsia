@@ -4,6 +4,12 @@
 
 library fidl.test.dartbindingstest;
 
+resource struct HandleStruct {
+    string foo;
+    int32 bar;
+    handle baz;
+};
+
 struct NoHandleStruct {
     string foo;
     int32 bar;
@@ -70,6 +76,8 @@ protocol TestServer {
     TwoWayNoArgs() -> ();
     TwoWayStringArg(string value) -> (string value);
     TwoWayThreeArgs(int32 x, uint64 y, NoHandleStruct z) -> (int32 x, uint64 y, NoHandleStruct z);
+    TwoWayOneHandleArg(HandleStruct h1) -> (HandleStruct h1);
+    TwoWayTwoHandleArgs(HandleStruct h1, HandleStruct h2) -> (HandleStruct h1, HandleStruct h2);
 
     OneWayExampleXunion(ExampleXunion value);
     ReceivedOneWayExampleXunion() -> (ExampleXunion received);
@@ -128,12 +136,6 @@ flexible enum FlexibleEnumFour : int32 {
     TWO = 2;
     THREE = 3;
     [Unknown] CUSTOM_UNKNOWN = -123;
-};
-
-resource struct HandleStruct {
-    string foo;
-    int32 bar;
-    handle baz;
 };
 
 union UnionOne {

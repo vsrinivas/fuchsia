@@ -35,22 +35,28 @@ $async.Future<void>
   The current object is the method (ir.Method).
   The Dart local variables are:
     List<$fidl.MemberType> $types - the table for the response.
-    $fidl.Decoder $decoder - the decoder for the message.
+    $fidl.Message $message - the message being decoded.
   This template expands to an expression so it can be assigned or passed as an argument.
 */}}
 {{- define "DecodeResponse" -}}
   {{- if .Response.HasError }}
-    $types[0].decode($decoder, $fidl.kMessageHeaderSize)
+    $fidl.decodeMessage($message, {{ .TypeSymbol }}.decodeResponseInlineSize(), $types[0])
   {{- else }}
     {{- if .AsyncResponseClass -}}
-      {{ .AsyncResponseClass }}(
-        {{- range $index, $response := .Response.WireParameters }}
-          $types[{{ $index }}].decode($decoder, $fidl.kMessageHeaderSize),
-        {{- end -}}
+      $fidl.decodeMessageWithCallback<{{ .AsyncResponseClass }}>(
+				$message,
+				{{ .TypeSymbol }}.decodeResponseInlineSize(),
+				($fidl.Decoder decoder) {
+					return {{ .AsyncResponseClass }}(
+						{{- range $index, $response := .Response.WireParameters }}
+							$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize),
+						{{- end -}}
+					);
+				}
       )
     {{- else -}}
       {{- if .Response.WireParameters -}}
-        $types[0].decode($decoder, $fidl.kMessageHeaderSize)
+        $fidl.decodeMessage($message, {{ .TypeSymbol }}.decodeResponseInlineSize(), $types[0])
       {{- else -}}
         null
       {{- end -}}
@@ -199,8 +205,6 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
   {{- end }}
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
 {{- range .Methods }}
 {{- if not .HasRequest }}
@@ -210,7 +214,6 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         try {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
-          $decoder.claimMemory({{ .TypeSymbol }}.decodeResponseInlineSize($decoder));
           _{{ .Name }}EventStreamController.add(
             {{- template "DecodeResponse" . -}}
           );
@@ -243,8 +246,6 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -254,7 +255,6 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         try {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
-          $decoder.claimMemory({{ .TypeSymbol }}.decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
           final $response = {{- template "DecodeResponse" . -}};
           {{ if .Response.HasError }}
@@ -311,7 +311,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       final $fidl.Encoder $encoder = $fidl.Encoder();
       $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
       {{- if .Request }}
-        $encoder.alloc({{ .TypeSymbol }}.encodingRequestInlineSize($encoder));
+        $encoder.alloc({{ .TypeSymbol }}.encodingRequestInlineSize());
         final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
       {{- end }}
       {{- range $index, $request := .Request }}
@@ -359,7 +359,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
               $subscriptions.add(_{{ .Name }}_stream.listen(($response) {
                 final $fidl.Encoder $encoder = $fidl.Encoder();
                 $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
-                $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize($encoder));
+                $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize());
                 final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                 {{ template "EncodeResponse" . }}
                 sendMessage($encoder.message);
@@ -377,8 +377,6 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
@@ -387,11 +385,19 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
             try {
               Timeline.startSync(_name);
               final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
-              $decoder.claimMemory({{ .TypeSymbol }}.decodeRequestInlineSize($decoder));
-              final {{ template "AsyncReturn" . }} $future = impl!.{{ .Name }}(
-              {{- range $index, $request := .Request }}
-                $types[{{ $index }}].decode($decoder, $fidl.kMessageHeaderSize),
-              {{- end }});
+							// ignore: prefer_const_declarations
+							final _impl = impl!;
+							final {{ template "AsyncReturn" . }} $future = $fidl.decodeMessageWithCallback<{{ template "AsyncReturn" . }}>(
+								$message,
+								{{ .TypeSymbol }}.decodeRequestInlineSize(),
+								($fidl.Decoder decoder) {
+									return _impl.{{ .Name }}(
+										{{- range $index, $request := .Request }}
+											$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize),
+										{{- end }}
+									);
+								}
+							);
 
               {{- if .HasResponse }}
                 $future
@@ -424,7 +430,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                   final $fidl.Encoder $encoder = $fidl.Encoder();
                   $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid);
                   {{- if .Response.WireParameters }}
-                    $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize($encoder));
+                    $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize());
                     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                     {{ template "EncodeResponse" . -}}
                   {{- end }}

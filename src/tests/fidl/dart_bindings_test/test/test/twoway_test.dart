@@ -5,6 +5,7 @@
 import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:zircon/zircon.dart' show System;
 
 import './server.dart';
 
@@ -42,6 +43,35 @@ void main() async {
       expect(threeReply.z.foo, equals('hello'));
       expect(threeReply.z.bar, equals(1729));
       expect(threeReply.z.baz, unorderedEquals(primes));
+    });
+
+    test('one handle arg', () async {
+      final pair = System.channelCreate();
+      final handleStr = pair.first.toString();
+      final h1 = HandleStruct(foo: 'hello', bar: 42, baz: pair.first);
+
+      final oneHandleReply = await server.proxy.twoWayOneHandleArg(h1);
+
+      expect(oneHandleReply.foo, equals('hello'));
+      expect(oneHandleReply.bar, equals(42));
+      expect(oneHandleReply.baz.toString(), equals(handleStr));
+    });
+
+    test('two handle args', () async {
+      final pair = System.channelCreate();
+      final firstHandleStr = pair.first.toString();
+      final secondHandleStr = pair.second.toString();
+      final h1 = HandleStruct(foo: 'hello', bar: 42, baz: pair.first);
+      final h2 = HandleStruct(foo: 'goodbye', bar: 24, baz: pair.second);
+
+      final twoHandleReply = await server.proxy.twoWayTwoHandleArgs(h1, h2);
+
+      expect(twoHandleReply.h1.foo, equals('hello'));
+      expect(twoHandleReply.h1.bar, equals(42));
+      expect(twoHandleReply.h1.baz.toString(), equals(firstHandleStr));
+      expect(twoHandleReply.h2.foo, equals('goodbye'));
+      expect(twoHandleReply.h2.bar, equals(24));
+      expect(twoHandleReply.h2.baz.toString(), equals(secondHandleStr));
     });
   });
 }

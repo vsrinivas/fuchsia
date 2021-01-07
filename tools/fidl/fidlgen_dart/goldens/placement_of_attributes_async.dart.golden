@@ -454,8 +454,6 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -476,8 +474,6 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -497,8 +493,7 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kExampleProtocol_Method_Ordinal, 0);
-    $encoder.alloc(
-        _kExampleProtocol_Method_Type.encodingRequestInlineSize($encoder));
+    $encoder.alloc(_kExampleProtocol_Method_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kExampleProtocol_Method_Type.request!;
     $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
@@ -513,8 +508,6 @@ class ExampleProtocolBinding extends $fidl.AsyncBinding<ExampleProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kExampleProtocol_Method_Ordinal:
         final String _name = _kExampleProtocol_Method_Type.name;
@@ -522,11 +515,16 @@ class ExampleProtocolBinding extends $fidl.AsyncBinding<ExampleProtocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kExampleProtocol_Method_Type.request!;
-          $decoder.claimMemory(
-              _kExampleProtocol_Method_Type.decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.method(
-            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
-          );
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kExampleProtocol_Method_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.method(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+            );
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');

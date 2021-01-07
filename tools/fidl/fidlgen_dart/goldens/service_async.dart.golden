@@ -82,8 +82,6 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -104,8 +102,6 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -136,8 +132,6 @@ class FirstProtocolBinding extends $fidl.AsyncBinding<FirstProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kFirstProtocol_MethodOnFirst_Ordinal:
         final String _name = _kFirstProtocol_MethodOnFirst_Type.name;
@@ -145,9 +139,14 @@ class FirstProtocolBinding extends $fidl.AsyncBinding<FirstProtocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kFirstProtocol_MethodOnFirst_Type.request!;
-          $decoder.claimMemory(_kFirstProtocol_MethodOnFirst_Type
-              .decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.methodOnFirst();
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kFirstProtocol_MethodOnFirst_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.methodOnFirst();
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');
@@ -204,8 +203,6 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
   Null get $serviceData => null;
 
   void _handleEvent($fidl.Message $message) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -226,8 +223,6 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -258,8 +253,6 @@ class SecondProtocolBinding extends $fidl.AsyncBinding<SecondProtocol> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
     switch ($message.ordinal) {
       case _kSecondProtocol_MethodOnSecond_Ordinal:
         final String _name = _kSecondProtocol_MethodOnSecond_Type.name;
@@ -267,9 +260,15 @@ class SecondProtocolBinding extends $fidl.AsyncBinding<SecondProtocol> {
           Timeline.startSync(_name);
           final List<$fidl.MemberType> $types =
               _kSecondProtocol_MethodOnSecond_Type.request!;
-          $decoder.claimMemory(_kSecondProtocol_MethodOnSecond_Type
-              .decodeRequestInlineSize($decoder));
-          final $async.Future<void> $future = impl!.methodOnSecond();
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>(
+                  $message,
+                  _kSecondProtocol_MethodOnSecond_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.methodOnSecond();
+          });
         } catch (_e) {
           close();
           print('Exception handling method call $_name: $_e');

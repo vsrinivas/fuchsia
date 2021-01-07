@@ -104,6 +104,17 @@ class TestServerImpl extends TestServer {
     return TestServer$TwoWayThreeArgs$Response(x, y, z);
   }
 
+  @override
+  Future<HandleStruct> twoWayOneHandleArg(HandleStruct h1) async {
+    return h1;
+  }
+
+  @override
+  Future<TestServer$TwoWayTwoHandleArgs$Response> twoWayTwoHandleArgs(
+      HandleStruct h1, HandleStruct h2) async {
+    return TestServer$TwoWayTwoHandleArgs$Response(h1, h2);
+  }
+
   final StreamController<void> _emptyEventController =
       StreamController.broadcast();
   @override

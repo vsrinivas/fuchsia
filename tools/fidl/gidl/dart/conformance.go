@@ -60,7 +60,6 @@ void main() {
 			{{ range .DecodeSuccessCases }}
 			{{- if .HandleDefs }}
 			DecodeSuccessCase.runWithHandles(
-				{{ .DecoderName }},
 				{{ .Name }},
 				(List<Handle> handleDefs) => {{ .Value }},
 				{{ .ValueType }},
@@ -70,7 +69,6 @@ void main() {
 				{{ .UnusedHandles }});
 			{{- else }}
 			DecodeSuccessCase.run(
-				{{ .DecoderName }},
 				{{ .Name }},
 				{{ .Value }},
 				{{ .ValueType }},
@@ -103,7 +101,6 @@ void main() {
 		group('decode failure cases', () {
 			{{ range .DecodeFailureCases }}
 			DecodeFailureCase.run(
-				{{ .DecoderName }},
 				{{ .Name }},
 				{{ .ValueType }},
 				{{ .Bytes }},
@@ -213,7 +210,6 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				DecoderName:   decoderName(encoding.WireFormat),
 				Name:          testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				Value:         valueStr,
 				ValueType:     valueType,
@@ -277,13 +273,12 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				DecoderName: decoderName(encoding.WireFormat),
-				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
-				ValueType:   valueType,
-				Bytes:       buildBytes(encoding.Bytes),
-				ErrorCode:   errorCode,
-				HandleDefs:  buildHandleDefs(decodeFailure.HandleDefs),
-				Handles:     toDartIntList(encoding.Handles),
+				Name:       testCaseName(decodeFailure.Name, encoding.WireFormat),
+				ValueType:  valueType,
+				Bytes:      buildBytes(encoding.Bytes),
+				ErrorCode:  errorCode,
+				HandleDefs: buildHandleDefs(decodeFailure.HandleDefs),
+				Handles:    toDartIntList(encoding.Handles),
 			})
 		}
 	}
@@ -300,10 +295,6 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 
 func encoderName(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("Encoders.%s", wireFormat)
-}
-
-func decoderName(wireFormat gidlir.WireFormat) string {
-	return fmt.Sprintf("Decoders.%s", wireFormat)
 }
 
 func dartTypeName(inputType string) string {
@@ -365,6 +356,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictEnumUnknownValue:     "fidlInvalidEnumValue",
 	gidlir.InvalidPaddingByte:         "unknown",
 	gidlir.TooFewHandles:              "fidlTooFewHandles",
+	gidlir.ExtraHandles:               "fidlTooManyHandles",
 	gidlir.NonResourceUnknownHandles:  "fidlNonResourceHandle",
 }
 
