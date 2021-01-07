@@ -71,6 +71,8 @@ function main {
 
   fx-command-run wait
 
+  fx-command-run shell update wait-for-commit
+
   if needs-update; then
     fx-error "After update, system appears still out of date."
     return 1
