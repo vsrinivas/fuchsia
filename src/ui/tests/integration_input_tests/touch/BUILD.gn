@@ -46,8 +46,9 @@ test_package("touch-input-test") {
   # for injecting the display rotation into root presenter
   meta = [
     {
-      path = rebase_path("//src/ui/bin/root_presenter/meta/root_presenter.cmx")
-      dest = "root_presenter.cmx"
+      path = rebase_path(
+              "//src/ui/bin/root_presenter/meta/root_presenter_base.cmx")
+      dest = "root_presenter-for-test.cmx"
     },
   ]
 

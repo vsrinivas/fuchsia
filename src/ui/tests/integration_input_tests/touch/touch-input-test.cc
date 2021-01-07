@@ -76,7 +76,7 @@ constexpr zx::duration kTimeout = zx::min(5);
 // Root presenter is included in this test's package so the two components have the same
 // /config/data. This allows the test to control the display rotation read by root presenter.
 constexpr char kRootPresenter[] =
-    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx";
+    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter-for-test.cmx";
 constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
 
 class TouchInputBase : public sys::testing::TestWithEnvironment, public ResponseListener {
