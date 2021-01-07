@@ -14,6 +14,7 @@ use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
+use crate::switchboard::input_types::{InputDevice, InputState};
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightState;
 use bitflags::bitflags;
@@ -210,6 +211,9 @@ pub enum SettingRequest {
     // Factory Reset requests.
     SetLocalResetAllowed(bool),
 
+    // Input requests.
+    SetInputStates(Vec<InputDevice>),
+
     // Intl requests.
     SetIntlInfo(IntlInfo),
 
@@ -249,6 +253,7 @@ impl SettingRequest {
             SettingRequest::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
             SettingRequest::SetLowLightMode(_) => "SetLowLightMode",
             SettingRequest::SetDnD(_) => "SetDnD",
+            SettingRequest::SetInputStates(_) => "SetInputStates",
             SettingRequest::SetIntlInfo(_) => "SetIntlInfo",
             SettingRequest::SetLightGroupValue(_, _) => "SetLightGroupValue",
             SettingRequest::SetNightModeInfo(_) => "SetNightModeInfo",
@@ -308,27 +313,22 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct InputInfo {
     pub microphone: Microphone,
-    pub camera: Camera,
+    pub input_device_state: InputState,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct InputInfoSources {
     pub sw_microphone: Microphone,
     pub hw_microphone: Microphone,
-    pub hw_camera: Camera,
+    pub input_device_state: InputState,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Microphone {
     pub muted: bool,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Camera {
-    pub disabled: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

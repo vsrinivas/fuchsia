@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::input_device_configuration::InputConfiguration;
 
@@ -9,14 +10,34 @@ use anyhow::Error;
 use bitflags::bitflags;
 use fidl_fuchsia_settings::{
     DeviceState as FidlDeviceState, DeviceStateSource as FidlDeviceStateSource,
-    DeviceType as FidlDeviceType, InputDevice as FidlInputDevice, SourceState as FidlSourceState,
+    DeviceType as FidlDeviceType, InputDevice as FidlInputDevice,
+    InputSettings as FidlInputSettings, SourceState as FidlSourceState,
     ToggleStateFlags as FidlToggleFlags,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-// TODO(fxbug.dev/60682): Write tests using input types.
+impl From<SettingInfo> for FidlInputSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Input(info) = response {
+            let mut input_settings = FidlInputSettings::EMPTY;
+            let mut input_devices: Vec<FidlInputDevice> = Vec::new();
+
+            info.input_device_state.input_categories.iter().for_each(|(_, category)| {
+                category.devices.iter().for_each(|(_, device)| {
+                    input_devices.push(device.clone().into());
+                })
+            });
+
+            input_settings.devices = Some(input_devices);
+            input_settings
+        } else {
+            panic!("Incorrect value sent to input");
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 /// The top-level struct for the input state. It categorizes the input devices
 /// by their device type.
@@ -202,36 +223,33 @@ impl InputDevice {
     }
 
     pub fn compute_input_state(&mut self) {
-        let mut has_error = false;
-        let mut has_disabled = false;
-        let mut has_muted = false;
-        let mut has_active = false;
+        let mut computed_state = DeviceState::from_bits(0).unwrap();
 
         for state in self.source_states.values() {
             if state.has_error() {
-                has_error = true;
+                computed_state |= DeviceState::ERROR;
             }
             if state.has_state(DeviceState::DISABLED) {
-                has_disabled = true;
+                computed_state |= DeviceState::DISABLED | DeviceState::MUTED;
             }
             if state.has_state(DeviceState::MUTED) {
-                has_muted = true;
+                computed_state |= DeviceState::MUTED;
             }
             if state.has_state(DeviceState::ACTIVE) {
-                has_active = true;
+                computed_state |= DeviceState::ACTIVE | DeviceState::AVAILABLE;
             }
         }
 
         // If any source has ERROR, DISABLED, MUTED, or ACTIVE, the overall
         // state is that state, in order of precedence. Otherwise, the overall state
         // is AVAILABLE.
-        if has_error {
+        if computed_state.has_error() {
             self.state = DeviceState::ERROR;
-        } else if has_disabled {
+        } else if computed_state.has_state(DeviceState::DISABLED) {
             self.state = DeviceState::DISABLED | DeviceState::MUTED;
-        } else if has_muted {
+        } else if computed_state.has_state(DeviceState::MUTED) {
             self.state = DeviceState::MUTED;
-        } else if has_active {
+        } else if computed_state.has_state(DeviceState::ACTIVE) {
             self.state = DeviceState::ACTIVE | DeviceState::AVAILABLE;
         } else {
             self.state = DeviceState::AVAILABLE;
@@ -339,6 +357,9 @@ impl From<DeviceStateSource> for FidlDeviceStateSource {
     }
 }
 
+// TODO(fxbug.dev/67156): Add a "BLOCKED" flag to represent policy-driven
+// disabling. "DISABLED" also needs to track "MUTED", as it will eventually
+// be its replacement. This should also be done for the FIDL.
 bitflags! {
     #[derive(Serialize, Deserialize)]
     pub struct DeviceState : u64 {

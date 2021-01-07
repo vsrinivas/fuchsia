@@ -21,12 +21,9 @@ use fidl_fuchsia_settings::{InputMarker, InputProxy};
 use futures::lock::Mutex;
 use std::sync::Arc;
 
-#[allow(dead_code)]
 const ENV_NAME: &str = "settings_service_input_test_environment";
-#[allow(dead_code)]
 const CONTEXT_ID: u64 = 0;
 
-#[allow(dead_code)]
 pub struct TestInputEnvironment {
     /// For sending requests to the input proxy.
     pub input_service: InputProxy,
@@ -38,7 +35,6 @@ pub struct TestInputEnvironment {
     pub store: Arc<Mutex<DeviceStorage<InputInfoSources>>>,
 }
 
-#[allow(dead_code)]
 pub struct TestInputEnvironmentBuilder {
     /// The initial InputInfoSources in the environment.
     starting_input_info_sources: Option<InputInfoSources>,
@@ -51,7 +47,6 @@ pub struct TestInputEnvironmentBuilder {
 }
 
 impl TestInputEnvironmentBuilder {
-    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             starting_input_info_sources: None,
@@ -60,13 +55,11 @@ impl TestInputEnvironmentBuilder {
         }
     }
 
-    #[allow(dead_code)]
     pub fn set_input_device_config(mut self, input_device_config: InputConfiguration) -> Self {
         self.input_device_config = Some(input_device_config);
         self
     }
 
-    #[allow(dead_code)]
     pub async fn build(self) -> TestInputEnvironment {
         let service_registry = ServiceRegistry::create();
         let storage_factory = InMemoryStorageFactory::create();
