@@ -6,13 +6,14 @@
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
+#include "src/graphics/display/drivers/ssd1306/ssd1306-bind.h"
 
 namespace ssd1306 {
 
@@ -180,10 +181,4 @@ static zx_driver_ops_t ssd1306_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ssd1306, ssd1306_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SSD1306),
-ZIRCON_DRIVER_END(ssd1306)
-    // clang-format on
+ZIRCON_DRIVER(ssd1306, ssd1306_driver_ops, "zircon", "0.1");
