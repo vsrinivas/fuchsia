@@ -232,6 +232,27 @@ async fn test_theme_type_light() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_type_light_theme_mode_empty() {
+    let incoming_theme = Some(FidlTheme {
+        theme_type: Some(FidlThemeType::Light),
+        theme_mode: Some(FidlThemeMode::empty()),
+        ..FidlTheme::EMPTY
+    });
+    // theme_mode of 0x00 should be replaced with theme_mode absent.
+    let expected_theme =
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Light), ..FidlTheme::EMPTY });
+
+    let display_proxy = setup_display_env().await;
+
+    let mut display_settings = DisplaySettings::EMPTY;
+    display_settings.theme = incoming_theme;
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, expected_theme);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_no_theme_set() {
     let display_proxy = setup_display_env().await;
 
