@@ -4,10 +4,9 @@
 
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 
 namespace media::audio {

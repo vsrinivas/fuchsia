@@ -6,8 +6,8 @@
 
 #include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/process_config.h"
 
 namespace media::audio {

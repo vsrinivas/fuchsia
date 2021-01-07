@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/wakeup_event.h"
 
-#include <lib/gtest/test_loop_fixture.h>
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace media::audio {
 namespace {

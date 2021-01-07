@@ -4,8 +4,7 @@
 
 #include "src/media/audio/audio_core/policy_loader.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/policy_loader_unittest_data.h"
 
 namespace media::audio {

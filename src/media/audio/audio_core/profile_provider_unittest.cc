@@ -5,11 +5,11 @@
 #include "src/media/audio/audio_core/profile_provider.h"
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/testing/fake_profile_provider.h"
 
 namespace media::audio {

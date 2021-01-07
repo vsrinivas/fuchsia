@@ -5,9 +5,10 @@
 #include "src/media/audio/audio_core/volume_control.h"
 
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace media::audio {
 namespace {

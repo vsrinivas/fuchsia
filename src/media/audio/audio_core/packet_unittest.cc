@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/packet.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <fbl/ref_ptr.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace media::audio {
 namespace {

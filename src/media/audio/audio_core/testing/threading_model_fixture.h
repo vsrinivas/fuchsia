@@ -8,11 +8,11 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/compiler.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/testing/fake_plug_detector.h"
 #include "src/media/audio/audio_core/testing/test_process_config.h"

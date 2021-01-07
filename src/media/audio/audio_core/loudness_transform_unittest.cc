@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/loudness_transform.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace media::audio {
 namespace {

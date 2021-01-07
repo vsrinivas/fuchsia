@@ -4,8 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_device_settings.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {

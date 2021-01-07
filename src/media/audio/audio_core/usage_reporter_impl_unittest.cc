@@ -5,10 +5,10 @@
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 
 namespace media::audio {

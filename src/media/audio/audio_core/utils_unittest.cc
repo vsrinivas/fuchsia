@@ -6,13 +6,13 @@
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/errors.h>
 
 #include <cstdint>
 #include <unordered_map>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/testing/fake_profile_provider.h"
 
 namespace media::audio {

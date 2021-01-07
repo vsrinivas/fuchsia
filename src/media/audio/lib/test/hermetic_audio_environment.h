@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
@@ -22,6 +21,7 @@
 #include <thread>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::test {

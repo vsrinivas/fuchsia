@@ -7,13 +7,14 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <zircon/errors.h>
 
 #include <deque>
 #include <initializer_list>
 #include <optional>
 #include <unordered_map>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace media::audio::test {
 

@@ -4,11 +4,10 @@
 
 #include "src/media/audio/audio_core/link_matrix.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/volume_curve.h"
