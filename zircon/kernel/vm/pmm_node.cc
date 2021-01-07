@@ -439,7 +439,12 @@ void PmmNode::FreePage(vm_page* page) {
   FreePageHelperLocked(page);
 
   // add it to the free queue
-  list_add_head(&free_list_, &page->queue_node);
+  if constexpr (!__has_feature(address_sanitizer)) {
+    list_add_head(&free_list_, &page->queue_node);
+  } else {
+    // If address sanitizer is enabled, put the page at the tail to maximize reuse distance.
+    list_add_tail(&free_list_, &page->queue_node);
+  }
 
   IncrementFreeCountLocked(1);
 }
@@ -455,8 +460,17 @@ void PmmNode::FreeListLocked(list_node* list) {
     count++;
   }
 
-  // splice list at the head of free_list_
-  list_splice_after(list, &free_list_);
+  if constexpr (!__has_feature(address_sanitizer)) {
+    // splice list at the head of free_list_
+    list_splice_after(list, &free_list_);
+  } else {
+    // If address sanitizer is enabled, put the pages at the tail to maximize reuse distance.
+    if (!list_is_empty(&free_list_)) {
+      list_splice_after(list, list_peek_tail(&free_list_));
+    } else {
+      list_splice_after(list, &free_list_);
+    }
+  }
 
   IncrementFreeCountLocked(count);
 }
