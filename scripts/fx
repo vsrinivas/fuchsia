@@ -253,12 +253,6 @@ if [[ $? -ne 0 || ! -x "${command_path}" ]]; then
   exit 1
 fi
 
-_requires_build_dir="$(get_metadata_value "REQUIRES_BUILD_DIR" "$command_path")"
-if [[ "$_requires_build_dir" == "yes" || "${_requires_build_dir}" == "true" ]] \
-      || fx-build-dir-if-present ; then
-  fx-config-read
-fi
-
 # For each optional feature, force the existence of the FUCHSIA_DISABLE_* env
 # variable. This is needed so that non-bash code can reliably use this
 # to check for optional features that have default values.
