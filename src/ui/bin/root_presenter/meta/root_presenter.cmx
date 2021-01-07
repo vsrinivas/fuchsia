@@ -1,27 +1,10 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "src/ui/bin/root_presenter/meta/root_presenter_base.cmx"
     ],
-    "program": {
-        "binary": "bin/root_presenter"
-    },
     "sandbox": {
         "dev": [
             "class/input-report"
-        ],
-        "features": [
-            "config-data",
-            "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.accessibility.ColorTransform",
-            "fuchsia.accessibility.Magnifier",
-            "fuchsia.media.sounds.Player",
-            "fuchsia.recovery.FactoryReset",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.pointerinjector.Registry",
-            "fuchsia.ui.policy.accessibility.PointerEventRegistry",
-            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }
