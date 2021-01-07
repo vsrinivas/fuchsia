@@ -1260,7 +1260,7 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1412,6 +1412,23 @@ mod tests {
                 ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
                     .expect("failed to send connection completion");
             }
+        );
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
+        validate_cobalt_events!(
+            cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::FailedToConnect
+        );
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RetryAfterFailedConnectAttempt
         );
     }
 
