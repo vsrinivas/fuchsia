@@ -32,6 +32,7 @@ namespace {
 
 // Ensures unittests are not run concurrently.
 DECLARE_SINGLETON_MUTEX(UnittestLock);
+unsigned long g_repeat;
 
 // External references to the testcase registration tables.
 extern "C" unittest_testcase_registration_t __start_unittest_testcases[];
@@ -94,22 +95,31 @@ bool run_unittest(const unittest_testcase_registration_t* testcase) {
 
   zx_time_t testcase_start = current_time();
 
-  for (size_t i = 0; i < testcase->test_cnt; ++i) {
-    const unittest_registration_t* test = &testcase->tests[i];
+  for (unsigned long j = 0; j < g_repeat; j++) {
+    bool good = true;
+    for (size_t i = 0; i < testcase->test_cnt; ++i) {
+      const unittest_registration_t* test = &testcase->tests[i];
 
-    printf("  %-*s : ", static_cast<int>(max_namelen), test->name ? test->name : "");
+      unittest_printf("  %-*s : ", static_cast<int>(max_namelen), test->name ? test->name : "");
 
-    zx_time_t test_start = current_time();
-    bool good = test->fn ? test->fn() : false;
-    zx_duration_t test_runtime = current_time() - test_start;
+      zx_time_t test_start = current_time();
+      good &= test->fn ? test->fn() : false;
+      zx_duration_t test_runtime = current_time() - test_start;
 
-    if (good) {
-      passed++;
-    } else {
-      printf("  %-*s : ", static_cast<int>(max_namelen), test->name ? test->name : "");
+      unittest_printf("%s (%" PRIi64 " nSec) ", good ? "PASSED" : "FAILED", test_runtime);
+      if (g_repeat > 1) {
+        unittest_printf(" [%lu / %lu]", j + 1, g_repeat);
+      }
+      unittest_printf("\n");
+      if (good) {
+        if (j == g_repeat - 1) {
+          passed++;
+        }
+      } else {
+        printf("  %-*s : ", static_cast<int>(max_namelen), test->name ? test->name : "");
+        break;
+      }
     }
-
-    unittest_printf("%s (%" PRIi64 " nSec)\n", good ? "PASSED" : "FAILED", test_runtime);
   }
 
   zx_duration_t testcase_runtime = current_time() - testcase_start;
@@ -175,13 +185,13 @@ int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
     list_cases();
     return 0;
   }
-  unsigned long repeat = 1;
+  g_repeat = 1;
   if (!strcmp(casename, "-r")) {
     if (argc < 4) {
       usage(argv[0].str);
       return 0;
     }
-    repeat = argv[2].u;
+    g_repeat = argv[2].u;
     casename = argv[3].str;
   }
 
@@ -200,22 +210,16 @@ int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
       if (run_all || !strcmp(casename, testcase->name)) {
         chosen++;
 
-        bool all_repeats_passed = true;
-        for (unsigned long i = 0; i < repeat; i++) {
-          printf("Test %s [%lu / %lu]\n", testcase->name, i + 1, repeat);
-          bool status = run_testcase_in_thread(testcase);
-          all_repeats_passed &= status;
-          if (!status) {
-            break;
-          }
-          printf("\n");
+        bool status = run_testcase_in_thread(testcase);
+        if (!status) {
+          break;
         }
-        if (all_repeats_passed) {
+        printf("\n");
+        if (status) {
           passed++;
         } else {
           *fn++ = testcase->name;
         }
-        printf("\n");
 
         if (!run_all)
           break;
