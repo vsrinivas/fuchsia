@@ -33,6 +33,14 @@
     ],
     offer: [
         {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#element_proposer",
+                "#elements",
+            ],
+        },
+        {
             protocol: "fuchsia.session.examples.ElementPing",
             from: "self",
             to: [ "#elements" ],

@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_session_examples::{ElementPingRequest, ElementPingRequestStream},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_syslog::fx_log_info,
     futures::{StreamExt, TryStreamExt},
     legacy_element_management::{
         Element, ElementManager, ElementManagerError, SimpleElementManager,
@@ -38,6 +39,8 @@ const NUM_CONCURRENT_REQUESTS: usize = 5;
 /// can connect to in order to add an element to the session.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["element_session"]).expect("Failed to initialize logger");
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::ElementPing);
     fs.dir("svc").add_fidl_service(ExposedServices::ElementManager);
@@ -76,7 +79,7 @@ async fn handle_element_ping_requests(mut stream: ElementPingRequestStream) -> R
     while let Some(ElementPingRequest::Ping { control_handle: _ }) =
         stream.try_next().await.context("Error handling ping request stream")?
     {
-        println!("Element did ping session.");
+        fx_log_info!("Element did ping session.");
     }
     Ok(())
 }

@@ -69,11 +69,15 @@ instructions in [//src/session/README.md](//src/session/README.md).
 
 To instruct a running `session_manager` to launch the session, run:
 ```
-fx shell session_control -s fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm
+fx shell session_control launch fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm
 ```
 
-The last command should output a message stating that the element's ping has
-been received.
+The last command should output a message stating that the session was launched.
+`fx log` should show a message saying element's ping has been received:
+
+```
+[00016.031278][25622][25624][element_session] INFO: Element did ping session.
+```
 
 ## Testing
 
