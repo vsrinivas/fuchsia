@@ -5,7 +5,7 @@
 use {
     crate::config_management,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -20,6 +20,43 @@ pub type WlanChan = fidl_common::WlanChan;
 pub type Bssid = [u8; 6];
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
 pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
+
+pub fn convert_to_sme_disconnect_reason(
+    disconnect_reason: PolicyDisconnectionMetricDimensionReason,
+) -> fidl_sme::UserDisconnectReason {
+    match disconnect_reason {
+        PolicyDisconnectionMetricDimensionReason::Unknown => {
+            fidl_sme::UserDisconnectReason::Unknown
+        }
+        PolicyDisconnectionMetricDimensionReason::FailedToConnect => {
+            fidl_sme::UserDisconnectReason::FailedToConnect
+        }
+        PolicyDisconnectionMetricDimensionReason::FidlConnectRequest => {
+            fidl_sme::UserDisconnectReason::FidlConnectRequest
+        }
+        PolicyDisconnectionMetricDimensionReason::FidlStopClientConnectionsRequest => {
+            fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest
+        }
+        PolicyDisconnectionMetricDimensionReason::ProactiveNetworkSwitch => {
+            fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch
+        }
+        PolicyDisconnectionMetricDimensionReason::DisconnectDetectedFromSme => {
+            fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme
+        }
+        PolicyDisconnectionMetricDimensionReason::RegulatoryRegionChange => {
+            fidl_sme::UserDisconnectReason::RegulatoryRegionChange
+        }
+        PolicyDisconnectionMetricDimensionReason::Startup => {
+            fidl_sme::UserDisconnectReason::Startup
+        }
+        PolicyDisconnectionMetricDimensionReason::NetworkUnsaved => {
+            fidl_sme::UserDisconnectReason::NetworkUnsaved
+        }
+        PolicyDisconnectionMetricDimensionReason::NetworkConfigUpdated => {
+            fidl_sme::UserDisconnectReason::NetworkConfigUpdated
+        }
+    }
+}
 
 // An internal version of fidl_policy::ScanResult that can be cloned
 #[derive(Debug, Clone, PartialEq)]

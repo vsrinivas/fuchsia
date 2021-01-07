@@ -1449,7 +1449,7 @@ mod tests {
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
         );
         process_stash_flush(&mut exec, &mut stash_server);
     }
@@ -1460,7 +1460,7 @@ mod tests {
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix{..})))
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix { .. })))
         );
         process_stash_flush(&mut exec, &mut stash_server);
     }
@@ -1604,7 +1604,7 @@ mod tests {
             // Acknowledge the disconnection attempt.
             assert_variant!(
                 poll_sme_req(&mut exec, &mut _sme_stream),
-                Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Disconnect{ responder }) => {
+                Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_fuchsia_wlan_sme::UserDisconnectReason::Startup }) => {
                     responder.send().expect("could not send response")
                 }
             );
@@ -3638,7 +3638,7 @@ mod tests {
         // Acknowledge the disconnection attempt.
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_stream),
-            Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_fuchsia_wlan_sme::UserDisconnectReason::Startup }) => {
                 responder.send().expect("could not send response")
             }
         );

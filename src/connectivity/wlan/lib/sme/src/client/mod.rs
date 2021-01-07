@@ -391,8 +391,14 @@ impl ClientSme {
         receiver
     }
 
-    pub fn on_disconnect_command(&mut self) {
-        self.state = self.state.take().map(|state| state.disconnect(&mut self.context));
+    pub fn on_disconnect_command(
+        &mut self,
+        policy_disconnect_reason: fidl_sme::UserDisconnectReason,
+    ) {
+        self.state = self
+            .state
+            .take()
+            .map(|state| state.disconnect(&mut self.context, policy_disconnect_reason));
         self.context.inspect.update_pulse(self.status());
     }
 

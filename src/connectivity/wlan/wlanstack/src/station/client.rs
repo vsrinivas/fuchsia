@@ -125,8 +125,8 @@ async fn handle_fidl_request(
         ClientSmeRequest::Connect { req, txn, .. } => Ok(connect(sme, txn, req)
             .await
             .unwrap_or_else(|e| error!("Error handling a connect transaction: {:?}", e))),
-        ClientSmeRequest::Disconnect { responder } => {
-            disconnect(sme);
+        ClientSmeRequest::Disconnect { responder, reason } => {
+            disconnect(sme, reason);
             responder.send()
         }
         ClientSmeRequest::Status { responder } => responder.send(&mut status(sme)),
@@ -169,8 +169,8 @@ pub fn filter_out_peer_closed(r: Result<(), fidl::Error>) -> Result<(), fidl::Er
     }
 }
 
-fn disconnect(sme: &Mutex<Sme>) {
-    sme.lock().unwrap().on_disconnect_command();
+fn disconnect(sme: &Mutex<Sme>, policy_disconnect_reason: fidl_sme::UserDisconnectReason) {
+    sme.lock().unwrap().on_disconnect_command(policy_disconnect_reason);
 }
 
 fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {

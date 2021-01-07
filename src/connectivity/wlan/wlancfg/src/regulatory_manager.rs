@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::types as client_types,
+        client::types,
         mode_management::{iface_manager_api::IfaceManagerApi, phy_manager::PhyManagerApi},
     },
     anyhow::{bail, Context, Error},
@@ -51,7 +51,7 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             // Stop all clients and APs in preparation for setting the country code.
             let mut iface_manager = self.iface_manager.lock().await;
             iface_manager
-                .stop_client_connections(client_types::DisconnectReason::RegulatoryRegionChange)
+                .stop_client_connections(types::DisconnectReason::RegulatoryRegionChange)
                 .await?;
             iface_manager.stop_all_aps().await?;
 
@@ -98,7 +98,7 @@ mod tests {
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream,
         },
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::{
             channel::{mpsc, oneshot},
@@ -523,7 +523,7 @@ mod tests {
         let _ = context.executor.run_until_stalled(&mut regulatory_fut);
         assert_variant!(
             context.executor.run_until_stalled(device_service_request_fut),
-            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{..})))
+            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry { .. })))
         );
     }
 
@@ -574,7 +574,7 @@ mod tests {
         let _ = context.executor.run_until_stalled(&mut regulatory_fut);
         assert_variant!(
             context.executor.run_until_stalled(device_service_request_fut),
-            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{..})))
+            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry { .. })))
         );
     }
 
@@ -613,11 +613,10 @@ mod tests {
 
         // Fetch the SetCountryRequest.
         let device_service_request_fut = &mut context.device_service_requests.next();
-        let device_service_responder =
-            assert_variant!(
-                context.executor.run_until_stalled(device_service_request_fut),
-                Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{req:_, responder}))) => responder
-            );
+        let device_service_responder = assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{req:_, responder}))) => responder
+        );
 
         // Reply to the SetCountryRequest, and drive the RegulatoryManager forward again.
         device_service_responder.send(ZX_OK).expect("failed to send device service response");

@@ -26,6 +26,7 @@ use {
     anyhow::bail,
     fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
     link_state::LinkState,
@@ -549,6 +550,7 @@ impl Associated {
                 } else {
                     DisconnectSource::Ap
                 },
+                user_disconnect_reason: None,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
             context.info.report_disconnect(disconnect_info);
@@ -608,6 +610,7 @@ impl Associated {
                     } else {
                         DisconnectSource::Ap
                     },
+                    user_disconnect_reason: None,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
@@ -955,7 +958,11 @@ impl ClientState {
         }
     }
 
-    pub fn disconnect(self, context: &mut Context) -> Self {
+    pub fn disconnect(
+        self,
+        context: &mut Context,
+        user_disconnect_reason: fidl_sme::UserDisconnectReason,
+    ) -> Self {
         let reason_code = fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive();
         let locally_initiated = true;
         if let Self::Associated(state) = &self {
@@ -969,6 +976,7 @@ impl ClientState {
                     channel: Channel::from_fidl(state.bss.chan),
                     reason_code,
                     disconnect_source: DisconnectSource::User,
+                    user_disconnect_reason: Some(user_disconnect_reason),
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
@@ -1957,7 +1965,8 @@ mod tests {
     #[test]
     fn disconnect_while_idle() {
         let mut h = TestHelper::new();
-        let new_state = idle_state().disconnect(&mut h.context);
+        let new_state = idle_state()
+            .disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         assert_idle(new_state);
         // Expect no messages to the MLME
         assert!(h.mlme_stream.try_next().is_err());
@@ -1968,7 +1977,8 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = joining_state(cmd);
-        let state = state.disconnect(&mut h.context);
+        let state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
     }
@@ -1978,7 +1988,8 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = authenticating_state(cmd);
-        let state = state.disconnect(&mut h.context);
+        let state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
     }
@@ -1988,7 +1999,8 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd, receiver) = connect_command_one();
         let state = associating_state(cmd);
-        let state = state.disconnect(&mut h.context);
+        let state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         let state = exchange_deauth(state, &mut h);
         expect_result(receiver, ConnectResult::Canceled);
         assert_idle(state);
@@ -1998,7 +2010,8 @@ mod tests {
     fn disconnect_while_link_up() {
         let mut h = TestHelper::new();
         let state = link_up_state(connect_command_one().0.bss);
-        let state = state.disconnect(&mut h.context);
+        let state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
     }
@@ -2012,7 +2025,8 @@ mod tests {
         let state = state.connect(connect_command_one().0, &mut h.context);
         assert_eq!(h.context.att_id, 1);
 
-        let state = state.disconnect(&mut h.context);
+        let state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         assert_eq!(h.context.att_id, 1);
 
         let state = state.connect(connect_command_two().0, &mut h.context);
@@ -2166,7 +2180,8 @@ mod tests {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
 
-        let _state = state.disconnect(&mut h.context);
+        let _state =
+            state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
@@ -2174,6 +2189,7 @@ mod tests {
             assert_eq!(info.bssid, [8; 6]);
             assert_eq!(info.reason_code, fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive());
             assert_eq!(info.disconnect_source, DisconnectSource::User);
+            assert_eq!(info.user_disconnect_reason, Some(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
     }
 

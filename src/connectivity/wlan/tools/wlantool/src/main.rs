@@ -263,7 +263,9 @@ async fn do_client_disconnect(
 ) -> Result<(), Error> {
     let opts::ClientDisconnectCmd { iface_id } = cmd;
     let sme = get_client_sme(wlan_svc, iface_id).await?;
-    sme.disconnect().await.map_err(|e| format_err!("error sending disconnect request: {}", e))
+    sme.disconnect(fidl_sme::UserDisconnectReason::WlanDevTool)
+        .await
+        .map_err(|e| format_err!("error sending disconnect request: {}", e))
 }
 
 async fn do_client_scan(cmd: opts::ClientScanCmd, wlan_svc: WlanSvc) -> Result<(), Error> {

@@ -140,7 +140,10 @@ async fn handle_connect_transaction(
 }
 
 pub async fn disconnect(iface_sme_proxy: &fidl_sme::ClientSmeProxy) -> Result<(), Error> {
-    iface_sme_proxy.disconnect().await.context("failed to trigger disconnect")?;
+    iface_sme_proxy
+        .disconnect(fidl_sme::UserDisconnectReason::WlanServiceUtilTesting)
+        .await
+        .context("failed to trigger disconnect")?;
 
     // check the status and ensure we are not connected to or connecting to anything
     let rsp = iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
@@ -340,7 +343,7 @@ mod tests {
         let req = exec.run_until_stalled(&mut req_stream.next());
         let responder = assert_variant !(
             req,
-            Poll::Ready(Some(Ok(ClientSmeRequest::Disconnect{ responder})))
+            Poll::Ready(Some(Ok(ClientSmeRequest::Disconnect{ responder, .. })))
             => responder);
 
         // now send the response back
@@ -1037,7 +1040,7 @@ mod tests {
         server: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
-            Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,
+            Poll::Ready(ClientSmeRequest::Disconnect { responder, .. }) => responder,
             Poll::Pending => panic!("Expected a DisconnectRequest"),
             _ => panic!("Expected a DisconnectRequest"),
         };

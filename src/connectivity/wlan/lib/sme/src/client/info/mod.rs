@@ -17,7 +17,7 @@ use {
         Ssid,
     },
     derivative::Derivative,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     wlan_common::{self, bss::BssDescription},
 };
@@ -338,6 +338,7 @@ pub struct DisconnectInfo {
     pub ssid: Ssid,
     pub channel: wlan_common::channel::Channel,
     pub reason_code: u16,
+    pub user_disconnect_reason: Option<fidl_sme::UserDisconnectReason>,
     pub disconnect_source: DisconnectSource,
     pub time_since_channel_switch: Option<zx::Duration>,
 }

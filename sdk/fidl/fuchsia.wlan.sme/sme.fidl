@@ -23,6 +23,24 @@ enum Protection {
     WPA3_ENTERPRISE = 10;
 };
 
+enum UserDisconnectReason {
+    UNKNOWN = 0;
+    FAILED_TO_CONNECT = 1;
+    FIDL_CONNECT_REQUEST = 2;
+    FIDL_STOP_CLIENT_CONNECTIONS_REQUEST = 3;
+    PROACTIVE_NETWORK_SWITCH = 4;
+    DISCONNECT_DETECTED_FROM_SME = 5;
+    REGULATORY_REGION_CHANGE = 6;
+    STARTUP = 7;
+    NETWORK_UNSAVED = 8;
+    NETWORK_CONFIG_UPDATED = 9;
+
+    // The following reasons should only be used for development and testing.
+    WLAN_SME_UNIT_TESTING = 125;
+    WLAN_SERVICE_UTIL_TESTING = 126;
+    WLAN_DEV_TOOL = 127;
+};
+
 struct BssInfo {
     array<uint8>:6 bssid;
     vector<uint8>:32 ssid;
@@ -130,7 +148,7 @@ struct ClientStatusResponse {
 protocol ClientSme {
     Scan(ScanRequest req, request<ScanTransaction> txn);
     Connect(ConnectRequest req, request<ConnectTransaction>? txn);
-    Disconnect() -> ();
+    Disconnect(UserDisconnectReason reason) -> ();
     Status() -> (ClientStatusResponse resp);
 };
 

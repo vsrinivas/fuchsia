@@ -682,6 +682,7 @@ pub fn log_disconnect(
             DisconnectSource::Mlme => "mlme",
             DisconnectSource::Ap => "ap",
         },
+        user_disconnect_reason?: info.user_disconnect_reason.map(|reason| format!("{:?}", reason)),
         time_since_channel_switch?: info.time_since_channel_switch.map(|d| d.into_nanos()),
     });
 
@@ -1131,6 +1132,7 @@ mod tests {
             last_snr: 1,
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
             disconnect_source: DisconnectSource::Mlme,
+            user_disconnect_reason: None,
             time_since_channel_switch: Some(zx::Duration::from_nanos(1337i64)),
         };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
@@ -1154,6 +1156,7 @@ mod tests {
                         last_snr: 1i64,
                         reason_code: 1u64,
                         disconnect_source: "mlme",
+                        user_disconnect_reason: "None",
                         time_since_channel_switch: 1337i64,
                     }
                 }
@@ -1433,6 +1436,7 @@ mod tests {
             last_snr: 1,
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
             disconnect_source: DisconnectSource::Mlme,
+            user_disconnect_reason: None,
             time_since_channel_switch: None,
         }
     }

@@ -230,9 +230,13 @@ async fn disconnecting_state(
 
     // TODO(fxbug.dev/53505): either make this fire-and-forget in the SME, or spawn a thread for this,
     // so we don't block on it
-    common_options.proxy.disconnect().await.map_err(|e| {
-        ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
-    })?;
+    common_options
+        .proxy
+        .disconnect(types::convert_to_sme_disconnect_reason(options.reason))
+        .await
+        .map_err(|e| {
+            ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
+        })?;
 
     // Notify the caller that disconnect was sent to the SME
     match options.disconnect_responder {
@@ -679,6 +683,7 @@ mod tests {
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         wlan_common::assert_variant,
+        wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
     };
 
     struct TestValues {
@@ -739,7 +744,7 @@ mod tests {
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
         );
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
@@ -1169,7 +1174,7 @@ mod tests {
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::FailedToConnect }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -1350,7 +1355,7 @@ mod tests {
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::FailedToConnect }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -1921,7 +1926,7 @@ mod tests {
         // Second SME request: disconnect
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::FidlConnectRequest }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2105,7 +2110,7 @@ mod tests {
         );
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::NetworkUnsaved }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2231,7 +2236,7 @@ mod tests {
         // Respond to the SME disconnect
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2414,7 +2419,7 @@ mod tests {
         // First SME request: disconnect
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2595,7 +2600,7 @@ mod tests {
         // Check for an SME disconnect request
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2725,7 +2730,7 @@ mod tests {
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::RegulatoryRegionChange }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2796,7 +2801,7 @@ mod tests {
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -2882,7 +2887,7 @@ mod tests {
     #[test]
     fn serve_loop_handles_startup() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = exec.run_singlethreaded(test_setup());
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -2921,13 +2926,20 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::Startup }) => {
                 responder.send().expect("could not send sme response");
             }
         );
 
         // Run the future again and ensure that it has not exited after receiving the response.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::Startup
+        );
     }
 
     #[test]
@@ -2980,7 +2992,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::Startup }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -3037,7 +3049,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::Startup }) => {
                 responder.send().expect("could not send sme response");
             }
         );
@@ -3086,14 +3098,14 @@ mod tests {
         let mut client = Client::new(client_req_sender);
         let (sender, mut receiver) = oneshot::channel();
         client
-            .disconnect(types::DisconnectReason::NetworkConfigUpdated, sender)
+            .disconnect(PolicyDisconnectionMetricDimensionReason::NetworkConfigUpdated, sender)
             .expect("failed to make request");
 
         // Run the state machine so that it handles the disconnect message.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder, reason: fidl_sme::UserDisconnectReason::NetworkConfigUpdated }) => {
                 responder.send().expect("could not send sme response");
             }
         );
