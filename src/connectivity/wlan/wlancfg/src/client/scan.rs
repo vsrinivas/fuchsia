@@ -958,20 +958,20 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back an error
         assert_variant!(
-                exec.run_until_stalled(&mut sme_stream.next()),
-                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                    txn, ..
-                }))) => {
-                    // Send failed scan response.
-                    let (_stream, ctrl) = txn
-                        .into_stream_and_control_handle().expect("error accessing control handle");
-                    ctrl.send_on_error(&mut fidl_sme::ScanError {
-                        code: fidl_sme::ScanErrorCode::InternalError,
-                        message: "Failed to scan".to_string()
-                    })
-                        .expect("failed to send scan error");
-                }
-            );
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
@@ -994,14 +994,14 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back an error
         assert_variant!(
-                exec.run_until_stalled(&mut sme_stream.next()),
-                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                    txn, ..
-                }))) => {
-                    // Send failed scan response.
-                    txn.close_with_epitaph(zx::Status::OK).expect("Failed to close channel");
-                }
-            );
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                txn.close_with_epitaph(zx::Status::OK).expect("Failed to close channel");
+            }
+        );
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
@@ -1582,20 +1582,20 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back an error
         assert_variant!(
-                exec.run_until_stalled(&mut sme_stream.next()),
-                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                    txn, ..
-                }))) => {
-                    // Send failed scan response.
-                    let (_stream, ctrl) = txn
-                        .into_stream_and_control_handle().expect("error accessing control handle");
-                    ctrl.send_on_error(&mut fidl_sme::ScanError {
-                        code: fidl_sme::ScanErrorCode::InternalError,
-                        message: "Failed to scan".to_string()
-                    })
-                        .expect("failed to send scan error");
-                }
-            );
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
 
         // Process SME result.
         // Note: this will be Poll::Ready, since the scan handler will quit after sending the error
@@ -1669,54 +1669,54 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back results
         assert_variant!(
-                exec.run_until_stalled(&mut sme_stream.next()),
-                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                    txn, ..
-                }))) => {
-                    // Send the first AP
-                    let (_stream, ctrl) = txn
-                        .into_stream_and_control_handle().expect("error accessing control handle");
-                    let mut aps = [passive_input_aps[0].clone()];
-                    ctrl.send_on_result(&mut aps.iter_mut())
-                        .expect("failed to send scan data");
-                    // Process SME result.
-                    assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
-                    // The iterator should not have any data yet, until the sme is done
-                    assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send the first AP
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                let mut aps = [passive_input_aps[0].clone()];
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+                // The iterator should not have any data yet, until the sme is done
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
 
-                    // Progress second scan handler forward so that it will respond to the iterator get next request.
-                    assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
-                    // Check that the second scan request was sent to the sme and send back results
-                    let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-                    validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, passive_input_aps.clone()); // for output_iter_fut1
-                    // Process SME result.
-                    assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
-                    // The second request should now result in an active scan
-                    let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                        channels: vec![],
-                        ssids: vec!["foo active ssid".as_bytes().to_vec()],
-                    });
-                    validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, active_input_aps.clone()); // for output_iter_fut1
-                    // Process SME result.
-                    assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);// The second iterator should have all its data
+                // Progress second scan handler forward so that it will respond to the iterator get next request.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
+                // Check that the second scan request was sent to the sme and send back results
+                let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+                validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, passive_input_aps.clone()); // for output_iter_fut1
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
+                // The second request should now result in an active scan
+                let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                    channels: vec![],
+                    ssids: vec!["foo active ssid".as_bytes().to_vec()],
+                });
+                validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, active_input_aps.clone()); // for output_iter_fut1
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);// The second iterator should have all its data
 
-                    assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
-                        let results = result.expect("Failed to get next scan results").unwrap();
-                        assert_eq!(results.len(), combined_fidl_aps.len());
-                        assert_eq!(results, combined_fidl_aps);
-                    });
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
+                    let results = result.expect("Failed to get next scan results").unwrap();
+                    assert_eq!(results.len(), combined_fidl_aps.len());
+                    assert_eq!(results, combined_fidl_aps);
+                });
 
-                    // Send the remaining APs for the first iterator
-                    let mut aps = passive_input_aps[1..].iter().map(|a| a.clone()).collect::<Vec<_>>();
-                    ctrl.send_on_result(&mut aps.iter_mut())
-                        .expect("failed to send scan data");
-                    // Process SME result.
-                    assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
-                    // Send the end of data
-                    ctrl.send_on_finished()
-                        .expect("failed to send scan data");
-                }
-            );
+                // Send the remaining APs for the first iterator
+                let mut aps = passive_input_aps[1..].iter().map(|a| a.clone()).collect::<Vec<_>>();
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
 
         // Process response from SME
         assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
