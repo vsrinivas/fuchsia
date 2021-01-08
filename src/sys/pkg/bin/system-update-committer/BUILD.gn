@@ -34,15 +34,15 @@ rustc_library("lib") {
 
   source_root = "src/main.rs"
   sources = [
-    "src/check_and_commit.rs",
-    "src/check_and_commit/check.rs",
-    "src/check_and_commit/commit.rs",
-    "src/check_and_commit/configuration.rs",
-    "src/check_and_commit/errors.rs",
-    "src/check_and_commit/policy.rs",
     "src/config.rs",
     "src/fidl.rs",
     "src/main.rs",
+    "src/metadata.rs",
+    "src/metadata/check.rs",
+    "src/metadata/commit.rs",
+    "src/metadata/configuration.rs",
+    "src/metadata/errors.rs",
+    "src/metadata/policy.rs",
   ]
 
   visibility = [

@@ -15,9 +15,9 @@ use {
     std::sync::Arc,
 };
 
-mod check_and_commit;
 mod config;
 mod fidl;
+mod metadata;
 
 pub fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["system-update-committer"])
@@ -51,15 +51,15 @@ async fn main_inner_async() -> Result<(), Error> {
         .duplicate_handle(zx::Rights::SIGNAL_PEER | zx::Rights::SIGNAL)
         .context("while duplicating p_check")?;
 
-    // Handle check and commit.
+    // Handle putting boot metadata in happy state.
     futures.push(
         async move {
-            // TODO(http://fxbug.dev/64595) combine the config and the result of check_and_commit
-            // to determine if we should reboot. For now, we just log.
+            // TODO(http://fxbug.dev/64595) combine the config and the result of
+            // put_metadata_in_happy_state to determine if we should reboot. For now, we just log.
             if let Err(e) =
-                crate::check_and_commit::check_and_commit(&boot_manager, &p_check_clone).await
+                crate::metadata::put_metadata_in_happy_state(&boot_manager, &p_check_clone).await
             {
-                fx_log_warn!("error checking health and committing: {:#}", anyhow!(e));
+                fx_log_warn!("error putting boot metadata in happy state: {:#}", anyhow!(e));
             }
         }
         .boxed_local(),

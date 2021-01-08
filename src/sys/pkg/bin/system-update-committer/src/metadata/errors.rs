@@ -22,9 +22,12 @@ pub enum BootManagerError {
     },
 }
 
-/// Error condition that may be returned by `determine_slot_to_commit`.
+/// Error condition that may be returned by the PolicyEngine.
 #[derive(Error, Debug)]
-pub enum DetermineSlotToCommitError {
+pub enum PolicyError {
+    #[error("the policy engine failed to build")]
+    Build(#[source] BootManagerError),
+
     #[error("the current configuration ({_0:?}) is unbootable. This should never happen.")]
     CurrentConfigurationUnbootable(paver::Configuration),
 }
@@ -41,23 +44,23 @@ pub enum HealthCheckError {
     Other(#[source] anyhow::Error),
 }
 
-/// Error condition that may be returned by check_and_commit.
+/// Error condition that may be returned by `put_metadata_in_happy_state`.
 #[derive(Error, Debug)]
-pub enum CheckAndCommitError {
+pub enum MetadataError {
     #[error("while calling do_health_checks")]
     HealthCheck(#[source] HealthCheckError),
 
-    #[error("failed to signal EventPair peer")]
+    #[error("while signalling EventPair peer")]
     SignalPeer(#[source] Status),
 
-    #[error("failed to signal EventPair handle")]
+    #[error("while signalling EventPair handle")]
     SignalHandle(#[source] Status),
 
-    #[error("BootManager returned error")]
-    BootManager(#[source] BootManagerError),
+    #[error("while doing commit")]
+    Commit(#[source] BootManagerError),
 
-    #[error("while calling determine_slot_to_commit")]
-    DetermineSlotToCommit(#[source] DetermineSlotToCommitError),
+    #[error("while interfacing with policy")]
+    Policy(#[source] PolicyError),
 }
 
 /// Helper to convert fidl's nested errors.

@@ -4,15 +4,14 @@
 
 use {
     super::configuration::Configuration,
-    super::errors::{BootManagerError, BootManagerResultExt, DetermineSlotToCommitError},
+    super::errors::{BootManagerError, BootManagerResultExt, PolicyError},
     fidl_fuchsia_paver as paver,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::Status,
 };
 
-/// After gathering state from the BootManager, the PolicyEngine can answer questions like:
-/// * should we run health checks?
-/// * should we do a commit?
+/// After gathering state from the BootManager, the PolicyEngine can answer whether we
+/// should check and commit.
 #[derive(Debug)]
 pub struct PolicyEngine {
     current_config: Option<(Configuration, paver::ConfigurationStatus)>,
@@ -20,7 +19,7 @@ pub struct PolicyEngine {
 
 impl PolicyEngine {
     /// Gathers system state from the BootManager.
-    pub async fn build(boot_manager: &paver::BootManagerProxy) -> Result<Self, BootManagerError> {
+    pub async fn build(boot_manager: &paver::BootManagerProxy) -> Result<Self, PolicyError> {
         let current_config = match boot_manager
             .query_current_configuration()
             .await
@@ -34,7 +33,7 @@ impl PolicyEngine {
                 fx_log_info!("ABR not supported: skipping health checks and boot metadata updates");
                 return Ok(Self { current_config: None });
             }
-            Err(e) => return Err(e),
+            Err(e) => return Err(PolicyError::Build(e)),
 
             // As a special case, if we're in Recovery, ensure we neither check nor commit.
             Ok(paver::Configuration::Recovery) => {
@@ -51,39 +50,28 @@ impl PolicyEngine {
         let current_config_status = boot_manager
             .query_configuration_status((&current_config).into())
             .await
-            .into_boot_manager_result("query_configuration_status")?;
+            .into_boot_manager_result("query_configuration_status")
+            .map_err(PolicyError::Build)?;
 
         Ok(Self { current_config: Some((current_config, current_config_status)) })
     }
 
-    /// Determines if we should do health checks.
-    /// * We should only run health checks when the current config is Pending.
-    /// * If the current config is Healthy, it means the system already passed the health checks at
-    ///   some point. We assume they would still pass so we skip them.
-    /// * If the current config is Unbootable, we also skip the checks (this will surface as an
-    ///   error in `determine_slot_to_commit`).
-    pub fn should_check(&self) -> bool {
-        match self.current_config {
-            Some((_, paver::ConfigurationStatus::Pending)) => true,
-            _ => false,
-        }
-    }
-
-    /// Determines which slot to commit (e.g. modify the boot metadata), if any.
-    pub fn determine_slot_to_commit(
-        &self,
-    ) -> Result<Option<&Configuration>, DetermineSlotToCommitError> {
+    /// Determines if we should check and commit.
+    /// * If we should (e.g. if the system is pending commit), return `Ok(Some(slot_to_act_on))`.
+    /// * If we shouldn't (e.g. if the system is already committed), return `Ok(None)`.
+    /// * If the system is seriously busted, return an error.
+    pub fn should_check_and_commit(&self) -> Result<Option<&Configuration>, PolicyError> {
         match self.current_config.as_ref() {
-            Some((config, paver::ConfigurationStatus::Pending))
-            // FIXME: we shouldn't need to commit if the current slot is already healthy.
-            | Some((config, paver::ConfigurationStatus::Healthy)) => Ok(Some(config)),
+            Some((config, paver::ConfigurationStatus::Pending)) => Ok(Some(config)),
             Some((config, paver::ConfigurationStatus::Unbootable)) => {
-                Err(DetermineSlotToCommitError::CurrentConfigurationUnbootable(
-                    config.into(),
-                ))
+                Err(PolicyError::CurrentConfigurationUnbootable(config.into()))
             }
-            // ABR is not supported or current slot is recovery, so we shouldn't actually commit.
-            None => Ok(None),
+            // We don't need to check and commit in these situations because it wont give us any
+            // new information or have any effect on boot metadata:
+            // * ABR is not supported
+            // * current slot is recovery
+            // * current slot already healthy on boot
+            None | Some((_, paver::ConfigurationStatus::Healthy)) => Ok(None),
         }
     }
 }
@@ -99,7 +87,7 @@ mod tests {
         std::sync::Arc,
     };
 
-    /// Test we neither check nor commit when the device is in recovery.
+    /// Test we should NOT check and commit when when the device is in recovery.
     #[fasync::run_singlethreaded(test)]
     async fn test_skip_when_device_in_recovery() {
         let paver = Arc::new(
@@ -110,13 +98,12 @@ mod tests {
         );
         let engine = PolicyEngine::build(&paver.spawn_boot_manager_service()).await.unwrap();
 
-        assert!(!engine.should_check());
-        assert_eq!(engine.determine_slot_to_commit().unwrap(), None);
+        assert_eq!(engine.should_check_and_commit().unwrap(), None);
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
     }
 
-    /// Test we neither check nor commit when the device does not support ABR.
+    /// Test we should NOT check and commit when the device does not support ABR.
     #[fasync::run_singlethreaded(test)]
     async fn test_skip_when_device_does_not_support_abr() {
         let paver = Arc::new(
@@ -126,14 +113,13 @@ mod tests {
         );
         let engine = PolicyEngine::build(&paver.spawn_boot_manager_service()).await.unwrap();
 
-        assert!(!engine.should_check());
-        assert_eq!(engine.determine_slot_to_commit().unwrap(), None);
+        assert_eq!(engine.should_check_and_commit().unwrap(), None);
 
         assert_eq!(paver.take_events(), vec![]);
     }
 
-    /// Helper fn to verify we commit (but don't check) when current is healthy.
-    async fn test_only_commits_when_current_is_healthy(current_config: &Configuration) {
+    /// Helper fn to verify we should NOT check and commit when current is healthy.
+    async fn test_skip_when_current_is_healthy(current_config: &Configuration) {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config.into())
@@ -142,8 +128,7 @@ mod tests {
         );
         let engine = PolicyEngine::build(&paver.spawn_boot_manager_service()).await.unwrap();
 
-        assert!(!engine.should_check());
-        assert_eq!(engine.determine_slot_to_commit().unwrap(), Some(current_config));
+        assert_eq!(engine.should_check_and_commit().unwrap(), None);
 
         assert_eq!(
             paver.take_events(),
@@ -155,17 +140,17 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_only_commits_when_current_is_healthy_a() {
-        test_only_commits_when_current_is_healthy(&Configuration::A).await
+    async fn test_skip_when_current_is_healthy_a() {
+        test_skip_when_current_is_healthy(&Configuration::A).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_only_commits_when_current_is_healthy_b() {
-        test_only_commits_when_current_is_healthy(&Configuration::B).await
+    async fn test_skip_when_current_is_healthy_b() {
+        test_skip_when_current_is_healthy(&Configuration::B).await
     }
 
-    /// Helper fn to verify we both check and commit when current is pending.
-    async fn test_checks_and_commits_when_current_is_pending(current_config: &Configuration) {
+    /// Helper fn to verify we should check and commit when current is pending.
+    async fn test_check_and_commit_when_current_is_pending(current_config: &Configuration) {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config.into())
@@ -174,8 +159,7 @@ mod tests {
         );
         let engine = PolicyEngine::build(&paver.spawn_boot_manager_service()).await.unwrap();
 
-        assert!(engine.should_check());
-        assert_eq!(engine.determine_slot_to_commit().unwrap(), Some(current_config));
+        assert_eq!(engine.should_check_and_commit().unwrap(), Some(current_config));
 
         assert_eq!(
             paver.take_events(),
@@ -187,16 +171,16 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_checks_and_commits_when_current_is_pending_a() {
-        test_checks_and_commits_when_current_is_pending(&Configuration::A).await
+    async fn test_check_and_commit_when_current_is_pending_a() {
+        test_check_and_commit_when_current_is_pending(&Configuration::A).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_checks_and_commits_when_current_is_pending_b() {
-        test_checks_and_commits_when_current_is_pending(&Configuration::B).await
+    async fn test_check_and_commit_when_current_is_pending_b() {
+        test_check_and_commit_when_current_is_pending(&Configuration::B).await
     }
 
-    /// Helper fn to verify an error is returned on `determine_slot_to_commit` if current is unbootable.
+    /// Helper fn to verify an error is returned if current is unbootable.
     async fn test_returns_error_when_current_unbootable(current_config: &Configuration) {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
@@ -206,11 +190,9 @@ mod tests {
         );
         let engine = PolicyEngine::build(&paver.spawn_boot_manager_service()).await.unwrap();
 
-        assert!(!engine.should_check());
         assert_matches!(
-            engine.determine_slot_to_commit(),
-            Err(DetermineSlotToCommitError::CurrentConfigurationUnbootable(cc))
-            if cc == current_config.into()
+            engine.should_check_and_commit(),
+            Err(PolicyError::CurrentConfigurationUnbootable(cc)) if cc == current_config.into()
         );
 
         assert_eq!(
@@ -246,10 +228,10 @@ mod tests {
 
         assert_matches!(
             PolicyEngine::build(&paver.spawn_boot_manager_service()).await,
-            Err(BootManagerError::Status {
+            Err(PolicyError::Build(BootManagerError::Status {
                 method_name: "query_current_configuration",
                 status: Status::OUT_OF_RANGE
-            })
+            }))
         );
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);

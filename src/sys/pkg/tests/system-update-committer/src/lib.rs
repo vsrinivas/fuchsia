@@ -12,7 +12,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{channel::mpsc, prelude::*},
+    futures::prelude::*,
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     std::{sync::Arc, time::Duration},
@@ -77,33 +77,44 @@ impl TestEnv {
     }
 }
 
+/// IsCurrentSystemCommitted should hang until when the Paver responds to QueryConfigurationStatus.
 #[fasync::run_singlethreaded(test)]
-async fn calls_paver() {
-    let (paver_events_send, mut paver_events_recv) = mpsc::unbounded();
+async fn is_current_system_committed_hangs_until_query_configuration_status() {
+    let (throttle_hook, throttler) = mphooks::throttle();
 
-    let _env = TestEnv::builder()
-        .paver_service_builder(
-            MockPaverServiceBuilder::new()
-                .event_hook(move |e| paver_events_send.unbounded_send(e.clone()).unwrap()),
-        )
+    let env = TestEnv::builder()
+        .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(throttle_hook))
         .build();
 
-    // Collect and assert paver events.
-    let mut paver_events = Vec::with_capacity(5);
-    for _ in 0..5 {
-        let event = paver_events_recv.next().await.unwrap();
-        paver_events.push(event);
-    }
-    assert_eq!(
-        paver_events,
-        vec![
-            PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
-            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
-            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-            PaverEvent::BootManagerFlush
-        ]
+    // No paver events yet, so the commit status FIDL server is still hanging.
+    // We use timeouts to tell if the FIDL server hangs. This is obviously not ideal, but
+    // there does not seem to be a better way of doing it. We considered using `run_until_stalled`,
+    // but that's no good because the system-update-committer is running in a seperate process.
+    assert_matches!(
+        env.commit_status_provider_proxy()
+            .is_current_system_committed()
+            .map(Some)
+            .on_timeout(HANG_DURATION, || None)
+            .await,
+        None
     );
+
+    // Even after the first paver response, is_current_system_committed should still hang.
+    let () = throttler.emit_next_paver_event(&PaverEvent::QueryCurrentConfiguration);
+    assert_matches!(
+        env.commit_status_provider_proxy()
+            .is_current_system_committed()
+            .map(Some)
+            .on_timeout(HANG_DURATION, || None)
+            .await,
+        None
+    );
+
+    // After the second paver event, we're finally unblocked.
+    let () = throttler.emit_next_paver_event(&PaverEvent::QueryConfigurationStatus {
+        configuration: Configuration::A,
+    });
+    env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
 }
 
 /// If the current system is pending commit, the commit status FIDL server should hang
@@ -121,22 +132,7 @@ async fn system_pending_commit() {
         )
         .build();
 
-    // No paver events yet, so the commit status FIDL server is still hanging.
-    // We use timeouts to tell if the FIDL server hangs. This is obviously not ideal, but
-    // there does not seem to be a better way of doing it. We considered using `run_until_stalled`,
-    // but that's no good because the system-update-committer is running in a seperate process.
-    assert_matches!(
-        env.commit_status_provider_proxy()
-            .is_current_system_committed()
-            .map(Some)
-            .on_timeout(HANG_DURATION, || None)
-            .await,
-        None
-    );
-
-    // Since the current configuration is pending, the commit FIDL server will unblock after
-    // the first two paver events. When the commit status FIDL responds, the event pair should
-    // NOT observe the signal.
+    // Emit the first 2 paver events to unblock the FIDL server.
     let () = throttler.emit_next_paver_events(&[
         PaverEvent::QueryCurrentConfiguration,
         PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
@@ -157,9 +153,8 @@ async fn system_pending_commit() {
     assert_eq!(OnSignals::new(&event_pair, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
 }
 
-/// If the current system is already committed, the commit status FIDL server should hang
-/// until the signal is asserted on the event pair (that is, until all Paver events are
-/// emitted). Once returned, the EventPair should immediately have `USER_0` asserted.
+/// If the current system is already committed, the EventPair returned should immediately have
+/// `USER_0` asserted.
 #[fasync::run_singlethreaded(test)]
 async fn system_already_committed() {
     let (throttle_hook, throttler) = mphooks::throttle();
@@ -168,29 +163,13 @@ async fn system_already_committed() {
         .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(throttle_hook))
         .build();
 
-    // Even when we get the first 2 paver events, the commit FIDL server still hangs because when
-    // the system is already committed, the FIDL server should only return once the signal is set.
-    // See comment in `system_pending_commit` for info on why we use timeouts.
+    // Emit the first 2 paver events to unblock the FIDL server.
     let () = throttler.emit_next_paver_events(&[
         PaverEvent::QueryCurrentConfiguration,
         PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
     ]);
-    assert_matches!(
-        env.commit_status_provider_proxy()
-            .is_current_system_committed()
-            .map(Some)
-            .on_timeout(HANG_DURATION, || None)
-            .await,
-        None
-    );
 
-    // Yield all the paver events to unblock the FIDL service. When the commit status
-    // FIDL responds, the event pair should immediately observe the signal.
-    let () = throttler.emit_next_paver_events(&[
-        PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
-        PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-        PaverEvent::BootManagerFlush,
-    ]);
+    // When the commit status FIDL responds, the event pair should immediately observe the signal.
     let event_pair =
         env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
     assert_eq!(

@@ -67,8 +67,8 @@ impl FidlServer {
         // the system is committed and the consumer received the EventPair, but we haven't yet
         // asserted the signal on the EventPair.
         //
-        // If there is an error with `check_and_set`, the FIDL server will hang here indefinitely.
-        // This is acceptable because we'll Soon™ reboot on error.
+        // If there is an error with `put_metadata_in_happy_state`, the FIDL server will hang here
+        // indefinitely. This is acceptable because we'll Soon™ reboot on error.
         OnSignals::new(&server.p_check, zx::Signals::USER_1).await?;
 
         let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
