@@ -118,6 +118,14 @@ pub enum Error {
     #[error("Invalid response with txid 0.")]
     InvalidResponseTxid,
 
+    /// An envelope in the FIDL message had an unexpected number of bytes.
+    #[error("Invalid number of bytes in FIDL envelope.")]
+    InvalidNumBytesInEnvelope,
+
+    /// An envelope in the FIDL message had an unexpected number of handles.
+    #[error("Invalid number of handles in FIDL envelope.")]
+    InvalidNumHandlesInEnvelope,
+
     /// A handle which is invalid in the context of a host build of Fuchsia.
     #[error("Invalid FIDL handle used on the host.")]
     InvalidHostHandle,

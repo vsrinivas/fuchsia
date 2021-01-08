@@ -332,17 +332,19 @@ func encodingContext(wireFormat gidlir.WireFormat) string {
 
 // Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:              "OutOfRange",
-	gidlir.StringNotUtf8:              "Utf8Error",
-	gidlir.NonEmptyStringWithNullBody: "UnexpectedNullRef",
-	gidlir.NonResourceUnknownHandles:  "CannotStoreUnknownHandles",
-	gidlir.StrictUnionFieldNotSet:     "UnknownUnionTag",
-	gidlir.StrictUnionUnknownField:    "UnknownUnionTag",
-	gidlir.StrictBitsUnknownBit:       "InvalidBitsValue",
-	gidlir.StrictEnumUnknownValue:     "InvalidEnumValue",
-	gidlir.ExceededMaxOutOfLineDepth:  "MaxRecursionDepth",
-	gidlir.InvalidPaddingByte:         "NonZeroPadding",
-	gidlir.ExtraHandles:               "ExtraHandles",
+	gidlir.StringTooLong:               "OutOfRange",
+	gidlir.StringNotUtf8:               "Utf8Error",
+	gidlir.NonEmptyStringWithNullBody:  "UnexpectedNullRef",
+	gidlir.NonResourceUnknownHandles:   "CannotStoreUnknownHandles",
+	gidlir.StrictUnionFieldNotSet:      "UnknownUnionTag",
+	gidlir.StrictUnionUnknownField:     "UnknownUnionTag",
+	gidlir.StrictBitsUnknownBit:        "InvalidBitsValue",
+	gidlir.StrictEnumUnknownValue:      "InvalidEnumValue",
+	gidlir.ExceededMaxOutOfLineDepth:   "MaxRecursionDepth",
+	gidlir.InvalidPaddingByte:          "NonZeroPadding",
+	gidlir.InvalidNumBytesInEnvelope:   "InvalidNumBytesInEnvelope",
+	gidlir.InvalidNumHandlesInEnvelope: "InvalidNumHandlesInEnvelope",
+	gidlir.ExtraHandles:                "ExtraHandles",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

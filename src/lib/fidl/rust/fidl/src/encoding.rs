@@ -2822,7 +2822,9 @@ pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<
         }
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
-                Err(Error::UnexpectedNullRef)
+                Err(Error::InvalidNumBytesInEnvelope)
+            } else if num_handles != 0 {
+                Err(Error::InvalidNumHandlesInEnvelope)
             } else {
                 Ok(None)
             }
@@ -2852,7 +2854,9 @@ pub fn decode_unknown_data(
         }),
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
-                Err(Error::UnexpectedNullRef)
+                Err(Error::InvalidNumBytesInEnvelope)
+            } else if num_handles != 0 {
+                Err(Error::InvalidNumHandlesInEnvelope)
             } else {
                 Ok(None)
             }
@@ -3148,16 +3152,19 @@ macro_rules! fidl_table {
                                 }
                                 $crate::encoding::ALLOC_ABSENT_U64 => {
                                     if num_bytes != 0 {
-                                        return Err($crate::Error::UnexpectedNullRef);
+                                        return Err($crate::Error::InvalidNumBytesInEnvelope);
+                                    }
+                                    if num_handles != 0 {
+                                        return Err($crate::Error::InvalidNumHandlesInEnvelope);
                                     }
                                 }
                                 _ => return Err($crate::Error::Invalid),
                             }
                             if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                                return Err($crate::Error::Invalid);
+                                return Err($crate::Error::InvalidNumBytesInEnvelope);
                             }
                             if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
-                                return Err($crate::Error::Invalid);
+                                return Err($crate::Error::InvalidNumHandlesInEnvelope);
                             }
 
                             next_offset += 16;
@@ -3265,7 +3272,13 @@ pub unsafe fn unsafe_decode_xunion_inline_portion(
     let mut present: u64 = 0;
     present.unsafe_decode(decoder, offset + 16)?;
     if present != ALLOC_PRESENT_U64 {
-        return Err(Error::Invalid);
+        return if num_bytes != 0 {
+            Err(Error::InvalidNumBytesInEnvelope)
+        } else if num_handles != 0 {
+            Err(Error::InvalidNumHandlesInEnvelope)
+        } else {
+            Err(Error::Invalid)
+        };
     }
 
     Ok((ordinal, num_bytes, num_handles))
@@ -3590,6 +3603,8 @@ macro_rules! fidl_xunion {
             #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 #[allow(unused_variables)]
+                let next_out_of_line = decoder.next_out_of_line();
+                let handles_before = decoder.remaining_handles();
                 let (ordinal, num_bytes, num_handles) = $crate::encoding::unsafe_decode_xunion_inline_portion(decoder, offset)?;
                 let member_inline_size = match ordinal {
                     $(
@@ -3672,7 +3687,15 @@ macro_rules! fidl_xunion {
                             ordinal => panic!("unexpected ordinal {:?}", ordinal)
                         }
                         Ok(())
-                })
+                })?;
+
+                if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+                    return Err($crate::Error::InvalidNumHandlesInEnvelope);
+                }
+                if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                    return Err($crate::Error::InvalidNumBytesInEnvelope);
+                }
+                Ok(())
             }
         }
 
