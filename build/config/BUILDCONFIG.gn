@@ -2248,7 +2248,9 @@ foreach(_target_type,
                                "script",
                                "testonly",
                                "visibility",
+                               "metadata",
                              ])
+
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -2283,9 +2285,31 @@ foreach(_target_type,
         }
       }
 
-      if (!build_should_trace_actions ||
-          # TODO(shayba): fix response file issue (see below)
-          defined(response_file_contents)) {
+      # If the action has inputs/outputs that are not explicitly stated then it will
+      # fail verification against the trace.
+      # Actions that are known non-hermetic should set `hermetic_deps = false`.
+      # TODO(rudymathu): At some point, we may want to restrict usage of
+      # non-hermetic actions, which we can do by depending on a target with
+      # explicit visibility.
+      hermetic_deps = true
+      if (defined(invoker.hermetic_deps)) {
+        hermetic_deps = invoker.hermetic_deps
+      }
+
+      # TODO(shayba): fix response file issue (see below)
+      should_trace = hermetic_deps && build_should_trace_actions &&
+                     !defined(response_file_contents)
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+        if (should_trace) {
+          traceable_action =
+              [ get_label_info(":$target_name", "label_no_toolchain") ]
+        }
+      }
+
+      if (!should_trace) {
         script = _invoker_script
         args = _invoker_args
       } else {

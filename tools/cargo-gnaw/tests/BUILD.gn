@@ -129,6 +129,7 @@ if (is_host) {
 
   template("_copy_tool") {
     action(target_name) {
+      hermetic_deps = false
       source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
       target = "${invoker.out_dir}/${invoker.tool}"
       inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
