@@ -1590,4 +1590,12 @@ mod tests {
         };
         assert_eq!(run(5), run(10)); // Same number of notifications independent of wakeup calls
     }
+
+    // Ensure that a large amount of wakeups does not exhaust kernel resources,
+    // such as the zx port queue limit.
+    #[test]
+    fn many_wakeups() {
+        let mut executor = Executor::new().unwrap();
+        executor.run_singlethreaded(multi_wake(4096 * 2));
+    }
 }
