@@ -605,7 +605,7 @@ class Fuzzer(object):
                 'Unable to find \'{}\' in {}'.format(fuzzer_target, build_gn))
             return False
 
-    def generate_coverage_report(self, local=False):
+    def generate_coverage_report(self, local=False, input_dirs=None):
         """Replicates the steps in the fuchsia/coverage infra build recipe and
         runs them locally in order to build a more targetted coverage report."""
 
@@ -627,10 +627,22 @@ class Fuzzer(object):
                                                   in args['select_variant']):
                 self.host.error('Not built with profile variant.')
 
-        if not local:
+        # Set the realm_label so we can push corpus data to the device.
+        if not local or input_dirs:
             self.realm_label = 'coverage'
+
+        # Fetch and push clusterfuzz data.
+        if not local:
             self.host.echo('Including corpus elements from clusterfuzz...')
             self.corpus.add_from_gcs(self.clusterfuzz_gcs_url)
+
+        # Push local corpus data
+        if input_dirs:
+            for input_dir in input_dirs:
+                if self.host.isdir(input_dir):
+                    self.corpus.add_from_host(input_dir)
+                else:
+                    self.host.error('{} is not a directory, and cannot be used as corpus input.')
 
         # Ensure the output directory is created.
         self.host.mkdir(self.output)

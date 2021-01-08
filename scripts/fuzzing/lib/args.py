@@ -211,6 +211,16 @@ class ArgParser(argparse.ArgumentParser):
         ]
         coverage_parser._add_flag(
             '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
+        coverage_parser.add_option(
+            '-i',
+            '--input',
+            help=[
+                'Provide path(s) to local directories with corpus data.',
+                'This can be used to test coverage of input data without',
+                'a full rebuild. Note that the coverage report will also',
+                'include seed corpora data and clusterfuzz data (if --local',
+                'is not provided).'
+            ])
         coverage_parser._add_verbose_flag()
         coverage_parser._add_name_argument(required=True)
         coverage_parser._add_output_option()

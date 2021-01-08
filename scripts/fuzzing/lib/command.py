@@ -190,4 +190,4 @@ def run_e2e_test(args, factory):
 def measure_coverage(args, factory):
     """Generates a coverage report of specified fuzzers."""
     fuzzer = factory.create_fuzzer(args, include_tests=True)
-    fuzzer.generate_coverage_report(local=args.local)
+    fuzzer.generate_coverage_report(local=args.local, input_dirs=args.input)
