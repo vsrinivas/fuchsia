@@ -10,9 +10,23 @@
 ##   --no-auto-config do not configure this host as a package server on the device
 ##   -v enable more verbose output (must be first argument)
 ##   -a target ipv6 address for "fx pave --no-bind"
+##
+## NOTE: This command supports incremental package publishing. If enabled,
+## it will not run 'pave' at all, and only act as a proxy for 'fx serve-updates'
+##
+## To enable incremental package serving, run "fx --enable=incremental serve ..."
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-optional-features.sh || exit $?
 fx-config-read
+
+# If incremental is enabled, this is only a proxy for 'fx serve-updates', not
+# starting a bootserver (pave). This is a transitional state while incremental
+# is opt-in, and will be the default once incremental is on by default.
+if is_feature_enabled "incremental"; then
+  fx-info "This command does not initiate 'pave' anymore, please run 'fx pave' if you need a paving server."
+  fx-command-exec serve-updates "$@"
+fi
 
 kill_child_processes() {
   child_pids=$(jobs -p)
