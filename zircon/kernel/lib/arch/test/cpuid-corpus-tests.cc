@@ -6,21 +6,10 @@
 
 #include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/arch/x86/cpuid.h>
-#include <libgen.h>
-#include <unistd.h>
 
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
-#include <filesystem>
-#include <string>
 #include <string_view>
 
-#include <rapidjson/document.h>
 #include <zxtest/zxtest.h>
-
-#include "src/lib/files/file.h"
 
 // This file is meant for testing lib/arch logic that deals in CpuidIo access,
 // along with expressing expectations of the accessed values for the suite of
@@ -32,77 +21,14 @@ namespace {
 
 using namespace std::string_view_literals;
 
-constexpr std::string_view kTestDataDir = "testdata/cpuid";
-
-//
-// Helpers.
-//
-
-// TODO(joshuaseaton): make this a shared utility available to all host-side
-// tests.
-std::string GetTestDataPath(std::string_view filename) {
-  std::filesystem::path path;
-#if defined(__linux__)
-  char self_path[PATH_MAX];
-  const char* bin_dir = dirname(realpath("/proc/self/exe", self_path));
-  path.append(bin_dir).append(kTestDataDir);
-#elif defined(__APPLE__)
-  uint32_t length = PATH_MAX;
-  char self_path[length];
-  char self_path_symlink[length];
-  _NSGetExecutablePath(self_path_symlink, &length);
-  const char* bin_dir = dirname(realpath(self_path_symlink, self_path));
-  path.append(bin_dir).append(kTestDataDir);
-#else
-#error unknown platform.
-#endif
-  path.append(filename);
-  return path.string();
-}
-
-// Populates a FakeCpuidIo from the raw format of an entry in the CPUID corpus.
-void PopulateFromFile(std::string_view filename, arch::testing::FakeCpuidIo* cpuid) {
-  std::string path = GetTestDataPath(filename);
-  std::string contents;
-  ASSERT_TRUE(files::ReadFileToString(path, &contents));
-  rapidjson::Document document;
-  document.Parse(contents);
-  ASSERT_FALSE(document.HasParseError());
-  ASSERT_TRUE(document.IsArray());
-
-  bool hypervisor_leaves = false;  // Whether such leaves are present.
-  for (rapidjson::SizeType i = 0; i < document.Size(); ++i) {
-    const auto& entry = document[i];
-    ASSERT_TRUE(entry.IsObject());
-    ASSERT_TRUE(entry["leaf"].IsUint());
-    ASSERT_TRUE(entry["subleaf"].IsUint());
-    ASSERT_TRUE(entry["eax"].IsUint());
-    ASSERT_TRUE(entry["ebx"].IsUint());
-    ASSERT_TRUE(entry["ecx"].IsUint());
-    ASSERT_TRUE(entry["edx"].IsUint());
-    const uint32_t leaf = entry["leaf"].GetUint();
-    cpuid->Populate(leaf, entry["subleaf"].GetUint(), entry["eax"].GetUint(),
-                    entry["ebx"].GetUint(), entry["ecx"].GetUint(), entry["edx"].GetUint());
-
-    hypervisor_leaves = hypervisor_leaves || (0x4000'0000 <= leaf && leaf < 0x8000'0000);
-  }
-
-  // Generally, the zeroth hypervisor leaf is safe to compute, even if no
-  // hypervisor is actually present. If no hypervisor leaves are present,
-  // we stub in one with garbage values, which ensures that we are doing
-  // proper feature testing, e.g., in creating an arch::HypervisorName.
-  if (!hypervisor_leaves) {
-    cpuid->Populate(0x4000'0000, 0x0, 0xaaaa'aaaa, 0xbbbb'bbbb, 0xcccc'cccc, 0xdddd'dddd);
-  }
-}
+using arch::testing::X86Microprocessor;
 
 //
 // Tests.
 //
 
-TEST(CpuidTests, Core2_6300) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("core2-6300.json", &cpuid));
+TEST(CpuidTests, IntelCore2_6300) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelCore2_6300);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelCore2, arch::GetMicroarchitecture(cpuid));
@@ -146,9 +72,8 @@ TEST(CpuidTests, Core2_6300) {
   }
 }
 
-TEST(CpuidTests, Nehalem_Xeon_E5520) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("nehalem-xeon-e5520.json", &cpuid));
+TEST(CpuidTests, IntelXeonE5520) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5520);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelNehalem, arch::GetMicroarchitecture(cpuid));
@@ -192,9 +117,8 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
   }
 }
 
-TEST(CpuidTests, SandyBridge_i7_2600K) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("sandy-bridge-i7-2600k.json", &cpuid));
+TEST(CpuidTests, IntelCoreI7_2600k) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelCoreI7_2600k);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelSandyBridge, arch::GetMicroarchitecture(cpuid));
@@ -238,9 +162,8 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
   }
 }
 
-TEST(CpuidTests, IvyBridge_i3_3240) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ivy-bridge-i3-3240.json", &cpuid));
+TEST(CpuidTests, IntelCoreI3_3240) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelCoreI3_3240);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelIvyBridge, arch::GetMicroarchitecture(cpuid));
@@ -286,9 +209,8 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
   }
 }
 
-TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("haswell-xeon-e5-2690v3.json", &cpuid));
+TEST(CpuidTests, IntelXeonE5_2690_V3) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V3);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelHaswell, arch::GetMicroarchitecture(cpuid));
@@ -334,9 +256,8 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
   }
 }
 
-TEST(CpuidTests, Skylake_i3_6100) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("skylake-i3-6100.json", &cpuid));
+TEST(CpuidTests, IntelCoreI3_6100) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelCoreI3_6100);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
@@ -380,9 +301,8 @@ TEST(CpuidTests, Skylake_i3_6100) {
   }
 }
 
-TEST(CpuidTests, AtomD510) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("atom-d510.json", &cpuid));
+TEST(CpuidTests, IntelAtomD510) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelAtomD510);
 
   EXPECT_EQ(arch::Vendor::kIntel, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kIntelBonnell, arch::GetMicroarchitecture(cpuid));
@@ -426,9 +346,8 @@ TEST(CpuidTests, AtomD510) {
   }
 }
 
-TEST(CpuidTests, Ryzen2700X) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-2700x.json", &cpuid));
+TEST(CpuidTests, AmdRyzen7_2700x) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen7_2700x);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -474,9 +393,8 @@ TEST(CpuidTests, Ryzen2700X) {
   }
 }
 
-TEST(CpuidTests, Ryzen3950X) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x.json", &cpuid));
+TEST(CpuidTests, AmdRyzen9_3950x) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950x);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -522,9 +440,8 @@ TEST(CpuidTests, Ryzen3950X) {
   }
 }
 
-TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-virtualbox-hyperv.json", &cpuid));
+TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVirtualBoxHyperv);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -572,9 +489,8 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
   }
 }
 
-TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-virtualbox-kvm.json", &cpuid));
+TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVirtualBoxKvm);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -622,9 +538,8 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
   }
 }
 
-TEST(CpuidTests, Ryzen3950X_VMware) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-vmware.json", &cpuid));
+TEST(CpuidTests, AmdRyzen9_3950xVmware) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVmware);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -670,9 +585,8 @@ TEST(CpuidTests, Ryzen3950X_VMware) {
   }
 }
 
-TEST(CpuidTests, Ryzen3950X_WSL2) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-wsl2.json", &cpuid));
+TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xWsl2);
 
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
@@ -720,10 +634,8 @@ TEST(CpuidTests, Ryzen3950X_WSL2) {
   }
 }
 
-TEST(CpuidTests, Threadripper1950X) {
-  arch::testing::FakeCpuidIo cpuid;
-  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("threadripper-1950x.json", &cpuid));
-
+TEST(CpuidTests, AmdRyzenThreadripper1950x) {
+  arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzenThreadripper1950x);
   EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
   EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
 

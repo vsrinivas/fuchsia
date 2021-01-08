@@ -15,6 +15,28 @@
 
 namespace arch::testing {
 
+// Represents an x86 microprocessor, except where we stretch the term to also
+// include hypervisors running atop them.
+// Underscores are used to avoid the ambiguitity of otherwise concatenated
+// alphanumeric identifiers.
+// Entries are given chronologically within specific manufacture lines.
+enum class X86Microprocessor {
+  kIntelAtomD510,
+  kIntelCore2_6300,
+  kIntelCoreI3_3240,
+  kIntelCoreI3_6100,
+  kIntelCoreI7_2600k,
+  kIntelXeonE5520,
+  kIntelXeonE5_2690_V3,
+  kAmdRyzen7_2700x,
+  kAmdRyzen9_3950x,
+  kAmdRyzen9_3950xVirtualBoxHyperv,
+  kAmdRyzen9_3950xVirtualBoxKvm,
+  kAmdRyzen9_3950xVmware,
+  kAmdRyzen9_3950xWsl2,
+  kAmdRyzenThreadripper1950x,
+};
+
 // FakeCpuidIo is a fake analogue to arch::BootCpuidIo, which may be provided
 // in its place for tests - in the kernel and on host - for logic templated
 // on any type the interface contract of the latter. A "CPUID I/O provider",
@@ -28,6 +50,12 @@ namespace arch::testing {
 // around by const reference.
 class FakeCpuidIo {
  public:
+  FakeCpuidIo() = default;
+
+  // Constructs an FakeCpuidIo populated from the CPUID data collected from the
+  // provided mircoprocessor.
+  explicit FakeCpuidIo(X86Microprocessor microprocessor);
+
   // Returns the cached CpuidIo object corresponding to the particular CPUID
   // register type.
   template <typename CpuidValue>
