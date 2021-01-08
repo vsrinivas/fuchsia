@@ -469,7 +469,17 @@ void dlog_force_panic() { dlog_bypass_ = true; }
 static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
                                         ktl::atomic<bool>* shutdown_requested, Event* event,
                                         zx_time_t deadline) {
-  shutdown_requested->store(true);
+  const bool already_shutdown = shutdown_requested->exchange(true);
+  if (already_shutdown) {
+    // If shutdown has already been requested then either a full debuglog shutdown has already
+    // happened, or we are currently racing with one. In the former case we could immediately
+    // return, but in the latter we need to wait until they have finished shutdown. Given how
+    // unlikely this whole scenario is, and the comparative difficulty of synchronizing the second
+    // scenario we just wait till the deadline. Most likely whoever was already shutting down the
+    // debuglog will have performed halt/reboot before this sleep completes.
+    Thread::Current::Sleep(deadline);
+    return ZX_OK;
+  }
   event->Signal();
   if (thread != nullptr) {
     zx_status_t status = thread->Join(nullptr, deadline);
