@@ -676,10 +676,12 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kSimpleProtocol_Add_Ordinal, 0);
-    $encoder.alloc(_kSimpleProtocol_Add_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kSimpleProtocol_Add_Type.request!;
-    $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-    $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kSimpleProtocol_Add_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -713,11 +715,13 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kSimpleProtocol_Add_Ordinal, $message.txid);
-            $encoder
-                .alloc(_kSimpleProtocol_Add_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kSimpleProtocol_Add_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kSimpleProtocol_Add_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();

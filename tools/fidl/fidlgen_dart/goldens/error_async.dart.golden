@@ -293,9 +293,11 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kExample_foo_Ordinal, 0);
-    $encoder.alloc(_kExample_foo_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kExample_foo_Type.request!;
-    $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kExample_foo_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -335,9 +337,12 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
           }).then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kExample_foo_Ordinal, $message.txid);
-            $encoder.alloc(_kExample_foo_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kExample_foo_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();

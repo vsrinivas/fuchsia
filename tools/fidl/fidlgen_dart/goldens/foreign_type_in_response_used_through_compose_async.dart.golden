@@ -169,9 +169,12 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
           $future.then(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, $message.txid);
-            $encoder.alloc(_kTop_GetFoo_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kTop_GetFoo_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();

@@ -18,6 +18,7 @@ const int _kAlignment = 8;
 const int _kAlignmentMask = _kAlignment - 1;
 
 const int _kUnionAsXUnionFlag = 1;
+const int _maxOutOfLineDepth = 32;
 
 int _align(int size) => (size + _kAlignmentMask) & ~_kAlignmentMask;
 
@@ -42,6 +43,9 @@ class Encoder {
   final List<Handle> _handles = <Handle>[];
   int _extent = 0;
 
+  int _nextOutOfLineDepth = 0;
+  int get nextOutOfLineDepth => _nextOutOfLineDepth;
+
   void _grow(int newSize) {
     final Uint8List newList = Uint8List(newSize)
       ..setRange(0, data.lengthInBytes, data.buffer.asUint8List());
@@ -58,9 +62,20 @@ class Encoder {
   }
 
   int alloc(int size) {
+    if (_nextOutOfLineDepth > _maxOutOfLineDepth) {
+      throw FidlError('Exceeded maxOutOfLineDepth',
+          FidlErrorCode.fidlExceededMaxOutOfLineDepth);
+    }
+    _nextOutOfLineDepth++;
     int offset = _extent;
     _claimMemory(_align(size));
     return offset;
+  }
+
+  /// This method should be invoked as soon as the out-of-line object created by
+  /// a call to the alloc() method has been fully written.
+  void allocComplete() {
+    _nextOutOfLineDepth--;
   }
 
   int nextOffset() {
@@ -83,6 +98,7 @@ class Encoder {
     encodeUint8(0, kMessageFlagOffset + 2);
     encodeUint8(kMagicNumberInitial, kMessageMagicOffset);
     encodeUint64(ordinal, kMessageOrdinalOffset);
+    allocComplete();
   }
 
   void encodeBool(bool value, int offset) {
@@ -149,17 +165,31 @@ class Decoder {
   int _nextOffset = 0;
   int _nextHandle = 0;
 
+  int _nextOutOfLineDepth = 0;
+  int get nextOutOfLineDepth => _nextOutOfLineDepth;
+
   int nextOffset() {
     return _nextOffset;
   }
 
   int claimMemory(int size) {
+    if (_nextOutOfLineDepth > _maxOutOfLineDepth) {
+      throw FidlError('Exceeded maxOutOfLineDepth',
+          FidlErrorCode.fidlExceededMaxOutOfLineDepth);
+    }
+    _nextOutOfLineDepth++;
     final int result = _nextOffset;
     _nextOffset += _align(size);
     if (_nextOffset > data.lengthInBytes) {
       throw FidlError('Cannot access out of range memory');
     }
     return result;
+  }
+
+  /// This method should be invoked as soon as the out-of-line object defined by
+  /// a call to the claimMemory() method has been fully read.
+  void claimMemoryComplete() {
+    _nextOutOfLineDepth--;
   }
 
   int countClaimedHandles() {

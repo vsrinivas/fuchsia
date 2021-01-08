@@ -1024,11 +1024,14 @@ class WithAndWithoutRequestResponseProxy
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(
         _kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, 0);
-    $encoder.alloc(_kWithAndWithoutRequestResponse_WithRequestNoResponse_Type
-        .encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestNoResponse_Type.request!;
-    $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kWithAndWithoutRequestResponse_WithRequestNoResponse_Type
+            .encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -1045,11 +1048,14 @@ class WithAndWithoutRequestResponseProxy
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(
         _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, 0);
-    $encoder.alloc(_kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type
-        .encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type.request!;
-    $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type
+            .encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -1066,11 +1072,14 @@ class WithAndWithoutRequestResponseProxy
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(
         _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, 0);
-    $encoder.alloc(_kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
-        .encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type.request!;
-    $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
+            .encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<String>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -1110,8 +1119,6 @@ class WithAndWithoutRequestResponseBinding
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, 0);
-            $encoder.alloc(_kWithAndWithoutRequestResponse_OnEmptyResponse_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.response!;
 
@@ -1124,11 +1131,14 @@ class WithAndWithoutRequestResponseBinding
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, 0);
-            $encoder.alloc(_kWithAndWithoutRequestResponse_OnWithResponse_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_OnWithResponse_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithAndWithoutRequestResponse_OnWithResponse_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             sendMessage($encoder.message);
           }));
         }
@@ -1221,13 +1231,15 @@ class WithAndWithoutRequestResponseBinding
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
                 $message.txid);
-            $encoder.alloc(
-                _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type
-                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type
                     .response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -1329,13 +1341,15 @@ class WithAndWithoutRequestResponseBinding
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
                 $message.txid);
-            $encoder.alloc(
-                _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
-                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
                     .response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -1642,11 +1656,14 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kWithErrorSyntax_ResponseAsStruct_Ordinal, $message.txid);
-            $encoder.alloc(_kWithErrorSyntax_ResponseAsStruct_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ResponseAsStruct_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithErrorSyntax_ResponseAsStruct_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -1689,11 +1706,14 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kWithErrorSyntax_ErrorAsPrimitive_Ordinal, $message.txid);
-            $encoder.alloc(_kWithErrorSyntax_ErrorAsPrimitive_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ErrorAsPrimitive_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithErrorSyntax_ErrorAsPrimitive_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -1734,11 +1754,13 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kWithErrorSyntax_ErrorAsEnum_Ordinal, $message.txid);
-            $encoder.alloc(_kWithErrorSyntax_ErrorAsEnum_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ErrorAsEnum_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithErrorSyntax_ErrorAsEnum_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -1996,11 +2018,14 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChannelProtocol_MethodA_Ordinal, 0);
-    $encoder.alloc(_kChannelProtocol_MethodA_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MethodA_Type.request!;
-    $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-    $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kChannelProtocol_MethodA_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -2022,11 +2047,14 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChannelProtocol_MethodB_Ordinal, 0);
-    $encoder.alloc(_kChannelProtocol_MethodB_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MethodB_Type.request!;
-    $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-    $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kChannelProtocol_MethodB_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2042,11 +2070,13 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal, 0);
-    $encoder
-        .alloc(_kChannelProtocol_TakeHandle_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_TakeHandle_Type.request!;
-    $types[0].encode($encoder, h, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kChannelProtocol_TakeHandle_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2062,11 +2092,12 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChannelProtocol_MutateSocket_Ordinal, 0);
-    $encoder
-        .alloc(_kChannelProtocol_MutateSocket_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MutateSocket_Type.request!;
-    $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback($encoder,
+        _kChannelProtocol_MutateSocket_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<$zircon.Socket>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2091,13 +2122,13 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
           $subscriptions.add(_eventA_stream.listen(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kChannelProtocol_EventA_Ordinal, 0);
-            $encoder.alloc(
-                _kChannelProtocol_EventA_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_EventA_Type.response!;
-
-            $types[0].encode($encoder, $response.a, $fidl.kMessageHeaderSize);
-            $types[1].encode($encoder, $response.b, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessageWithCallback($encoder,
+                _kChannelProtocol_EventA_Type.encodingResponseInlineSize(), () {
+              $types[0].encode($encoder, $response.a, $fidl.kMessageHeaderSize);
+              $types[1].encode($encoder, $response.b, $fidl.kMessageHeaderSize);
+            });
             sendMessage($encoder.message);
           }));
         }
@@ -2155,11 +2186,13 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kChannelProtocol_MethodB_Ordinal, $message.txid);
-            $encoder.alloc(
-                _kChannelProtocol_MethodB_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_MethodB_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kChannelProtocol_MethodB_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -2227,11 +2260,14 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kChannelProtocol_MutateSocket_Ordinal, $message.txid);
-            $encoder.alloc(_kChannelProtocol_MutateSocket_Type
-                .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_MutateSocket_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kChannelProtocol_MutateSocket_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -2410,9 +2446,11 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kTransitional_Request_Ordinal, 0);
-    $encoder.alloc(_kTransitional_Request_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kTransitional_Request_Type.request!;
-    $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kTransitional_Request_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+    });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2428,9 +2466,11 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kTransitional_OneWay_Ordinal, 0);
-    $encoder.alloc(_kTransitional_OneWay_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kTransitional_OneWay_Type.request!;
-    $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kTransitional_OneWay_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -2459,11 +2499,13 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
           $subscriptions.add(_event_stream.listen(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kTransitional_Event_Ordinal, 0);
-            $encoder
-                .alloc(_kTransitional_Event_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTransitional_Event_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kTransitional_Event_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             sendMessage($encoder.message);
           }));
         }
@@ -2495,11 +2537,13 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kTransitional_Request_Ordinal, $message.txid);
-            $encoder.alloc(
-                _kTransitional_Request_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTransitional_Request_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kTransitional_Request_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();

@@ -82,6 +82,29 @@ class Message {
   }
 }
 
+void _validateEncoding(Encoder encoder) {
+  if (encoder.nextOutOfLineDepth != 0) {
+    int ool = encoder.nextOutOfLineDepth;
+    throw FidlError(
+        'Encoding completed with a non-zero out-of-line-depth ($ool)');
+  }
+}
+
+void encodeMessage<T>(
+    Encoder encoder, int inlineSize, MemberType typ, T value) {
+  encoder.alloc(inlineSize);
+  typ.encode(encoder, value, kMessageHeaderSize);
+  encoder.allocComplete();
+  _validateEncoding(encoder);
+}
+
+void encodeMessageWithCallback(Encoder encoder, int inlineSize, Function() f) {
+  encoder.alloc(inlineSize);
+  f();
+  encoder.allocComplete();
+  _validateEncoding(encoder);
+}
+
 void _validateDecoding(Decoder decoder) {
   if (decoder.countUnclaimedHandles() > 0) {
     // If there are unclaimed handles at the end of the decoding, close all
@@ -101,6 +124,12 @@ void _validateDecoding(Decoder decoder) {
         'Message contains extra handles (unclaimed: $unclaimed, total: $total)',
         FidlErrorCode.fidlTooManyHandles);
   }
+
+  if (decoder.nextOutOfLineDepth != 0) {
+    int ool = decoder.nextOutOfLineDepth;
+    throw FidlError(
+        'Decoding completed with a non-zero out-of-line-depth ($ool)');
+  }
 }
 
 /// Decodes a single FIDL message.  Most messages can be decoded using this
@@ -110,6 +139,7 @@ T decodeMessage<T>(Message message, int inlineSize, MemberType typ) {
   final Decoder decoder = Decoder(message)
     ..claimMemory(kMessageHeaderSize + inlineSize);
   T decoded = typ.decode(decoder, kMessageHeaderSize);
+  decoder.claimMemoryComplete();
   _validateDecoding(decoder);
   return decoded;
 }
@@ -123,6 +153,7 @@ A decodeMessageWithCallback<A>(
   final Decoder decoder = Decoder(message)
     ..claimMemory(kMessageHeaderSize + inlineSize);
   A out = f(decoder);
+  decoder.claimMemoryComplete();
   _validateDecoding(decoder);
   return out;
 }

@@ -493,10 +493,13 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kExampleProtocol_Method_Ordinal, 0);
-    $encoder.alloc(_kExampleProtocol_Method_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kExampleProtocol_Method_Type.request!;
-    $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kExampleProtocol_Method_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });

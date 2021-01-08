@@ -7,6 +7,7 @@
 // TODO(fxbug.dev/8076) Generate these values.
 enum FidlErrorCode {
   unknown,
+  fidlExceededMaxOutOfLineDepth,
   fidlInvaliNumBytesInEnvelope,
   fidlInvaliNumHandlesInEnvelope,
   fidlTooManyHandles,

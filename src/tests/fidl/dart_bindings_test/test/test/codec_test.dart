@@ -11,15 +11,20 @@ import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
 void main() async {
+  ExampleXunion xunion;
+
   group('encode/decode', () {
-    // TODO(fxbug.dev/56687): test in GIDL
-    test('unknown ordinal flexible with handles', () async {
+    setUpAll(() async {
       ChannelPair pair = ChannelPair();
       expect(pair.status, equals(ZX.OK));
       pair.second.close();
 
-      final xunion = ExampleXunion.withWithHandle(
+      xunion = ExampleXunion.withWithHandle(
           NumberHandleNumber(n1: 1, h: pair.first.handle, n2: 2));
+    });
+
+    // TODO(fxbug.dev/56687): test in GIDL
+    test('unknown ordinal flexible with handles', () async {
       var encoder = Encoder()..alloc(24);
       kExampleXunion_Type.encode(encoder, xunion, 0);
 
@@ -40,6 +45,7 @@ void main() async {
 
       encoder = Encoder()..alloc(24);
       kExampleXunion_Type.encode(encoder, unknownXunion, 0);
+
       expect(encoder.message.data.lengthInBytes, 40);
       final bytes = encoder.message.data.buffer.asUint8List(0, 40);
       expect(
@@ -87,6 +93,23 @@ void main() async {
       encoder.encodeUint32(4294967295, 0);
       expect(() => encoder.encodeUint32(-1, 0), throwsException);
       expect(() => encoder.encodeUint32(4294967296, 0), throwsException);
+    });
+
+    test('encode out of line depth check', () {
+      MemberType member = MemberType(
+        type: kExampleXunion_Type,
+        offset: 0,
+      );
+
+      final encoder = Encoder()
+        ..encodeMessageHeader(0, 0)
+        // An alloc call without a matching allocComplete call should cause an
+        //error.
+        ..alloc(0);
+      expect(
+          () => encodeMessage(encoder, kExampleXunion_Type.encodingInlineSize(),
+              member, xunion),
+          throwsA(predicate((err) => err is FidlError)));
     });
   });
 }

@@ -122,9 +122,11 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kParent_First_Ordinal, 0);
-    $encoder.alloc(_kParent_First_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
-    $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kParent_First_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -260,9 +262,11 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChild_First_Ordinal, 0);
-    $encoder.alloc(_kChild_First_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kChild_First_Type.request!;
-    $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kChild_First_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -278,9 +282,11 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kChild_Second_Ordinal, 0);
-    $encoder.alloc(_kChild_Second_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kChild_Second_Type.request!;
-    $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kChild_Second_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, request, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });

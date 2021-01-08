@@ -684,6 +684,7 @@ void _encodeString(
     ..encodeUint64(kAllocPresent, offset + 8); // data
   int childOffset = encoder.alloc(size);
   _copyUint8(encoder.data, bytes, childOffset);
+  encoder.allocComplete();
 }
 
 String? _decodeString(Decoder decoder, int offset) {
@@ -702,6 +703,8 @@ String? _decodeString(Decoder decoder, int offset) {
     return const Utf8Decoder().convert(bytes, 0, size);
   } on FormatException {
     throw FidlError('Received a string with invalid UTF8: $bytes');
+  } finally {
+    decoder.claimMemoryComplete();
   }
 }
 
@@ -774,6 +777,7 @@ class PointerType<T> extends SimpleFidlType<T?> {
       encoder.encodeUint64(kAllocPresent, offset);
       int childOffset = encoder.alloc(element.encodingInlineSize());
       element.encode(encoder, value, childOffset);
+      encoder.allocComplete();
     }
   }
 
@@ -784,8 +788,10 @@ class PointerType<T> extends SimpleFidlType<T?> {
     if (data == kAllocAbsent) {
       return null;
     }
-    return element.decode(
+    T? decoded = element.decode(
         decoder, decoder.claimMemory(element.decodingInlineSize()));
+    decoder.claimMemoryComplete();
+    return decoded;
   }
 
   void validateEncoded(int encoded) {
@@ -845,7 +851,8 @@ void _encodeEnvelopePresent<T, I extends Iterable<T>>(
   encoder
     ..encodeUint32(numBytes, offset)
     ..encodeUint32(numHandles, offset + 4)
-    ..encodeUint64(kAllocPresent, offset + 8);
+    ..encodeUint64(kAllocPresent, offset + 8)
+    ..allocComplete();
 }
 
 void _encodeEnvelopeAbsent(Encoder encoder, int offset) {
@@ -885,12 +892,16 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
         final numHandlesConsumed =
             decoder.countClaimedHandles() - claimedHandles;
-        if (header.numHandles != numHandlesConsumed)
+
+        decoder.claimMemoryComplete();
+        if (header.numHandles != numHandlesConsumed) {
           throw FidlError('envelope handles were mis-sized',
               FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
-        if (header.numBytes != numBytesConsumed)
+        }
+        if (header.numBytes != numBytesConsumed) {
           throw FidlError('envelope was mis-sized',
               FidlErrorCode.fidlInvaliNumBytesInEnvelope);
+        }
         return field;
       }
 
@@ -904,6 +915,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
           // best effort
         }
       }
+      decoder.claimMemoryComplete();
       return null;
     case kAllocAbsent:
       if (header.numBytes != 0)
@@ -992,6 +1004,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       }
       envelopeOffset += _kEnvelopeSize;
     }
+    encoder.allocComplete();
   }
 
   @override
@@ -1045,6 +1058,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       }
       envelopeOffset += _kEnvelopeSize;
     }
+    decoder.claimMemoryComplete();
 
     return ctor(argv, unknownData);
   }
@@ -1262,6 +1276,7 @@ void _encodeVector<T, I extends Iterable<T>>(
     ..encodeUint64(kAllocPresent, offset + 8); // data
   int childOffset = encoder.alloc(count * element.encodingInlineSize());
   element.encodeArray(encoder, value, childOffset);
+  encoder.allocComplete();
 }
 
 I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
@@ -1273,7 +1288,9 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
     return null;
   }
   final int base = decoder.claimMemory(count * element.decodingInlineSize());
-  return element.decodeArray(decoder, count, base);
+  I? out = element.decodeArray(decoder, count, base);
+  decoder.claimMemoryComplete();
+  return out;
 }
 
 class VectorType<T, I extends Iterable<T>> extends SimpleFidlType<I> {

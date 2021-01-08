@@ -76,12 +76,18 @@ $async.Future<void>
 */}}
 {{- define "EncodeResponse" -}}
   {{- if (and .AsyncResponseClass (not .Response.HasError)) -}}
-    {{- range $index, $response := .Response.WireParameters }}
-      $types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize);
-    {{- end }}
+		$fidl.encodeMessageWithCallback(
+			$encoder,
+			{{ .TypeSymbol }}.encodingResponseInlineSize(),
+			() {
+				{{- range $index, $response := .Response.WireParameters }}
+					$types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize);
+				{{- end -}}
+			}
+		);
   {{- else -}}
     {{- if .Response.WireParameters -}}
-      $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+			$fidl.encodeMessage($encoder, {{ .TypeSymbol }}.encodingResponseInlineSize(), $types[0], $response);
     {{- end -}}
   {{- end -}}
 {{ end -}}
@@ -311,11 +317,16 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       final $fidl.Encoder $encoder = $fidl.Encoder();
       $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
       {{- if .Request }}
-        $encoder.alloc({{ .TypeSymbol }}.encodingRequestInlineSize());
         final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
-      {{- end }}
-      {{- range $index, $request := .Request }}
-        $types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize);
+				$fidl.encodeMessageWithCallback(
+					$encoder,
+					{{ .TypeSymbol }}.encodingRequestInlineSize(),
+					() {
+						{{- range $index, $request := .Request }}
+							$types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize);
+						{{- end -}}
+					}
+				);
       {{- end }}
 
       {{- if .HasResponse }}
@@ -359,7 +370,6 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
               $subscriptions.add(_{{ .Name }}_stream.listen(($response) {
                 final $fidl.Encoder $encoder = $fidl.Encoder();
                 $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
-                $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize());
                 final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                 {{ template "EncodeResponse" . }}
                 sendMessage($encoder.message);
@@ -430,7 +440,6 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                   final $fidl.Encoder $encoder = $fidl.Encoder();
                   $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid);
                   {{- if .Response.WireParameters }}
-                    $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize());
                     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                     {{ template "EncodeResponse" . -}}
                   {{- end }}

@@ -303,9 +303,11 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kParent_TakeChild_Ordinal, 0);
-    $encoder.alloc(_kParent_TakeChild_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types = _kParent_TakeChild_Type.request!;
-    $types[0].encode($encoder, c, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kParent_TakeChild_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, c, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -321,10 +323,13 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
 
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kParent_TakeChildRequest_Ordinal, 0);
-    $encoder.alloc(_kParent_TakeChildRequest_Type.encodingRequestInlineSize());
     final List<$fidl.MemberType> $types =
         _kParent_TakeChildRequest_Type.request!;
-    $types[0].encode($encoder, r, $fidl.kMessageHeaderSize);
+    $fidl.encodeMessageWithCallback(
+        $encoder, _kParent_TakeChildRequest_Type.encodingRequestInlineSize(),
+        () {
+      $types[0].encode($encoder, r, $fidl.kMessageHeaderSize);
+    });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -355,10 +360,13 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kParent_GetChild_Ordinal, $message.txid);
-            $encoder.alloc(_kParent_GetChild_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kParent_GetChild_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kParent_GetChild_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -391,11 +399,13 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(
                 _kParent_GetChildRequest_Ordinal, $message.txid);
-            $encoder.alloc(
-                _kParent_GetChildRequest_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kParent_GetChildRequest_Type.response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kParent_GetChildRequest_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();

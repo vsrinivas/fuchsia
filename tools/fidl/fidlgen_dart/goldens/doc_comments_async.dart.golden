@@ -768,8 +768,6 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
           $subscriptions.add(_onEvent_stream.listen(($response) {
             final $fidl.Encoder $encoder = $fidl.Encoder();
             $encoder.encodeMessageHeader(_kInterface_OnEvent_Ordinal, 0);
-            $encoder
-                .alloc(_kInterface_OnEvent_Type.encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kInterface_OnEvent_Type.response!;
 

@@ -2607,13 +2607,15 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             $encoder.encodeMessageHeader(
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
                 $message.txid);
-            $encoder.alloc(
-                _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
-                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
                     .response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
@@ -2651,13 +2653,15 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             $encoder.encodeMessageHeader(
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
                 $message.txid);
-            $encoder.alloc(
-                _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
-                    .encodingResponseInlineSize());
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
                     .response!;
-            $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $fidl.encodeMessage(
+                $encoder,
+                _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
