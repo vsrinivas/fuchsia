@@ -202,7 +202,7 @@ directly.
 
  * `vk_icdGetInstanceProcAddr`
  * `vk_icdNegotiateLoaderICDInterfaceVersion`
- * `vk_icdInitializeConnectToServiceCallback`
+ * `vk_icdInitializeOpenInNamespaceCallback`
 
 In addition, the Vulkan ICD shared library has a `NEEDED` section that lists
 several shared libraries upon which the Vulkan ICD depends. The package
