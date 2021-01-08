@@ -69,7 +69,7 @@ impl SshFormatter for TargetAddr {
 ///
 /// Based on the structure from which the SSH address is coming, this will
 /// return in order of priority:
-/// -- The first local IPv6 address.
+/// -- The first local IPv6 address with a scope id.
 /// -- The last local IPv4 address.
 /// -- Any other address.
 pub trait SshAddrFetcher {
@@ -80,10 +80,13 @@ impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T
     fn to_ssh_addr(self) -> Option<TargetAddr> {
         let mut res: Option<TargetAddr> = None;
         for addr in self.into_iter() {
-            if res.is_none() || addr.ip().is_local_addr() {
+            let is_valid_local_addr = addr.ip().is_local_addr()
+                && (addr.ip().is_ipv4() || !(addr.ip().is_link_local_addr() && addr.scope_id == 0));
+
+            if res.is_none() || is_valid_local_addr {
                 res.replace(addr.clone());
             }
-            if addr.ip().is_local_addr() && addr.ip().is_ipv6() {
+            if addr.ip().is_ipv6() && is_valid_local_addr {
                 res.replace(addr.clone());
                 break;
             }
@@ -1758,10 +1761,11 @@ mod test {
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
             SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)),
             SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
-            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 1)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::3".parse().unwrap(), 0, 0, 0)),
         ];
         let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
-        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[2]));
+        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[3]));
 
         let sockets = vec![
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),

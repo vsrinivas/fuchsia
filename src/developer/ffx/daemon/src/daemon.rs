@@ -638,7 +638,7 @@ mod test {
         let fake_target = Target::new(ascendd.clone(), nodename);
         fake_target
             .addrs_insert(
-                SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)).into(),
+                SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 1)).into(),
             )
             .await;
         res.send_mdns_discovery_event(fake_target).await;
@@ -791,7 +791,7 @@ mod test {
             ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
                 addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),
-            scope_id: 0,
+            scope_id: 1,
         }));
         assert_eq!(r, want);
 
