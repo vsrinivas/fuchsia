@@ -12,8 +12,14 @@ use {
         properties::{DataKind, ExtentProperties},
         utils::{RangeOps, ReadAndSeek},
     },
+    flate2::{write::GzEncoder, Compression},
     std::{fmt, io::Write, ops::Range},
 };
+
+enum Streamer {
+    UncompressedStream(Box<dyn Write>),
+    CompressedStream(GzEncoder<Box<dyn Write>>),
+}
 
 /// `Extractor` helps to extract disk images.
 ///
@@ -37,7 +43,7 @@ use {
 /// extractor.write().unwrap();
 /// ```
 pub struct Extractor {
-    out_stream: Box<dyn Write>,
+    streamer: Streamer,
     in_stream: Box<dyn ReadAndSeek>,
     options: ExtractorOptions,
     extent_cluster: ExtentCluster,
@@ -68,7 +74,12 @@ impl Extractor {
     ) -> Extractor {
         let cluster = ExtentCluster::new(&options);
         Extractor {
-            out_stream: out_stream,
+            streamer: match options.compress {
+                true => {
+                    Streamer::CompressedStream(GzEncoder::new(out_stream, Compression::default()))
+                }
+                false => Streamer::UncompressedStream(out_stream),
+            },
             in_stream: in_stream,
             options: options,
             extent_cluster: cluster,
@@ -124,22 +135,28 @@ impl Extractor {
     /// Writes all pending extents and their data to the out_stream.
     pub fn write(&mut self) -> Result<u64, Error> {
         let mut bytes_written = 0;
+        let stream: &mut dyn Write = match &mut self.streamer {
+            Streamer::UncompressedStream(o) => o,
+            Streamer::CompressedStream(c) => c,
+        };
         if self.write_header {
             assert_eq!(self.current_offset, 0);
             let mut header = Header::new(self.options.alignment);
-            bytes_written = header.serialize_to(&mut self.out_stream)?;
+            bytes_written = header.serialize_to(stream)?;
             self.current_offset = bytes_written;
             self.write_header = false;
         }
         bytes_written = bytes_written
-            + self.extent_cluster.write(
-                &mut self.in_stream,
-                self.current_offset,
-                true,
-                &mut self.out_stream,
-            )?;
-        self.out_stream.flush().map_err(|_| Error::WriteFailed)?;
+            + self.extent_cluster.write(&mut self.in_stream, self.current_offset, true, stream)?;
+        stream.flush().map_err(|_| Error::WriteFailed)?;
         self.current_offset = self.current_offset + bytes_written;
+        match &mut self.streamer {
+            Streamer::CompressedStream(c) => {
+                c.try_finish().map_err(|_| Error::WriteFailed)?;
+                c.get_mut().flush().map_err(|_| Error::WriteFailed)?;
+            }
+            _ => {}
+        }
         Ok(bytes_written)
     }
 }
@@ -152,10 +169,11 @@ mod test {
             format::{ExtentClusterHeader, ExtentInfo, Header},
             properties::{DataKind, ExtentKind},
         },
+        flate2::write::GzDecoder,
         std::{
             convert::TryFrom,
             fs::File,
-            io::{Cursor, Read, Seek},
+            io::{Cursor, Read, Seek, SeekFrom},
         },
         tempfile::tempfile,
     };
@@ -174,6 +192,7 @@ mod test {
 
         let mut options: ExtractorOptions = Default::default();
         options.alignment = 1;
+        options.compress = false;
         let extractor = Extractor::new(in_buffer, options, out_buffer);
         extractor
     }
@@ -229,8 +248,9 @@ mod test {
         assert!(extractor.add(10..11, override_properties, None).is_ok());
     }
 
-    fn new_file_based_extractor() -> (Extractor, ExtractorOptions, File, File) {
-        let options: ExtractorOptions = Default::default();
+    fn new_file_based_extractor(compress: bool) -> (Extractor, ExtractorOptions, File, File) {
+        let mut options: ExtractorOptions = Default::default();
+        options.compress = compress;
         let out_file = tempfile().unwrap();
         let mut in_file = tempfile().unwrap();
         for i in 0..64 {
@@ -240,7 +260,7 @@ mod test {
 
         let extractor = Extractor::new(
             Box::new(in_file.try_clone().unwrap()),
-            Default::default(),
+            options,
             Box::new(out_file.try_clone().unwrap()),
         );
         (extractor, options, out_file, in_file)
@@ -248,7 +268,7 @@ mod test {
 
     #[test]
     fn test_write_empty() {
-        let (mut extractor, options, out_file, _) = new_file_based_extractor();
+        let (mut extractor, options, out_file, _) = new_file_based_extractor(false);
         let bytes_written = extractor.write().unwrap();
         assert_eq!(bytes_written, 2 * options.alignment);
         assert_eq!(bytes_written, out_file.metadata().unwrap().len());
@@ -256,7 +276,7 @@ mod test {
 
     #[test]
     fn test_write() {
-        let (mut extractor, options, mut out_file, _) = new_file_based_extractor();
+        let (mut extractor, options, mut out_file, _) = new_file_based_extractor(false);
 
         // Add pii
         let pii_range = options.alignment..options.alignment * 2;
@@ -313,5 +333,63 @@ mod test {
             // blocks contain value data_offset.
             assert_eq!(*byte, data_offset as u8);
         }
+    }
+
+    // In this test we extract same image twice; once with compression on and once with off and check that the size of compressed image is smaller.
+    #[test]
+    fn test_compression() {
+        let (mut uncompressed_extractor, options, mut uncompressed_out_file, _) =
+            new_file_based_extractor(false);
+
+        // Add pii
+        let pii_range = options.alignment..options.alignment * 2;
+        let pii_properties =
+            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified };
+        uncompressed_extractor.add(pii_range.clone(), pii_properties, None).unwrap();
+
+        // Add data
+        let data_offset = 4;
+        let data_range = options.alignment * data_offset..options.alignment * 5;
+        let data_properties =
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
+        uncompressed_extractor.add(data_range.clone(), data_properties, None).unwrap();
+
+        // Add skipped data block
+        let skipped_range = options.alignment * 8..options.alignment * 10;
+        let skipped_properties =
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Skipped };
+        uncompressed_extractor.add(skipped_range.clone(), skipped_properties, None).unwrap();
+
+        assert!(uncompressed_extractor.write().unwrap() > 0);
+        assert_eq!(uncompressed_out_file.metadata().unwrap().len(), 3 * options.alignment);
+
+        let (mut compressed_extractor, _options, mut compressed_out_file, _) =
+            new_file_based_extractor(true);
+        compressed_extractor.add(pii_range.clone(), pii_properties, None).unwrap();
+        compressed_extractor.add(data_range.clone(), data_properties, None).unwrap();
+        compressed_extractor.add(skipped_range.clone(), skipped_properties, None).unwrap();
+        assert!(compressed_extractor.write().unwrap() > 0);
+        assert!(compressed_out_file.metadata().unwrap().len() > 0);
+        assert_ne!(
+            uncompressed_out_file.metadata().unwrap().len(),
+            compressed_out_file.metadata().unwrap().len()
+        );
+
+        let mut raw_image = Vec::new();
+        uncompressed_out_file.seek(SeekFrom::Start(0)).unwrap();
+        uncompressed_out_file.read_to_end(&mut raw_image).unwrap();
+
+        let mut compressed_image = Vec::new();
+        compressed_out_file.seek(SeekFrom::Start(0)).unwrap();
+        compressed_out_file.read_to_end(&mut compressed_image).unwrap();
+        let mut uncompressed_image = Vec::new();
+        let mut decoder = GzDecoder::new(uncompressed_image);
+        decoder.write_all(&compressed_image[..]).unwrap();
+        uncompressed_image = decoder.finish().unwrap();
+        assert_eq!(uncompressed_image.len(), raw_image.len());
+        assert_eq!(
+            uncompressed_image.iter().zip(&raw_image).filter(|&(a, b)| a == b).count(),
+            uncompressed_image.len()
+        );
     }
 }

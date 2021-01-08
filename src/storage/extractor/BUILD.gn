@@ -18,6 +18,7 @@ rustc_library("disk_extractor_lib") {
     "//third_party/rust_crates:bincode",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:crc",
+    "//third_party/rust_crates:flate2",
     "//third_party/rust_crates:thiserror",
   ]
 

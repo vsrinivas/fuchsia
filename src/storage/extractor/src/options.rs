@@ -19,10 +19,18 @@ pub struct ExtractorOptions {
     /// Forces alignment of extents and extractor metadata within extracted
     /// image file.
     pub alignment: u64,
+
+    /// Using gzip, compresses extracted image before writing it.
+    pub compress: bool,
 }
 
 impl Default for ExtractorOptions {
     fn default() -> Self {
-        Self { force_dump_pii: false, add_checksum: false, alignment: DEFAULT_ALIGNMENT }
+        Self {
+            force_dump_pii: false,
+            add_checksum: false,
+            alignment: DEFAULT_ALIGNMENT,
+            compress: true,
+        }
     }
 }

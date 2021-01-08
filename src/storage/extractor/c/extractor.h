@@ -138,6 +138,8 @@ struct ExtractorOptions {
   // Forces alignment of extents and extractor metadata within extracted
   // image file.
   uint64_t alignment;
+  // Using gzip, compresses extracted image before writing it.
+  bool compress;
 };
 
 // Properties of an extent

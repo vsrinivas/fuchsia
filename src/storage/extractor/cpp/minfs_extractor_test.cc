@@ -102,8 +102,10 @@ fbl::unique_fd CreateAndExtract(fbl::unique_fd& input_fd, bool dump_pii) {
   char out_path[] = "/tmp/minfs-extraction.XXXXXX";
   fbl::unique_fd output_fd(mkostemp(out_path, O_RDWR | O_CREAT | O_EXCL));
   EXPECT_TRUE(output_fd);
-  ExtractorOptions options = ExtractorOptions{
-      .force_dump_pii = dump_pii, .add_checksum = false, .alignment = minfs::kMinfsBlockSize};
+  ExtractorOptions options = ExtractorOptions{.force_dump_pii = dump_pii,
+                                              .add_checksum = false,
+                                              .alignment = minfs::kMinfsBlockSize,
+                                              .compress = false};
   auto extractor =
       std::move(Extractor::Create(input_fd.duplicate(), options, output_fd.duplicate()).value());
   auto status = MinfsExtract(input_fd.duplicate(), *extractor);

@@ -41,10 +41,12 @@ std::tuple<fbl::unique_fd, fbl::unique_fd> setup_fds() {
 }
 
 TEST(Extractor, CreateInvalidAlignment) {
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = 0;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = 0,
+      .compress = false,
+  };
   fbl::unique_fd in;
   fbl::unique_fd out;
   auto extractor = Extractor::Create(std::move(in), options, std::move(out));
@@ -53,10 +55,12 @@ TEST(Extractor, CreateInvalidAlignment) {
 }
 
 TEST(Extractor, CreateFailureWithInvalidFd) {
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = 1;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = 1,
+      .compress = false,
+  };
   fbl::unique_fd in;
   fbl::unique_fd out;
   auto extractor = Extractor::Create(std::move(in), options, std::move(out));
@@ -65,10 +69,12 @@ TEST(Extractor, CreateFailureWithInvalidFd) {
 }
 
 TEST(Extractor, Create) {
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = 1;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = 1,
+      .compress = false,
+  };
   fbl::unique_fd in;
   fbl::unique_fd out;
   std::tie(in, out) = setup_fds();
@@ -82,10 +88,12 @@ TEST(Extractor, Create) {
 }
 
 TEST(Extractor, AddInvalidExtent) {
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = 1;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = 1,
+      .compress = false,
+  };
   fbl::unique_fd in;
   fbl::unique_fd out;
   std::tie(in, out) = setup_fds();
@@ -106,10 +114,12 @@ void verify_block(int fd, size_t size, off_t offset, uint8_t content) {
 }
 
 TEST(Extractor, AddUnaligned) {
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = 1024;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = 1024,
+      .compress = false,
+  };
 
   fbl::unique_fd in;
   fbl::unique_fd out;
@@ -125,10 +135,12 @@ TEST(Extractor, AddUnaligned) {
 
 TEST(Extractor, Write) {
   constexpr uint16_t kBlockSize = 8192;
-  ExtractorOptions options;
-  options.add_checksum = false;
-  options.force_dump_pii = false;
-  options.alignment = kBlockSize;
+  ExtractorOptions options = {
+      .force_dump_pii = false,
+      .add_checksum = false,
+      .alignment = kBlockSize,
+      .compress = false,
+  };
 
   fbl::unique_fd in;
   fbl::unique_fd out;
