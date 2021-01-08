@@ -337,7 +337,7 @@ config("optimize_profile") {
 }
 
 config("default_optimize") {
-  configs = [ ":optimize_${zircon_optimize}" ]
+  configs = [ ":optimize_${optimize}" ]
 }
 
 config("linker_gc_none") {
@@ -370,7 +370,7 @@ config("linker_gc_profile") {
 }
 
 config("default_linker_gc") {
-  configs = [ ":linker_gc_${zircon_optimize}" ]
+  configs = [ ":linker_gc_${optimize}" ]
 }
 
 # This is separate from default_optimize so it can be removed.

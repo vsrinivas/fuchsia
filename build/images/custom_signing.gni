@@ -102,7 +102,7 @@ template("custom_signed_zbi") {
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "-B",
-      rebase_path(zircon_root_build_dir, root_build_dir),
+      ".",
     ]
   }
 }

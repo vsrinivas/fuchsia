@@ -24,23 +24,12 @@ def run_command(command):
         command, stderr=subprocess.STDOUT, encoding="utf8")
 
 
-def get_common_gn_args(is_zircon):
+def get_common_gn_args():
     """Retrieve common GN args shared by several commands in this script.
-    Args:
-      is_zircon: True iff dealing with the Zircon build output directory.
     Returns:
       A list of GN command-line arguments (to be used after "gn <command>").
     """
-    if is_zircon:
-        return [
-            "out/default.zircon",
-            "--root=zircon",
-            "--all-toolchains",
-            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-arm64-clang)",
-            "//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-x64-clang)",
-        ]
-    else:
-        return ["out/default"]
+    return ["out/default"]
 
 
 def can_have_config(params):
@@ -56,10 +45,10 @@ def can_have_config(params):
               multiprocessing works.
     """
 
-    target, config, is_zircon = params
+    target, config, _ = params
 
     desc_command = ["fx", "gn", "desc"]
-    desc_command += get_common_gn_args(is_zircon)
+    desc_command += get_common_gn_args()
 
     try:
         desc_out = run_command(desc_command + [target, "configs"])
@@ -87,13 +76,10 @@ def main():
     parser.add_argument("--error", required=True, help="Compiler error marker")
     parser.add_argument("--config", required=True, help="Config to add")
     parser.add_argument("--comment", help="Comment to add before config")
-    parser.add_argument(
-        "--zircon", help="//zircon build (ZN)", action="store_true")
     args = parser.parse_args()
     error = args.error
     config = args.config
     comment = args.comment
-    zircon = args.zircon
 
     # Harvest all compilation errors
     print("Building...")
@@ -111,8 +97,6 @@ def main():
         match = error_regex.match(line)
         if match:
             path = os.path.normpath(match.group(1))
-            if zircon:
-                path = "//" + os.path.relpath(path, "zircon")
             error_files.add(path)
     print("Sources with compilation errors:")
     print("\n".join(sorted(error_files)))
@@ -122,9 +106,9 @@ def main():
 
     # Collect all BUILD.gn files with targets referencing failing sources
     print("Resolving references...")
-    outdir = "out/default.zircon" if zircon else "out/default"
+    outdir = "out/default"
     refs_command = ["fx", "gn", "refs"]
-    refs_command += get_common_gn_args(zircon)
+    refs_command += get_common_gn_args(False)
     refs_command += sorted(error_files)
     try:
         refs_out = run_command(refs_command)
@@ -147,7 +131,7 @@ def main():
             error_targets,
             p.map(
                 can_have_config,
-                ((target, config, zircon) for target in error_targets)),
+                ((target, config, False) for target in error_targets)),
         )
         error_targets = {
             target for target, can_have in target_can_have if can_have
@@ -164,8 +148,7 @@ def main():
         build_dir, target_name = match.groups()
         target_regex = re.compile(
             '^\s*\w*\("' + re.escape(target_name) + '"\) {')
-        build_file = os.path.join(
-            build_dir, "BUILD.gn" if not zircon else "BUILD.zircon.gn")
+        build_file = os.path.join(build_dir, "BUILD.gn")
         # Format file before processing
         run_command(["fx", "format-code", "--files=" + build_file])
         print("Fixing", target)
@@ -173,8 +156,6 @@ def main():
         config_printed = False
         in_configs = False
         curly_brace_depth = 0
-        if zircon:
-            build_file = os.path.join("zircon", build_file)
         secondary_build_file = os.path.join("build", "secondary", build_file)
         if os.path.exists(secondary_build_file):
             # Sometimes we put third_party BUILD.gn files in a shadow directory

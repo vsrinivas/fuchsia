@@ -97,29 +97,6 @@ if (current_toolchain == default_toolchain) {
     data_keys = [ "legacy_dirs" ]
     walk_keys = [ "legacy_barrier" ]
     deps = []
-    foreach(cpu, standard_fuchsia_cpus) {
-      deps += [ ":legacy-$cpu" ]
-    }
-  }
-
-  foreach(cpu, standard_fuchsia_cpus) {
-    group("legacy-$cpu") {
-      testonly = true
-      deps = [ ":legacy-deps-$cpu" ]
-    }
-  }
-}
-
-foreach(cpu, standard_fuchsia_cpus) {
-  environment_redirect("legacy-deps-$cpu") {
-    visibility = [ ":*" ]
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:user"
-    cpu = cpu
-    deps = [ "$zx/kernel" ]
-    metadata = {
-      legacy_barrier = []
-    }
   }
 }
 
@@ -127,9 +104,6 @@ build_api_module("legacy_images") {
   testonly = true
   data_keys = [ "images" ]
   deps = []
-  foreach(cpu, standard_fuchsia_cpus) {
-    deps += [ ":legacy-$cpu" ]
-  }
 }
 
 # This target complements legacy_images in that it lists the various elements
@@ -138,6 +112,6 @@ foreach(cpu, standard_fuchsia_cpus) {
   build_api_module("legacy_unification-$cpu") {
     testonly = true
     data_keys = [ "zx_manifest" ]
-    deps = [ ":legacy-$cpu" ]
+    deps = []
   }
 }

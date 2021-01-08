@@ -114,7 +114,7 @@ template("zbi_test") {
       # zbi_input() with type == "zbi" and $sources of this target's $outputs.
       # Thus a zbi() target can be a dependency of another zbi() target to
       # combine them without requiring an intervening zbi_input() target.
-      migrated_zbi_input_barrier = []
+      migrated_zbi_barrier = []
       migrated_zbi_input_args = [
         "--type=container",
         rebase_path(_output_file, root_build_dir),
