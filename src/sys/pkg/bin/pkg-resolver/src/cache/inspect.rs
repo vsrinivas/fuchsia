@@ -18,7 +18,8 @@ fn now_monotonic_nanos() -> i64 {
 
 /// Creates Inspect wrappers for individual blob fetches.
 pub struct BlobFetcher {
-    node: Node,
+    queue: Node,
+    _node: Node,
 }
 
 impl BlobFetcher {
@@ -26,12 +27,12 @@ impl BlobFetcher {
     pub fn from_node_and_timeouts(node: Node, timeouts: &BlobNetworkTimeouts) -> Self {
         node.record_uint("blob_header_timeout_seconds", timeouts.header().as_secs());
         node.record_uint("blob_body_timeout_seconds", timeouts.body().as_secs());
-        Self { node }
+        Self { queue: node.create_child("queue"), _node: node }
     }
 
     /// Create an Inspect wrapper for an individual blob fetch.
     pub fn fetch(&self, id: &BlobId) -> Fetch {
-        let node = self.node.create_child(id.to_string());
+        let node = self.queue.create_child(id.to_string());
         node.record_int("fetch_ts", now_monotonic_nanos());
         Fetch { node }
     }
@@ -187,6 +188,7 @@ mod tests {
     use {
         super::*,
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
+        std::time::Duration,
     };
 
     const ZEROES_HASH: &'static str =
@@ -196,8 +198,30 @@ mod tests {
 
     impl BlobFetcher {
         fn from_node(node: Node) -> Self {
-            Self { node }
+            Self::from_node_and_timeouts(
+                node,
+                &BlobNetworkTimeouts::builder()
+                    .header(Duration::from_secs(0))
+                    .body(Duration::from_secs(1)),
+            )
         }
+    }
+
+    #[test]
+    fn initial_state() {
+        let inspector = Inspector::new();
+
+        let _blob_fetcher = BlobFetcher::from_node(inspector.root().create_child("blob_fetcher"));
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                blob_fetcher: {
+                    blob_header_timeout_seconds: 0u64,
+                    blob_body_timeout_seconds: 1u64,
+                    queue: {}
+                }
+            }
+        );
     }
 
     #[test]
@@ -209,9 +233,11 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                        }
                     }
                 }
             }
@@ -221,10 +247,12 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
-                        source: "http",
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                            source: "http",
+                        }
                     }
                 }
             }
@@ -234,15 +262,17 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
-                        source: "http",
-                        mirror: "fake-mirror",
-                        state: "initial",
-                        state_ts: AnyProperty,
-                        bytes_written: 0u64,
-                        attempts: 0u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                            source: "http",
+                            mirror: "fake-mirror",
+                            state: "initial",
+                            state_ts: AnyProperty,
+                            bytes_written: 0u64,
+                            attempts: 0u64,
+                        }
                     }
                 }
             }
@@ -252,15 +282,17 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
-                        source: "http",
-                        mirror: "fake-mirror",
-                        state: "create blob",
-                        state_ts: AnyProperty,
-                        bytes_written: 0u64,
-                        attempts: 0u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                            source: "http",
+                            mirror: "fake-mirror",
+                            state: "create blob",
+                            state_ts: AnyProperty,
+                            bytes_written: 0u64,
+                            attempts: 0u64,
+                        }
                     }
                 }
             }
@@ -276,9 +308,11 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                        }
                     }
                 }
             }
@@ -288,14 +322,16 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
-                        source: "local-mirror",
-                        state: "initial",
-                        state_ts: AnyProperty,
-                        bytes_written: 0u64,
-                        attempts: 0u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                            source: "local-mirror",
+                            state: "initial",
+                            state_ts: AnyProperty,
+                            bytes_written: 0u64,
+                            attempts: 0u64,
+                        }
                     }
                 }
             }
@@ -305,14 +341,16 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => {
-                        fetch_ts: AnyProperty,
-                        source: "local-mirror",
-                        state: "create blob",
-                        state_ts: AnyProperty,
-                        bytes_written: 0u64,
-                        attempts: 0u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => {
+                            fetch_ts: AnyProperty,
+                            source: "local-mirror",
+                            state: "create blob",
+                            state_ts: AnyProperty,
+                            bytes_written: 0u64,
+                            attempts: 0u64,
+                        }
                     }
                 }
             }
@@ -331,11 +369,13 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => contains {
-                        state: "initial",
-                        bytes_written: 6u64,
-                        attempts: 1u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => contains {
+                            state: "initial",
+                            bytes_written: 6u64,
+                            attempts: 1u64,
+                        }
                     }
                 }
             }
@@ -346,11 +386,13 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => contains {
-                        state: "truncate blob",
-                        bytes_written: 6u64,
-                        attempts: 1u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => contains {
+                            state: "truncate blob",
+                            bytes_written: 6u64,
+                            attempts: 1u64,
+                        }
                     }
                 }
             }
@@ -368,9 +410,11 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => contains {
-                        bytes_written: 7u64,
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => contains {
+                            bytes_written: 7u64,
+                        }
                     }
                 }
             }
@@ -382,8 +426,10 @@ mod tests {
             inspector,
             root: {
                 blob_fetcher: contains {
-                    ZEROES_HASH.to_string() => contains {
-                        bytes_written: 15u64,
+                    queue: {
+                        ZEROES_HASH.to_string() => contains {
+                            bytes_written: 15u64,
+                        }
                     }
                 }
             }
@@ -401,9 +447,11 @@ mod tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                blob_fetcher: {
-                    ZEROES_HASH.to_string() => contains {},
-                    ONES_HASH.to_string() => contains {},
+                blob_fetcher: contains {
+                    queue: {
+                        ZEROES_HASH.to_string() => contains {},
+                        ONES_HASH.to_string() => contains {},
+                    }
                 }
             }
         );

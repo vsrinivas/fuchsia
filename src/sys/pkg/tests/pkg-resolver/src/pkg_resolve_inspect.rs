@@ -61,6 +61,7 @@ async fn initial_inspect_state() {
             blob_fetcher: {
                 blob_header_timeout_seconds: 30u64,
                 blob_body_timeout_seconds: 30u64,
+                queue: {},
             }
         }
     );
@@ -222,8 +223,10 @@ async fn package_and_blob_queues() {
     env.wait_for_pkg_resolver_inspect_state(tree_assertion!(
         root: contains {
             blob_fetcher: contains {
-                pkg.meta_far_merkle_root().to_string() => contains {
-                    state: "read http body"
+                queue: contains {
+                    pkg.meta_far_merkle_root().to_string() => contains {
+                        state: "read http body"
+                    }
                 }
             }
         }
@@ -233,17 +236,17 @@ async fn package_and_blob_queues() {
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
-            blob_fetcher: {
-                blob_header_timeout_seconds: 30u64,
-                blob_body_timeout_seconds: 30u64,
-                pkg.meta_far_merkle_root().to_string() => {
-                    fetch_ts: AnyProperty,
-                    source: "http",
-                    mirror: format!("{}{}", served_repository.local_url(), meta_far_blob_path),
-                    attempts: 1u64,
-                    state: "read http body",
-                    state_ts: AnyProperty,
-                    bytes_written: 0u64,
+            blob_fetcher: contains {
+                queue: {
+                    pkg.meta_far_merkle_root().to_string() => {
+                        fetch_ts: AnyProperty,
+                        source: "http",
+                        mirror: format!("{}{}", served_repository.local_url(), meta_far_blob_path),
+                        attempts: 1u64,
+                        state: "read http body",
+                        state_ts: AnyProperty,
+                        bytes_written: 0u64,
+                    }
                 }
             },
             resolver_service: contains {
@@ -264,9 +267,8 @@ async fn package_and_blob_queues() {
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
         root: contains {
-            blob_fetcher: {
-                blob_header_timeout_seconds: 30u64,
-                blob_body_timeout_seconds: 30u64,
+            blob_fetcher: contains {
+                queue: {}
             }
         }
     );
