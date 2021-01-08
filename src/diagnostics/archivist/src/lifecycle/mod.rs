@@ -149,7 +149,7 @@ mod tests {
     }
 
     async fn verify_reader(path: PathBuf) {
-        let diagnostics_repo = DataRepo::new();
+        let diagnostics_repo = DataRepo::default();
         let pipeline_wrapper =
             Arc::new(RwLock::new(Pipeline::for_test(None, diagnostics_repo.clone())));
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();

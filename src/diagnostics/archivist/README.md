@@ -47,7 +47,11 @@ Each data type the Archivist supports has a directory:
 
 Archivist accepts a configuration file to allow product-specific configuration separately from its
 package. The configuration file must be valid JSON with a single object at the top level. Its path
-within Archivist's namespace is defined by the `--config-path` argument. See `src/configs.rs` for
-details about supported configuration fields.
+within Archivist's namespace is defined by the `--config-path` argument.
+
+<!-- TODO(fxbug.dev/60812) link to the fuchsia.dev configuration docs -->
+
+See [the generated docs for Archivist's serde-based config parser][config-docs] for details.
 
 [bootstrap]: /src/sys/bootstrap/meta/bootstrap.cml
+[config-docs]: https://fuchsia-docs.firebaseapp.com/rust/archivist_lib/configs/struct.Config.html

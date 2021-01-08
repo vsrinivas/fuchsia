@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL, MAXIMUM_CACHED_LOGS_BYTES},
+        constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
         container::{ComponentDiagnostics, ComponentIdentity},
         events::types::{ComponentEvent, ComponentIdentifier, LogSinkRequestedEvent},
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
@@ -54,31 +54,23 @@ impl std::ops::Deref for DataRepo {
     }
 }
 
-impl DataRepo {
-    pub fn new() -> Self {
+#[cfg(test)]
+impl Default for DataRepo {
+    fn default() -> Self {
         DataRepo {
-            inner: Arc::new(RwLock::new(DataRepoState {
-                inspect_node: Default::default(),
-                data_directories: trie::Trie::new(),
-                logs_interest: vec![],
-                logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES))),
-            })),
-        }
-    }
-
-    pub fn with_inspect(parent: &fuchsia_inspect::Node) -> Self {
-        DataRepo {
-            inner: Arc::new(RwLock::new(DataRepoState {
-                inspect_node: parent.create_child("sources"),
-                data_directories: trie::Trie::new(),
-                logs_interest: vec![],
-                logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES))),
-            })),
+            inner: DataRepoState::new(
+                crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
+                &Default::default(),
+            ),
         }
     }
 }
 
 impl DataRepo {
+    pub fn new(logs_capacity: usize, parent: &fuchsia_inspect::Node) -> Self {
+        DataRepo { inner: DataRepoState::new(logs_capacity, parent) }
+    }
+
     /// Drain the kernel's debug log. The returned future completes once
     /// existing messages have been ingested.
     pub async fn drain_debuglog<K>(self, klog_reader: K)
@@ -280,6 +272,15 @@ pub struct DataRepoState {
 }
 
 impl DataRepoState {
+    fn new(logs_capacity: usize, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self {
+            inspect_node: parent.create_child("sources"),
+            data_directories: trie::Trie::new(),
+            logs_interest: vec![],
+            logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(logs_capacity))),
+        }))
+    }
+
     pub fn remove(&mut self, key: &[String]) {
         self.data_directories.remove(key.to_vec());
     }
@@ -596,7 +597,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let inspect_repo = DataRepo::new();
+        let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -628,7 +629,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -660,7 +661,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -697,7 +698,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn running_components_provide_start_time() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -731,7 +732,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -766,7 +767,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -799,7 +800,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
-        let data_repo = DataRepo::new();
+        let data_repo = DataRepo::default();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 

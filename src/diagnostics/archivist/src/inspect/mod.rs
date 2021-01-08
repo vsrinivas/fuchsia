@@ -633,7 +633,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let inspect_repo = DataRepo::new();
+        let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
@@ -767,7 +767,7 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = DataRepo::new();
+                let inspect_repo = DataRepo::default();
                 let pipeline_wrapper =
                     Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
 
@@ -838,7 +838,7 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
-        let inspect_repo = DataRepo::new();
+        let inspect_repo = DataRepo::default();
         let static_selectors_opt =
             Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]);
 

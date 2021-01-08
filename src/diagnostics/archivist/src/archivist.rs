@@ -133,7 +133,10 @@ impl ArchivistBuilder {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let diagnostics_repo = DataRepo::with_inspect(diagnostics::root());
+        let diagnostics_repo = DataRepo::new(
+            archivist_configuration.logs.max_cached_original_bytes,
+            diagnostics::root(),
+        );
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -739,7 +742,7 @@ fn maybe_create_archive<ServiceObjTy: ServiceObjTrait>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::testing::*;
+    use crate::{constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES, logs::testing::*};
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_diagnostics_test::ControllerMarker;
     use fidl_fuchsia_io as fio;
@@ -754,6 +757,9 @@ mod tests {
             max_archive_size_bytes: 10,
             max_event_group_size_bytes: 10,
             num_threads: 1,
+            logs: configs::LogsConfig {
+                max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
+            },
         };
 
         ArchivistBuilder::new(config).unwrap()
