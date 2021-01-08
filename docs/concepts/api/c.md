@@ -473,3 +473,4 @@ compiler extensions such as pragma pack.
 
 [compiler.h]: /zircon/system/public/zircon/compiler.h
 [library naming document]: /docs/development/languages/c-cpp/naming.md
+[zircon/errors.h]: /zircon/system/public/zircon/errors.h

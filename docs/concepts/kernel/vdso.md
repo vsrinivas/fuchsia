@@ -280,7 +280,7 @@ the full vDSO system call interface. For example, system calls intended
 only for use by device drivers might be elided from the vDSO variant
 used for normal application code.
 
-[`zx_process_start()]: /docs/reference/syscalls/process_start.md
+[`zx_process_start()`]: /docs/reference/syscalls/process_start.md
 [`zx_system_get_num_cpus()`]: /docs/reference/syscalls/system_get_num_cpus.md
 [`zx_system_get_version_string()`]: /docs/reference/syscalls/system_get_version_string.md
 [`zx_ticks_per_second()`]: /docs/reference/syscalls/ticks_per_second.md
