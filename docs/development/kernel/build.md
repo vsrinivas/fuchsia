@@ -6,7 +6,7 @@ Kernel commandline options are declared using the
 [`kernel_cmdline`](/build/zbi/kernel_cmdline.gni) template:
 
 ```gn
-import("//build/kernel_cmdline.gni")
+import("//build/zbi/kernel_cmdline.gni")
 
 kernel_cmdline("foobar") {
   args = [ "foobar=true" ]
@@ -16,7 +16,7 @@ kernel_cmdline("foobar") {
 A single target may include multiple options:
 
 ```gn
-import("//build/kernel_cmdline.gni")
+import("//build/zbi/kernel_cmdline.gni")
 
 kernel_cmdline("debug") {
   args = [
