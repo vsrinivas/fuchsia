@@ -44,8 +44,7 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
-            realm::BindReason,
-            resolver::{Resolver, ResolverRegistrationError, ResolverRegistry},
+            resolver::{Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -67,11 +66,9 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
-    log::{error, info, warn},
-    moniker::AbsoluteMoniker,
+    log::*,
     std::{
         path::PathBuf,
-        process,
         sync::{Arc, Weak},
     },
 };
@@ -172,9 +169,9 @@ impl BuiltinEnvironmentBuilder {
         mut self,
         scheme: String,
         resolver: Box<dyn Resolver + Send + Sync + 'static>,
-    ) -> Result<Self, ResolverRegistrationError> {
-        self.resolvers.register(scheme, resolver)?;
-        Ok(self)
+    ) -> Self {
+        self.resolvers.register(scheme, resolver);
+        self
     }
 
     /// Adds standard resolvers whose dependencies are available in the process's namespace and for
@@ -240,7 +237,7 @@ impl BuiltinEnvironmentBuilder {
             runtime_config: Arc::clone(&runtime_config),
             namespace_capabilities: runtime_config.namespace_capabilities.clone(),
         };
-        let model = Arc::new(Model::new(params).await?);
+        let model = Model::new(params).await?;
 
         // If we previously created a resolver that requires the Model (in
         // add_available_resolvers_from_namespace), send the just-created model to it.
@@ -294,14 +291,7 @@ impl BuiltinEnvironmentBuilder {
         match boot_resolver {
             None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
             Some(r) => {
-                resolvers.register(
-                    fuchsia_boot_resolver::SCHEME.to_string(),
-                    Box::new(r)).unwrap_or_else(|_| {
-                        info!(
-                            "failed to register `{}` resolver from environment, a custom resolver is registered.",
-                            fuchsia_boot_resolver::SCHEME.to_string()
-                        );
-                    });
+                resolvers.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
             }
         };
 
@@ -311,17 +301,10 @@ impl BuiltinEnvironmentBuilder {
                     warn!("Appmgr bridge package resolver is available, but not enabled, verify configuration correctness");
                 }
                 BuiltinPkgResolver::AppmgrBridge => {
-                    resolvers
-                        .register(
-                            fuchsia_pkg_resolver::SCHEME.to_string(),
-                            Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
-                        )
-                        .unwrap_or_else(|_| {
-                            info!(
-                                "A resolver for {} is already registered, it will be used instead",
-                                fuchsia_pkg_resolver::SCHEME.to_string()
-                            );
-                        });
+                    resolvers.register(
+                        fuchsia_pkg_resolver::SCHEME.to_string(),
+                        Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
+                    );
                     return Ok(None);
                 }
             }
@@ -814,19 +797,8 @@ impl BuiltinEnvironment {
             OutDirContents::Svc => {
                 info!("Field `out_dir_contents` is set to Svc.");
                 let hub_proxy = self.bind_service_fs_for_hub().await?;
-                let root_moniker = AbsoluteMoniker::root();
-                match self.model.bind(&root_moniker, &BindReason::Root).await {
-                    Ok(_) => {
-                        // TODO: Exit the component manager when the root component's binding is lost
-                        // (when it terminates).
-                    }
-                    Err(error) => {
-                        error!("Failed to bind to root component: {:?}", error);
-                        process::exit(1);
-                    }
-                }
-
-                // List the services exposed by the root component (i.e., the session manager).
+                self.model.start().await;
+                // List the services exposed by the root component.
                 let expose_dir_proxy = io_util::open_directory(
                     &hub_proxy,
                     &PathBuf::from("exec/expose"),
@@ -834,8 +806,8 @@ impl BuiltinEnvironment {
                 )
                 .expect("Failed to open directory");
 
-                // Bind the session manager's expose/svc to out/svc of this component, so sysmgr can find it and
-                // route service connections to it.
+                // Bind the root component's expose/ to out/svc of this component, so sysmgr can
+                // find it and route service connections to it.
                 let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
                 fs.add_remote("svc", expose_dir_proxy);
 

@@ -388,12 +388,12 @@ impl Binder for FakeBinder {
     ) -> Result<Arc<Realm>, ModelError> {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();
-        Ok(Arc::new(Realm::new_root_realm(
+        Ok(Realm::new_root_realm(
             Environment::new_root(RunnerRegistry::default(), resolver),
             Weak::new(),
             Weak::new(),
             root_component_url,
-        )))
+        ))
     }
 }
 

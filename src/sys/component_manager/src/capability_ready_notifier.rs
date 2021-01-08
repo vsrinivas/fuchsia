@@ -294,7 +294,7 @@ async fn clone_outgoing_root(
 impl EventSynthesisProvider for CapabilityReadyNotifier {
     async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<Event> {
         let decl = {
-            if let Some(state) = realm.lock_state().await.as_ref() {
+            if let Some(state) = realm.lock_state().await.get_resolved() {
                 state.decl().clone()
             } else {
                 return Vec::new();

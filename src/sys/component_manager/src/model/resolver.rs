@@ -31,12 +31,6 @@ pub trait Resolver {
 
 pub type ResolverFut<'a> = BoxFuture<'a, Result<fsys::Component, ResolverError>>;
 
-#[derive(Error, Debug, Clone)]
-pub enum ResolverRegistrationError {
-    #[error("a resolver is already registered with the URL scheme \"{}\"", 0)]
-    SchemeAlreadyRegistered(String),
-}
-
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
 #[derive(Default)]
 pub struct ResolverRegistry {
@@ -52,21 +46,17 @@ impl ResolverRegistry {
         &mut self,
         scheme: String,
         resolver: Box<dyn Resolver + Send + Sync + 'static>,
-    ) -> Result<(), ResolverRegistrationError> {
-        if self.resolvers.contains_key(&scheme) {
-            Err(ResolverRegistrationError::SchemeAlreadyRegistered(scheme.clone()))
-        } else {
-            self.resolvers.insert(scheme, resolver);
-            Ok(())
-        }
+    ) {
+        // ComponentDecl validation checks that there aren't any duplicate schemes.
+        assert!(
+            self.resolvers.insert(scheme, resolver).is_none(),
+            "Found duplicate scheme in ComponentDecl"
+        );
     }
 
     /// Creates and populates a `ResolverRegistry` with `RemoteResolvers` that
     /// have been registered with an environment.
-    pub fn from_decl(
-        decl: &[ResolverRegistration],
-        parent: &Arc<Realm>,
-    ) -> Result<Self, ResolverRegistrationError> {
+    pub fn from_decl(decl: &[ResolverRegistration], parent: &Arc<Realm>) -> Self {
         let mut registry = ResolverRegistry::new();
         for resolver in decl {
             registry.register(
@@ -76,9 +66,9 @@ impl ResolverRegistry {
                     resolver.source.clone(),
                     parent.as_weak(),
                 )),
-            )?;
+            );
         }
-        Ok(registry)
+        registry
     }
 }
 
@@ -246,7 +236,7 @@ struct RemoteError(Status);
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::format_err, matches::assert_matches};
+    use {super::*, anyhow::format_err};
 
     struct MockOkResolver {
         pub expected_url: String,
@@ -291,26 +281,22 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn register_and_resolve() {
         let mut registry = ResolverRegistry::new();
-        registry
-            .register(
-                "foo".to_string(),
-                Box::new(MockOkResolver {
-                    expected_url: "foo://url".to_string(),
-                    resolved_url: "foo://resolved".to_string(),
+        registry.register(
+            "foo".to_string(),
+            Box::new(MockOkResolver {
+                expected_url: "foo://url".to_string(),
+                resolved_url: "foo://resolved".to_string(),
+            }),
+        );
+        registry.register(
+            "bar".to_string(),
+            Box::new(MockErrorResolver {
+                expected_url: "bar://url".to_string(),
+                error: Box::new(|url| {
+                    ResolverError::component_not_available(url, format_err!("not available"))
                 }),
-            )
-            .unwrap();
-        registry
-            .register(
-                "bar".to_string(),
-                Box::new(MockErrorResolver {
-                    expected_url: "bar://url".to_string(),
-                    error: Box::new(|url| {
-                        ResolverError::component_not_available(url, format_err!("not available"))
-                    }),
-                }),
-            )
-            .unwrap();
+            }),
+        );
 
         // Resolve known scheme that returns success.
         let component = registry.resolve("foo://url").await.unwrap();
@@ -339,14 +325,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Found duplicate scheme in ComponentDecl")]
     fn test_duplicate_registration() {
         let mut registry = ResolverRegistry::new();
         let resolver_a =
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
         let resolver_b =
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
-        assert_matches!(registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a)), Ok(()));
-        assert_matches!(registry.register("fuchsia-pkg".to_string(), Box::new(resolver_b)), Err(ResolverRegistrationError::SchemeAlreadyRegistered(scheme)) if scheme == "fuchsia-pkg");
+        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a));
+        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_b));
     }
 
     #[test]
@@ -356,7 +343,7 @@ mod tests {
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
         let resolver_b =
             MockOkResolver { expected_url: "".to_string(), resolved_url: "".to_string() };
-        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a)).unwrap();
-        registry.register("fuchsia-boot".to_string(), Box::new(resolver_b)).unwrap();
+        registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a));
+        registry.register("fuchsia-boot".to_string(), Box::new(resolver_b));
     }
 }

@@ -45,7 +45,7 @@ impl ModelContext {
 /// A wrapper for a weak reference to `ModelContext`. It implements an upgrade()
 /// member function that returns a ModelError which is useful for error
 /// reporting.
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct WeakModelContext {
     inner: Weak<ModelContext>,
 }

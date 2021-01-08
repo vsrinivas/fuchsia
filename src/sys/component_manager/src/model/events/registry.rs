@@ -346,7 +346,7 @@ impl EventRegistry {
         let realm = model.look_up_realm(&target_moniker).await?;
         let decl = {
             let state = realm.lock_state().await;
-            state.as_ref().expect("route_events: not registered").decl().clone()
+            state.get_resolved().expect("route_events: not registered").decl().clone()
         };
 
         let mut result = RouteEventsResult::new();
@@ -491,12 +491,12 @@ mod tests {
             .expect("subscribe succeeds");
         assert_eq!(1, registry.dispatchers_per_event_type(EventType::CapabilityRouted).await);
 
-        let realm = Arc::new(Realm::new_root_realm(
+        let realm = Realm::new_root_realm(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
             "test:///root".to_string(),
-        ));
+        );
         let capability = ComponentCapability::Protocol(ProtocolDecl {
             name: "foo".into(),
             source_path: "/svc/foo".parse().unwrap(),

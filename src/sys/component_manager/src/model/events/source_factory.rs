@@ -265,7 +265,7 @@ mod tests {
             );
             let resolver_registry = {
                 let mut registry = ResolverRegistry::new();
-                registry.register("test".to_string(), Box::new(resolver)).unwrap();
+                registry.register("test".to_string(), Box::new(resolver));
                 registry
             };
             Arc::new(

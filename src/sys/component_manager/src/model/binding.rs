@@ -95,7 +95,7 @@ pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), Model
 
     let eager_children: Vec<_> = {
         let mut state = realm.lock_state().await;
-        let state = state.as_mut().expect("bind_single_instance: not resolved");
+        let state = state.get_resolved_mut().expect("bind_single_instance: not resolved");
         state
             .live_child_realms()
             .filter_map(|(_, r)| match r.startup {
@@ -146,7 +146,7 @@ mod tests {
             RunnerSource,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
-        futures::prelude::*,
+        futures::{join, prelude::*},
         matches::assert_matches,
         moniker::PartialMoniker,
         std::{collections::HashSet, convert::TryFrom},
@@ -282,7 +282,7 @@ mod tests {
         let echo_realm = get_live_child(&*model.root_realm, "echo").await;
         let actual_children = get_live_children(&*system_realm).await;
         assert!(actual_children.is_empty());
-        assert!(echo_realm.lock_state().await.is_none());
+        assert!(echo_realm.lock_state().await.get_resolved().is_none());
         // bind to echo
         let m: AbsoluteMoniker = vec!["echo:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
@@ -523,14 +523,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_action_sequence() {
         // Test that binding registers the expected actions in the expected sequence
-        // (Discovered -> Start -> Resolve).
+        // (Discover -> Resolve -> Start).
 
+        // Set up the tree.
         let (model, builtin_environment, _mock_runner) = new_model(vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
             ("system", component_decl_with_test_runner()),
         ])
         .await;
-
         let events = vec![
             EventType::Discovered.into(),
             EventType::Resolved.into(),
@@ -541,7 +541,6 @@ mod tests {
             .create_for_debug(EventMode::Sync)
             .await
             .expect("create event source");
-
         let mut event_stream = event_source
             .subscribe(
                 events
@@ -553,34 +552,51 @@ mod tests {
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;
 
-        let model_copy = model.clone();
-        let (f, bind_handle) = async move {
-            let m = AbsoluteMoniker::new(vec!["system:0".into()]);
-            model_copy.bind(&m, &BindReason::Root).await
-        }
-        .remote_handle();
-        fasync::Task::spawn(f).detach();
-        let m: AbsoluteMoniker = vec!["system:0"].into();
+        // Child of root should start out discovered but not resolved yet.
+        let m = AbsoluteMoniker::new(vec!["system:0".into()]);
+        let start_model = model.start();
+        let check_events = async {
+            let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
+            {
+                let root_state = model.root_realm.lock_state().await;
+                let root_state = root_state.get_resolved().unwrap();
+                let realm = root_state.get_child_instance(&"system:0".into()).unwrap();
+                let actions = realm.lock_actions().await;
+                assert!(actions.contains(&ActionKey::Discover));
+                assert!(!actions.contains(&ActionKey::Resolve));
+            }
+            event.resume();
+            let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
+            event.resume();
+        };
+        join!(start_model, check_events);
 
-        let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
-        event.resume();
-        let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
-        // While the Resolved hook is handled, it should be possible to look up the realm
-        // without deadlocking.
-        let realm = model.look_up_realm(&m).await.unwrap();
-        {
-            let actions = realm.lock_actions().await;
-            assert!(actions.contains(&ActionKey::Resolve));
-        }
-        event.resume();
-        let event = event_stream.wait_until(EventType::Started, m.clone()).await.unwrap();
-        {
-            let actions = realm.lock_actions().await;
-            assert!(actions.contains(&ActionKey::Start));
-            assert!(!actions.contains(&ActionKey::Resolve));
-        }
-        event.resume();
+        // Bind to child and check that it gets resolved, with a Resolve event and action.
+        let bind = async {
+            model.bind(&m, &BindReason::Root).await.unwrap();
+        };
+        let check_events = async {
+            let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
+            // While the Resolved hook is handled, it should be possible to look up the realm
+            // without deadlocking.
+            let realm = model.look_up_realm(&m).await.unwrap();
+            {
+                let actions = realm.lock_actions().await;
+                assert!(actions.contains(&ActionKey::Resolve));
+                assert!(!actions.contains(&ActionKey::Discover));
+            }
+            event.resume();
 
-        bind_handle.await.unwrap();
+            // Check that the child is started, with a Start event and action.
+            let event = event_stream.wait_until(EventType::Started, m.clone()).await.unwrap();
+            {
+                let actions = realm.lock_actions().await;
+                assert!(actions.contains(&ActionKey::Start));
+                assert!(!actions.contains(&ActionKey::Discover));
+                assert!(!actions.contains(&ActionKey::Resolve));
+            }
+            event.resume();
+        };
+        join!(bind, check_events);
     }
 }

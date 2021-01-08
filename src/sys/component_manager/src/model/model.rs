@@ -6,7 +6,7 @@ use {
     crate::capability::NamespaceCapabilities,
     crate::config::RuntimeConfig,
     crate::model::{
-        actions::ActionKey,
+        actions::{ActionKey, DiscoverAction},
         binding::Binder,
         context::ModelContext,
         environment::Environment,
@@ -43,21 +43,21 @@ pub struct Model {
 
 impl Model {
     /// Creates a new component model and initializes its topology.
-    pub async fn new(params: ModelParams) -> Result<Model, ModelError> {
+    pub async fn new(params: ModelParams) -> Result<Arc<Model>, ModelError> {
         let component_manager_realm =
             Arc::new(ComponentManagerRealm::new(params.namespace_capabilities));
         let context = Arc::new(ModelContext::new(params.runtime_config).await?);
-        let root_realm = Arc::new(Realm::new_root_realm(
+        let root_realm = Realm::new_root_realm(
             params.root_environment,
             Arc::downgrade(&context),
             Arc::downgrade(&component_manager_realm),
             params.root_component_url,
-        ));
-        Ok(Model {
+        );
+        Ok(Arc::new(Model {
             root_realm,
             _context: context,
             _component_manager_realm: component_manager_realm,
-        })
+        }))
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
@@ -81,10 +81,15 @@ impl Model {
         Ok(cur_realm)
     }
 
-    /// Binds to the root realm, starting the component tree
+    /// Binds to the root realm, starting the component tree.
     pub async fn start(self: &Arc<Model>) {
-        let root_moniker = AbsoluteMoniker::root();
-        if let Err(e) = self.bind(&root_moniker, &BindReason::Root).await {
+        // Normally the Discovered event is dispatched when a realm is added as a child, but
+        // since the root realm isn't anyone's child we need to dispatch it here.
+        {
+            let mut actions = self.root_realm.lock_actions().await;
+            let _ = actions.register_no_wait(&self.root_realm, DiscoverAction::new());
+        }
+        if let Err(e) = self.bind(&AbsoluteMoniker::root(), &BindReason::Root).await {
             // If we fail binding to the root realm, but the root realm is being shutdown, that's
             // ok. The system is tearing down, so it doesn't matter any more if we never got
             // everything started that we wanted to.

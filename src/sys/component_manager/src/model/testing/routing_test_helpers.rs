@@ -281,7 +281,6 @@ impl RoutingTest {
             .set_args(args)
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
-            .unwrap()
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
         for (name, runner) in builder.builtin_runners {
             env_builder = env_builder.add_runner(name, runner);
@@ -400,7 +399,8 @@ impl RoutingTest {
                         "relative moniker required if expected result is ok"
                     );
                 }
-                capability_util::write_file_to_storage(&namespace, path, expected_res.clone()).await;
+                capability_util::write_file_to_storage(&namespace, path, expected_res.clone())
+                    .await;
 
                 if let Some(relative_moniker) = storage_relation {
                     if from_cm_namespace {
@@ -478,7 +478,8 @@ impl RoutingTest {
                         storage_relation.clone(),
                         &storage_dir,
                     )
-                    .await.expect("failed to read file");
+                    .await
+                    .expect("failed to read file");
                     storage_admin_proxy
                         .delete_component_storage(relative_moniker_string.as_str())
                         .await
@@ -924,7 +925,8 @@ pub mod capability_util {
     ) -> Result<(), anyhow::Error> {
         let mut dir_path = generate_storage_path(storage_subdir, &relation);
         dir_path.push("hippos");
-        let file_proxy = io_util::open_file(&test_dir_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)?;
+        let file_proxy =
+            io_util::open_file(&test_dir_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)?;
         let res = io_util::read_file(&file_proxy).await;
 
         if let Ok(contents) = res {

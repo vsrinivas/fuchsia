@@ -6,13 +6,10 @@ use {
     crate::model::{
         error::ModelError,
         realm::{Realm, WeakRealm},
-        resolver::{
-            Resolver, ResolverError, ResolverFut, ResolverRegistrationError, ResolverRegistry,
-        },
+        resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
     },
     fidl_fuchsia_sys2 as fsys,
     std::{collections::HashMap, sync::Arc, time::Duration},
-    thiserror::Error,
 };
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
@@ -34,16 +31,6 @@ pub struct Environment {
 }
 
 pub const DEFAULT_STOP_TIMEOUT: Duration = Duration::from_secs(5);
-
-#[derive(Debug, Error, Clone)]
-pub enum EnvironmentError {
-    #[error(
-        "stop timeout could not be set, environment has no parent and does not specify a value"
-    )]
-    StopTimeoutUnknown,
-    #[error("failed to register resolvers")]
-    ResolverRegistration(#[from] ResolverRegistrationError),
-}
 
 /// How this environment extends its parent's.
 #[derive(Debug, Clone)]
@@ -90,25 +77,22 @@ impl Environment {
     }
 
     /// Creates an environment from `env_decl`, using `parent` as the parent realm.
-    pub fn from_decl(
-        parent: &Arc<Realm>,
-        env_decl: &cm_rust::EnvironmentDecl,
-    ) -> Result<Environment, EnvironmentError> {
-        Ok(Environment {
+    pub fn from_decl(parent: &Arc<Realm>, env_decl: &cm_rust::EnvironmentDecl) -> Environment {
+        Environment {
             parent: Some(parent.into()),
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
-            resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers, parent)?,
+            resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers, parent),
             stop_timeout: match env_decl.stop_timeout_ms {
                 Some(timeout) => Duration::from_millis(timeout.into()),
                 None => match env_decl.extends {
                     fsys::EnvironmentExtends::Realm => parent.environment.stop_timeout(),
                     fsys::EnvironmentExtends::None => {
-                        return Err(EnvironmentError::StopTimeoutUnknown);
+                        panic!("EnvironmentDecl is missing stop_timeout");
                     }
                 },
             },
-        })
+        }
     }
 
     /// Creates a new environment with `parent` as the parent.
@@ -241,12 +225,12 @@ mod tests {
 
     #[test]
     fn test_from_decl() {
-        let realm = Arc::new(Realm::new_root_realm(
+        let realm = Realm::new_root_realm(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
             "test:///root".to_string(),
-        ));
+        );
         let environment = Environment::from_decl(
             &realm,
             &EnvironmentDeclBuilder::new()
@@ -254,8 +238,7 @@ mod tests {
                 .extends(fsys::EnvironmentExtends::None)
                 .stop_timeout(1234)
                 .build(),
-        )
-        .expect("environment construction failed");
+        );
         assert_matches!(environment.parent, Some(_));
 
         let environment = Environment::from_decl(
@@ -264,8 +247,7 @@ mod tests {
                 .name("env")
                 .extends(fsys::EnvironmentExtends::Realm)
                 .build(),
-        )
-        .expect("environment constuction failed");
+        );
         assert_matches!(environment.parent, Some(_));
     }
 
@@ -307,20 +289,18 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver)).unwrap();
+            registry.register("test".to_string(), Box::new(resolver));
             registry
         };
 
-        let model = Arc::new(
-            Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-                namespace_capabilities: vec![],
-            })
-            .await
-            .unwrap(),
-        );
+        let model = Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
+        })
+        .await
+        .unwrap();
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
 
@@ -374,20 +354,17 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver)).unwrap();
+            registry.register("test".to_string(), Box::new(resolver));
             registry
         };
 
-        let model = Arc::new(
-            Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-                namespace_capabilities: vec![],
-            })
-            .await
-            .unwrap(),
-        );
+        let model = Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
+        })
+        .await?;
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
 
@@ -445,20 +422,17 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver)).unwrap();
+            registry.register("test".to_string(), Box::new(resolver));
             registry
         };
 
-        let model = Arc::new(
-            Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-                namespace_capabilities: vec![],
-            })
-            .await
-            .unwrap(),
-        );
+        let model = Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
+        })
+        .await?;
         // Add instance to collection.
         {
             let parent_realm = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
@@ -514,20 +488,18 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver)).unwrap();
+            registry.register("test".to_string(), Box::new(resolver));
             registry
         };
 
-        let model = Arc::new(
-            Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
-                namespace_capabilities: vec![],
-            })
-            .await
-            .unwrap(),
-        );
+        let model = Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            namespace_capabilities: vec![],
+        })
+        .await
+        .unwrap();
 
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -570,19 +542,16 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let registry = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver)).unwrap();
+            registry.register("test".to_string(), Box::new(resolver));
             registry
         };
-        let model = Arc::new(
-            Model::new(ModelParams {
-                runtime_config: Arc::new(RuntimeConfig::default()),
-                root_component_url: "test:///root".to_string(),
-                root_environment: Environment::new_root(RunnerRegistry::default(), registry),
-                namespace_capabilities: vec![],
-            })
-            .await
-            .unwrap(),
-        );
+        let model = Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::default(), registry),
+            namespace_capabilities: vec![],
+        })
+        .await?;
         assert_matches!(
             model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await,
             Err(ModelError::ResolverError { .. })

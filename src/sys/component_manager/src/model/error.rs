@@ -4,9 +4,9 @@
 
 use {
     crate::model::{
-        component_id_index::ComponentIdIndexError, environment::EnvironmentError,
-        events::error::EventsError, policy::PolicyError, resolver::ResolverError,
-        rights::RightsError, routing::RoutingError, runner::RunnerError, storage::StorageError,
+        component_id_index::ComponentIdIndexError, events::error::EventsError, policy::PolicyError,
+        resolver::ResolverError, rights::RightsError, routing::RoutingError, runner::RunnerError,
+        storage::StorageError,
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -34,15 +34,6 @@ pub enum ModelError {
     ComponentIdIndexError {
         #[from]
         err: ComponentIdIndexError,
-    },
-    #[error("environment {} not found in realm {}", name, moniker)]
-    EnvironmentNotFound { name: String, moniker: AbsoluteMoniker },
-    #[error("environment {} in realm {} is not valid: {}", name, moniker, err)]
-    EnvironmentInvalid {
-        name: String,
-        moniker: AbsoluteMoniker,
-        #[source]
-        err: EnvironmentError,
     },
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
@@ -150,10 +141,6 @@ impl ModelError {
 
     pub fn context_not_found() -> ModelError {
         ModelError::ContextNotFound {}
-    }
-
-    pub fn environment_not_found(name: impl Into<String>, moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::EnvironmentNotFound { name: name.into(), moniker }
     }
 
     pub fn unsupported(feature: impl Into<String>) -> ModelError {

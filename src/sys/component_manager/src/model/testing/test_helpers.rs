@@ -111,7 +111,7 @@ pub async fn has_child<'a>(realm: &'a Realm, moniker: &'a str) -> bool {
     realm
         .lock_state()
         .await
-        .as_ref()
+        .get_resolved()
         .expect("not resolved")
         .all_child_realms()
         .contains_key(&moniker.into())
@@ -122,7 +122,7 @@ pub async fn get_instance_id<'a>(realm: &'a Realm, moniker: &'a str) -> u32 {
     realm
         .lock_state()
         .await
-        .as_ref()
+        .get_resolved()
         .expect("not resolved")
         .get_live_child_instance_id(&moniker.into())
         .unwrap()
@@ -133,7 +133,7 @@ pub async fn get_live_children(realm: &Realm) -> HashSet<PartialMoniker> {
     realm
         .lock_state()
         .await
-        .as_ref()
+        .get_resolved()
         .expect("not resolved")
         .live_child_realms()
         .map(|(m, _)| m.clone())
@@ -145,7 +145,7 @@ pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> 
     realm
         .lock_state()
         .await
-        .as_ref()
+        .get_resolved()
         .expect("not resolved")
         .get_live_child_realm(&child.into())
         .unwrap()
@@ -682,7 +682,6 @@ pub async fn new_test_model(
         BuiltinEnvironmentBuilder::new()
             .set_args(args)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
-            .unwrap()
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
             .set_runtime_config(runtime_config)
             .build()

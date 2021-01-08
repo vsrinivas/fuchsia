@@ -60,13 +60,14 @@ use {
     crate::model::{
         error::ModelError,
         hooks::{Event, EventPayload},
-        realm::{BindReason, Component, Realm},
+        realm::{BindReason, Component, Realm, RealmState},
     },
     async_trait::async_trait,
     fuchsia_async as fasync,
     futures::{
         channel::oneshot,
         future::{join_all, BoxFuture, FutureExt, Shared},
+        Future,
     },
     moniker::ChildMoniker,
     std::any::Any,
@@ -84,6 +85,28 @@ pub trait Action: Send + Sync + 'static {
     fn key(&self) -> ActionKey;
 }
 
+/// Dispatches a `Discovered` event for a component instance. This action should be registered
+/// when a component instance is created.
+pub struct DiscoverAction {}
+
+impl DiscoverAction {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl Action for DiscoverAction {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
+        do_discover(realm).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Discover
+    }
+}
+
+/// Resolves a component instance's declaration and initializes its state.
 pub struct ResolveAction {}
 
 impl ResolveAction {
@@ -103,6 +126,7 @@ impl Action for ResolveAction {
     }
 }
 
+/// Starts a component instance.
 pub struct StartAction {
     bind_reason: BindReason,
 }
@@ -124,6 +148,7 @@ impl Action for StartAction {
     }
 }
 
+/// Stops a component instance.
 pub struct StopAction {}
 
 impl StopAction {
@@ -143,6 +168,7 @@ impl Action for StopAction {
     }
 }
 
+/// Marks a child of a realm as deleting.
 pub struct MarkDeletingAction {
     moniker: ChildMoniker,
 }
@@ -164,6 +190,7 @@ impl Action for MarkDeletingAction {
     }
 }
 
+/// Completely deletes the given child of a realm.
 pub struct DeleteChildAction {
     moniker: ChildMoniker,
 }
@@ -185,6 +212,7 @@ impl Action for DeleteChildAction {
     }
 }
 
+/// Destroy this component instance, including all instances nested in its realm.
 pub struct DestroyAction {}
 
 impl DestroyAction {
@@ -204,6 +232,8 @@ impl Action for DestroyAction {
     }
 }
 
+/// Shuts down all component instances in this realm (stops them and guarantees they will never
+/// be started again).
 pub struct ShutdownAction {}
 
 impl ShutdownAction {
@@ -226,19 +256,13 @@ impl Action for ShutdownAction {
 /// A key that uniquely identifies an action.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ActionKey {
-    /// This single component instance should be resolved.
+    Discover,
     Resolve,
-    /// This single component instance should be started.
     Start,
-    /// This single component instance should be stopped.
     Stop,
-    /// This realm's component instances should be shut down (stopped and never started again).
     Shutdown,
-    /// The given child of this realm should be marked deleting.
     MarkDeleting(ChildMoniker),
-    /// The given child of this realm should be deleted.
     DeleteChild(ChildMoniker),
-    /// This realm and all its component instance should be destroyed.
     Destroy,
 }
 
@@ -292,14 +316,31 @@ impl ActionSet {
     where
         A: Action,
     {
-        let (task, rx) = {
+        let rx = {
             let mut actions = realm.lock_actions().await;
-            actions.register_inner(&realm, action)
+            actions.register_no_wait(&realm, action)
         };
+        rx.await
+    }
+
+    /// Registers an action in the set, but does not wait for it to complete, instead returning a
+    /// future that can be used to wait on the task. This function is a no-op if the task is
+    /// already registered.
+    ///
+    /// REQUIRES: `self` is the `ActionSet` contained in `realm`.
+    pub fn register_no_wait<A>(
+        &mut self,
+        realm: &Arc<Realm>,
+        action: A,
+    ) -> impl Future<Output = A::Output>
+    where
+        A: Action,
+    {
+        let (task, rx) = self.register_inner(realm, action);
         if let Some(task) = task {
             task.spawn();
         }
-        rx.await
+        rx
     }
 
     /// Removes an action from the set, completing it.
@@ -360,7 +401,7 @@ impl ActionSet {
             let rx = async move {
                 let res = rx.await;
                 // This should never crash because the task is spawned
-                res.expect("action sender was dropped")
+                res.expect("action snder was dropped")
             }
             .boxed()
             .shared();
@@ -370,18 +411,39 @@ impl ActionSet {
     }
 }
 
+async fn do_discover(realm: &Arc<Realm>) -> Result<(), ModelError> {
+    let is_discovered = {
+        let state = realm.lock_state().await;
+        match *state {
+            RealmState::New => false,
+            _ => true,
+        }
+    };
+    if is_discovered {
+        return Ok(());
+    }
+    let event = Event::new(&realm, Ok(EventPayload::Discovered));
+    realm.hooks.dispatch(&event).await?;
+    {
+        let mut state = realm.lock_state().await;
+        assert!(matches!(*state, RealmState::New), "Realm in unexpected state after discover");
+        *state = RealmState::Discovered
+    }
+    Ok(())
+}
+
 async fn do_mark_deleting(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<(), ModelError> {
     let partial_moniker = moniker.to_partial();
     let child_realm = {
         let state = realm.lock_state().await;
-        let state = state.as_ref().expect("do_mark_deleting: not resolved");
+        let state = state.get_resolved().expect("do_mark_deleting: not resolved");
         state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
     };
     if let Some(child_realm) = child_realm {
         let event = Event::new(&child_realm, Ok(EventPayload::MarkedForDestruction));
         child_realm.hooks.dispatch(&event).await?;
         let mut state = realm.lock_state().await;
-        let state = state.as_mut().expect("do_mark_deleting: not resolved");
+        let state = state.get_resolved_mut().expect("do_mark_deleting: not resolved");
         state.mark_child_realm_deleting(&partial_moniker);
     } else {
         // Child already marked deleting. Nothing to do.
@@ -397,14 +459,17 @@ async fn do_delete_child(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<()
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child_realm = {
         let state = realm.lock_state().await;
-        let state = state.as_ref().expect("do_delete_child: not resolved");
+        let state = state.get_resolved().expect("do_delete_child: not resolved");
         state.all_child_realms().get(&moniker).map(|r| r.clone())
     };
     if let Some(child_realm) = child_realm {
         ActionSet::register(child_realm.clone(), DestroyAction::new()).await?;
         {
             let mut state = realm.lock_state().await;
-            state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
+            state
+                .get_resolved_mut()
+                .expect("do_delete_child: not resolved")
+                .remove_child_realm(&moniker);
         }
         let event = Event::new(&child_realm, Ok(EventPayload::Destroyed));
         child_realm.hooks.dispatch(&event).await?;
@@ -417,7 +482,7 @@ async fn do_destroy(realm: &Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
     ActionSet::register(realm.clone(), ShutdownAction::new()).await?;
 
-    let nfs = if let Some(state) = realm.lock_state().await.as_ref() {
+    let nfs = if let Some(state) = realm.lock_state().await.get_resolved() {
         let mut nfs = vec![];
         for (m, _) in state.all_child_realms().iter() {
             let realm = realm.clone();
@@ -780,7 +845,7 @@ pub mod tests {
         // Get realm_b without resolving it.
         let realm_b = {
             let state = realm_a.lock_state().await;
-            let state = state.as_ref().unwrap();
+            let state = state.get_resolved().unwrap();
             state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
         };
         assert!(execution_is_shut_down(&realm_b).await);
@@ -1986,7 +2051,7 @@ pub mod tests {
         // Get realm_b without resolving it.
         let realm_b = {
             let state = realm_a.lock_state().await;
-            let state = state.as_ref().unwrap();
+            let state = state.get_resolved().unwrap();
             state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
         };
 
@@ -2074,8 +2139,13 @@ pub mod tests {
         {
             // Expect only "x" as child of root.
             let state = realm_root.lock_state().await;
-            let children: Vec<_> =
-                state.as_ref().unwrap().all_child_realms().keys().map(|m| m.clone()).collect();
+            let children: Vec<_> = state
+                .get_resolved()
+                .unwrap()
+                .all_child_realms()
+                .keys()
+                .map(|m| m.clone())
+                .collect();
             assert_eq!(children, vec!["x:0".into()]);
         }
         {
@@ -2178,8 +2248,13 @@ pub mod tests {
         assert!(is_destroyed(&realm_b, &realm_b2).await);
         {
             let state = realm_root.lock_state().await;
-            let children: Vec<_> =
-                state.as_ref().unwrap().all_child_realms().keys().map(|m| m.clone()).collect();
+            let children: Vec<_> = state
+                .get_resolved()
+                .unwrap()
+                .all_child_realms()
+                .keys()
+                .map(|m| m.clone())
+                .collect();
             assert_eq!(children, Vec::<ChildMoniker>::new());
         }
         {
@@ -2360,7 +2435,7 @@ pub mod tests {
     async fn is_deleting(realm: &Realm, moniker: ChildMoniker) -> bool {
         let partial = moniker.to_partial();
         let state = realm.lock_state().await;
-        let state = state.as_ref().unwrap();
+        let state = state.get_resolved().unwrap();
         state.get_live_child_realm(&partial).is_none()
             && state.get_child_instance(&moniker).is_some()
     }
@@ -2375,10 +2450,10 @@ pub mod tests {
         assert_eq!(parent_realm.abs_moniker.child(child_moniker.clone()), child_realm.abs_moniker);
 
         let parent_state = parent_realm.lock_state().await;
-        let parent_state = parent_state.as_ref().unwrap();
+        let parent_state = parent_state.get_resolved().unwrap();
 
         let child_state = child_realm.lock_state().await;
-        let child_state = child_state.as_ref().unwrap();
+        let child_state = child_state.get_resolved().unwrap();
         let child_execution = child_realm.lock_execution().await;
 
         let found_partial_moniker = parent_state
@@ -2396,6 +2471,6 @@ pub mod tests {
     async fn is_unresolved(realm: &Realm) -> bool {
         let state = realm.lock_state().await;
         let execution = realm.lock_execution().await;
-        execution.runtime.is_none() && state.is_none()
+        execution.runtime.is_none() && state.get_resolved().is_none()
     }
 }

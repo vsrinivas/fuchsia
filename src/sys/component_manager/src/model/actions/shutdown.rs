@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{ActionSet, ShutdownAction},
         error::ModelError,
-        realm::{Realm, RealmState},
+        realm::{Realm, ResolvedRealmState},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl,
@@ -74,7 +74,7 @@ impl ShutdownJob {
     /// Creates a new ShutdownJob by examining the Realm's declaration and
     /// runtime state to build up the necessary data structures to stop
     /// components in the realm in dependency order.
-    pub async fn new(state: &RealmState) -> ShutdownJob {
+    pub async fn new(state: &ResolvedRealmState) -> ShutdownJob {
         // `children` represents the dependency relationships between the
         // children as expressed in the realm's component declaration.
         // This representation must be reconciled with the runtime state of the
@@ -232,7 +232,7 @@ pub async fn do_shutdown(realm: &Arc<Realm>) -> Result<(), ModelError> {
                 return Ok(());
             }
         }
-        if let Some(state) = state_lock.as_ref() {
+        if let Some(state) = state_lock.get_resolved() {
             let mut shutdown_job = ShutdownJob::new(state).await;
             drop(state_lock);
             Box::pin(shutdown_job.execute()).await?;
@@ -268,7 +268,7 @@ impl fmt::Debug for ShutdownInfo {
 /// Realm that match.
 fn get_child_monikers(
     child_names: &HashSet<DependencyNode>,
-    realm_state: &RealmState,
+    realm_state: &ResolvedRealmState,
 ) -> HashSet<ChildMoniker> {
     let mut deps: HashSet<ChildMoniker> = HashSet::new();
     let realms = realm_state.all_child_realms();

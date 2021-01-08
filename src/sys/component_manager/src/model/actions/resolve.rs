@@ -4,17 +4,26 @@
 
 use {
     crate::model::{
+        actions::{ActionSet, DiscoverAction},
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload},
-        realm::{Component, Realm, RealmState, WeakExtendedRealm},
+        realm::{Component, Realm, RealmState, ResolvedRealmState},
         resolver::Resolver,
     },
-    moniker::ChildMoniker,
     std::convert::TryFrom,
     std::sync::Arc,
 };
 
 pub(super) async fn do_resolve(realm: &Arc<Realm>) -> Result<Component, ModelError> {
+    // Ensure `Resolved` is dispatched after `Discovered`.
+    ActionSet::register(realm.clone(), DiscoverAction::new()).await?;
+    let first_resolve = {
+        let state = realm.lock_state().await;
+        match *state {
+            RealmState::Resolved(_) => false,
+            _ => true,
+        }
+    };
     let result = async move {
         let component = realm
             .environment
@@ -22,42 +31,34 @@ pub(super) async fn do_resolve(realm: &Arc<Realm>) -> Result<Component, ModelErr
             .await
             .map_err(|err| ModelError::from(err))?;
         let component = Component::try_from(component)?;
-        let created_new_realm_state = {
-            let mut state = realm.lock_state().await;
-            if state.is_none() {
-                *state = Some(RealmState::new(realm, component.decl.clone()).await?);
-                true
-            } else {
-                false
-            }
-        };
-        Ok((created_new_realm_state, component))
+        Ok(component)
     }
     .await;
 
-    // If a `RealmState` was installed in this call, first dispatch
-    // `Resolved` for the component itrealm and then dispatch
-    // `Discovered` for every static child that was discovered in the
+    // If a `RealmState` was installed in this call, first dispatch `Resolved` for the component's
+    // realm and then dispatch `Discovered` for every static child that was discovered in the
     // manifest.
-    match result {
-        Ok((false, component)) => Ok(component),
-        Ok((true, component)) => {
-            if let WeakExtendedRealm::AboveRoot(_) = &realm.parent {
-                let event = Event::new(realm, Ok(EventPayload::Discovered));
-                realm.hooks.dispatch(&event).await?;
+    match (first_resolve, result) {
+        (false, Ok(component)) => Ok(component),
+        (true, Ok(component)) => {
+            {
+                let mut state = realm.lock_state().await;
+                match *state {
+                    RealmState::Resolved(_) => {
+                        panic!("Realm state was unexpectedly populated");
+                    }
+                    _ => {}
+                }
+                *state = RealmState::Resolved(
+                    ResolvedRealmState::new(realm, component.decl.clone()).await,
+                );
             }
             let event =
                 Event::new(realm, Ok(EventPayload::Resolved { decl: component.decl.clone() }));
             realm.hooks.dispatch(&event).await?;
-            for child in component.decl.children.iter() {
-                let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
-                let child_abs_moniker = realm.abs_moniker.child(child_moniker);
-                let event = Event::child_discovered(child_abs_moniker, child.url.clone());
-                realm.hooks.dispatch(&event).await?;
-            }
             Ok(component)
         }
-        Err(e) => {
+        (_, Err(e)) => {
             let event = Event::new(realm, Err(EventError::new(&e, EventErrorPayload::Resolved)));
             realm.hooks.dispatch(&event).await?;
             Err(e)

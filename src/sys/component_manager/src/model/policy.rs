@@ -218,12 +218,15 @@ mod tests {
             capability::{ComponentCapability, InternalCapability},
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
+                context::WeakModelContext,
                 environment::{Environment, RunnerRegistry},
-                realm::Realm,
+                hooks::Hooks,
+                realm::{Realm, WeakExtendedRealm, WeakRealm},
                 resolver::ResolverRegistry,
             },
         },
         cm_rust::*,
+        fidl_fuchsia_sys2 as fsys,
         matches::assert_matches,
         moniker::ChildMoniker,
         std::{collections::HashMap, collections::HashSet, iter::FromIterator, sync::Arc},
@@ -481,15 +484,15 @@ mod tests {
 
         // Create a fake realm.
         let resolver = ResolverRegistry::new();
-        let root_component_url = "test:///foo".to_string();
-        let mut realm = Realm::new_root_realm(
-            Environment::new_root(RunnerRegistry::default(), resolver),
-            Weak::new(),
-            Weak::new(),
-            root_component_url,
+        let realm = Realm::new(
+            Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
+            vec!["foo:0"].into(),
+            "test:///foo".into(),
+            fsys::StartupMode::Lazy,
+            WeakModelContext::default(),
+            WeakExtendedRealm::Component(WeakRealm::default()),
+            Arc::new(Hooks::new(None)),
         );
-        realm.abs_moniker = AbsoluteMoniker::from(vec!["foo:0"]);
-        let realm = Arc::new(realm);
         let weak_realm = realm.as_weak();
 
         let protocol_capability = CapabilitySource::Component {
@@ -544,15 +547,15 @@ mod tests {
 
         // Create a fake realm.
         let resolver = ResolverRegistry::new();
-        let root_component_url = "test:///foo".to_string();
-        let mut realm = Realm::new_root_realm(
-            Environment::new_root(RunnerRegistry::default(), resolver),
-            Weak::new(),
-            Weak::new(),
-            root_component_url,
+        let realm = Realm::new(
+            Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
+            vec!["foo:0"].into(),
+            "test:///foo".into(),
+            fsys::StartupMode::Lazy,
+            WeakModelContext::default(),
+            WeakExtendedRealm::Component(WeakRealm::default()),
+            Arc::new(Hooks::new(None)),
         );
-        realm.abs_moniker = AbsoluteMoniker::from(vec!["foo:0"]);
-        let realm = Arc::new(realm);
         let weak_realm = realm.as_weak();
 
         let protocol_capability = CapabilitySource::Capability {
