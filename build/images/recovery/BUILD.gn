@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/board.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
@@ -76,12 +75,12 @@ assemble_system("recovery-eng") {
               "netsvc.disable=false",
               "kernel.enable-debugging-syscalls=true",
               "kernel.enable-serial-syscalls=true",
-            ] + zedboot_cmdline_args + board_zedboot_cmdline_args
+            ] + zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
-  bootfs_labels = board_recovery_bootfs_labels
-  bootfs_labels += [
+  bootfs_labels = [
     "//build/info:bootfs",
+    "//build/input:recovery_bootfs",
     "//bundles:bootstrap",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",
@@ -108,9 +107,9 @@ assemble_system("recovery-fdr") {
   devmgr_config = [ "virtcon.disable=true" ]
   cmdline = []
 
-  bootfs_labels = board_recovery_bootfs_labels
-  bootfs_labels += [
+  bootfs_labels = [
     "//build/info:bootfs",
+    "//build/input:recovery_bootfs",
     "//bundles:bootstrap",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",

@@ -22,4 +22,5 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 
 # serial console
 board_bootfs_labels += [ "//boards/kernel_cmdline:vs680" ]
-board_zedboot_cmdline_args = [ "kernel.bypass-debuglog=true" ]
+board_zedboot_bootfs_labels += [ "//boards/kernel_cmdline:vs680" ]
+board_recovery_bootfs_labels += [ "//boards/kernel_cmdline:vs680" ]

@@ -9,9 +9,15 @@ board_bootfs_labels = [
   "//src/security/policy/zxcrypt:null",
 ]
 
-board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+board_zedboot_bootfs_labels = [
+  "//boards/kernel_cmdline:toulouse",
+  "//src/security/policy/zxcrypt:null",
+]
 
-board_recovery_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
+board_recovery_bootfs_labels = [
+  "//boards/kernel_cmdline:toulouse",
+  "//src/security/policy/zxcrypt:null",
+]
 
 board_system_image_deps = [
   "//garnet/packages/prod:drivers-system",
@@ -23,14 +29,4 @@ board_package_labels = [
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/packages/prod:drivers-support",
-]
-
-# Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
-# /dev/class/ethernet/xxx paths have no well-defined mapping to the ports on the front of the
-# device.
-# In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
-# to the left-most ethernet port.
-board_zedboot_cmdline_args = [
-  "kernel.serial=legacy",
-  "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
 ]

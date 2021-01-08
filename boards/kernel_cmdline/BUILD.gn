@@ -63,3 +63,7 @@ kernel_cmdline("x64-reduced-perf-variation") {
 kernel_cmdline("vs680") {
   args = [ "kernel.bypass-debuglog=true" ]
 }
+
+kernel_cmdline("c18") {
+  args = [ "kernel.bypass-debuglog=true" ]
+}
