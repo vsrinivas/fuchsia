@@ -23,6 +23,7 @@
 
 #include <arch/ops.h>
 #include <kernel/thread.h>
+#include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 #include <platform/debug.h>
 #include <vm/physmap.h>
@@ -45,6 +46,7 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_assert(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_build_instrumentation(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -69,6 +71,10 @@ STATIC_COMMAND("crash_assert", "intentionally crash by failing an assert", &cmd_
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
+STATIC_COMMAND(
+    "build_instrumentation",
+    "display a non-exhaustive list of build instrumentations used to build this kernel image",
+    &cmd_build_instrumentation)
 STATIC_COMMAND_END(mem)
 
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
@@ -469,5 +475,31 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
     }
   }
 
+  return 0;
+}
+
+static int cmd_build_instrumentation(int argc, const cmd_args *argv, uint32_t flags) {
+  ktl::array static_features {
+#if __has_feature(address_sanitizer)
+    "address_sanitizer",
+#endif
+#if DEBUG_ASSERT_IMPLEMENTED
+        "debug_assert",
+#endif
+#if WITH_LOCK_DEP
+        "lockdep",
+#endif
+#if __has_feature(safe_stack)
+        "safe_stack",
+#endif
+#if __has_feature(shadow_call_stack)
+        "shadow_call_stack",
+#endif
+    // missing: sancov, profile
+  };
+  for (const auto &feature : static_features) {
+    printf("build_instrumentation: %s\n", feature);
+  }
+  printf("build_instrumentation: done\n");
   return 0;
 }
