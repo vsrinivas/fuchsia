@@ -28,6 +28,10 @@
             startup: "eager",
         },
         {
+            name: "decompressor",
+            url: "fuchsia-boot://#meta/decompressor-sandbox.cm",
+        },
+        {
             name: "miscsvc",
             url: "fuchsia-boot:///#meta/miscsvc.cm",
         },
@@ -241,6 +245,19 @@
         {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#svchost",
+            to: [
+                "#decompressor",
+                "#fshost",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#decompressor" ],
+        },
+        {
+            protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
+            from: "#decompressor",
             to: [ "#fshost" ],
         },
         {
@@ -572,6 +589,7 @@
             to: [
                 "#base_resolver",
                 "#console-launcher",
+                "#decompressor",
                 "#device_name_provider",
                 "#fshost",
                 "#netsvc",
