@@ -353,6 +353,36 @@ func TestFilterDevices(t *testing.T) {
 	if d := cmp.Diff([]*fuchsiaDevice{want}, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
 	}
+
+	cmd = newDevFinderCmd(
+		[]string{},
+		false,
+		false,
+		subtest{ipv6: true},
+		nbDiscover,
+	)
+	cmd.deviceLimit = 1
+	f = make(chan *fuchsiaDevice, 1024)
+	f <- &fuchsiaDevice{
+		addr:   net.ParseIP(defaultIPv6Target),
+		domain: fuchsiaMDNSNodename1,
+		zone:   defaultIPv6MDNSZone,
+	}
+	f <- &fuchsiaDevice{
+		addr:   net.ParseIP(defaultIPv6Target),
+		domain: fuchsiaMDNSNodename1,
+		zone:   "",
+	}
+	got, err = cmd.filterInboundDevices(context.Background(), f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d device results, want 1", len(got))
+	}
+	if got := got[0].zone; got != defaultIPv6MDNSZone {
+		t.Errorf("got device zone %s, want %s", got, defaultIPv6MDNSZone)
+	}
 }
 
 //// Tests for the `list` command.
@@ -611,6 +641,9 @@ func TestResolveDevices(t *testing.T) {
 				addr:   s.defaultMDNSIP(),
 				domain: s.node,
 			},
+		}
+		if want[0].addr.IsLinkLocalUnicast() {
+			want[0].zone = defaultIPv6MDNSZone
 		}
 		if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 			t.Errorf("resolveDevices mismatch: (-want +got):\n%s", d)

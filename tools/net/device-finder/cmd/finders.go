@@ -44,9 +44,7 @@ func parseAnswer(cmd *devFinderCmd, a mdns.Record, resp mDNSResponse) *fuchsiaDe
 			addr:   net.IP(a.Data),
 			domain: fuchsiaDomain,
 		}
-		if fdev.addr.IsLinkLocalMulticast() || fdev.addr.IsLinkLocalUnicast() {
-			fdev.zone = resp.devAddr.(*net.UDPAddr).Zone
-		}
+		fdev.zone = resp.devAddr.(*net.UDPAddr).Zone
 		if cmd.localResolve {
 			var err error
 			fdev, err = fdev.outbound()

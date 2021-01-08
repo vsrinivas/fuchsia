@@ -348,7 +348,7 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 				return nil, err
 			}
 
-			if cmd.shouldIgnoreIP(device.addr) {
+			if cmd.shouldIgnoreIP(device.addr) || (isLinkLocal6(device.addr) && device.zone == "") {
 				continue
 			}
 
