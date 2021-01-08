@@ -216,6 +216,8 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto& msg = logs[0];
   ASSERT_EQ(msg.tags.size(), 1u);
   ASSERT_EQ(msg.tags[0], tag);
+
+  fx_logger_destroy(logger);
 }
 
 }  // namespace
