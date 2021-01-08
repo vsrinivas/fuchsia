@@ -3732,8 +3732,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->ctrl_wait = {};
   bus->dcmd_resp_wait = {};
 
-  /* Set up the watchdog timer */
-  bus->timer = new Timer(sdiodev->drvr, std::bind(brcmf_sdio_watchdog, bus), false);
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);
@@ -3759,6 +3757,11 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* Attach to the common layer, reserve hdr space */
   bus->sdiodev->drvr->bus_if = bus->sdiodev->bus_if;
   bus->sdiodev->drvr->settings = bus->sdiodev->settings;
+
+  /* Set up the watchdog timer */
+  bus->timer = new Timer(bus->sdiodev->drvr->bus_if, bus->sdiodev->drvr->dispatcher,
+                         std::bind(brcmf_sdio_watchdog, bus), false);
+
   ret = brcmf_attach(bus->sdiodev->drvr);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed");

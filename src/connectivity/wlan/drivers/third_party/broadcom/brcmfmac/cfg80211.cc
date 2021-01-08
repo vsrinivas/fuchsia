@@ -741,8 +741,8 @@ static zx_status_t brcmf_abort_escan(struct brcmf_if* ifp) {
   params_le.channel_list[0] = -1;
   /* E-Scan (or anyother type) can be aborted by SCAN */
   bcme_status_t fwerr = BCME_OK;
-  zx_status_t err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCAN, &params_le,
-                                           sizeof(params_le), &fwerr);
+  zx_status_t err =
+      brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCAN, &params_le, sizeof(params_le), &fwerr);
   if (err != ZX_OK) {
     BRCMF_ERR("Scan abort failed: %s (fw err %s)", zx_status_get_string(err),
               brcmf_fil_get_errstr(fwerr));
@@ -751,8 +751,7 @@ static zx_status_t brcmf_abort_escan(struct brcmf_if* ifp) {
   return err;
 }
 
-static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg,
-                                        struct brcmf_if* ifp,
+static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted) {
   BRCMF_DBG(SCAN, "Enter");
 
@@ -953,10 +952,8 @@ static inline uint16_t brcmf_next_sync_id(struct brcmf_cfg80211_info* cfg) {
   return cfg->next_sync_id++;
 }
 
-static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg,
-                                   struct brcmf_if* ifp,
-                                   const wlanif_scan_req_t* request,
-                                   uint16_t* sync_id_out) {
+static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                                   const wlanif_scan_req_t* request, uint16_t* sync_id_out) {
   if (request == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1042,8 +1039,7 @@ exit:
   return err;
 }
 
-static zx_status_t brcmf_do_escan(struct brcmf_if* ifp,
-                                  const wlanif_scan_req_t* req,
+static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, const wlanif_scan_req_t* req,
                                   uint16_t* sync_id_out) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   zx_status_t err;
@@ -1062,8 +1058,7 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp,
   return err;
 }
 
-zx_status_t brcmf_cfg80211_scan(struct net_device* ndev,
-                                const wlanif_scan_req_t* req,
+zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t* req,
                                 uint16_t* sync_id_out) {
   zx_status_t err;
 
@@ -2424,8 +2419,8 @@ static zx_status_t brcmf_cfg80211_is_valid_sync_id(net_device* ndev,
     return false;
   }
   if (result->sync_id != ndev->scan_sync_id) {
-    BRCMF_ERR("Invalid escan result with sync_id %u, current scan_sync_id %u",
-              result->sync_id, ndev->scan_sync_id);
+    BRCMF_ERR("Invalid escan result with sync_id %u, current scan_sync_id %u", result->sync_id,
+              ndev->scan_sync_id);
     return false;
   }
   return true;
@@ -2526,7 +2521,8 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_ESCAN_RESULT, brcmf_cfg80211_escan_handler);
   cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
   /* Init scan_timeout timer */
-  cfg->escan_timer = new Timer(cfg->pub, std::bind(brcmf_escan_timeout, cfg), false);
+  cfg->escan_timer =
+      new Timer(cfg->pub->bus_if, cfg->pub->dispatcher, std::bind(brcmf_escan_timeout, cfg), false);
   cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -2568,10 +2564,8 @@ static zx_status_t brcmf_internal_escan_add_info(wlanif_scan_req_t* req, uint8_t
   return ZX_OK;
 }
 
-static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp,
-                                              uint32_t fwmap,
-                                              wlanif_scan_req_t* req,
-                                              uint16_t* sync_id_out) {
+static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp, uint32_t fwmap,
+                                              wlanif_scan_req_t* req, uint16_t* sync_id_out) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   zx_status_t err;
 
@@ -5466,6 +5460,8 @@ init_priv_mem_out:
 
 static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
+  struct brcmf_bus* bus_if = cfg->pub->bus_if;
+  async_dispatcher_t* dispatcher = cfg->pub->dispatcher;
 
   cfg->scan_request = nullptr;
   cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
@@ -5478,17 +5474,21 @@ static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   mtx_init(&cfg->usr_sync, mtx_plain);
   brcmf_init_escan(cfg);
   brcmf_init_conf(cfg->conf);
+
   // Initialize the disconnect timer
-  cfg->disconnect_timer = new Timer(cfg->pub, std::bind(brcmf_disconnect_timeout, cfg), false);
+  cfg->disconnect_timer =
+      new Timer(bus_if, dispatcher, std::bind(brcmf_disconnect_timeout, cfg), false);
   cfg->disconnect_timeout_work = WorkItem(brcmf_disconnect_timeout_worker);
   // Initialize the signal report timer
-  cfg->signal_report_timer = new Timer(cfg->pub, std::bind(brcmf_signal_report_timeout, cfg), true);
+  cfg->signal_report_timer =
+      new Timer(bus_if, dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
   cfg->signal_report_work = WorkItem(brcmf_signal_report_worker);
   // Initialize the ap start timer
-  cfg->ap_start_timer = new Timer(cfg->pub, std::bind(brcmf_ap_start_timeout, cfg), false);
+  cfg->ap_start_timer =
+      new Timer(bus_if, dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
   cfg->ap_start_timeout_work = WorkItem(brcmf_ap_start_timeout_worker);
   // Initialize the connect timer
-  cfg->connect_timer = new Timer(cfg->pub, std::bind(brcmf_connect_timeout, cfg), false);
+  cfg->connect_timer = new Timer(bus_if, dispatcher, std::bind(brcmf_connect_timeout, cfg), false);
   cfg->connect_timeout_work = WorkItem(brcmf_connect_timeout_worker);
 
   cfg->vif_disabled = {};

@@ -29,6 +29,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 #define SDIOD_FBR_SIZE 0x100
 

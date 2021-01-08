@@ -108,10 +108,13 @@ TestTimerCfg::~TestTimerCfg() {
 
 void TimerTest::CreateTimer(TestTimerCfg* cfg, uint32_t exp_count, bool periodic,
                             bool call_timerset, bool call_timerstop) {
+  brcmf_pub* pub = GetFakeDrvr();
+
   cfg->target_cnt = exp_count;
   cfg->call_timerset = call_timerset;
   cfg->call_timerstop = call_timerstop;
-  cfg->timer = new Timer(GetFakeDrvr(), std::bind(test_timer_handler, cfg), periodic);
+  cfg->timer =
+      new Timer(pub->bus_if, pub->dispatcher, std::bind(test_timer_handler, cfg), periodic);
 }
 
 void TimerTest::StartTimer(TestTimerCfg* cfg, uint32_t delay) {
