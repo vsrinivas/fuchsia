@@ -5,16 +5,16 @@
 #include "dsi-mt.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/zircon-internal/align.h>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <lib/zircon-internal/align.h>
 
 #include "mt-dsi-reg.h"
+#include "src/graphic/display/drivers/dsi-mt/dsi-mt-bind.h"
 
 namespace dsi_mt {
 
@@ -395,10 +395,8 @@ void DsiMt::DsiImplPrintDsiRegisters() {
   zxlogf(INFO, "DsiIntEnReg = 0x%x", DsiIntEnReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiIntStaReg = 0x%x", DsiIntStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiComCtrlReg = 0x%x", DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiModeCtrlReg = 0x%x",
-         DsiModeCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiTxRxCtrlReg = 0x%x",
-         DsiTxRxCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiModeCtrlReg = 0x%x", DsiModeCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiTxRxCtrlReg = 0x%x", DsiTxRxCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiPsCtrlReg = 0x%x", DsiPsCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiVsaNlReg = 0x%x", DsiVsaNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiVbpNlReg = 0x%x", DsiVbpNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
@@ -408,25 +406,19 @@ void DsiMt::DsiImplPrintDsiRegisters() {
   zxlogf(INFO, "DsiHbpWcReg = 0x%x", DsiHbpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiHfpWcReg = 0x%x", DsiHfpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiBllpWcReg = 0x%x", DsiBllpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiCmdqSizeReg = 0x%x",
-         DsiCmdqSizeReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiCmdqSizeReg = 0x%x", DsiCmdqSizeReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiHstxCklWcReg = 0x%x",
          DsiHstxCklWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData03Reg = 0x%x",
-         DsiRxData03Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData47Reg = 0x%x",
-         DsiRxData47Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData8bReg = 0x%x",
-         DsiRxData8bReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiRxData03Reg = 0x%x", DsiRxData03Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiRxData47Reg = 0x%x", DsiRxData47Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiRxData8bReg = 0x%x", DsiRxData8bReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiRxDataCReg = 0x%x", DsiRxDataCReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiRackReg = 0x%x", DsiRackReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiTrigStaReg = 0x%x", DsiTrigStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiMemContReg = 0x%x", DsiMemContReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiFrmBcReg = 0x%x", DsiFrmBcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyLcpatReg = 0x%x",
-         DsiPhyLcpatReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyLcconReg = 0x%x",
-         DsiPhyLcconReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiPhyLcpatReg = 0x%x", DsiPhyLcpatReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiPhyLcconReg = 0x%x", DsiPhyLcconReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiPhyLd0ConReg = 0x%x",
          DsiPhyLd0ConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiPhyTimeCon0Reg = 0x%x",
@@ -439,8 +431,7 @@ void DsiMt::DsiImplPrintDsiRegisters() {
          DsiPhyTimeCon3Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiPhyTimeCon4Reg = 0x%x",
          DsiPhyTimeCon4Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdConReg = 0x%x",
-         DsiVmCmdConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiVmCmdConReg = 0x%x", DsiVmCmdConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiVmCmdData0Reg = 0x%x",
          DsiVmCmdData0Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiVmCmdData4Reg = 0x%x",
@@ -470,8 +461,7 @@ void DsiMt::DsiImplPrintDsiRegisters() {
          DsiStateDbg8Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiStateDbg9Reg = 0x%x",
          DsiStateDbg9Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiDebugSelReg = 0x%x",
-         DsiDebugSelReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiDebugSelReg = 0x%x", DsiDebugSelReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiBistPatternReg = 0x%x",
          DsiBistPatternReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
   zxlogf(INFO, "DsiBistConReg = 0x%x", DsiBistConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
@@ -792,9 +782,4 @@ static constexpr zx_driver_ops_t dsi_mt_ops = [] {
 
 }  // namespace dsi_mt
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(dsi_mt, dsi_mt::dsi_mt_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DSI),
-ZIRCON_DRIVER_END(dsi_mt)
+ZIRCON_DRIVER(dsi_mt, dsi_mt::dsi_mt_ops, "zircon", "0.1");

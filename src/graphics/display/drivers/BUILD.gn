@@ -10,6 +10,7 @@ group("tests") {
     "amlogic-display:tests",
     "display:tests",
     "dsi-dw:tests",
+    "dsi-mt:tests",
     "fake:tests",
     "goldfish-display:tests",
     "intel-i915:tests",
