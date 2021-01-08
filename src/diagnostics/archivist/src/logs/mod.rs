@@ -17,7 +17,7 @@ pub mod testing;
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 pub use message::Message;
 
-use crate::logs::error::{EventError, LogsError};
+use crate::{events::error::EventError, logs::error::LogsError};
 
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream};
@@ -59,7 +59,7 @@ pub fn log_sink_request_stream_from_event(
                     description: Some(description),
                     ..
                 }) => Err(EventError::ReceivedError { description }),
-                _ => Err(EventError::InvalidEventType),
+                unknown => Err(EventError::UnknownResult { unknown }),
             }
         })?;
 
@@ -259,16 +259,16 @@ mod tests {
         let log_reader1 = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
             component_url: Some("http://foo.com".into()),
-            instance_id: None,
-            realm_path: None,
+            instance_id: Some("0".into()),
+            realm_path: Some(vec![".".into()]),
             ..SourceIdentity::EMPTY
         });
 
         let log_reader2 = harness.create_default_reader(SourceIdentity {
             component_name: Some("bar".into()),
             component_url: Some("http://bar.com".into()),
-            instance_id: None,
-            realm_path: None,
+            instance_id: Some("0".into()),
+            realm_path: Some(vec![".".into()]),
             ..SourceIdentity::EMPTY
         });
 
@@ -283,8 +283,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_v2_streams_different_identities() {
         let harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
-        let log_reader2 = harness.create_event_stream_reader("bar", "http://bar.com");
+        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
+        let log_reader2 = harness.create_event_stream_reader("./bar:0", "http://bar.com");
         attributed_inspect_two_streams_different_identities_by_reader(
             harness,
             log_reader1,
@@ -296,12 +296,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
         let harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
+        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 = harness.create_default_reader(SourceIdentity {
             component_name: Some("bar".into()),
             component_url: Some("http://bar.com".into()),
-            instance_id: None,
-            realm_path: None,
+            instance_id: Some("0".into()),
+            realm_path: Some(vec![".".into()]),
             ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_different_identities_by_reader(
@@ -413,8 +413,8 @@ mod tests {
         let log_reader = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
             component_url: Some("http://foo.com".into()),
-            instance_id: None,
-            realm_path: None,
+            instance_id: Some("0".into()),
+            realm_path: Some(vec![".".into()]),
             ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_same_identity_by_reader(
@@ -428,7 +428,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_v2_streams_same_identity() {
         let harness = TestHarness::with_retained_sinks();
-        let log_reader = harness.create_event_stream_reader("foo", "http://foo.com");
+        let log_reader = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         attributed_inspect_two_streams_same_identity_by_reader(
             harness,
             log_reader.clone(),
@@ -440,12 +440,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_mixed_streams_same_identity() {
         let harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
+        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
             component_url: Some("http://foo.com".into()),
-            instance_id: None,
-            realm_path: None,
+            instance_id: Some("0".into()),
+            realm_path: Some(vec![".".into()]),
             ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)

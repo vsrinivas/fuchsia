@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     crate::{
-        events::types::ComponentIdentifier,
         inspect::container::UnpopulatedInspectDataContainer,
         lifecycle::container::LifecycleDataContainer,
         logs::{
@@ -64,14 +63,11 @@ impl Pipeline {
         self.log_redactor.clone().redact_stream(self.data_repo.cursor(mode))
     }
 
-    pub fn remove(&mut self, component_id: &ComponentIdentifier) {
-        self.moniker_to_static_matcher_map
-            .remove(&component_id.relative_moniker_for_selectors().join("/"));
+    pub fn remove(&mut self, relative_moniker: &[String]) {
+        self.moniker_to_static_matcher_map.remove(&relative_moniker.join("/"));
     }
 
-    pub fn add_inspect_artifacts(&mut self, identifier: ComponentIdentifier) -> Result<(), Error> {
-        let relative_moniker = identifier.relative_moniker_for_selectors();
-
+    pub fn add_inspect_artifacts(&mut self, relative_moniker: &[String]) -> Result<(), Error> {
         // Update the pipeline wrapper to be aware of the new inspect source if there
         // are are static selectors for the pipeline, and some of them are applicable to
         // the inspect source's relative moniker. Otherwise, ignore.

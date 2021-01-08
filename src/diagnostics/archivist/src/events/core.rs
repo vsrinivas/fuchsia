@@ -99,7 +99,7 @@ impl EventStreamServer {
 pub mod tests {
     use {
         super::*,
-        crate::events::types::*,
+        crate::{container::ComponentIdentity, events::types::*},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_io::NodeMarker,
         fuchsia_zircon as zx,
@@ -186,10 +186,13 @@ pub mod tests {
             .expect("send stopped event ok");
 
         let expected_component_id = ComponentIdentifier::Moniker("./foo:0/bar:0".to_string());
+        let expected_identity = ComponentIdentity::from_identifier_and_url(
+            &expected_component_id,
+            "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
+        );
 
         let shared_data = EventMetadata {
-            component_id: expected_component_id.clone(),
-            component_url: "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string(),
+            identity: expected_identity.clone(),
             timestamp: zx::Time::get_monotonic(),
         };
         // Assert the first received event was a Start event.
@@ -215,7 +218,7 @@ pub mod tests {
             ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
                 metadata,
                 directory: Some(_),
-            }) => assert_eq!(metadata.component_id, expected_component_id),
+            }) => assert_eq!(metadata.identity, expected_identity),
             _ => assert!(false),
         }
 
@@ -231,26 +234,21 @@ pub mod tests {
         event1: &ComponentEvent,
         event2: &ComponentEvent,
     ) {
-        let metadata_comparator = |x: &EventMetadata, y: &EventMetadata| {
-            assert_eq!(x.component_id, y.component_id);
-            assert_eq!(x.component_url, y.component_url);
-        };
-
         // Need to explicitly check every case despite the logic being the same since rust
         // requires multi-case match arms to have variable bindings be the same type in every
         // case. This isn't doable in our polymorphic event enums.
         match (event1, event2) {
             (ComponentEvent::Start(x), ComponentEvent::Start(y)) => {
-                metadata_comparator(&x.metadata, &y.metadata)
+                assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             (ComponentEvent::Stop(x), ComponentEvent::Stop(y)) => {
-                metadata_comparator(&x.metadata, &y.metadata)
+                assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             (ComponentEvent::Running(x), ComponentEvent::Running(y)) => {
-                metadata_comparator(&x.metadata, &y.metadata)
+                assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             (ComponentEvent::DiagnosticsReady(x), ComponentEvent::DiagnosticsReady(y)) => {
-                metadata_comparator(&x.metadata, &y.metadata)
+                assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             _ => panic!(
                 "Events are not equal, they are different enumerations: {:?}, {:?}",

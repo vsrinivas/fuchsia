@@ -594,7 +594,7 @@ pub fn sanitize_string_for_selectors(node: &str) -> String {
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
 pub fn match_component_moniker_against_selector(
-    moniker: &Vec<impl AsRef<str> + std::string::ToString>,
+    moniker: &[impl AsRef<str> + std::string::ToString],
     selector: &Arc<Selector>,
 ) -> Result<bool, Error> {
     validate_selector(selector)?;
@@ -637,8 +637,8 @@ pub fn match_component_moniker_against_selector(
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
 pub fn match_component_moniker_against_selectors(
-    moniker: &Vec<String>,
-    selectors: &Vec<Arc<Selector>>,
+    moniker: &[String],
+    selectors: &[Arc<Selector>],
 ) -> Result<Vec<Arc<Selector>>, Error> {
     if moniker.is_empty() {
         return Err(format_err!(
@@ -897,7 +897,7 @@ mod tests {
             .expect("create file")
             .write_all(
                 b"a:b:c
-     
+    
 ",
             )
             .expect("writing test file");

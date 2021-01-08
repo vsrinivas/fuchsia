@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    crate::{container::ComponentIdentity, events::error::EventError},
+    anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
@@ -84,7 +85,7 @@ impl ComponentIdentifier {
                 }
                 // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
                 // a/b/coll:dynamic_child/c
-                // 2.. to remove the `.`, always present as this is a relative moniker.
+                // 2.. to remove the `./`, always present as this is a relative moniker.
                 moniker[2..]
                     .split("/")
                     .map(|component| match &component.split(":").collect::<Vec<_>>()[..] {
@@ -113,7 +114,7 @@ impl ComponentIdentifier {
 
                 // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
                 // [a, 0, b, 0, coll:dynamic_child, c]
-                // 1.. to remove the `./`, always present as this is a relative moniker.
+                // 2.. to remove the `./`, always present as this is a relative moniker.
                 moniker[2..]
                     .split("/")
                     .flat_map(|parts| match &parts.split(":").collect::<Vec<_>>()[..] {
@@ -132,17 +133,10 @@ impl ComponentIdentifier {
 }
 
 impl TryFrom<SourceIdentity> for EventMetadata {
-    type Error = anyhow::Error;
-    fn try_from(component: SourceIdentity) -> Result<Self, Error> {
-        let component: ValidatedSourceIdentity = ValidatedSourceIdentity::try_from(component)?;
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
-            component_name: component.component_name,
-            instance_id: component.instance_id,
-            realm_path: RealmPath(component.realm_path),
-        });
+    type Error = EventError;
+    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
         Ok(EventMetadata {
-            component_id,
-            component_url: component.component_url,
+            identity: ComponentIdentity::try_from(component)?,
             timestamp: zx::Time::get_monotonic(),
         })
     }
@@ -208,9 +202,7 @@ pub struct LegacyIdentifier {
 /// all component events.
 #[derive(Debug, PartialEq, Clone)]
 pub struct EventMetadata {
-    pub component_id: ComponentIdentifier,
-
-    pub component_url: String,
+    pub identity: ComponentIdentity,
 
     pub timestamp: zx::Time,
 }
@@ -297,30 +289,32 @@ pub enum InspectData {
 }
 
 impl TryFrom<Event> for ComponentEvent {
-    type Error = anyhow::Error;
+    type Error = EventError;
 
-    fn try_from(event: Event) -> Result<ComponentEvent, Error> {
+    fn try_from(event: Event) -> Result<ComponentEvent, Self::Error> {
         let event: ValidatedEvent = ValidatedEvent::try_from(event)?;
 
-        let shared_data = EventMetadata {
-            component_id: ComponentIdentifier::Moniker(event.header.moniker.clone()),
-            component_url: event.header.component_url.clone(),
+        let metadata = EventMetadata {
+            identity: ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Moniker(event.header.moniker.clone()),
+                &event.header.component_url,
+            ),
             timestamp: zx::Time::from_nanos(event.header.timestamp),
         };
 
         match event.header.event_type {
             fsys::EventType::Started => {
-                let start_event = StartEvent { metadata: shared_data };
+                let start_event = StartEvent { metadata };
                 Ok(ComponentEvent::Start(start_event))
             }
             fsys::EventType::Stopped => {
-                let stop_event = StopEvent { metadata: shared_data };
+                let stop_event = StopEvent { metadata };
                 Ok(ComponentEvent::Stop(stop_event))
             }
             fsys::EventType::CapabilityReady | fsys::EventType::Running => {
-                construct_payload_holding_component_event(event, shared_data)
+                construct_payload_holding_component_event(event, metadata)
             }
-            _ => Err(format_err!("Unexpected type: {:?}", event.header.event_type)),
+            _ => Err(EventError::InvalidEventType { ty: event.header.event_type }),
         }
     }
 }
@@ -328,14 +322,15 @@ impl TryFrom<Event> for ComponentEvent {
 fn construct_payload_holding_component_event(
     event: ValidatedEvent,
     shared_data: EventMetadata,
-) -> Result<ComponentEvent, Error> {
+) -> Result<ComponentEvent, EventError> {
     match event.event_result {
         Some(result) => {
             match result {
                 fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
                     capability_ready,
                 )) => {
-                    if capability_ready.name == Some("diagnostics".to_string()) {
+                    let name = capability_ready.name.ok_or(EventError::MissingField("name"))?;
+                    if name == "diagnostics" {
                         match capability_ready.node {
                             Some(node) => {
                                 let diagnostics_ready_event = DiagnosticsReadyEvent {
@@ -344,14 +339,10 @@ fn construct_payload_holding_component_event(
                                 };
                                 Ok(ComponentEvent::DiagnosticsReady(diagnostics_ready_event))
                             }
-                            None => Err(format_err!(
-                                "Missing diagnostics directory in CapabilityReady payload"
-                            )),
+                            None => Err(EventError::MissingDiagnosticsDir),
                         }
                     } else {
-                        Err(format_err!(
-                            "DiagnosticsReady event didn't encode a diagnostics directory."
-                        ))
+                        Err(EventError::IncorrectName { received: name, expected: "diagnostics" })
                     }
                 }
                 fsys::EventResult::Payload(fsys::EventPayload::Running(payload)) => {
@@ -363,20 +354,21 @@ fn construct_payload_holding_component_event(
                             };
                             Ok(ComponentEvent::Running(existing_data))
                         }
-                        None => Err(format_err!("Running event didn't encode start timestamp.")),
+                        None => Err(EventError::MissingStartTimestamp),
                     }
                 }
-                fsys::EventResult::Error(e) => {
+                fsys::EventResult::Error(fsys::EventError {
+                    description: Some(description),
+                    ..
+                }) => {
                     // TODO(fxbug.dev/53903): result.error carries information about errors that happened
                     // in component_manager. We should dump those in diagnostics.
-                    Err(format_err!("Payload containing event encountered an error: {:?}", e))
+                    Err(EventError::ReceivedError { description })
                 }
-                _ => Err(format_err!("Encountered an unknown payload containing event")),
+                result => Err(EventError::UnrecognizedResult { result }),
             }
         }
-        None => {
-            Err(format_err!("Cannot extract payload from an event missing results: {:?}", event))
-        }
+        None => Err(EventError::MissingPayload { event }),
     }
 }
 

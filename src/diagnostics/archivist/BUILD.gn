@@ -85,6 +85,7 @@ rustc_library("lib") {
     "src/diagnostics.rs",
     "src/error.rs",
     "src/events/core.rs",
+    "src/events/error.rs",
     "src/events/legacy.rs",
     "src/events/mod.rs",
     "src/events/stream.rs",

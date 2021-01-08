@@ -71,6 +71,7 @@ mod tests {
         super::*,
         crate::{
             accessor::BatchIterator,
+            container::ComponentIdentity,
             diagnostics::{self, ConnectionStats},
             events::types::{ComponentIdentifier, LegacyIdentifier},
             inspect::collector::InspectDataCollector,
@@ -160,23 +161,19 @@ mod tests {
             realm_path: vec![].into(),
             component_name: "test_component.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         diagnostics_repo
             .write()
-            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .unwrap();
 
         diagnostics_repo
             .write()
-            .add_inspect_artifacts(
-                component_id.clone(),
-                TEST_URL,
-                out_dir_proxy,
-                zx::Time::from_nanos(0),
-            )
+            .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
             .unwrap();
 
-        pipeline_wrapper.write().add_inspect_artifacts(component_id.clone()).unwrap();
+        pipeline_wrapper.write().add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -195,8 +192,8 @@ mod tests {
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
         }
 
-        diagnostics_repo.write().remove(&component_id.clone());
-        pipeline_wrapper.write().remove(&component_id.clone());
+        diagnostics_repo.write().remove(&identity.unique_key);
+        pipeline_wrapper.write().remove(&identity.relative_moniker);
 
         let test_batch_iterator_stats2 =
             Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));

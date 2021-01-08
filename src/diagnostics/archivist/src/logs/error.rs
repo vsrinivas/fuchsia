@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+use crate::events::error::EventError;
 use diagnostics_stream::parse::ParseError;
 use thiserror::Error;
 
@@ -31,24 +32,6 @@ pub enum LogsError {
         #[from]
         source: ListenerError,
     },
-}
-
-#[derive(Debug, Error)]
-pub enum EventError {
-    #[error("missing `{0}`")]
-    MissingField(&'static str),
-
-    #[error("incorrect capability name {received} (expected {expected})")]
-    IncorrectName { received: String, expected: &'static str },
-
-    #[error("server end from event was invalid: {source}")]
-    InvalidServerEnd { source: fidl::Error },
-
-    #[error("received a fuchsia.sys2/EventErro: {description}")]
-    ReceivedError { description: String },
-
-    #[error("received an invalid event type")]
-    InvalidEventType,
 }
 
 #[derive(Debug, Error)]

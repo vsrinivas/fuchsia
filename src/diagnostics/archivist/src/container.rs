@@ -3,15 +3,20 @@
 
 use {
     crate::{
-        events::types::ComponentIdentifier, inspect::container::InspectArtifactsContainer,
+        events::{
+            error::EventError,
+            types::{ComponentIdentifier, LegacyIdentifier, ValidatedSourceIdentity},
+        },
+        inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
+    fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_zircon as zx,
-    std::sync::Arc,
+    std::{convert::TryFrom, sync::Arc},
 };
 
 pub enum ReadSnapshot {
@@ -20,10 +25,15 @@ pub enum ReadSnapshot {
     Finished(DiagnosticsHierarchy),
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct ComponentIdentity {
     /// Relative moniker of the component that this artifacts container
     /// is representing.
     pub relative_moniker: Vec<String>,
+
+    /// A "rendered" moniker has had `/` inserted between segments and has had instance IDs
+    /// appended after colons, this is the form of moniker most familiar to downstream users.
+    pub rendered_moniker: String,
 
     /// The url with which the associated component was launched.
     pub url: String,
@@ -42,9 +52,29 @@ impl ComponentIdentity {
     ) -> Self {
         ComponentIdentity {
             relative_moniker: identifier.relative_moniker_for_selectors(),
+            rendered_moniker: identifier.to_string(),
             unique_key: identifier.unique_key(),
             url: url.into(),
         }
+    }
+}
+
+impl TryFrom<SourceIdentity> for ComponentIdentity {
+    type Error = EventError;
+    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
+        let component: ValidatedSourceIdentity = ValidatedSourceIdentity::try_from(component)?;
+        let id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            component_name: component.component_name,
+            instance_id: component.instance_id,
+            realm_path: component.realm_path.into(),
+        });
+        Ok(Self::from_identifier_and_url(&id, component.component_url))
+    }
+}
+
+impl std::fmt::Display for ComponentIdentity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.rendered_moniker)
     }
 }
 

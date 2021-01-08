@@ -7,10 +7,10 @@ use {
         accessor::ArchiveAccessor,
         archive, configs, constants,
         constants::INSPECT_LOG_WINDOW_SIZE,
+        container::ComponentIdentity,
         diagnostics,
         events::types::{
-            ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
-            EventMetadata,
+            ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
         },
         events::{stream::EventStream, types::EventSource},
         logs::redact::Redactor,
@@ -498,7 +498,7 @@ impl Archivist {
         // as an Option is only to support mock objects for equality in tests.
         let diagnostics_proxy = diagnostics_ready_data.directory.unwrap();
 
-        let component_id = diagnostics_ready_data.metadata.component_id.clone();
+        let identity = diagnostics_ready_data.metadata.identity.clone();
 
         let locked_state = &self.lock();
 
@@ -507,14 +507,13 @@ impl Archivist {
             .diagnostics_repo
             .write()
             .add_inspect_artifacts(
-                component_id.clone(),
-                diagnostics_ready_data.metadata.component_url.clone(),
+                identity.clone(),
                 diagnostics_proxy,
                 diagnostics_ready_data.metadata.timestamp.clone(),
             )
             .unwrap_or_else(|e| {
                 warn!(
-                    component = ?component_id.clone(), ?e,
+                    component = ?identity, ?e,
                     "Failed to add inspect artifacts to repository"
                 );
             });
@@ -523,49 +522,40 @@ impl Archivist {
         // to eagerly bucket static selectors based on that component's moniker.
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
         for pipeline in &locked_state.diagnostics_pipelines {
-            pipeline.write().add_inspect_artifacts(component_id.clone()).unwrap_or_else(|e| {
-                warn!(
-                    component = ?component_id.clone(), ?e,
-                    "Failed to add inspect artifacts to pipeline wrapper"
-                );
-            });
+            pipeline.write().add_inspect_artifacts(&identity.relative_moniker).unwrap_or_else(
+                |e| {
+                    warn!(
+                        component = ?identity, ?e,
+                        "Failed to add inspect artifacts to pipeline wrapper"
+                    );
+                },
+            );
         }
     }
 
+    /// Updates the central repository to reference the new diagnostics source.
     fn add_new_component(
         &self,
-        identifier: ComponentIdentifier,
-        component_url: String,
+        identity: ComponentIdentity,
         event_timestamp: zx::Time,
         component_start_time: Option<zx::Time>,
     ) {
-        let locked_state = &self.lock();
-
-        // Update the central repository to reference the new diagnostics source.
-        locked_state
-            .diagnostics_repo
-            .write()
-            .add_new_component(
-                identifier.clone(),
-                component_url.clone(),
-                event_timestamp,
-                component_start_time,
-            )
-            .unwrap_or_else(|e| {
-                error!(
-                    id = ?identifier, ?e,
-                    "Failed to add new component to repository",
-                );
-            });
+        if let Err(e) = self.lock().diagnostics_repo.write().add_new_component(
+            identity.clone(),
+            event_timestamp,
+            component_start_time,
+        ) {
+            error!(?identity, ?e, "Failed to add new component to repository");
+        }
     }
 
-    fn remove_from_inspect_repo(&self, component_id: &ComponentIdentifier) {
+    fn remove_from_inspect_repo(&self, identity: &ComponentIdentity) {
         let locked_state = &self.lock();
-        locked_state.diagnostics_repo.write().remove(&component_id);
+        locked_state.diagnostics_repo.write().remove(&identity.unique_key);
 
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
         for pipeline in &locked_state.diagnostics_pipelines {
-            pipeline.write().remove(&component_id);
+            pipeline.write().remove(&identity.relative_moniker);
         }
     }
 
@@ -573,24 +563,15 @@ impl Archivist {
         match event {
             ComponentEvent::Start(start) => {
                 let archived_metadata = start.metadata.clone();
-                debug!(
-                    "Adding new component. id={:?} url={}",
-                    &start.metadata.component_id, &start.metadata.component_url
-                );
-                self.add_new_component(
-                    start.metadata.component_id,
-                    start.metadata.component_url,
-                    start.metadata.timestamp,
-                    None,
-                );
+                debug!(identity = ?start.metadata.identity, "Adding new component.");
+                self.add_new_component(start.metadata.identity, start.metadata.timestamp, None);
                 self.archive_event("START", archived_metadata).await
             }
             ComponentEvent::Running(running) => {
                 let archived_metadata = running.metadata.clone();
-                debug!("Component is running. id={:?}", &running.metadata.component_id,);
+                debug!(identity = ?running.metadata.identity, "Component is running.");
                 self.add_new_component(
-                    running.metadata.component_id,
-                    running.metadata.component_url,
+                    running.metadata.identity,
                     running.metadata.timestamp,
                     Some(running.component_start_time),
                 );
@@ -599,14 +580,14 @@ impl Archivist {
             ComponentEvent::Stop(stop) => {
                 // TODO(fxbug.dev/53939): Get inspect data from repository before removing
                 // for post-mortem inspection.
-                debug!("Component stopped. id={:?}", &stop.metadata.component_id);
-                self.remove_from_inspect_repo(&stop.metadata.component_id);
+                debug!("Component stopped. id={:?}", &stop.metadata.identity);
+                self.remove_from_inspect_repo(&stop.metadata.identity);
                 self.archive_event("STOP", stop.metadata).await
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 debug!(
-                    "Diagnostics directory is ready. id={:?}",
-                    &diagnostics_ready.metadata.component_id
+                    identity = ?diagnostics_ready.metadata.identity,
+                    "Diagnostics directory is ready.",
                 );
                 self.populate_inspect_repo(diagnostics_ready).await;
                 Ok(())

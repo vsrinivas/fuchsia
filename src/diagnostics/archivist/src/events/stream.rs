@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::types::*,
+    crate::{container::ComponentIdentity, events::types::*},
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{channel::mpsc, StreamExt},
@@ -72,27 +72,27 @@ impl EventStream {
         match event {
             ComponentEvent::Start(start) => {
                 self.components_started.add(1);
-                self.log_inspect("START", &start.metadata.component_id);
+                self.log_inspect("START", &start.metadata.identity);
             }
             ComponentEvent::Stop(stop) => {
                 self.components_stopped.add(1);
-                self.log_inspect("STOP", &stop.metadata.component_id);
+                self.log_inspect("STOP", &stop.metadata.identity);
             }
             ComponentEvent::Running(running) => {
                 self.components_seen_running.add(1);
-                self.log_inspect("RUNNING", &running.metadata.component_id);
+                self.log_inspect("RUNNING", &running.metadata.identity);
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 self.diagnostics_directories_seen.add(1);
-                self.log_inspect("DIAGNOSTICS_DIR_READY", &diagnostics_ready.metadata.component_id);
+                self.log_inspect("DIAGNOSTICS_DIR_READY", &diagnostics_ready.metadata.identity);
             }
         }
     }
 
-    fn log_inspect(&mut self, event_name: &str, identifier: &ComponentIdentifier) {
+    fn log_inspect(&mut self, event_name: &str, identity: &ComponentIdentity) {
         inspect_log!(self.component_log_node,
             event: event_name,
-            moniker: identifier.to_string(),
+            moniker: identity.rendered_moniker,
         );
     }
 }
@@ -115,22 +115,25 @@ mod tests {
     struct FakeFutureProvider {}
 
     lazy_static! {
+        static ref TEST_URL: String = "NO-OP URL".to_string();
         static ref LEGACY_ID: ComponentIdentifier = ComponentIdentifier::Legacy(LegacyIdentifier {
             component_name: "foo.cmx".to_string(),
             instance_id: "12345".to_string(),
             realm_path: RealmPath(vec!["a".to_string(), "b".to_string()]),
         });
-        static ref LEGACY_URL: String = "NO-OP URL".to_string();
+        static ref LEGACY_IDENTITY: ComponentIdentity =
+            ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL);
         static ref MONIKER_ID: ComponentIdentifier =
-            ComponentIdentifier::Moniker("a:0/b:1".to_string());
+            ComponentIdentifier::Moniker("./a:0/b:1".to_string());
+        static ref MONIKER_IDENTITY: ComponentIdentity =
+            ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL);
     }
 
     #[async_trait]
     impl EventSource for FakeEventSource {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
-                component_id: MONIKER_ID.clone(),
-                component_url: LEGACY_URL.clone(),
+                identity: ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
             };
 
@@ -157,8 +160,7 @@ mod tests {
     impl EventSource for FakeLegacyProvider {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
-                component_id: LEGACY_ID.clone(),
-                component_url: LEGACY_URL.clone(),
+                identity: ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
             };
 
@@ -188,14 +190,14 @@ mod tests {
         }
     }
 
-    async fn validate_events(stream: &mut ComponentEventStream, expected_id: &ComponentIdentifier) {
+    async fn validate_events(stream: &mut ComponentEventStream, expected_id: &ComponentIdentity) {
         for i in 0..3 {
             let event = stream.next().await.expect("received event");
             match (i, &event) {
                 (0, ComponentEvent::Start(StartEvent { metadata, .. }))
                 | (1, ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent { metadata, .. }))
                 | (2, ComponentEvent::Stop(StopEvent { metadata, .. })) => {
-                    assert_eq!(metadata.component_id, *expected_id);
+                    assert_eq!(metadata.identity, *expected_id);
                 }
                 _ => panic!("unexpected event: {:?}", event),
             }
@@ -212,8 +214,8 @@ mod tests {
         stream.add_source("v3", Box::new(FakeFutureProvider {}));
         let mut stream = stream.listen().await;
 
-        validate_events(&mut stream, &LEGACY_ID).await;
-        validate_events(&mut stream, &MONIKER_ID).await;
+        validate_events(&mut stream, &LEGACY_IDENTITY).await;
+        validate_events(&mut stream, &MONIKER_IDENTITY).await;
 
         assert_inspect_tree!(inspector, root: {
             events: {
@@ -249,17 +251,17 @@ mod tests {
                     "3": {
                         "@time": inspect::testing::AnyProperty,
                         event: "START",
-                        moniker: "a:0/b:1"
+                        moniker: "./a:0/b:1"
                     },
                     "4": {
                         "@time": inspect::testing::AnyProperty,
                         event: "DIAGNOSTICS_DIR_READY",
-                        moniker: "a:0/b:1"
+                        moniker: "./a:0/b:1"
                     },
                     "5": {
                         "@time": inspect::testing::AnyProperty,
                         event: "STOP",
-                        moniker: "a:0/b:1"
+                        moniker: "./a:0/b:1"
                     }
                 }
             }

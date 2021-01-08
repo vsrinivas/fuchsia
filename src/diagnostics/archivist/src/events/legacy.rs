@@ -120,7 +120,7 @@ impl EventListenerServer {
 mod tests {
     use {
         super::*,
-        crate::events::core::tests::*,
+        crate::{container::ComponentIdentity, events::core::tests::*},
         fidl_fuchsia_io::DirectoryMarker,
         fidl_fuchsia_sys_internal::{
             ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
@@ -156,12 +156,14 @@ mod tests {
     impl Into<EventMetadata> for ClonableSourceIdentity {
         fn into(self) -> EventMetadata {
             EventMetadata {
-                component_id: ComponentIdentifier::Legacy(LegacyIdentifier {
-                    component_name: self.component_name,
-                    instance_id: self.instance_id,
-                    realm_path: RealmPath(self.realm_path),
-                }),
-                component_url: MOCK_URL.clone(),
+                identity: ComponentIdentity::from_identifier_and_url(
+                    &ComponentIdentifier::Legacy(LegacyIdentifier {
+                        component_name: self.component_name,
+                        instance_id: self.instance_id,
+                        realm_path: RealmPath(self.realm_path),
+                    }),
+                    &*MOCK_URL,
+                ),
                 timestamp: zx::Time::from_nanos(0),
             }
         }
@@ -199,19 +201,20 @@ mod tests {
         let event = event_stream.next().await.unwrap();
         match event {
             ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
-                metadata:
-                    EventMetadata {
-                        component_id: ComponentIdentifier::Legacy(identifier),
-                        component_url: _,
-                        timestamp: _,
-                    },
+                metadata: EventMetadata { identity: observed_identity, timestamp: _ },
                 directory: Some(_),
             }) => {
-                assert_eq!(identifier.realm_path, RealmPath(identity.realm_path.clone()));
-                assert_eq!(identifier.component_name, identity.component_name);
-                assert_eq!(identifier.instance_id, identity.instance_id);
+                assert_eq!(
+                    observed_identity.to_string(),
+                    format!(
+                        "{}/{}:{}",
+                        identity.realm_path.join("/"),
+                        &identity.component_name,
+                        &identity.instance_id
+                    )
+                );
             }
-            _ => assert!(false),
+            other => panic!("unexpected event: {:?}", other),
         }
 
         let event = event_stream.next().await.unwrap();

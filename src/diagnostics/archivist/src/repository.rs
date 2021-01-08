@@ -5,7 +5,6 @@ use {
     crate::{
         constants::MAXIMUM_CACHED_LOGS_BYTES,
         container::{ComponentDiagnostics, ComponentIdentity},
-        events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
@@ -416,14 +415,13 @@ impl Default for LogState {
 }
 
 impl DataRepoState {
-    pub fn remove(&mut self, component_id: &ComponentIdentifier) {
-        self.data_directories.remove(component_id.unique_key());
+    pub fn remove(&mut self, key: &[String]) {
+        self.data_directories.remove(key.to_vec());
     }
 
     pub fn add_new_component(
         &mut self,
-        identifier: ComponentIdentifier,
-        component_url: impl Into<String>,
+        identity: ComponentIdentity,
         event_timestamp: zx::Time,
         component_start_time: Option<zx::Time>,
     ) -> Result<(), Error> {
@@ -432,7 +430,7 @@ impl DataRepoState {
             component_start_time: component_start_time,
         };
 
-        let key = identifier.unique_key();
+        let key = identity.unique_key.clone();
 
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
         match diag_repo_entry_opt {
@@ -449,10 +447,7 @@ impl DataRepoState {
                         self.data_directories.insert(
                             key,
                             ComponentDiagnostics::new_with_lifecycle(
-                                Arc::new(ComponentIdentity::from_identifier_and_url(
-                                    &identifier,
-                                    component_url,
-                                )),
+                                Arc::new(identity),
                                 lifecycle_artifact_container,
                             ),
                         )
@@ -482,10 +477,7 @@ impl DataRepoState {
             None => self.data_directories.insert(
                 key,
                 ComponentDiagnostics::new_with_lifecycle(
-                    Arc::new(ComponentIdentity::from_identifier_and_url(
-                        &identifier,
-                        component_url,
-                    )),
+                    Arc::new(identity),
                     lifecycle_artifact_container,
                 ),
             ),
@@ -495,8 +487,7 @@ impl DataRepoState {
 
     pub fn add_inspect_artifacts(
         &mut self,
-        identifier: ComponentIdentifier,
-        component_url: impl Into<String>,
+        identity: ComponentIdentity,
         directory_proxy: DirectoryProxy,
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
@@ -505,17 +496,16 @@ impl DataRepoState {
             event_timestamp,
         };
 
-        self.insert_inspect_artifact_container(inspect_container, identifier, component_url.into())
+        self.insert_inspect_artifact_container(inspect_container, identity)
     }
 
     // Inserts an InspectArtifactsContainer into the data repository.
     fn insert_inspect_artifact_container(
         &mut self,
         inspect_container: InspectArtifactsContainer,
-        identifier: ComponentIdentifier,
-        component_url: String,
+        identity: ComponentIdentity,
     ) -> Result<(), Error> {
-        let key = identifier.unique_key();
+        let key = identity.unique_key.clone();
 
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
 
@@ -533,10 +523,7 @@ impl DataRepoState {
                         self.data_directories.insert(
                             key,
                             ComponentDiagnostics::new_with_inspect(
-                                Arc::new(ComponentIdentity::from_identifier_and_url(
-                                    &identifier,
-                                    component_url,
-                                )),
+                                Arc::new(identity),
                                 inspect_container,
                             ),
                         )
@@ -570,13 +557,7 @@ impl DataRepoState {
             // event before a start or existing event!
             None => self.data_directories.insert(
                 key,
-                ComponentDiagnostics::new_with_inspect(
-                    Arc::new(ComponentIdentity::from_identifier_and_url(
-                        &identifier,
-                        component_url,
-                    )),
-                    inspect_container,
-                ),
+                ComponentDiagnostics::new_with_inspect(Arc::new(identity), inspect_container),
             ),
         }
         Ok(())
@@ -706,21 +687,23 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = component_id.unique_key();
+        let key = identity.unique_key.clone();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
@@ -736,19 +719,20 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
-            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("instantiated new component.");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         data_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = component_id.unique_key();
+        let key = &identity.unique_key;
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert!(entry.inspect.is_some());
@@ -767,21 +751,21 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
-            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("instantiated new component.");
 
         let duplicate_new_component_insertion = data_repo.add_new_component(
-            component_id.clone(),
-            TEST_URL,
+            identity.clone(),
             zx::Time::from_nanos(1),
             Some(zx::Time::from_nanos(0)),
         );
 
         assert!(duplicate_new_component_insertion.is_ok());
 
-        let key = component_id.unique_key();
+        let key = &identity.unique_key;
         let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
@@ -804,17 +788,17 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let component_insertion = data_repo.add_new_component(
-            component_id.clone(),
-            TEST_URL,
+            identity.clone(),
             zx::Time::from_nanos(1),
             Some(zx::Time::from_nanos(0)),
         );
 
         assert!(component_insertion.is_ok());
 
-        let key = component_id.unique_key();
+        let key = &identity.unique_key;
         let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
@@ -838,25 +822,22 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         data_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let false_new_component_result = data_repo.add_new_component(
-            component_id.clone(),
-            TEST_URL,
-            zx::Time::from_nanos(0),
-            None,
-        );
+        let false_new_component_result =
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0), None);
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
         // artifacts container.
-        let key = component_id.unique_key();
+        let key = &identity.unique_key;
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert_eq!(entry.identity.url, TEST_URL);
@@ -876,27 +857,24 @@ mod tests {
             realm_path,
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
-            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
-        let key = component_id.unique_key();
+        let key = &identity.unique_key;
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
 
         let mutable_values =
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
 
-        mutable_values.push(ComponentDiagnostics::empty(Arc::new(
-            ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL.to_string()),
-        )));
+        mutable_values.push(ComponentDiagnostics::empty(Arc::new(identity.clone())));
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
-        assert!(data_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
-            .is_err());
+        assert!(data_repo.add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0)).is_err());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -910,17 +888,17 @@ mod tests {
             realm_path: realm_path.clone(),
             component_name: "foo.cmx".into(),
         });
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
             .write()
-            .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         data_repo
             .write()
             .add_inspect_artifacts(
-                component_id.clone(),
-                TEST_URL,
+                identity,
                 io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
                     .expect("open root"),
                 zx::Time::from_nanos(0),
@@ -932,17 +910,17 @@ mod tests {
             realm_path,
             component_name: "foo2.cmx".into(),
         });
+        let identity2 = ComponentIdentity::from_identifier_and_url(&component_id2, TEST_URL);
 
         data_repo
             .write()
-            .add_new_component(component_id2.clone(), TEST_URL, zx::Time::from_nanos(0), None)
+            .add_new_component(identity2.clone(), zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         data_repo
             .write()
             .add_inspect_artifacts(
-                component_id2.clone(),
-                TEST_URL,
+                identity2,
                 io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
                     .expect("open root"),
                 zx::Time::from_nanos(0),

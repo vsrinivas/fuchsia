@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod core;
+pub(crate) mod error;
 mod legacy;
 pub(crate) mod stream;
 pub(crate) mod types;

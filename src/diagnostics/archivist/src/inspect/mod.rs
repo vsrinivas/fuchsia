@@ -329,6 +329,7 @@ mod tests {
         super::*,
         crate::{
             accessor::BatchIterator,
+            container::ComponentIdentity,
             diagnostics,
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
             repository::DataRepo,
@@ -637,26 +638,29 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        });
+        let identity = ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                instance_id,
+                realm_path,
+                component_name: "foo.cmx".into(),
+            }),
+            TEST_URL,
+        );
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
 
         inspect_repo
-            .add_inspect_artifacts(component_id.clone(), TEST_URL, proxy, zx::Time::from_nanos(0))
+            .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = component_id.unique_key();
+        let key = identity.unique_key.clone();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
@@ -768,17 +772,16 @@ mod tests {
                     Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
 
                 for (cid, proxy) in id_and_directory_proxy {
+                    let identity = ComponentIdentity::from_identifier_and_url(&cid, TEST_URL);
                     inspect_repo
                         .write()
-                        .add_inspect_artifacts(
-                            cid.clone(),
-                            TEST_URL,
-                            proxy,
-                            zx::Time::from_nanos(0),
-                        )
+                        .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
                         .unwrap();
 
-                    pipeline_wrapper.write().add_inspect_artifacts(cid.clone()).unwrap();
+                    pipeline_wrapper
+                        .write()
+                        .add_inspect_artifacts(&identity.relative_moniker)
+                        .unwrap();
                 }
 
                 let inspector = Inspector::new();
@@ -912,17 +915,13 @@ mod tests {
 
         let inspector_arc = Arc::new(inspector);
 
+        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
         inspect_repo
             .write()
-            .add_inspect_artifacts(
-                component_id.clone(),
-                TEST_URL,
-                out_dir_proxy,
-                zx::Time::from_nanos(0),
-            )
+            .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
             .unwrap();
 
-        pipeline_wrapper.write().add_inspect_artifacts(component_id.clone()).unwrap();
+        pipeline_wrapper.write().add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,
@@ -1017,8 +1016,8 @@ mod tests {
         let test_batch_iterator_stats2 =
             Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
-        inspect_repo.write().remove(&component_id);
-        pipeline_wrapper.write().remove(&component_id);
+        inspect_repo.write().remove(&identity.unique_key);
+        pipeline_wrapper.write().remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(
                 pipeline_wrapper.clone(),
