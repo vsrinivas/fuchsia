@@ -20,19 +20,14 @@ You can specify packages in these ways:
 * Individually, if you want to build less packages:
 
   ```
-  --with //garnet/packages/tests:scenic
-  --with //garnet/packages/tests:scenic_cpp
-  --with //garnet/packages/tests:escher
-  --with //garnet/packages/tests:ui
-  --with //garnet/packages/tests:e2e_input_tests
-  --with //garnet/packages/tests:vulkan
-  --with //garnet/packages/tests:magma
+  --with //src/ui:tests
+  --with //src/ui/lib/escher:escher_tests
   ```
 
 ## Scenic and CQ
 
 Tests are automatically run before submission by trybots for every change in
-Fuchsia. See the `fuchsia-x64-release` and `fuchsia-x64-debug` bots on
+Fuchsia. See the `fuchsia-x64-release` and `fuchsia-x64-asan` bots on
 [https://ci.chromium.org/p/fuchsia/builders](https://ci.chromium.org/p/fuchsia/builders).
 
 ### Add a new test suite to existing CQ tests
@@ -67,10 +62,9 @@ Examples of test packages:
 
 To ensure the test is run on CQ, it requires an unbroken chain of dependencies that roll up to your
 `fx set` command's available packages (expandable using the `--with` flag), typically
-going through the all target of `//<layer>/packages/tests/BUILD.gn`, such as
-`//garnet/packages/tests:all`.
+going through the all target of `//garnet/packages/tests:all`.
 
-You need to make sure that there is a dependency chain from `//<layer>/packages/tests:all` to
+You need to make sure that there is a dependency chain from `//garnet/packages/tests:all` to
 your test package. For more information, see
 [Testing FAQ documentation](/docs/development/testing/faq.md#q_what-ensures-it-is-run).
 
@@ -81,19 +75,18 @@ To ensure that the test is run on CQ, you also need to specify a
 for each test executable in the package inside the test's `BUILD.gn` file.
 
 Generally the environment is set to `environments = basic_envs`.
-This specifies the test should be run on both QEMU (for x64 + arm64) and NUC (for x64), and using
+This specifies the test should be run on both QEMU (for arm64), FEMU and NUC (for x64), and using
 both debug and release builds. For running on other environments, refer to
 [Test environments](/docs/concepts/testing/environments.md).
 
 Reference the test package transitively. For example, the packages above are
-referenced by `//garnet/packages/tests:all`.
-
+referenced by `//garnet/packages/tests:all` through `//garnet/packages/tests:scenic`.
 
 ## Unit tests and integration tests
 
 To run tests locally during development:
 
-### Running on device
+### Running on device/emulator
 
 Some of these tests require the test Scenic to connect to the real display controller.
 
@@ -104,10 +97,10 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From host workstation, ensure `fx serve` is running, then:
 
   ```
-  fx test scenic_tests escher_tests flutter_screencap_test
+  fx test scenic_tests escher_tests
   ```
 
-  From Fuchsia target device:
+  Or from Fuchsia target device:
 
   ```
   runtests --names gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
@@ -123,7 +116,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   fx test gfx_unittests
   ```
 
-  From Fuchsia target device:
+  Or from Fuchsia target device:
 
   ```
   runtests --names gfx_unittests
@@ -134,14 +127,10 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From host workstation, ensure `fx serve` is running, then:
 
   ```
-  fx test gfx_unittests -- --gunit_filter=HostImageTest.FindResource
+  fx test gfx_unittests -- --gtest_filter=HostImageTest.FindResource
   ```
 
-  Note: The previous way to target a single component involved the `-t` flag.
-  To learn more about this new command, see
-  [Run Fuchsia tests][run_fuchsia_tests].
-
-  From Fuchsia target device:
+  Or from Fuchsia target device:
 
   ```
   runtests --names gfx_unittests -- --gtest_filter=HostImageTest.FindResource
@@ -181,36 +170,6 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   fx test gfx_pixeltests
   ```
 
-  Note: `gfx_pixeltests` currently requires `//bundles:tests` to be in your list of packages (e.g., `fx set [...] --with //bundles:tests`)
-
-### Running on emulator
-
-From your host workstation:
-
-```
-fx set terminal.x64 --release --with-base //garnet/packages/tests:scenic
-```
-
-Then, start an emulator:
-
-* Start QEMU:
-
-  ```
-  fx qemu
-  ```
-
-* Start AEMU:
-
-  ```
-  fx emu -N
-  ```
-
-Then, in the QEMU or EMU shell:
-
-```
-runtests --names gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
-```
-
 ### Host tests
 
   * `fx test --host` runs all host tests, but you probably only want to run Escher tests.
@@ -244,14 +203,14 @@ There are some examples available:
     [Carnelian](/src/lib/ui/carnelian/README.md),
     a prototype framework for writing Fuchsia modules in Rust.
   - **Source:** [`//src/lib/ui/carnelian/examples/spinning_square.rs`](/src/lib/ui/carnelian/examples/spinning_square.rs)
-  - **Build dependency:** `//src/lib/ui/carnelian:spinning_square_rs`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx`
+  - **Build dependency:** `//src/lib/ui/carnelian:spinning-square-rs`
+  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx`
 
 * **spinning_cube**
   - An example written in Dart and Flutter, showing how to create a Flutter app in Fuchsia.
-  - **Source:** [`//src/experiences/examples/spinning_cube`](/src/experiences/examples/spinning_cube)
-  - **Build dependency:** `//topaz/app/spinning_cube`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx`
+  - **Source:** [`//src/experiences/examples/spinning_cube`](https://fuchsia.googlesource.com/experiences/+/master/examples/spinning_cube)
+  - **Build dependency:** `//src/experiences/examples/spinning_cube:spinning-cube`
+  - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-cube#meta/spinning_cube.cmx`
 
 * **simplest_app**
   - An application which changes background color with every user touch input, which uses root
@@ -264,14 +223,14 @@ There are some examples available:
 * **yuv_to_image_pipe**
   - An application which updates the scene using an ImagePipe.
   - **Source:** [`//src/ui/examples/yuv_to_image_pipe`](/src/ui/examples/yuv_to_image_pipe)
-  - **Build dependency:** `//src/ui/examples:yuv_to_image_pip`
+  - **Build dependency:** `//src/ui/examples:yuv_to_image_pipe`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx`
 
 To run these applications, you need to include the following dependency in your `fx set`
 configuration:
 
 ```shell
-fx set terminal.x64 --with "//src/ui/examples:ui,//topaz/app/spinning_cube,//src/lib/ui"
+fx set terminal.x64 --with "//src/ui/examples,//src/lib/ui/carnelian:examples,//src/experiences/examples/spinning_cube:spinning-cube"
 ```
 
 You can replace the product with `workstation.x64` as well; you can also use an all-in-one bundle
@@ -285,24 +244,7 @@ tests, tools and examples without any extra dependency.
 You can launch the stories (modules) in any shell you are in:
 
 * In Ermine shell, you can run modules by typing in the package name (e.g. `simplest_app`, or
-  `spinning_cube`) in the [ASK] bar to run modules; or
-
-* Use command `sessionctl add_mod <mod_name>` to launch a story.
-
-  From your host workstation, run:
-
-  ```shell
-  fx shell "sessionctl add_mod fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx"
-  ```
-
-  This adds a tab displaying a spinning cube on your current shell.
-
-  **Note:** `sessionctl` supports package URI auto completion if there is only one package
-  matching the `<mod_name>` pattern. So the command above is equivalent to
-
-  ```shell
-  fx shell "sessionctl add_mod spinning_cube"
-  ```
+  `spinning-cube`) in the [ASK] bar to run modules.
 
 #### Running a module standalone
 
@@ -326,8 +268,8 @@ where there's no existing shell (e.g. in `terminal` or `core` products).
   fx shell present_view spinning_square_view
   ```
 
-  Note: If this doesn't work, you may need to run `fx shell killall scenic.cmx` from your host
-  workstation to kill the existing Scenic session.
+  Note: If this doesn't work, you may need to run `fx shell "killall scenic.cmx; killall root_presenter.cmx"`
+  from your host workstation to kill the existing Scenic session.
 
 * You can also use package `tiles` to create a tiled view and add or delete modules to the tile.
 
@@ -335,13 +277,14 @@ where there's no existing shell (e.g. in `terminal` or `core` products).
     `//src/ui/tools/tiles` and `//src/ui/tools/tiles_ctl` included in your `--with`
     argument of `fx set` command.
 
-    Or you can use `--with //garnet/packages:all` or `--with //bundles:tools` (huge build
-    may be expected) where `tiles` related packages will be included as well.
+    Or you can use `--with //src/ui/tools` or `--with //bundles:tools` (huge
+    build may be expected) where `tiles` related packages will be included as
+    well.
 
   * To display the tiles view, from your host workstations, run:
 
     ```shell
-    fx shell "run -d fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx"
+    fx shell "tiles_ctl start"
     ```
 
     This runs `tiles.cmx` package as a daemon.
@@ -369,6 +312,8 @@ where there's no existing shell (e.g. in `terminal` or `core` products).
     ```shell
     fx shell tiles_ctl remove 1
     ```
+
+  * `tiles_ctl quit` command kills the `tiles` executable and all associated views.
 
 <!-- Reference links -->
 
