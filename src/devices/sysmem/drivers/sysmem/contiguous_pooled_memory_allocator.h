@@ -103,6 +103,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // This is the size of a the largest free contiguous region when high_water_mark_property_ was
   // last modified. It can be used to determine how much space was wasted due to fragmentation.
   inspect::UintProperty max_free_at_high_water_property_;
+  // size - high_water_mark. This is used for cobalt reporting.
+  inspect::UintProperty free_at_high_water_mark_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,

@@ -75,6 +75,10 @@ TEST_F(ContiguousPooledSystem, Full) {
   auto* value = hierarchy.value().GetByPath({"test-pool"});
   ASSERT_TRUE(value);
 
+  EXPECT_LT(
+      0u,
+      value->node().get_property<inspect::UintPropertyValue>("free_at_high_water_mark")->value());
+
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
     zx::vmo vmo;
@@ -134,6 +138,9 @@ TEST_F(ContiguousPooledSystem, Full) {
   EXPECT_EQ(
       0u,
       value->node().get_property<inspect::UintPropertyValue>("max_free_at_high_water")->value());
+  EXPECT_EQ(
+      0u,
+      value->node().get_property<inspect::UintPropertyValue>("free_at_high_water_mark")->value());
   for (auto& vmo : vmos) {
     if (vmo)
       allocator_.Delete(std::move(vmo));

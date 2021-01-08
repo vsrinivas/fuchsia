@@ -56,6 +56,7 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   node_ = parent_node->CreateChild(allocation_name);
   size_property_ = node_.CreateUint("size", size);
   high_water_mark_property_ = node_.CreateUint("high_water_mark", 0);
+  free_at_high_water_mark_property_ = node_.CreateUint("free_at_high_water_mark", size);
   used_size_property_ = node_.CreateUint("used_size", 0);
   allocations_failed_property_ = node_.CreateUint("allocations_failed", 0);
   last_allocation_failed_timestamp_ns_property_ =
@@ -342,6 +343,7 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
     high_water_mark_used_size_ = used_size;
     trace_high_water_mark = true;
     high_water_mark_property_.Set(high_water_mark_used_size_);
+    free_at_high_water_mark_property_.Set(size_ - high_water_mark_used_size_);
     uint64_t max_free_size = 0;
     region_allocator_.WalkAvailableRegions([&max_free_size](const ralloc_region_t* r) -> bool {
       max_free_size = std::max(max_free_size, r->size);
