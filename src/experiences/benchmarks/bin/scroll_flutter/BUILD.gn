@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//build/flutter/flutter_app.gni")
 
 flutter_app("scroll-flutter") {
@@ -24,6 +25,6 @@ flutter_app("scroll-flutter") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/args",
-    "//topaz/public/dart/fuchsia_scenic_flutter",
+    dart_package_label.fuchsia_scenic_flutter,
   ]
 }

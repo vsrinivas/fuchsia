@@ -118,11 +118,11 @@ flutter_app("ermine") {
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/uuid",
     "//third_party/dart-pkg/pub/vector_math",
-    "//topaz/public/dart/fuchsia_inspect",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
-    "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_scenic_flutter",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_inspect,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_scenic_flutter,
     dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]
@@ -203,9 +203,9 @@ flutter_test2("ermine_unittests") {
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
-    "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_scenic_flutter",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_logger,
+    dart_package_label.fuchsia_scenic_flutter,
     dart_package_label.zircon,
   ]
 }

@@ -18,6 +18,6 @@ flutter_app("gamma-flutter") {
 
   deps = [
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/public/dart/fuchsia_scenic_flutter",
+    dart_package_label.fuchsia_scenic_flutter,
   ]
 }

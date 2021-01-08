@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 
 dart_library("internationalization") {
   package_name = "internationalization"
@@ -31,6 +32,6 @@ dart_library("internationalization") {
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
-    "//topaz/public/dart/fuchsia_logger",
+    dart_package_label.fuchsia_logger,
   ]
 }
