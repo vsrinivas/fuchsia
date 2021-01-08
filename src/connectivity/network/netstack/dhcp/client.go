@@ -170,7 +170,7 @@ func (c *Client) Run(ctx context.Context) {
 	c.sem <- struct{}{}
 	defer func() { <-c.sem }()
 	defer func() {
-		_ = syslog.WarnTf(tag, "client is stopping, cleaning up")
+		_ = syslog.InfoTf(tag, "client is stopping, cleaning up")
 		c.cleanup(&info)
 		// cleanup mutates info.
 		c.info.Store(info)
@@ -229,29 +229,32 @@ func (c *Client) Run(ctx context.Context) {
 				return nil
 			}
 
+			if cfg.LeaseLength == 0 {
+				_ = syslog.WarnTf(tag, "unspecified lease length; proceeding with default (%s)", defaultLeaseLength)
+				cfg.LeaseLength = defaultLeaseLength
+			}
 			{
-				leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
-				if cfg.LeaseLength == 0 {
-					_ = syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
-					leaseLength = defaultLeaseLength
+				// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
+				defaultRenewTime := cfg.LeaseLength / 2
+				if cfg.RenewTime == 0 {
+					_ = syslog.WarnTf(tag, "unspecified renew time; proceeding with default (%s)", defaultRenewTime)
+					cfg.RenewTime = defaultRenewTime
 				}
-				switch {
-				case cfg.LeaseLength != 0 && cfg.RenewTime >= cfg.LeaseLength:
-					_ = syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
-					fallthrough
-				case cfg.RenewTime == 0:
-					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
-					renewTime = leaseLength / 2
+				if cfg.RenewTime >= cfg.LeaseLength {
+					_ = syslog.WarnTf(tag, "renew time (%s) >= lease length (%s); proceeding with default (%s)", cfg.RenewTime, cfg.LeaseLength, defaultRenewTime)
+					cfg.RenewTime = defaultRenewTime
 				}
-				switch {
-				case cfg.RenewTime != 0 && cfg.RebindTime <= cfg.RenewTime:
-					_ = syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
-					fallthrough
-				case cfg.RebindTime == 0:
-					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
-					rebindTime = leaseLength * 875 / 1000
+			}
+			{
+				// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
+				defaultRebindTime := cfg.LeaseLength * 875 / 1000
+				if cfg.RebindTime == 0 {
+					cfg.RebindTime = defaultRebindTime
 				}
-				cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime = leaseLength, renewTime, rebindTime
+				if cfg.RebindTime <= cfg.RenewTime {
+					_ = syslog.WarnTf(tag, "rebind time (%s) <= renew time (%s); proceeding with default (%s)", cfg.RebindTime, cfg.RenewTime, defaultRebindTime)
+					cfg.RebindTime = defaultRebindTime
+				}
 			}
 
 			now := c.now()
@@ -270,7 +273,7 @@ func (c *Client) Run(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			_ = syslog.DebugTf(tag, "%s; retrying", err)
+			_ = syslog.InfoTf(tag, "%s; retrying", err)
 		}
 
 		// Synchronize info after attempt to acquire is complete.
@@ -490,13 +493,13 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 				}
 				if retransmit {
 					c.stats.RecvOfferTimeout.Increment()
-					_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
+					_ = syslog.WarnTf(tag, "recv timeout waiting for %s; retransmitting %s", dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
 				if result.typ != dhcpOFFER {
 					c.stats.RecvOfferUnexpectedType.Increment()
-					_ = syslog.DebugTf(tag, "got DHCP type = %s, want = %s", result.typ, dhcpOFFER)
+					_ = syslog.InfoTf(tag, "got DHCP type = %s from %s, want = %s; discarding", result.typ, result.source, dhcpOFFER)
 					continue
 				}
 				c.stats.RecvOffers.Increment()
@@ -583,7 +586,7 @@ retransmitRequest:
 			}
 			if retransmit {
 				c.stats.RecvAckTimeout.Increment()
-				_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
+				_ = syslog.WarnTf(tag, "recv timeout waiting for %s; retransmitting %s", dhcpACK, dhcpREQUEST)
 				continue retransmitRequest
 			}
 
@@ -622,7 +625,7 @@ retransmitRequest:
 				}, nil
 			default:
 				c.stats.RecvAckUnexpectedType.Increment()
-				_ = syslog.DebugTf(tag, "got DHCP type = %s from %s, want = %s or %s", result.typ, result.source, dhcpACK, dhcpNAK)
+				_ = syslog.InfoTf(tag, "got DHCP type = %s from %s, want = %s or %s; discarding", result.typ, result.source, dhcpACK, dhcpNAK)
 				continue
 			}
 		}
@@ -666,7 +669,7 @@ func (c *Client) send(
 		panic(err)
 	}
 
-	_ = syslog.DebugTf(
+	_ = syslog.InfoTf(
 		tag,
 		"send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
 		typ,
@@ -750,9 +753,15 @@ func (c *Client) recv(
 	xid []byte,
 	retransmit <-chan time.Time,
 ) (recvResult, bool, error) {
-	var info tcpip.LinkPacketInfo
+	var (
+		info   tcpip.LinkPacketInfo
+		sender tcpip.FullAddress
+	)
+	senderAddr := func() tcpip.LinkAddress {
+		return tcpip.LinkAddress(sender.Addr)
+	}
 	for {
-		v, _, err := ep.ReadPacket(nil, &info)
+		v, _, err := ep.ReadPacket(&sender, &info)
 		if err == tcpip.ErrWouldBlock {
 			select {
 			case <-read:
@@ -779,20 +788,60 @@ func (c *Client) recv(
 
 		ip := header.IPv4(v)
 		if !ip.IsValid(len(v)) {
+			_ = syslog.WarnTf(
+				tag,
+				"received malformed IP frame from %s; discarding %d bytes",
+				senderAddr(),
+				len(v),
+			)
 			continue
 		}
 		// TODO(https://gvisor.dev/issues/5049): Abstract away checksum validation when possible.
 		if ip.CalculateChecksum() != 0xffff {
+			_ = syslog.WarnTf(
+				tag,
+				"received damaged IP frame from %s; discarding %d bytes",
+				senderAddr(),
+				len(v),
+			)
+			continue
+		}
+		if ip.More() || ip.FragmentOffset() != 0 {
+			_ = syslog.WarnTf(
+				tag,
+				"received fragmented IP frame from %s; discarding %d bytes",
+				senderAddr(),
+				len(v),
+			)
+			continue
+		}
+		if ip.TransportProtocol() != header.UDPProtocolNumber {
 			continue
 		}
 		udp := header.UDP(ip.Payload())
 		if len(udp) < header.UDPMinimumSize {
+			_ = syslog.WarnTf(
+				tag,
+				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				ip.SourceAddress(),
+				senderAddr(),
+				ip.DestinationAddress(),
+				len(udp),
+			)
 			continue
 		}
 		if udp.DestinationPort() != ClientPort {
 			continue
 		}
 		if udp.Length() > uint16(len(udp)) {
+			_ = syslog.WarnTf(
+				tag,
+				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				ip.SourceAddress(),
+				senderAddr(),
+				ip.DestinationAddress(),
+				len(udp),
+			)
 			continue
 		}
 		payload := udp.Payload()
@@ -800,6 +849,14 @@ func (c *Client) recv(
 			xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, ip.DestinationAddress(), ip.SourceAddress(), udp.Length())
 			xsum = header.Checksum(payload, xsum)
 			if udp.CalculateChecksum(xsum) != 0xffff {
+				_ = syslog.WarnTf(
+					tag,
+					"received damaged UDP frame (%s@%s -> %s); discarding %d bytes",
+					ip.SourceAddress(),
+					senderAddr(),
+					ip.DestinationAddress(),
+					len(udp),
+				)
 				continue
 			}
 		}
