@@ -627,6 +627,11 @@ config("no_safestack") {
   configs = [ ":no_stack_protector" ]
 }
 
+group("no_safestack_deps") {
+  # Each config added to a zircon_toolchain_suite() must have a corresponding
+  # _deps group listing implicit dependencies if needed.
+}
+
 config("no-shadow-call-stack") {
   if (current_cpu == "arm64" && !is_gcc) {
     cflags = [ "-fno-sanitize=shadow-call-stack" ]

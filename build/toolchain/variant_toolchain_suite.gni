@@ -208,14 +208,27 @@ template("variant_toolchain_suite") {
         "Unknown exclude_variant_tags ${_unknown_tags} in toolchain suite definition ${target_name}")
   }
 
+  _toolchain_tags = []
   if (defined(invoker.toolchain_tags)) {
+    _toolchain_tags = invoker.toolchain_tags
     _unknown_tags = []
-    _unknown_tags =
-        invoker.toolchain_tags + all_toolchain_tags - all_toolchain_tags
+    _unknown_tags = _toolchain_tags + all_toolchain_tags - all_toolchain_tags
     assert(
         _unknown_tags == [],
         "Unknown toolchain_tags ${_unknown_tags} in toolchain suite definition ${target_name}")
   }
+
+  # As a special case, always ensure that 'kernel-excluded' or 'kernel-only' is part of
+  # exclude_tags, based on whether 'kernel' appears in invoker.toolchain_tags.
+  _is_kernel = _toolchain_tags + [ "kernel" ] - [ "kernel" ] != _toolchain_tags
+  if (_is_kernel) {
+    _kernel_exclude_tags = [ "kernel-excluded" ]
+  } else {
+    _kernel_exclude_tags = [ "kernel-only" ]
+  }
+  exclude_tags += _kernel_exclude_tags
+  exclude_tags -= _kernel_exclude_tags
+  exclude_tags += _kernel_exclude_tags
 
   variants = []
   foreach(variant, all_toolchain_variants) {
@@ -249,10 +262,10 @@ template("variant_toolchain_suite") {
               "Unknown tags ${unknown_tags} in variant definition: ${variant}")
         }
 
-        if (defined(invoker.toolchain_tags)) {
-          tags += invoker.toolchain_tags
-          tags -= invoker.toolchain_tags
-          tags += invoker.toolchain_tags
+        if (_toolchain_tags != []) {
+          tags += _toolchain_tags
+          tags -= _toolchain_tags
+          tags += _toolchain_tags
         }
 
         # Recompute `instrumented` flag based on tags.

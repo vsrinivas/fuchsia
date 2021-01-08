@@ -82,12 +82,14 @@ if ("$zx/" == "//") {
     _sanitizer_config_dir = "//build/config/sanitizers"
     _hidden_config = "//build/config:symbol_visibility_hidden"
     _no_sanitizers_config = "//build/config:no_sanitizers"
+    _is_kernel = false
   } else {
     _sanitizer_config_dir = "//build/config/zircon/instrumentation"
     _hidden_config = "//build/config/zircon:visibility_hidden"
     _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
+    _is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+                 toolchain_variant.tags
   }
-  _is_kernel = false
 
   if (defined(toolchain_variant.tags)) {
     _tags = toolchain_variant.tags

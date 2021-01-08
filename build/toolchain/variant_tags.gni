@@ -63,4 +63,12 @@ all_variant_tags = [
   # linkable binaries properly with --gc-sections, which instructs the
   # linker to remove unused sections from the output.
   "breaks-gc-sections",
+
+  # The 'kernel-excluded' and 'kernel-only' tags are used to indicate
+  # that a given variant should never be applied to the kernel toolchains,
+  # or should only be applied to them respectively. Note that these are
+  # treated specially by toolchain_variant_suite(), based on the
+  # presence of the 'kernel' tag in the toolchain suite's tags.
+  "kernel-excluded",
+  "kernel-only",
 ]

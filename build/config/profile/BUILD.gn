@@ -10,7 +10,10 @@ variant("profile") {
     "-fcoverage-mapping",
   ]
 
-  if (is_fuchsia) {
+  is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+              toolchain_variant.tags
+
+  if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
     deps = [ "//src/zircon/lib/zircon" ]

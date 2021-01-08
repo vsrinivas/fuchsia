@@ -52,6 +52,12 @@ variant("asan") {
   # on allocations and such, not just on errors.
   configs = [ "//build/config:frame_pointers" ]
 
+  is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+              toolchain_variant.tags
+  if (is_kernel) {
+    configs += [ "//zircon/kernel/lib/instrumentation/asan:kasan" ]
+  }
+
   deps = [ ":asan_default_options" ]
 }
 

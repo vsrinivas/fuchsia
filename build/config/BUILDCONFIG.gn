@@ -158,10 +158,11 @@ declare_args() {
 }
 
 if (!defined(toolchain_variant.name)) {
-  # Default values describe the "null variant".
-  # All the optional fields (except `toolchain_args`) are canonicalized
-  # to their default/empty values so the code below doesn't need to have
-  # `defined(toolchain_variant.field)` checks all over.
+  # Default values correspond to the default toolchain. For now, it is used
+  # to build Fuchsia user binaries, so populate it accordingly. The only
+  # non-obvious key is 'exclude_variant_tags', it must match the result
+  # of calling clang_toolchain_suite() for $target_cpu, which currently
+  # implies rejecting variants with the 'gcc' and 'kernel-only' tags.
   toolchain_variant.name = ""
   toolchain_variant.suffix = ""
   toolchain_variant.configs = []
@@ -173,7 +174,10 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.with_shared = true
   toolchain_variant.instrumented = false
   toolchain_variant.tags = []
-  toolchain_variant.exclude_variant_tags = [ "gcc" ]
+  toolchain_variant.exclude_variant_tags = [
+    "gcc",
+    "kernel-only",
+  ]
 }
 
 is_android = false
@@ -840,7 +844,19 @@ _asan_variant = {
     "instrumented",
     "lsan",
     "replaces-allocator",
+    "kernel-excluded",
   ]
+}
+
+# This is the "kasan" variant that only applies to the kernel. This is
+# very similar to the "asan" one except for the use of no_safestack
+# config, and the fact that it must use the 'kernel-only' tag, instead
+# of 'kernel-excluded'.
+_kasan_variant = {
+  forward_variables_from(_asan_variant, "*")
+  configs += [ "//build/config/zircon:no_safestack" ]
+  tags -= [ "kernel-excluded" ]
+  tags += [ "kernel-only" ]
 }
 
 # When fuzzing with ASan, we configure it to be ClusterFuzz-friendly
@@ -973,6 +989,7 @@ declare_args() {
       tags = [
         "instrumented",
         "instrumentation-runtime",
+        "kernel-excluded",
         "ubsan",
       ]
     },
@@ -985,6 +1002,7 @@ declare_args() {
       tags = [
         "instrumented",
         "instrumentation-runtime",
+        "kernel-excluded",
         "sancov",
         "ubsan",
       ]
@@ -999,6 +1017,21 @@ declare_args() {
     },
     {
       forward_variables_from(_asan_variant, "*")
+      configs += [ "//build/config/sanitizers:sancov" ]
+      tags += [ "sancov" ]
+    },
+
+    # The 'kasan' variant is the same as the 'asan' one except for the
+    # fact that it has the 'kernel-only' tag instead of 'kernel-excluded'.
+    {
+      name = "kasan"
+      forward_variables_from(_kasan_variant, "*")
+    },
+
+    # Same for 'kasan-sancov' that mimics 'asan-sancov'.
+    {
+      name = "kasan-sancov"
+      forward_variables_from(_kasan_variant, "*")
       configs += [ "//build/config/sanitizers:sancov" ]
       tags += [ "sancov" ]
     },
@@ -1122,22 +1155,6 @@ declare_args() {
           host = true
         },
       ]
-    },
-
-    # TODO(fxbug.dev/30033): Eventually this will go away and just "asan" will cover it.
-    # This is just ignored so it can be passed through to the Zircon GN build.
-    # It has no effect on variant selection in the Fuchsia GN build.
-    {
-      name = "kasan"
-      select_variant = []
-    },
-
-    # TODO(fxbug.dev/30033): Eventually this will go away and just "asan" will cover it.
-    # This is just ignored so it can be passed through to the Zircon GN build.
-    # It has no effect on variant selection in the Fuchsia GN build.
-    {
-      name = "kasan-sancov"
-      select_variant = []
     },
   ]
 }

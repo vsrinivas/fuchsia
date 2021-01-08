@@ -18,12 +18,18 @@ asan_mapping_scale = 3
 # shadow_addr = asan_mapping_offset + (address >> asan_mapping_scale)
 asan_mapping_offset = "0xdffffff000000000"
 
-_asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
-_sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
 if (zx == "/") {
+  _asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
+  _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
   _toolchain_configs = toolchain.configs
 } else {
+  _asan_config = [ "//build/config/sanitizers:asan" ]
+  _sancov_config = [ "//build/config/sanitiziers:sancov" ]
   _toolchain_configs = toolchain_variant.configs
+  zircon_cpu = target_cpu
+  if (zircon_cpu == "x64") {
+    zircon_cpu = "x86"
+  }
 }
 is_asan = _toolchain_configs + _asan_config - _asan_config != _toolchain_configs
 is_sancov =
