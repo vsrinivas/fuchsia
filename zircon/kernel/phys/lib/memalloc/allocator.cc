@@ -63,15 +63,15 @@ bool RangesConnected(const Range& a, const Range& b) {
 
 }  // namespace
 
-Allocator::Allocator(fbl::Span<Range> nodes) {
-  for (Range& node : nodes) {
-    free_list_.push_front(new (&node) Range{});
+Allocator::Allocator(fbl::Span<RangeStorage> storage) {
+  for (RangeStorage& s : storage) {
+    free_list_.push_front(new (s.AsRange()) Range{});
   }
 }
 
 Allocator::~Allocator() {
-  free_list_.clear();
-  ranges_.clear();
+  free_list_.clear_unsafe();
+  ranges_.clear_unsafe();
 }
 
 zx::status<> Allocator::RemoveRangeFromNode(RangeIter node, uint64_t first, uint64_t last) {

@@ -37,12 +37,12 @@ auto IsOkAndHolds(X matcher) {
 template <size_t Elements = 100>
 struct AllocatorAndStorage {
   AllocatorAndStorage() : data(), allocator(fbl::Span(data.data(), data.size())) {}
-  std::array<Range, Elements> data;
+  std::array<RangeStorage, Elements> data;
   Allocator allocator;
 };
 
 TEST(Allocator, EmptyAllocator) {
-  Allocator allocator{fbl::Span<Range>{}};
+  Allocator allocator{fbl::Span<RangeStorage>{}};
   EXPECT_THAT(allocator.Allocate(1), HasError(ZX_ERR_NO_RESOURCES));
 }
 

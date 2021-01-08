@@ -140,9 +140,8 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   }
 
   // Add all memory claimed to be free to the allocator.
-  constexpr size_t kMaxRanges = 32;
-  memalloc::Range ranges[kMaxRanges];
-  static_assert(sizeof(ranges) <= 1024, "`ranges` too large for stack.");
+  constexpr size_t kMaxRanges = 64;
+  static memalloc::RangeStorage ranges[kMaxRanges];
   memalloc::Allocator allocator(ranges);
   for (const auto& range : container) {
     // Ignore reserved memory on our first pass.
