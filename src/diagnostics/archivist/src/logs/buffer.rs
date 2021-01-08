@@ -24,27 +24,28 @@ pub struct AccountedBuffer<T> {
     buffer: ArcList<T>,
     #[inspect(skip)]
     total_size: usize,
-    #[inspect(skip)]
-    capacity: usize,
     inspect_node: inspect::Node,
     rolled_out_entries: inspect::UintProperty,
+}
+
+// we use an explicit impl here instead of a derive because derives add bounds to generics to match
+// the trait being derived, so we'd have `impl<T: Default> Default for AccountedBuffer<T>` here
+// which would prevent `AccountedBuffer<Message>: Default` from being satisfied
+impl<T> Default for AccountedBuffer<T> {
+    fn default() -> Self {
+        Self {
+            buffer: ArcList::default(),
+            total_size: 0,
+            inspect_node: inspect::Node::default(),
+            rolled_out_entries: inspect::UintProperty::default(),
+        }
+    }
 }
 
 impl<T> AccountedBuffer<T>
 where
     T: Accounted,
 {
-    pub fn new(capacity: usize) -> AccountedBuffer<T> {
-        assert!(capacity > 0, "capacity should be more than 0");
-        Self {
-            buffer: ArcList::default(),
-            capacity: capacity,
-            total_size: 0,
-            inspect_node: inspect::Node::default(),
-            rolled_out_entries: inspect::UintProperty::default(),
-        }
-    }
-
     /// Add an item to the buffer.
     ///
     /// If adding the item overflows the capacity, oldest item(s) are deleted until under the limit.
@@ -52,7 +53,10 @@ where
         let size = item.bytes_used();
         self.buffer.push_back(item);
         self.total_size += size;
-        while self.total_size > self.capacity {
+    }
+
+    pub fn trim_to(&mut self, capacity: usize) {
+        while self.total_size > capacity {
             let bytes_freed =
                 self.buffer.pop_front().expect("there are items if reducing size").bytes_used();
             self.total_size -= bytes_freed;
@@ -107,14 +111,11 @@ mod tests {
         }
     }
 
-    const TEST_BUFFER_CAPACITY: usize = 12;
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple() {
         let inspector = inspect::Inspector::new();
-        let mut m = AccountedBuffer::new(TEST_BUFFER_CAPACITY)
-            .with_inspect(inspector.root(), "buffer_stats")
-            .unwrap();
+        let mut m =
+            AccountedBuffer::default().with_inspect(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
@@ -129,16 +130,19 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_bound() {
+        let test_buffer_capacity = 12;
         let inspector = inspect::Inspector::new();
-        let mut m = AccountedBuffer::new(TEST_BUFFER_CAPACITY)
-            .with_inspect(inspector.root(), "buffer_stats")
-            .unwrap();
+
+        let mut m =
+            AccountedBuffer::default().with_inspect(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
+        m.trim_to(test_buffer_capacity);
         assert_eq!(&m.collect().await[..], &[(2, 4), (3, 5)]);
         m.push((4, 4));
         m.push((5, 4));
+        m.trim_to(test_buffer_capacity);
         assert_eq!(&m.collect().await[..], &[(4, 4), (5, 4)]);
         assert_inspect_tree!(inspector,
         root: {

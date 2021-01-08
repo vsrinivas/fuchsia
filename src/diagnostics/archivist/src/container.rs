@@ -22,6 +22,7 @@ use {
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
+    futures::channel::mpsc::Sender,
     parking_lot::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
@@ -149,6 +150,7 @@ impl ComponentDiagnostics {
         &mut self,
         // TODO(fxbug.dev/47611) remove this and construct a local buffer in this function
         buffer: &Arc<Mutex<AccountedBuffer<Message>>>,
+        on_new_messages: &Sender<()>,
         interest_selectors: &[LogInterestSelector],
     ) -> Arc<LogsArtifactsContainer> {
         if let Some(logs) = &self.logs {
@@ -160,6 +162,7 @@ impl ComponentDiagnostics {
             let container = Arc::new(LogsArtifactsContainer::new(
                 self.identity.clone(),
                 interest_selectors,
+                on_new_messages.clone(),
                 stats,
                 buffer.clone(),
             ));
