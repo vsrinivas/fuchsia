@@ -233,14 +233,6 @@ component_id_index("component_id_index_no_restrict_storage") {
   source = "config/component_id_index_no_restrict_storage.json"
 }
 
-group("unittests") {
-  testonly = true
-  public_deps = [
-    ":appmgr_unittests",
-    ":system_data_file",
-  ]
-}
-
 executable("test_component_using_storage_bin") {
   output_name = "test_component_using_storage"
   sources = [ "test/test_component_using_storage.cc" ]
@@ -266,25 +258,10 @@ fuchsia_unittest_package("appmgr_unittests") {
   }
 }
 
-package("system_data_file") {
-  __deprecated_system_image = true
-  resources = [
-    {
-      path = "test_file.txt"
-      dest = "test_file.txt"
-    },
-    {
-      path = "test_file.txt"
-      dest = "subdir/test_file.txt"
-    },
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
     ":appmgr_unittests",
-    ":system_data_file",
     "integration_tests",
   ]
 }
