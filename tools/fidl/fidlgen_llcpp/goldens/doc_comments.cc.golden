@@ -31,7 +31,8 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace
-Interface::ResultOf::Method::Method(zx_handle_t _client) {
+Interface::ResultOf::Method::Method(
+    ::fidl::UnownedClientEnd<Interface> _client) {
   MethodRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -40,7 +41,8 @@ Interface::ResultOf::Method::Method(zx_handle_t _client) {
 
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::Method(_channel->handle());
+    auto _res = ResultOf::Method(
+        ::fidl::UnownedClientEnd<Interface>(_channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -204,7 +206,7 @@ void Interface::OnEventResponse::_InitHeader() {
 
 zx_status_t Interface::EventSender::OnEvent() const {
   OnEventResponse::OwnedEncodedMessage _response{};
-  _response.Write(server_end_.channel().get());
+  _response.Write(server_end_);
   return _response.status();
 }
 

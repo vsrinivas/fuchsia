@@ -221,7 +221,10 @@ class EmptyProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       SendRequest& Message() {
@@ -253,7 +256,10 @@ class EmptyProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -362,7 +368,10 @@ class EmptyProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ReceiveResponse& Message() {
@@ -393,7 +402,10 @@ class EmptyProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -502,7 +514,10 @@ class EmptyProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       SendAndReceiveResponse& Message() {
@@ -533,7 +548,10 @@ class EmptyProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -647,7 +665,10 @@ class EmptyProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       SendAndReceiveRequest& Message() {
@@ -679,7 +700,10 @@ class EmptyProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -771,7 +795,9 @@ class EmptyProtocol final {
    public:
     class Send final : public ::fidl::Result {
      public:
-      explicit Send(zx_handle_t _client,
+      explicit Send(::fidl::UnownedClientEnd<
+                        ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+                        _client,
                     ::llcpp::fidl::test::emptystruct::Empty& e);
       explicit Send(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Send(Send&&) = delete;
@@ -784,9 +810,14 @@ class EmptyProtocol final {
     };
     class SendAndReceive final : public ::fidl::Result {
      public:
-      explicit SendAndReceive(zx_handle_t _client,
-                              ::llcpp::fidl::test::emptystruct::Empty& e);
-      SendAndReceive(zx_handle_t _client,
+      explicit SendAndReceive(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+              _client,
+          ::llcpp::fidl::test::emptystruct::Empty& e);
+      SendAndReceive(::fidl::UnownedClientEnd<
+                         ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+                         _client,
                      ::llcpp::fidl::test::emptystruct::Empty& e,
                      zx_time_t _deadline);
       explicit SendAndReceive(const ::fidl::Result& result)
@@ -830,8 +861,10 @@ class EmptyProtocol final {
    public:
     class Send final : public ::fidl::Result {
      public:
-      explicit Send(zx_handle_t _client, uint8_t* _request_bytes,
-                    uint32_t _request_byte_capacity,
+      explicit Send(::fidl::UnownedClientEnd<
+                        ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+                        _client,
+                    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
                     ::llcpp::fidl::test::emptystruct::Empty& e);
       explicit Send(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Send(Send&&) = delete;
@@ -842,11 +875,13 @@ class EmptyProtocol final {
     };
     class SendAndReceive final : public ::fidl::Result {
      public:
-      explicit SendAndReceive(zx_handle_t _client, uint8_t* _request_bytes,
-                              uint32_t _request_byte_capacity,
-                              ::llcpp::fidl::test::emptystruct::Empty& e,
-                              uint8_t* _response_bytes,
-                              uint32_t _response_byte_capacity);
+      explicit SendAndReceive(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::emptystruct::EmptyProtocol>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::llcpp::fidl::test::emptystruct::Empty& e, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit SendAndReceive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       SendAndReceive(SendAndReceive&&) = delete;
@@ -889,7 +924,7 @@ class EmptyProtocol final {
     static ResultOf::Send Send(
         ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
         ::llcpp::fidl::test::emptystruct::Empty e) {
-      return ResultOf::Send(_client_end.channel(), e);
+      return ResultOf::Send(_client_end, e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -898,7 +933,7 @@ class EmptyProtocol final {
         ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
         ::fidl::BufferSpan _request_buffer,
         ::llcpp::fidl::test::emptystruct::Empty e) {
-      return UnownedResultOf::Send(_client_end.channel(), _request_buffer.data,
+      return UnownedResultOf::Send(_client_end, _request_buffer.data,
                                    _request_buffer.capacity, e);
     }
 
@@ -907,7 +942,7 @@ class EmptyProtocol final {
     static ResultOf::SendAndReceive SendAndReceive(
         ::fidl::UnownedClientEnd<EmptyProtocol> _client_end,
         ::llcpp::fidl::test::emptystruct::Empty e) {
-      return ResultOf::SendAndReceive(_client_end.channel(), e);
+      return ResultOf::SendAndReceive(_client_end, e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -918,8 +953,8 @@ class EmptyProtocol final {
         ::llcpp::fidl::test::emptystruct::Empty e,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::SendAndReceive(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          e, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, e,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -945,14 +980,14 @@ class EmptyProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Send Send(::llcpp::fidl::test::emptystruct::Empty e) {
-      return ResultOf::Send(this->channel().get(), e);
+      return ResultOf::Send(this->client_end(), e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Send Send(::fidl::BufferSpan _request_buffer,
                                ::llcpp::fidl::test::emptystruct::Empty e) {
-      return UnownedResultOf::Send(this->channel().get(), _request_buffer.data,
+      return UnownedResultOf::Send(this->client_end(), _request_buffer.data,
                                    _request_buffer.capacity, e);
     }
 
@@ -960,7 +995,7 @@ class EmptyProtocol final {
     // necessary.
     ResultOf::SendAndReceive SendAndReceive(
         ::llcpp::fidl::test::emptystruct::Empty e) {
-      return ResultOf::SendAndReceive(this->channel().get(), e);
+      return ResultOf::SendAndReceive(this->client_end(), e);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -970,8 +1005,8 @@ class EmptyProtocol final {
         ::llcpp::fidl::test::emptystruct::Empty e,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::SendAndReceive(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          e, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, e,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.

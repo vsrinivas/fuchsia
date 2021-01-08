@@ -2732,7 +2732,10 @@ class TestProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       StrictXUnionHenceResponseMayBeStackAllocatedResponse& Message() {
@@ -2767,7 +2770,10 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2886,7 +2892,10 @@ class TestProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       StrictXUnionHenceResponseMayBeStackAllocatedRequest& Message() {
@@ -2920,7 +2929,10 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3040,7 +3052,10 @@ class TestProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& Message() {
@@ -3075,7 +3090,10 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3194,7 +3212,10 @@ class TestProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest& Message() {
@@ -3228,7 +3249,10 @@ class TestProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3305,9 +3329,12 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          zx_handle_t _client);
-      StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
-                                                   zx_time_t _deadline);
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client);
+      StrictXUnionHenceResponseMayBeStackAllocated(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client,
+          zx_time_t _deadline);
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -3368,9 +3395,12 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          zx_handle_t _client);
-      FlexibleXUnionHenceResponseMustBeHeapAllocated(zx_handle_t _client,
-                                                     zx_time_t _deadline);
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client);
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client,
+          zx_time_t _deadline);
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -3438,8 +3468,9 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
-          zx_handle_t _client, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit StrictXUnionHenceResponseMayBeStackAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -3497,8 +3528,9 @@ class TestProtocol final {
         : public ::fidl::Result {
      public:
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          zx_handle_t _client, uint8_t* _response_bytes,
-          uint32_t _response_byte_capacity);
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::union_::TestProtocol>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
           const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -3566,7 +3598,7 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocated(
         ::fidl::UnownedClientEnd<TestProtocol> _client_end) {
       return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          _client_end.channel());
+          _client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3576,8 +3608,7 @@ class TestProtocol final {
         ::fidl::UnownedClientEnd<TestProtocol> _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          _client_end.channel(), _response_buffer.data,
-          _response_buffer.capacity);
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
@@ -3586,7 +3617,7 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         ::fidl::UnownedClientEnd<TestProtocol> _client_end) {
       return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          _client_end.channel());
+          _client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3596,8 +3627,7 @@ class TestProtocol final {
         ::fidl::UnownedClientEnd<TestProtocol> _client_end,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          _client_end.channel(), _response_buffer.data,
-          _response_buffer.capacity);
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -3625,7 +3655,7 @@ class TestProtocol final {
     ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
     StrictXUnionHenceResponseMayBeStackAllocated() {
       return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          this->channel().get());
+          this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3634,8 +3664,7 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocated(
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
-          this->channel().get(), _response_buffer.data,
-          _response_buffer.capacity);
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
@@ -3643,7 +3672,7 @@ class TestProtocol final {
     ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated() {
       return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          this->channel().get());
+          this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3652,8 +3681,7 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-          this->channel().get(), _response_buffer.data,
-          _response_buffer.capacity);
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
    private:

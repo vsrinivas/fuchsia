@@ -225,7 +225,8 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 
      private:
       {{ .Name }}Response& Message() { return *reinterpret_cast<{{ .Name }}Response*>(message_.bytes()); }
@@ -269,7 +270,8 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 
      private:
       {{- if gt .ResponseSentMaxSize 512 }}
@@ -425,7 +427,8 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 
      private:
       {{ .Name }}Request& Message() { return *reinterpret_cast<{{ .Name }}Request*>(message_.bytes()); }
@@ -469,7 +472,8 @@ class {{ .Name }} final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 
      private:
       {{- if gt .RequestSentMaxSize 512 }}
@@ -585,10 +589,14 @@ class {{ .Name }} final {
     {{- end }}
     class {{ .Name }} final : public ::fidl::Result {
      public:
-      explicit {{ .Name }}(zx_handle_t _client {{- template "CommaMessagePrototype" .Request }});
+      explicit {{ .Name }}(
+          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
+          {{- template "CommaMessagePrototype" .Request }});
     {{- if .HasResponse }}
-      {{ .Name }}(zx_handle_t _client {{- template "CommaMessagePrototype" .Request }},
-                           zx_time_t _deadline);
+      {{ .Name }}(
+          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
+          {{- template "CommaMessagePrototype" .Request }},
+          zx_time_t _deadline);
     {{- end }}
       explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
       {{ .Name }}({{ .Name }}&&) = delete;
@@ -647,13 +655,14 @@ class {{ .Name }} final {
     {{- range .ClientMethods -}}
     class {{ .Name }} final : public ::fidl::Result {
      public:
-      explicit {{ .Name }}(zx_handle_t _client
+      explicit {{ .Name }}(
+          ::fidl::UnownedClientEnd<{{ $protocol.Namespace }}::{{ $protocol.Name }}> _client
         {{- if .Request -}}
-        , uint8_t* _request_bytes, uint32_t _request_byte_capacity
+          , uint8_t* _request_bytes, uint32_t _request_byte_capacity
         {{- end -}}
         {{- template "CommaMessagePrototype" .Request }}
         {{- if .HasResponse -}}
-        , uint8_t* _response_bytes, uint32_t _response_byte_capacity
+          , uint8_t* _response_bytes, uint32_t _response_byte_capacity
         {{- end -}});
       explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
       {{ .Name }}({{ .Name }}&&) = delete;
@@ -708,7 +717,7 @@ class {{ .Name }} final {
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
     static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestManagedMethodArguments" . }}) {
-      return ResultOf::{{ .Name }}(_client_end.channel()
+      return ResultOf::{{ .Name }}(_client_end
         {{- template "CommaPassthroughMessageParams" .Request -}}
         );
     }
@@ -719,7 +728,7 @@ class {{ .Name }} final {
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-      return UnownedResultOf::{{ .Name }}(_client_end.channel()
+      return UnownedResultOf::{{ .Name }}(_client_end
         {{- if .Request -}}
           , _request_buffer.data, _request_buffer.capacity
         {{- end -}}
@@ -757,7 +766,7 @@ class {{ .Name }} final {
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
     ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestManagedMethodArguments" . }}) {
-      return ResultOf::{{ .Name }}(this->channel().get()
+      return ResultOf::{{ .Name }}(this->client_end()
         {{- template "CommaPassthroughMessageParams" .Request -}});
     }
 {{ "" }}
@@ -767,7 +776,7 @@ class {{ .Name }} final {
         {{- end }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
-      return UnownedResultOf::{{ .Name }}(this->channel().get()
+      return UnownedResultOf::{{ .Name }}(this->client_end()
         {{- if .Request -}}
           , _request_buffer.data, _request_buffer.capacity
         {{- end -}}

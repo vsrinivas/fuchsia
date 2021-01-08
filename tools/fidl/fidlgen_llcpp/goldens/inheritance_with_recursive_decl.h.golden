@@ -103,7 +103,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FirstRequest& Message() {
@@ -136,7 +139,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -218,7 +224,11 @@ class Parent final {
    public:
     class First final : public ::fidl::Result {
      public:
-      explicit First(zx_handle_t _client, ::zx::channel& request);
+      explicit First(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+              _client,
+          ::zx::channel& request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
       First(const First&) = delete;
@@ -238,8 +248,12 @@ class Parent final {
    public:
     class First final : public ::fidl::Result {
      public:
-      explicit First(zx_handle_t _client, uint8_t* _request_bytes,
-                     uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit First(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::zx::channel& request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
       First(const First&) = delete;
@@ -259,7 +273,7 @@ class Parent final {
     // necessary.
     static ResultOf::First First(::fidl::UnownedClientEnd<Parent> _client_end,
                                  ::zx::channel request) {
-      return ResultOf::First(_client_end.channel(), request);
+      return ResultOf::First(_client_end, request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -267,7 +281,7 @@ class Parent final {
     static UnownedResultOf::First First(
         ::fidl::UnownedClientEnd<Parent> _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::channel request) {
-      return UnownedResultOf::First(_client_end.channel(), _request_buffer.data,
+      return UnownedResultOf::First(_client_end, _request_buffer.data,
                                     _request_buffer.capacity, request);
     }
   };
@@ -292,14 +306,14 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::First First(::zx::channel request) {
-      return ResultOf::First(this->channel().get(), request);
+      return ResultOf::First(this->client_end(), request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::First First(::fidl::BufferSpan _request_buffer,
                                  ::zx::channel request) {
-      return UnownedResultOf::First(this->channel().get(), _request_buffer.data,
+      return UnownedResultOf::First(this->client_end(), _request_buffer.data,
                                     _request_buffer.capacity, request);
     }
 
@@ -424,7 +438,10 @@ class Child final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FirstRequest& Message() {
@@ -457,7 +474,10 @@ class Child final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -578,7 +598,10 @@ class Child final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       SecondRequest& Message() {
@@ -611,7 +634,10 @@ class Child final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -693,7 +719,11 @@ class Child final {
    public:
     class First final : public ::fidl::Result {
      public:
-      explicit First(zx_handle_t _client, ::zx::channel& request);
+      explicit First(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              _client,
+          ::zx::channel& request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
       First(const First&) = delete;
@@ -705,7 +735,11 @@ class Child final {
     };
     class Second final : public ::fidl::Result {
      public:
-      explicit Second(zx_handle_t _client, ::zx::channel& request);
+      explicit Second(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              _client,
+          ::zx::channel& request);
       explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Second(Second&&) = delete;
       Second(const Second&) = delete;
@@ -725,8 +759,12 @@ class Child final {
    public:
     class First final : public ::fidl::Result {
      public:
-      explicit First(zx_handle_t _client, uint8_t* _request_bytes,
-                     uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit First(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::zx::channel& request);
       explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
       First(First&&) = delete;
       First(const First&) = delete;
@@ -736,8 +774,12 @@ class Child final {
     };
     class Second final : public ::fidl::Result {
      public:
-      explicit Second(zx_handle_t _client, uint8_t* _request_bytes,
-                      uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit Second(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::inheritancewithrecursivedecl::Child>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::zx::channel& request);
       explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Second(Second&&) = delete;
       Second(const Second&) = delete;
@@ -757,7 +799,7 @@ class Child final {
     // necessary.
     static ResultOf::First First(::fidl::UnownedClientEnd<Child> _client_end,
                                  ::zx::channel request) {
-      return ResultOf::First(_client_end.channel(), request);
+      return ResultOf::First(_client_end, request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -765,7 +807,7 @@ class Child final {
     static UnownedResultOf::First First(
         ::fidl::UnownedClientEnd<Child> _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::channel request) {
-      return UnownedResultOf::First(_client_end.channel(), _request_buffer.data,
+      return UnownedResultOf::First(_client_end, _request_buffer.data,
                                     _request_buffer.capacity, request);
     }
 
@@ -773,7 +815,7 @@ class Child final {
     // necessary.
     static ResultOf::Second Second(::fidl::UnownedClientEnd<Child> _client_end,
                                    ::zx::channel request) {
-      return ResultOf::Second(_client_end.channel(), request);
+      return ResultOf::Second(_client_end, request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -781,8 +823,7 @@ class Child final {
     static UnownedResultOf::Second Second(
         ::fidl::UnownedClientEnd<Child> _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::channel request) {
-      return UnownedResultOf::Second(_client_end.channel(),
-                                     _request_buffer.data,
+      return UnownedResultOf::Second(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, request);
     }
   };
@@ -807,29 +848,28 @@ class Child final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::First First(::zx::channel request) {
-      return ResultOf::First(this->channel().get(), request);
+      return ResultOf::First(this->client_end(), request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::First First(::fidl::BufferSpan _request_buffer,
                                  ::zx::channel request) {
-      return UnownedResultOf::First(this->channel().get(), _request_buffer.data,
+      return UnownedResultOf::First(this->client_end(), _request_buffer.data,
                                     _request_buffer.capacity, request);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Second Second(::zx::channel request) {
-      return ResultOf::Second(this->channel().get(), request);
+      return ResultOf::Second(this->client_end(), request);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Second Second(::fidl::BufferSpan _request_buffer,
                                    ::zx::channel request) {
-      return UnownedResultOf::Second(this->channel().get(),
-                                     _request_buffer.data,
+      return UnownedResultOf::Second(this->client_end(), _request_buffer.data,
                                      _request_buffer.capacity, request);
     }
 

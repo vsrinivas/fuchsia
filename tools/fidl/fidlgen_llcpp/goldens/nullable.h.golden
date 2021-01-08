@@ -1053,7 +1053,10 @@ class SimpleProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       AddResponse& Message() {
@@ -1084,7 +1087,10 @@ class SimpleProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1194,7 +1200,10 @@ class SimpleProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       AddRequest& Message() {
@@ -1225,7 +1234,10 @@ class SimpleProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1299,8 +1311,14 @@ class SimpleProtocol final {
    public:
     class Add final : public ::fidl::Result {
      public:
-      explicit Add(zx_handle_t _client, int32_t a, int32_t b);
-      Add(zx_handle_t _client, int32_t a, int32_t b, zx_time_t _deadline);
+      explicit Add(::fidl::UnownedClientEnd<
+                       ::llcpp::fidl::test::nullable::SimpleProtocol>
+                       _client,
+                   int32_t a, int32_t b);
+      Add(::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::nullable::SimpleProtocol>
+              _client,
+          int32_t a, int32_t b, zx_time_t _deadline);
       explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Add(Add&&) = delete;
       Add(const Add&) = delete;
@@ -1340,9 +1358,12 @@ class SimpleProtocol final {
    public:
     class Add final : public ::fidl::Result {
      public:
-      explicit Add(zx_handle_t _client, uint8_t* _request_bytes,
-                   uint32_t _request_byte_capacity, int32_t a, int32_t b,
-                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit Add(::fidl::UnownedClientEnd<
+                       ::llcpp::fidl::test::nullable::SimpleProtocol>
+                       _client,
+                   uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                   int32_t a, int32_t b, uint8_t* _response_bytes,
+                   uint32_t _response_byte_capacity);
       explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Add(Add&&) = delete;
       Add(const Add&) = delete;
@@ -1384,7 +1405,7 @@ class SimpleProtocol final {
     static ResultOf::Add Add(
         ::fidl::UnownedClientEnd<SimpleProtocol> _client_end, int32_t a,
         int32_t b) {
-      return ResultOf::Add(_client_end.channel(), a, b);
+      return ResultOf::Add(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1394,8 +1415,8 @@ class SimpleProtocol final {
         ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Add(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          a, b, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, a, b,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -1421,7 +1442,7 @@ class SimpleProtocol final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Add Add(int32_t a, int32_t b) {
-      return ResultOf::Add(this->channel().get(), a, b);
+      return ResultOf::Add(this->client_end(), a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1429,8 +1450,8 @@ class SimpleProtocol final {
     UnownedResultOf::Add Add(::fidl::BufferSpan _request_buffer, int32_t a,
                              int32_t b, ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Add(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          a, b, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
+          b, _response_buffer.data, _response_buffer.capacity);
     }
 
    private:

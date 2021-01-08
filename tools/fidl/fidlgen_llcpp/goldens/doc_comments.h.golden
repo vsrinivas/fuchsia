@@ -926,7 +926,10 @@ class Interface final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MethodRequest& Message() {
@@ -957,7 +960,10 @@ class Interface final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1060,7 +1066,10 @@ class Interface final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       OnEventResponse& Message() {
@@ -1090,7 +1099,10 @@ class Interface final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1184,7 +1196,9 @@ class Interface final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(zx_handle_t _client);
+      explicit Method(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+              _client);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1204,7 +1218,9 @@ class Interface final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(zx_handle_t _client);
+      explicit Method(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::doccomments::Interface>
+              _client);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -1227,7 +1243,7 @@ class Interface final {
     // necessary.
     static ResultOf::Method Method(
         ::fidl::UnownedClientEnd<Interface> _client_end) {
-      return ResultOf::Method(_client_end.channel());
+      return ResultOf::Method(_client_end);
     }
   };
 
@@ -1255,9 +1271,7 @@ class Interface final {
     // method comment #3
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::Method Method() {
-      return ResultOf::Method(this->channel().get());
-    }
+    ResultOf::Method Method() { return ResultOf::Method(this->client_end()); }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the

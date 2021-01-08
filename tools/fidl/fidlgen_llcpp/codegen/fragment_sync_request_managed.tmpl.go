@@ -29,7 +29,8 @@ const fragmentSyncRequestManagedTmpl = `
 
 {{- define "SyncRequestManagedMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
-  zx_handle_t _client {{- template "CommaMessagePrototype" .Request }})
+    ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
+    {{- template "CommaMessagePrototype" .Request }})
     {{- if gt .ResponseReceivedMaxSize 512 -}}
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
@@ -37,9 +38,10 @@ const fragmentSyncRequestManagedTmpl = `
   {{ .Name }}Request::OwnedEncodedMessage _request(zx_txid_t(0)
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
-                                 {{- template "ResponseReceivedByteAccess" . }},
-                                 {{ template "ResponseReceivedSize" . }});
+  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
+      _client,
+      {{- template "ResponseReceivedByteAccess" . }},
+      {{ template "ResponseReceivedSize" . }});
   {{- else }}
   _request.GetOutgoingMessage().Write(_client);
   {{- end }}
@@ -49,17 +51,20 @@ const fragmentSyncRequestManagedTmpl = `
   {{- if .HasResponse }}
 
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
-  zx_handle_t _client {{- template "CommaMessagePrototype" .Request }}, zx_time_t _deadline)
+    ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
+    {{- template "CommaMessagePrototype" .Request -}}
+    , zx_time_t _deadline)
     {{- if gt .ResponseReceivedMaxSize 512 -}}
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
    {
   {{ .Name }}Request::OwnedEncodedMessage _request(zx_txid_t(0)
     {{- template "CommaPassthroughMessageParams" .Request -}});
-  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
-                                 {{- template "ResponseReceivedByteAccess" . }},
-                                 {{ template "ResponseReceivedSize" . }},
-                                 _deadline);
+  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
+      _client,
+      {{- template "ResponseReceivedByteAccess" . }},
+      {{ template "ResponseReceivedSize" . }},
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }

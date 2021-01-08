@@ -8,7 +8,11 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
+
 #ifdef __Fuchsia__
+#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/server_end.h>
+#include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #endif
 
@@ -79,6 +83,22 @@ class OutgoingMessage final : public ::fidl::Result {
   // Before calling Write, LinearizeAndEncode must be called.
   void Write(zx_handle_t channel);
 
+  // Various helper functions for writing to other channel-like types.
+
+  void Write(const ::zx::channel& channel) { Write(channel.get()); }
+
+  void Write(const ::zx::unowned_channel& channel) { Write(channel->get()); }
+
+  template <typename Protocol>
+  void Write(::fidl::UnownedClientEnd<Protocol> client_end) {
+    Write(client_end.channel());
+  }
+
+  template <typename Protocol>
+  void Write(const ::fidl::ServerEnd<Protocol>& server_end) {
+    Write(server_end.channel().get());
+  }
+
   // For requests with a response, uses zx_channel_call to write the linearized message.
   // Before calling Call, LinearizeAndEncode must be called.
   // If the call succeed, |result_bytes| contains the decoded linearized result.
@@ -86,6 +106,13 @@ class OutgoingMessage final : public ::fidl::Result {
   void Call(zx_handle_t channel, uint8_t* result_bytes, uint32_t result_capacity,
             zx_time_t deadline = ZX_TIME_INFINITE) {
     Call(FidlType::Type, channel, result_bytes, result_capacity, deadline);
+  }
+
+  // Helper function for making a call over other channel-like types.
+  template <typename FidlType, typename Protocol>
+  void Call(::fidl::UnownedClientEnd<Protocol> client_end, uint8_t* result_bytes,
+            uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
+    Call(FidlType::Type, client_end.channel(), result_bytes, result_capacity, deadline);
   }
 
   // For asynchronous clients, writes a request.

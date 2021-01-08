@@ -30,7 +30,8 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace
-SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
+SimpleProtocol::ResultOf::Add::Add(
+    ::fidl::UnownedClientEnd<SimpleProtocol> _client, int32_t a, int32_t b) {
   AddRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
@@ -38,8 +39,9 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
   error_ = _request.error();
 }
 
-SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b,
-                                   zx_time_t _deadline) {
+SimpleProtocol::ResultOf::Add::Add(
+    ::fidl::UnownedClientEnd<SimpleProtocol> _client, int32_t a, int32_t b,
+    zx_time_t _deadline) {
   AddRequest::OwnedEncodedMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine,
@@ -48,12 +50,10 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b,
   error_ = _request.error();
 }
 
-SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
-                                          uint8_t* _request_bytes,
-                                          uint32_t _request_byte_capacity,
-                                          int32_t a, int32_t b,
-                                          uint8_t* _response_bytes,
-                                          uint32_t _response_byte_capacity)
+SimpleProtocol::UnownedResultOf::Add::Add(
+    ::fidl::UnownedClientEnd<SimpleProtocol> _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, int32_t a, int32_t b,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   AddRequest::UnownedEncodedMessage _request(_request_bytes,
                                              _request_byte_capacity, 0, a, b);
@@ -66,7 +66,8 @@ SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
 SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
                                                                    int32_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::Add(_channel->handle(), a, b);
+    return ResultOf::Add(
+        ::fidl::UnownedClientEnd<SimpleProtocol>(_channel->handle()), a, b);
   }
   return SimpleProtocol::ResultOf::Add(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -77,8 +78,9 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::Add(
-        _channel->handle(), _request_buffer.data, _request_buffer.capacity, a,
-        b, _response_buffer.data, _response_buffer.capacity);
+        ::fidl::UnownedClientEnd<SimpleProtocol>(_channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, a, b,
+        _response_buffer.data, _response_buffer.capacity);
   }
   return SimpleProtocol::UnownedResultOf::Add(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));

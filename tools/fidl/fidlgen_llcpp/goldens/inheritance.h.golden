@@ -92,7 +92,10 @@ class super final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       fooResponse& Message() {
@@ -123,7 +126,10 @@ class super final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -233,7 +239,10 @@ class super final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       fooRequest& Message() {
@@ -268,7 +277,10 @@ class super final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -342,9 +354,13 @@ class super final {
    public:
     class foo final : public ::fidl::Result {
      public:
-      explicit foo(zx_handle_t _client, const ::fidl::StringView& s);
-      foo(zx_handle_t _client, const ::fidl::StringView& s,
-          zx_time_t _deadline);
+      explicit foo(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
+              _client,
+          const ::fidl::StringView& s);
+      foo(::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
+              _client,
+          const ::fidl::StringView& s, zx_time_t _deadline);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
       foo(const foo&) = delete;
@@ -384,9 +400,12 @@ class super final {
    public:
     class foo final : public ::fidl::Result {
      public:
-      explicit foo(zx_handle_t _client, uint8_t* _request_bytes,
-                   uint32_t _request_byte_capacity, const ::fidl::StringView& s,
-                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit foo(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::super>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          const ::fidl::StringView& s, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
       foo(const foo&) = delete;
@@ -427,7 +446,7 @@ class super final {
     // heap-allocated.
     static ResultOf::foo foo(::fidl::UnownedClientEnd<super> _client_end,
                              ::fidl::StringView s) {
-      return ResultOf::foo(_client_end.channel(), s);
+      return ResultOf::foo(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -437,8 +456,8 @@ class super final {
                                     ::fidl::StringView s,
                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -462,7 +481,7 @@ class super final {
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
     ResultOf::foo foo(::fidl::StringView s) {
-      return ResultOf::foo(this->channel().get(), s);
+      return ResultOf::foo(this->client_end(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -471,8 +490,8 @@ class super final {
                              ::fidl::StringView s,
                              ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
    private:
@@ -600,7 +619,10 @@ class sub final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       fooResponse& Message() {
@@ -631,7 +653,10 @@ class sub final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -741,7 +766,10 @@ class sub final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       fooRequest& Message() {
@@ -776,7 +804,10 @@ class sub final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -850,9 +881,13 @@ class sub final {
    public:
     class foo final : public ::fidl::Result {
      public:
-      explicit foo(zx_handle_t _client, const ::fidl::StringView& s);
-      foo(zx_handle_t _client, const ::fidl::StringView& s,
-          zx_time_t _deadline);
+      explicit foo(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
+              _client,
+          const ::fidl::StringView& s);
+      foo(::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
+              _client,
+          const ::fidl::StringView& s, zx_time_t _deadline);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
       foo(const foo&) = delete;
@@ -892,9 +927,12 @@ class sub final {
    public:
     class foo final : public ::fidl::Result {
      public:
-      explicit foo(zx_handle_t _client, uint8_t* _request_bytes,
-                   uint32_t _request_byte_capacity, const ::fidl::StringView& s,
-                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit foo(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::inheritance::sub>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          const ::fidl::StringView& s, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
       foo(foo&&) = delete;
       foo(const foo&) = delete;
@@ -935,7 +973,7 @@ class sub final {
     // heap-allocated.
     static ResultOf::foo foo(::fidl::UnownedClientEnd<sub> _client_end,
                              ::fidl::StringView s) {
-      return ResultOf::foo(_client_end.channel(), s);
+      return ResultOf::foo(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -945,8 +983,8 @@ class sub final {
                                     ::fidl::StringView s,
                                     ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -970,7 +1008,7 @@ class sub final {
     // Allocates 24 bytes of response buffer on the stack. Request is
     // heap-allocated.
     ResultOf::foo foo(::fidl::StringView s) {
-      return ResultOf::foo(this->channel().get(), s);
+      return ResultOf::foo(this->client_end(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -979,8 +1017,8 @@ class sub final {
                              ::fidl::StringView s,
                              ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::foo(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
    private:

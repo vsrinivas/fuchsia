@@ -19,7 +19,7 @@ extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
 }  // namespace
-Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
+Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client) {
   GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
@@ -28,7 +28,8 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
   error_ = _request.error();
 }
 
-Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client, zx_time_t _deadline) {
+Top::ResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
+                              zx_time_t _deadline) {
   GetFooRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
@@ -37,7 +38,7 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client, zx_time_t _deadline) {
   error_ = _request.error();
 }
 
-Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
+Top::UnownedResultOf::GetFoo::GetFoo(::fidl::UnownedClientEnd<Top> _client,
                                      uint8_t* _response_bytes,
                                      uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
@@ -50,7 +51,7 @@ Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
 
 Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::GetFoo(_channel->handle());
+    return ResultOf::GetFoo(::fidl::UnownedClientEnd<Top>(_channel->handle()));
   }
   return Top::ResultOf::GetFoo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -59,8 +60,9 @@ Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
 Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetFoo(_channel->handle(), _response_buffer.data,
-                                   _response_buffer.capacity);
+    return UnownedResultOf::GetFoo(
+        ::fidl::UnownedClientEnd<Top>(_channel->handle()),
+        _response_buffer.data, _response_buffer.capacity);
   }
   return Top::UnownedResultOf::GetFoo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));

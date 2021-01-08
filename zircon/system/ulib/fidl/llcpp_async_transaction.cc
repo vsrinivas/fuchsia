@@ -57,7 +57,7 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
   ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
   auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
   hdr->txid = txid;
-  message->Write(binding->channel()->get());
+  message->Write(binding->channel());
   return message->status();
 }
 

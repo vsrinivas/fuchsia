@@ -36,7 +36,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
     hdr->txid = txid_;
-    message->Write(channel_->get());
+    message->Write(channel_);
     return message->status();
   }
 

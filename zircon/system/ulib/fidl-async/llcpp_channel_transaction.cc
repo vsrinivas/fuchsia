@@ -22,7 +22,7 @@ zx_status_t ChannelTransaction::Reply(fidl::OutgoingMessage* message) {
   auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
   hdr->txid = txid_;
   txid_ = 0;
-  message->Write(binding_->channel()->get());
+  message->Write(binding_->channel());
   return message->status();
 }
 

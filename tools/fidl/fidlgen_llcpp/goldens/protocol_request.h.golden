@@ -112,7 +112,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       GetChildResponse& Message() {
@@ -145,7 +148,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -259,7 +265,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       GetChildRequest& Message() {
@@ -290,7 +299,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -402,7 +414,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       GetChildRequestResponse& Message() {
@@ -435,7 +450,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -550,7 +568,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       GetChildRequestRequest& Message() {
@@ -581,7 +602,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -694,7 +718,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       TakeChildRequest& Message() {
@@ -727,7 +754,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -850,7 +880,10 @@ class Parent final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       TakeChildRequestRequest& Message() {
@@ -883,7 +916,10 @@ class Parent final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -965,8 +1001,13 @@ class Parent final {
    public:
     class GetChild final : public ::fidl::Result {
      public:
-      explicit GetChild(zx_handle_t _client);
-      GetChild(zx_handle_t _client, zx_time_t _deadline);
+      explicit GetChild(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client);
+      GetChild(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          zx_time_t _deadline);
       explicit GetChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChild(GetChild&&) = delete;
@@ -1004,8 +1045,13 @@ class Parent final {
     };
     class GetChildRequest final : public ::fidl::Result {
      public:
-      explicit GetChildRequest(zx_handle_t _client);
-      GetChildRequest(zx_handle_t _client, zx_time_t _deadline);
+      explicit GetChildRequest(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client);
+      GetChildRequest(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          zx_time_t _deadline);
       explicit GetChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChildRequest(GetChildRequest&&) = delete;
@@ -1043,7 +1089,10 @@ class Parent final {
     };
     class TakeChild final : public ::fidl::Result {
      public:
-      explicit TakeChild(zx_handle_t _client, ::zx::channel& c);
+      explicit TakeChild(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          ::zx::channel& c);
       explicit TakeChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChild(TakeChild&&) = delete;
@@ -1056,7 +1105,10 @@ class Parent final {
     };
     class TakeChildRequest final : public ::fidl::Result {
      public:
-      explicit TakeChildRequest(zx_handle_t _client, ::zx::channel& r);
+      explicit TakeChildRequest(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          ::zx::channel& r);
       explicit TakeChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChildRequest(TakeChildRequest&&) = delete;
@@ -1077,8 +1129,10 @@ class Parent final {
    public:
     class GetChild final : public ::fidl::Result {
      public:
-      explicit GetChild(zx_handle_t _client, uint8_t* _response_bytes,
-                        uint32_t _response_byte_capacity);
+      explicit GetChild(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit GetChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChild(GetChild&&) = delete;
@@ -1114,8 +1168,10 @@ class Parent final {
     };
     class GetChildRequest final : public ::fidl::Result {
      public:
-      explicit GetChildRequest(zx_handle_t _client, uint8_t* _response_bytes,
-                               uint32_t _response_byte_capacity);
+      explicit GetChildRequest(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit GetChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       GetChildRequest(GetChildRequest&&) = delete;
@@ -1151,8 +1207,11 @@ class Parent final {
     };
     class TakeChild final : public ::fidl::Result {
      public:
-      explicit TakeChild(zx_handle_t _client, uint8_t* _request_bytes,
-                         uint32_t _request_byte_capacity, ::zx::channel& c);
+      explicit TakeChild(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::zx::channel& c);
       explicit TakeChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChild(TakeChild&&) = delete;
@@ -1163,9 +1222,11 @@ class Parent final {
     };
     class TakeChildRequest final : public ::fidl::Result {
      public:
-      explicit TakeChildRequest(zx_handle_t _client, uint8_t* _request_bytes,
-                                uint32_t _request_byte_capacity,
-                                ::zx::channel& r);
+      explicit TakeChildRequest(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::zx::channel& r);
       explicit TakeChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChildRequest(TakeChildRequest&&) = delete;
@@ -1186,7 +1247,7 @@ class Parent final {
     // necessary.
     static ResultOf::GetChild GetChild(
         ::fidl::UnownedClientEnd<Parent> _client_end) {
-      return ResultOf::GetChild(_client_end.channel());
+      return ResultOf::GetChild(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1194,8 +1255,7 @@ class Parent final {
     static UnownedResultOf::GetChild GetChild(
         ::fidl::UnownedClientEnd<Parent> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::GetChild(_client_end.channel(),
-                                       _response_buffer.data,
+      return UnownedResultOf::GetChild(_client_end, _response_buffer.data,
                                        _response_buffer.capacity);
     }
 
@@ -1203,7 +1263,7 @@ class Parent final {
     // necessary.
     static ResultOf::GetChildRequest GetChildRequest(
         ::fidl::UnownedClientEnd<Parent> _client_end) {
-      return ResultOf::GetChildRequest(_client_end.channel());
+      return ResultOf::GetChildRequest(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1211,16 +1271,15 @@ class Parent final {
     static UnownedResultOf::GetChildRequest GetChildRequest(
         ::fidl::UnownedClientEnd<Parent> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::GetChildRequest(_client_end.channel(),
-                                              _response_buffer.data,
-                                              _response_buffer.capacity);
+      return UnownedResultOf::GetChildRequest(
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeChild TakeChild(
         ::fidl::UnownedClientEnd<Parent> _client_end, ::zx::channel c) {
-      return ResultOf::TakeChild(_client_end.channel(), c);
+      return ResultOf::TakeChild(_client_end, c);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1228,8 +1287,7 @@ class Parent final {
     static UnownedResultOf::TakeChild TakeChild(
         ::fidl::UnownedClientEnd<Parent> _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::channel c) {
-      return UnownedResultOf::TakeChild(_client_end.channel(),
-                                        _request_buffer.data,
+      return UnownedResultOf::TakeChild(_client_end, _request_buffer.data,
                                         _request_buffer.capacity, c);
     }
 
@@ -1237,7 +1295,7 @@ class Parent final {
     // necessary.
     static ResultOf::TakeChildRequest TakeChildRequest(
         ::fidl::UnownedClientEnd<Parent> _client_end, ::zx::channel r) {
-      return ResultOf::TakeChildRequest(_client_end.channel(), r);
+      return ResultOf::TakeChildRequest(_client_end, r);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1245,9 +1303,8 @@ class Parent final {
     static UnownedResultOf::TakeChildRequest TakeChildRequest(
         ::fidl::UnownedClientEnd<Parent> _client_end,
         ::fidl::BufferSpan _request_buffer, ::zx::channel r) {
-      return UnownedResultOf::TakeChildRequest(_client_end.channel(),
-                                               _request_buffer.data,
-                                               _request_buffer.capacity, r);
+      return UnownedResultOf::TakeChildRequest(
+          _client_end, _request_buffer.data, _request_buffer.capacity, r);
     }
   };
 
@@ -1271,43 +1328,41 @@ class Parent final {
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::GetChild GetChild() {
-      return ResultOf::GetChild(this->channel().get());
+      return ResultOf::GetChild(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::GetChild GetChild(::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::GetChild(this->channel().get(),
-                                       _response_buffer.data,
-                                       _response_buffer.capacity);
+      return UnownedResultOf::GetChild(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::GetChildRequest GetChildRequest() {
-      return ResultOf::GetChildRequest(this->channel().get());
+      return ResultOf::GetChildRequest(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::GetChildRequest GetChildRequest(
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::GetChildRequest(this->channel().get(),
-                                              _response_buffer.data,
-                                              _response_buffer.capacity);
+      return UnownedResultOf::GetChildRequest(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::TakeChild TakeChild(::zx::channel c) {
-      return ResultOf::TakeChild(this->channel().get(), c);
+      return ResultOf::TakeChild(this->client_end(), c);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::TakeChild TakeChild(::fidl::BufferSpan _request_buffer,
                                          ::zx::channel c) {
-      return UnownedResultOf::TakeChild(this->channel().get(),
+      return UnownedResultOf::TakeChild(this->client_end(),
                                         _request_buffer.data,
                                         _request_buffer.capacity, c);
     }
@@ -1315,14 +1370,14 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::TakeChildRequest TakeChildRequest(::zx::channel r) {
-      return ResultOf::TakeChildRequest(this->channel().get(), r);
+      return ResultOf::TakeChildRequest(this->client_end(), r);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::TakeChildRequest TakeChildRequest(
         ::fidl::BufferSpan _request_buffer, ::zx::channel r) {
-      return UnownedResultOf::TakeChildRequest(this->channel().get(),
+      return UnownedResultOf::TakeChildRequest(this->client_end(),
                                                _request_buffer.data,
                                                _request_buffer.capacity, r);
     }

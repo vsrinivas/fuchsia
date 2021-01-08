@@ -321,7 +321,10 @@ class Protocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestStrictResponseFlexibleResponse& Message() {
@@ -359,7 +362,10 @@ class Protocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -481,7 +487,10 @@ class Protocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestStrictResponseFlexibleRequest& Message() {
@@ -520,7 +529,10 @@ class Protocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -636,7 +648,10 @@ class Protocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestFlexibleResponseStrictResponse& Message() {
@@ -674,7 +689,10 @@ class Protocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -796,7 +814,10 @@ class Protocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestFlexibleResponseStrictRequest& Message() {
@@ -835,7 +856,10 @@ class Protocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -910,10 +934,14 @@ class Protocol final {
     class RequestStrictResponseFlexible final : public ::fidl::Result {
      public:
       explicit RequestStrictResponseFlexible(
-          zx_handle_t _client,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
           ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s);
       RequestStrictResponseFlexible(
-          zx_handle_t _client,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
           ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
           zx_time_t _deadline);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
@@ -960,10 +988,14 @@ class Protocol final {
     class RequestFlexibleResponseStrict final : public ::fidl::Result {
      public:
       explicit RequestFlexibleResponseStrict(
-          zx_handle_t _client,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
           ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s);
       RequestFlexibleResponseStrict(
-          zx_handle_t _client,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
           ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
           zx_time_t _deadline);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
@@ -1018,8 +1050,10 @@ class Protocol final {
     class RequestStrictResponseFlexible final : public ::fidl::Result {
      public:
       explicit RequestStrictResponseFlexible(
-          zx_handle_t _client, uint8_t* _request_bytes,
-          uint32_t _request_byte_capacity,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
           ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
@@ -1064,8 +1098,10 @@ class Protocol final {
     class RequestFlexibleResponseStrict final : public ::fidl::Result {
      public:
       explicit RequestFlexibleResponseStrict(
-          zx_handle_t _client, uint8_t* _request_bytes,
-          uint32_t _request_byte_capacity,
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
           ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
@@ -1120,7 +1156,7 @@ class Protocol final {
     RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
-      return ResultOf::RequestStrictResponseFlexible(_client_end.channel(), s);
+      return ResultOf::RequestStrictResponseFlexible(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1132,8 +1168,8 @@ class Protocol final {
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
@@ -1141,7 +1177,7 @@ class Protocol final {
     RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
-      return ResultOf::RequestFlexibleResponseStrict(_client_end.channel(), s);
+      return ResultOf::RequestFlexibleResponseStrict(_client_end, s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1153,8 +1189,8 @@ class Protocol final {
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -1180,7 +1216,7 @@ class Protocol final {
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
-      return ResultOf::RequestStrictResponseFlexible(this->channel().get(), s);
+      return ResultOf::RequestStrictResponseFlexible(this->client_end(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1191,14 +1227,14 @@ class Protocol final {
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
-      return ResultOf::RequestFlexibleResponseStrict(this->channel().get(), s);
+      return ResultOf::RequestFlexibleResponseStrict(this->client_end(), s);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1209,8 +1245,8 @@ class Protocol final {
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          s, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
    private:

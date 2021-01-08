@@ -864,7 +864,10 @@ class Transitional final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestResponse& Message() {
@@ -895,7 +898,10 @@ class Transitional final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1005,7 +1011,10 @@ class Transitional final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       RequestRequest& Message() {
@@ -1036,7 +1045,10 @@ class Transitional final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1145,7 +1157,10 @@ class Transitional final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       OneWayRequest& Message() {
@@ -1176,7 +1191,10 @@ class Transitional final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1280,7 +1298,10 @@ class Transitional final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       EventResponse& Message() {
@@ -1311,7 +1332,10 @@ class Transitional final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1402,8 +1426,14 @@ class Transitional final {
    public:
     class Request final : public ::fidl::Result {
      public:
-      explicit Request(zx_handle_t _client, int64_t x);
-      Request(zx_handle_t _client, int64_t x, zx_time_t _deadline);
+      explicit Request(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+              _client,
+          int64_t x);
+      Request(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+              _client,
+          int64_t x, zx_time_t _deadline);
       explicit Request(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Request(Request&&) = delete;
       Request(const Request&) = delete;
@@ -1436,7 +1466,10 @@ class Transitional final {
     };
     class OneWay final : public ::fidl::Result {
      public:
-      explicit OneWay(zx_handle_t _client, int64_t x);
+      explicit OneWay(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+              _client,
+          int64_t x);
       explicit OneWay(const ::fidl::Result& result) : ::fidl::Result(result) {}
       OneWay(OneWay&&) = delete;
       OneWay(const OneWay&) = delete;
@@ -1456,10 +1489,11 @@ class Transitional final {
    public:
     class Request final : public ::fidl::Result {
      public:
-      explicit Request(zx_handle_t _client, uint8_t* _request_bytes,
-                       uint32_t _request_byte_capacity, int64_t x,
-                       uint8_t* _response_bytes,
-                       uint32_t _response_byte_capacity);
+      explicit Request(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit Request(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Request(Request&&) = delete;
       Request(const Request&) = delete;
@@ -1490,8 +1524,10 @@ class Transitional final {
     };
     class OneWay final : public ::fidl::Result {
      public:
-      explicit OneWay(zx_handle_t _client, uint8_t* _request_bytes,
-                      uint32_t _request_byte_capacity, int64_t x);
+      explicit OneWay(
+          ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocols::Transitional>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity, int64_t x);
       explicit OneWay(const ::fidl::Result& result) : ::fidl::Result(result) {}
       OneWay(OneWay&&) = delete;
       OneWay(const OneWay&) = delete;
@@ -1511,7 +1547,7 @@ class Transitional final {
     // necessary.
     static ResultOf::Request Request(
         ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
-      return ResultOf::Request(_client_end.channel(), x);
+      return ResultOf::Request(_client_end, x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1521,15 +1557,15 @@ class Transitional final {
         ::fidl::BufferSpan _request_buffer, int64_t x,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          x, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, x,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::OneWay OneWay(
         ::fidl::UnownedClientEnd<Transitional> _client_end, int64_t x) {
-      return ResultOf::OneWay(_client_end.channel(), x);
+      return ResultOf::OneWay(_client_end, x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1537,8 +1573,7 @@ class Transitional final {
     static UnownedResultOf::OneWay OneWay(
         ::fidl::UnownedClientEnd<Transitional> _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t x) {
-      return UnownedResultOf::OneWay(_client_end.channel(),
-                                     _request_buffer.data,
+      return UnownedResultOf::OneWay(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, x);
     }
   };
@@ -1565,7 +1600,7 @@ class Transitional final {
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Request Request(int64_t x) {
-      return ResultOf::Request(this->channel().get(), x);
+      return ResultOf::Request(this->client_end(), x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -1574,22 +1609,21 @@ class Transitional final {
                                      int64_t x,
                                      ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::Request(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          x, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, x,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::OneWay OneWay(int64_t x) {
-      return ResultOf::OneWay(this->channel().get(), x);
+      return ResultOf::OneWay(this->client_end(), x);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::OneWay OneWay(::fidl::BufferSpan _request_buffer,
                                    int64_t x) {
-      return UnownedResultOf::OneWay(this->channel().get(),
-                                     _request_buffer.data,
+      return UnownedResultOf::OneWay(this->client_end(), _request_buffer.data,
                                      _request_buffer.capacity, x);
     }
 
@@ -1761,7 +1795,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MethodARequest& Message() {
@@ -1792,7 +1829,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -1901,7 +1941,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       EventAResponse& Message() {
@@ -1932,7 +1975,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2037,7 +2083,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MethodBResponse& Message() {
@@ -2068,7 +2117,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2180,7 +2232,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MethodBRequest& Message() {
@@ -2211,7 +2266,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2315,7 +2373,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       TakeHandleResponse& Message() {
@@ -2345,7 +2406,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2457,7 +2521,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       TakeHandleRequest& Message() {
@@ -2490,7 +2557,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2608,7 +2678,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MutateSocketResponse& Message() {
@@ -2641,7 +2714,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2762,7 +2838,10 @@ class ChannelProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MutateSocketRequest& Message() {
@@ -2795,7 +2874,10 @@ class ChannelProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -2895,7 +2977,10 @@ class ChannelProtocol final {
    public:
     class MethodA final : public ::fidl::Result {
      public:
-      explicit MethodA(zx_handle_t _client, int64_t a, int64_t b);
+      explicit MethodA(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::ChannelProtocol>
+                           _client,
+                       int64_t a, int64_t b);
       explicit MethodA(const ::fidl::Result& result) : ::fidl::Result(result) {}
       MethodA(MethodA&&) = delete;
       MethodA(const MethodA&) = delete;
@@ -2907,8 +2992,14 @@ class ChannelProtocol final {
     };
     class MethodB final : public ::fidl::Result {
      public:
-      explicit MethodB(zx_handle_t _client, int64_t a, int64_t b);
-      MethodB(zx_handle_t _client, int64_t a, int64_t b, zx_time_t _deadline);
+      explicit MethodB(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::ChannelProtocol>
+                           _client,
+                       int64_t a, int64_t b);
+      MethodB(::fidl::UnownedClientEnd<
+                  ::llcpp::fidl::test::protocols::ChannelProtocol>
+                  _client,
+              int64_t a, int64_t b, zx_time_t _deadline);
       explicit MethodB(const ::fidl::Result& result) : ::fidl::Result(result) {}
       MethodB(MethodB&&) = delete;
       MethodB(const MethodB&) = delete;
@@ -2941,8 +3032,14 @@ class ChannelProtocol final {
     };
     class TakeHandle final : public ::fidl::Result {
      public:
-      explicit TakeHandle(zx_handle_t _client, ::zx::handle& h);
-      TakeHandle(zx_handle_t _client, ::zx::handle& h, zx_time_t _deadline);
+      explicit TakeHandle(::fidl::UnownedClientEnd<
+                              ::llcpp::fidl::test::protocols::ChannelProtocol>
+                              _client,
+                          ::zx::handle& h);
+      TakeHandle(::fidl::UnownedClientEnd<
+                     ::llcpp::fidl::test::protocols::ChannelProtocol>
+                     _client,
+                 ::zx::handle& h, zx_time_t _deadline);
       explicit TakeHandle(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeHandle(TakeHandle&&) = delete;
@@ -2976,8 +3073,14 @@ class ChannelProtocol final {
     };
     class MutateSocket final : public ::fidl::Result {
      public:
-      explicit MutateSocket(zx_handle_t _client, ::zx::socket& a);
-      MutateSocket(zx_handle_t _client, ::zx::socket& a, zx_time_t _deadline);
+      explicit MutateSocket(::fidl::UnownedClientEnd<
+                                ::llcpp::fidl::test::protocols::ChannelProtocol>
+                                _client,
+                            ::zx::socket& a);
+      MutateSocket(::fidl::UnownedClientEnd<
+                       ::llcpp::fidl::test::protocols::ChannelProtocol>
+                       _client,
+                   ::zx::socket& a, zx_time_t _deadline);
       explicit MutateSocket(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       MutateSocket(MutateSocket&&) = delete;
@@ -3023,8 +3126,11 @@ class ChannelProtocol final {
    public:
     class MethodA final : public ::fidl::Result {
      public:
-      explicit MethodA(zx_handle_t _client, uint8_t* _request_bytes,
-                       uint32_t _request_byte_capacity, int64_t a, int64_t b);
+      explicit MethodA(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::ChannelProtocol>
+                           _client,
+                       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                       int64_t a, int64_t b);
       explicit MethodA(const ::fidl::Result& result) : ::fidl::Result(result) {}
       MethodA(MethodA&&) = delete;
       MethodA(const MethodA&) = delete;
@@ -3034,9 +3140,11 @@ class ChannelProtocol final {
     };
     class MethodB final : public ::fidl::Result {
      public:
-      explicit MethodB(zx_handle_t _client, uint8_t* _request_bytes,
-                       uint32_t _request_byte_capacity, int64_t a, int64_t b,
-                       uint8_t* _response_bytes,
+      explicit MethodB(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::ChannelProtocol>
+                           _client,
+                       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+                       int64_t a, int64_t b, uint8_t* _response_bytes,
                        uint32_t _response_byte_capacity);
       explicit MethodB(const ::fidl::Result& result) : ::fidl::Result(result) {}
       MethodB(MethodB&&) = delete;
@@ -3068,7 +3176,10 @@ class ChannelProtocol final {
     };
     class TakeHandle final : public ::fidl::Result {
      public:
-      explicit TakeHandle(zx_handle_t _client, uint8_t* _request_bytes,
+      explicit TakeHandle(::fidl::UnownedClientEnd<
+                              ::llcpp::fidl::test::protocols::ChannelProtocol>
+                              _client,
+                          uint8_t* _request_bytes,
                           uint32_t _request_byte_capacity, ::zx::handle& h,
                           uint8_t* _response_bytes,
                           uint32_t _response_byte_capacity);
@@ -3103,7 +3214,10 @@ class ChannelProtocol final {
     };
     class MutateSocket final : public ::fidl::Result {
      public:
-      explicit MutateSocket(zx_handle_t _client, uint8_t* _request_bytes,
+      explicit MutateSocket(::fidl::UnownedClientEnd<
+                                ::llcpp::fidl::test::protocols::ChannelProtocol>
+                                _client,
+                            uint8_t* _request_bytes,
                             uint32_t _request_byte_capacity, ::zx::socket& a,
                             uint8_t* _response_bytes,
                             uint32_t _response_byte_capacity);
@@ -3153,7 +3267,7 @@ class ChannelProtocol final {
     static ResultOf::MethodA MethodA(
         ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
         int64_t b) {
-      return ResultOf::MethodA(_client_end.channel(), a, b);
+      return ResultOf::MethodA(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3161,8 +3275,7 @@ class ChannelProtocol final {
     static UnownedResultOf::MethodA MethodA(
         ::fidl::UnownedClientEnd<ChannelProtocol> _client_end,
         ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
-      return UnownedResultOf::MethodA(_client_end.channel(),
-                                      _request_buffer.data,
+      return UnownedResultOf::MethodA(_client_end, _request_buffer.data,
                                       _request_buffer.capacity, a, b);
     }
 
@@ -3171,7 +3284,7 @@ class ChannelProtocol final {
     static ResultOf::MethodB MethodB(
         ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, int64_t a,
         int64_t b) {
-      return ResultOf::MethodB(_client_end.channel(), a, b);
+      return ResultOf::MethodB(_client_end, a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3181,15 +3294,15 @@ class ChannelProtocol final {
         ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          a, b, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, a, b,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeHandle TakeHandle(
         ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::handle h) {
-      return ResultOf::TakeHandle(_client_end.channel(), h);
+      return ResultOf::TakeHandle(_client_end, h);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3199,15 +3312,15 @@ class ChannelProtocol final {
         ::fidl::BufferSpan _request_buffer, ::zx::handle h,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::TakeHandle(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          h, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, h,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MutateSocket MutateSocket(
         ::fidl::UnownedClientEnd<ChannelProtocol> _client_end, ::zx::socket a) {
-      return ResultOf::MutateSocket(_client_end.channel(), a);
+      return ResultOf::MutateSocket(_client_end, a);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3217,8 +3330,8 @@ class ChannelProtocol final {
         ::fidl::BufferSpan _request_buffer, ::zx::socket a,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          a, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, a,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -3244,22 +3357,21 @@ class ChannelProtocol final {
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::MethodA MethodA(int64_t a, int64_t b) {
-      return ResultOf::MethodA(this->channel().get(), a, b);
+      return ResultOf::MethodA(this->client_end(), a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::MethodA MethodA(::fidl::BufferSpan _request_buffer,
                                      int64_t a, int64_t b) {
-      return UnownedResultOf::MethodA(this->channel().get(),
-                                      _request_buffer.data,
+      return UnownedResultOf::MethodA(this->client_end(), _request_buffer.data,
                                       _request_buffer.capacity, a, b);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::MethodB MethodB(int64_t a, int64_t b) {
-      return ResultOf::MethodB(this->channel().get(), a, b);
+      return ResultOf::MethodB(this->client_end(), a, b);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3268,14 +3380,14 @@ class ChannelProtocol final {
                                      int64_t a, int64_t b,
                                      ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MethodB(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          a, b, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
+          b, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::TakeHandle TakeHandle(::zx::handle h) {
-      return ResultOf::TakeHandle(this->channel().get(), h);
+      return ResultOf::TakeHandle(this->client_end(), h);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3284,14 +3396,14 @@ class ChannelProtocol final {
         ::fidl::BufferSpan _request_buffer, ::zx::handle h,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::TakeHandle(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          h, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, h,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::MutateSocket MutateSocket(::zx::socket a) {
-      return ResultOf::MutateSocket(this->channel().get(), a);
+      return ResultOf::MutateSocket(this->client_end(), a);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -3300,8 +3412,8 @@ class ChannelProtocol final {
         ::fidl::BufferSpan _request_buffer, ::zx::socket a,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::MutateSocket(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
-          a, _response_buffer.data, _response_buffer.capacity);
+          this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Handle all possible events defined in this protocol.
@@ -3526,7 +3638,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       NoRequestNoResponseRequest& Message() {
@@ -3557,7 +3672,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3661,7 +3779,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       NoRequestEmptyResponseResponse& Message() {
@@ -3692,7 +3813,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3800,7 +3924,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       NoRequestEmptyResponseRequest& Message() {
@@ -3832,7 +3959,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -3942,7 +4072,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       NoRequestWithResponseResponse& Message() {
@@ -3978,7 +4111,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -4087,7 +4223,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       NoRequestWithResponseRequest& Message() {
@@ -4119,7 +4258,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -4234,7 +4376,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       WithRequestNoResponseRequest& Message() {
@@ -4271,7 +4416,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -4376,7 +4524,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       WithRequestEmptyResponseResponse& Message() {
@@ -4407,7 +4558,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -4521,7 +4675,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       WithRequestEmptyResponseRequest& Message() {
@@ -4558,7 +4715,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -4669,7 +4829,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       WithRequestWithResponseResponse& Message() {
@@ -4705,7 +4868,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -4820,7 +4986,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       WithRequestWithResponseRequest& Message() {
@@ -4857,7 +5026,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -4961,7 +5133,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       OnEmptyResponseResponse& Message() {
@@ -4991,7 +5166,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -5100,7 +5278,10 @@ class WithAndWithoutRequestResponse final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       OnWithResponseResponse& Message() {
@@ -5135,7 +5316,10 @@ class WithAndWithoutRequestResponse final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
@@ -5228,7 +5412,10 @@ class WithAndWithoutRequestResponse final {
    public:
     class NoRequestNoResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestNoResponse(zx_handle_t _client);
+      explicit NoRequestNoResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client);
       explicit NoRequestNoResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestNoResponse(NoRequestNoResponse&&) = delete;
@@ -5241,8 +5428,15 @@ class WithAndWithoutRequestResponse final {
     };
     class NoRequestEmptyResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestEmptyResponse(zx_handle_t _client);
-      NoRequestEmptyResponse(zx_handle_t _client, zx_time_t _deadline);
+      explicit NoRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client);
+      NoRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          zx_time_t _deadline);
       explicit NoRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestEmptyResponse(NoRequestEmptyResponse&&) = delete;
@@ -5280,8 +5474,15 @@ class WithAndWithoutRequestResponse final {
     };
     class NoRequestWithResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestWithResponse(zx_handle_t _client);
-      NoRequestWithResponse(zx_handle_t _client, zx_time_t _deadline);
+      explicit NoRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client);
+      NoRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          zx_time_t _deadline);
       explicit NoRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestWithResponse(NoRequestWithResponse&&) = delete;
@@ -5317,8 +5518,11 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestNoResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestNoResponse(zx_handle_t _client,
-                                     const ::fidl::StringView& arg);
+      explicit WithRequestNoResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          const ::fidl::StringView& arg);
       explicit WithRequestNoResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestNoResponse(WithRequestNoResponse&&) = delete;
@@ -5331,11 +5535,16 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestEmptyResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestEmptyResponse(zx_handle_t _client,
-                                        const ::fidl::StringView& arg);
-      WithRequestEmptyResponse(zx_handle_t _client,
-                               const ::fidl::StringView& arg,
-                               zx_time_t _deadline);
+      explicit WithRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          const ::fidl::StringView& arg);
+      WithRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          const ::fidl::StringView& arg, zx_time_t _deadline);
       explicit WithRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestEmptyResponse(WithRequestEmptyResponse&&) = delete;
@@ -5377,11 +5586,16 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestWithResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestWithResponse(zx_handle_t _client,
-                                       const ::fidl::StringView& arg);
-      WithRequestWithResponse(zx_handle_t _client,
-                              const ::fidl::StringView& arg,
-                              zx_time_t _deadline);
+      explicit WithRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          const ::fidl::StringView& arg);
+      WithRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          const ::fidl::StringView& arg, zx_time_t _deadline);
       explicit WithRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestWithResponse(WithRequestWithResponse&&) = delete;
@@ -5429,7 +5643,10 @@ class WithAndWithoutRequestResponse final {
    public:
     class NoRequestNoResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestNoResponse(zx_handle_t _client);
+      explicit NoRequestNoResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client);
       explicit NoRequestNoResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestNoResponse(NoRequestNoResponse&&) = delete;
@@ -5440,9 +5657,11 @@ class WithAndWithoutRequestResponse final {
     };
     class NoRequestEmptyResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestEmptyResponse(zx_handle_t _client,
-                                      uint8_t* _response_bytes,
-                                      uint32_t _response_byte_capacity);
+      explicit NoRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit NoRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestEmptyResponse(NoRequestEmptyResponse&&) = delete;
@@ -5478,9 +5697,11 @@ class WithAndWithoutRequestResponse final {
     };
     class NoRequestWithResponse final : public ::fidl::Result {
      public:
-      explicit NoRequestWithResponse(zx_handle_t _client,
-                                     uint8_t* _response_bytes,
-                                     uint32_t _response_byte_capacity);
+      explicit NoRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit NoRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       NoRequestWithResponse(NoRequestWithResponse&&) = delete;
@@ -5514,10 +5735,12 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestNoResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestNoResponse(zx_handle_t _client,
-                                     uint8_t* _request_bytes,
-                                     uint32_t _request_byte_capacity,
-                                     const ::fidl::StringView& arg);
+      explicit WithRequestNoResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          const ::fidl::StringView& arg);
       explicit WithRequestNoResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestNoResponse(WithRequestNoResponse&&) = delete;
@@ -5528,12 +5751,13 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestEmptyResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestEmptyResponse(zx_handle_t _client,
-                                        uint8_t* _request_bytes,
-                                        uint32_t _request_byte_capacity,
-                                        const ::fidl::StringView& arg,
-                                        uint8_t* _response_bytes,
-                                        uint32_t _response_byte_capacity);
+      explicit WithRequestEmptyResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          const ::fidl::StringView& arg, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit WithRequestEmptyResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestEmptyResponse(WithRequestEmptyResponse&&) = delete;
@@ -5573,12 +5797,13 @@ class WithAndWithoutRequestResponse final {
     };
     class WithRequestWithResponse final : public ::fidl::Result {
      public:
-      explicit WithRequestWithResponse(zx_handle_t _client,
-                                       uint8_t* _request_bytes,
-                                       uint32_t _request_byte_capacity,
-                                       const ::fidl::StringView& arg,
-                                       uint8_t* _response_bytes,
-                                       uint32_t _response_byte_capacity);
+      explicit WithRequestWithResponse(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithAndWithoutRequestResponse>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          const ::fidl::StringView& arg, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
       explicit WithRequestWithResponse(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       WithRequestWithResponse(WithRequestWithResponse&&) = delete;
@@ -5625,21 +5850,21 @@ class WithAndWithoutRequestResponse final {
     // necessary.
     static ResultOf::NoRequestNoResponse NoRequestNoResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
-      return ResultOf::NoRequestNoResponse(_client_end.channel());
+      return ResultOf::NoRequestNoResponse(_client_end);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
-      return ResultOf::NoRequestEmptyResponse(_client_end.channel());
+      return ResultOf::NoRequestEmptyResponse(_client_end);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
     // heap-allocated.
     static ResultOf::NoRequestWithResponse NoRequestWithResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end) {
-      return ResultOf::NoRequestWithResponse(_client_end.channel());
+      return ResultOf::NoRequestWithResponse(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5647,16 +5872,15 @@ class WithAndWithoutRequestResponse final {
     static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::NoRequestWithResponse(_client_end.channel(),
-                                                    _response_buffer.data,
-                                                    _response_buffer.capacity);
+      return UnownedResultOf::NoRequestWithResponse(
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated.
     static ResultOf::WithRequestNoResponse WithRequestNoResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestNoResponse(_client_end.channel(), arg);
+      return ResultOf::WithRequestNoResponse(_client_end, arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5665,8 +5889,7 @@ class WithAndWithoutRequestResponse final {
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          arg);
+          _client_end, _request_buffer.data, _request_buffer.capacity, arg);
     }
 
     // Allocates 16 bytes of response buffer on the stack. Request is
@@ -5674,7 +5897,7 @@ class WithAndWithoutRequestResponse final {
     static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestEmptyResponse(_client_end.channel(), arg);
+      return ResultOf::WithRequestEmptyResponse(_client_end, arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5684,15 +5907,15 @@ class WithAndWithoutRequestResponse final {
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          arg, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, arg,
+          _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::WithRequestWithResponse WithRequestWithResponse(
         ::fidl::UnownedClientEnd<WithAndWithoutRequestResponse> _client_end,
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestWithResponse(_client_end.channel(), arg);
+      return ResultOf::WithRequestWithResponse(_client_end, arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5702,8 +5925,8 @@ class WithAndWithoutRequestResponse final {
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
-          _client_end.channel(), _request_buffer.data, _request_buffer.capacity,
-          arg, _response_buffer.data, _response_buffer.capacity);
+          _client_end, _request_buffer.data, _request_buffer.capacity, arg,
+          _response_buffer.data, _response_buffer.capacity);
     }
   };
 
@@ -5732,34 +5955,33 @@ class WithAndWithoutRequestResponse final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::NoRequestNoResponse NoRequestNoResponse() {
-      return ResultOf::NoRequestNoResponse(this->channel().get());
+      return ResultOf::NoRequestNoResponse(this->client_end());
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse() {
-      return ResultOf::NoRequestEmptyResponse(this->channel().get());
+      return ResultOf::NoRequestEmptyResponse(this->client_end());
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is
     // heap-allocated.
     ResultOf::NoRequestWithResponse NoRequestWithResponse() {
-      return ResultOf::NoRequestWithResponse(this->channel().get());
+      return ResultOf::NoRequestWithResponse(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::NoRequestWithResponse(this->channel().get(),
-                                                    _response_buffer.data,
-                                                    _response_buffer.capacity);
+      return UnownedResultOf::NoRequestWithResponse(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated.
     ResultOf::WithRequestNoResponse WithRequestNoResponse(
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestNoResponse(this->channel().get(), arg);
+      return ResultOf::WithRequestNoResponse(this->client_end(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5767,7 +5989,7 @@ class WithAndWithoutRequestResponse final {
     UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
       return UnownedResultOf::WithRequestNoResponse(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          this->client_end(), _request_buffer.data, _request_buffer.capacity,
           arg);
     }
 
@@ -5775,7 +5997,7 @@ class WithAndWithoutRequestResponse final {
     // heap-allocated.
     ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestEmptyResponse(this->channel().get(), arg);
+      return ResultOf::WithRequestEmptyResponse(this->client_end(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5784,14 +6006,14 @@ class WithAndWithoutRequestResponse final {
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestEmptyResponse(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          this->client_end(), _request_buffer.data, _request_buffer.capacity,
           arg, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::WithRequestWithResponse WithRequestWithResponse(
         ::fidl::StringView arg) {
-      return ResultOf::WithRequestWithResponse(this->channel().get(), arg);
+      return ResultOf::WithRequestWithResponse(this->client_end(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -5800,7 +6022,7 @@ class WithAndWithoutRequestResponse final {
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::WithRequestWithResponse(
-          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          this->client_end(), _request_buffer.data, _request_buffer.capacity,
           arg, _response_buffer.data, _response_buffer.capacity);
     }
 
@@ -6049,7 +6271,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ResponseAsStructResponse& Message() {
@@ -6082,7 +6307,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6189,7 +6417,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ResponseAsStructRequest& Message() {
@@ -6220,7 +6451,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6334,7 +6568,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ErrorAsPrimitiveResponse& Message() {
@@ -6367,7 +6604,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6474,7 +6714,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ErrorAsPrimitiveRequest& Message() {
@@ -6505,7 +6748,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6619,7 +6865,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ErrorAsEnumResponse& Message() {
@@ -6652,7 +6901,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6759,7 +7011,10 @@ class WithErrorSyntax final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       ErrorAsEnumRequest& Message() {
@@ -6790,7 +7045,10 @@ class WithErrorSyntax final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -6864,8 +7122,13 @@ class WithErrorSyntax final {
    public:
     class ResponseAsStruct final : public ::fidl::Result {
      public:
-      explicit ResponseAsStruct(zx_handle_t _client);
-      ResponseAsStruct(zx_handle_t _client, zx_time_t _deadline);
+      explicit ResponseAsStruct(::fidl::UnownedClientEnd<
+                                ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                                    _client);
+      ResponseAsStruct(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                           _client,
+                       zx_time_t _deadline);
       explicit ResponseAsStruct(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ResponseAsStruct(ResponseAsStruct&&) = delete;
@@ -6899,8 +7162,13 @@ class WithErrorSyntax final {
     };
     class ErrorAsPrimitive final : public ::fidl::Result {
      public:
-      explicit ErrorAsPrimitive(zx_handle_t _client);
-      ErrorAsPrimitive(zx_handle_t _client, zx_time_t _deadline);
+      explicit ErrorAsPrimitive(::fidl::UnownedClientEnd<
+                                ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                                    _client);
+      ErrorAsPrimitive(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                           _client,
+                       zx_time_t _deadline);
       explicit ErrorAsPrimitive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ErrorAsPrimitive(ErrorAsPrimitive&&) = delete;
@@ -6934,8 +7202,13 @@ class WithErrorSyntax final {
     };
     class ErrorAsEnum final : public ::fidl::Result {
      public:
-      explicit ErrorAsEnum(zx_handle_t _client);
-      ErrorAsEnum(zx_handle_t _client, zx_time_t _deadline);
+      explicit ErrorAsEnum(::fidl::UnownedClientEnd<
+                           ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                               _client);
+      ErrorAsEnum(::fidl::UnownedClientEnd<
+                      ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                      _client,
+                  zx_time_t _deadline);
       explicit ErrorAsEnum(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ErrorAsEnum(ErrorAsEnum&&) = delete;
@@ -6977,8 +7250,11 @@ class WithErrorSyntax final {
    public:
     class ResponseAsStruct final : public ::fidl::Result {
      public:
-      explicit ResponseAsStruct(zx_handle_t _client, uint8_t* _response_bytes,
-                                uint32_t _response_byte_capacity);
+      explicit ResponseAsStruct(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithErrorSyntax>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit ResponseAsStruct(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ResponseAsStruct(ResponseAsStruct&&) = delete;
@@ -7010,8 +7286,11 @@ class WithErrorSyntax final {
     };
     class ErrorAsPrimitive final : public ::fidl::Result {
      public:
-      explicit ErrorAsPrimitive(zx_handle_t _client, uint8_t* _response_bytes,
-                                uint32_t _response_byte_capacity);
+      explicit ErrorAsPrimitive(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::protocols::WithErrorSyntax>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit ErrorAsPrimitive(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       ErrorAsPrimitive(ErrorAsPrimitive&&) = delete;
@@ -7043,7 +7322,10 @@ class WithErrorSyntax final {
     };
     class ErrorAsEnum final : public ::fidl::Result {
      public:
-      explicit ErrorAsEnum(zx_handle_t _client, uint8_t* _response_bytes,
+      explicit ErrorAsEnum(::fidl::UnownedClientEnd<
+                               ::llcpp::fidl::test::protocols::WithErrorSyntax>
+                               _client,
+                           uint8_t* _response_bytes,
                            uint32_t _response_byte_capacity);
       explicit ErrorAsEnum(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -7086,7 +7368,7 @@ class WithErrorSyntax final {
     // necessary.
     static ResultOf::ResponseAsStruct ResponseAsStruct(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
-      return ResultOf::ResponseAsStruct(_client_end.channel());
+      return ResultOf::ResponseAsStruct(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -7094,16 +7376,15 @@ class WithErrorSyntax final {
     static UnownedResultOf::ResponseAsStruct ResponseAsStruct(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ResponseAsStruct(_client_end.channel(),
-                                               _response_buffer.data,
-                                               _response_buffer.capacity);
+      return UnownedResultOf::ResponseAsStruct(
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
-      return ResultOf::ErrorAsPrimitive(_client_end.channel());
+      return ResultOf::ErrorAsPrimitive(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -7111,16 +7392,15 @@ class WithErrorSyntax final {
     static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsPrimitive(_client_end.channel(),
-                                               _response_buffer.data,
-                                               _response_buffer.capacity);
+      return UnownedResultOf::ErrorAsPrimitive(
+          _client_end, _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::ErrorAsEnum ErrorAsEnum(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end) {
-      return ResultOf::ErrorAsEnum(_client_end.channel());
+      return ResultOf::ErrorAsEnum(_client_end);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -7128,8 +7408,7 @@ class WithErrorSyntax final {
     static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
         ::fidl::UnownedClientEnd<WithErrorSyntax> _client_end,
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsEnum(_client_end.channel(),
-                                          _response_buffer.data,
+      return UnownedResultOf::ErrorAsEnum(_client_end, _response_buffer.data,
                                           _response_buffer.capacity);
     }
   };
@@ -7156,46 +7435,43 @@ class WithErrorSyntax final {
     // Allocates 80 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::ResponseAsStruct ResponseAsStruct() {
-      return ResultOf::ResponseAsStruct(this->channel().get());
+      return ResultOf::ResponseAsStruct(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ResponseAsStruct ResponseAsStruct(
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ResponseAsStruct(this->channel().get(),
-                                               _response_buffer.data,
-                                               _response_buffer.capacity);
+      return UnownedResultOf::ResponseAsStruct(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::ErrorAsPrimitive ErrorAsPrimitive() {
-      return ResultOf::ErrorAsPrimitive(this->channel().get());
+      return ResultOf::ErrorAsPrimitive(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsPrimitive(this->channel().get(),
-                                               _response_buffer.data,
-                                               _response_buffer.capacity);
+      return UnownedResultOf::ErrorAsPrimitive(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::ErrorAsEnum ErrorAsEnum() {
-      return ResultOf::ErrorAsEnum(this->channel().get());
+      return ResultOf::ErrorAsEnum(this->client_end());
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::ErrorAsEnum ErrorAsEnum(
         ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsEnum(this->channel().get(),
-                                          _response_buffer.data,
-                                          _response_buffer.capacity);
+      return UnownedResultOf::ErrorAsEnum(
+          this->client_end(), _response_buffer.data, _response_buffer.capacity);
     }
 
    private:

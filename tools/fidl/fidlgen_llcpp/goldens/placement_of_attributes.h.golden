@@ -732,7 +732,10 @@ class ExampleProtocol final {
 
       ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       MethodRequest& Message() {
@@ -764,7 +767,10 @@ class ExampleProtocol final {
         return message_.GetOutgoingMessage();
       }
 
-      void Write(zx_handle_t client) { message_.Write(client); }
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
 
      private:
       FIDL_ALIGNDECL
@@ -838,7 +844,11 @@ class ExampleProtocol final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(zx_handle_t _client, ::llcpp::exampleusing::Empty& arg);
+      explicit Method(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+              _client,
+          ::llcpp::exampleusing::Empty& arg);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -858,9 +868,12 @@ class ExampleProtocol final {
    public:
     class Method final : public ::fidl::Result {
      public:
-      explicit Method(zx_handle_t _client, uint8_t* _request_bytes,
-                      uint32_t _request_byte_capacity,
-                      ::llcpp::exampleusing::Empty& arg);
+      explicit Method(
+          ::fidl::UnownedClientEnd<
+              ::llcpp::fidl::test::placementofattributes::ExampleProtocol>
+              _client,
+          uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          ::llcpp::exampleusing::Empty& arg);
       explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
       Method(Method&&) = delete;
       Method(const Method&) = delete;
@@ -881,7 +894,7 @@ class ExampleProtocol final {
     static ResultOf::Method Method(
         ::fidl::UnownedClientEnd<ExampleProtocol> _client_end,
         ::llcpp::exampleusing::Empty arg) {
-      return ResultOf::Method(_client_end.channel(), arg);
+      return ResultOf::Method(_client_end, arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
@@ -889,8 +902,7 @@ class ExampleProtocol final {
     static UnownedResultOf::Method Method(
         ::fidl::UnownedClientEnd<ExampleProtocol> _client_end,
         ::fidl::BufferSpan _request_buffer, ::llcpp::exampleusing::Empty arg) {
-      return UnownedResultOf::Method(_client_end.channel(),
-                                     _request_buffer.data,
+      return UnownedResultOf::Method(_client_end, _request_buffer.data,
                                      _request_buffer.capacity, arg);
     }
   };
@@ -917,15 +929,14 @@ class ExampleProtocol final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::Method Method(::llcpp::exampleusing::Empty arg) {
-      return ResultOf::Method(this->channel().get(), arg);
+      return ResultOf::Method(this->client_end(), arg);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::Method Method(::fidl::BufferSpan _request_buffer,
                                    ::llcpp::exampleusing::Empty arg) {
-      return UnownedResultOf::Method(this->channel().get(),
-                                     _request_buffer.data,
+      return UnownedResultOf::Method(this->client_end(), _request_buffer.data,
                                      _request_buffer.capacity, arg);
     }
 

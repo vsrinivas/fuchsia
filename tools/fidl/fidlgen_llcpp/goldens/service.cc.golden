@@ -20,7 +20,8 @@ extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
 }  // namespace
-SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
+SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(
+    ::fidl::UnownedClientEnd<SecondProtocol> _client) {
   MethodOnSecondRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -29,7 +30,8 @@ SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
 
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::MethodOnSecond(_channel->handle());
+    auto _res = ResultOf::MethodOnSecond(
+        ::fidl::UnownedClientEnd<SecondProtocol>(_channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
@@ -103,7 +105,8 @@ extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
 }  // namespace
-FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
+FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(
+    ::fidl::UnownedClientEnd<FirstProtocol> _client) {
   MethodOnFirstRequest::OwnedEncodedMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -112,7 +115,8 @@ FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
 
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::MethodOnFirst(_channel->handle());
+    auto _res = ResultOf::MethodOnFirst(
+        ::fidl::UnownedClientEnd<FirstProtocol>(_channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
   }
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);

@@ -104,7 +104,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
   {{ .Name }}Response::OwnedEncodedMessage _response{
       {{- template "PassthroughMessageParams" .Response -}}
   };
-  _response.Write(server_end_.channel().get());
+  _response.Write(server_end_);
   return _response.status();
 }
     {{- /* Caller-allocated */}}
@@ -115,7 +115,7 @@ zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
       {{- template "CommaPassthroughMessageParams" .Response -}}
   );
-  _response.Write(server_end_.channel().get());
+  _response.Write(server_end_);
   return _response.status();
 }
     {{- end }}

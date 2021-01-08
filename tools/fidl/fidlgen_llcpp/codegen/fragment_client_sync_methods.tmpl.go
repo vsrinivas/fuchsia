@@ -7,10 +7,12 @@ package codegen
 const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
   {{- if .HasResponse }}
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}
+{{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::{{ .Name }}(_channel->handle()
+    return UnownedResultOf::{{ .Name }}(
+      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
     {{- if .Request -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end -}}
@@ -21,9 +23,11 @@ const fragmentClientSyncMethodsTmpl = `
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}{{ if .Request }}
-::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
+    {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = UnownedResultOf::{{ .Name }}(_channel->handle()
+    auto _res = UnownedResultOf::{{ .Name }}(
+      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
     {{- if .Request -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end }}
@@ -37,10 +41,12 @@ const fragmentClientSyncMethodsTmpl = `
 
 {{- define "ClientSyncRequestManagedMethodDefinition" }}
   {{- if .HasResponse }}
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}
+{{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::{{ .Name }}(_channel->handle()
+    return ResultOf::{{ .Name }}(
+      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
   }
@@ -51,7 +57,8 @@ const fragmentClientSyncMethodsTmpl = `
 ::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::{{ .Name }}(_channel->handle()
+    auto _res = ResultOf::{{ .Name }}(
+      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
       {{- template "CommaPassthroughMessageParams" .Request -}}
     );
     return ::fidl::Result(_res.status(), _res.error());

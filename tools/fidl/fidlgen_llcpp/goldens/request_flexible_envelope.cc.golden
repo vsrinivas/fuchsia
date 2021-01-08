@@ -56,7 +56,7 @@ extern "C" const fidl_type_t
 }  // namespace
 Protocol::ResultOf::RequestStrictResponseFlexible::
     RequestStrictResponseFlexible(
-        zx_handle_t _client,
+        ::fidl::UnownedClientEnd<Protocol> _client,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -70,7 +70,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
 
 Protocol::ResultOf::RequestStrictResponseFlexible::
     RequestStrictResponseFlexible(
-        zx_handle_t _client,
+        ::fidl::UnownedClientEnd<Protocol> _client,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
         zx_time_t _deadline)
     : bytes_(std::make_unique<
@@ -85,7 +85,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
 
 Protocol::UnownedResultOf::RequestStrictResponseFlexible::
     RequestStrictResponseFlexible(
-        zx_handle_t _client, uint8_t* _request_bytes,
+        ::fidl::UnownedClientEnd<Protocol> _client, uint8_t* _request_bytes,
         uint32_t _request_byte_capacity,
         ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
@@ -100,7 +100,7 @@ Protocol::UnownedResultOf::RequestStrictResponseFlexible::
 
 Protocol::ResultOf::RequestFlexibleResponseStrict::
     RequestFlexibleResponseStrict(
-        zx_handle_t _client,
+        ::fidl::UnownedClientEnd<Protocol> _client,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
@@ -114,7 +114,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
 
 Protocol::ResultOf::RequestFlexibleResponseStrict::
     RequestFlexibleResponseStrict(
-        zx_handle_t _client,
+        ::fidl::UnownedClientEnd<Protocol> _client,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
         zx_time_t _deadline)
     : bytes_(std::make_unique<
@@ -129,7 +129,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
 
 Protocol::UnownedResultOf::RequestFlexibleResponseStrict::
     RequestFlexibleResponseStrict(
-        zx_handle_t _client, uint8_t* _request_bytes,
+        ::fidl::UnownedClientEnd<Protocol> _client, uint8_t* _request_bytes,
         uint32_t _request_byte_capacity,
         ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
@@ -146,7 +146,8 @@ Protocol::ResultOf::RequestStrictResponseFlexible
 Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
     ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::RequestStrictResponseFlexible(_channel->handle(), s);
+    return ResultOf::RequestStrictResponseFlexible(
+        ::fidl::UnownedClientEnd<Protocol>(_channel->handle()), s);
   }
   return Protocol::ResultOf::RequestStrictResponseFlexible(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -159,7 +160,8 @@ Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::RequestStrictResponseFlexible(
-        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
+        ::fidl::UnownedClientEnd<Protocol>(_channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
   return Protocol::UnownedResultOf::RequestStrictResponseFlexible(
@@ -223,7 +225,8 @@ Protocol::ResultOf::RequestFlexibleResponseStrict
 Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
     ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::RequestFlexibleResponseStrict(_channel->handle(), s);
+    return ResultOf::RequestFlexibleResponseStrict(
+        ::fidl::UnownedClientEnd<Protocol>(_channel->handle()), s);
   }
   return Protocol::ResultOf::RequestFlexibleResponseStrict(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -236,7 +239,8 @@ Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::RequestFlexibleResponseStrict(
-        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
+        ::fidl::UnownedClientEnd<Protocol>(_channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
   return Protocol::UnownedResultOf::RequestFlexibleResponseStrict(

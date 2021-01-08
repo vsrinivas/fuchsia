@@ -25,7 +25,7 @@ zx_status_t FidlTransaction::Reply(fidl::OutgoingMessage* message) {
   hdr->txid = transaction_id_;
   transaction_id_ = 0;
   if (auto binding = binding_.lock()) {
-    message->Write(binding->channel().get());
+    message->Write(binding->channel());
     return message->status();
   }
   return ZX_ERR_CANCELED;

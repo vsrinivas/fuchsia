@@ -17,7 +17,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace
-super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
+super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
+                          const ::fidl::StringView& s) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
@@ -25,8 +26,8 @@ super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
   error_ = _request.error();
 }
 
-super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
-                          zx_time_t _deadline) {
+super::ResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
+                          const ::fidl::StringView& s, zx_time_t _deadline) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
@@ -35,7 +36,8 @@ super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
   error_ = _request.error();
 }
 
-super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
+super::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<super> _client,
+                                 uint8_t* _request_bytes,
                                  uint32_t _request_byte_capacity,
                                  const ::fidl::StringView& s,
                                  uint8_t* _response_bytes,
@@ -51,7 +53,8 @@ super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
 
 super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::foo(_channel->handle(), s);
+    return ResultOf::foo(::fidl::UnownedClientEnd<super>(_channel->handle()),
+                         s);
   }
   return super::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -62,7 +65,8 @@ super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
+        ::fidl::UnownedClientEnd<super>(_channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
   return super::UnownedResultOf::foo(
@@ -191,7 +195,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace
-sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
+sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
+                        const ::fidl::StringView& s) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
@@ -199,8 +204,8 @@ sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
   error_ = _request.error();
 }
 
-sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
-                        zx_time_t _deadline) {
+sub::ResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
+                        const ::fidl::StringView& s, zx_time_t _deadline) {
   fooRequest::OwnedEncodedMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
@@ -209,7 +214,8 @@ sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
   error_ = _request.error();
 }
 
-sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
+sub::UnownedResultOf::foo::foo(::fidl::UnownedClientEnd<sub> _client,
+                               uint8_t* _request_bytes,
                                uint32_t _request_byte_capacity,
                                const ::fidl::StringView& s,
                                uint8_t* _response_bytes,
@@ -225,7 +231,7 @@ sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
 
 sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::foo(_channel->handle(), s);
+    return ResultOf::foo(::fidl::UnownedClientEnd<sub>(_channel->handle()), s);
   }
   return sub::ResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
@@ -236,8 +242,9 @@ sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::foo(
-        _channel->handle(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        ::fidl::UnownedClientEnd<sub>(_channel->handle()), _request_buffer.data,
+        _request_buffer.capacity, s, _response_buffer.data,
+        _response_buffer.capacity);
   }
   return sub::UnownedResultOf::foo(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));

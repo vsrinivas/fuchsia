@@ -27,7 +27,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
-  zx_handle_t _client
+  ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
   {{- if .Request -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity
   {{- end -}}
