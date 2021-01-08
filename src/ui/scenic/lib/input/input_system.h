@@ -16,6 +16,7 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
+#include "src/ui/scenic/lib/input/pointer_event_buffer.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -77,8 +78,6 @@ class InputSystem : public System,
                 fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
                 RegisterCallback callback) override;
 
-  fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
-
   fuchsia::ui::input::accessibility::PointerEventListenerPtr& accessibility_pointer_event_listener()
       const {
     return pointer_event_registry_->accessibility_pointer_event_listener();
@@ -91,10 +90,6 @@ class InputSystem : public System,
   }
 
   bool IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t koid) const;
-
-  std::map<scheduling::SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
-    return hard_keyboard_requested_;
-  }
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
@@ -166,17 +161,6 @@ class InputSystem : public System,
   // pointer events until an accessibility listener decides how to handle them.
   // It is always null otherwise.
   std::unique_ptr<PointerEventBuffer> pointer_event_buffer_;
-
-  // Send hard keyboard events to IME Service for dispatch via IME.
-  // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
-  fuchsia::ui::input::ImeServicePtr ime_service_;
-
-  // By default, clients don't get hard keyboard events directly from Scenic.
-  // Clients may request these events via the SetHardKeyboardDeliveryCmd;
-  // this set remembers which sessions have opted in.  We need this map because
-  // each InputCommandDispatcher works independently.
-  // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
-  std::map<scheduling::SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
 
   fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
 

@@ -29,12 +29,9 @@ using InputCommand = fuchsia::ui::input::Command;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using escher::impl::CommandBufferSequencer;
 using fuchsia::ui::input::InputEvent;
-using fuchsia::ui::input::KeyboardEvent;
-using fuchsia::ui::input::KeyboardEventPhase;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
-using fuchsia::ui::input::SendKeyboardInputCmd;
 using fuchsia::ui::input::SendPointerInputCmd;
 using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::GlobalId;
@@ -314,64 +311,6 @@ InputCommand PointerCommandGenerator::MakeInputCommand(PointerEvent event) {
 
   InputCommand input_cmd;
   input_cmd.set_send_pointer_input(std::move(pointer_cmd));
-
-  return input_cmd;
-}
-
-KeyboardCommandGenerator::KeyboardCommandGenerator(ResourceId compositor_id, uint32_t device_id)
-    : compositor_id_(compositor_id) {
-  blank_.device_id = device_id;
-}
-
-InputCommand KeyboardCommandGenerator::Pressed(uint32_t hid_usage, uint32_t modifiers) {
-  KeyboardEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = KeyboardEventPhase::PRESSED;
-  event.hid_usage = hid_usage;
-  event.modifiers = modifiers;
-  return MakeInputCommand(event);
-}
-
-InputCommand KeyboardCommandGenerator::Released(uint32_t hid_usage, uint32_t modifiers) {
-  KeyboardEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = KeyboardEventPhase::RELEASED;
-  event.hid_usage = hid_usage;
-  event.modifiers = modifiers;
-  return MakeInputCommand(event);
-}
-
-InputCommand KeyboardCommandGenerator::Cancelled(uint32_t hid_usage, uint32_t modifiers) {
-  KeyboardEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = KeyboardEventPhase::CANCELLED;
-  event.hid_usage = hid_usage;
-  event.modifiers = modifiers;
-  return MakeInputCommand(event);
-}
-
-InputCommand KeyboardCommandGenerator::Repeat(uint32_t hid_usage, uint32_t modifiers) {
-  KeyboardEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = KeyboardEventPhase::REPEAT;
-  event.hid_usage = hid_usage;
-  event.modifiers = modifiers;
-  return MakeInputCommand(event);
-}
-
-InputCommand KeyboardCommandGenerator::MakeInputCommand(KeyboardEvent event) {
-  // Typically code point is inferred this same way by DeviceState.
-  event.code_point = hid_map_key(event.hid_usage,
-                                 event.modifiers & (fuchsia::ui::input::kModifierShift |
-                                                    fuchsia::ui::input::kModifierCapsLock),
-                                 qwerty_map);
-
-  SendKeyboardInputCmd keyboard_cmd;
-  keyboard_cmd.compositor_id = compositor_id_;
-  keyboard_cmd.keyboard_event = std::move(event);
-
-  InputCommand input_cmd;
-  input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
 
   return input_cmd;
 }

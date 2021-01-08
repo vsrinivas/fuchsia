@@ -173,27 +173,6 @@ class PointerCommandGenerator {
   fuchsia::ui::input::PointerEvent blank_;
 };
 
-// Creates keyboard event commands. Helps remove boilerplate clutter.
-//
-// NOTE: Just like PointerCommandGenerator, it's easy to create an event with
-// inconsistent state. Client is responsible for ensuring desired usage.
-class KeyboardCommandGenerator {
- public:
-  KeyboardCommandGenerator(scenic_impl::ResourceId compositor_id, uint32_t device_id);
-  ~KeyboardCommandGenerator() = default;
-
-  fuchsia::ui::input::Command Pressed(uint32_t hid_usage, uint32_t modifiers);
-  fuchsia::ui::input::Command Released(uint32_t hid_usage, uint32_t modifiers);
-  fuchsia::ui::input::Command Cancelled(uint32_t hid_usage, uint32_t modifiers);
-  fuchsia::ui::input::Command Repeat(uint32_t hid_usage, uint32_t modifiers);
-
- private:
-  fuchsia::ui::input::Command MakeInputCommand(fuchsia::ui::input::KeyboardEvent event);
-
-  scenic_impl::ResourceId compositor_id_;
-  fuchsia::ui::input::KeyboardEvent blank_;
-};
-
 bool PointerMatches(
     const fuchsia::ui::input::PointerEvent& event, uint32_t pointer_id,
     fuchsia::ui::input::PointerEventPhase phase, float x, float y,

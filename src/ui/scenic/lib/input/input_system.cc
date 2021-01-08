@@ -194,10 +194,6 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
         FX_LOGS(INFO) << "PointerEventBuffer destroyed";
       });
 
-  ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
-  ime_service_.set_error_handler(
-      [](zx_status_t status) { FX_LOGS(WARNING) << "Scenic lost connection to TextSync"; });
-
   this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
 
   this->context()->app_context()->outgoing()->AddPublicService(
@@ -209,10 +205,9 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
 CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
     scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
     std::shared_ptr<ErrorReporter> error_reporter) {
-  return CommandDispatcherUniquePtr(
-      new InputCommandDispatcher(session_id, std::move(event_reporter), scene_graph_, this),
-      // Custom deleter.
-      [](CommandDispatcher* cd) { delete cd; });
+  return CommandDispatcherUniquePtr(new InputCommandDispatcher(session_id, this),
+                                    // Custom deleter.
+                                    [](CommandDispatcher* cd) { delete cd; });
 }
 
 A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context,

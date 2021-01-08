@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
-            }
-        }
-    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/vulkan/test-application.shard.cmx"
