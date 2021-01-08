@@ -1,0 +1,11 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.audio;
+
+extend uint fuchsia.BIND_USB_SUBCLASS {
+  AUDIO_CONTROL = 0x01,
+  AUDIO_STREAMING = 0x02,
+  MIDI_STREAMING = 0x03,
+};

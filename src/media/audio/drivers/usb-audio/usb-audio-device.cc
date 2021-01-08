@@ -9,12 +9,12 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 
+#include "src/media/audio/drivers/usb-audio/usb_audio_bind.h"
 #include "usb-audio-stream-interface.h"
 #include "usb-audio-stream.h"
 #include "usb-audio.h"
@@ -505,9 +505,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_audio, audio::usb::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_AUDIO),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-ZIRCON_DRIVER_END(usb_audio)
+ZIRCON_DRIVER(usb_audio, audio::usb::driver_ops, "zircon", "0.1");
