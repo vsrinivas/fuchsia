@@ -795,25 +795,28 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
           if (!defined(data_deps)) {
             data_deps = []
           }
-          should_add_shared_cpp_runtime = zircon_toolchain == false
-          if (defined(configs)) {
-            # Do not add runtime dependencies if compiling statically.
-            static_cpp_configs = [
-              "//build/config/fuchsia:static_cpp_standard_library",
-              "//build/config/zircon:static-libc++",
-            ]
-            if (configs + static_cpp_configs - static_cpp_configs != configs) {
-              should_add_shared_cpp_runtime = false
+          if (zircon_toolchain == false) {
+            should_add_shared_cpp_runtime = true
+            if (defined(configs)) {
+              # Do not add runtime dependencies if compiling statically.
+              static_cpp_configs = [
+                "//build/config/fuchsia:static_cpp_standard_library",
+                "//build/config/zircon:static-libc++",
+              ]
+              if (configs + static_cpp_configs - static_cpp_configs !=
+                  configs) {
+                should_add_shared_cpp_runtime = false
+              }
             }
-          }
-          if (should_add_shared_cpp_runtime) {
-            data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-          } else {
-            # Even when compiling statically, some runtime dependencies might
-            # be needed when performing instrumented builds, because the
-            # compiler-generated machine code will contain imports to
-            # instrumentation-runtime-specific libraries.
-            data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+            if (should_add_shared_cpp_runtime) {
+              data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
+            } else {
+              # Even when compiling statically, some runtime dependencies might
+              # be needed when performing instrumented builds, because the
+              # compiler-generated machine code will contain imports to
+              # instrumentation-runtime-specific libraries.
+              data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+            }
           }
         }
       }
@@ -1762,25 +1765,27 @@ template("variant_target") {
 
         # NOTE: invoker.crate_root will be defined when building a Rust crate
         # instead of a C++ binary.
-        should_add_shared_cpp_runtime = true
-        if (defined(configs)) {
-          # Do not add runtime dependencies if compiling statically.
-          static_cpp_configs = [
-            "//build/config/fuchsia:static_cpp_standard_library",
-            "//build/config/zircon:static-libc++",
-          ]
-          if (configs + static_cpp_configs - static_cpp_configs != configs) {
-            should_add_shared_cpp_runtime = false
+        if (zircon_toolchain == false) {
+          should_add_shared_cpp_runtime = true
+          if (defined(configs)) {
+            # Do not add runtime dependencies if compiling statically.
+            static_cpp_configs = [
+              "//build/config/fuchsia:static_cpp_standard_library",
+              "//build/config/zircon:static-libc++",
+            ]
+            if (configs + static_cpp_configs - static_cpp_configs != configs) {
+              should_add_shared_cpp_runtime = false
+            }
           }
-        }
-        if (should_add_shared_cpp_runtime) {
-          data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-        } else if (!defined(crate_root)) {
-          # Even when compiling statically, some runtime dependencies might
-          # be needed when performing instrumented builds, because the
-          # compiler-generated machine code will contain imports to
-          # instrumentation-runtime-specific libraries.
-          data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+          if (should_add_shared_cpp_runtime) {
+            data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
+          } else if (!defined(crate_root)) {
+            # Even when compiling statically, some runtime dependencies might
+            # be needed when performing instrumented builds, because the
+            # compiler-generated machine code will contain imports to
+            # instrumentation-runtime-specific libraries.
+            data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+          }
         }
         if (defined(crate_root)) {
           should_add_shared_rust_runtime = true
