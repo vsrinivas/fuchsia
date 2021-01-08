@@ -51,7 +51,6 @@ const INSTALL_PLAN_ID: &str = "install_plan_id";
 const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
 const UPDATE_FINISH_TIME: &str = "update_finish_time";
 const TARGET_VERSION: &str = "target_version";
-const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
 const CONSECUTIVE_FAILED_INSTALL_ATTEMPTS: &str = "consecutive_failed_install_attempts";
 // How long do we wait after not allowed to reboot to check again.
 const CHECK_REBOOT_ALLOWED_INTERVAL: Duration = Duration::from_secs(30 * 60);
@@ -588,12 +587,11 @@ where
                     }
                 });
 
-                // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
-                self.context.state.consecutive_failed_update_checks = 0;
+                // Update check succeeded, reset |consecutive_failed_update_checks| to 0 and
+                // report metrics.
+                self.report_attempts_to_successful_check(true).await;
 
                 self.app_set.update_from_omaha(&result.app_responses).await;
-
-                self.report_attempts_to_successful_check(true).await;
 
                 // Only report |attempts_to_successful_install| if we get an error trying to
                 // install, or we succeed to install an update without error.
@@ -605,8 +603,6 @@ where
             }
             Err(error) => {
                 error!("Update check failed: {:?}", error);
-                // Update check failed, increment |consecutive_failed_update_checks|.
-                self.context.state.consecutive_failed_update_checks += 1;
 
                 let failure_reason = match error {
                     UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
@@ -638,19 +634,15 @@ where
         self.persist_data().await;
     }
 
-    /// Update `CONSECUTIVE_FAILED_UPDATE_CHECKS` in storage and report the metrics if `success`.
-    /// Does not commit the change to storage.
+    // Update self.context.state.consecutive_failed_update_checks and report the metric if
+    // `success`. Does not persist the value to storage, but rather relies on the caller.
     async fn report_attempts_to_successful_check(&mut self, success: bool) {
-        let storage_ref = self.storage_ref.clone();
-        let mut storage = storage_ref.lock().await;
-        let attempts = storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await.unwrap_or(0) + 1;
+        let attempts = self.context.state.consecutive_failed_update_checks + 1;
         if success {
-            storage.remove_or_log(CONSECUTIVE_FAILED_UPDATE_CHECKS).await;
+            self.context.state.consecutive_failed_update_checks = 0;
             self.report_metrics(Metrics::AttemptsToSuccessfulCheck(attempts as u64));
         } else {
-            if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, attempts).await {
-                error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
-            }
+            self.context.state.consecutive_failed_update_checks = attempts;
         }
     }
 
@@ -1071,6 +1063,7 @@ where
                 Err(e) => {
                     error!("Ping Omaha failed: {:#}", anyhow!(e));
                     self.context.state.consecutive_failed_update_checks += 1;
+                    self.persist_data().await;
                     return;
                 }
             };
@@ -1080,6 +1073,7 @@ where
             Err(e) => {
                 error!("Unable to parse Omaha response: {:#}", anyhow!(e));
                 self.context.state.consecutive_failed_update_checks += 1;
+                self.persist_data().await;
                 return;
             }
         };
@@ -2689,40 +2683,91 @@ mod tests {
                 .await;
 
             state_machine.report_attempts_to_successful_check(true).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
-                assert_eq!(storage.len(), 0);
-            }
+
+            // consecutive_failed_update_attempts should be zero (there were no previous failures)
+            // but we should record an attempt in metrics
+            assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 0);
             assert_eq!(
                 state_machine.metrics_reporter.metrics,
                 vec![Metrics::AttemptsToSuccessfulCheck(1)]
             );
 
             state_machine.report_attempts_to_successful_check(false).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(1));
-                assert_eq!(storage.len(), 1);
-            }
+            assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 1);
 
             state_machine.report_attempts_to_successful_check(false).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(2));
-                assert_eq!(storage.len(), 1);
-            }
+            assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 2);
 
+            // consecutive_failed_update_attempts should be reset to zero on success
+            // but we should record the previous number of failed attempts (2) + 1 in metrics
             state_machine.report_attempts_to_successful_check(true).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
-                assert_eq!(storage.len(), 0);
-            }
+            assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 0);
             assert_eq!(
                 state_machine.metrics_reporter.metrics,
                 vec![Metrics::AttemptsToSuccessfulCheck(1), Metrics::AttemptsToSuccessfulCheck(3)]
             );
+        });
+    }
+
+    #[test]
+    fn test_ping_omaha_updates_consecutive_failed_update_checks_and_persists() {
+        block_on(async {
+            let mut http = MockHttpRequest::empty();
+            http.add_error(http_request::mock_errors::make_transport_error());
+            http.add_response(HttpResponse::new(vec![]));
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            http.add_response(HttpResponse::new(response));
+
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+
+            // Start out with a value in storage...
+            {
+                let mut storage = storage.lock().await;
+                storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, 1);
+                storage.commit();
+            }
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .storage(Rc::clone(&storage))
+                .http(http)
+                .build()
+                .await;
+
+            async_generator::generate(move |mut co| async move {
+                // Failed ping increases `consecutive_failed_update_checks`, adding the value from
+                // storage.
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 2);
+                {
+                    let storage = storage.lock().await;
+                    assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(2));
+                }
+
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 3);
+                {
+                    let storage = storage.lock().await;
+                    assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(3));
+                }
+
+                // Successful ping resets `consecutive_failed_update_checks`.
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 0);
+                {
+                    let storage = storage.lock().await;
+                    assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
+                }
+            })
+            .into_complete()
+            .await;
         });
     }
 
@@ -3317,40 +3362,6 @@ mod tests {
         wait_for_reboot_timer.unblock();
         pool.run_until_stalled();
         assert!(*reboot_called.borrow());
-    }
-
-    #[test]
-    fn test_ping_omaha_update_consecutive_failed_update_checks() {
-        block_on(async {
-            let mut http = MockHttpRequest::empty();
-            http.add_error(http_request::mock_errors::make_transport_error());
-            http.add_response(HttpResponse::new(vec![]));
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            http.add_response(HttpResponse::new(response));
-
-            let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
-
-            async_generator::generate(move |mut co| async move {
-                // Failed ping increases `consecutive_failed_update_checks`.
-                state_machine.ping_omaha(&mut co).await;
-                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 1);
-                state_machine.ping_omaha(&mut co).await;
-                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 2);
-                // Successful ping resets `consecutive_failed_update_checks`.
-                state_machine.ping_omaha(&mut co).await;
-                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 0);
-            })
-            .into_complete()
-            .await;
-        });
     }
 
     #[derive(Debug)]

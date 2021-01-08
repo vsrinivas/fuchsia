@@ -11,10 +11,11 @@ use crate::{
     time::PartialComplexTime,
 };
 use log::error;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::time::Duration;
 
 // These are the keys used to persist data to storage.
+pub const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
 pub const LAST_UPDATE_TIME: &str = "last_update_time";
 pub const SERVER_DICTATED_POLL_INTERVAL: &str = "server_dictated_poll_interval";
 
@@ -42,6 +43,13 @@ impl Context {
             .and_then(|t| u64::try_from(t).ok())
             .map(Duration::from_micros);
 
+        let consecutive_failed_update_checks: u32 = storage
+            .get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS)
+            .await
+            .unwrap_or(0)
+            .try_into()
+            .unwrap_or_default();
+
         // last_check_time isn't really last_update_time, but we're not persisting our
         // between-check wall time for reporting, and this is a reasonable-enough proxy.
         Context {
@@ -49,7 +57,11 @@ impl Context {
                 .last_time(last_update_time)
                 .last_check_time(last_update_time)
                 .build(),
-            state: ProtocolState { server_dictated_poll_interval, ..Default::default() },
+            state: ProtocolState {
+                server_dictated_poll_interval,
+                consecutive_failed_update_checks,
+                ..Default::default()
+            },
         }
     }
 
@@ -80,6 +92,26 @@ impl Context {
             .await
         {
             error!("Unable to persist {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
+        }
+
+        // By converting to an option, set_option_int will clean up storage associated with this
+        // value if it's the default (0).
+        let consecutive_failed_update_checks_option = {
+            if self.state.consecutive_failed_update_checks == 0 {
+                None
+            } else {
+                Some(self.state.consecutive_failed_update_checks as i64)
+            }
+        };
+
+        if let Err(e) = storage
+            .set_option_int(
+                CONSECUTIVE_FAILED_UPDATE_CHECKS,
+                consecutive_failed_update_checks_option,
+            )
+            .await
+        {
+            error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
         }
     }
 }
@@ -150,11 +182,14 @@ mod tests {
                 .await
                 .unwrap();
 
+            storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, 1234).await.unwrap();
+
             let context = Context::load(&storage).await;
 
             let last_update_time = PartialComplexTime::from_micros_since_epoch(last_update_time);
             assert_eq!(context.schedule.last_update_time, Some(last_update_time));
             assert_eq!(context.state.server_dictated_poll_interval, Some(poll_interval));
+            assert_eq!(context.state.consecutive_failed_update_checks, 1234);
         });
     }
 
@@ -165,6 +200,7 @@ mod tests {
             let context = Context::load(&storage).await;
             assert_eq!(None, context.schedule.last_update_time);
             assert_eq!(None, context.state.server_dictated_poll_interval);
+            assert_eq!(0, context.state.consecutive_failed_update_checks);
         });
     }
 
@@ -174,34 +210,43 @@ mod tests {
             let mut storage = MemStorage::new();
             let last_update_time = PartialComplexTime::from_micros_since_epoch(123456789);
             let server_dictated_poll_interval = Some(Duration::from_micros(56789));
+            let consecutive_failed_update_checks = 1234;
             let context = Context {
                 schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
-                state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
+                state: ProtocolState {
+                    server_dictated_poll_interval,
+                    consecutive_failed_update_checks,
+                    ..ProtocolState::default()
+                },
             };
             context.persist(&mut storage).await;
             assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
             assert_eq!(Some(56789), storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
+            assert_eq!(Some(1234), storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await);
             assert_eq!(false, storage.committed());
         });
     }
 
     #[test]
-    fn test_persist_context_remove_poll_interval() {
+    fn test_persist_context_remove_defaults() {
         block_on(async {
             let mut storage = MemStorage::new();
             let last_update_time = PartialComplexTime::from_micros_since_epoch(123456789);
             storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654).await.unwrap();
+            storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, 1234).await.unwrap();
 
             let context = Context {
                 schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
                 state: ProtocolState {
                     server_dictated_poll_interval: None,
+                    consecutive_failed_update_checks: 0,
                     ..ProtocolState::default()
                 },
             };
             context.persist(&mut storage).await;
             assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
             assert_eq!(None, storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
+            assert_eq!(None, storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await);
             assert_eq!(false, storage.committed());
         });
     }
