@@ -154,25 +154,22 @@ The list of environment names to include in "basic_envs".
 From //build/testing/environments.gni:14
 
 ### blob_blobfs_maximum_bytes
-For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:82
+From //build/images/fvm.gni:98
 
 ### blob_blobfs_minimum_data_bytes
-For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:68
+From //build/images/fvm.gni:95
 
 ### blob_blobfs_minimum_inodes
-For build/images:fvm.blob.sparse.blk, use this argument.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:57
+From //build/images/fvm.gni:92
 
 ### blob_layout_format
 The format blobfs should store blobs in.
@@ -181,7 +178,7 @@ The format blobfs should store blobs in.
 
 From //build/images/args.gni:100
 
-### blobfs_maximum_bytes
+### blobfs_board_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
 space for maintaining some internal data structures. So the
 space required to reserve inodes and data may exceed sum of the space
@@ -193,7 +190,33 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:78
+From //build/images/fvm.gni:84
+
+### blobfs_board_minimum_data_bytes
+Number of bytes to reserve for data in the fs. This is in addition
+to what is reserved, if any, for the inodes. Data bytes constitutes
+"usable" space of the fs.
+An empty string does not reserve any additional space than minimum
+required for the filesystem.
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:71
+
+### blobfs_board_minimum_inodes
+minimum_inodes is the number of inodes to reserve for the fs
+An empty string does not reserve any additional space than minimum
+required for the filesystem.
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:61
+
+### blobfs_maximum_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:97
 
 ### blobfs_maximum_runtime_bytes
 blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -207,24 +230,18 @@ Pass the empty string for no limit.
 From //src/storage/fshost/BUILD.gn:16
 
 ### blobfs_minimum_data_bytes
-Number of bytes to reserve for data in the fs. This is in addition
-to what is reserved, if any, for the inodes. Data bytes constitutes
-"usable" space of the fs.
-An empty string does not reserve any additional space than minimum
-required for the filesystem.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:64
+From //build/images/fvm.gni:94
 
 ### blobfs_minimum_inodes
-minimum_inodes is the number of inodes to reserve for the fs
-An empty string does not reserve any additional space than minimum
-required for the filesystem.
+TODO(fxbug.dev/67015): Remove these; these are left here to facilitate a
+soft transition. DO NOT USE THESE VARIABLES.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:53
+From //build/images/fvm.gni:91
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -235,6 +252,24 @@ to accommodate the large number of metrics entries.
 **Current value (from the default):** `false`
 
 From //src/storage/blobfs/BUILD.gn:13
+
+### blobfs_product_maximum_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:85
+
+### blobfs_product_minimum_data_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:72
+
+### blobfs_product_minimum_inodes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:62
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -1117,13 +1152,13 @@ From //build/images/fvm.gni:17
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:92
+From //build/images/fvm.gni:111
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:90
+From //build/images/fvm.gni:109
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1134,13 +1169,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:89
+From //build/images/fvm.gni:108
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:91
+From //build/images/fvm.gni:110
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -1910,6 +1945,24 @@ From //products/bringup.gni:40
 
 From //build/images/args.gni:58
 
+### minfs_board_maximum_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:86
+
+### minfs_board_minimum_data_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:73
+
+### minfs_board_minimum_inodes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:63
+
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
 This is a compile time argument instead of mount time argument because
@@ -1926,7 +1979,7 @@ From //src/storage/minfs/BUILD.gn:12
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:79
+From //build/images/fvm.gni:99
 
 ### minfs_maximum_runtime_bytes
 minfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -1943,13 +1996,31 @@ From //src/storage/fshost/BUILD.gn:23
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:65
+From //build/images/fvm.gni:96
 
 ### minfs_minimum_inodes
 
 **Current value (from the default):** `""`
 
-From //build/images/fvm.gni:54
+From //build/images/fvm.gni:93
+
+### minfs_product_maximum_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:87
+
+### minfs_product_minimum_data_bytes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:74
+
+### minfs_product_minimum_inodes
+
+**Current value (from the default):** `""`
+
+From //build/images/fvm.gni:64
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
