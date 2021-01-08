@@ -29,6 +29,12 @@ static const pbus_mmio_t i2c_mmios[] = {
     },
 };
 
+static const uint32_t i2c_clock_delays[] = {
+    0,    // Ignore I2C AO
+    131,  // Set I2C 2 (touch) to 400 kHz
+    0,    // Ignore I2C 3
+};
+
 static const pbus_irq_t i2c_irqs[] = {
     {
         .irq = S905D2_I2C_AO_0_IRQ,
@@ -107,6 +113,11 @@ static const pbus_metadata_t i2c_metadata[] = {
         .type = DEVICE_METADATA_I2C_CHANNELS,
         .data_buffer = &i2c_channels,
         .data_size = sizeof(i2c_channels),
+    },
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &i2c_clock_delays,
+        .data_size = sizeof(i2c_clock_delays),
     },
 };
 
