@@ -141,9 +141,32 @@ rustc_test("keyboard_test_bin") {
   sources = [ "tests/keyboard.rs" ]
 }
 
+rustc_test("keyboard3_integration_test") {
+  edition = "2018"
+
+  deps = [
+    ":bin",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-scenic",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+  ]
+  source_root = "tests/keyboard3.rs"
+
+  sources = [ "tests/keyboard3.rs" ]
+}
+
 test_package("keyboard_test") {
   deps = [
     ":bin",
+    ":keyboard3_integration_test",
     ":keyboard_test_bin",
     "//src/ui/bin/default_hardware_ime:bin",
   ]
@@ -151,6 +174,10 @@ test_package("keyboard_test") {
   tests = [
     {
       name = "keyboard_test_bin"
+      environments = basic_envs
+    },
+    {
+      name = "keyboard3_integration_test"
       environments = basic_envs
     },
   ]

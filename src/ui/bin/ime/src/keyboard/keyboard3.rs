@@ -272,9 +272,10 @@ mod tests {
         key: input::Key,
         modifiers: ui_input3::Modifiers,
     ) {
+        let listener_request = listener.next().await;
         if let Some(Ok(ui_input3::KeyboardListenerRequest::OnKeyEvent {
             event, responder, ..
-        })) = listener.next().await
+        })) = listener_request
         {
             responder
                 .send(ui_input3::KeyEventStatus::Handled)
@@ -282,7 +283,7 @@ mod tests {
             assert_eq!(event.key, Some(key));
             assert_eq!(event.modifiers, Some(modifiers));
         } else {
-            panic!("Expected key error: {:?}", (key, modifiers));
+            panic!("Expected key error: {:?}, got {:?}", (key, modifiers), listener_request);
         }
     }
 
