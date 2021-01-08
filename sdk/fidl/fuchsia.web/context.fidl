@@ -243,6 +243,8 @@ resource table CreateFrameParams {
     /// Enables automatic blocking of navigations to explicit sites, and specifies the error page
     /// content, in HTML, to be loaded in the Frame when a navigation is canceled by the filter.
     /// Applies to navigations in all frames within the Frame.
+    /// When navigation of the main document is canceled, the Frame's [`NavigationState.PageType`]
+    /// is `ERROR`.
     /// If set to an empty buffer, a default error message will be displayed.
     /// If set and such filtering is not supported, the [`Frame`] will disconnect with
     /// `ZX_ERR_NOT_SUPPORTED`.
