@@ -1496,46 +1496,47 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
   // Run many iterations in parallel in order to increase load on Netstack and increase the
   // probability we'll hit the problem.
   for (auto& t : threads) {
-    t = std::thread([&] {
-      fbl::unique_fd peer;
-      ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+    t =
+        std::thread([&] {
+          fbl::unique_fd peer;
+          ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-      // Connect and immediately close a peer with linger. This causes the network-initiated close
-      // that will race with the accepted connection close below. Linger is necessary because we
-      // need a TCP RST to force a full teardown, tickling Netstack the right way to cause a bad
-      // race.
-      struct linger opt = {
-          .l_onoff = 1,
-          .l_linger = 0,
-      };
-      EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
-          << strerror(errno);
-      ASSERT_EQ(connect(peer.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-                0)
-          << strerror(errno);
-      ASSERT_EQ(close(peer.release()), 0) << strerror(errno);
+          // Connect and immediately close a peer with linger. This causes the network-initiated
+          // close that will race with the accepted connection close below. Linger is necessary
+          // because we need a TCP RST to force a full teardown, tickling Netstack the right way to
+          // cause a bad race.
+          struct linger opt = {
+              .l_onoff = 1,
+              .l_linger = 0,
+          };
+          EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+              << strerror(errno);
+          ASSERT_EQ(
+              connect(peer.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+              << strerror(errno);
+          ASSERT_EQ(close(peer.release()), 0) << strerror(errno);
 
-      // Accept the connection and close it, adding new racing signal (operating on `close`) to
-      // Netstack.
-      int local = accept(listener.get(), nullptr, nullptr);
-      if (local < 0) {
+          // Accept the connection and close it, adding new racing signal (operating on `close`) to
+          // Netstack.
+          int local = accept(listener.get(), nullptr, nullptr);
+          if (local < 0) {
 #if !defined(__Fuchsia__)
-        // We get EAGAIN when there are no pending acceptable connections. Though the peer connect
-        // was a blocking call, it can return before the final ACK is sent out causing the RST from
-        // linger0+close to be sent out before the final ACK. This would result in that connection
-        // to be not completed and hence not added to the acceptable queue.
-        //
-        // The above race does not currently exist on Fuchsia where the final ACK would always
-        // be sent out over lo before connect() call returns.
-        ASSERT_EQ(errno, EAGAIN)
+            // We get EAGAIN when there are no pending acceptable connections. Though the peer
+            // connect was a blocking call, it can return before the final ACK is sent out causing
+            // the RST from linger0+close to be sent out before the final ACK. This would result in
+            // that connection to be not completed and hence not added to the acceptable queue.
+            //
+            // The above race does not currently exist on Fuchsia where the final ACK would always
+            // be sent out over lo before connect() call returns.
+            ASSERT_EQ(errno, EAGAIN)
 #else
-        FAIL()
+            FAIL()
 #endif
-        << strerror(errno);
-      } else {
-        ASSERT_EQ(close(local), 0) << strerror(errno);
-      }
-    });
+                << strerror(errno);
+          } else {
+            ASSERT_EQ(close(local), 0) << strerror(errno);
+          }
+        });
   }
 
   for (auto& t : threads) {
