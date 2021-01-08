@@ -28,8 +28,8 @@ driver_module("nvme") {
   sources = [ "nvme.c" ]
   deps = [
     ":nvme_bind",
-    "//sdk/banjo/ddk.protocol.block",
-    "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/fuchsia.hardware.block",
+    "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",

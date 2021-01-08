@@ -130,24 +130,12 @@ template("banjo_library") {
   cpp_mock_response_file = "$target_gen_dir/cpp_mock/$target_name.args"
   rust_file = "banjo_" + string_replace(library_name, ".", "_") + ".rs"
 
-  # Legacy files
-  ddk_response_file = "$target_gen_dir/ddk/$target_name.args"
-  ddktl_response_file = "$target_gen_dir/ddktl/$target_name.args"
-  ddktl_mock_response_file = "$target_gen_dir/ddktl_mock/$target_name.args"
-
   c_root = string_replace(string_replace(library_name, ".", "/"), "_", "-")
   c_header = "$root_gen_dir/$c_root/c/banjo.h"
   cpp_header = "$root_gen_dir/$c_root/cpp/banjo.h"
   cpp_internal_header = "$root_gen_dir/$c_root/cpp/banjo-internal.h"
   cpp_mock_header = "$root_gen_dir/$c_root/cpp/banjo-mock.h"
   rust_internal_header = "$target_gen_dir/$rust_file"
-
-  # Legacy headers
-  ddk_root = string_replace(c_root, "fuchsia/hardware", "ddk/protocol")
-  ddktl_root = string_replace(ddk_root, "ddk", "ddktl")
-  ddk_header = "$root_gen_dir/$ddk_root.h"
-  ddktl_header = "$root_gen_dir/$ddktl_root.h"
-  ddktl_mock_header = "$root_gen_dir/mock/$ddktl_root.h"
 
   main_target_name = target_name
   c_response_file_target_name = "${target_name}_c_response_file"
@@ -156,22 +144,11 @@ template("banjo_library") {
   rust_response_file_target_name = "${target_name}_rust_response_file"
   cpp_mock_response_file_target_name = "${target_name}_cpp_mock_response_file"
 
-  # Legacy response
-  ddk_response_file_target_name = "${target_name}_ddk_response_file"
-  ddktl_response_file_target_name = "${target_name}_ddktl_response_file"
-  ddktl_mock_response_file_target_name =
-      "${target_name}_ddktl_mock_response_file"
-
   c_compile_target_name = "${target_name}_c_compile"
   cpp_compile_target_name = "${target_name}_cpp_compile"
   cpp_i_compile_target_name = "${target_name}_cpp_i_compile"
   rust_compile_target_name = "${target_name}_rust_compile"
   cpp_mock_target_name = "${target_name}_cpp_mock"
-
-  # Legacy Targets
-  ddk_compile_target_name = "${target_name}_ddk_compile"
-  ddktl_compile_target_name = "${target_name}_ddktl_compile"
-  ddktl_mock_compile_target_name = "${target_name}_ddktl_mock_compile"
 
   targets = [
     [
@@ -208,27 +185,6 @@ template("banjo_library") {
       cpp_mock_response_file,
       "cpp_mock",
       cpp_mock_header,
-    ],
-    [
-      ddk_response_file_target_name,
-      ddk_compile_target_name,
-      ddk_response_file,
-      "ddk",
-      ddk_header,
-    ],
-    [
-      ddktl_response_file_target_name,
-      ddktl_compile_target_name,
-      ddktl_response_file,
-      "ddktl",
-      ddktl_header,
-    ],
-    [
-      ddktl_mock_response_file_target_name,
-      ddktl_mock_compile_target_name,
-      ddktl_mock_response_file,
-      "ddktl_mock",
-      ddktl_mock_header,
     ],
   ]
 
@@ -348,14 +304,6 @@ template("banjo_library") {
       ":$cpp_mock_target_name",
       ":$cpp_response_file_target_name",
       ":$cpp_response_file_target_name",
-
-      # Legacy deps
-      ":$ddk_compile_target_name",
-      ":$ddk_response_file_target_name",
-      ":$ddktl_compile_target_name",
-      ":$ddktl_mock_compile_target_name",
-      ":$ddktl_mock_response_file_target_name",
-      ":$ddktl_response_file_target_name",
       ":$rust_compile_target_name",
       ":$rust_response_file_target_name",
     ]
