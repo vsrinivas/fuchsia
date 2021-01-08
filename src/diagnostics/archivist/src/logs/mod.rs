@@ -17,79 +17,22 @@ pub mod testing;
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 pub use message::Message;
 
-use crate::{events::error::EventError, logs::error::LogsError};
-
-use fidl::endpoints::{ServerEnd, ServiceMarker};
-use fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream};
-use fidl_fuchsia_sys2 as fsys;
-use fidl_fuchsia_sys_internal::SourceIdentity;
-use std::sync::Arc;
-
-/// Extract the SourceIdentity from a components v2 event.
-pub fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
-    let target_moniker = event
-        .header
-        .as_ref()
-        .and_then(|header| header.moniker.clone())
-        .ok_or(EventError::MissingField("moniker"))?;
-
-    let component_url = event
-        .header
-        .as_ref()
-        .and_then(|header| header.component_url.clone())
-        .ok_or(EventError::MissingField("component_url"))?;
-
-    let mut source = SourceIdentity::EMPTY;
-    source.component_url = Some(component_url.clone());
-    source.component_name = Some(target_moniker.clone());
-    Ok(Arc::new(source))
-}
-
-/// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
-pub fn log_sink_request_stream_from_event(
-    event: fsys::Event,
-) -> Result<LogSinkRequestStream, LogsError> {
-    let payload =
-        event.event_result.ok_or(EventError::MissingField("event_result")).and_then(|result| {
-            match result {
-                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
-                    Ok(payload)
-                }
-                fsys::EventResult::Error(fsys::EventError {
-                    description: Some(description),
-                    ..
-                }) => Err(EventError::ReceivedError { description }),
-                unknown => Err(EventError::UnknownResult { unknown }),
-            }
-        })?;
-
-    let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
-    if &capability_name != LogSinkMarker::NAME {
-        Err(EventError::IncorrectName {
-            received: capability_name,
-            expected: LogSinkMarker::NAME,
-        })?;
-    }
-
-    let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
-    let server_end = ServerEnd::<LogSinkMarker>::new(capability)
-        .into_stream()
-        .map_err(|source| EventError::InvalidServerEnd { source })?;
-    Ok(server_end)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::logs::{message::LegacySeverity, testing::*};
+    use crate::{
+        container::ComponentIdentity,
+        events::types::{ComponentIdentifier, LegacyIdentifier},
+        logs::{
+            message::{LegacySeverity, TEST_IDENTITY},
+            testing::*,
+        },
+    };
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_stream::{Argument, Record, Severity as StreamSeverity, Value};
-    use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, LogSinkMarker};
-    use fidl_fuchsia_sys_internal::SourceIdentity;
+    use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon as zx;
-    use matches::assert_matches;
     use std::sync::Arc;
 
     #[fasync::run_singlethreaded(test)]
@@ -130,7 +73,7 @@ mod tests {
         fifth_message.severity = fifth_packet.metadata.severity;
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(TEST_IDENTITY.clone());
         stream.write_packets(vec![
             first_packet,
             second_packet,
@@ -161,8 +104,7 @@ mod tests {
                     error_logs: 1u64,
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
-                    unattributed_log_sinks: 1u64,
-                    by_component: { "(unattributed)": contains {
+                    by_component: { "fuchsia-pkg://fuchsia.com/testing123#test-component.cm": contains {
                         total_logs: 5u64,
                         trace_logs: 0u64,
                         debug_logs: 0u64,
@@ -223,7 +165,6 @@ mod tests {
                     error_logs: 1u64,
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
-                    unattributed_log_sinks: 0u64,
                     by_component: {
                         "http://foo.com": contains {
                             total_logs: 1u64,
@@ -256,21 +197,25 @@ mod tests {
     async fn attributed_inspect_two_streams_different_identities() {
         let harness = TestHarness::with_retained_sinks();
 
-        let log_reader1 = harness.create_default_reader(SourceIdentity {
-            component_name: Some("foo".into()),
-            component_url: Some("http://foo.com".into()),
-            instance_id: Some("0".into()),
-            realm_path: Some(vec![".".into()]),
-            ..SourceIdentity::EMPTY
-        });
+        let log_reader1 =
+            harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                    realm_path: vec![".".into()].into(),
+                    component_name: "foo".into(),
+                    instance_id: "0".into(),
+                }),
+                "http://foo.com",
+            ));
 
-        let log_reader2 = harness.create_default_reader(SourceIdentity {
-            component_name: Some("bar".into()),
-            component_url: Some("http://bar.com".into()),
-            instance_id: Some("0".into()),
-            realm_path: Some(vec![".".into()]),
-            ..SourceIdentity::EMPTY
-        });
+        let log_reader2 =
+            harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                    realm_path: vec![".".into()].into(),
+                    component_name: "bar".into(),
+                    instance_id: "0".into(),
+                }),
+                "http://bar.com",
+            ));
 
         attributed_inspect_two_streams_different_identities_by_reader(
             harness,
@@ -297,51 +242,21 @@ mod tests {
     async fn attributed_inspect_two_mixed_streams_different_identities() {
         let harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
-        let log_reader2 = harness.create_default_reader(SourceIdentity {
-            component_name: Some("bar".into()),
-            component_url: Some("http://bar.com".into()),
-            instance_id: Some("0".into()),
-            realm_path: Some(vec![".".into()]),
-            ..SourceIdentity::EMPTY
-        });
+        let log_reader2 =
+            harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                    realm_path: vec![".".into()].into(),
+                    component_name: "bar".into(),
+                    instance_id: "0".into(),
+                }),
+                "http://bar.com",
+            ));
         attributed_inspect_two_streams_different_identities_by_reader(
             harness,
             log_reader1,
             log_reader2,
         )
         .await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn source_identity_from_v2_event() {
-        let target_moniker = "foo".to_string();
-        let target_url = "http://foo.com".to_string();
-        let (_log_sink_proxy, log_sink_server_end) =
-            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
-        let event = create_capability_requested_event(
-            target_moniker.clone(),
-            target_url.clone(),
-            log_sink_server_end.into_channel(),
-        );
-        let identity = source_identity_from_event(&event).unwrap();
-        assert_matches!(&identity.component_name,
-                        Some(component_name) if *component_name == target_moniker);
-        assert_matches!(&identity.component_url,
-                        Some(component_url) if *component_url == target_url);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn log_sink_request_stream_from_v2_event() {
-        let target_moniker = "foo".to_string();
-        let target_url = "http://foo.com".to_string();
-        let (_log_sink_proxy, log_sink_server_end) =
-            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
-        let event = create_capability_requested_event(
-            target_moniker.clone(),
-            target_url.clone(),
-            log_sink_server_end.into_channel(),
-        );
-        log_sink_request_stream_from_event(event).unwrap();
     }
 
     async fn attributed_inspect_two_streams_same_identity_by_reader(
@@ -387,7 +302,6 @@ mod tests {
                     error_logs: 1u64,
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
-                    unattributed_log_sinks: 0u64,
                     by_component: {
                         "http://foo.com": contains {
                             total_logs: 2u64,
@@ -410,13 +324,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_streams_same_identity() {
         let harness = TestHarness::with_retained_sinks();
-        let log_reader = harness.create_default_reader(SourceIdentity {
-            component_name: Some("foo".into()),
-            component_url: Some("http://foo.com".into()),
-            instance_id: Some("0".into()),
-            realm_path: Some(vec![".".into()]),
-            ..SourceIdentity::EMPTY
-        });
+        let log_reader = harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                realm_path: vec![".".into()].into(),
+                component_name: "foo".into(),
+                instance_id: "0".into(),
+            }),
+            "http://foo.com",
+        ));
         attributed_inspect_two_streams_same_identity_by_reader(
             harness,
             log_reader.clone(),
@@ -441,13 +356,15 @@ mod tests {
     async fn attributed_inspect_two_mixed_streams_same_identity() {
         let harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
-        let log_reader2 = harness.create_default_reader(SourceIdentity {
-            component_name: Some("foo".into()),
-            component_url: Some("http://foo.com".into()),
-            instance_id: Some("0".into()),
-            realm_path: Some(vec![".".into()]),
-            ..SourceIdentity::EMPTY
-        });
+        let log_reader2 =
+            harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                    realm_path: vec![".".into()].into(),
+                    component_name: "foo".into(),
+                    instance_id: "0".into(),
+                }),
+                "http://foo.com",
+            ));
         attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)
             .await;
     }
@@ -477,7 +394,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -509,7 +426,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -548,7 +465,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -583,7 +500,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![p, p2, p3]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -632,7 +549,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
@@ -682,7 +599,7 @@ mod tests {
                 severity: LegacySeverity::Info.for_listener(),
                 dropped_logs: 0,
                 msg: String::from("hi"),
-                tags: vec!["UNKNOWN".to_owned()],
+                tags: vec!["UNKNOWN:0".to_owned()],
             },
             LogMessage {
                 pid: zx::sys::ZX_KOID_INVALID,
@@ -691,7 +608,7 @@ mod tests {
                 severity: LegacySeverity::Error.for_listener(),
                 dropped_logs: 0,
                 msg: String::from(""),
-                tags: vec!["UNKNOWN".to_owned()],
+                tags: vec!["UNKNOWN:0".to_owned()],
             },
             LogMessage {
                 pid: 0x1d1,
@@ -713,7 +630,7 @@ mod tests {
             },
         ];
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = harness.create_structured_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(logs);
         drop(stream);
         harness.filter_test(expected_logs, None).await;
@@ -778,7 +695,6 @@ mod tests {
                     error_logs: 0u64,
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
-                    unattributed_log_sinks: 0u64,
                     by_component: {
                         "fuchsia-boot://klog": contains {
                             total_logs: 3u64,

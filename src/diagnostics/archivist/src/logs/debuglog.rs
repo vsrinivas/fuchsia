@@ -4,15 +4,18 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use crate::logs::{
-    error::LogsError,
-    message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE},
+use crate::{
+    container::ComponentIdentity,
+    events::types::ComponentIdentifier,
+    logs::{
+        error::LogsError,
+        message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE},
+    },
 };
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
-use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
@@ -22,11 +25,11 @@ use tracing::warn;
 
 pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
-    pub static ref KERNEL_IDENTITY: SourceIdentity = {
-        let mut identity = SourceIdentity::EMPTY;
-        identity.component_name = Some("klog".to_string());
-        identity.component_url = Some(KERNEL_URL.to_string());
-        identity
+    pub static ref KERNEL_IDENTITY: ComponentIdentity = {
+        ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Moniker("./klog:0".into()),
+            KERNEL_URL,
+        )
     };
 }
 
@@ -177,6 +180,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
             vec![
                 LogsProperty::Uint(LogsField::ProcessId, pid),
                 LogsProperty::Uint(LogsField::ThreadId, tid),
+                LogsProperty::String(LogsField::Tag, "klog".to_string()),
                 LogsProperty::String(LogsField::Msg, contents),
             ],
             vec![],
@@ -209,6 +213,7 @@ mod tests {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]
@@ -245,6 +250,7 @@ mod tests {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(
                             LogsField::Msg,
                             String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
@@ -272,6 +278,7 @@ mod tests {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "".to_string())
                     ],
                     vec![]
@@ -313,6 +320,7 @@ mod tests {
                     vec![
                         LogsProperty::Uint(LogsField::ProcessId, klog.pid),
                         LogsProperty::Uint(LogsField::ThreadId, klog.tid),
+                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
                         LogsProperty::String(LogsField::Msg, "test log".to_string())
                     ],
                     vec![]

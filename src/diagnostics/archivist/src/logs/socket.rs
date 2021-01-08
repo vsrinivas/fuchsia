@@ -3,7 +3,7 @@
 
 use super::error::StreamError;
 use super::message::{Message, MAX_DATAGRAM_LEN};
-use fidl_fuchsia_sys_internal::SourceIdentity;
+use crate::container::ComponentIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::io::{self, AsyncReadExt};
@@ -12,7 +12,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// An `Encoding` is able to parse a `Message` from raw bytes.
 pub trait Encoding {
     /// Attempt to parse a message from the given buffer
-    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError>;
+    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError>;
 }
 
 /// An encoding that can parse the legacy [logger/syslog wire format]
@@ -28,20 +28,20 @@ pub struct LegacyEncoding;
 pub struct StructuredEncoding;
 
 impl Encoding for LegacyEncoding {
-    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError> {
+    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError> {
         Message::from_logger(source, buf)
     }
 }
 
 impl Encoding for StructuredEncoding {
-    fn parse_message(source: &SourceIdentity, buf: &[u8]) -> Result<Message, StreamError> {
+    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError> {
         Message::from_structured(source, buf)
     }
 }
 
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket<E> {
-    source: Arc<SourceIdentity>,
+    source: Arc<ComponentIdentity>,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
     _encoder: PhantomData<E>,
@@ -49,14 +49,14 @@ pub struct LogMessageSocket<E> {
 
 impl<E> LogMessageSocket<E> {
     /// URL from which the items were produced.
-    pub fn source_url(&self) -> &str {
-        self.source.component_url.as_ref().map(String::as_str).unwrap_or("(unattributed)")
+    pub fn source(&self) -> &ComponentIdentity {
+        &*self.source
     }
 }
 
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
-    pub fn new(socket: zx::Socket, source: Arc<SourceIdentity>) -> Result<Self, io::Error> {
+    pub fn new(socket: zx::Socket, source: Arc<ComponentIdentity>) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
@@ -71,7 +71,7 @@ impl LogMessageSocket<StructuredEncoding> {
     /// format.
     pub fn new_structured(
         socket: zx::Socket,
-        source: Arc<SourceIdentity>,
+        source: Arc<ComponentIdentity>,
     ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,

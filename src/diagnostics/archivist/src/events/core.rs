@@ -250,6 +250,9 @@ pub mod tests {
             (ComponentEvent::DiagnosticsReady(x), ComponentEvent::DiagnosticsReady(y)) => {
                 assert_eq!(x.metadata.identity, y.metadata.identity);
             }
+            (ComponentEvent::LogSinkRequested(x), ComponentEvent::LogSinkRequested(y)) => {
+                assert_eq!(x.metadata.identity, y.metadata.identity);
+            }
             _ => panic!(
                 "Events are not equal, they are different enumerations: {:?}, {:?}",
                 event1, event2

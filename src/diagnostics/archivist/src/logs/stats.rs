@@ -25,7 +25,6 @@ pub struct LogManagerStats {
     by_component: LogStatsByComponent,
     fatal_logs: inspect::UintProperty,
     closed_streams: inspect::UintProperty,
-    unattributed_log_sinks: inspect::UintProperty,
 }
 
 #[derive(Inspect)]
@@ -132,11 +131,6 @@ impl LogManagerStats {
     /// Record that we rejected a message.
     pub fn record_closed_stream(&self) {
         self.closed_streams.add(1);
-    }
-
-    /// Record an unattributed log message.
-    pub fn record_unattributed(&self) {
-        self.unattributed_log_sinks.add(1);
     }
 }
 

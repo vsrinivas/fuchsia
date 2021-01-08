@@ -51,7 +51,14 @@ async fn same_log_sink_simultaneously_via_connector() {
         for socket in sockets {
             let (client, server) = zx::Channel::create().unwrap();
             let log_request = ServerEnd::<LogSinkMarker>::new(server);
-            let source_identity = SourceIdentity::EMPTY;
+            let source_identity = {
+                let mut source = SourceIdentity::EMPTY;
+                source.realm_path = Some(vec![]);
+                source.component_name = Some("foo".into());
+                source.instance_id = Some("0".into());
+                source.component_url = Some("http://foo.com".into());
+                source
+            };
             listener
                 .on_new_connection(&mut LogConnection { log_request, source_identity })
                 .unwrap();

@@ -93,9 +93,8 @@ impl Redactor {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::logs::message::{Message, Severity};
+    use crate::logs::message::{Message, Severity, TEST_IDENTITY};
     use diagnostics_data::{LogsField, LogsHierarchy, LogsProperty};
-    use fidl_fuchsia_sys_internal::SourceIdentity;
     use futures::stream::iter as iter2stream;
     use std::sync::Arc;
 
@@ -105,7 +104,7 @@ mod test {
             Severity::Info,
             0, // size
             0, // dropped_logs
-            &SourceIdentity::EMPTY,
+            &*TEST_IDENTITY,
             LogsHierarchy::new(
                 "root",
                 vec![LogsProperty::String(LogsField::Msg, contents.to_string())],

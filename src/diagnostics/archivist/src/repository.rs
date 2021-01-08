@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::{
-        constants::MAXIMUM_CACHED_LOGS_BYTES,
+        constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL, MAXIMUM_CACHED_LOGS_BYTES},
         container::{ComponentDiagnostics, ComponentIdentity},
+        events::types::{ComponentEvent, ComponentIdentifier, LogSinkRequestedEvent},
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
@@ -13,9 +14,7 @@ use {
             error::{LogsError, StreamError},
             interest::InterestDispatcher,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
-            log_sink_request_stream_from_event,
             socket::{Encoding, LogMessageSocket},
-            source_identity_from_event,
             stats::{LogManagerStats, LogSource},
             Message,
         },
@@ -30,9 +29,7 @@ use {
         LogSinkRequestStream,
     },
     fidl_fuchsia_sys2 as fsys,
-    fidl_fuchsia_sys_internal::{
-        LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
-    },
+    fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_async::Task,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{Inspect, WithInspect},
@@ -43,7 +40,8 @@ use {
     parking_lot::RwLock,
     selectors,
     std::collections::HashMap,
-    std::sync::Arc,
+    std::convert::TryInto,
+    std::{convert::TryFrom, sync::Arc},
     tracing::{debug, error, trace, warn},
 };
 
@@ -122,11 +120,12 @@ impl DataRepo {
     }
 
     /// Drain log sink for messages sent by the archivist itself.
-    pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
+    pub async fn drain_internal_log_sink(self, socket: zx::Socket) {
         // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
-        let mut source = SourceIdentity::EMPTY;
-        source.component_name = Some(name.to_owned());
-        let source = Arc::new(source);
+        let source = Arc::new(ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Moniker(ARCHIVIST_MONIKER.to_string()),
+            ARCHIVIST_URL,
+        ));
         let log_stream = LogMessageSocket::new(socket, source)
             .expect("failed to create internal LogMessageSocket");
         self.drain_messages(log_stream).await;
@@ -151,14 +150,20 @@ impl DataRepo {
                             connection: LogConnection { log_request, source_identity },
                             control_handle: _,
                         } => {
+                            let identity = match ComponentIdentity::try_from(source_identity) {
+                                Ok(i) => i,
+                                Err(e) => {
+                                    error!(%e, "error consuming SourceIdentity");
+                                    continue;
+                                }
+                            };
                             let stream = log_request
                                 .into_stream()
                                 .expect("getting LogSinkRequestStream from serverend");
-                            let source = Arc::new(source_identity);
                             sender
                                 .unbounded_send(Task::spawn(self.clone().handle_log_sink(
                                     stream,
-                                    source,
+                                    Arc::new(identity),
                                     sender.clone(),
                                 )))
                                 .expect("channel is held by archivist, lasts for whole program");
@@ -177,13 +182,9 @@ impl DataRepo {
     pub async fn handle_log_sink(
         self,
         mut stream: LogSinkRequestStream,
-        source: Arc<SourceIdentity>,
+        source: Arc<ComponentIdentity>,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        if source.component_name.is_none() {
-            self.read().logs.stats.record_unattributed();
-        }
-
         while let Some(next) = stream.next().await {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
@@ -224,7 +225,7 @@ impl DataRepo {
         E: Encoding + Unpin,
     {
         let component_log_stats =
-            { self.read().logs.stats.get_component_log_stats(log_stream.source_url()) };
+            { self.read().logs.stats.get_component_log_stats(&log_stream.source().url) };
         loop {
             match log_stream.next().await {
                 Ok(message) => {
@@ -234,7 +235,7 @@ impl DataRepo {
                 Err(StreamError::Closed) => return,
                 Err(e) => {
                     self.read().logs.stats.record_closed_stream();
-                    warn!(source = ?log_stream.source_url(), %e, "closing socket");
+                    warn!(source = %log_stream.source(), %e, "closing socket");
                     return;
                 }
             }
@@ -248,13 +249,9 @@ impl DataRepo {
     /// name is present, this function will exit without adding any listener.
     fn try_add_interest_listener(
         &self,
-        source: &Arc<SourceIdentity>,
+        source: &Arc<ComponentIdentity>,
         control_handle: LogSinkControlHandle,
     ) {
-        if source.component_name.is_none() {
-            return;
-        }
-
         let control_handle = Arc::new(control_handle);
         let event_listener = control_handle.clone();
         self.write()
@@ -277,7 +274,7 @@ impl DataRepo {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 fsys::EventStreamRequest::OnEvent { event, .. } => {
-                    if let Err(e) = self.handle_event(event, sender.clone()) {
+                    if let Err(e) = self.clone().handle_event(event, sender.clone()) {
                         error!(%e, "Unable to process event");
                     }
                 }
@@ -288,13 +285,19 @@ impl DataRepo {
     /// Handle the components v2 CapabilityRequested event for attributed logs of
     /// v2 components.
     fn handle_event(
-        &self,
+        self,
         event: fsys::Event,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<(), LogsError> {
-        let identity = source_identity_from_event(&event)?;
-        let stream = log_sink_request_stream_from_event(event)?;
-        let task = Task::spawn(self.clone().handle_log_sink(stream, identity, sender.clone()));
+        let LogSinkRequestedEvent { metadata, requests } = match event.try_into()? {
+            ComponentEvent::LogSinkRequested(event) => event,
+            other => unreachable!("should never see {:?} here", other),
+        };
+        let task = Task::spawn(self.handle_log_sink(
+            requests,
+            Arc::new(metadata.identity.clone()),
+            sender.clone(),
+        ));
         sender.unbounded_send(task).expect("channel is alive for whole program");
         Ok(())
     }

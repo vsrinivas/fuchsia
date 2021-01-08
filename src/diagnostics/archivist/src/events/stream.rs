@@ -86,6 +86,10 @@ impl EventStream {
                 self.diagnostics_directories_seen.add(1);
                 self.log_inspect("DIAGNOSTICS_DIR_READY", &diagnostics_ready.metadata.identity);
             }
+            ComponentEvent::LogSinkRequested(_request) => {
+                // TODO(fxbug.dev/66950) join event_stream and EventSource streams
+                unreachable!("we don't yet receive LogSink over the main event intake");
+            }
         }
     }
 

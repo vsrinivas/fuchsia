@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use {
+    crate::container::ComponentIdentity,
     fidl_fuchsia_diagnostics::{Interest, StringSelector},
     fidl_fuchsia_logger::{LogInterestSelector, LogSinkControlHandle},
-    fidl_fuchsia_sys_internal::SourceIdentity,
     std::collections::HashMap,
-    std::convert::TryFrom,
-    std::sync::{Arc, Weak},
+    std::sync::Weak,
     tracing::warn,
 };
 
@@ -16,17 +15,6 @@ use {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct Component {
     name: String,
-}
-
-impl<'s> TryFrom<&'s Arc<SourceIdentity>> for Component {
-    type Error = &'static str;
-
-    fn try_from(source: &'s Arc<SourceIdentity>) -> Result<Self, Self::Error> {
-        match &source.component_name {
-            Some(n) => Ok(Component { name: n.to_string() }),
-            None => Err("Failed to convert SourceIdentity to Component - missing name."),
-        }
-    }
 }
 
 /// Interest dispatcher to handle the communication of `Interest` changes
@@ -49,16 +37,10 @@ impl InterestDispatcher {
     /// multiple instances) this handle will be apended to the list.
     pub fn add_interest_listener(
         &mut self,
-        source: &Arc<SourceIdentity>,
+        source: &ComponentIdentity,
         handle: Weak<LogSinkControlHandle>,
     ) {
-        let component = match Component::try_from(source) {
-            Ok(c) => c,
-            _ => {
-                warn!("Failed to add interest listener - no component for source");
-                return;
-            }
-        };
+        let component = Component { name: source.to_string() };
 
         let component_listeners =
             self.interest_listeners.entry(component.clone()).or_insert(vec![]);
@@ -153,6 +135,7 @@ impl InterestDispatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::logs::message::TEST_IDENTITY;
     use fidl::endpoints::{create_request_stream, RequestStream};
     use std::sync::Arc;
 
@@ -160,11 +143,7 @@ mod tests {
     /// an executor available.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn interest_listeners() {
-        let mut source_id = SourceIdentity::EMPTY;
-        source_id.component_name = Some("foo.cmx".to_string());
-
-        let source_arc = Arc::new(source_id);
-        let component = Component::try_from(&source_arc);
+        let source_arc = TEST_IDENTITY.clone();
 
         let mut dispatcher = InterestDispatcher::default();
         let (_logsink_client, log_request_stream) =
@@ -176,31 +155,27 @@ mod tests {
         dispatcher.add_interest_listener(&source_arc, Arc::downgrade(&Arc::new(handle)));
 
         // check listener addition successful
-        assert_eq!(component.is_ok(), true);
-        if let Ok(c) = component {
-            let preclose_listeners = &dispatcher.interest_listeners.get(&c);
-            assert_eq!(preclose_listeners.is_some(), true);
-            if let Some(l) = preclose_listeners {
-                assert_eq!(l.len(), 1);
-                if let Some(handle) = l[0].upgrade() {
-                    // close the channel
-                    handle.shutdown();
-                }
-                // notify checks the channel/retains
-                dispatcher.notify_listeners_for_component(c.clone(), |listener| {
-                    let _ = listener.send_on_register_interest(Interest {
-                        min_severity: None,
-                        ..Interest::EMPTY
-                    });
-                });
+        let c = Component { name: source_arc.to_string() };
+        let preclose_listeners = &dispatcher.interest_listeners.get(&c);
+        assert_eq!(preclose_listeners.is_some(), true);
+        if let Some(l) = preclose_listeners {
+            assert_eq!(l.len(), 1);
+            if let Some(handle) = l[0].upgrade() {
+                // close the channel
+                handle.shutdown();
+            }
+            // notify checks the channel/retains
+            dispatcher.notify_listeners_for_component(c.clone(), |listener| {
+                let _ = listener
+                    .send_on_register_interest(Interest { min_severity: None, ..Interest::EMPTY });
+            });
 
-                // check that the listener is no longer active.
-                let postclose_listeners = &dispatcher.interest_listeners.get(&c);
-                assert_eq!(postclose_listeners.is_some(), true);
-                match postclose_listeners {
-                    Some(l) => assert_eq!(l.len(), 0),
-                    None => {}
-                }
+            // check that the listener is no longer active.
+            let postclose_listeners = &dispatcher.interest_listeners.get(&c);
+            assert_eq!(postclose_listeners.is_some(), true);
+            match postclose_listeners {
+                Some(l) => assert_eq!(l.len(), 0),
+                None => {}
             }
         }
     }

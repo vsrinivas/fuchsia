@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    logs::message::{fx_log_packet_t, MAX_DATAGRAM_LEN},
+    container::ComponentIdentity,
+    logs::message::{fx_log_packet_t, EMPTY_IDENTITY, MAX_DATAGRAM_LEN},
     repository::DataRepo,
 };
 use async_trait::async_trait;
@@ -15,7 +16,6 @@ use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,
 };
 use fidl_fuchsia_sys2 as fsys;
-use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_async::Task;
 use fuchsia_component::client::connect_to_protocol_at_dir_svc;
@@ -52,6 +52,7 @@ pub fn create_capability_requested_event(
             event_type: Some(fsys::EventType::CapabilityRequested),
             moniker: Some(target_moniker),
             component_url: Some(target_url),
+            timestamp: Some(zx::Time::get_monotonic().into_nanos()),
             ..fsys::EventHeader::EMPTY
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
@@ -100,7 +101,7 @@ impl TestHarness {
         }
     }
 
-    pub fn create_default_reader(&self, identity: SourceIdentity) -> Arc<dyn LogReader> {
+    pub fn create_default_reader(&self, identity: ComponentIdentity) -> Arc<dyn LogReader> {
         DefaultLogReader::new(self.log_manager.clone(), Arc::new(identity))
     }
 
@@ -147,7 +148,7 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        let mut stream = self.create_stream(Arc::new(SourceIdentity::EMPTY));
+        let mut stream = self.create_stream(Arc::new(EMPTY_IDENTITY.clone()));
         stream.write_packet(&mut p);
 
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
@@ -169,7 +170,10 @@ impl TestHarness {
 
     /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
     /// `manager_test`.
-    pub fn create_stream(&mut self, identity: Arc<SourceIdentity>) -> TestStream<LogPacketWriter> {
+    pub fn create_stream(
+        &mut self,
+        identity: Arc<ComponentIdentity>,
+    ) -> TestStream<LogPacketWriter> {
         self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
     }
 
@@ -186,7 +190,7 @@ impl TestHarness {
     /// `manager_test`.
     pub fn create_structured_stream(
         &mut self,
-        identity: Arc<SourceIdentity>,
+        identity: Arc<ComponentIdentity>,
     ) -> TestStream<StructuredMessageWriter> {
         self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
     }
@@ -267,11 +271,11 @@ pub trait LogReader {
 // A LogReader that exercises the handle_log_sink code path.
 pub struct DefaultLogReader {
     log_manager: DataRepo,
-    identity: Arc<SourceIdentity>,
+    identity: Arc<ComponentIdentity>,
 }
 
 impl DefaultLogReader {
-    fn new(log_manager: DataRepo, identity: Arc<SourceIdentity>) -> Arc<dyn LogReader> {
+    fn new(log_manager: DataRepo, identity: Arc<ComponentIdentity>) -> Arc<dyn LogReader> {
         Arc::new(Self { log_manager, identity })
     }
 }

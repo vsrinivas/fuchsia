@@ -6,9 +6,11 @@ use {
     crate::{container::ComponentIdentity, events::error::EventError},
     anyhow::Error,
     async_trait::async_trait,
+    fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
     fidl_fuchsia_sys2::{self as fsys, Event, EventHeader},
     fidl_fuchsia_sys_internal::SourceIdentity,
     fidl_table_validation::*,
@@ -241,6 +243,50 @@ pub struct DiagnosticsReadyEvent {
     pub directory: Option<DirectoryProxy>,
 }
 
+/// A new incoming connection to `LogSink`.
+pub struct LogSinkRequestedEvent {
+    pub metadata: EventMetadata,
+    pub requests: LogSinkRequestStream,
+}
+
+impl LogSinkRequestedEvent {
+    fn new(event: ValidatedEvent, metadata: EventMetadata) -> Result<Self, EventError> {
+        let payload = event.event_result.ok_or(EventError::MissingField("event_result")).and_then(
+            |result| match result {
+                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
+                    Ok(payload)
+                }
+                fsys::EventResult::Error(fsys::EventError {
+                    description: Some(description),
+                    ..
+                }) => Err(EventError::ReceivedError { description }),
+                result => Err(EventError::UnrecognizedResult { result }),
+            },
+        )?;
+
+        let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
+        if &capability_name != LogSinkMarker::NAME {
+            Err(EventError::IncorrectName {
+                received: capability_name,
+                expected: LogSinkMarker::NAME,
+            })?;
+        }
+
+        let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
+        let requests = ServerEnd::<LogSinkMarker>::new(capability)
+            .into_stream()
+            .map_err(|source| EventError::InvalidServerEnd { source })?;
+
+        Ok(Self { metadata, requests })
+    }
+}
+
+impl std::fmt::Debug for LogSinkRequestedEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LogSinkRequestedEvent").field("metadata", &self.metadata).finish()
+    }
+}
+
 pub type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
 
 /// A stream of |ComponentEvent|s
@@ -260,6 +306,9 @@ pub enum ComponentEvent {
 
     /// We observed the creation of a new `out` directory.
     DiagnosticsReady(DiagnosticsReadyEvent),
+
+    /// We received a new connection to `LogSink`.
+    LogSinkRequested(LogSinkRequestedEvent),
 }
 
 /// Data associated with a component.
@@ -313,6 +362,9 @@ impl TryFrom<Event> for ComponentEvent {
             }
             fsys::EventType::CapabilityReady | fsys::EventType::Running => {
                 construct_payload_holding_component_event(event, metadata)
+            }
+            fsys::EventType::CapabilityRequested => {
+                Ok(ComponentEvent::LogSinkRequested(LogSinkRequestedEvent::new(event, metadata)?))
             }
             _ => Err(EventError::InvalidEventType { ty: event.header.event_type }),
         }
@@ -387,6 +439,7 @@ impl PartialEq for ComponentEvent {
             (ComponentEvent::Running(a), ComponentEvent::Running(b)) => {
                 return a == b;
             }
+            // we can't check two LogSinkRequested events for equality because they have channels
             _ => false,
         }
     }
@@ -404,6 +457,8 @@ impl PartialEq for DiagnosticsReadyEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::logs::testing::create_capability_requested_event;
+    use std::convert::TryInto;
 
     #[test]
     fn convert_v2_moniker_for_diagnostics() {
@@ -422,5 +477,30 @@ mod tests {
         let identifier = ComponentIdentifier::Moniker(".".into());
         assert!(identifier.relative_moniker_for_selectors().is_empty());
         assert!(identifier.unique_key().is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)] // we need an executor for the fidl types
+    async fn validate_logsink_requested_event() {
+        let target_moniker = "./foo:0".to_string();
+        let target_url = "http://foo.com".to_string();
+        let (_log_sink_proxy, log_sink_server_end) =
+            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
+        let raw_event = create_capability_requested_event(
+            target_moniker.clone(),
+            target_url.clone(),
+            log_sink_server_end.into_channel(),
+        );
+        let event = match raw_event.try_into().unwrap() {
+            ComponentEvent::LogSinkRequested(e) => e,
+            other => panic!("incorrect event type received: {:?}", other),
+        };
+
+        assert_eq!(
+            event.metadata.identity,
+            ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Moniker(target_moniker),
+                target_url
+            )
+        );
     }
 }

@@ -6,4 +6,4 @@ mod core;
 pub(crate) mod error;
 mod legacy;
 pub(crate) mod stream;
-pub(crate) mod types;
+pub mod types;

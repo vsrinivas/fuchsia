@@ -22,7 +22,6 @@ use {
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
-    fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
@@ -339,10 +338,9 @@ impl ArchivistBuilder {
             })
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.LogSink connection");
-                let source = Arc::new(SourceIdentity::EMPTY);
                 fasync::Task::spawn(data_repo_2.clone().handle_log_sink(
                     stream,
-                    source,
+                    Arc::new(ComponentIdentity::unknown()),
                     log_sender.clone(),
                 ))
                 .detach();
@@ -591,6 +589,10 @@ impl Archivist {
                 );
                 self.populate_inspect_repo(diagnostics_ready).await;
                 Ok(())
+            }
+            ComponentEvent::LogSinkRequested(_request) => {
+                // TODO(fxbug.dev/66950) implement this as the primary path for attributed log intake
+                unreachable!("CapabilityRequested events should not yet flow through here.");
             }
         }
     }

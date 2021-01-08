@@ -99,17 +99,21 @@ impl MessageFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::message::{LegacySeverity, LogsHierarchy, Severity};
-    use fidl_fuchsia_sys_internal::SourceIdentity;
+    use crate::{
+        container::ComponentIdentity,
+        events::types::{ComponentIdentifier, LegacyIdentifier},
+        logs::message::{LegacySeverity, LogsHierarchy, Severity},
+    };
 
     fn test_message() -> Message {
-        let identity = SourceIdentity {
-            instance_id: None,
-            realm_path: Some(vec!["bogus".to_string()]),
-            component_name: Some("specious-at-best.cmx".to_string()),
-            component_url: Some("fuchsia-pkg://not-a-package".to_string()),
-            ..SourceIdentity::EMPTY
-        };
+        let identity = ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                realm_path: vec!["bogus".to_string()].into(),
+                component_name: "specious-at-best.cmx".to_string(),
+                instance_id: "0".into(),
+            }),
+            "fuchsia-pkg://not-a-package",
+        );
         Message::new(
             fuchsia_zircon::Time::from_nanos(1),
             Severity::Info,
@@ -273,7 +277,12 @@ mod tests {
         let message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.tags = vec!["specious-at-best.cmx".to_string()].into_iter().collect();
-        assert_eq!(filter.should_send(&message), true);
+        filter.tags = vec!["specious-at-best.cmx:0".to_string()].into_iter().collect();
+        assert_eq!(
+            filter.should_send(&message),
+            true,
+            "the filter should have sent {:#?}",
+            message
+        );
     }
 }

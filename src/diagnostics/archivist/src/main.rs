@@ -71,12 +71,11 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
 
-    let log_name = "archivist";
     let mut log_server = None;
     if opt.consume_own_logs {
         let (log_client, server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
         log_server = Some(server);
-        fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
+        fuchsia_syslog::init_with_socket_and_name(log_client, "archivist")?;
         info!("Logging started.");
         logs::redact::emit_canary();
     } else {
@@ -109,10 +108,8 @@ fn main() -> Result<(), Error> {
         archivist.add_event_source("v2", Box::new(event_source));
     }
     if let Some(log_server) = log_server {
-        fasync::Task::spawn(
-            archivist.data_repo().clone().drain_internal_log_sink(log_server, log_name),
-        )
-        .detach();
+        fasync::Task::spawn(archivist.data_repo().clone().drain_internal_log_sink(log_server))
+            .detach();
     }
 
     assert!(

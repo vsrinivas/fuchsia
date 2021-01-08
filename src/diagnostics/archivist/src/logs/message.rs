@@ -1,8 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::buffer::Accounted;
-use super::error::StreamError;
+use crate::{
+    container::ComponentIdentity,
+    events::types::{ComponentIdentifier, LegacyIdentifier},
+    logs::{buffer::Accounted, error::StreamError},
+};
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
 use diagnostics_hierarchy::DiagnosticsHierarchy;
@@ -76,7 +79,7 @@ impl Message {
         severity: impl Into<Severity>,
         size_bytes: usize,
         dropped_before: u64,
-        source: &SourceIdentity,
+        source: &ComponentIdentity,
         mut payload: DiagnosticsHierarchy<LogsField>,
     ) -> Self {
         payload.sort();
@@ -87,10 +90,10 @@ impl Message {
         Self {
             id: MessageId::next(),
             data: LogsData::for_logs(
-                source.moniker(),
+                source.to_string(),
                 Some(payload),
                 timestamp,
-                source.url(),
+                &source.url,
                 severity,
                 size_bytes,
                 errors,
@@ -104,10 +107,10 @@ impl Message {
         Self {
             id: MessageId::next(),
             data: LogsData::for_logs(
-                EMPTY_IDENTITY.moniker(),
+                EMPTY_IDENTITY.to_string(),
                 Some(LogsHierarchy::new_root()), // payload
                 zx::Time::get_monotonic().into_nanos(),
-                EMPTY_IDENTITY.url(),
+                &EMPTY_IDENTITY.url,
                 Severity::Warn,
                 0, // size_bytes
                 vec![LogError::DroppedLogs { count }],
@@ -121,7 +124,7 @@ impl Message {
     /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
     ///
     /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
-    pub fn from_logger(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
+    pub fn from_logger(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         if bytes.len() < MIN_PACKET_SIZE {
             return Err(StreamError::ShortRead { len: bytes.len() });
         }
@@ -162,7 +165,7 @@ impl Message {
             let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
 
             if tag == COMPONENT_NAME_PLACEHOLDER_TAG {
-                tags.push(source.name().to_string());
+                tags.push(source.to_string());
             } else {
                 tags.push(tag.to_owned());
             }
@@ -216,7 +219,7 @@ impl Message {
     /// are in the format specified as in the [log encoding].
     ///
     /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
-    pub fn from_structured(source: &SourceIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
+    pub fn from_structured(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         let (record, _) = diagnostics_stream::parse::parse_record(bytes)?;
 
         let mut properties = vec![];
@@ -411,14 +414,16 @@ impl DerefMut for Message {
 }
 
 lazy_static! {
-    pub static ref EMPTY_IDENTITY: SourceIdentity = SourceIdentity::EMPTY;
-    pub static ref TEST_IDENTITY: Arc<SourceIdentity> = {
-        let mut identity = SourceIdentity::EMPTY;
-        identity.realm_path = Some(vec!["fake-test-env".to_string()]);
-        identity.component_name = Some("test-component.cm".to_string());
-        identity.component_url =
-            Some("fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string());
-        Arc::new(identity)
+    pub static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
+    pub static ref TEST_IDENTITY: Arc<ComponentIdentity> = {
+        Arc::new(ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                realm_path: vec!["fake-test-env".to_string()].into(),
+                component_name: "test-component.cm".into(),
+                instance_id: "".into(),
+            }),
+            "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",
+        ))
     };
 }
 
@@ -783,10 +788,7 @@ mod tests {
                 vec![
                     LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
                     LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(
-                        LogsField::Tag,
-                        TEST_IDENTITY.component_name.clone().unwrap(),
-                    ),
+                    LogsProperty::String(LogsField::Tag, TEST_IDENTITY.to_string()),
                     LogsProperty::String(LogsField::Tag, "AAAAA".into()),
                     LogsProperty::String(LogsField::Msg, "BBBBB".into()),
                 ],
@@ -806,12 +808,8 @@ mod tests {
             &*TEST_IDENTITY,
             LogsHierarchy::new("root", vec![], vec![]),
         );
-        assert_eq!(test_message.component_name(), TEST_IDENTITY.component_name.as_ref().unwrap());
-        assert_eq!(&test_message.moniker, &TEST_IDENTITY.moniker());
-        assert_eq!(
-            &test_message.metadata.component_url,
-            TEST_IDENTITY.component_url.as_ref().unwrap()
-        );
+        assert_eq!(&test_message.moniker, &TEST_IDENTITY.rendered_moniker);
+        assert_eq!(&test_message.metadata.component_url, &TEST_IDENTITY.url);
     }
 
     #[test]

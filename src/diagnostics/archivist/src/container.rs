@@ -57,6 +57,18 @@ impl ComponentIdentity {
             url: url.into(),
         }
     }
+
+    /// Returns generic metadata, suitable for providing a uniform ID to unattributed data.
+    pub fn unknown() -> Self {
+        Self::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                component_name: "UNKNOWN".into(),
+                instance_id: "0".to_string(),
+                realm_path: vec![].into(),
+            }),
+            "fuchsia-pkg://UNKNOWN",
+        )
+    }
 }
 
 impl TryFrom<SourceIdentity> for ComponentIdentity {

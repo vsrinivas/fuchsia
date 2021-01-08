@@ -463,10 +463,13 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 mod test {
     use super::*;
 
-    use archivist_lib::logs::Message;
+    use archivist_lib::{
+        container::ComponentIdentity,
+        events::types::{ComponentIdentifier, LegacyIdentifier},
+        logs::Message,
+    };
     use diagnostics_data::Severity;
     use diagnostics_testing::assert_data_tree;
-    use fidl_fuchsia_sys_internal::SourceIdentity;
     use log::{debug, error, info, trace, warn};
     use std::fs::File;
     use std::io::Read;
@@ -490,21 +493,21 @@ mod test {
         // component identity.
         let mut buffer: [u8; 1024] = [0; 1024];
         let read_len = tx.read(&mut buffer).expect("socket read failed");
-        let src_id: SourceIdentity = {
-            let mut identity = SourceIdentity::EMPTY;
-            identity.realm_path = Some(vec!["fake-test-env".to_string()]);
-            identity.component_name = Some("test-component.cm".to_string());
-            identity.component_url =
-                Some("fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string());
-            identity
-        };
+        let src_id = ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Legacy(LegacyIdentifier {
+                realm_path: vec!["fake-test-env".to_string()].into(),
+                component_name: "test-component.cm".into(),
+                instance_id: "".into(),
+            }),
+            "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",
+        );
 
         let msg = Message::from_logger(&src_id, &buffer[..read_len])
             .expect("couldn't decode message from buffer");
 
         // Check metadata and payload
         assert_eq!(msg.metadata.errors, None);
-        assert_eq!(msg.metadata.component_url, src_id.component_url.unwrap());
+        assert_eq!(msg.metadata.component_url, src_id.url);
         assert_eq!(msg.metadata.severity, Severity::Error);
         // For some reason the socket read size does *not* match the recorded
         // metadata size
