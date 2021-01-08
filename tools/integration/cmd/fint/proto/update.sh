@@ -14,8 +14,8 @@ set -o pipefail
 # cd to fuchsia checkout root.
 cd "$( dirname "${BASH_SOURCE[0]}" )/../../../../.."
 
-scripts/fx set core.x64 --with //tools/integration/cmd/fint:context,//tools/integration/cmd/fint:static
-scripts/fx ninja -C out/default tools/integration/cmd/fint:context tools/integration/cmd/fint:static
+scripts/fx set core.x64 --with //tools/integration/cmd/fint:protos
+scripts/fx ninja -C out/default tools/integration/cmd/fint:protos
 
 cp out/default/gen/go-proto-gen/src/tools/integration/cmd/fint/proto/*.pb.go \
   tools/integration/cmd/fint/proto/

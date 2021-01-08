@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package fint;
+
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
+
+// SetArtifacts contains information about the manifests and other metadata
+// produced by `fint set`.
+message SetArtifacts {
+    // A brief error log populated in case of a recognized failure mode (e.g.
+    // `gn gen` failure due to a broken build graph).
+    string failure_summary = 1;
+}

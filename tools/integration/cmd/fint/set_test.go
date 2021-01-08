@@ -6,9 +6,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,12 +22,58 @@ import (
 type fakeSubprocessRunner struct {
 	commandsRun [][]string
 	mockStdout  []byte
+	fail        bool
 }
+
+var errSubprocessFailure = errors.New("exit status 1")
 
 func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer) error {
 	r.commandsRun = append(r.commandsRun, cmd)
 	stdout.Write(r.mockStdout)
+	if r.fail {
+		return errSubprocessFailure
+	}
 	return nil
+}
+
+func TestRunSteps(t *testing.T) {
+	ctx := context.Background()
+
+	contextSpec := &fintpb.Context{
+		CheckoutDir: "/path/to/checkout",
+		BuildDir:    "/path/to/out/default",
+	}
+	staticSpec := &fintpb.Static{
+		TargetArch: fintpb.Static_X64,
+		Optimize:   fintpb.Static_DEBUG,
+	}
+
+	t.Run("propagates GN stdout to failure summary in case of failure", func(t *testing.T) {
+		runner := &fakeSubprocessRunner{
+			mockStdout: []byte("some stdout"),
+			fail:       true,
+		}
+		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		if !errors.Is(err, errSubprocessFailure) {
+			t.Fatalf("Unexpected error from runSteps: %s", err)
+		}
+		if artifacts.FailureSummary != string(runner.mockStdout) {
+			t.Errorf("Expected runSteps to propagate GN stdout to failure summary: %q != %q", runner.mockStdout, artifacts.FailureSummary)
+		}
+	})
+
+	t.Run("leaves failure summary empty in case of success", func(t *testing.T) {
+		runner := &fakeSubprocessRunner{
+			mockStdout: []byte("some stdout"),
+		}
+		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		if err != nil {
+			t.Fatalf("Unexpected error from runSteps: %s", err)
+		}
+		if artifacts.FailureSummary != "" {
+			t.Errorf("Expected runSteps to leave failure summary empty but got: %q", artifacts.FailureSummary)
+		}
+	})
 }
 
 func TestRunGen(t *testing.T) {
@@ -78,16 +124,12 @@ func TestRunGen(t *testing.T) {
 				mockStdout: []byte("some stdout"),
 			}
 
-			failureSummaryPath := filepath.Join(t.TempDir(), "gen-stdout")
 			platform := "mac-x64"
-			if err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"}, failureSummaryPath); err != nil {
+			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"})
+			if err != nil {
 				t.Fatalf("Unexpected error from runGen: %v", err)
 			}
 
-			failureSummary, err := ioutil.ReadFile(failureSummaryPath)
-			if err != nil {
-				t.Fatal(err)
-			}
 			if string(failureSummary) != string(runner.mockStdout) {
 				t.Errorf("runGen produced the wrong failure output: %q, expected %q", failureSummary, runner.mockStdout)
 			}

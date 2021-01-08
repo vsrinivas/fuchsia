@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/google/subcommands"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -29,6 +31,10 @@ const (
 	// Locations of GN trace files in the build directory.
 	zirconGNTrace  = "zircon_gn_trace.json"
 	fuchsiaGNTrace = "gn_trace.json"
+
+	// Name of the file (in `contextSpec.ArtifactsDir`) that will expose
+	// manifest files and other metadata produced by this command to the caller.
+	artifactsManifest = "set_artifacts.textproto"
 )
 
 type subprocessRunner interface {
@@ -62,6 +68,8 @@ func (c *SetCommand) SetFlags(f *flag.FlagSet) {
 			fuchsiaDirEnvVar +
 			" will be used to locate the checkout."),
 	)
+	// TODO(fxbug.dev/65899): Delete this flag after recipes retrieve failure
+	// summary via set artifacts instead.
 	f.StringVar(
 		&c.failureSummaryPath,
 		"failure-summary",
@@ -120,13 +128,32 @@ func (c *SetCommand) run(ctx context.Context) error {
 		return err
 	}
 
-	genArgs, err := genArgs(staticSpec, contextSpec, platform)
-	if err != nil {
-		return err
+	runner := &runner.SubprocessRunner{}
+	artifacts, runErr := runSteps(ctx, runner, staticSpec, contextSpec, platform)
+
+	if c.failureSummaryPath != "" {
+		f, err := osmisc.CreateFile(c.failureSummaryPath)
+		if err != nil {
+			return fmt.Errorf("failed to create failure summary file: %w", err)
+		}
+		defer f.Close()
+		if _, err := f.WriteString(artifacts.FailureSummary); err != nil {
+			return fmt.Errorf("failed to write failure summary: %w", err)
+		}
 	}
 
-	runner := &runner.SubprocessRunner{}
-	return runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs, c.failureSummaryPath)
+	if contextSpec.ArtifactDir != "" {
+		f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
+		if err != nil {
+			return fmt.Errorf("failed to create artifacts file: %w", err)
+		}
+		defer f.Close()
+		if err := proto.MarshalText(f, artifacts); err != nil {
+			return fmt.Errorf("failed to write artifacts file: %w", err)
+		}
+	}
+
+	return runErr
 }
 
 func defaultContextSpec() (*fintpb.Context, error) {
@@ -140,6 +167,27 @@ func defaultContextSpec() (*fintpb.Context, error) {
 	}, nil
 }
 
+// runSteps runs `gn gen` along with any post-processing steps, and returns a
+// SetArtifacts object containing metadata produced by GN and post-processing.
+func runSteps(
+	ctx context.Context,
+	runner subprocessRunner,
+	staticSpec *fintpb.Static,
+	contextSpec *fintpb.Context,
+	platform string,
+) (*fintpb.SetArtifacts, error) {
+	artifacts := &fintpb.SetArtifacts{}
+	genArgs, err := genArgs(staticSpec, contextSpec, platform)
+	if err != nil {
+		return nil, err
+	}
+	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs)
+	if err != nil {
+		artifacts.FailureSummary = genStdout
+	}
+	return artifacts, err
+}
+
 func runGen(
 	ctx context.Context,
 	runner subprocessRunner,
@@ -147,8 +195,7 @@ func runGen(
 	contextSpec *fintpb.Context,
 	platform string,
 	args []string,
-	failureSummaryPath string,
-) error {
+) (genStdout string, err error) {
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	genCmd := []string{
 		gnPath, "gen",
@@ -167,26 +214,12 @@ func runGen(
 
 	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))
 
-	// When `gn gen` fails, it outputs a brief helpful error message to stdout,
-	// so we can just use the entire gen stdout as our failure summary. We'll
-	// record it to the failure summary path even when gen succeeds, and leave
-	// it to the caller to decide what to do with it based on whether the fint
-	// command succeeds.
-	var stdout io.Writer = os.Stdout
-	if failureSummaryPath != "" {
-		file, err := osmisc.CreateFile(failureSummaryPath)
-		if err != nil {
-			return fmt.Errorf("failed to create failure summary file: %w", err)
-		}
-		defer file.Close()
-		stdout = io.MultiWriter(file, os.Stdout)
+	// When `gn gen` fails, it outputs a brief helpful error message to stdout.
+	var stdoutBuf bytes.Buffer
+	if err := runner.Run(ctx, genCmd, io.MultiWriter(&stdoutBuf, os.Stdout), os.Stderr); err != nil {
+		return stdoutBuf.String(), fmt.Errorf("error running gn gen: %w", err)
 	}
-	io.MultiWriter(os.Stdout)
-
-	if err := runner.Run(ctx, genCmd, stdout, os.Stderr); err != nil {
-		return fmt.Errorf("error running gn gen: %w", err)
-	}
-	return nil
+	return stdoutBuf.String(), nil
 }
 
 func getPlatform() (string, error) {

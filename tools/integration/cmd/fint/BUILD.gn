@@ -12,6 +12,7 @@ go_library("proto_lib") {
   source_dir = "proto"
   sources = [
     "context.pb.go",
+    "set_artifacts.pb.go",
     "static.pb.go",
   ]
   deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
@@ -35,6 +36,16 @@ go_library("fint_lib") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/runner",
+  ]
+}
+
+# This target encompasses all generated proto files, and is intended for use by
+# the update.sh script to avoid needing to specify all the protos again there.
+group("protos") {
+  deps = [
+    ":context",
+    ":set_artifacts",
+    ":static",
   ]
 }
 
@@ -63,6 +74,13 @@ proto_library("static") {
   generate_python = false
 }
 
+proto_library("set_artifacts") {
+  sources = [ "proto/set_artifacts.proto" ]
+  generate_cc = false
+  generate_go = true
+  generate_python = false
+}
+
 golden_file("context_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/context.pb.go"
   golden = "proto/context.pb.go"
@@ -74,6 +92,13 @@ golden_file("static_pb_go_diff") {
   current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/static.pb.go"
   golden = "proto/static.pb.go"
   deps = [ ":static" ]
+  warn_on_changes = false
+}
+
+golden_file("set_artifacts_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/cmd/fint/proto/set_artifacts.pb.go"
+  golden = "proto/set_artifacts.pb.go"
+  deps = [ ":set_artifacts" ]
   warn_on_changes = false
 }
 
@@ -90,6 +115,7 @@ group("tests") {
     # The diff rules aren't really tests, but we want to ensure they're run in CQ.
     ":context_pb_go_diff",
     ":fint_tests",
+    ":set_artifacts_pb_go_diff",
     ":static_desc_pb_diff",
     ":static_pb_go_diff",
   ]
