@@ -33,20 +33,20 @@
 #include <arch/x86/feature.h>
 #endif
 
-static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_crash_assert(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_build_instrumentation(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_display_mem(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_modify_mem(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_fill_mem(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_memtest(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_copy_mem(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_sleep(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_stackstomp(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_recurse(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -77,7 +77,7 @@ STATIC_COMMAND(
     &cmd_build_instrumentation)
 STATIC_COMMAND_END(mem)
 
-static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_display_mem(int argc, const cmd_args* argv, uint32_t flags) {
   /* save the last address and len so we can continue where we left off */
   static unsigned long address;
   static size_t len;
@@ -126,7 +126,7 @@ static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
   }
 
   /* preflight the start address to see if it's mapped */
-  if (vaddr_to_paddr((void *)address) == 0) {
+  if (vaddr_to_paddr((void*)address) == 0) {
     printf("ERROR: address 0x%lx is unmapped\n", address);
     return -1;
   }
@@ -137,24 +137,24 @@ static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
     switch (size) {
       case 8: {
         uint64_t val =
-            (byte_order != BYTE_ORDER) ? SWAP_64(*(uint64_t *)address) : *(uint64_t *)address;
+            (byte_order != BYTE_ORDER) ? SWAP_64(*(uint64_t*)address) : *(uint64_t*)address;
         printf("%016lx ", val);
         break;
       }
       case 4: {
         uint32_t val =
-            (byte_order != BYTE_ORDER) ? SWAP_32(*(uint32_t *)address) : *(uint32_t *)address;
+            (byte_order != BYTE_ORDER) ? SWAP_32(*(uint32_t*)address) : *(uint32_t*)address;
         printf("%08x ", val);
         break;
       }
       case 2: {
         uint16_t val =
-            (byte_order != BYTE_ORDER) ? SWAP_16(*(uint16_t *)address) : *(uint16_t *)address;
+            (byte_order != BYTE_ORDER) ? SWAP_16(*(uint16_t*)address) : *(uint16_t*)address;
         printf("%04hx ", val);
         break;
       }
       case 1:
-        printf("%02hhx ", *(uint8_t *)address);
+        printf("%02hhx ", *(uint8_t*)address);
         break;
     }
     count += size;
@@ -170,7 +170,7 @@ static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags) {
   return 0;
 }
 
-static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_modify_mem(int argc, const cmd_args* argv, uint32_t flags) {
   int size;
 
   if (argc < 3) {
@@ -197,20 +197,20 @@ static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags) {
 
   switch (size) {
     case 4:
-      *(uint32_t *)address = (uint32_t)val;
+      *(uint32_t*)address = (uint32_t)val;
       break;
     case 2:
-      *(uint16_t *)address = (uint16_t)val;
+      *(uint16_t*)address = (uint16_t)val;
       break;
     case 1:
-      *(uint8_t *)address = (uint8_t)val;
+      *(uint8_t*)address = (uint8_t)val;
       break;
   }
 
   return 0;
 }
 
-static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_fill_mem(int argc, const cmd_args* argv, uint32_t flags) {
   int size;
 
   if (argc < 4) {
@@ -240,13 +240,13 @@ static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags) {
   for (; address < stop; address += size) {
     switch (size) {
       case 4:
-        *(uint32_t *)address = (uint32_t)val;
+        *(uint32_t*)address = (uint32_t)val;
         break;
       case 2:
-        *(uint16_t *)address = (uint16_t)val;
+        *(uint16_t*)address = (uint16_t)val;
         break;
       case 1:
-        *(uint8_t *)address = (uint8_t)val;
+        *(uint8_t*)address = (uint8_t)val;
         break;
     }
   }
@@ -254,7 +254,7 @@ static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags) {
   return 0;
 }
 
-static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_copy_mem(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 4) {
     printf("not enough arguments\n");
     printf("%s <source address> <target address> <len>\n", argv[0].str);
@@ -265,22 +265,22 @@ static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags) {
   uintptr_t target = argv[2].u;
   size_t len = argv[3].u;
 
-  memcpy((void *)target, (const void *)source, len);
+  memcpy((void*)target, (const void*)source, len);
 
   return 0;
 }
 
-static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_memtest(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 3) {
     printf("not enough arguments\n");
     printf("%s <base> <len>\n", argv[0].str);
     return -1;
   }
 
-  uint32_t *ptr;
+  uint32_t* ptr;
   size_t len;
 
-  ptr = (uint32_t *)argv[1].u;
+  ptr = (uint32_t*)argv[1].u;
   len = (size_t)argv[2].u;
 
   size_t i;
@@ -302,7 +302,7 @@ static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags) {
   return 0;
 }
 
-static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_sleep(int argc, const cmd_args* argv, uint32_t flags) {
   zx_duration_t t = ZX_SEC(1); /* default to 1 second */
 
   if (argc >= 2) {
@@ -316,18 +316,18 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags) {
   return 0;
 }
 
-static int crash_thread(void *) {
+static int crash_thread(void*) {
   /* should crash */
-  volatile uint32_t *ptr = (volatile uint32_t *)1u;
+  volatile uint32_t* ptr = (volatile uint32_t*)1u;
   *ptr = 1;
 
   return 0;
 }
 
-static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_crash(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc > 1) {
     if (!strcmp(argv[1].str, "thread")) {
-      Thread *t = Thread::Create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
+      Thread* t = Thread::Create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
       t->Resume();
 
       t->Join(NULL, ZX_TIME_INFINITE);
@@ -345,13 +345,13 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags) {
 
 // Crash by intentionally recursing to itself until the kernel
 // call stack is exceeded.
-__attribute__((noinline)) static int recurse(void *_func) {
-  auto func = reinterpret_cast<int (*)(void *)>(_func);
+__attribute__((noinline)) static int recurse(void* _func) {
+  auto func = reinterpret_cast<int (*)(void*)>(_func);
   return func(_func) + 1;
 }
 
-static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags) {
-  recurse(reinterpret_cast<void *>(&recurse));
+static int cmd_recurse(int argc, const cmd_args* argv, uint32_t flags) {
+  recurse(reinterpret_cast<void*>(&recurse));
 
   printf("survived.\n");
 
@@ -361,12 +361,12 @@ static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags) {
 __attribute__((noinline)) static void stomp_stack(size_t size) {
   // -Wvla prevents VLAs but not explicit alloca.
   // Neither is allowed anywhere in the kernel outside this test code.
-  void *death = __builtin_alloca(size);  // OK in test-only code.
+  void* death = __builtin_alloca(size);  // OK in test-only code.
   memset(death, 0xaa, size);
   Thread::Current::SleepRelative(ZX_USEC(1));
 }
 
-static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_stackstomp(int argc, const cmd_args* argv, uint32_t flags) {
   for (size_t i = 0; i < DEFAULT_STACK_SIZE * 2; i++)
     stomp_stack(i);
 
@@ -376,9 +376,9 @@ static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags) {
 }
 
 // Marked with NO_ASAN because this will be called with a pointer to user memory.
-NO_ASAN uint8_t read_byte(const uint8_t *p) { return *p; }
+NO_ASAN uint8_t read_byte(const uint8_t* p) { return *p; }
 
-static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags) {
   // TODO(fxbug.dev/59284): Once we support PAN enable this for arm64.
 #if defined(__x86_64__)
   if (!g_x86_feature_has_smap) {
@@ -395,7 +395,7 @@ static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags) {
     printf("failed to allocate user memory; will not crash.\n");
     return -1;
   }
-  const uint8_t *p = mem->user_in<uint8_t>().get();
+  const uint8_t* p = mem->user_in<uint8_t>().get();
   if (p == nullptr) {
     printf("failed to get pointer; will not crash.\n");
     return -1;
@@ -408,7 +408,7 @@ static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags) {
   return -1;
 }
 
-static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags) {
   // We want to corrupt one of the pages on the pmm's free list.  To do so, we'll allocate a bunch
   // of pages, keep track of the address of the last page, then free them all.  The free list is
   // LIFO so by allocating and freeing a bunch of pages we'll have a pointer "to the middle" and our
@@ -424,8 +424,8 @@ static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t
   }
 
   // Make note of address.
-  vm_page_t *last_page = list_peek_tail_type(&pages, vm_page_t, queue_node);
-  void *va = paddr_to_physmap(last_page->paddr());
+  vm_page_t* last_page = list_peek_tail_type(&pages, vm_page_t, queue_node);
+  void* va = paddr_to_physmap(last_page->paddr());
 
   // We're printing a little early because once we've returned the pages to the free list, we want
   // to avoid doing anything that might cause the target page to be allocated (by this thread or
@@ -436,24 +436,24 @@ static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t
   pmm_free(&pages);
 
   // Corrupt!
-  *reinterpret_cast<char *>(va) = 'X';
+  *reinterpret_cast<char*>(va) = 'X';
 
   printf("crash_pmm_use_after_free done\n");
   return -1;
 }
 
-static int cmd_crash_assert(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags) {
   constexpr int kValue = 42;
   ASSERT_MSG(kValue == 0, "value %d\n", kValue);
   return -1;
 }
 
 #define DEBUG_CMDLINE_MAX 1024
-static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc == 1) {
     char cmdline_buf[DEBUG_CMDLINE_MAX];
     memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
-    const char *cmdline = gCmdline.GetString(NULL);
+    const char* cmdline = gCmdline.GetString(NULL);
     for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
       if (cmdline[i] == '\0') {
         if (cmdline[i + 1] == '\0') {
@@ -466,8 +466,8 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
     }
     printf("cmdline: %s\n", cmdline_buf);
   } else {
-    const char *key = argv[1].str;
-    const char *val = gCmdline.GetString(key);
+    const char* key = argv[1].str;
+    const char* val = gCmdline.GetString(key);
     if (!val) {
       printf("cmdline: %s not found\n", key);
     } else {
@@ -478,7 +478,7 @@ static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags) {
   return 0;
 }
 
-static int cmd_build_instrumentation(int argc, const cmd_args *argv, uint32_t flags) {
+static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags) {
   ktl::array static_features {
 #if __has_feature(address_sanitizer)
     "address_sanitizer",
@@ -497,7 +497,7 @@ static int cmd_build_instrumentation(int argc, const cmd_args *argv, uint32_t fl
 #endif
     // missing: sancov, profile
   };
-  for (const auto &feature : static_features) {
+  for (const auto& feature : static_features) {
     printf("build_instrumentation: %s\n", feature);
   }
   printf("build_instrumentation: done\n");
