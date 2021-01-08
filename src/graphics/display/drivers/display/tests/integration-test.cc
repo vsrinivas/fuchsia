@@ -30,6 +30,8 @@
 #include "../client.h"
 // clang-format on
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 namespace display {
@@ -109,6 +111,8 @@ class IntegrationTest : public TestBase {
     EXPECT_TRUE(connector->Connect(std::move(server)).ok());
     __UNUSED auto c = connector->mutable_channel()->release();
     sysmem_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
+    sysmem_->SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+                                fsl::GetCurrentProcessKoid());
   }
 
   // |TestBase|

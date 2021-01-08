@@ -305,6 +305,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& 
     }
     sysmem_collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
   }
+  sysmem_collection->SetName(10000u, "display-client-unittest");
   sysmem::BufferCollectionConstraints constraints = {};
   constraints.min_buffer_count = 1;
   constraints.usage.none = sysmem::noneUsage;
