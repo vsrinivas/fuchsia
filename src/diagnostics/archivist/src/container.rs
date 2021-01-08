@@ -9,13 +9,20 @@ use {
         },
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
+        logs::{
+            buffer::MemoryBoundedBuffer, container::LogsArtifactsContainer, stats::LogStreamStats,
+            Message,
+        },
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
+    fidl_fuchsia_logger::LogInterestSelector,
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
+    fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
+    parking_lot::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -105,26 +112,60 @@ pub struct ComponentDiagnostics {
     pub inspect: Option<InspectArtifactsContainer>,
     /// Container holding the artifacts needed to serve lifecycle data.
     pub lifecycle: Option<LifecycleArtifactsContainer>,
+    /// Container holding cached log messages and interest dispatchers.
+    pub logs: Option<Arc<LogsArtifactsContainer>>,
+    /// Holds the state for `root/sources/MONIKER/*` in Archivist's inspect.
+    pub source_node: fuchsia_inspect::Node,
 }
 
 impl ComponentDiagnostics {
-    #[cfg(test)]
-    pub fn empty(identity: Arc<ComponentIdentity>) -> Self {
-        Self { identity, inspect: None, lifecycle: None }
+    pub fn empty(identity: Arc<ComponentIdentity>, parent: &fuchsia_inspect::Node) -> Self {
+        let source_node = parent.create_child(identity.relative_moniker.join("/"));
+        source_node.record_string("url", &identity.url);
+        Self { identity, inspect: None, lifecycle: None, logs: None, source_node }
     }
 
     pub fn new_with_lifecycle(
         identity: Arc<ComponentIdentity>,
         lifecycle: LifecycleArtifactsContainer,
+        parent: &fuchsia_inspect::Node,
     ) -> Self {
-        Self { identity, inspect: None, lifecycle: Some(lifecycle) }
+        let mut new = Self::empty(identity, parent);
+        new.lifecycle = Some(lifecycle);
+        new
     }
 
     pub fn new_with_inspect(
         identity: Arc<ComponentIdentity>,
         inspect: InspectArtifactsContainer,
+        parent: &fuchsia_inspect::Node,
     ) -> Self {
-        Self { identity, inspect: Some(inspect), lifecycle: None }
+        let mut new = Self::empty(identity, parent);
+        new.inspect = Some(inspect);
+        new
+    }
+
+    pub fn logs(
+        &mut self,
+        // TODO(fxbug.dev/47661) remove this and construct a local buffer in this function
+        buffer: &Arc<Mutex<MemoryBoundedBuffer<Message>>>,
+        interest_selectors: &[LogInterestSelector],
+    ) -> Arc<LogsArtifactsContainer> {
+        if let Some(logs) = &self.logs {
+            logs.clone()
+        } else {
+            let stats = LogStreamStats::default()
+                .with_inspect(&self.source_node, "logs")
+                .expect("failed to attach component log stats");
+            let container = Arc::new(LogsArtifactsContainer::new(
+                self.identity.clone(),
+                interest_selectors,
+                stats,
+                buffer.clone(),
+            ));
+            self.logs = Some(container.clone());
+            container
+        }
     }
 }
 

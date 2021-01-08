@@ -13,7 +13,7 @@ use {
             ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
         },
         events::{stream::EventStream, types::EventSource},
-        logs::redact::Redactor,
+        logs::{redact::Redactor, socket::LogMessageSocket},
         pipeline::Pipeline,
         repository::DataRepo,
     },
@@ -133,7 +133,7 @@ impl ArchivistBuilder {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let diagnostics_repo = DataRepo::with_logs_inspect(diagnostics::root(), "log_stats");
+        let diagnostics_repo = DataRepo::with_inspect(diagnostics::root());
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -256,6 +256,20 @@ impl ArchivistBuilder {
         &self.log_sender
     }
 
+    // TODO(fxrev.dev/427417) pass a LogSinkRequestStream instead
+    //      when doing above, investigate why sandbox-unittest.cmx hangs if we use handle_log_sink
+    //      and write a new integration test for the archivist to capture the behavior
+    pub fn consume_own_logs(&self, socket: zx::Socket) {
+        let container = self.data_repo().write().get_own_log_container();
+        fasync::Task::spawn(async move {
+            let log_stream = LogMessageSocket::new(socket, container.identity.clone())
+                .expect("failed to create internal LogMessageSocket");
+            container.drain_messages(log_stream).await;
+            unreachable!();
+        })
+        .detach();
+    }
+
     /// Install controller service.
     pub fn install_controller_service(&mut self) -> &mut Self {
         let (stop_sender, stop_recv) = mpsc::channel(0);
@@ -337,15 +351,13 @@ impl ArchivistBuilder {
                 data_repo_1.clone().handle_log(stream, listen_sender.clone());
             })
             .add_fidl_service(move |stream| {
-                debug!("fuchsia.logger.LogSink connection");
-                fasync::Task::spawn(data_repo_2.clone().handle_log_sink(
-                    stream,
-                    Arc::new(ComponentIdentity::unknown()),
-                    log_sender.clone(),
-                ))
-                .detach();
+                // TODO(fxbug.dev/66950) create a channel and add it to the EventStream as a source
+                debug!("unattributed fuchsia.logger.LogSink connection");
+                let container = data_repo_2.write().get_log_container(ComponentIdentity::unknown());
+                fasync::Task::spawn(container.handle_log_sink(stream, log_sender.clone())).detach();
             })
             .add_fidl_service(move |stream| {
+                // TODO(fxbug.dev/66950) create a channel and add it to the EventStream as a source
                 debug!("fuchsia.sys.EventStream connection");
                 fasync::Task::spawn(
                     data_repo_3.clone().handle_event_stream(stream, log_sender2.clone()),

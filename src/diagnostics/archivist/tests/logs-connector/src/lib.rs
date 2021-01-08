@@ -51,13 +51,15 @@ async fn same_log_sink_simultaneously_via_connector() {
         for socket in sockets {
             let (client, server) = zx::Channel::create().unwrap();
             let log_request = ServerEnd::<LogSinkMarker>::new(server);
-            let source_identity = {
-                let mut source = SourceIdentity::EMPTY;
-                source.realm_path = Some(vec![]);
-                source.component_name = Some("foo".into());
-                source.instance_id = Some("0".into());
-                source.component_url = Some("http://foo.com".into());
-                source
+            let source_identity = SourceIdentity {
+                realm_path: Some(vec![]),
+                component_name: Some("testing123".to_string()),
+                instance_id: Some("0".to_string()),
+                component_url: Some(
+                    "fuchsia-pkg://fuchsia.com/test-logs-connector#meta/test-logs-connector.cmx"
+                        .to_string(),
+                ),
+                ..SourceIdentity::EMPTY
             };
             listener
                 .on_new_connection(&mut LogConnection { log_request, source_identity })

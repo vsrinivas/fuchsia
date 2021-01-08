@@ -32,7 +32,7 @@ pub trait EventSource: Sync + Send {
 pub static CHANNEL_CAPACITY: usize = 1024;
 
 /// A realm path is a vector of realm names.
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RealmPath(pub Vec<String>);
 
 impl Deref for RealmPath {
@@ -62,7 +62,7 @@ impl Into<String> for RealmPath {
 }
 
 /// Represents the ID of a component.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ComponentIdentifier {
     Legacy(LegacyIdentifier),
     Moniker(String),
@@ -188,7 +188,7 @@ pub struct ValidatedEvent {
 }
 
 /// The ID of a component as used in components V1.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct LegacyIdentifier {
     /// The name of the component.
     pub component_name: String,

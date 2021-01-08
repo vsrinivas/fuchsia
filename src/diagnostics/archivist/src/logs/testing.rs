@@ -80,7 +80,7 @@ impl TestHarness {
 
     fn make(hold_sinks: bool) -> Self {
         let inspector = Inspector::new();
-        let log_manager = DataRepo::with_logs_inspect(inspector.root(), "log_stats");
+        let log_manager = DataRepo::with_inspect(inspector.root());
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
@@ -284,11 +284,8 @@ impl LogReader for DefaultLogReader {
     fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let task = Task::spawn(self.log_manager.clone().handle_log_sink(
-            log_sink_stream,
-            self.identity.clone(),
-            log_sender.clone(),
-        ));
+        let container = self.log_manager.write().get_log_container((*self.identity).clone());
+        let task = Task::spawn(container.handle_log_sink(log_sink_stream, log_sender.clone()));
         log_sender.unbounded_send(task).unwrap();
         log_sink_proxy
     }
@@ -369,7 +366,7 @@ pub async fn debuglog_test(
         .detach();
 
     let inspector = Inspector::new();
-    let lm = DataRepo::with_logs_inspect(inspector.root(), "log_stats");
+    let lm = DataRepo::with_inspect(inspector.root());
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

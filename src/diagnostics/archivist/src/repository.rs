@@ -10,39 +10,34 @@ use {
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
             buffer::{LazyItem, MemoryBoundedBuffer},
-            debuglog::{DebugLog, DebugLogBridge},
-            error::{LogsError, StreamError},
-            interest::InterestDispatcher,
+            container::LogsArtifactsContainer,
+            debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
+            error::LogsError,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
-            socket::{Encoding, LogMessageSocket},
-            stats::{LogManagerStats, LogSource},
             Message,
         },
     },
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_diagnostics::{self, Interest, Selector, StreamMode},
+    fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
-    fidl_fuchsia_logger::{
-        LogMarker, LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest,
-        LogSinkRequestStream,
-    },
+    fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_async::Task,
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::{Inspect, WithInspect},
-    fuchsia_zircon as zx,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     io_util,
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     selectors,
     std::collections::HashMap,
-    std::convert::TryInto,
-    std::{convert::TryFrom, sync::Arc},
-    tracing::{debug, error, trace, warn},
+    std::{
+        convert::{TryFrom, TryInto},
+        sync::Arc,
+    },
+    tracing::{debug, error, warn},
 };
 
 /// DataRepo holds all diagnostics data and is a singleton wrapped by multiple
@@ -63,20 +58,25 @@ impl DataRepo {
     pub fn new() -> Self {
         DataRepo {
             inner: Arc::new(RwLock::new(DataRepoState {
+                inspect_node: Default::default(),
                 data_directories: trie::Trie::new(),
-                logs: Default::default(),
+                logs_interest: vec![],
+                logs_buffer: Arc::new(Mutex::new(MemoryBoundedBuffer::new(
+                    MAXIMUM_CACHED_LOGS_BYTES,
+                ))),
             })),
         }
     }
 
-    pub fn with_logs_inspect(parent: &fuchsia_inspect::Node, name: impl AsRef<str>) -> Self {
-        let logs = LogState::default();
+    pub fn with_inspect(parent: &fuchsia_inspect::Node) -> Self {
         DataRepo {
             inner: Arc::new(RwLock::new(DataRepoState {
+                inspect_node: parent.create_child("sources"),
                 data_directories: trie::Trie::new(),
-                logs: logs
-                    .with_inspect(parent, name)
-                    .expect("couldn't attach log stats to inspect"),
+                logs_interest: vec![],
+                logs_buffer: Arc::new(Mutex::new(MemoryBoundedBuffer::new(
+                    MAXIMUM_CACHED_LOGS_BYTES,
+                ))),
             })),
         }
     }
@@ -90,8 +90,7 @@ impl DataRepo {
         K: DebugLog + Send + Sync + 'static,
     {
         debug!("Draining debuglog.");
-        let component_log_stats =
-            { self.read().logs.stats.get_component_log_stats("fuchsia-boot://klog") };
+        let container = self.write().get_log_container(KERNEL_IDENTITY.clone());
         let mut kernel_logger = DebugLogBridge::create(klog_reader);
         let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
@@ -102,15 +101,13 @@ impl DataRepo {
         };
         messages.sort_by_key(|m| m.metadata.timestamp);
         for message in messages {
-            component_log_stats.record_log(&message);
-            self.ingest_message(message, LogSource::Kernel);
+            container.ingest_message(message);
         }
 
         let res = kernel_logger
             .listen()
             .try_for_each(|message| async {
-                component_log_stats.clone().record_log(&message);
-                self.ingest_message(message, LogSource::Kernel);
+                container.ingest_message(message);
                 Ok(())
             })
             .await;
@@ -119,19 +116,7 @@ impl DataRepo {
         }
     }
 
-    /// Drain log sink for messages sent by the archivist itself.
-    pub async fn drain_internal_log_sink(self, socket: zx::Socket) {
-        // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
-        let source = Arc::new(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Moniker(ARCHIVIST_MONIKER.to_string()),
-            ARCHIVIST_URL,
-        ));
-        let log_stream = LogMessageSocket::new(socket, source)
-            .expect("failed to create internal LogMessageSocket");
-        self.drain_messages(log_stream).await;
-        unreachable!();
-    }
-
+    // TODO(fxbug.dev/66950) this should be a small shim to convert this into v2 events
     /// Handle `LogConnectionListener` for the parent realm, eventually passing
     /// `LogSink` connections into the manager.
     pub async fn handle_log_connector(
@@ -157,15 +142,15 @@ impl DataRepo {
                                     continue;
                                 }
                             };
+                            let container = self.write().get_log_container(identity);
+
                             let stream = log_request
                                 .into_stream()
                                 .expect("getting LogSinkRequestStream from serverend");
+                            let task =
+                                Task::spawn(container.handle_log_sink(stream, sender.clone()));
                             sender
-                                .unbounded_send(Task::spawn(self.clone().handle_log_sink(
-                                    stream,
-                                    Arc::new(identity),
-                                    sender.clone(),
-                                )))
+                                .unbounded_send(task)
                                 .expect("channel is held by archivist, lasts for whole program");
                         }
                     };
@@ -176,94 +161,7 @@ impl DataRepo {
         }
     }
 
-    /// Handle `LogSink` protocol on `stream`. The future returned by this
-    /// function will not complete before all messages on this connection are
-    /// processed.
-    pub async fn handle_log_sink(
-        self,
-        mut stream: LogSinkRequestStream,
-        source: Arc<ComponentIdentity>,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        while let Some(next) = stream.next().await {
-            match next {
-                Ok(LogSinkRequest::Connect { socket, control_handle }) => {
-                    match LogMessageSocket::new(socket, source.clone()) {
-                        Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle);
-                            let task = Task::spawn(self.clone().drain_messages(log_stream));
-                            sender.unbounded_send(task).expect("channel alive for whole program");
-                        }
-                        Err(e) => {
-                            control_handle.shutdown();
-                            warn!(?source, %e, "error creating socket")
-                        }
-                    };
-                }
-                Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
-                    match LogMessageSocket::new_structured(socket, source.clone()) {
-                        Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle);
-                            let task = Task::spawn(self.clone().drain_messages(log_stream));
-                            sender.unbounded_send(task).expect("channel alive for whole program");
-                        }
-                        Err(e) => {
-                            control_handle.shutdown();
-                            warn!(?source, %e, "error creating socket")
-                        }
-                    };
-                }
-                Err(e) => error!(?source, %e, "error handling log sink"),
-            }
-        }
-    }
-
-    /// Drain a `LogMessageSocket` which wraps a socket from a component
-    /// generating logs.
-    async fn drain_messages<E>(self, mut log_stream: LogMessageSocket<E>)
-    where
-        E: Encoding + Unpin,
-    {
-        let component_log_stats =
-            { self.read().logs.stats.get_component_log_stats(&log_stream.source().url) };
-        loop {
-            match log_stream.next().await {
-                Ok(message) => {
-                    component_log_stats.record_log(&message);
-                    self.ingest_message(message, LogSource::LogSink);
-                }
-                Err(StreamError::Closed) => return,
-                Err(e) => {
-                    self.read().logs.stats.record_closed_stream();
-                    warn!(source = %log_stream.source(), %e, "closing socket");
-                    return;
-                }
-            }
-        }
-    }
-
-    /// Add 'Interest' listener to connect the interest dispatcher to the
-    /// LogSinkControlHandle (weak reference) associated with the given source.
-    /// Interest listeners are only supported for log connections where the
-    /// SourceIdentity includes an attributed component name. If no component
-    /// name is present, this function will exit without adding any listener.
-    fn try_add_interest_listener(
-        &self,
-        source: &Arc<ComponentIdentity>,
-        control_handle: LogSinkControlHandle,
-    ) {
-        let control_handle = Arc::new(control_handle);
-        let event_listener = control_handle.clone();
-        self.write()
-            .logs
-            .interest_dispatcher
-            .add_interest_listener(source, Arc::downgrade(&event_listener));
-
-        // ack successful connections with 'empty' interest
-        // for async clients
-        let _ = control_handle.send_on_register_interest(Interest::EMPTY);
-    }
-
+    // TODO(fxbug.dev/66950) delete this
     /// Handle the components v2 EventStream for attributed logs of v2
     /// components.
     pub async fn handle_event_stream(
@@ -282,6 +180,7 @@ impl DataRepo {
         }
     }
 
+    // TODO(fxbug.dev/66950) delete this
     /// Handle the components v2 CapabilityRequested event for attributed logs of
     /// v2 components.
     fn handle_event(
@@ -293,11 +192,8 @@ impl DataRepo {
             ComponentEvent::LogSinkRequested(event) => event,
             other => unreachable!("should never see {:?} here", other),
         };
-        let task = Task::spawn(self.handle_log_sink(
-            requests,
-            Arc::new(metadata.identity.clone()),
-            sender.clone(),
-        ));
+        let container = self.write().get_log_container(metadata.identity);
+        let task = Task::spawn(container.handle_log_sink(requests, sender.clone()));
         sender.unbounded_send(task).expect("channel is alive for whole program");
         Ok(())
     }
@@ -358,7 +254,7 @@ impl DataRepo {
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
             let logs = self.cursor(mode);
             if let Some(s) = selectors {
-                self.write().logs.interest_dispatcher.update_selectors(s);
+                self.write().update_logs_interest(s);
             }
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
@@ -367,54 +263,24 @@ impl DataRepo {
     }
 
     pub fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
-        self.read().logs.log_msg_buffer.cursor(mode).map(|item| match item {
+        self.read().logs_buffer.lock().cursor(mode).map(|item| match item {
             LazyItem::Next(m) => m,
             LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
         })
     }
 
-    /// Ingest an individual log message.
-    fn ingest_message(&self, log_msg: Message, source: LogSource) {
-        let mut inner = self.write();
-        trace!("Ingesting {:?}", log_msg.id);
-
-        // We always record the log before pushing onto the buffer and waking listeners because
-        // we want to be able to see that stats are updated as soon as we receive messages in tests.
-        inner.logs.stats.record_log(&log_msg, source);
-        inner.logs.log_msg_buffer.push(log_msg);
-    }
-
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub fn terminate_logs(&self) {
-        self.write().logs.log_msg_buffer.terminate();
+        self.read().logs_buffer.lock().terminate();
     }
 }
 
 pub struct DataRepoState {
     pub data_directories: trie::Trie<String, ComponentDiagnostics>,
-    logs: LogState,
-}
-
-#[derive(Inspect)]
-struct LogState {
-    #[inspect(skip)]
-    interest_dispatcher: InterestDispatcher,
-    #[inspect(rename = "buffer_stats")]
-    log_msg_buffer: MemoryBoundedBuffer<Message>,
-    stats: LogManagerStats,
     inspect_node: inspect::Node,
-}
-
-impl Default for LogState {
-    fn default() -> Self {
-        LogState {
-            interest_dispatcher: InterestDispatcher::default(),
-            log_msg_buffer: MemoryBoundedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES),
-            stats: LogManagerStats::new_detached(),
-            inspect_node: inspect::Node::default(),
-        }
-    }
+    logs_interest: Vec<LogInterestSelector>,
+    logs_buffer: Arc<Mutex<MemoryBoundedBuffer<Message>>>,
 }
 
 impl DataRepoState {
@@ -452,6 +318,7 @@ impl DataRepoState {
                             ComponentDiagnostics::new_with_lifecycle(
                                 Arc::new(identity),
                                 lifecycle_artifact_container,
+                                &self.inspect_node,
                             ),
                         )
                     }
@@ -482,10 +349,58 @@ impl DataRepoState {
                 ComponentDiagnostics::new_with_lifecycle(
                     Arc::new(identity),
                     lifecycle_artifact_container,
+                    &self.inspect_node,
                 ),
             ),
         }
         Ok(())
+    }
+
+    /// Returns a container for logs artifacts, constructing one and adding it to the trie if
+    /// necessary.
+    pub fn get_log_container(
+        &mut self,
+        identity: ComponentIdentity,
+    ) -> Arc<LogsArtifactsContainer> {
+        let trie_key = identity.unique_key.clone();
+
+        // we use a macro instead of a closure to avoid lifetime issues
+        macro_rules! insert_component {
+            () => {{
+                let mut to_insert =
+                    ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
+                let logs = to_insert.logs(&self.logs_buffer, &self.logs_interest);
+                self.data_directories.insert(trie_key, to_insert);
+                logs
+            }};
+        }
+
+        match self.data_directories.get_mut(trie_key.clone()) {
+            Some(component) => match &mut component.get_values_mut()[..] {
+                [] => insert_component!(),
+                [existing] => existing.logs(&self.logs_buffer, &self.logs_interest),
+                _ => unreachable!("invariant: each trie node has 0-1 entries"),
+            },
+            None => insert_component!(),
+        }
+    }
+
+    pub fn get_own_log_container(&mut self) -> Arc<LogsArtifactsContainer> {
+        self.get_log_container(ComponentIdentity::from_identifier_and_url(
+            &ComponentIdentifier::Moniker(ARCHIVIST_MONIKER.to_string()),
+            ARCHIVIST_URL,
+        ))
+    }
+
+    pub fn update_logs_interest(&mut self, selectors: Vec<LogInterestSelector>) {
+        self.logs_interest = selectors;
+        for (_, dir) in self.data_directories.iter() {
+            if let Some(dir) = dir {
+                if let Some(logs) = &dir.logs {
+                    logs.update_interest(&self.logs_interest);
+                }
+            }
+        }
     }
 
     pub fn add_inspect_artifacts(
@@ -528,6 +443,7 @@ impl DataRepoState {
                             ComponentDiagnostics::new_with_inspect(
                                 Arc::new(identity),
                                 inspect_container,
+                                &self.inspect_node,
                             ),
                         )
                     }
@@ -560,7 +476,11 @@ impl DataRepoState {
             // event before a start or existing event!
             None => self.data_directories.insert(
                 key,
-                ComponentDiagnostics::new_with_inspect(Arc::new(identity), inspect_container),
+                ComponentDiagnostics::new_with_inspect(
+                    Arc::new(identity),
+                    inspect_container,
+                    &self.inspect_node,
+                ),
             ),
         }
         Ok(())
@@ -872,7 +792,8 @@ mod tests {
         let mutable_values =
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
 
-        mutable_values.push(ComponentDiagnostics::empty(Arc::new(identity.clone())));
+        mutable_values
+            .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");

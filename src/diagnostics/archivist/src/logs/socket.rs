@@ -47,13 +47,6 @@ pub struct LogMessageSocket<E> {
     _encoder: PhantomData<E>,
 }
 
-impl<E> LogMessageSocket<E> {
-    /// URL from which the items were produced.
-    pub fn source(&self) -> &ComponentIdentity {
-        &*self.source
-    }
-}
-
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
     pub fn new(socket: zx::Socket, source: Arc<ComponentIdentity>) -> Result<Self, io::Error> {

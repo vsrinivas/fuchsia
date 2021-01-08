@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    cs::log_stats::{LogSeverity, LogStats},
     diagnostics_data::Logs,
     diagnostics_hierarchy::assert_data_tree,
     diagnostics_reader::{ArchiveReader, Inspect},
@@ -11,55 +10,14 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
-    fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
     log::info,
-    selectors,
 };
 
+const DRIVER_COMPONENT: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/driver.cm";
 const TEST_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
-const RETRY_DELAY_MS: i64 = 300;
-
-// Verifies that archivist attributes logs from this component.
-async fn verify_component_attributed(url: &str, expected_info_count: u64) {
-    loop {
-        // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
-        // which would be taken care of by the ArchiveReader itself.
-        let mut response = ArchiveReader::new()
-            .add_selector(format!(
-                "archivist:root/log_stats/by_component/{}:*",
-                selectors::sanitize_string_for_selectors(&url)
-            ))
-            .add_selector("archivist:root/event_stats/recent_events/*:*")
-            .snapshot::<Inspect>()
-            .await
-            .unwrap();
-        let hierarchy = response.pop().and_then(|r| r.payload).unwrap();
-        let log_stats = LogStats::new_with_root(LogSeverity::INFO, &hierarchy).await.unwrap();
-        let component_log_stats = log_stats.get_by_url(url).unwrap();
-        let info_log_count = component_log_stats.get_count(LogSeverity::INFO);
-        if info_log_count != expected_info_count {
-            fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
-            continue;
-        }
-        return;
-    }
-}
-
-async fn verify_attributed_log_content(logs: &[&str]) {
-    let (mut result, _) =
-        ArchiveReader::new().snapshot_then_subscribe::<Logs>().expect("snapshot then subscribe");
-    for log_str in logs {
-        let log_record = result.next().await.expect("received log");
-        assert_eq!(log_record.moniker, ".\\archivist:0/driver:0");
-        assert_eq!(log_record.metadata.severity, Severity::Info);
-        assert_data_tree!(log_record.payload.unwrap(), root: contains {
-            "message".to_string() => log_str.to_string(),
-            "tag".to_string() => "archivist_integration_tests".to_string(),
-        });
-    }
-}
 
 #[fasync::run_singlethreaded(test)]
 async fn read_v2_components_inspect() {
@@ -85,16 +43,19 @@ async fn read_v2_components_inspect() {
 #[fasync::run_singlethreaded(test)]
 async fn log_attribution() {
     fuchsia_syslog::init().unwrap();
-    info!("This is a syslog message");
-    info!("This is another syslog message");
-    println!("This is a debuglog message");
+    let (mut result, _errors) =
+        ArchiveReader::new().snapshot_then_subscribe::<Logs>().expect("snapshot then subscribe");
 
-    verify_component_attributed(
-        "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/driver.cm",
-        2,
-    )
-    .await;
+    for log_str in &["This is a syslog message", "This is another syslog message"] {
+        info!("{}", log_str);
+        let log_record = result.next().await.expect("received log");
 
-    verify_attributed_log_content(&["This is a syslog message", "This is another syslog message"])
-        .await;
+        assert_eq!(log_record.moniker, ".\\archivist:0/driver:0");
+        assert_eq!(log_record.metadata.component_url, DRIVER_COMPONENT);
+        assert_eq!(log_record.metadata.severity, Severity::Info);
+        assert_data_tree!(log_record.payload.unwrap(), root: contains {
+            "message".to_string() => log_str.to_string(),
+            "tag".to_string() => "archivist_integration_tests".to_string(),
+        });
+    }
 }

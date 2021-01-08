@@ -99,9 +99,9 @@ rustc_library("lib") {
     "src/lifecycle/mod.rs",
     "src/logs/buffer.rs",
     "src/logs/buffer/arc_list.rs",
+    "src/logs/container.rs",
     "src/logs/debuglog.rs",
     "src/logs/error.rs",
-    "src/logs/interest.rs",
     "src/logs/listener.rs",
     "src/logs/listener/asbestos.rs",
     "src/logs/listener/filter.rs",
@@ -137,6 +137,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/control:controller-rustc",

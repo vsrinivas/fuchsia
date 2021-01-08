@@ -107,9 +107,9 @@ fn main() -> Result<(), Error> {
             .context("failed to connect to event source")?;
         archivist.add_event_source("v2", Box::new(event_source));
     }
-    if let Some(log_server) = log_server {
-        fasync::Task::spawn(archivist.data_repo().clone().drain_internal_log_sink(log_server))
-            .detach();
+
+    if let Some(socket) = log_server {
+        archivist.consume_own_logs(socket);
     }
 
     assert!(
@@ -125,6 +125,7 @@ fn main() -> Result<(), Error> {
         archivist.install_lifecycle_listener();
     }
 
+    // TODO(fxbug.dev/66950) add to ArchivistBuilder's EventStream as a source
     if !opt.disable_log_connector {
         let connector = connect_to_service::<LogConnectorMarker>()?;
         let sender = archivist.log_sender().clone();

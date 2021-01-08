@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 pub mod buffer;
+pub mod container;
 pub mod debuglog;
 pub mod error;
-pub mod interest;
 pub mod listener;
 pub mod message;
 pub mod redact;
@@ -22,16 +22,13 @@ mod tests {
     use crate::{
         container::ComponentIdentity,
         events::types::{ComponentIdentifier, LegacyIdentifier},
-        logs::{
-            message::{LegacySeverity, TEST_IDENTITY},
-            testing::*,
-        },
+        logs::{message::LegacySeverity, testing::*},
     };
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_stream::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async as fasync;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};
     use fuchsia_zircon as zx;
     use std::sync::Arc;
 
@@ -73,7 +70,7 @@ mod tests {
         fifth_message.severity = fifth_packet.metadata.severity;
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(TEST_IDENTITY.clone());
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packets(vec![
             first_packet,
             second_packet,
@@ -93,109 +90,95 @@ mod tests {
         assert_inspect_tree!(
             log_stats_tree,
             root: {
-                log_stats: {
-                    total_logs: 5u64,
-                    kernel_logs: 0u64,
-                    logsink_logs: 5u64,
-                    trace_logs: 0u64,
-                    debug_logs: 0u64,
-                    info_logs: 2u64,
-                    warning_logs: 2u64,
-                    error_logs: 1u64,
-                    fatal_logs: 0u64,
-                    closed_streams: 0u64,
-                    by_component: { "fuchsia-pkg://fuchsia.com/testing123#test-component.cm": contains {
-                        total_logs: 5u64,
-                        trace_logs: 0u64,
-                        debug_logs: 0u64,
-                        info_logs: 2u64,
-                        warning_logs: 2u64,
-                        error_logs: 1u64,
-                        fatal_logs: 0u64,
-                    } },
-                    buffer_stats: {
-                        rolled_out_entries: 0u64,
+                sources: {
+                    "UNKNOWN": {
+                        url: "fuchsia-pkg://UNKNOWN",
+                        logs: {
+                            last_timestamp: AnyProperty,
+                            total: 5u64,
+                            trace: 0u64,
+                            debug: 0u64,
+                            info: 2u64,
+                            warn: 2u64,
+                            error: 1u64,
+                            fatal: 0u64,
+                        },
                     },
-                },
+                }
             }
         );
     }
 
-    async fn attributed_inspect_two_streams_different_identities_by_reader(
-        mut harness: TestHarness,
-        log_reader1: Arc<dyn LogReader>,
-        log_reader2: Arc<dyn LogReader>,
-    ) {
-        let mut packet = setup_default_packet();
-        let message = LogMessage {
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
-            time: packet.metadata.time,
-            dropped_logs: packet.metadata.dropped_logs,
-            severity: packet.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
+    macro_rules! attributed_inspect_two_streams_different_identities_by_reader {
+        (
+            $harness:ident,
+            $log_reader1:ident @ $foo_moniker:literal,
+            $log_reader2:ident @ $bar_moniker:literal,
+        ) => {{
+            let mut packet = setup_default_packet();
+            let message = LogMessage {
+                pid: packet.metadata.pid,
+                tid: packet.metadata.tid,
+                time: packet.metadata.time,
+                dropped_logs: packet.metadata.dropped_logs,
+                severity: packet.metadata.severity,
+                msg: String::from("BBBBB"),
+                tags: vec![String::from("AAAAA")],
+            };
 
-        let mut packet2 = packet.clone();
-        packet2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
-        let mut message2 = message.clone();
-        message2.severity = packet2.metadata.severity;
+            let mut packet2 = packet.clone();
+            packet2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+            let mut message2 = message.clone();
+            message2.severity = packet2.metadata.severity;
 
-        let mut foo_stream = harness.create_stream_from_log_reader(log_reader1.clone());
-        foo_stream.write_packet(&mut packet);
+            let mut foo_stream = $harness.create_stream_from_log_reader($log_reader1);
+            foo_stream.write_packet(&mut packet);
 
-        let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
-        bar_stream.write_packet(&mut packet2);
-        drop((foo_stream, bar_stream));
+            let mut bar_stream = $harness.create_stream_from_log_reader($log_reader2);
+            bar_stream.write_packet(&mut packet2);
+            drop((foo_stream, bar_stream));
 
-        let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
+            let log_stats_tree = $harness.filter_test(vec![message, message2], None).await;
 
-        assert_inspect_tree!(
-            log_stats_tree,
-            root: {
-                log_stats: {
-                    total_logs: 2u64,
-                    kernel_logs: 0u64,
-                    logsink_logs: 2u64,
-                    trace_logs: 0u64,
-                    debug_logs: 0u64,
-                    info_logs: 0u64,
-                    warning_logs: 1u64,
-                    error_logs: 1u64,
-                    fatal_logs: 0u64,
-                    closed_streams: 0u64,
-                    by_component: {
-                        "http://foo.com": contains {
-                            total_logs: 1u64,
-                            trace_logs: 0u64,
-                            debug_logs: 0u64,
-                            info_logs: 0u64,
-                            warning_logs: 1u64,
-                            error_logs: 0u64,
-                            fatal_logs: 0u64,
+            assert_inspect_tree!(
+                log_stats_tree,
+                root: {
+                    sources: {
+                        $foo_moniker: {
+                            url: "http://foo.com",
+                            logs: {
+                                last_timestamp: AnyProperty,
+                                total: 1u64,
+                                trace: 0u64,
+                                debug: 0u64,
+                                info: 0u64,
+                                warn: 1u64,
+                                error: 0u64,
+                                fatal: 0u64,
+                            },
                         },
-                        "http://bar.com": contains {
-                            total_logs: 1u64,
-                            trace_logs: 0u64,
-                            debug_logs: 0u64,
-                            info_logs: 0u64,
-                            warning_logs: 0u64,
-                            error_logs: 1u64,
-                            fatal_logs: 0u64,
-                        }
+                        $bar_moniker: {
+                            url: "http://bar.com",
+                            logs: {
+                                last_timestamp: AnyProperty,
+                                total: 1u64,
+                                trace: 0u64,
+                                debug: 0u64,
+                                info: 0u64,
+                                warn: 0u64,
+                                error: 1u64,
+                                fatal: 0u64,
+                            },
+                        },
                     },
-                    buffer_stats: {
-                        rolled_out_entries: 0u64,
-                    }
-                },
-            }
-        );
+                }
+            );
+        }}
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_streams_different_identities() {
-        let harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks();
 
         let log_reader1 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
@@ -217,30 +200,29 @@ mod tests {
                 "http://bar.com",
             ));
 
-        attributed_inspect_two_streams_different_identities_by_reader(
+        attributed_inspect_two_streams_different_identities_by_reader!(
             harness,
-            log_reader1,
-            log_reader2,
-        )
-        .await;
+            log_reader1 @ "./foo",
+            log_reader2 @ "./bar",
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_v2_streams_different_identities() {
-        let harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 = harness.create_event_stream_reader("./bar:0", "http://bar.com");
-        attributed_inspect_two_streams_different_identities_by_reader(
+
+        attributed_inspect_two_streams_different_identities_by_reader!(
             harness,
-            log_reader1,
-            log_reader2,
-        )
-        .await;
+            log_reader1 @ "foo",
+            log_reader2 @ "bar",
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
-        let harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
@@ -251,122 +233,12 @@ mod tests {
                 }),
                 "http://bar.com",
             ));
-        attributed_inspect_two_streams_different_identities_by_reader(
+
+        attributed_inspect_two_streams_different_identities_by_reader!(
             harness,
-            log_reader1,
-            log_reader2,
-        )
-        .await;
-    }
-
-    async fn attributed_inspect_two_streams_same_identity_by_reader(
-        mut harness: TestHarness,
-        log_reader1: Arc<dyn LogReader>,
-        log_reader2: Arc<dyn LogReader>,
-    ) {
-        let mut packet = setup_default_packet();
-        let message = LogMessage {
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
-            time: packet.metadata.time,
-            dropped_logs: packet.metadata.dropped_logs,
-            severity: packet.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-
-        let mut packet2 = packet.clone();
-        packet2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
-        let mut message2 = message.clone();
-        message2.severity = packet2.metadata.severity;
-
-        let mut foo_stream = harness.create_stream_from_log_reader(log_reader1.clone());
-        foo_stream.write_packet(&mut packet);
-
-        let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
-        bar_stream.write_packet(&mut packet2);
-        drop((foo_stream, bar_stream));
-        let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
-
-        assert_inspect_tree!(
-            log_stats_tree,
-            root: {
-                log_stats: {
-                    total_logs: 2u64,
-                    kernel_logs: 0u64,
-                    logsink_logs: 2u64,
-                    trace_logs: 0u64,
-                    debug_logs: 0u64,
-                    info_logs: 0u64,
-                    warning_logs: 1u64,
-                    error_logs: 1u64,
-                    fatal_logs: 0u64,
-                    closed_streams: 0u64,
-                    by_component: {
-                        "http://foo.com": contains {
-                            total_logs: 2u64,
-                            trace_logs: 0u64,
-                            debug_logs: 0u64,
-                            info_logs: 0u64,
-                            warning_logs: 1u64,
-                            error_logs: 1u64,
-                            fatal_logs: 0u64,
-                        },
-                    },
-                    buffer_stats: {
-                        rolled_out_entries: 0u64,
-                    },
-                },
-            }
+            log_reader1 @ "foo",
+            log_reader2 @ "./bar",
         );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn attributed_inspect_two_streams_same_identity() {
-        let harness = TestHarness::with_retained_sinks();
-        let log_reader = harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
-                realm_path: vec![".".into()].into(),
-                component_name: "foo".into(),
-                instance_id: "0".into(),
-            }),
-            "http://foo.com",
-        ));
-        attributed_inspect_two_streams_same_identity_by_reader(
-            harness,
-            log_reader.clone(),
-            log_reader.clone(),
-        )
-        .await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn attributed_inspect_two_v2_streams_same_identity() {
-        let harness = TestHarness::with_retained_sinks();
-        let log_reader = harness.create_event_stream_reader("./foo:0", "http://foo.com");
-        attributed_inspect_two_streams_same_identity_by_reader(
-            harness,
-            log_reader.clone(),
-            log_reader.clone(),
-        )
-        .await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn attributed_inspect_two_mixed_streams_same_identity() {
-        let harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
-        let log_reader2 =
-            harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy(LegacyIdentifier {
-                    realm_path: vec![".".into()].into(),
-                    component_name: "foo".into(),
-                    instance_id: "0".into(),
-                }),
-                "http://foo.com",
-            ));
-        attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)
-            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -684,28 +556,20 @@ mod tests {
         assert_inspect_tree!(
             klog_stats_tree,
             root: {
-                log_stats: contains {
-                    total_logs: 3u64,
-                    kernel_logs: 3u64,
-                    logsink_logs: 0u64,
-                    trace_logs: 0u64,
-                    debug_logs: 0u64,
-                    info_logs: 3u64,
-                    warning_logs: 0u64,
-                    error_logs: 0u64,
-                    fatal_logs: 0u64,
-                    closed_streams: 0u64,
-                    by_component: {
-                        "fuchsia-boot://klog": contains {
-                            total_logs: 3u64,
-                            trace_logs: 0u64,
-                            debug_logs: 0u64,
-                            info_logs: 3u64,
-                            warning_logs: 0u64,
-                            error_logs: 0u64,
-                            fatal_logs: 0u64,
+                "sources": {
+                    "klog": {
+                        url: "fuchsia-boot://kernel",
+                        logs: {
+                            last_timestamp: AnyProperty,
+                            total: 3u64,
+                            trace: 0u64,
+                            debug: 0u64,
+                            info: 3u64,
+                            warn: 0u64,
+                            error: 0u64,
+                            fatal: 0u64,
                         },
-                    }
+                    },
                 }
             }
         );
