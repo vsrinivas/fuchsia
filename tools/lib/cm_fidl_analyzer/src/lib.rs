@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod component_tree;
+pub mod component_tree;
 
 use {cm_rust::ComponentDecl, thiserror::Error};
 

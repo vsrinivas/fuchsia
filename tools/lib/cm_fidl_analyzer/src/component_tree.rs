@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::{ChildDecl, ComponentDecl},
-    fidl_fuchsia_sys2::StartupMode,
+    cm_rust::ComponentDecl,
     moniker::PartialMoniker,
     std::{
         boxed::Box,
@@ -260,7 +259,7 @@ impl ComponentTreeWalker for BreadthFirstWalker {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::collections::HashSet};
+    use {super::*, cm_rust::ChildDecl, fidl_fuchsia_sys2::StartupMode, std::collections::HashSet};
 
     fn new_child_decl(name: &String, url: &String) -> ChildDecl {
         ChildDecl {
