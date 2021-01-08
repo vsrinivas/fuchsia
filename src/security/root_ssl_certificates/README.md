@@ -8,8 +8,9 @@ The certificates file, `third_party/cert.pem`, is updated using the
 https://hg.mozilla.org/mozilla-central/raw-file/tip/security/nss/lib/ckfw/builtins/certdata.txt
 and converts it to a single PEM file using
 `third_party/convert_mozilla_certdata.go`. To update, simply run `go run
-roll_certs.go` and check in the new version of the files `third_party/cert.pem`
-and `third_party/cert.stamp`.
+roll_certs.go` and, if this results in any update to `third_party/cert.pem`,
+check in the new versions of both `third_party/cert.pem` and
+`third_party/cert.stamp`.
 
 This includes the `third_party/convert_mozilla_certdata.go` tool, which is used
 by `roll_certs.go` to extract the bundle of Mozilla root certificates. This tool
