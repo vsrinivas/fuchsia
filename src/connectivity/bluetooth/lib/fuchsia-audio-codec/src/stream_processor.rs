@@ -7,7 +7,9 @@ use {
     fidl_fuchsia_media::*,
     fidl_fuchsia_mediacodec::*,
     fidl_fuchsia_sysmem::*,
+    fuchsia_runtime,
     fuchsia_stream_processors::*,
+    fuchsia_zircon::AsHandleRef,
     futures::{
         future::{maybe_done, MaybeDone},
         io::{self, AsyncWrite},
@@ -446,10 +448,18 @@ pub struct StreamProcessorOutputStream {
     inner: Arc<RwLock<StreamProcessorInner>>,
 }
 
+fn set_allocator_name(sysmem_client: &AllocatorProxy) -> Result<(), Error> {
+    let name = fuchsia_runtime::process_self().get_name()?;
+    let koid = fuchsia_runtime::process_self().get_koid()?;
+    Ok(sysmem_client.set_debug_client_info(name.to_str()?, koid.raw_koid())?)
+}
+
 impl StreamProcessor {
     /// Create a new StreamProcessor given the proxy.
     /// Takes the event stream of the proxy.
     fn create(processor: StreamProcessorProxy, sysmem_client: AllocatorProxy) -> Self {
+        let _ = set_allocator_name(&sysmem_client);
+
         let events = processor.take_event_stream();
         Self {
             inner: Arc::new(RwLock::new(StreamProcessorInner {
