@@ -13,10 +13,11 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <hw/inout.h>
+
+#include "src/devices/serial/drivers/uart16550/uart16550_bind.h"
 
 // The register types and constants are defined in the uart library.
 using namespace uart::ns8250;
@@ -538,8 +539,4 @@ static constexpr zx_driver_ops_t driver_ops = [] {
 }  // namespace uart16550
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(uart16550, uart16550::driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
-  BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, 0x504e5030), // PNP0501\0
-  BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x35303100),
-ZIRCON_DRIVER_END(uart16550)
+ZIRCON_DRIVER(uart16550, uart16550::driver_ops, "zircon", "0.1");

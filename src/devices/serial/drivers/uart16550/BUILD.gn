@@ -2,13 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":uart16550-test" ]
+  deps = [
+    ":uart16550-test",
+    ":uart16550_bind_test",
+  ]
 }
 
 # We need to build both a "normal" and a "testonly" version of the library,
@@ -33,15 +37,15 @@ template("define_common_lib") {
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
     sources = [ "uart16550.cc" ]
-    deps = [ "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c" ]
+    deps = [
+      ":uart16550_bind",
+      "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    ]
     public_deps = [
       "//sdk/banjo/fuchsia.hardware.acpi",
       "//sdk/banjo/fuchsia.hardware.serial",
       "//sdk/banjo/fuchsia.hardware.serialimpl",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/hwreg",
@@ -67,9 +71,17 @@ define_common_lib("uart16550_lib_for_testing") {
   testonly = true
 }
 
+bind_rules("uart16550_bind") {
+  rules = "uart16550.bind"
+  output = "uart16550_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+}
+
 driver_module("uart16550") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
+    ":uart16550_bind",
     ":uart16550_lib",
     "//src/devices/lib/driver",
   ]
