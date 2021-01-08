@@ -26,7 +26,9 @@ use {
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_async::Task,
-    fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::WithInspect,
+    fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     io_util,
@@ -277,7 +279,11 @@ impl DataRepoState {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
             logs_interest: vec![],
-            logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(logs_capacity))),
+            logs_buffer: Arc::new(Mutex::new(
+                AccountedBuffer::new(logs_capacity)
+                    .with_inspect(parent, "logs_buffer")
+                    .expect("failed to attach inspect"),
+            )),
         }))
     }
 

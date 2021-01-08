@@ -652,6 +652,7 @@ mod tests {
         assert_eq!(METADATA_SIZE, 32);
         assert_eq!(MAX_TAGS, 5);
         assert_eq!(MAX_TAG_LEN, 64);
+        assert_eq!(mem::size_of::<fx_log_metadata_t>(), METADATA_SIZE);
         assert_eq!(mem::size_of::<fx_log_packet_t>(), MAX_DATAGRAM_LEN);
 
         // Test that there is no padding

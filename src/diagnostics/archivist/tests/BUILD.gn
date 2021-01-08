@@ -13,6 +13,7 @@ group("tests") {
     "archive_path:test-spec",
     "feedback_reader:test-spec",
     "logs-basic-integration",
+    "logs-budget",
     "logs-connector",
     "logs-from-crash",
     "logs-redaction",

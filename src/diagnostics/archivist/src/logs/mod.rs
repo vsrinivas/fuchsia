@@ -89,7 +89,7 @@ mod tests {
 
         assert_inspect_tree!(
             log_stats_tree,
-            root: {
+            root: contains {
                 sources: {
                     "UNKNOWN": {
                         url: "fuchsia-pkg://UNKNOWN",
@@ -142,7 +142,7 @@ mod tests {
 
             assert_inspect_tree!(
                 log_stats_tree,
-                root: {
+                root: contains {
                     sources: {
                         $foo_moniker: {
                             url: "http://foo.com",
@@ -555,7 +555,7 @@ mod tests {
         let klog_stats_tree = debuglog_test(expected_logs, klog_reader).await;
         assert_inspect_tree!(
             klog_stats_tree,
-            root: {
+            root: contains {
                 "sources": {
                     "klog": {
                         url: "fuchsia-boot://kernel",
