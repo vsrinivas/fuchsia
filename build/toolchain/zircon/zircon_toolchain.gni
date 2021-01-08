@@ -11,6 +11,7 @@ import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/gcc.gni")
+import("//build/zircon/build_args.gni")
 
 _buildidtool =
     rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
@@ -613,6 +614,38 @@ template("zircon_toolchain") {
       _zircon_optimize = zircon_optimize
     }
 
+    # The assert level used by Zircon artifacts is controlled by the zx_assert_level
+    # build argument, except that, as a special case, zircon_kernel_disable_asserts
+    # can be set to true to disable them in the kernel itself.
+    #
+    # For legacy reasons, also recognize that zircon_extra_args.environment_args is
+    # set to a specific value to disable kernel assertions as well. For more details
+    # see https://fxbug.dev/67356.
+    _assert_level = zx_assert_level
+
+    if (defined(invoker.toolchain_tags) &&
+        invoker.toolchain_tags + [ "kernel" ] - [ "kernel" ] !=
+        invoker.toolchain_tags) {
+      if (zircon_kernel_disable_asserts) {
+        _assert_level = 0
+      }
+
+      if (defined(zircon_extra_args.environment_args)) {
+        _env_args = zircon_extra_args.environment_args
+        _expected_args = [
+          {
+            kernel = true
+            assert_level = 0
+          },
+        ]
+        assert(
+            _env_args == _expected_args,
+            "Invalid zircon_extra_args.environment_args value (see https://fxbug.dev/67356): ${_env_args}")
+
+        _assert_level = 0
+      }
+    }
+
     toolchain_args = {
       current_cpu = invoker.cpu
       current_os = invoker.os
@@ -632,6 +665,8 @@ template("zircon_toolchain") {
       # Otherwise the default is used. Try to replicate this here.
       #
       optimize = _zircon_optimize
+
+      zx_assert_level = _assert_level
 
       if (defined(invoker.toolchain_args)) {
         forward_variables_from(invoker.toolchain_args,

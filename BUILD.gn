@@ -20,6 +20,8 @@ import("//build/zbi/zbi.gni")
 import(
     "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
+import("//build/zircon/build_args.gni")
+
 # TODO(fxbug.dev/32978): This is temporary until the kernel build is unified or
 # kernel PCI is removed.
 import("//src/devices/bus/drivers/pci/pci.gni")
@@ -58,30 +60,6 @@ declare_args() {
   # artifact set, which represents an additional set of host-only software that
   # is produced by the build.
   host_labels = []
-
-  # [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
-  # This is included in the default value of [`zircon_args`](#zircon_args) so
-  # you can set this to add things there without wiping out the defaults.
-  # When you set `zircon_args` directly, then this has no effect at all.
-  # Arguments you set here override any arguments in the default
-  # `zircon_args`.  There is no way to append to a value from the defaults.
-  # Note that for just setting simple (string-only) values in Zircon GN's
-  # [`variants`](/docs/gen/zircon_build_arguments.md#variants), the
-  # default [`zircon_args`](#zircon_args) uses a `variants` value derived from
-  # [`select_variant`](#select_variant) so for simple cases there is no need
-  # to explicitly set Zircon's `variants` here.
-  zircon_extra_args = {
-  }
-
-  # Additional Zircon GN labels to include in the Zircon build.
-  zircon_extra_deps = []
-
-  # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
-  # given the empty string. Path can be source-absolute or system-absolute.
-  zircon_tracelog = ""
-
-  # Compilation database filter. Gets passed to --export-compile-commands=<filter>.
-  zircon_compdb_filter = "default"
 
   # Whether to allow testonly=true targets in base/cache pacakges. Default to
   # true to allow testonly=true targets. It is preferrable to set to false for
