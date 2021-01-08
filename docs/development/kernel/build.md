@@ -4,6 +4,7 @@
 
 Kernel commandline options are declared using the
 [`kernel_cmdline`](/build/zbi/kernel_cmdline.gni) template:
+
 ```gn
 import("//build/kernel_cmdline.gni")
 
@@ -13,6 +14,7 @@ kernel_cmdline("foobar") {
 ```
 
 A single target may include multiple options:
+
 ```gn
 import("//build/kernel_cmdline.gni")
 
@@ -41,6 +43,7 @@ Note that this folder is not tracked by git and therefore might not exist yet in
 your checkout.
 Use [`dev_bootfs_labels`](/build/dev.gni) to inject the options into the build
 graph via `fx set`:
+
 ```posix-terminal
 fx set ... --args='dev_bootfs_labels=["//local/path/to/my:options"]'
 ```
