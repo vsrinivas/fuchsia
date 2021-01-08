@@ -32,10 +32,12 @@ function needs-update {
 
 function main {
   local build=false
+  local build_targets=("updates")
   if is_feature_enabled "incremental"; then
     # In incremental workflows, these defaults have changed.
     # Keep old behavior if incremental is not enabled.
     build=true
+    build_targets=("build/images:packages" "build/images:update.meta")
   fi
   while (( $# )); do
     case "$1" in
@@ -60,8 +62,8 @@ function main {
   check-for-amber-server || return 1
 
   if $build; then
-    fx-info "Building/refreshing target 'updates'"
-    fx-command-run build updates
+    fx-info "Building/refreshing ${build_targets[@]}"
+    fx-command-run build "${build_targets[@]}"
   fi
 
   # Note: the following command continues to run as the system goes into
