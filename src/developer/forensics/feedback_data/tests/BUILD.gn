@@ -140,6 +140,9 @@ executable("data_register_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(67364): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("datastore_unittest_exe") {

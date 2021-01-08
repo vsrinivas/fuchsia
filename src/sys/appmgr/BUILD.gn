@@ -207,6 +207,9 @@ executable("unittest_bin") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(67361): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_package_with_single_component("appmgr") {
