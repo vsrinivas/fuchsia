@@ -13,7 +13,6 @@ pub mod socket;
 pub mod stats;
 #[cfg(test)]
 pub mod testing;
-pub mod trimmer;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 pub use message::Message;

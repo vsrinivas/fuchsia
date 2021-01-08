@@ -18,10 +18,7 @@ use fidl_fuchsia_logger::{
     LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
 use fuchsia_async::Task;
-use futures::{
-    channel::mpsc::{self, Sender},
-    prelude::*,
-};
+use futures::{channel::mpsc, prelude::*};
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tracing::{error, warn};
@@ -41,16 +38,12 @@ pub struct LogsArtifactsContainer {
 
     /// Buffer for all log messages.
     buffer: Arc<Mutex<AccountedBuffer<Message>>>,
-
-    /// Alerts the `DataRepo` that new messages have arrived.
-    on_new_messages: Mutex<Sender<()>>,
 }
 
 impl LogsArtifactsContainer {
     pub fn new(
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
-        on_new_messages: Sender<()>,
         stats: LogStreamStats,
         buffer: Arc<Mutex<AccountedBuffer<Message>>>,
     ) -> Self {
@@ -58,7 +51,6 @@ impl LogsArtifactsContainer {
             identity,
             stats,
             buffer,
-            on_new_messages: Mutex::new(on_new_messages),
             control_handles: Mutex::new(vec![]),
             interest: Mutex::new(Interest::EMPTY),
         };
@@ -137,7 +129,6 @@ impl LogsArtifactsContainer {
     pub fn ingest_message(&self, message: Message) {
         self.stats.ingest_message(&message);
         self.buffer.lock().push(message);
-        self.on_new_messages.lock().try_send(()).ok();
     }
 
     /// Set the `Interest` for this component, calling `LogSink/OnRegisterInterest` with all

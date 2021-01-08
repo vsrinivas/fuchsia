@@ -14,7 +14,6 @@ use {
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
-            trimmer::keep_logs_trimmed,
             Message,
         },
     },
@@ -30,7 +29,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
-    futures::channel::mpsc::{self, Sender},
+    futures::channel::mpsc,
     futures::prelude::*,
     io_util,
     parking_lot::{Mutex, RwLock},
@@ -60,7 +59,12 @@ impl std::ops::Deref for DataRepo {
 #[cfg(test)]
 impl Default for DataRepo {
     fn default() -> Self {
-        Self::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES, &Default::default())
+        DataRepo {
+            inner: DataRepoState::new(
+                crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
+                &Default::default(),
+            ),
+        }
     }
 }
 
@@ -267,29 +271,19 @@ pub struct DataRepoState {
     inspect_node: inspect::Node,
     logs_interest: Vec<LogInterestSelector>,
     logs_buffer: Arc<Mutex<AccountedBuffer<Message>>>,
-    logs_notifier: Sender<()>,
-    _logs_trimmer: Task<()>,
 }
 
 impl DataRepoState {
     fn new(logs_capacity: usize, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
-        let logs_buffer = Arc::new(Mutex::new(
-            AccountedBuffer::default()
-                .with_inspect(parent, "logs_buffer")
-                .expect("failed to attach inspect"),
-        ));
-        let (logs_notifier, on_new_messages) = mpsc::channel(1);
-        let weak_buffer = Arc::downgrade(&logs_buffer);
-        let _logs_trimmer =
-            Task::spawn(keep_logs_trimmed(weak_buffer, logs_capacity, on_new_messages));
-
         Arc::new(RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
             logs_interest: vec![],
-            logs_buffer,
-            logs_notifier,
-            _logs_trimmer,
+            logs_buffer: Arc::new(Mutex::new(
+                AccountedBuffer::new(logs_capacity)
+                    .with_inspect(parent, "logs_buffer")
+                    .expect("failed to attach inspect"),
+            )),
         }))
     }
 
@@ -378,8 +372,7 @@ impl DataRepoState {
             () => {{
                 let mut to_insert =
                     ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
-                let logs =
-                    to_insert.logs(&self.logs_buffer, &self.logs_notifier, &self.logs_interest);
+                let logs = to_insert.logs(&self.logs_buffer, &self.logs_interest);
                 self.data_directories.insert(trie_key, to_insert);
                 logs
             }};
@@ -388,9 +381,7 @@ impl DataRepoState {
         match self.data_directories.get_mut(trie_key.clone()) {
             Some(component) => match &mut component.get_values_mut()[..] {
                 [] => insert_component!(),
-                [existing] => {
-                    existing.logs(&self.logs_buffer, &self.logs_notifier, &self.logs_interest)
-                }
+                [existing] => existing.logs(&self.logs_buffer, &self.logs_interest),
                 _ => unreachable!("invariant: each trie node has 0-1 entries"),
             },
             None => insert_component!(),
