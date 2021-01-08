@@ -17,7 +17,7 @@ use {
         collections::HashSet,
         path::{Path, PathBuf},
         sync::{
-            atomic::{AtomicBool, Ordering},
+            atomic::{AtomicBool, AtomicU32, Ordering},
             Arc,
         },
     },
@@ -516,5 +516,29 @@ impl<H: UriPathHandler> Once<H> {
     /// Creates a handler that forwards to `handler` once.
     pub fn new(handler: H) -> Self {
         Self { already_forwarded: AtomicBool::new(false), handler }
+    }
+}
+
+/// Handler that forwards to its wrapped handler the nth time it is called.
+pub struct OverrideNth<H: UriPathHandler> {
+    n: u32,
+    call_count: AtomicU32,
+    handler: H,
+}
+
+impl<H: UriPathHandler> UriPathHandler for OverrideNth<H> {
+    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        if self.call_count.fetch_add(1, Ordering::SeqCst) + 1 == self.n {
+            self.handler.handle(uri_path, response)
+        } else {
+            ready(response).boxed()
+        }
+    }
+}
+
+impl<H: UriPathHandler> OverrideNth<H> {
+    /// Creates a handler that forwards to `handler` on the nth call.
+    pub fn new(n: u32, handler: H) -> Self {
+        Self { n, call_count: AtomicU32::new(0), handler }
     }
 }

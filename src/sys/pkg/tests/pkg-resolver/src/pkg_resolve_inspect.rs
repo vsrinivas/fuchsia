@@ -13,7 +13,7 @@ use {
         testing::{AnyProperty, PropertyAssertion},
         tree_assertion,
     },
-    fuchsia_pkg_testing::{serve::handler as UriHandler, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{serve::handler as uri_handler, PackageBuilder, RepositoryBuilder},
     lib::MountsBuilder,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
@@ -197,14 +197,26 @@ async fn package_and_blob_queues() {
             .unwrap(),
     );
 
-    let (blocking_uri_path_handler, unblocking_closure_receiver) =
-        UriHandler::BlockResponseBodyOnce::new();
     let meta_far_blob_path = format!("/blobs/{}", pkg.meta_far_merkle_root());
-    let blocking_uri_path_handler =
-        UriHandler::ForPath::new(meta_far_blob_path.clone(), blocking_uri_path_handler);
 
-    let served_repository =
-        repo.server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
+    let flake_first_attempt = uri_handler::ForPath::new(
+        meta_far_blob_path.clone(),
+        uri_handler::OverrideNth::new(1, uri_handler::StaticResponseCode::server_error()),
+    );
+
+    let (blocking_uri_path_handler, unblocking_closure_receiver) =
+        uri_handler::BlockResponseBodyOnce::new();
+    let block_second_attempt = uri_handler::ForPath::new(
+        meta_far_blob_path.clone(),
+        uri_handler::OverrideNth::new(2, blocking_uri_path_handler),
+    );
+
+    let served_repository = repo
+        .server()
+        .uri_path_override_handler(flake_first_attempt)
+        .uri_path_override_handler(block_second_attempt)
+        .start()
+        .unwrap();
     let () = env
         .proxies
         .repo_manager
@@ -225,7 +237,11 @@ async fn package_and_blob_queues() {
             blob_fetcher: contains {
                 queue: contains {
                     pkg.meta_far_merkle_root().to_string() => contains {
-                        state: "read http body"
+                        attempts: {
+                            "2": contains {
+                                state: "read http body"
+                            }
+                        }
                     }
                 }
             }
@@ -242,11 +258,14 @@ async fn package_and_blob_queues() {
                         fetch_ts: AnyProperty,
                         source: "http",
                         mirror: format!("{}{}", served_repository.local_url(), meta_far_blob_path),
-                        attempts: 1u64,
-                        state: "read http body",
-                        state_ts: AnyProperty,
-                        expected_size_bytes: 8192u64,
-                        bytes_written: 0u64,
+                        attempts: {
+                            "2": {
+                                state: "read http body",
+                                state_ts: AnyProperty,
+                                expected_size_bytes: 8192u64,
+                                bytes_written: 0u64,
+                            }
+                        }
                     }
                 }
             },

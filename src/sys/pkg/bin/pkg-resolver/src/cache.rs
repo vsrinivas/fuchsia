@@ -521,7 +521,7 @@ pub fn make_blob_fetch_queue(
 }
 
 async fn fetch_blob(
-    inspect: inspect::Fetch,
+    inspect: inspect::NeedsRemoteType,
     http_client: &fuchsia_hyper::HttpsClient,
     cache: PackageCache,
     stats: Arc<Mutex<Stats>>,
@@ -577,7 +577,7 @@ async fn fetch_blob(
 }
 
 async fn fetch_blob_http(
-    inspect: inspect::FetchHttp,
+    inspect: inspect::NeedsMirror,
     client: &fuchsia_hyper::HttpsClient,
     mirrors: &[MirrorConfig],
     merkle: BlobId,
@@ -600,12 +600,12 @@ async fn fetch_blob_http(
     let flaked = Arc::new(AtomicBool::new(false));
 
     fuchsia_backoff::retry_or_first_error(retry::blob_fetch(), || {
-        inspect.attempt();
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
         let mut cobalt_sender = cobalt_sender.clone();
 
         async {
+            let inspect = inspect.attempt();
             inspect.state(inspect::Http::CreateBlob);
             if let Some((blob, blob_closer)) =
                 cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
@@ -654,14 +654,14 @@ async fn fetch_blob_http(
 }
 
 async fn fetch_blob_local(
-    inspect: inspect::FetchStateLocal,
+    inspect: inspect::TriggerAttempt<inspect::LocalMirror>,
     local_mirror: &LocalMirrorProxy,
     merkle: BlobId,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
     cache: &PackageCache,
 ) -> Result<(), FetchError> {
-    inspect.attempt();
+    let inspect = inspect.attempt();
     inspect.state(inspect::LocalMirror::CreateBlob);
     if let Some((blob, blob_closer)) =
         cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
@@ -675,7 +675,7 @@ async fn fetch_blob_local(
 }
 
 async fn read_local_blob(
-    inspect: &inspect::FetchStateLocal,
+    inspect: &inspect::Attempt<inspect::LocalMirror>,
     proxy: &LocalMirrorProxy,
     merkle: BlobId,
     expected_len: Option<u64>,
@@ -731,7 +731,7 @@ fn make_blob_url(
 }
 
 async fn download_blob(
-    inspect: &inspect::FetchStateHttp,
+    inspect: &inspect::Attempt<inspect::Http>,
     client: &fuchsia_hyper::HttpsClient,
     uri: &http::Uri,
     expected_len: Option<u64>,
