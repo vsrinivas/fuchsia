@@ -12,7 +12,6 @@
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>

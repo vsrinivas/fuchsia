@@ -23,7 +23,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -33,6 +32,7 @@
 #include <gpt/c/gpt.h>
 
 #include "mbr.h"
+#include "src/devices/block/drivers/mbr/mbr_bind.h"
 
 namespace {
 
@@ -341,9 +341,4 @@ zx_driver_ops_t MbrDriverOps = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mbr, MbrDriverOps, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
-ZIRCON_DRIVER_END(mbr)
-    // clang-format on
+ZIRCON_DRIVER(mbr, MbrDriverOps, "zircon", "0.1");
