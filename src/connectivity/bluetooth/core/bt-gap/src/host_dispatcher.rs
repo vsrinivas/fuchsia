@@ -474,7 +474,7 @@ impl HostDispatcher {
             if let Err(e) = fut.await {
                 warn!("Unable to apply new settings to host {}: {:?}", host_id, e);
                 let failed_host_path = device.path().to_path_buf();
-                self.rm_adapter(&failed_host_path).await;
+                self.rm_device(&failed_host_path).await;
             }
         }
         new_config
@@ -798,9 +798,8 @@ impl HostDispatcher {
         Ok(())
     }
 
-    /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
-    /// watcher
-    pub async fn add_adapter(&self, host_path: &Path) -> Result<(), Error> {
+    /// Adds a bt-host device to the host dispatcher. Called by the watch_hosts device watcher
+    pub async fn add_device(&self, host_path: &Path) -> Result<(), Error> {
         let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
         let host_dev = bt::util::open_rdwr(host_path)
             .context(format!("failed to open {:?} device file", host_path))?;
@@ -876,7 +875,7 @@ impl HostDispatcher {
         }
     }
 
-    pub async fn rm_adapter(&self, host_path: &Path) {
+    pub async fn rm_device(&self, host_path: &Path) {
         let mut new_adapter_activated = false;
         // Scope our HostDispatcherState lock
         {

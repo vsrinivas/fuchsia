@@ -112,7 +112,7 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         assert!(is_discovering);
 
         // Deactivate Host #1
-        hd.rm_adapter(active_host_path).await;
+        hd.rm_device(active_host_path).await;
 
         // Assert that Host #2 is now marked as discovering
         host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");

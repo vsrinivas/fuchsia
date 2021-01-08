@@ -7,10 +7,9 @@
 //! the system
 
 use {
-    anyhow::Error,
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
-    futures::{FutureExt, Stream, TryStreamExt},
+    futures::{future, FutureExt, Stream, TryStreamExt},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     log::warn,
     std::{
@@ -19,35 +18,32 @@ use {
     },
 };
 
-pub enum AdapterEvent {
-    AdapterAdded(PathBuf),
-    AdapterRemoved(PathBuf),
+pub enum HostEvent {
+    HostAdded(PathBuf),
+    HostRemoved(PathBuf),
 }
 
-/// Watch the VFS for host adapter devices being added or removed, and produce
-/// a stream of AdapterEvent messages
-pub fn watch_hosts() -> impl Stream<Item = Result<AdapterEvent, Error>> {
+/// Watch the VFS for host devices being added or removed, and produce a stream of HostEvent messages
+pub fn watch_hosts() -> impl Stream<Item = Result<HostEvent, io::Error>> {
     async {
         let directory = open_directory_in_namespace(HOST_DEVICE_DIR, OPEN_RIGHT_READABLE).unwrap();
         let watcher = vfs_watcher::Watcher::new(directory)
             .await
             .expect("Cannot open vfs watcher for bt-host device path");
-        watcher.try_filter_map(as_adapter_msg).err_into()
+        watcher.try_filter_map(|msg| future::ok(as_host_event(msg)))
     }
     .flatten_stream()
 }
 
-async fn as_adapter_msg(msg: WatchMessage) -> Result<Option<AdapterEvent>, io::Error> {
-    use self::AdapterEvent::*;
-
+fn as_host_event(msg: WatchMessage) -> Option<HostEvent> {
     let path = Path::new(HOST_DEVICE_DIR).join(&msg.filename);
-    Ok(match msg.event {
-        WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(AdapterAdded(path)),
-        WatchEvent::REMOVE_FILE => Some(AdapterRemoved(path)),
+    match msg.event {
+        WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(HostEvent::HostAdded(path)),
+        WatchEvent::REMOVE_FILE => Some(HostEvent::HostRemoved(path)),
         WatchEvent::IDLE => None,
         e => {
             warn!("Unrecognized host watch event: {:?}", e);
             None
         }
-    })
+    }
 }

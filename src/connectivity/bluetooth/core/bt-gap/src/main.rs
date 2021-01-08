@@ -29,15 +29,15 @@ use {
 };
 
 use crate::{
-    adapters::{AdapterEvent::*, *},
+    devices::{watch_hosts, HostEvent::*},
     generic_access_service::GenericAccessService,
     host_dispatcher::{HostService::*, *},
     services::host_watcher,
     watch_peers::PeerWatcher,
 };
 
-mod adapters;
 mod build_config;
+mod devices;
 mod generic_access_service;
 mod host_device;
 mod host_dispatcher;
@@ -82,7 +82,7 @@ async fn launch_profile_forwarding_component(
     let mut rfcomm_fs = ServiceFs::new();
     rfcomm_fs
         .add_service_at(ProfileMarker::NAME, move |chan| {
-            info!("Connecting Profile Service to Adapter");
+            info!("Connecting Profile Service to Host Device");
             fasync::Task::spawn(profile_hd.clone().request_host_service(chan, Profile)).detach();
             None
         })
@@ -118,7 +118,7 @@ fn profile_handler(
                 let _ = rfcomm_component.pass_to_service::<ProfileMarker>(chan);
             }
             None => {
-                info!("Directly connecting Profile Service to Adapter");
+                info!("Directly connecting Profile Service to Host Device");
                 fasync::Task::spawn(hd.clone().request_host_service(chan, Profile)).detach();
             }
         }
@@ -133,7 +133,7 @@ fn host_service_handler(
 ) -> impl FnMut(fuchsia_zircon::Channel) -> Option<()> {
     let dispatcher = dispatcher.clone();
     move |chan| {
-        info!("Connecting {} to Adapter", service_name);
+        info!("Connecting {} to Host Device", service_name);
         fasync::Task::spawn(dispatcher.clone().request_host_service(chan, service)).detach();
         None
     }
@@ -198,15 +198,15 @@ async fn run() -> Result<(), Error> {
         pin_mut!(stream);
         while let Some(msg) = stream.try_next().await? {
             match msg {
-                AdapterAdded(device_path) => {
-                    let result = watch_hd.add_adapter(&device_path).await;
+                HostAdded(device_path) => {
+                    let result = watch_hd.add_device(&device_path).await;
                     if let Err(e) = &result {
                         warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                     }
                     result?
                 }
-                AdapterRemoved(device_path) => {
-                    watch_hd.rm_adapter(&device_path).await;
+                HostRemoved(device_path) => {
+                    watch_hd.rm_device(&device_path).await;
                 }
             }
         }

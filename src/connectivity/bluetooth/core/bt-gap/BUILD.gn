@@ -53,8 +53,8 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/adapters.rs",
     "src/build_config.rs",
+    "src/devices.rs",
     "src/generic_access_service.rs",
     "src/host_device.rs",
     "src/host_dispatcher.rs",
