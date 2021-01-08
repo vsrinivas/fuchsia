@@ -9,7 +9,7 @@ use {
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
-            buffer::{LazyItem, MemoryBoundedBuffer},
+            buffer::{AccountedBuffer, LazyItem},
             container::LogsArtifactsContainer,
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
@@ -61,9 +61,7 @@ impl DataRepo {
                 inspect_node: Default::default(),
                 data_directories: trie::Trie::new(),
                 logs_interest: vec![],
-                logs_buffer: Arc::new(Mutex::new(MemoryBoundedBuffer::new(
-                    MAXIMUM_CACHED_LOGS_BYTES,
-                ))),
+                logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES))),
             })),
         }
     }
@@ -74,9 +72,7 @@ impl DataRepo {
                 inspect_node: parent.create_child("sources"),
                 data_directories: trie::Trie::new(),
                 logs_interest: vec![],
-                logs_buffer: Arc::new(Mutex::new(MemoryBoundedBuffer::new(
-                    MAXIMUM_CACHED_LOGS_BYTES,
-                ))),
+                logs_buffer: Arc::new(Mutex::new(AccountedBuffer::new(MAXIMUM_CACHED_LOGS_BYTES))),
             })),
         }
     }
@@ -280,7 +276,7 @@ pub struct DataRepoState {
     pub data_directories: trie::Trie<String, ComponentDiagnostics>,
     inspect_node: inspect::Node,
     logs_interest: Vec<LogInterestSelector>,
-    logs_buffer: Arc<Mutex<MemoryBoundedBuffer<Message>>>,
+    logs_buffer: Arc<Mutex<AccountedBuffer<Message>>>,
 }
 
 impl DataRepoState {

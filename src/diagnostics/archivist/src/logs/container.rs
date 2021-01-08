@@ -5,7 +5,7 @@
 use crate::{
     container::ComponentIdentity,
     logs::{
-        buffer::MemoryBoundedBuffer,
+        buffer::AccountedBuffer,
         error::StreamError,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
@@ -37,7 +37,7 @@ pub struct LogsArtifactsContainer {
     stats: LogStreamStats,
 
     /// Buffer for all log messages.
-    buffer: Arc<Mutex<MemoryBoundedBuffer<Message>>>,
+    buffer: Arc<Mutex<AccountedBuffer<Message>>>,
 }
 
 impl LogsArtifactsContainer {
@@ -45,7 +45,7 @@ impl LogsArtifactsContainer {
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
         stats: LogStreamStats,
-        buffer: Arc<Mutex<MemoryBoundedBuffer<Message>>>,
+        buffer: Arc<Mutex<AccountedBuffer<Message>>>,
     ) -> Self {
         let new = Self {
             identity,

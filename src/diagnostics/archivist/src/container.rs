@@ -10,7 +10,7 @@ use {
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
         logs::{
-            buffer::MemoryBoundedBuffer, container::LogsArtifactsContainer, stats::LogStreamStats,
+            buffer::AccountedBuffer, container::LogsArtifactsContainer, stats::LogStreamStats,
             Message,
         },
     },
@@ -147,8 +147,8 @@ impl ComponentDiagnostics {
 
     pub fn logs(
         &mut self,
-        // TODO(fxbug.dev/47661) remove this and construct a local buffer in this function
-        buffer: &Arc<Mutex<MemoryBoundedBuffer<Message>>>,
+        // TODO(fxbug.dev/47611) remove this and construct a local buffer in this function
+        buffer: &Arc<Mutex<AccountedBuffer<Message>>>,
         interest_selectors: &[LogInterestSelector],
     ) -> Arc<LogsArtifactsContainer> {
         if let Some(logs) = &self.logs {

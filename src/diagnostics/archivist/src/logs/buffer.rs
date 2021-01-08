@@ -19,7 +19,7 @@ pub trait Accounted {
 
 /// A Memory bounded buffer. Sizes are calculated by items' implementation of `Accounted`.
 #[derive(Inspect)]
-pub struct MemoryBoundedBuffer<T> {
+pub struct AccountedBuffer<T> {
     #[inspect(skip)]
     buffer: ArcList<T>,
     #[inspect(skip)]
@@ -30,13 +30,13 @@ pub struct MemoryBoundedBuffer<T> {
     rolled_out_entries: inspect::UintProperty,
 }
 
-impl<T> MemoryBoundedBuffer<T>
+impl<T> AccountedBuffer<T>
 where
     T: Accounted,
 {
-    pub fn new(capacity: usize) -> MemoryBoundedBuffer<T> {
+    pub fn new(capacity: usize) -> AccountedBuffer<T> {
         assert!(capacity > 0, "capacity should be more than 0");
-        MemoryBoundedBuffer {
+        Self {
             buffer: ArcList::default(),
             capacity: capacity,
             total_size: 0,
@@ -85,7 +85,7 @@ mod tests {
         }
     }
 
-    impl<T> MemoryBoundedBuffer<T>
+    impl<T> AccountedBuffer<T>
     where
         T: Accounted + Clone,
     {
@@ -107,11 +107,14 @@ mod tests {
         }
     }
 
+    const TEST_BUFFER_CAPACITY: usize = 12;
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple() {
         let inspector = inspect::Inspector::new();
-        let mut m =
-            MemoryBoundedBuffer::new(12).with_inspect(inspector.root(), "buffer_stats").unwrap();
+        let mut m = AccountedBuffer::new(TEST_BUFFER_CAPACITY)
+            .with_inspect(inspector.root(), "buffer_stats")
+            .unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
@@ -127,8 +130,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_bound() {
         let inspector = inspect::Inspector::new();
-        let mut m =
-            MemoryBoundedBuffer::new(12).with_inspect(inspector.root(), "buffer_stats").unwrap();
+        let mut m = AccountedBuffer::new(TEST_BUFFER_CAPACITY)
+            .with_inspect(inspector.root(), "buffer_stats")
+            .unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
