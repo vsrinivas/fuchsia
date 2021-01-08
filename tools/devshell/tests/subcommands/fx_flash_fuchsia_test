@@ -20,12 +20,13 @@ BT_MOCKED_TOOLS=(
   "tools/devshell/build"
 )
 
-declare fx fastboot_mock flash_script
+declare fx ffx fastboot_mock flash_script
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  ffx="$(btf::make_installed_hosttools_mock ffx)"
   flash_script="${BT_TEMP_DIR}/out/default/flash.sh"
 
   btf::make_mock "$flash_script"
@@ -42,6 +43,10 @@ BT_SET_UP() {
       shift
       "${fastboot_mock}" "\$@"
     fi
+    if [[ "\$2" == "ffx" ]]; then
+      shift
+      "${ffx}" "\$@"
+    fi
 EOF
 }
 
@@ -54,6 +59,16 @@ INPUT
   BT_EXPECT ${fx} flash --no-build
   source "${flash_script}.mock_state"
   BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
+}
+
+TEST_fx_flash_ssh_with_ffx() {
+  cat >"${fastboot_mock}.mock_side_effects" <<INPUT
+if [[ "\$1" == "devices" ]]; then
+  echo "97300YCABZZ5AA	fastboot"
+fi
+INPUT
+  BT_EXPECT ${fx} --disable=legacy_fastboot flash --no-build
+  btf::expect-mock-args "${ffx}.mock_state" "ffx" "target" "flash" "./flash.json" "fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
 }
 
 TEST_fx_flash_ssh_falls_back_to_recovery_if_not_exist() {
@@ -69,12 +84,29 @@ INPUT
   btf::expect-mock-args "${flash_script}" --recovery
 }
 
+TEST_fx_flash_ssh_falls_back_to_recovery_if_not_exist_with_ffx() {
+  # Remove the ssh key file
+  rm "${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
+  cat >"${fastboot_mock}.mock_side_effects" <<INPUT
+if [[ "\$1" == "devices" ]]; then
+  echo "97300YCABZZ5AA	fastboot"
+fi
+INPUT
+  BT_EXPECT ${fx} --disable=legacy_fastboot flash --no-build 2>/dev/null
+  btf::expect-mock-args "${ffx}.mock_state" "ffx" "target" "flash" "./flash.json" "recovery"
+}
+
 TEST_fx_flash_with_serial() {
   BT_EXPECT ${fx} flash -s 12345
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" \
     "--ssh-key=${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys" \
     -s 12345
+}
+
+TEST_fx_flash_with_serial_with_ffx() {
+  BT_EXPECT ${fx} --disable=legacy_fastboot flash -s 12345
+  btf::expect-mock-args "${ffx}.mock_state" "ffx" -t 12345 "target" "flash" "./flash.json" "fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
 }
 
 BT_RUN_TESTS "$@"

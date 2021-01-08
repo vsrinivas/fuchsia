@@ -6,7 +6,8 @@
 function list_optional_features {
   echo \
     "incremental" \
-    "ffx_discovery"
+    "ffx_discovery" \
+    "legacy_fastboot"
 }
 
 # Return 0 (true) if the default of the given feature is enabled, 1 (false) otherwise.

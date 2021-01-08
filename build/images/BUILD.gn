@@ -1640,6 +1640,33 @@ action("flash_script") {
     ],
   ]
 
+  recovery_parts = [
+    [
+      zircon_a_partition,
+      rebase_path(recovery_image),
+    ],
+    [
+      zircon_b_partition,
+      rebase_path(recovery_image),
+    ],
+    [
+      zircon_r_partition,
+      rebase_path(recovery_image),
+    ],
+    [
+      vbmeta_a_partition,
+      rebase_path(recovery_vbmeta),
+    ],
+    [
+      vbmeta_b_partition,
+      rebase_path(recovery_vbmeta),
+    ],
+    [
+      vbmeta_r_partition,
+      rebase_path(recovery_vbmeta),
+    ],
+  ]
+
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
   args = [
     "--image=" + rebase_path(image, root_build_dir),
@@ -1702,6 +1729,12 @@ action("flash_script") {
       {
         version = 1
         manifest = [
+          {
+            name = "recovery"
+            bootloader_partitions = bootloader_parts
+            partitions = recovery_parts
+            oem_files = []
+          },
           {
             name = "fuchsia"
             bootloader_partitions = bootloader_parts

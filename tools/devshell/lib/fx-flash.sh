@@ -34,6 +34,11 @@ function fx-flash {
     return 1
   fi
 
+  ffx_flash_args=("fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,$(get-ssh-authkeys)") || {
+    fx-warn "Cannot find a valid authorized keys file. Recovery will be flashed."
+    ffx_flash_args=("recovery")
+  }
+
   flash_args=("--ssh-key=$(get-ssh-authkeys)") || {
     fx-warn "Cannot find a valid authorized keys file. Recovery will be flashed."
     flash_args=("--recovery")
@@ -44,6 +49,7 @@ function fx-flash {
   else
     # Process traditional fastboot over USB.
     fastboot_args=()
+    ffx_args=()
     if [[ -z "${serial}" ]]; then
       # If the user didn't specify a device with -s, see if there's exactly 1.
       num_devices=$(fx-command-run host-tool fastboot devices | wc -l)
@@ -56,8 +62,13 @@ function fx-flash {
       fi
     else
       fastboot_args=("-s" "${serial}")
+      ffx_args=("-t" "${serial}")
     fi
 
-    "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
+    if is_feature_enabled "legacy_fastboot"; then
+      "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
+    else 
+      fx-command-run host-tool --check-firewall ffx "${ffx_args[@]}" target flash ./flash.json "${ffx_flash_args[@]}"
+    fi
   fi
 }
