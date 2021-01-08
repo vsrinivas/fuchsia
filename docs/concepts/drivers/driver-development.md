@@ -35,11 +35,12 @@ Creating a new driver can be done automatically by using the
 [Create Tool](/tools/create/README.md). Simply run the following command:
 
 ```
-fx create driver <NAME> --lang cpp --dest <PATH>
+fx create driver <PATH> --lang cpp 
 ```
 
-This will create an empty driver `<NAME>` at location `<PATH>/<NAME>`. After
-this command is run, the following steps need to be followed:
+This will create the directory `<PATH>` containing an empty driver where the last
+segment of `<PATH>` is the driver name and GN target name. After this command is run,
+the following steps need to be followed:
 
 1) Include the `driver_module` or `driver_package` build target in the correct
 place to get your driver included into the system.
