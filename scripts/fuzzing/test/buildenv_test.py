@@ -229,6 +229,66 @@ class BuildEnvTest(TestCaseWithFactory):
         self.set_outputs(cmd, addrs[:1])
         self.assertEqual(self.buildenv.find_device(None), addrs[0])
 
+    def test_find_device_by_list_devices(self):
+        device_name = 'test_find_device_by_list_devices'
+        addr = '::1'
+
+        # Tests with device_name provided
+
+        # Matching device returned
+        cmd = [
+            self.buildenv.abspath(
+                self.buildenv.fuchsia_dir, '.jiri_root/bin/fx'), 'list-devices'
+        ]
+        self.set_outputs(cmd, ['%s %s' % (addr, device_name)])
+        self.assertEqual(
+            self.buildenv._find_device_by_list_devices(device_name), addr)
+
+        # Multiple devices in addition to the matching device
+        other_device_name = 'foo'
+        other_addr = '::2'
+        self.set_outputs(
+            cmd, [
+                '%s %s' % (addr, device_name),
+                '%s %s' % (other_addr, other_device_name)
+            ])
+        self.assertEqual(
+            self.buildenv._find_device_by_list_devices(device_name), addr)
+
+        # No matching device returned
+        self.set_outputs(cmd, ['%s %s' % (other_addr, other_device_name)])
+        self.assertError(
+            lambda: self.buildenv._find_device_by_list_devices(device_name),
+            'Unable to find device.', 'Try "fx set-device".')
+
+        # No results returned
+        self.set_outputs(cmd, [''])
+        self.assertError(
+            lambda: self.buildenv._find_device_by_list_devices(device_name),
+            'Unable to find device.', 'Try "fx set-device".')
+
+        # Tests without device_name provided
+
+        # More than 1 result
+        self.set_outputs(
+            cmd, [
+                '%s %s' % (addr, device_name),
+                '%s %s' % (other_addr, other_device_name)
+            ])
+        self.assertError(
+            lambda: self.buildenv._find_device_by_list_devices(),
+            'Multiple devices found.', 'Try "fx set-device".')
+
+        # Only one result
+        self.set_outputs(cmd, ['%s %s' % (addr, device_name)])
+        self.assertEqual(self.buildenv._find_device_by_list_devices(), addr)
+
+        # No results
+        self.set_outputs(cmd, [''])
+        self.assertError(
+            lambda: self.buildenv._find_device_by_list_devices(),
+            'Unable to find device.', 'Try "fx set-device".')
+
     def test_symbolize(self):
         stacktrace = [
             'a line',

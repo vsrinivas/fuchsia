@@ -319,13 +319,54 @@ class BuildEnv(object):
             cmd += ['resolve', '-device-limit', '1', device_name]
         else:
             cmd += ['list']
-        addrs = self.host.create_process(cmd).check_output().strip()
+        try:
+            addrs = self.host.create_process(cmd).check_output().strip()
+        except subprocess.CalledProcessError as err:
+            return self._find_device_by_list_devices(device_name)
+
         if not addrs:
             self.host.error('Unable to find device.', 'Try "fx set-device".')
+
         addrs = addrs.split('\n')
         if len(addrs) != 1:
             self.host.error('Multiple devices found.', 'Try "fx set-device".')
         return addrs[0]
+
+    def _find_device_by_list_devices(self, device_name=None):
+        """ Find a device address by using fx list-devices
+
+        Attributes:
+            device_name: The name of the device to match to. If not present,
+                         will only suceed if there is exactly 1 device.
+
+        Returns:
+            The device address.
+        """
+        cmd = [
+            self.abspath(self.fuchsia_dir, '.jiri_root/bin/fx'), 'list-devices'
+        ]
+        list_devices_out = self.host.create_process(cmd).check_output().strip()
+        if not list_devices_out:
+            self.host.error('Unable to find device.', 'Try "fx set-device".')
+
+        # Try parsing the returned values
+        devices = list_devices_out.split('\n')
+
+        if devices:
+            if not device_name:
+                if len(devices) != 1:
+                    self.host.error(
+                        'Multiple devices found.', 'Try "fx set-device".')
+
+                return devices[0].split(' ', 1)[0]
+
+            # Find the matching device name
+            for device in devices:
+                addr, name = device.split(' ', 1)
+                if name == device_name:
+                    return addr
+
+        self.host.error('Unable to find device.', 'Try "fx set-device".')
 
     def symbolize(self, raw, json_output=None):
         """Symbolizes backtraces in a log file using the current build.
