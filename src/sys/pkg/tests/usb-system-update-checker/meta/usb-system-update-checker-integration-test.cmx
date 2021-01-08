@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/usb-system-update-checker-integration-test"
+        "binary": "bin/usb_system_update_checker_integration_test"
     },
     "sandbox": {
         "dev": [

@@ -50,6 +50,12 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("isolated") {
+  component_name = "usb-system-update-checker-isolated"
+  manifest = "meta/usb-system-update-checker-isolated.cmx"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("usb-system-update-checker") {
   package_name = "usb-system-update-checker"
   deps = [ ":component" ]

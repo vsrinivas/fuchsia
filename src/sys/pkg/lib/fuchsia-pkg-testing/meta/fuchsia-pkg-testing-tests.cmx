@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/fuchsia-pkg-testing-tests"
+        "binary": "bin/fuchsia_pkg_testing_lib_test"
     },
     "sandbox": {
         "features": [

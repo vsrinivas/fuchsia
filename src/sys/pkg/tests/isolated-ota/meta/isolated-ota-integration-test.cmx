@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/isolated-ota-integration-test"
+        "binary": "bin/isolated_ota_integration_test"
     },
     "sandbox": {
         "dev": [

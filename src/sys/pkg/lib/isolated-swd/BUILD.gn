@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("isolated-swd") {
   version = "0.1.0"
@@ -74,120 +73,40 @@ rustc_library("isolated-swd") {
   ]
 }
 
-test_package("isolated-swd-tests") {
-  deps = [
-    ":isolated-swd_test",
-    "//garnet/go/src/grand_unified_binary",
-    "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/pkg-cache:bin",
-    "//src/sys/pkg/bin/pm:pm_bin",
-    "//src/sys/pkg/bin/system-updater:bin",
-    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
-  ]
-
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkg-cache"
-      source = "pkg_cache"
-    },
-    {
-      name = "pkg-resolver"
-      source = "grand_swd_binary"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-    {
-      name = "system-updater"
-      source = "system_updater"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
-      dest = "ssl/cert.pem"
-    },
-  ]
-
-  resource_deps = [ "//src/sys/pkg/tests/pkg-resolver:empty-repo" ]
-
-  meta = [
-    {
-      path =
-          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
-      dest = "pkg-cache.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
-      dest = "pkg-resolver.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
-      dest = "system-updater.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "isolated_swd_lib_test"
-      dest = "isolated-swd-tests"
-    },
-  ]
+fuchsia_component("isolated-swd-tests-component") {
+  testonly = true
+  component_name = "isolated-swd-tests"
+  manifest = "meta/isolated-swd-tests.cmx"
+  deps = [ ":isolated-swd_test" ]
 }
 
-package("isolated-swd-components") {
+isolated_swd_components = [
+  "//src/sys/pkg/bin/pkg-cache:isolated",
+  "//src/sys/pkg/bin/pkg-resolver:isolated",
+  "//src/sys/pkg/bin/system-updater:isolated",
+]
+
+fuchsia_test_package("isolated-swd-tests") {
+  test_components = [ ":isolated-swd-tests-component" ]
+
   deps = [
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/pkg-cache:bin",
-    "//src/sys/pkg/bin/system-updater:bin",
+    "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr_bin",
+    "//src/sys/pkg/bin/pm:pm_bin",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
   ]
+  deps += isolated_swd_components
 
-  binaries = [
-    {
-      name = "pkg-cache"
-      source = "pkg_cache"
-    },
-    {
-      name = "pkg-resolver"
-      source = "grand_swd_binary"
-    },
-    {
-      name = "system-updater"
-      source = "system_updater"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
 
-  meta = [
-    {
-      path =
-          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
-      dest = "pkg-cache-isolated.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
-      dest = "pkg-resolver-isolated.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
-      dest = "system-updater-isolated.cmx"
-    },
-  ]
+fuchsia_package("isolated-swd-components") {
+  deps = isolated_swd_components
 }
 
 group("tests") {

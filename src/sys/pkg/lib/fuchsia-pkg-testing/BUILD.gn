@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-pkg-testing") {
   version = "0.1.0"
@@ -79,7 +78,14 @@ rustc_library("fuchsia-pkg-testing") {
   ]
 }
 
-rustc_test("pkgfs-test") {
+fuchsia_component("fuchsia-pkg-testing-tests-component") {
+  testonly = true
+  component_name = "fuchsia-pkg-testing-tests"
+  manifest = "meta/fuchsia-pkg-testing-tests.cmx"
+  deps = [ ":fuchsia-pkg-testing_test" ]
+}
+
+rustc_test("pkgfs_test") {
   edition = "2018"
   source_root = "tests/pkgfs_test.rs"
   deps = [
@@ -106,37 +112,22 @@ rustc_test("pkgfs-test") {
   ]
 }
 
-test_package("fuchsia-pkg-testing-tests") {
+fuchsia_component("pkgfs-test-component") {
+  testonly = true
+  component_name = "pkgfs-test"
+  manifest = "meta/pkgfs-test.cmx"
+  deps = [ ":pkgfs_test" ]
+}
+
+fuchsia_test_package("fuchsia-pkg-testing-tests") {
+  test_components = [
+    ":fuchsia-pkg-testing-tests-component",
+    ":pkgfs-test-component",
+  ]
   deps = [
-    ":fuchsia-pkg-testing_test",
-    ":pkgfs-test",
-    "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
-  ]
-
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_pkg_testing_lib_test"
-      dest = "fuchsia-pkg-testing-tests"
-    },
-    {
-      name = "pkgfs_test"
-      dest = "pkgfs-test"
-    },
   ]
 }
 

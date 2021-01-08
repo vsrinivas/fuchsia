@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "omaha_client_integration_test"
@@ -43,56 +43,25 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("omaha-client-integration-tests") {
+fuchsia_component("omaha-client-integration-test") {
+  testonly = true
+  manifest = "meta/omaha-client-integration-test.cmx"
+  deps = [ ":driver" ]
+}
+
+fuchsia_test_package("omaha-client-integration-tests") {
+  test_components = [ ":omaha-client-integration-test" ]
   deps = [
-    ":driver",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/omaha-client:bin",
-    "//src/sys/pkg/bin/system-updater:bin",
+    "//src/sys/pkg/bin/omaha-client:omaha-client-service-for-integration-test",
+    "//src/sys/pkg/bin/system-updater:isolated",
+    "//src/sys/pkg/tests/system-update-committer",
   ]
 
-  binaries = [
-    {
-      name = "omaha_client_service"
-      dest = "omaha-client-service"
-    },
-    {
-      name = "system_updater"
-      dest = "system-updater"
-    },
-    {
-      name = "grand_swd_binary"
-      dest = "system-update-committer"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/omaha-client/meta/omaha-client-service-for-integration-test.cmx")
-      dest = "omaha-client-service-for-integration-test.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
-      dest = "system-updater-isolated.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/tests/system-update-committer/meta/system-update-committer.cmx")
-      dest = "system-update-committer.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "omaha_client_integration_test"
-      dest = "omaha-client-integration-test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

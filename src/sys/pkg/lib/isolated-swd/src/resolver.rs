@@ -153,8 +153,8 @@ pub mod for_tests {
                 repo,
                 repo_url,
                 channel,
-                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-resolver.cmx",
-                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache.cmx",
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-resolver-isolated.cmx",
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache-isolated.cmx",
             )
             .await
         }

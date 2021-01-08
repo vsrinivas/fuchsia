@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
@@ -78,37 +77,25 @@ rustc_binary("bin") {
   ]
 }
 
-package("system-updater") {
+fuchsia_package_with_single_component("system-updater") {
+  manifest = "meta/system-updater.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "system_updater"
-      dest = "system-updater"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/system-updater.cmx")
-      dest = "system-updater.cmx"
-    },
-  ]
 }
 
-test_package("system-updater-tests") {
+fuchsia_unittest_package("system-updater-tests") {
   deps = [ ":bin_test" ]
+  manifest = "meta/system-updater-bin-test.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
 
-  tests = [
-    {
-      name = "system_updater_bin_test"
-      dest = "system-updater-bin-test"
-      environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+fuchsia_component("isolated") {
+  component_name = "system-updater-isolated"
+  manifest = "meta/system-updater-isolated.cmx"
+  deps = [ "//src/sys/pkg/bin/system-updater:bin" ]
 }
 
 sysmgr_config("config") {

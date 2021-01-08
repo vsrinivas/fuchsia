@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "isolated-ota-integration-test"
@@ -36,41 +36,20 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("isolated-ota-integration-tests") {
+fuchsia_component("isolated-ota-integration-test") {
+  testonly = true
+  manifest = "meta/isolated-ota-integration-test.cmx"
+  deps = [ ":driver" ]
+}
+
+fuchsia_test_package("isolated-ota-integration-tests") {
+  test_components = [ ":isolated-ota-integration-test" ]
   deps = [
-    ":driver",
-    "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
-  ]
-
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
-      dest = "ssl/cert.pem"
-    },
-  ]
-
-  resource_deps = [ "//src/sys/pkg/tests/pkg-resolver:empty-repo" ]
-
-  tests = [
-    {
-      name = "isolated_ota_integration_test"
-      dest = "isolated-ota-integration-test"
-    },
+    "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
   ]
 }
 

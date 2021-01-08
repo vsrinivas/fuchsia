@@ -329,8 +329,8 @@ mod tests {
         fuchsia_pkg::build(
             &CreationManifest::from_external_and_far_contents(
                 btreemap! {
-                    "test/pkgfs-ramdisk-lib-test".to_string() =>
-                        "/pkg/test/pkgfs-ramdisk-lib-test".to_string(),
+                    "bin/pkgfs_ramdisk_lib_test".to_string() =>
+                        "/pkg/bin/pkgfs_ramdisk_lib_test".to_string(),
                 },
                 btreemap! {
                     "meta/pkgfs-ramdisk-lib-test.cmx".to_string() =>
@@ -343,7 +343,7 @@ mod tests {
         )
         .unwrap();
 
-        (meta_far, vec![fs::read("/pkg/test/pkgfs-ramdisk-lib-test").unwrap()])
+        (meta_far, vec![fs::read("/pkg/bin/pkgfs_ramdisk_lib_test").unwrap()])
     }
 
     /// Makes a test system_image package containing the given literal static_index contents,

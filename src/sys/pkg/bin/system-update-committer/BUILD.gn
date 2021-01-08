@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 
 # `system-update-committer` is conceptually a binary, but it built as a lib here so
 # it can be aggregated into //src/sys/pkg/bin/grand-swd-binary to save disk space.
@@ -50,41 +51,25 @@ rustc_library("lib") {
   ]
 }
 
-resource("renamed-grand-swd-binary") {
-  deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
-  data_deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
-  sources = [ "$root_out_dir/grand_swd_binary" ]
-  outputs = [ "bin/system-update-committer" ]
-  visibility = [
-    ":*",
-    "//src/sys/pkg/tests/system-update-committer/*",
-  ]
+grand_swd_binary("bin") {
+  output_name = "system_update_committer"
 }
 
 fuchsia_component("component") {
   component_name = "system-update-committer"
   manifest = "meta/system-update-committer.cml"
-  deps = [ ":renamed-grand-swd-binary" ]
+  deps = [ ":bin" ]
 }
 
-fuchsia_package("package") {
-  package_name = "system-update-committer"
+fuchsia_package("system-update-committer") {
   deps = [ ":component" ]
 }
 
-fuchsia_component("test-component") {
-  testonly = true
-  component_name = "system-update-committer-test"
-  manifest = "meta/system-update-committer-test.cml"
+fuchsia_unittest_package("system-update-committer-tests") {
   deps = [ ":lib_test" ]
-}
-
-fuchsia_test_package("test-package") {
-  package_name = "system-update-committer-tests"
-  test_components = [ ":test-component" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":test-package" ]
+  public_deps = [ ":system-update-committer-tests" ]
 }

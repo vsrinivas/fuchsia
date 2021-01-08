@@ -4,7 +4,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "bin/pkg-resolver"
+        "binary": "bin/pkg_resolver"
     },
     "sandbox": {
         "services": [

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/amberctl-test"
+        "binary": "bin/amberctl_test"
     },
     "sandbox": {
         "features": [

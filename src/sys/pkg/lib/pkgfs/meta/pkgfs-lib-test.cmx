@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/pkgfs-lib-test"
+        "binary": "bin/pkgfs_lib_test"
     },
     "sandbox": {
         "features": [

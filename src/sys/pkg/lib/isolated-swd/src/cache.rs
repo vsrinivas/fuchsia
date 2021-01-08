@@ -104,7 +104,7 @@ pub mod for_tests {
         /// Variant of `new_with_component` for use by isolated-swd tests.
         pub fn new() -> Result<Self, Error> {
             Self::new_with_component(
-                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache.cmx",
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache-isolated.cmx",
             )
         }
 

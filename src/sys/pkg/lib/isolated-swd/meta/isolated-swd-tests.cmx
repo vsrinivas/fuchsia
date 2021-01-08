@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/isolated-swd-tests"
+        "binary": "bin/isolated_swd_lib_test"
     },
     "sandbox": {
         "dev": [

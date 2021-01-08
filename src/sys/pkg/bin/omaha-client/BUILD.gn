@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
@@ -95,36 +94,27 @@ rustc_binary("bin") {
   ]
 }
 
-package("omaha-client") {
+fuchsia_component("omaha-client-service") {
+  manifest = "meta/omaha-client-service.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "omaha_client_service"
-      dest = "omaha-client-service"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/omaha-client-service.cmx")
-      dest = "omaha-client-service.cmx"
-    },
-  ]
 }
 
-test_package("omaha-client-service-bin-tests") {
+fuchsia_package("omaha-client") {
+  deps = [ ":omaha-client-service" ]
+}
+
+fuchsia_component("omaha-client-service-for-integration-test") {
+  testonly = true
+  manifest = "meta/omaha-client-service-for-integration-test.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_unittest_package("omaha-client-service-bin-tests") {
   deps = [
     ":bin_test",
     ":omaha-client-policy-config-for-test",
   ]
-
-  tests = [
-    {
-      name = "omaha_client_service_bin_test"
-      dest = "omaha-client-service-bin-test"
-    },
-  ]
+  manifest = "meta/omaha-client-service-bin-test.cmx"
 }
 
 metrics_registry("mos_metrics_registry") {

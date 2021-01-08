@@ -5,44 +5,40 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/package.gni")
+import("//garnet/go/src/grand_unified_binary/gub.gni")
 import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("gentool/generated.gni")
 
+grand_unified_binary("bin") {
+  output_name = "netstack"
+}
+
 fuchsia_component("component-v2") {
   component_name = "netstack"
   manifest = "meta/netstack.cml"
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_component("component") {
   component_name = "netstack"
   manifest = "meta/netstack.cmx"
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_component("component-debug") {
   testonly = true
   component_name = "netstack-debug"
   manifest = "meta/netstack_debug.cmx"
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_package("netstack") {
   deps = [ ":component" ]
 }
 
-package("tools") {
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
-
-  binaries = [
-    {
-      name = "ifconfig"
-      source = "grand_unified_binary"
-      shell = true
-    },
-  ]
+fuchsia_shell_package("tools") {
+  deps = [ "ifconfig" ]
 }
 
 metrics_registry("networking_metrics") {

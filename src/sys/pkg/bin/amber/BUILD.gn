@@ -8,8 +8,8 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/images/manifest.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//garnet/go/src/grand_unified_binary/gub.gni")
+import("//src/sys/build/components.gni")
 
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/..."
@@ -29,49 +29,28 @@ go_library("lib") {
   ]
 }
 
-package("pkgfs") {
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
-
-  binaries = [
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/pkgfs/meta/pkgsvr.cmx")
-      dest = "pkgsvr.cmx"
-    },
-  ]
+grand_unified_binary("bin") {
+  output_name = "amberctl"
 }
 
-# FIXME: Until fuchsia_component exists again, ensure this and //src/sys/pkg/tests/amberctl:amberctl-tests stay in sync
-package("amberctl") {
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
+fuchsia_component("component") {
+  component_name = "amberctl"
+  deps = [ ":bin" ]
+  manifest = "meta/amberctl.cmx"
+}
 
-  binaries = [
-    # TODO(raggi): remove the underscore version of the command name once all
-    # docs and scripts have been updated.
-    # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
-    {
-      name = "amber_ctl"
-      source = "grand_unified_binary"
-      shell = true
-    },
-    {
-      name = "amberctl"
-      source = "grand_unified_binary"
-      shell = true
-    },
-  ]
+# TODO(raggi): remove the underscore version of the command name once all
+# docs and scripts have been updated.
+# See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
+grand_unified_binary("bin_underscore") {
+  output_name = "amber_ctl"
+  visibility = [ ":*" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/amberctl.cmx")
-      dest = "amberctl.cmx"
-    },
+fuchsia_shell_package("amberctl") {
+  deps = [
+    ":bin_underscore",
+    ":component",
   ]
 }
 
@@ -86,13 +65,8 @@ go_test("amber_urlscope_test") {
   ]
 }
 
-test_package("amber_tests") {
+fuchsia_unittest_package("amber_tests") {
   deps = [ ":amber_urlscope_test" ]
-  tests = [
-    {
-      name = "amber_urlscope_test"
-    },
-  ]
 }
 
 # Retained for //garnet/packages/config:amber

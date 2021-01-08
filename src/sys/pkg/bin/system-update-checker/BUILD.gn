@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
 
 rustc_binary("bin") {
@@ -76,49 +75,41 @@ rustc_binary("bin") {
   ]
 }
 
-package("system-update-checker") {
+fuchsia_component("component") {
+  component_name = "system-update-checker"
+  manifest = "meta/system-update-checker.cmx"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "system_update_checker"
-      dest = "system-update-checker"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/system-update-checker.cmx")
-      dest = "system-update-checker.cmx"
-    },
-  ]
 }
 
-test_package("system-update-checker-tests") {
-  deps = [
-    ":bin_test",
-    "//third_party/sbase:test_bin",
-  ]
-  tests = [
-    {
-      name = "system_update_checker_bin_test"
-      dest = "system-update-checker-bin-test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
-  binaries = [
-    {
-      name = "test-shell-command"
-      source = "test"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-update-checker/meta/test-shell-command.cmx")
-      dest = "test-shell-command.cmx"
-    },
-  ]
+fuchsia_package("system-update-checker") {
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_component("system-update-checker-bin-test") {
+  manifest = "meta/system-update-checker-bin-test.cmx"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_component("sbase-test") {
+  component_name = "test"
+  deps = [ "//third_party/sbase:test_bin" ]
+  manifest = "meta/test-shell-command.cmx"
+}
+
+fuchsia_test_package("system-update-checker-tests") {
+  test_components = [ ":system-update-checker-bin-test" ]
+  deps = [ ":sbase-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_component("system-update-checker-for-integration-test") {
+  testonly = true
+  manifest = "meta/system-update-checker-for-integration-test.cmx"
+  deps = [ ":bin" ]
 }
 
 ota_config("auto_update") {

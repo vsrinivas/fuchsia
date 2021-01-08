@@ -1,7 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/system-update-committer",
+        binary: "bin/system_update_committer",
     },
     capabilities: [
         { protocol: "fuchsia.update.CommitStatusProvider" },

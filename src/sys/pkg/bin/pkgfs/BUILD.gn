@@ -6,7 +6,8 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//garnet/go/src/grand_unified_binary/gub.gni")
+import("//src/sys/build/components.gni")
 
 go_library("pmd") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/..."
@@ -48,6 +49,19 @@ go_library("pmd") {
   ]
 }
 
+grand_unified_binary("pkgsvr_bin") {
+  output_name = "pkgsvr"
+}
+
+fuchsia_component("pkgsvr") {
+  deps = [ ":pkgsvr_bin" ]
+  manifest = "meta/pkgsvr.cmx"
+}
+
+fuchsia_package("pkgfs") {
+  deps = [ "//src/sys/pkg/bin/pkgfs:pkgsvr" ]
+}
+
 package("disable-executability-restrictions") {
   __deprecated_system_image = true
 
@@ -59,13 +73,16 @@ package("disable-executability-restrictions") {
   ]
 }
 
-test_packages = [
+go_test_packages = [
   "allowlist",
   "index",
   "pkgfs",
 ]
-foreach(testpkg, test_packages) {
-  go_test("pmd_${testpkg}_test") {
+go_test_components = []
+
+foreach(testpkg, go_test_packages) {
+  test_target = "pmd_${testpkg}_test"
+  go_test(test_target) {
     gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/${testpkg}" ]
     deps = [ ":pmd" ]
     non_go_deps = [
@@ -73,25 +90,20 @@ foreach(testpkg, test_packages) {
       "//zircon/system/ulib/ramdevice-client",
     ]
   }
+
+  test_component_target = "${test_target}_component"
+  fuchsia_component(test_component_target) {
+    testonly = true
+    component_name = test_target
+    manifest = "meta/$test_target.cmx"
+    deps = [ ":$test_target" ]
+  }
+  go_test_components += [ ":$test_component_target" ]
 }
 
-test_package("pmd_tests") {
+fuchsia_test_package("pmd_tests") {
   deps = [ "//src/storage/bin/blobfs" ]
-  binaries = [
-    {
-      name = "blobfs"
-    },
-  ]
-
-  tests = []
-  foreach(testpkg, test_packages) {
-    deps += [ ":pmd_${testpkg}_test" ]
-    tests += [
-      {
-        name = "pmd_${testpkg}_test"
-      },
-    ]
-  }
+  test_components = go_test_components
 }
 
 group("tests") {

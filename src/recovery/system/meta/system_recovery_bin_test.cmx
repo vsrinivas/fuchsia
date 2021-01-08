@@ -15,7 +15,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/system_recovery_bin_test"
+        "binary": "bin/system_recovery_bin_test"
     },
     "sandbox": {
         "dev": [

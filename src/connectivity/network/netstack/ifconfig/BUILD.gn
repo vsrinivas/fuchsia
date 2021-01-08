@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
+import("//garnet/go/src/grand_unified_binary/gub.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 go_library("ifconfig_lib") {
@@ -32,4 +33,7 @@ go_test("netstack_ifconfig_test") {
 fuchsia_unittest_package("netstack-ifconfig-gotests") {
   deps = [ ":netstack_ifconfig_test" ]
   manifest = "meta/netstack_ifconfig_test.cmx"
+}
+
+grand_unified_binary("ifconfig") {
 }

@@ -415,7 +415,7 @@ fn system_updater_app_builder(
     let misc_dir = File::open(misc_path).expect("open misc dir");
 
     let mut system_updater = AppBuilder::new(
-        "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx",
+        "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cmx",
     )
     .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
     .expect("/config/build-info to mount")

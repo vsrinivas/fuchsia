@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
@@ -59,16 +57,6 @@ rustc_test("driver") {
   ]
 }
 
-resource("pkgsvr") {
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
-  sources = [ "$root_out_dir/grand_unified_binary" ]
-  outputs = [ "bin/pkgsvr" ]
-  visibility = [
-    ":*",
-    "//src/sys/pkg/tests/pkg-cache/*",
-  ]
-}
-
 fuchsia_component("test-case-realm") {
   testonly = true
   manifest = "meta/test-case-realm.cml"
@@ -79,8 +67,8 @@ fuchsia_component("pkg-cache-integration-test") {
   manifest = "meta/pkg-cache-integration-test.cml"
   deps = [
     ":driver",
-    ":pkgsvr",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 }
@@ -104,7 +92,7 @@ fuchsia_test_package("pkg-cache-integration-tests") {
     ":test-case-realm",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/lib/isolated_devmgr/v2_component:isolated-devmgr-component",
-    "//src/sys/pkg/bin/pkg-cache:component",
+    "//src/sys/pkg/bin/pkg-cache:component-v2",
     "//src/sys/pkg/bin/system-update-committer:component",
   ]
 }

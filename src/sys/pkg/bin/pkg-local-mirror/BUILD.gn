@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "pkg_local_mirror"
@@ -45,4 +46,9 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/local_mirror_manager.rs",
   ]
+}
+
+fuchsia_component("pkg-local-mirror") {
+  deps = [ ":bin" ]
+  manifest = "meta/pkg-local-mirror.cmx"
 }

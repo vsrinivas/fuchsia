@@ -26,9 +26,9 @@ use {
 
 const REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
 const RESOLVER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/pkg-resolver.cmx";
+    "fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/pkg-resolver-isolated.cmx";
 const CACHE_URL: &str =
-    "fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/pkg-cache.cmx";
+    "fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/pkg-cache-isolated.cmx";
 const CHECKER_URL: &str = "fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/usb-system-update-checker-isolated.cmx";
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 

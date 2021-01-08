@@ -1438,6 +1438,58 @@ executable target's name if `output_name` isn't specified).
 This feature was left out intentionally.
 Moving forward the use of legacy shell tools is discouraged.
 
+### Go `grand_unified_binary`
+
+"Grand unified binary" (GUB) is a single binary that merges together multiple Go
+programs. The entry point to the combined program can identify which sub-program
+the caller intends to run based on the filename of the invocation (`argv[0]`).
+Therefore in order to include GUB in your package and invoke a sub-program the
+common practice is to rename the binary.
+
+The legacy `package()` template allowed developers to accomplish this as shown
+below:
+
+```gn
+import("//build/go/go_library.gni")
+import("//build/package.gni")
+
+go_library("my_tool") {
+  ...
+}
+
+package("tools") {
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+  binaries = [
+    {
+      name = "my_tool"
+      source = "grand_unified_binary"
+    }
+  ]
+}
+```
+
+The new templates support this feature as follows:
+
+```gn
+import("//garnet/go/src/grand_unified_binary/gub.gni")
+import("//build/go/go_library.gni")
+import("//src/sys/build/components.gni")
+
+go_library("my_tool") {
+  ...
+}
+
+grand_unified_binary("bin") {
+  output_name = "my_tool"
+}
+
+fuchsia_package("tools") {
+  deps = [ ":bin" ]
+}
+```
+
 ### Unsupported features
 
 Note that some features of `package()` are unsupported moving forward. If your

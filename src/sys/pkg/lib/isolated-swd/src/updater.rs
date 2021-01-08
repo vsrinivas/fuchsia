@@ -207,7 +207,7 @@ pub mod for_tests {
     #[cfg(test)]
     const TEST_CHANNEL: &str = "test";
     pub const TEST_UPDATER_URL: &str =
-        "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater.cmx";
+        "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater-isolated.cmx";
     pub const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
 
     pub struct UpdaterBuilder {

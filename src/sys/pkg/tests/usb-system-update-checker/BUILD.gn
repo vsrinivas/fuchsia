@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "usb_system_update_checker_integration_test"
@@ -34,77 +34,31 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("usb-system-update-checker-integration-tests") {
+fuchsia_component("usb-system-update-checker-integration-test") {
+  testonly = true
+  manifest = "meta/usb-system-update-checker-integration-test.cmx"
+  deps = [ ":driver" ]
+}
+
+fuchsia_test_package("usb-system-update-checker-integration-tests") {
+  test_components = [ ":usb-system-update-checker-integration-test" ]
+
   deps = [
-    ":driver",
-    "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/pkg-cache:bin",
+    "//src/sys/pkg/bin/pkg-cache:isolated",
+    "//src/sys/pkg/bin/pkg-resolver:isolated",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr_bin",
     "//src/sys/pkg/bin/pm:pm_bin",
-    "//src/sys/pkg/bin/usb-system-update-checker:bin",
+    "//src/sys/pkg/bin/usb-system-update-checker:isolated",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
   ]
 
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkg-cache"
-      source = "pkg_cache"
-    },
-    {
-      name = "pkg-resolver"
-      source = "grand_swd_binary"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-    {
-      name = "usb_system_update_checker"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/usb-system-update-checker/meta/usb-system-update-checker-isolated.cmx")
-      dest = "usb-system-update-checker-isolated.cmx"
-    },
-    {
-      path =
-          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
-      dest = "pkg-cache.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
-      dest = "pkg-resolver.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
-      dest = "ssl/cert.pem"
-    },
-  ]
-
-  resource_deps = [ "//src/sys/pkg/tests/pkg-resolver:empty-repo" ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "usb_system_update_checker_integration_test"
-      dest = "usb-system-update-checker-integration-test"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

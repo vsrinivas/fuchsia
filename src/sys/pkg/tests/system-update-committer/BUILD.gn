@@ -27,17 +27,13 @@ rustc_test("test_driver") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("component-under-test") {
-  component_name = "system-update-committer"
+fuchsia_component("system-update-committer") {
   manifest = "meta/system-update-committer.cmx"
-  deps =
-      [ "//src/sys/pkg/bin/system-update-committer:renamed-grand-swd-binary" ]
+  deps = [ "//src/sys/pkg/bin/system-update-committer:bin" ]
   testonly = true
-  visibility = [ ":*" ]
 }
 
-fuchsia_component("component") {
-  component_name = "system-update-committer-integration-test"
+fuchsia_component("system-update-committer-integration-test") {
   manifest = "meta/system-update-committer-integration-test.cmx"
   deps = [ ":test_driver" ]
   testonly = true
@@ -46,8 +42,8 @@ fuchsia_component("component") {
 
 fuchsia_test_package("package") {
   package_name = "system-update-committer-integration-tests"
-  test_components = [ ":component" ]
-  deps = [ ":component-under-test" ]
+  test_components = [ ":system-update-committer-integration-test" ]
+  deps = [ ":system-update-committer" ]
 }
 
 group("tests") {

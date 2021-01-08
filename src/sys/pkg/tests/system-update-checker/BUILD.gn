@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "system_update_checker_integration_test"
@@ -34,46 +34,24 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("system-update-checker-integration-tests") {
+fuchsia_component("system-update-checker-integration-test") {
+  testonly = true
+  manifest = "meta/system-update-checker-integration-test.cmx"
+  deps = [ ":driver" ]
+}
+
+fuchsia_test_package("system-update-checker-integration-tests") {
+  test_components = [ ":system-update-checker-integration-test" ]
   deps = [
-    ":driver",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/system-update-checker:bin",
+    "//src/sys/pkg/bin/system-update-checker:system-update-checker-for-integration-test",
+    "//src/sys/pkg/tests/system-update-committer",
   ]
 
-  binaries = [
-    {
-      name = "system_update_checker"
-      dest = "system-update-checker"
-    },
-    {
-      name = "grand_swd_binary"
-      dest = "system-update-committer"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-update-checker/meta/system-update-checker-for-integration-test.cmx")
-      dest = "system-update-checker-for-integration-test.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/tests/system-update-committer/meta/system-update-committer.cmx")
-      dest = "system-update-committer.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "system_update_checker_integration_test"
-      dest = "system-update-checker-integration-test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

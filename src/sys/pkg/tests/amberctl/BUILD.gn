@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "amberctl-test"
@@ -38,52 +38,25 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("amberctl-tests") {
+resource("testdata") {
+  sources = [ "data/test.json" ]
+  outputs = [ "data/sources/test.json" ]
+}
+
+fuchsia_unittest_component("amberctl-test") {
   deps = [
     ":driver",
-    "//garnet/go/src/grand_unified_binary",
-    "//src/sys/pkg/bin/grand-swd-binary",
+    ":testdata",
   ]
+  manifest = "meta/amberctl-test.cmx"
+}
 
-  binaries = [
-    {
-      name = "amberctl"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pkg-resolver"
-      source = "grand_swd_binary"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("data/test.json")
-      dest = "sources/test.json"
-    },
-    {
-      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
-      dest = "ssl/cert.pem"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/amber/meta/amberctl.cmx")
-      dest = "amberctl.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
-      dest = "pkg-resolver-isolated.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "amberctl_test"
-      dest = "amberctl-test"
-    },
+fuchsia_test_package("amberctl-tests") {
+  test_components = [ ":amberctl-test" ]
+  deps = [
+    "//src/sys/pkg/bin/amber:component",
+    "//src/sys/pkg/bin/pkg-resolver:isolated",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
   ]
 }
 

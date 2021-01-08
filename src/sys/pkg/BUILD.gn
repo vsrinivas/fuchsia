@@ -32,10 +32,10 @@ group("e2e_tests") {
 group("core") {
   public_deps = [
     ":core_config",
-    "bin/amber:pkgfs",
     "bin/pkg-cache",
-    "bin/pkg-resolver:pkg-resolver-bin",
-    "bin/system-update-committer:package",
+    "bin/pkg-resolver",
+    "bin/pkgfs",
+    "bin/system-update-committer",
     "bin/system-updater",
   ]
 }
@@ -44,8 +44,8 @@ group("core") {
 group("recovery-core") {
   public_deps = [
     "bin/pkg-cache",
-    "bin/pkg-resolver:pkg-resolver-bin",
-    "bin/system-update-committer:package",
+    "bin/pkg-resolver",
+    "bin/system-update-committer",
   ]
 }
 

@@ -589,15 +589,15 @@ test_package("pkg-resolver-integration-tests") {
       name = "blobfs"
     },
     {
-      name = "pkg-cache"
+      name = "pkg_cache"
       source = "pkg_cache"
     },
     {
-      name = "pkg-local-mirror"
+      name = "pkg_local_mirror"
       source = "pkg_local_mirror"
     },
     {
-      name = "pkg-resolver"
+      name = "pkg_resolver"
       source = "grand_swd_binary"
     },
     {

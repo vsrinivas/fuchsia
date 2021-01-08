@@ -3,10 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "args": [
-            "netstack"
-        ],
-        "binary": "bin/grand_unified_binary"
+        "binary": "bin/netstack"
     },
     "sandbox": {
         "features": [

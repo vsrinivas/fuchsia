@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
@@ -63,28 +62,20 @@ rustc_binary("bin") {
   ]
 }
 
-package("pkg-cache") {
+fuchsia_component("component-v1") {
+  component_name = "pkg-cache"
+  manifest = "meta/pkg-cache.cmx"
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "pkg_cache"
-      dest = "pkg-cache"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pkg-cache.cmx")
-      dest = "pkg-cache.cmx"
-    },
-  ]
 }
 
-fuchsia_component("component") {
-  testonly = true
+fuchsia_component("component-v2") {
   component_name = "pkg-cache"
   manifest = "meta/pkg-cache.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("pkg-cache") {
+  deps = [ ":component-v1" ]
 }
 
 fuchsia_component("pkg-cache-test") {
@@ -95,6 +86,12 @@ fuchsia_component("pkg-cache-test") {
 
 fuchsia_test_package("pkg-cache-tests") {
   test_components = [ ":pkg-cache-test" ]
+}
+
+fuchsia_component("isolated") {
+  component_name = "pkg-cache-isolated"
+  manifest = "meta/pkg-cache-isolated.cmx"
+  deps = [ ":bin" ]
 }
 
 sysmgr_config("config") {

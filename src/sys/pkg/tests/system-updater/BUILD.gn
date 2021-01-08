@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "system_updater_test"
@@ -65,33 +64,15 @@ rustc_test("driver") {
   ]
 }
 
-test_package("system-updater-integration-tests") {
-  deps = [
-    ":driver",
-    "//src/sys/pkg/bin/system-updater:bin",
-  ]
+fuchsia_component("system-updater-test") {
+  testonly = true
+  manifest = "meta/system-updater-test.cmx"
+  deps = [ ":driver" ]
+}
 
-  binaries = [
-    {
-      name = "system-updater"
-      source = "system_updater"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
-      dest = "system-updater.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "system_updater_test"
-      dest = "system-updater-test"
-    },
-  ]
+fuchsia_test_package("system-updater-integration-tests") {
+  test_components = [ ":system-updater-test" ]
+  deps = [ "//src/sys/pkg/bin/system-updater:isolated" ]
 }
 
 group("tests") {

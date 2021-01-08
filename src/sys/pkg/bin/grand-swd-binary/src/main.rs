@@ -25,8 +25,8 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
         .into_owned();
 
     match name.as_str() {
-        "pkg-resolver" => Ok(Program::PkgResolver),
-        "system-update-committer" => Ok(Program::SystemUpdateCommitter),
+        "pkg_resolver" => Ok(Program::PkgResolver),
+        "system_update_committer" => Ok(Program::SystemUpdateCommitter),
         _ => Err(FindProgramError::UnknownProgram(name)),
     }
 }
@@ -63,9 +63,9 @@ mod tests {
 
     #[test]
     fn matches_known_programs() {
-        assert_eq!(find_program(args!("/pkg/bin/pkg-resolver")), Ok(Program::PkgResolver));
+        assert_eq!(find_program(args!("/pkg/bin/pkg_resolver")), Ok(Program::PkgResolver));
         assert_eq!(
-            find_program(args!("/pkg/bin/system-update-committer")),
+            find_program(args!("/pkg/bin/system_update_committer")),
             Ok(Program::SystemUpdateCommitter)
         );
     }

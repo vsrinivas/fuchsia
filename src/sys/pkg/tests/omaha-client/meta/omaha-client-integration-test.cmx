@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
-        "binary": "test/omaha-client-integration-test"
+        "binary": "bin/omaha_client_integration_test"
     },
     "sandbox": {
         "features": [

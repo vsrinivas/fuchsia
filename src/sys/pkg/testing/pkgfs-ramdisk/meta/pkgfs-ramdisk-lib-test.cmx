@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/pkgfs-ramdisk-lib-test"
+        "binary": "bin/pkgfs_ramdisk_lib_test"
     },
     "sandbox": {
         "features": [
