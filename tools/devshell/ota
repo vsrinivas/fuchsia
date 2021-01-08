@@ -76,7 +76,7 @@ function main {
   fx-command-run shell update wait-for-commit
 
   if needs-update; then
-    fx-error "After update, system appears still out of date."
+    fx-error "After update, system appears still out of date. OTA may have failed. Run 'fx log' for details."
     return 1
   fi
 }
