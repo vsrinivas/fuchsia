@@ -62,7 +62,7 @@ impl Fetch {
             state_ts,
             bytes_written,
             attempts,
-            _node: self.node,
+            node: self.node,
             _phantom: PhantomData,
         }
     }
@@ -86,7 +86,7 @@ impl FetchHttp {
             state_ts,
             bytes_written,
             attempts,
-            _node: self.node,
+            node: self.node,
             _phantom: PhantomData,
         }
     }
@@ -155,7 +155,7 @@ pub struct FetchState<S: State> {
     state_ts: IntProperty,
     bytes_written: UintProperty,
     attempts: UintProperty,
-    _node: Node,
+    node: Node,
     _phantom: std::marker::PhantomData<S>,
 }
 
@@ -163,6 +163,12 @@ impl<S: State> FetchState<S> {
     /// Increase the attempt account.
     pub fn attempt(&self) {
         self.attempts.add(1);
+    }
+
+    /// Set the expected size in bytes of the blob.
+    pub fn expected_size_bytes(&self, size: u64) -> &Self {
+        self.node.record_uint("expected_size_bytes", size);
+        self
     }
 
     /// Mark that `bytes` more bytes of the blob have been written to blobfs.
@@ -358,12 +364,13 @@ mod tests {
     }
 
     #[test]
-    fn state_does_not_change_bytes_written_or_attempts() {
+    fn state_does_not_change_other_data() {
         let inspector = Inspector::new();
 
         let blob_fetcher = BlobFetcher::from_node(inspector.root().create_child("blob_fetcher"));
         let inspect = blob_fetcher.fetch(&BlobId::parse(ZEROES_HASH).unwrap()).local_mirror();
         inspect.attempt();
+        inspect.expected_size_bytes(9);
         inspect.write_bytes(6);
 
         assert_inspect_tree!(
@@ -373,6 +380,7 @@ mod tests {
                     queue: {
                         ZEROES_HASH.to_string() => contains {
                             state: "initial",
+                            expected_size_bytes: 9u64,
                             bytes_written: 6u64,
                             attempts: 1u64,
                         }
@@ -390,6 +398,7 @@ mod tests {
                     queue: {
                         ZEROES_HASH.to_string() => contains {
                             state: "truncate blob",
+                            expected_size_bytes: 9u64,
                             bytes_written: 6u64,
                             attempts: 1u64,
                         }

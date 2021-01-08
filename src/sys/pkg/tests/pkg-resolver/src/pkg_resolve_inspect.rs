@@ -245,6 +245,7 @@ async fn package_and_blob_queues() {
                         attempts: 1u64,
                         state: "read http body",
                         state_ts: AnyProperty,
+                        expected_size_bytes: 8192u64,
                         bytes_written: 0u64,
                     }
                 }

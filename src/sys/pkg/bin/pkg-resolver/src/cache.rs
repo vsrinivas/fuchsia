@@ -769,6 +769,7 @@ async fn download_blob(
         (Some(length), None) | (None, Some(length)) => length,
         (None, None) => return Err(FetchError::UnknownLength { uri: uri.to_string() }),
     };
+    inspect.expected_size_bytes(expected_len);
 
     inspect.state(inspect::Http::TruncateBlob);
     let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
