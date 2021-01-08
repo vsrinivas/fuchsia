@@ -35,6 +35,7 @@ source_set("shared") {
   sources = [
     "client.cc",
     "controller.cc",
+    "eld.cc",
     "fence.cc",
     "image.cc",
     "layer.cc",
@@ -51,6 +52,7 @@ source_set("shared") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/eld",
     "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

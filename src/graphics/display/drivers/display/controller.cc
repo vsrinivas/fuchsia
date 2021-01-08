@@ -29,6 +29,7 @@
 #include <fbl/string_printf.h>
 
 #include "client.h"
+#include "eld.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
 
 namespace fidl_display = llcpp::fuchsia::hardware::display;
@@ -344,6 +345,12 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       }
 
       PopulateDisplayAudio(info);
+      {
+        fbl::Array<uint8_t> eld;
+        ComputeEld(info->edid, eld);
+        dc_.SetEld(info->id, eld.get(), eld.size());
+      }
+
       if (zxlog_level_enabled(DEBUG) && info->edid_audio_.size()) {
         zxlogf(DEBUG, "Supported audio formats:");
         for (auto range : info->edid_audio_) {

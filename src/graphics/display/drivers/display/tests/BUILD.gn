@@ -12,6 +12,7 @@ test("display-core-unittests") {
   ]
   sources = [
     "display-test.cc",
+    "eld-test.cc",
     "fence-test.cc",
     "image-test.cc",
     "integration-test.cc",

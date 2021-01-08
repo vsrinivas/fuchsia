@@ -159,6 +159,58 @@ class NorthDERestetWarning : public hwreg::RegisterBase<NorthDERestetWarning, ui
   static auto Get() { return hwreg::RegisterAddr<NorthDERestetWarning>(0x46408); }
 };
 
+// AUD_EDID_DATA
+class AudEdidData : public hwreg::RegisterBase<AudEdidData, uint32_t> {
+ public:
+  DEF_FIELD(31, 0, data);
+
+  static auto Get(int transcoder_id) {
+    if (transcoder_id == 0) {
+      return hwreg::RegisterAddr<AudEdidData>(0x65050);
+    } else if (transcoder_id == 1) {
+      return hwreg::RegisterAddr<AudEdidData>(0x65150);
+    } else {  // transcoder_id == 2.
+      ZX_DEBUG_ASSERT(transcoder_id == 2);
+      return hwreg::RegisterAddr<AudEdidData>(0x65250);
+    }
+  }
+};
+
+// AUD_DIP_ELD_CTRL_ST
+class AudioDipEldControlStatus : public hwreg::RegisterBase<AudioDipEldControlStatus, uint32_t> {
+ public:
+  DEF_FIELD(30, 29, dip_port_select);
+  DEF_FIELD(24, 21, dip_type_enable_status);
+  DEF_FIELD(20, 18, dip_buffer_index);
+  DEF_FIELD(17, 16, dip_transmission_frequency);
+  DEF_FIELD(14, 10, eld_buffer_size);
+  DEF_FIELD(9, 5, eld_access_address);
+  DEF_BIT(4, eld_ack);
+  DEF_FIELD(3, 0, dip_access_address);
+  static auto Get() { return hwreg::RegisterAddr<AudioDipEldControlStatus>(0x650B4); }
+};
+
+// AUD_PIN_ELD_CP_VLD
+class AudioPinEldCPReadyStatus : public hwreg::RegisterBase<AudioPinEldCPReadyStatus, uint32_t> {
+ public:
+  DEF_BIT(11, audio_inactive_c);
+  DEF_BIT(10, audio_enable_c);
+  DEF_BIT(9, cp_ready_c);
+  DEF_BIT(8, eld_valid_c);
+
+  DEF_BIT(7, audio_inactive_b);
+  DEF_BIT(6, audio_enable_b);
+  DEF_BIT(5, cp_ready_b);
+  DEF_BIT(4, eld_valid_b);
+
+  DEF_BIT(3, audio_inactive_a);
+  DEF_BIT(2, audio_enable_a);
+  DEF_BIT(1, cp_ready_a);
+  DEF_BIT(0, eld_valid_a);
+
+  static auto Get() { return hwreg::RegisterAddr<AudioPinEldCPReadyStatus>(0x650C0); }
+};
+
 // CLCLK_CTL
 class CdClockCtl : public hwreg::RegisterBase<CdClockCtl, uint32_t> {
  public:

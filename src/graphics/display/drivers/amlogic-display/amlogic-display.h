@@ -90,6 +90,8 @@ class AmlogicDisplay
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
                                                size_t display_count);
+  void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
+                                   size_t raw_eld_count) {}  // No ELD required for non-HDA systems.
   zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   uint32_t collection);

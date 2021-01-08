@@ -307,6 +307,9 @@ class Edid {
   uint16_t edid_length() const { return len_; }
 
   uint16_t product_code() const { return base_edid_->product_code; }
+  uint16_t manufacturer_name_code() const {
+    return static_cast<uint16_t>(base_edid_->manufacturer_id1 << 8 | base_edid_->manufacturer_id2);
+  }
   bool is_standard_rgb() const { return base_edid_->standard_srgb(); }
   bool supports_basic_audio() const;
   const char* manufacturer_id() const { return manufacturer_id_; }

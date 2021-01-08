@@ -13,6 +13,7 @@ group("lib") {
     "cobalt",
     "diagnostics",
     "directed_graph",
+    "eld",
     "elflib",
     "fake-clock",
     "fdio",

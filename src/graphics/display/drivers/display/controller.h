@@ -53,7 +53,6 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   fbl::Vector<audio_stream_format_range_t> edid_audio_;
   display_params_t params;
 
-  fbl::Array<uint8_t> edid_data_;
   fbl::Array<zx_pixel_format_t> pixel_formats_;
   fbl::Array<cursor_info_t> cursor_infos_;
 

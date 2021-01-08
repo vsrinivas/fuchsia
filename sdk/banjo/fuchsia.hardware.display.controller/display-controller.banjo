@@ -418,6 +418,16 @@ protocol DisplayControllerImpl {
     /// The driver must not retain references to the configuration after this function returns.
     ApplyConfiguration(vector<DisplayConfig?> display_config) -> ();
 
+    /// Set ELD for one display.
+    ///
+    /// This method is called independently from the CheckConfiguration and ApplyConfiguration
+    /// methods. The display_id may be unconfigured at the time this method is called.
+    /// raw_eld is the ELD raw data formatted according to the HDA specification version 1.0a
+    /// section 7.3.3.34.1.
+    /// https://www.intel.com/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf
+    /// The driver must not retain references to the ELD after this function returns.
+    SetEld(uint64 display_id, vector<uint8> raw_eld) -> ();
+
     // Connects the handle to the sysmem service.
     GetSysmemConnection(handle<channel> sysmem_handle) -> (zx.status s);
 

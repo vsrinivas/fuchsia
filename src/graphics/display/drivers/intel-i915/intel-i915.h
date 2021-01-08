@@ -103,6 +103,8 @@ class Controller : public DeviceType,
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
                                                size_t display_count);
+  void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
+                                   size_t raw_eld_count);
   zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   uint32_t collection);
@@ -167,6 +169,7 @@ class Controller : public DeviceType,
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
   zx_status_t AddDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);
+  void RemoveDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);
   bool BringUpDisplayEngine(bool resume) __TA_REQUIRES(display_lock_);
   void InitDisplayBuffers();
   DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
@@ -284,6 +287,7 @@ class Controller : public DeviceType,
 
   bool init_thrd_started_ = false;
   thrd_t init_thread_;
+  std::optional<uint64_t> eld_display_id_;
 };
 
 }  // namespace i915
