@@ -21,13 +21,24 @@ namespace arch::testing {
 // alphanumeric identifiers.
 // Entries are given chronologically within specific manufacture lines.
 enum class X86Microprocessor {
+  kIntelAtom330,
   kIntelAtomD510,
+  kIntelAtomX5_Z8350,
+  kIntelCeleron3855u,
   kIntelCore2_6300,
   kIntelCoreI3_3240,
   kIntelCoreI3_6100,
+  kIntelCoreI5_7300u,
   kIntelCoreI7_2600k,
+  kIntelCoreI7_6500u,
+  kIntelCoreI7_6700k,
+  kIntelCoreM3_7y30,
   kIntelXeonE5520,
   kIntelXeonE5_2690_V3,
+  kIntelXeonE5_2690_V4,
+  kAmdA10_7870k,
+  kAmdRyzen5_1500x,
+  kAmdRyzen7_1700,
   kAmdRyzen7_2700x,
   kAmdRyzen9_3950x,
   kAmdRyzen9_3950xVirtualBoxHyperv,
@@ -35,6 +46,7 @@ enum class X86Microprocessor {
   kAmdRyzen9_3950xVmware,
   kAmdRyzen9_3950xWsl2,
   kAmdRyzenThreadripper1950x,
+  kAmdRyzenThreadripper2970wx,
 };
 
 // FakeCpuidIo is a fake analogue to arch::BootCpuidIo, which may be provided

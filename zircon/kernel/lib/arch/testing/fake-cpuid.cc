@@ -16,8 +16,20 @@ FakeCpuidIo::FakeCpuidIo(X86Microprocessor microprocessor) {
   Populate(leaf, subleaf, eax, ebx, ecx, edx);
 
   switch (microprocessor) {
+    case X86Microprocessor::kIntelAtom330: {
+#include "data/cpuid/intel-atom-330.inc"
+      break;
+    }
     case X86Microprocessor::kIntelAtomD510: {
 #include "data/cpuid/intel-atom-d510.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelAtomX5_Z8350: {
+#include "data/cpuid/intel-atom-x5-z8350.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelCeleron3855u: {
+#include "data/cpuid/intel-celeron-3855u.inc"
       break;
     }
     case X86Microprocessor::kIntelCore2_6300: {
@@ -32,8 +44,24 @@ FakeCpuidIo::FakeCpuidIo(X86Microprocessor microprocessor) {
 #include "data/cpuid/intel-core-i3-6100.inc"
       break;
     }
+    case X86Microprocessor::kIntelCoreI5_7300u: {
+#include "data/cpuid/intel-core-i5-7300u.inc"
+      break;
+    }
     case X86Microprocessor::kIntelCoreI7_2600k: {
 #include "data/cpuid/intel-core-i7-2600k.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelCoreI7_6500u: {
+#include "data/cpuid/intel-core-i7-6500u.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelCoreI7_6700k: {
+#include "data/cpuid/intel-core-i7-6700k.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelCoreM3_7y30: {
+#include "data/cpuid/intel-core-m3-7y30.inc"
       break;
     }
     case X86Microprocessor::kIntelXeonE5520: {
@@ -42,6 +70,22 @@ FakeCpuidIo::FakeCpuidIo(X86Microprocessor microprocessor) {
     }
     case X86Microprocessor::kIntelXeonE5_2690_V3: {
 #include "data/cpuid/intel-xeon-e5-2690-v3.inc"
+      break;
+    }
+    case X86Microprocessor::kIntelXeonE5_2690_V4: {
+#include "data/cpuid/intel-xeon-e5-2690-v4.inc"
+      break;
+    }
+    case X86Microprocessor::kAmdA10_7870k: {
+#include "data/cpuid/amd-a10-7870k.inc"
+      break;
+    }
+    case X86Microprocessor::kAmdRyzen5_1500x: {
+#include "data/cpuid/amd-ryzen-5-1500x.inc"
+      break;
+    }
+    case X86Microprocessor::kAmdRyzen7_1700: {
+#include "data/cpuid/amd-ryzen-7-1700.inc"
       break;
     }
     case X86Microprocessor::kAmdRyzen7_2700x: {
@@ -70,6 +114,10 @@ FakeCpuidIo::FakeCpuidIo(X86Microprocessor microprocessor) {
     }
     case X86Microprocessor::kAmdRyzenThreadripper1950x: {
 #include "data/cpuid/amd-ryzen-threadripper-1950x.inc"
+      break;
+    }
+    case X86Microprocessor::kAmdRyzenThreadripper2970wx: {
+#include "data/cpuid/amd-ryzen-threadripper-2970wx.inc"
       break;
     }
   };
