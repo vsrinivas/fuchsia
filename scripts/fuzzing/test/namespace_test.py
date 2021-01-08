@@ -35,6 +35,29 @@ class NamespaceTest(TestCaseWithFuzzer):
         self.assertEqual(abspath, self.ns.data_abspath(data))
         self.assertEqual(abspath, self.ns.data_abspath(abspath))
 
+        # Assert that a fuzzer-built-as-test has the correct _test suffix.
+        self.fuzzer._is_test = True
+        self.assertEqual(
+            self.ns.data_abspath(relpath),
+            '/data/r/sys/fuchsia.com:{}:0#meta:{}_test.cmx/{}'.format(
+                self.fuzzer.package, self.fuzzer.executable, relpath))
+
+        # Assert that a fuzzer-built-as-test with a realm label applies the
+        # realm to the generated path.
+        self.fuzzer._realm_label = 'unittest'
+        self.assertEqual(
+            self.ns.data_abspath(relpath),
+            '/data/r/sys/r/{}/fuchsia.com:{}:0#meta:{}_test.cmx/{}'.format(
+                    self.fuzzer.realm_label, self.fuzzer.package, \
+                        self.fuzzer.executable, relpath))
+
+        # Assert that a fuzzer (not built as test) with a realm label does
+        # not apply the realm label.
+        self.fuzzer._is_test = False
+        self.assertEqual(
+            abspath, '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx/{}'.format(
+                self.fuzzer.package, self.fuzzer.executable, relpath))
+
     def test_resource_abspath(self):
         relpath = 'foo'
         resource = self.ns.resource(relpath)

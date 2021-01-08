@@ -132,9 +132,7 @@ def analyze_fuzzer(args, factory):
     if args.dict:
         fuzzer.dictionary.replace(args.dict)
     if not args.local:
-        gcs_url = 'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
-            fuzzer.package, fuzzer.executable)
-        fuzzer.corpus.add_from_gcs(gcs_url)
+        fuzzer.corpus.add_from_gcs(fuzzer.clusterfuzz_gcs_url)
     fuzzer.analyze()
 
 
@@ -192,4 +190,4 @@ def run_e2e_test(args, factory):
 def measure_coverage(args, factory):
     """Generates a coverage report of specified fuzzers."""
     fuzzer = factory.create_fuzzer(args, include_tests=True)
-    fuzzer.generate_coverage_report()
+    fuzzer.generate_coverage_report(local=args.local)

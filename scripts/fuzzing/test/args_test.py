@@ -612,6 +612,7 @@ class ArgsTest(TestCaseWithFactory):
                 '                      match "foo_package/bar_target".',
                 '',
                 'Options:',
+                '  -l,--local          Exclude corpus elements from Clusterfuzz.',
                 '  -v,--verbose        Display additional output.',
                 '  -o,--output OUTPUT  Path under which to store results.',
                 '',

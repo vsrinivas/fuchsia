@@ -53,6 +53,9 @@ class Fuzzer(object):
     # limitations).
     LOG_PATTERN = 'fuzz-[0-9].log'
 
+    # Default path for the ssh private key used to connect to a device.
+    DEFAULT_SSH_KEY_PATH = '~/.ssh/fuchsia_ed25519'
+
     def __init__(self, factory, fuzz_spec):
         assert factory, 'Factory not set.'
         self._factory = factory
@@ -84,6 +87,10 @@ class Fuzzer(object):
         self._output = None
         self._logbase = None
         self._last_known_pid = 0
+        self._clusterfuzz_gcs_url = \
+            'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
+                self._package, self._executable)
+        self._realm_label = ''
 
     def __str__(self):
         return '{}/{}'.format(self.package, self.executable)
@@ -209,6 +216,22 @@ class Fuzzer(object):
     @debug.setter
     def debug(self, debug):
         self._debug = debug
+
+    @property
+    def clusterfuzz_gcs_url(self):
+        """Path to the GCS bucket which contains clusterfuzz corpora for this fuzzer."""
+        return self._clusterfuzz_gcs_url
+
+    @property
+    def realm_label(self):
+        """The realm-label to apply to test fuzzers when building coverage."""
+        return self._realm_label
+
+    @realm_label.setter
+    def realm_label(self, realm_label):
+        if not self.is_test:
+            raise ValueError('Cannot set realm_label for a non-test fuzzer.')
+        self._realm_label = realm_label
 
     def update(self, args):
         """Updates the properties of this fuzzer from matching arguments."""
@@ -582,19 +605,19 @@ class Fuzzer(object):
                 'Unable to find \'{}\' in {}'.format(fuzzer_target, build_gn))
             return False
 
-    def generate_coverage_report(self):
+    def generate_coverage_report(self, local=False):
         """Replicates the steps in the fuchsia/coverage infra build recipe and
         runs them locally in order to build a more targetted coverage report."""
 
-        if not self.host.getenv('FUCHSIA_SSH_KEY'):
-            self.host.error(
-                'FUCHSIA_SSH_KEY not set, by default this should be the private key in ~/.ssh/'
-            )
-        if not self.host.getenv('FUCHSIA_DEVICE_ADDR'):
-            self.host.error(
-                'FUCHSIA_DEVICE_ADDR not set, `fx list-devices` can be used to get the ' \
-                'device address'
-            )
+        # Ensure envvars are set for testrunner
+        if self.device.ssh_identity:
+            self.host.putenv('FUCHSIA_SSH_KEY', self.device.ssh_identity)
+        else:
+            self.host.error('Unable to determine ssh identity.')
+        if self.device.addr:
+            self.host.putenv('FUCHSIA_DEVICE_ADDR', self.device.addr)
+        else:
+            self.host.error('Unable to determine device address.')
 
         # TODO fxb/60971
         args_json_file = os.path.join(self.buildenv.build_dir, 'args.json')
@@ -604,12 +627,18 @@ class Fuzzer(object):
                                                   in args['select_variant']):
                 self.host.error('Not built with profile variant.')
 
+        if not local:
+            self.realm_label = 'coverage'
+            self.host.echo('Including corpus elements from clusterfuzz...')
+            self.corpus.add_from_gcs(self.clusterfuzz_gcs_url)
+
         # Ensure the output directory is created.
         self.host.mkdir(self.output)
 
         # Since the fuzzer is built as test, turn it back into the test form for testsharder
         test_executable_url = re.sub(r'.cmx', '_test.cmx', self.executable_url)
-        shard_file = self.buildenv.testsharder(test_executable_url, self.output)
+        shard_file = self.buildenv.testsharder(
+            test_executable_url, self.output, self.realm_label)
         runner_dir, log_dump_file = self.buildenv.testrunner(
             shard_file, self.output, self.device)
         symbolize_out_file = os.path.join(self.output, 'symbolize_out')

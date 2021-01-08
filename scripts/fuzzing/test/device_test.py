@@ -94,7 +94,7 @@ class DeviceTest(TestCaseWithFactory):
             device.ssh_config,
             self.buildenv.abspath(
                 self.buildenv.build_dir, 'ssh-keys', 'ssh_config'))
-        self.assertFalse(device.ssh_identity)
+        self.assertTrue(device.ssh_identity)
         self.assertFalse(device.ssh_options)
         self.assertFalse(device.ssh_verbosity)
 

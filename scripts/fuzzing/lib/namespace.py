@@ -58,8 +58,17 @@ class Namespace(object):
 
     def data_abspath(self, relpath):
         """Absolute path to mutable data."""
-        base = '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx'.format(
-            self.fuzzer.package, self.fuzzer.executable)
+        if self.fuzzer.is_test:
+            if self.fuzzer.realm_label:
+                base = '/data/r/sys/r/{}/fuchsia.com:{}:0#meta:{}_test.cmx'.format(
+                    self.fuzzer.realm_label, self.fuzzer.package,
+                    self.fuzzer.executable)
+            else:
+                base = '/data/r/sys/fuchsia.com:{}:0#meta:{}_test.cmx'.format(
+                    self.fuzzer.package, self.fuzzer.executable)
+        else:
+            base = '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx'.format(
+                self.fuzzer.package, self.fuzzer.executable)
         if relpath.startswith(base):
             return relpath
         elif relpath.startswith('/'):

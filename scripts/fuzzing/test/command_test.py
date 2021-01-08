@@ -315,8 +315,7 @@ class CommandTest(TestCaseWithFuzzer):
         args = self.parse_args('coverage', '-o', output_dir, str(fuzzer))
         self.assertError(
             lambda: command.measure_coverage(args, self.factory),
-            'FUCHSIA_SSH_KEY not set, by default this should be the private key in ~/.ssh/'
-        )
+            'Failed to open /fuchsia_dir/build_dir/args.json.')
 
 
 if __name__ == '__main__':

@@ -64,6 +64,14 @@ class FakeFactory(Factory):
         golden = 'data/v2.fuzzers.json'
         self.host.add_golden(golden)
         buildenv.read_fuzzers(golden)
+
+        fx_ssh_path = buildenv.abspath('.fx-ssh-path')
+        ssh_identity_path = buildenv.abspath('test_ssh_identity')
+        self.host.touch(fx_ssh_path)
+        self.host.touch(ssh_identity_path)
+        with self.host.open(fx_ssh_path) as f:
+            f.write(ssh_identity_path)
+
         self._buildenv = buildenv
         return self._buildenv
 

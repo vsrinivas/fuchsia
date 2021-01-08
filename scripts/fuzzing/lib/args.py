@@ -209,6 +209,8 @@ class ArgParser(argparse.ArgumentParser):
             'necessary symbols. It is suggested to run with --no-goma in order',
             'to preserve linking to files in the report.',
         ]
+        coverage_parser._add_flag(
+            '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
         coverage_parser._add_verbose_flag()
         coverage_parser._add_name_argument(required=True)
         coverage_parser._add_output_option()

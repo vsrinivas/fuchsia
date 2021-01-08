@@ -267,7 +267,7 @@ class BuildEnvTest(TestCaseWithFactory):
             + ['-output-file', testsharder_out_file]
         self.set_outputs(cmd, [], returncode=0, reset=True)
 
-        # Write a sharder out with > 1 shards
+        # Write a sharder out with > 1 AEMU shards
         with self.host.open(testsharder_out_file, 'w') as f:
             json.dump(
                 [
@@ -282,7 +282,7 @@ class BuildEnvTest(TestCaseWithFactory):
         self.assertError(
             lambda: self.buildenv.testsharder(
                 fuzzer.executable_url, fuzzer.output),
-            'Expected a single shard, but got 2.')
+            'Expected a single AEMU shard, but got more than one.')
 
         # Write a sharder out without any AEMU shards
         with self.host.open(testsharder_out_file, 'w') as f:
@@ -333,6 +333,47 @@ class BuildEnvTest(TestCaseWithFactory):
         with self.host.open(out_file) as f:
             self.assertEqual(json.loads(f.read()), [tests[0]])
 
+    def test_testsharder_with_realm_label(self):
+        # Prerequisites
+        fuzzer = self.buildenv.fuzzers()[0]
+        realm_label = 'unittest'
+
+        # Capture the testsharder command
+        testsharder_out_file = os.path.join(
+            fuzzer.output, 'testsharder_out.json')
+        cmd = [os.path.join(self.buildenv.build_dir, 'host_x64', 'testsharder')] \
+            + ['-build-dir', self.buildenv.build_dir] \
+            + ['-max-shards-per-env', '1'] \
+            + ['-output-file', testsharder_out_file] \
+            + ['-realm-label', realm_label]
+        self.set_outputs(cmd, [], returncode=0, reset=True)
+
+        # Write a good sharder out
+        tests = [
+            {
+                'name': fuzzer.executable_url,
+                'meta': 'foo',
+                'meta1': 'bar',
+                'realm_label': realm_label,
+            }, {
+                'name': 'not-a-url',
+                'meta': 'baz',
+                'meta1': 'bam',
+                'realm_label': realm_label,
+            }
+        ]
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump([{'name': 'AEMU-unittest', 'tests': tests}], f)
+
+        # Assert that we ran the testsharder command
+        out_file = self.buildenv.testsharder(
+            fuzzer.executable_url, fuzzer.output, realm_label=realm_label)
+        self.assertRan(*cmd)
+
+        # Assert that the output is only the fuzzer test descriptor
+        with self.host.open(out_file) as f:
+            self.assertEqual(json.loads(f.read()), [tests[0]])
+
     def test_testrunner(self):
         # Prerequisites
         fuzzer = self.buildenv.fuzzers()[0]
@@ -348,7 +389,7 @@ class BuildEnvTest(TestCaseWithFactory):
         self.host.touch(shard_file)
 
         # Capture testrunner command
-        runner_out_dir = os.path.join(fuzzer.output, 'testrunner_out/')
+        runner_out_dir = os.path.join(fuzzer.output, 'testrunner_out')
         cmd = self.infra_testrunner_cmd(runner_out_dir, shard_file)
 
         # Set an output that does not contain any valid pids lines

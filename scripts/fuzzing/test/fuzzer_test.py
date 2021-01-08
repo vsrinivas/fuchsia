@@ -571,32 +571,32 @@ class FuzzerTest(TestCaseWithFuzzer):
                     '}',
                 ])
 
-    def test_generate_coverage_report(self):
+    def test_generate_coverage_report_local(self):
         # Prerequisites
         fuzzer = self.create_fuzzer('1/1')
 
-        # Assert that FUCHSIA_SSH_KEY needs to be set
-        self.assertError(
-            lambda: self.fuzzer.generate_coverage_report(),
-            'FUCHSIA_SSH_KEY not set, by default this should be the private key in ~/.ssh/'
-        )
+        # Assert that we need an ssh identity.
+        # This cannot be tested since device is instantiated as part of the
+        # factory workflow, and thus will have an ssh identity set.
+        # self.assertError(
+        #     lambda: self.fuzzer.generate_coverage_report(local=True),
+        #     'Unable to determine ssh identity.'
+        # )
 
-        self.host.setenv('FUCHSIA_SSH_KEY', 'foo')
-
-        # Assert that FUCHSIA_DEVICE_ADDR needs to be set
-        self.assertError(
-            lambda: self.fuzzer.generate_coverage_report(),
-            'FUCHSIA_DEVICE_ADDR not set, `fx list-devices` can be used to get the device address'
-        )
-
-        self.host.setenv('FUCHSIA_DEVICE_ADDR', 'bar')
+        # Assert that we need a device address.
+        # This cannot be tested since device is instantiated as part of the
+        # factory workflow, and thus will have an address set.
+        # self.assertError(
+        #     lambda: self.fuzzer.generate_coverage_report(local=True),
+        #     'Unable to determine device address.'
+        # )
 
         # Assert that not building with profile variant causes an error.
         with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
                                                   'args.json'), 'w') as f:
             json.dump({'select_variant': ['not-profile']}, f)
         self.assertError(
-            lambda: self.fuzzer.generate_coverage_report(),
+            lambda: self.fuzzer.generate_coverage_report(local=True),
             'Not built with profile variant.')
 
         with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
@@ -623,7 +623,6 @@ class FuzzerTest(TestCaseWithFuzzer):
         # passing these values around as expected.
         shard_file = os.path.join(
             fuzzer.output, 'shard_{}_tests.json'.format(shard_name))
-        runner_out_dir = os.path.join(fuzzer.output, 'testrunner_out/')
         symbolize_file = os.path.join(fuzzer.output, 'symbolize_out')
         testrunner_dir = os.path.join(fuzzer.output, 'testrunner_out')
         summary_json_file = os.path.join(testrunner_dir, 'summary.json')
@@ -631,7 +630,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.host.touch(summary_json_file)
 
         # Capture the testrunner cmd to parse a validated pid from the output
-        cmd = self.infra_testrunner_cmd(runner_out_dir, shard_file)
+        cmd = self.infra_testrunner_cmd(testrunner_dir, shard_file)
         fake_pid = 101
         self.set_outputs(
             cmd, [
@@ -641,7 +640,68 @@ class FuzzerTest(TestCaseWithFuzzer):
             returncode=0,
             reset=True)
 
-        self.fuzzer.generate_coverage_report()
+        self.fuzzer.generate_coverage_report(local=True)
+
+    def test_generate_coverage_report_with_clusterfuzz(self):
+        # Prerequisites
+        fuzzer = self.create_fuzzer('1/1')
+        fuzzer._is_test = True
+
+        with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
+                                                  'args.json'), 'w') as f:
+            json.dump({'select_variant': ['profile']}, f)
+
+        # Provide a sharded test definition with the fuzzer name turned back into a test
+        testsharder_out_file = os.path.join(
+            fuzzer.output, 'testsharder_out.json')
+        test_executable_url = re.sub(
+            r'.cmx', '_test.cmx', fuzzer.executable_url)
+        shard_name = 'AEMU-unittest'
+        tests = [{
+            'name': test_executable_url,
+            'meta': 'foo',
+            'meta1': 'bar',
+        }]
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump([{'name': shard_name, 'tests': tests}], f)
+
+        # Create a bunch of files to allow the buildenv fns to pass its tests.
+        # These fns are tested individually in buildenv_test.py and so we don't
+        # do any verification aside from that fuzzer.generate_coverage_report is
+        # passing these values around as expected.
+        shard_file = os.path.join(
+            fuzzer.output, 'shard_{}_tests.json'.format(shard_name))
+        symbolize_file = os.path.join(fuzzer.output, 'symbolize_out')
+        testrunner_dir = os.path.join(fuzzer.output, 'testrunner_out')
+        summary_json_file = os.path.join(testrunner_dir, 'summary.json')
+        self.host.touch(symbolize_file)
+        self.host.touch(summary_json_file)
+
+        # Capture the testrunner cmd to parse a validated pid from the output
+        cmd = self.infra_testrunner_cmd(testrunner_dir, shard_file)
+        fake_pid = 101
+        self.set_outputs(
+            cmd, [
+                ('[123.456][{}][102][foo.cmx] INFO: [fuzzer_test.cc(35)] ' \
+                'Fuzzer built as test: foo/bar').format(fake_pid)
+            ],
+            returncode=0,
+            reset=True)
+
+        with self.host.temp_dir() as temp_dir:
+            # Fake retrieving something from gcs
+            gcs_file = os.path.join(temp_dir.pathname, 'gcs_file')
+            self.host.touch(gcs_file)
+
+            self.fuzzer.generate_coverage_report(local=False)
+
+            # Note: this takes advantage of the fact that the FakeCLI always returns
+            # the same name for temp_dir().
+            cmd = [
+                'gsutil', '-m', 'cp', fuzzer.clusterfuzz_gcs_url + '/*',
+                temp_dir.pathname
+            ]
+            self.assertRan(*cmd)
 
 
 if __name__ == '__main__':

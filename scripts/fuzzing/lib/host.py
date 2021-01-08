@@ -210,6 +210,9 @@ class Host(object):
     def getenv(self, name):
         return os.getenv(name)
 
+    def putenv(self, name, value):
+        os.putenv(name, value)
+
     def create_process(self, args, **kwargs):
         self.trace(' running: {}'.format(' '.join(args)))
         return Process(args, **kwargs)
