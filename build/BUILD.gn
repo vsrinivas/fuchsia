@@ -52,8 +52,15 @@ group("deprecated_package") {
     "//third_party/vulkan-cts/fuchsia/split-cts/*",
   ]
 
-  visibility =
-      driver_package_users + shell_true_users + non_default_checkout_users
+  fuchsia_inspect_test_packages = [
+    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
+        "/test/integration/*",
+    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
+        "/test/validator_puppet/*",
+  ]
+
+  visibility = driver_package_users + shell_true_users +
+               non_default_checkout_users + fuchsia_inspect_test_packages
 
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed -E 's|([^:]*):.*|"\1\/*",|g' | sed 's|.*//vendor/.*|"//vendor/*",|' | sort | uniq
@@ -730,8 +737,6 @@ group("deprecated_package") {
     "//tools/create/goldens/my-driver-cpp/*",
     "//tools/fidl/measure-tape/*",
     "//tools/fidlcat/tests/*",
-    "//topaz/public/dart/fuchsia_inspect/test/integration/*",
-    "//topaz/public/dart/fuchsia_inspect/test/validator_puppet/*",
     "//vendor/*",
     "//zircon/kernel/lib/boot-options/tests/*",
     "//zircon/kernel/lib/devicetree/tests/*",

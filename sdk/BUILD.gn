@@ -512,15 +512,23 @@ sdk("fuchsia_dart") {
     get_label_info(dart_package_label.fuchsia, "dir") + ":" +
         get_label_info(dart_package_label.fuchsia, "name") +
         "_sdk($dart_toolchain)",
-    "//topaz/public/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
-    "//topaz/public/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia_inspect, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia_inspect, "name") +
+        "_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia_logger, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia_logger, "name") +
+        "_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_scenic, "dir") +
-        ":fuchsia_scenic_sdk($dart_toolchain)",
-    "//topaz/public/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_services, "dir") +
-        ":fuchsia_services_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia_scenic, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia_scenic, "name") +
+        "_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia_scenic_flutter, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia_scenic_flutter, "name") +
+        "_sdk($dart_toolchain)",
+    get_label_info(dart_package_label.fuchsia_services, "dir") + ":" +
+        get_label_info(dart_package_label.fuchsia_services, "name") +
+        "_sdk($dart_toolchain)",
     get_label_info(dart_package_label.fuchsia_vfs, "dir") + ":" +
         get_label_info(dart_package_label.fuchsia_vfs, "name") +
         "_sdk($dart_toolchain)",
