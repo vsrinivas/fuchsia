@@ -51,6 +51,8 @@ class Curl::Impl final : public debug_ipc::FDWatcher, public fxl::RefCountedThre
   std::map<curl_socket_t, debug_ipc::MessageLoop::WatchHandle> watches_;
   // Indicates whether we already have a task posted to read the messages from multi_handler_.
   bool cleanup_pending_ = false;
+  // Used in TimerCallback to avoid scheduling 2 timers and invalidate timers after destruction.
+  std::shared_ptr<bool> last_timer_valid_ = std::make_shared<bool>(false);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Impl);
   FRIEND_MAKE_REF_COUNTED(Impl);
@@ -84,11 +86,11 @@ void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
   }
 
   cleanup_pending_ = true;
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
-    cleanup_pending_ = false;
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [self = fxl::RefPtr<Impl>(this)]() {
+    self->cleanup_pending_ = false;
 
     int _ignore;
-    while (auto info = curl_multi_info_read(multi_handle_, &_ignore)) {
+    while (auto info = curl_multi_info_read(self->multi_handle_, &_ignore)) {
       if (info->msg != CURLMSG_DONE) {
         // CURLMSG_DONE is the only value for msg, documented or otherwise, so this is mostly
         // future-proofing at writing.
@@ -102,7 +104,7 @@ void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
       auto cb = std::move(curl->multi_cb_);
       curl->multi_cb_ = nullptr;
       curl->FreeSList();
-      auto rem_result = curl_multi_remove_handle(multi_handle_, info->easy_handle);
+      auto rem_result = curl_multi_remove_handle(self->multi_handle_, info->easy_handle);
       FX_DCHECK(rem_result == CURLM_OK);
 
       auto ref = curl->self_ref_;
@@ -115,6 +117,8 @@ void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
 
 int Curl::Impl::SocketCallback(CURL* /*easy*/, curl_socket_t s, int what, void* /*userp*/,
                                void* /*socketp*/) {
+  FX_DCHECK(instance_);
+
   if (what == CURL_POLL_REMOVE || what == CURL_POLL_NONE) {
     instance_->watches_.erase(s);
   } else {
@@ -142,18 +146,17 @@ int Curl::Impl::SocketCallback(CURL* /*easy*/, curl_socket_t s, int what, void* 
 }
 
 int Curl::Impl::TimerCallback(CURLM* multi, long timeout_ms, void* /*userp*/) {
-  static std::shared_ptr<bool> last_timer = std::make_shared<bool>();
+  FX_DCHECK(instance_);
 
-  *last_timer = false;
-
+  *instance_->last_timer_valid_ = false;
+  // A timeout_ms value of -1 passed to this callback means you should delete the timer.
   if (timeout_ms < 0) {
     return 0;
   }
 
-  last_timer = std::make_shared<bool>(true);
-
+  instance_->last_timer_valid_ = std::make_shared<bool>(true);
   debug_ipc::MessageLoop::Current()->PostTimer(
-      FROM_HERE, timeout_ms, [multi, valid = last_timer]() {
+      FROM_HERE, timeout_ms, [multi, valid = instance_->last_timer_valid_]() {
         if (!*valid) {
           return;
         }
@@ -183,6 +186,8 @@ Curl::Impl::Impl() {
 }
 
 Curl::Impl::~Impl() {
+  *last_timer_valid_ = false;
+
   auto result = curl_multi_cleanup(multi_handle_);
   FX_DCHECK(result == CURLM_OK);
   curl_global_cleanup();
