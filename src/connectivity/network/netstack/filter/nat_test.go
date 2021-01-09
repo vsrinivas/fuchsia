@@ -7,6 +7,7 @@
 package filter
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
@@ -25,6 +26,8 @@ import (
 )
 
 // TODO: make these tests table-driven.
+
+const maxInt = int(^uint(0) >> 1)
 
 func makeSubnet(addr string, m tcpip.AddressMask) tcpip.Subnet {
 	subnet, err := tcpip.NewSubnet(util.Parse(addr), m)
@@ -265,16 +268,18 @@ func TestNATOneWayLANToWANUDP(t *testing.T) {
 	}
 	wqWAN.EventUnregister(&waitEntryWAN)
 
-	var sender tcpip.FullAddress
-	recvd, _, err := epWANUDP.Read(&sender)
+	var recvd bytes.Buffer
+	res, err := epWANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+		NeedRemoteAddr: true,
+	})
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
-	if got, want := sender.Addr, testRouterNICAddr2; got != want {
-		t.Errorf("sender.Addr %s, want %s", got, want)
+	if got, want := res.RemoteAddr.Addr, testRouterNICAddr2; got != want {
+		t.Errorf("got res.RemoteAddr.Addr = %s, want %s", got, want)
 	}
 	// sender.Port is random.
-	if got, want := string(recvd), "hello"; got != want {
+	if got, want := recvd.String(), "hello"; got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
 }
@@ -322,46 +327,54 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 	}
 	wqWAN.EventUnregister(&waitEntryWAN)
 
-	var sender tcpip.FullAddress
-	recvd, _, err := epWANUDP.Read(&sender)
-	if err != nil {
-		t.Fatalf("Read error: %s", err)
-	}
-	if got, want := sender.Addr, testRouterNICAddr2; got != want {
-		t.Errorf("sender.Addr %s, want %s", got, want)
-	}
-	// sender.Port is random.
-	if got, want := string(recvd), "hello"; got != want {
-		t.Errorf("got %s, want %s", got, want)
+	{
+		var recvd bytes.Buffer
+		res, err := epWANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+			NeedRemoteAddr: true,
+		})
+		if err != nil {
+			t.Fatalf("Read error: %s", err)
+		}
+		if got, want := res.RemoteAddr.Addr, testRouterNICAddr2; got != want {
+			t.Errorf("got res.RemoteAddr.Addr = %s, want %s", got, want)
+		}
+		// sender.Port is random.
+		if got, want := recvd.String(), "hello"; got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
+
+		waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
+		wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
+
+		if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
+			t.Fatalf("Write error: %s", err)
+		}
+
+		select {
+		case <-chLAN:
+		case <-time.After(1 * time.Second):
+			t.Fatalf("Read timeout")
+		}
+		wqLAN.EventUnregister(&waitEntryLAN)
 	}
 
-	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
-	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
-
-	if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
-		t.Fatalf("Write error: %s", err)
-	}
-
-	select {
-	case <-chLAN:
-	case <-time.After(1 * time.Second):
-		t.Fatalf("Read timeout")
-	}
-	wqLAN.EventUnregister(&waitEntryLAN)
-
-	var sender2 tcpip.FullAddress
-	recvd2, _, err := epLANUDP.Read(&sender2)
-	if err != nil {
-		t.Fatalf("Read error: %s", err)
-	}
-	if got, want := sender2.Addr, receiverWAN.Addr; got != want {
-		t.Errorf("sender2.Addr %s, want %s", got, want)
-	}
-	if got, want := sender2.Port, receiverWAN.Port; got != want {
-		t.Errorf("sender2.Addr %d, want %d", got, want)
-	}
-	if got, want := string(recvd2), "hi"; got != want {
-		t.Errorf("got %s, want %s", got, want)
+	{
+		var recvd bytes.Buffer
+		res, err := epLANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+			NeedRemoteAddr: true,
+		})
+		if err != nil {
+			t.Fatalf("Read error: %s", err)
+		}
+		if got, want := res.RemoteAddr.Addr, receiverWAN.Addr; got != want {
+			t.Errorf("got res.RemoteAddr.Addr = %s, want %s", got, want)
+		}
+		if got, want := res.RemoteAddr.Port, receiverWAN.Port; got != want {
+			t.Errorf("got res.RemoteAddr.Port = %d, want %d", got, want)
+		}
+		if got, want := recvd.String(), "hi"; got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
 	}
 }
 
@@ -444,12 +457,14 @@ func TestNATLANToWANTCP(t *testing.T) {
 	}
 	wqWAN.EventUnregister(&waitEntryWAN)
 
-	recvd, _, err := epWANTCP.Read(nil)
-	if err != nil {
-		t.Fatalf("Read error: %s", err)
-	}
-	if got, want := string(recvd), "hello"; got != want {
-		t.Errorf("got %s, want %s", got, want)
+	{
+		var recvd bytes.Buffer
+		if _, err := epWANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+			t.Fatalf("Read error: %s", err)
+		}
+		if got, want := recvd.String(), "hello"; got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
 	}
 
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
@@ -465,12 +480,14 @@ func TestNATLANToWANTCP(t *testing.T) {
 	}
 	wqLAN.EventUnregister(&waitEntryLAN)
 
-	recvd2, _, err := epLANTCP.Read(nil)
-	if err != nil {
-		t.Fatalf("Read error: %s", err)
-	}
-	if got, want := string(recvd2), "hi"; got != want {
-		t.Errorf("got %s, want %s", got, want)
+	{
+		var recvd bytes.Buffer
+		if _, err := epLANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+			t.Fatalf("Read error: %s", err)
+		}
+		if got, want := recvd.String(), "hi"; got != want {
+			t.Errorf("got %s, want %s", got, want)
+		}
 	}
 }
 

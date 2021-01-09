@@ -7,6 +7,7 @@
 package netstack
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -33,7 +34,6 @@ import (
 	"fidl/fuchsia/posix/socket"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -478,12 +478,6 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 type endpointWithEvent struct {
 	endpoint
 
-	mu struct {
-		sync.Mutex
-		readView buffer.View
-		sender   tcpip.FullAddress
-	}
-
 	local, peer zx.Handle
 
 	incoming boolWithMutex
@@ -808,16 +802,14 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 		}()
 	}
 
-	var sender tcpip.FullAddress
+	var b bytes.Buffer
 	for {
-		var v []byte
-
 		for {
-			var err *tcpip.Error
 			// Acquire hard error lock across ep calls to avoid races and store the
 			// hard error deterministically.
 			eps.hardError.mu.Lock()
-			v, _, err = eps.ep.Read(&sender)
+			const count = 1 << 16 // 64 KiB
+			_, err := eps.ep.Read(&b, count, tcpip.ReadOptions{})
 			hardError := eps.hardError.storeAndRetrieveLocked(err)
 			eps.hardError.mu.Unlock()
 			if err == tcpip.ErrNotConnected {
@@ -943,7 +935,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			break
 		}
 
-		for {
+		for v := b.Bytes(); len(v) != 0; {
 			n, err := eps.local.Write(v, 0)
 			if err != nil {
 				if err, ok := err.(*zx.Error); ok {
@@ -988,11 +980,9 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 				}
 			}
 			v = v[n:]
-			if len(v) == 0 {
-				break
-			}
 			eps.ep.ModerateRecvBuf(n)
 		}
+		b.Reset()
 	}
 }
 
@@ -1068,18 +1058,12 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.Nod
 }
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
-	s.mu.Lock()
-	var err *tcpip.Error
-	if len(s.mu.readView) == 0 {
-		// TODO(fxbug.dev/21106): do something with control messages.
-		s.mu.readView, _, err = s.ep.Read(&s.mu.sender)
-	}
-	v, sender := s.mu.readView, s.mu.sender
-	if flags&socket.RecvMsgFlagsPeek == 0 {
-		s.mu.readView = nil
-		s.mu.sender = tcpip.FullAddress{}
-	}
-	s.mu.Unlock()
+	var b bytes.Buffer
+	// TODO(fxbug.dev/21106): do something with control messages.
+	res, err := s.ep.Read(&b, int(dataLen), tcpip.ReadOptions{
+		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
+		NeedRemoteAddr: wantAddr,
+	})
 	if err != nil {
 		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -1099,18 +1083,14 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	}
 	var addr *fidlnet.SocketAddress
 	if wantAddr {
-		sockaddr := toNetSocketAddress(s.netProto, sender)
+		sockaddr := toNetSocketAddress(s.netProto, res.RemoteAddr)
 		addr = &sockaddr
 	}
-	var truncated uint32
-	if t := len(v) - int(dataLen); t > 0 {
-		truncated = uint32(t)
-		v = v[:dataLen]
-	}
+
 	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
 		Addr:      addr,
-		Data:      v,
-		Truncated: truncated,
+		Data:      b.Bytes(),
+		Truncated: uint32(res.Total - res.Count),
 	}), nil
 }
 

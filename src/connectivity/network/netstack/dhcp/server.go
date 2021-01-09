@@ -17,6 +17,7 @@
 package dhcp
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -79,9 +80,11 @@ func newEPConn(ctx context.Context, wq *waiter.Queue, ep tcpip.Endpoint) *epConn
 }
 
 func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
+	var b bytes.Buffer
 	for {
-		var addr tcpip.FullAddress
-		v, _, err := c.ep.Read(&addr)
+		res, err := c.ep.Read(&b, maxInt, tcpip.ReadOptions{
+			NeedRemoteAddr: true,
+		})
 		if err == tcpip.ErrWouldBlock {
 			select {
 			case <-c.inCh:
@@ -91,9 +94,9 @@ func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
 			}
 		}
 		if err != nil {
-			return v, addr, fmt.Errorf("read: %v", err)
+			return b.Bytes(), res.RemoteAddr, fmt.Errorf("read: %s", err)
 		}
-		return v, addr, nil
+		return b.Bytes(), res.RemoteAddr, nil
 	}
 }
 

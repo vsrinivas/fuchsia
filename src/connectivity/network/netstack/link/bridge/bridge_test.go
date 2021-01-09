@@ -622,7 +622,7 @@ func TestBridge(t *testing.T) {
 
 			for addr, toStack := range addrs {
 				t.Run(fmt.Sprintf("ConnectAndWrite_%s", addr), func(t *testing.T) {
-					recvd, err := connectAndWrite(s1, toStack, testCase.protocolFactory, testCase.protocolNumber, addr, payload)
+					recvd, err := connectAndWrite(s1, toStack, testCase.protocolNumber, addr, payload)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -732,7 +732,7 @@ func TestBridge(t *testing.T) {
 			}
 
 			for addr, toStack := range stillConnectable {
-				recvd, err := connectAndWrite(s1, toStack, testCase.protocolFactory, testCase.protocolNumber, addr, payload)
+				recvd, err := connectAndWrite(s1, toStack, testCase.protocolNumber, addr, payload)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -885,7 +885,7 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkPr
 	return stk, bridgeEP, bID
 }
 
-func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address, payload string) ([]byte, error) {
+func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address, payload string) ([]byte, error) {
 	senderWaitQueue := new(waiter.Queue)
 	sender, err := fromStack.NewEndpoint(tcp.ProtocolNumber, protocolNumber, senderWaitQueue)
 	if err != nil {
@@ -926,11 +926,11 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolFacto
 			return nil, err
 		}
 
-		recvd, _, err := ep.Read(nil)
-		if err != nil {
+		var recvd bytes.Buffer
+		if _, err := ep.Read(&recvd, len(payload)+1, tcpip.ReadOptions{}); err != nil {
 			return nil, fmt.Errorf("read failed: %s", err)
 		}
-		return recvd, nil
+		return recvd.Bytes(), nil
 	}
 }
 

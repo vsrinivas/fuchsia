@@ -425,7 +425,6 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	if err := ep.Bind(recvOn); err != nil {
 		return Config{}, fmt.Errorf("ep.Bind(%+v): %s", recvOn, err)
 	}
-	recvEP := ep.(tcpip.PacketEndpoint)
 
 	switch info.State {
 	case initSelecting:
@@ -482,7 +481,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 			// Receive a DHCPOFFER message from a responding DHCP server.
 			retransmit := c.retransTimeout(c.exponentialBackoff(i))
 			for {
-				result, retransmit, err := c.recv(ctx, recvEP, ch, xid[:], retransmit)
+				result, retransmit, err := c.recv(ctx, ep, ch, xid[:], retransmit)
 				if err != nil {
 					if retransmit {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
@@ -575,7 +574,7 @@ retransmitRequest:
 		// Receive a DHCPACK/DHCPNAK from the server.
 		retransmit := c.retransTimeout(c.exponentialBackoff(i))
 		for {
-			result, retransmit, err := c.recv(ctx, recvEP, ch, xid[:], retransmit)
+			result, retransmit, err := c.recv(ctx, ep, ch, xid[:], retransmit)
 			if err != nil {
 				if retransmit {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
@@ -746,22 +745,24 @@ type recvResult struct {
 	typ     dhcpMsgType
 }
 
+const maxInt = int(^uint(0) >> 1)
+
 func (c *Client) recv(
 	ctx context.Context,
-	ep tcpip.PacketEndpoint,
+	ep tcpip.Endpoint,
 	read <-chan struct{},
 	xid []byte,
 	retransmit <-chan time.Time,
 ) (recvResult, bool, error) {
-	var (
-		info   tcpip.LinkPacketInfo
-		sender tcpip.FullAddress
-	)
-	senderAddr := func() tcpip.LinkAddress {
-		return tcpip.LinkAddress(sender.Addr)
-	}
+	var b bytes.Buffer
 	for {
-		v, _, err := ep.ReadPacket(&sender, &info)
+		b.Reset()
+
+		res, err := ep.Read(&b, maxInt, tcpip.ReadOptions{
+			NeedRemoteAddr:     true,
+			NeedLinkPacketInfo: true,
+		})
+		senderAddr := tcpip.LinkAddress(res.RemoteAddr.Addr)
 		if err == tcpip.ErrWouldBlock {
 			select {
 			case <-read:
@@ -776,22 +777,23 @@ func (c *Client) recv(
 			return recvResult{}, false, fmt.Errorf("read: %s", err)
 		}
 
-		if info.Protocol != header.IPv4ProtocolNumber {
+		if res.LinkPacketInfo.Protocol != header.IPv4ProtocolNumber {
 			continue
 		}
 
-		switch info.PktType {
+		switch res.LinkPacketInfo.PktType {
 		case tcpip.PacketHost, tcpip.PacketBroadcast:
 		default:
 			continue
 		}
 
+		v := b.Bytes()
 		ip := header.IPv4(v)
 		if !ip.IsValid(len(v)) {
 			_ = syslog.WarnTf(
 				tag,
 				"received malformed IP frame from %s; discarding %d bytes",
-				senderAddr(),
+				senderAddr,
 				len(v),
 			)
 			continue
@@ -801,7 +803,7 @@ func (c *Client) recv(
 			_ = syslog.WarnTf(
 				tag,
 				"received damaged IP frame from %s; discarding %d bytes",
-				senderAddr(),
+				senderAddr,
 				len(v),
 			)
 			continue
@@ -810,7 +812,7 @@ func (c *Client) recv(
 			_ = syslog.WarnTf(
 				tag,
 				"received fragmented IP frame from %s; discarding %d bytes",
-				senderAddr(),
+				senderAddr,
 				len(v),
 			)
 			continue
@@ -824,7 +826,7 @@ func (c *Client) recv(
 				tag,
 				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
 				ip.SourceAddress(),
-				senderAddr(),
+				senderAddr,
 				ip.DestinationAddress(),
 				len(udp),
 			)
@@ -838,7 +840,7 @@ func (c *Client) recv(
 				tag,
 				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
 				ip.SourceAddress(),
-				senderAddr(),
+				senderAddr,
 				ip.DestinationAddress(),
 				len(udp),
 			)
@@ -853,7 +855,7 @@ func (c *Client) recv(
 					tag,
 					"received damaged UDP frame (%s@%s -> %s); discarding %d bytes",
 					ip.SourceAddress(),
-					senderAddr(),
+					senderAddr,
 					ip.DestinationAddress(),
 					len(udp),
 				)
