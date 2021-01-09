@@ -13,29 +13,14 @@
 
 namespace fbl {
 
-// is_pow2
-//
-// Test to see if an unsigned integer type is an exact power of two or
-// not.  Note, this needs to use a helper struct because we are not
-// allowed to partially specialize functions (because C++).
-namespace internal {
-template <typename T, typename Enable = void>
-struct IsPow2Helper;
-
-template <typename T>
-struct IsPow2Helper<T, std::enable_if_t<std::is_unsigned_v<T>>> {
-  static constexpr bool is_pow2(T val) { return (val != 0) && (((val - 1U) & val) == 0); }
-};
-}  // namespace internal
-
 // is_pow2<T>(T val)
 //
 // Tests to see if val (which may be any unsigned integer type) is a power of 2
 // or not.  0 is not considered to be a power of 2.
 //
-template <typename T>
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr bool is_pow2(T val) {
-  return internal::IsPow2Helper<T>::is_pow2(val);
+  return (val != 0) && (((val - 1U) & val) == 0);
 }
 
 // round_up rounds up val until it is divisible by multiple.
