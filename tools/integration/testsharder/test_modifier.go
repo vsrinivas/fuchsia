@@ -114,7 +114,7 @@ func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, max
 				namesForMaxAttempts = append(namesForMaxAttempts, name)
 				continue
 			}
-			ret = append(ret, TestModifier{Name: name, OS: spec.OS})
+			ret = append(ret, TestModifier{Name: name, OS: spec.OS, Affected: true})
 		}
 	}
 	for _, name := range namesForMaxAttempts {

@@ -352,11 +352,12 @@ func TestShardAffected(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		shards    []*Shard
-		modifiers []TestModifier
-		expected  []*Shard
-		err       error
+		name         string
+		shards       []*Shard
+		modifiers    []TestModifier
+		affectedOnly bool
+		expected     []*Shard
+		err          error
 	}{
 		{
 			name: "matches any os",
@@ -385,6 +386,7 @@ func TestShardAffected(t *testing.T) {
 			},
 			modifiers: []TestModifier{
 				makeTestModifier(1, "fuchsia", false),
+				makeTestModifier(2, "fuchsia", false),
 				makeTestModifier(2, "fuchsia", true),
 				makeTestModifier(4, "fuchsia", true),
 				makeTestModifier(3, "linux", true),
@@ -396,6 +398,27 @@ func TestShardAffected(t *testing.T) {
 				shard(env2, "fuchsia", 1),
 				affectedShard(env3, "linux", 3),
 				shard(env3, "linux", 4),
+			},
+		},
+		{
+			name: "shards only affected tests",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+				shard(env1, "fuchsia", 2, 4),
+				shard(env2, "fuchsia", 1, 2, 4),
+				shard(env3, "linux", 3, 4),
+			},
+			modifiers: []TestModifier{
+				makeTestModifier(1, "fuchsia", false),
+				makeTestModifier(2, "fuchsia", true),
+				makeTestModifier(4, "fuchsia", true),
+				makeTestModifier(3, "linux", true),
+			},
+			affectedOnly: true,
+			expected: []*Shard{
+				affectedShard(env1, "fuchsia", 2, 4),
+				affectedShard(env2, "fuchsia", 2, 4),
+				affectedShard(env3, "linux", 3),
 			},
 		},
 		{
@@ -427,6 +450,7 @@ func TestShardAffected(t *testing.T) {
 			actual, err := ShardAffected(
 				tc.shards,
 				tc.modifiers,
+				tc.affectedOnly,
 			)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)

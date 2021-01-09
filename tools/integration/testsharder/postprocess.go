@@ -234,7 +234,8 @@ func MultiplyShards(
 }
 
 // ShardAffected separates the affected tests into separate shards.
-func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
+// If `affectedOnly` is true, it will only return the affected test shards.
+func ShardAffected(shards []*Shard, modTests []TestModifier, affectedOnly bool) ([]*Shard, error) {
 	var newShards []*Shard
 	defaultModTest := TestModifier{}
 	foundDefault := false
@@ -262,8 +263,8 @@ func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
 				if modTest.Affected {
 					isAffected = true
 					affected = append(affected, test)
+					break
 				}
-				break
 			}
 			if !isAffected {
 				unaffected = append(unaffected, test)
@@ -276,7 +277,7 @@ func ShardAffected(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
 				Env:   shard.Env,
 			})
 		}
-		if len(unaffected) > 0 {
+		if len(unaffected) > 0 && !affectedOnly {
 			shard.Tests = unaffected
 			newShards = append(newShards, shard)
 		}
