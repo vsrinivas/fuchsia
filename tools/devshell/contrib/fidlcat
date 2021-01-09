@@ -197,7 +197,7 @@ launch_agent=1
 
 action=
 
-arguments=()
+arguments=("--symbol-server=gs://fuchsia-artifacts-release/debug")
 
 use_gdb=0
 
@@ -216,8 +216,7 @@ while [[ $# -gt 0 ]]; do
       port="$1"
       ;;
     --with-symbol-server)
-      arguments+=("--symbol-server")
-      arguments+=("gs://fuchsia-artifacts-release/debug")
+      echo "--with-symbol-server option is now implicit. You don't need it anymore."
       ;;
     --debug-mode)
       agent_out="/dev/stdout"

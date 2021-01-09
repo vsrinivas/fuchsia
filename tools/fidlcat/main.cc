@@ -230,7 +230,7 @@ int ConsoleMain(int argc, const char* argv[]) {
                 }
                 if (ready) {
                   // Now all the symbol servers are ready. We can start fidlcat work.
-                  FX_LOGS(INFO) << "Connected to symbol server";
+                  FX_LOGS(INFO) << "Connected to symbol server " << server->name();
                   EnqueueStartup(&workflow, options, params);
                 }
               }
