@@ -8,7 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <functional>
@@ -137,20 +136,14 @@ void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
     FX_VLOGS(1) << "RequestFrame";
   }
 
-  auto next_times = ComputePresentationAndWakeupTimesForTargetTime(requested_presentation_time);
-  auto new_target_presentation_time = next_times.first;
-  auto new_wakeup_time = next_times.second;
+  const auto [new_target_presentation_time, new_wakeup_time] =
+      ComputePresentationAndWakeupTimesForTargetTime(requested_presentation_time);
 
   TRACE_DURATION("gfx", "DefaultFrameScheduler::RequestFrame", "requested presentation time",
                  requested_presentation_time.get() / 1'000'000, "target_presentation_time",
-                 new_target_presentation_time.get() / 1'000'000);
-
-  uint64_t trace_id = SESSION_TRACE_ID(request_to_render_count_, new_wakeup_time.get());
-
-  render_wakeup_map_.insert({new_wakeup_time, trace_id});
-  ++request_to_render_count_;
-
-  TRACE_FLOW_BEGIN("gfx", "request_to_render", trace_id);
+                 new_target_presentation_time.get() / 1'000'000, "candidate wakeup time",
+                 new_wakeup_time.get() / 1'000'000, "current wakeup time",
+                 wakeup_time_.get() / 1'000'000);
 
   // If there is no render waiting we should schedule a frame. Likewise, if newly predicted wake up
   // time is earlier than the current one then we need to reschedule the next wake-up.
@@ -168,12 +161,12 @@ void DefaultFrameScheduler::HandleNextFrameRequest() {
     auto min_it =
         std::min_element(pending_present_requests_.begin(), pending_present_requests_.end(),
                          [](const auto& left, const auto& right) {
-                           const auto leftPresentationTime = left.second;
-                           const auto rightPresentationTime = right.second;
+                           const auto leftPresentationTime = left.second.first;
+                           const auto rightPresentationTime = right.second.first;
                            return leftPresentationTime < rightPresentationTime;
                          });
 
-    RequestFrame(zx::time(min_it->second));
+    RequestFrame(zx::time(min_it->second.first));
   }
 }
 
@@ -251,12 +244,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     }
   };
 
-  ++frame_render_trace_id_;
-  TRACE_FLOW_BEGIN("gfx", "render_to_presented", frame_render_trace_id_);
+  const trace_flow_id_t frame_render_trace_id = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("gfx", "render_to_presented", frame_render_trace_id);
   auto timings_presented_callback = [weak = weak_factory_.GetWeakPtr(),
-                                     trace_id =
-                                         frame_render_trace_id_](const FrameTimings& timings) {
-    TRACE_FLOW_END("gfx", "render_to_presented", trace_id);
+                                     frame_render_trace_id](const FrameTimings& timings) {
+    TRACE_FLOW_END("gfx", "render_to_presented", frame_render_trace_id);
     if (weak) {
       weak->OnFramePresented(timings);
     } else {
@@ -322,7 +314,10 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
                 << " requested_presentation_time: " << requested_presentation_time.get();
   }
 
-  pending_present_requests_.emplace(id_pair, requested_presentation_time);
+  const trace_flow_id_t flow_id = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("gfx", "request_to_render", flow_id);
+  pending_present_requests_.try_emplace(id_pair, requested_presentation_time, flow_id);
+
   RequestFrame(requested_presentation_time);
 }
 
@@ -464,13 +459,14 @@ std::unordered_map<SessionId, PresentId> DefaultFrameScheduler::CollectUpdatesFo
   bool hit_limit = false;
   auto it = pending_present_requests_.begin();
   while (it != pending_present_requests_.end()) {
-    auto& [id_pair, requested_presentation_time] = *it;
+    auto& [id_pair, time_and_flow_id] = *it;
     if (current_session != id_pair.session_id) {
       current_session = id_pair.session_id;
       hit_limit = false;
     }
 
-    if (!hit_limit && requested_presentation_time <= target_presentation_time) {
+    if (!hit_limit && time_and_flow_id.first <= target_presentation_time) {
+      TRACE_FLOW_END("gfx", "request_to_render", time_and_flow_id.second);
       // Return only the last relevant present id for each session.
       updates[current_session] = id_pair.present_id;
       it = pending_present_requests_.erase(it);
@@ -585,13 +581,6 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
   // NOTE: this name is used by scenic_frame_stats.dart
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "target_presentation_time",
                  target_presentation_time.get() / 1'000'000, "frame_number", frame_number);
-
-  auto it = render_wakeup_map_.begin();
-  while (it != render_wakeup_map_.end() && it->first <= latched_time) {
-    TRACE_FLOW_END("gfx", "request_to_render", it->second);
-    ++it;
-  }
-  render_wakeup_map_.erase(render_wakeup_map_.begin(), it);
 
   TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 

@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <list>
@@ -161,8 +162,8 @@ class DefaultFrameScheduler final : public FrameScheduler {
   void RemoveFailedSessions(const std::unordered_set<SessionId>& sessions_with_failed_updates);
 
   // Map of all pending Present calls ordered by SessionId and then PresentId. Maps to requested
-  // presentation time for each present.
-  std::map<SchedulingIdPair, zx::time> pending_present_requests_;
+  // presentation time and the corresponding flow id for each present.
+  std::map<SchedulingIdPair, std::pair<zx::time, trace_flow_id_t>> pending_present_requests_;
 
   // TODO(fxbug.dev/47308): A lot of logic is temporarily duplicated while clients are being
   // converted over. When both session and and image pipes have been converted to handling their own
@@ -229,12 +230,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   inspect::UintProperty inspect_last_successful_render_start_time_;
 
   FrameStats stats_;
-
-  // For tracing.
-  uint64_t frame_render_trace_id_ = 0;
-  // Maps wakeup time to trace IDs, to properly match up renders for frames >1 vsyncs away.
-  uint64_t request_to_render_count_ = 0;
-  std::multimap<zx::time, uint64_t> render_wakeup_map_ = {};
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 
