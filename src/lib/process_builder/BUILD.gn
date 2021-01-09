@@ -122,7 +122,7 @@ executable("static_pie_test_util") {
 
   sources = [ "test/static_pie_test_util.c" ]
   configs += [
-    "//build/config/fuchsia:no_cpp_standard_library",
+    "//build/config/fuchsia:static_cpp_standard_library",
     "//build/config/fuchsia:static-pie-config",
   ]
 
