@@ -8,7 +8,7 @@ use {
     async_std::future::timeout,
     ffx_core::{build_info, ffx_error, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
-    ffx_lib_args::Ffx,
+    ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
@@ -119,7 +119,7 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
 }
 
 async fn run() -> Result<()> {
-    let app: Ffx = argh::from_env();
+    let app: Ffx = from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
