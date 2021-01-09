@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Kill the provided task (job or process).
+Kill the provided task (job, process, or thread).
 
 ## SYNOPSIS
 

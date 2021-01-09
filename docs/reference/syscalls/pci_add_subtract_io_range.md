@@ -13,8 +13,11 @@ TODO(fxbug.dev/32938)
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_pci_add_subtract_io_range(
-    zx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add);
+zx_status_t zx_pci_add_subtract_io_range(zx_handle_t handle,
+                                         uint32_t mmio,
+                                         uint64_t base,
+                                         uint64_t len,
+                                         uint32_t add);
 ```
 
 ## DESCRIPTION

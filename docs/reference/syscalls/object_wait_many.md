@@ -107,8 +107,7 @@ See [signals] for more information about signals and their terminology.
 
 ## SEE ALSO
 
-[signals]: /docs/concepts/kernel/signals.md
-
+ - [signals](/docs/concepts/kernel/signals.md)
  - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]

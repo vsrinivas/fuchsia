@@ -118,8 +118,7 @@ See [signals] for more information about signals and their terminology.
 
 ## SEE ALSO
 
-[signals]: /docs/concepts/kernel/signals.md
-
+ - [signals](/docs/concepts/kernel/signals.md)
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
  - [`zx_port_cancel()`]

@@ -13,7 +13,7 @@ TODO(fxbug.dev/32938)
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_pci_enable_bus_master(zx_handle_t handle, bool enable);
+zx_status_t zx_pci_enable_bus_master(zx_handle_t handle, uint32_t enable);
 ```
 
 ## DESCRIPTION

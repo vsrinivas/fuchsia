@@ -20,7 +20,7 @@ zx_status_t zx_pci_cfg_pio_rw(zx_handle_t handle,
                               uint8_t offset,
                               uint32_t* val,
                               size_t width,
-                              bool write);
+                              uint32_t write);
 ```
 
 ## DESCRIPTION

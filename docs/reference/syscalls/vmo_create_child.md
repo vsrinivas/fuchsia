@@ -147,6 +147,7 @@ pinned pages.
 [`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_create()`]: vmo_create.md
+[`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
 [`zx_vmo_create_physical()`]: vmo_create_physical.md
 [`zx_vmo_get_size()`]: vmo_get_size.md
 [`zx_vmo_op_range()`]: vmo_op_range.md

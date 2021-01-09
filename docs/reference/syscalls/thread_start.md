@@ -98,4 +98,3 @@ is part of is no longer alive.
 [`zx_thread_create()`]: thread_create.md
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md
-[canonical address]: ../../concepts/kernel/sysret_problem.md

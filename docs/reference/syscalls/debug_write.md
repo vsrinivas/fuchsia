@@ -48,8 +48,7 @@ or `output-only` on the kernel command line.
 
 ## SEE ALSO
 
- - [`kernel_cmdline.md`](/docs/reference/kernel/kernel_cmdline.md)
-
+ - [kernel command line](/docs/reference/kernel/kernel_cmdline.md)
  - [`zx_debug_read()`]
  - [`zx_debuglog_read()`]
  - [`zx_debuglog_write()`]

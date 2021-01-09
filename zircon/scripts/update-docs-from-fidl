@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2018 The Fuchsia Authors
 #
@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument('--json',
                         default=os.path.normpath(
                             os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
-                                         'out', 'default.zircon', 'gen',
+                                         'out', 'default', 'gen',
                                          'include', 'zircon', 'syscalls',
                                          'definitions.json')),
                         help='path to kazoo .json output')
@@ -138,6 +138,10 @@ def match_sentence_form(sentence, arg_names):
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
             'type', 'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE1', ',', 'TYPE2', ',', 'or', 'TYPE3', ',', 'and', 'have', 'RIGHT', '.'
         ],
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
@@ -432,7 +436,7 @@ def make_synopsis_block(syscall_data, warn):
     ],
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE)
-    formatted, _ = clang_format.communicate(to_format)
+    formatted, _ = clang_format.communicate(to_format.encode('utf-8'))
     if clang_format.returncode != 0:
         warn('formatting synopsis failed, skipping update')
         return None
@@ -441,7 +445,7 @@ def make_synopsis_block(syscall_data, warn):
         '```',
         '',
     ]
-    return STANDARD_BLOCK_HEADER + header + [formatted] + footer
+    return STANDARD_BLOCK_HEADER + header + [formatted.decode('utf-8')] + footer
 
 
 def update_synopsis(lines, syscall_data, warn):
@@ -511,11 +515,11 @@ def check_for_orphans(syscalls, root):
         if md == 'README.md':
             continue
         if not md.endswith('.md'):
-            print >> sys.stderr, 'warning: non .md file %s' % md
+            print('warning: non .md file %s' % md, file=sys.stderr)
         name = md[:-3]
         if name not in names:
             orphan_count += 1
-            print >> sys.stderr, 'warning: %s has no entry in syscalls' % md
+            print('warning: %s has no entry in syscalls' % md, file=sys.stderr)
     return orphan_count
 
 
@@ -525,7 +529,9 @@ SEE_ALSO_CONCEPTS = {
     'clocks': '/docs/reference/kernel_objects/clock.md',
     'exceptions': '/docs/concepts/kernel/exceptions.md',
     'futex objects': '/docs/reference/kernel_objects/futex.md',
+    'kernel command line': '/docs/reference/kernel/kernel_cmdline.md',
     'rights': '/docs/concepts/kernel/rights.md',
+    'signals': '/docs/concepts/kernel/signals.md',
     'timer slack': '/docs/concepts/kernel/timer_slack.md',
 }
 
@@ -662,9 +668,9 @@ def build_if_out_of_date(syscalls_dir, json):
             print('%s out of date vs %s, running `fx build`\n'
                   'This will only work if using out/default and configured'
                   ' for x64.' % (json, syscall))
-            subprocess.check_call(['fx', 'build', '-C', 'out/default.zircon'])
+            subprocess.check_call(['fx', 'build', '-C', 'out/default'])
             if not is_up_to_date(syscall, json):
-                print '%s still out of date relative to %s!' % (json, syscall)
+                print('%s still out of date relative to %s!' % (json, syscall))
                 raise SystemExit()
             break
 
@@ -674,8 +680,8 @@ def main():
     inf = os.path.relpath(args.json)
     outf = os.path.relpath(args.docroot)
     build_if_out_of_date(os.path.relpath(SYSCALLS_FIDL_DIR), args.json)
-    print 'using %s as input and updating %s...' % (inf, outf)
-    data = json.loads(open(inf, 'rb').read())
+    print('using %s as input and updating %s...' % (inf, outf))
+    data = json.load(open(inf, 'rb'))
     missing_count = 0
     all_syscall_names = set(x['name'] for x in data['syscalls'])
     for syscall in data['syscalls']:
@@ -691,17 +697,16 @@ def main():
             generate_stub(md)
 
         if not os.path.exists(md):
-            print >> sys.stderr, (
-                'warning: %s not found for updating, skipping update' % md)
+            print('warning: %s not found for updating, skipping update' % md, file=sys.stderr)
             missing_count += 1
         else:
-            with open(md, 'rb') as f:
-                lines = f.read().splitlines()
+            with open(md, 'r') as f:
+              lines = f.read().splitlines()
 
             assert (lines)
 
             def warn(msg):
-                print >> sys.stderr, 'warning: %s: %s' % (md, msg)
+                print('warning: %s: %s' % (md, msg), file=sys.stderr)
 
             update_title(lines, syscall, warn)
             update_name(lines, syscall, warn)
@@ -710,11 +715,11 @@ def main():
             update_seealso(lines, syscall, all_syscall_names, warn)
             update_syscall_references(lines, syscall, all_syscall_names, warn)
 
-            with open(md, 'wb') as f:
+            with open(md, 'w') as f:
                 f.write('\n'.join(lines) + '\n')
 
     if missing_count > 0:
-        print >> sys.stderr, 'warning: %d missing .md files' % missing_count
+        print('warning: %d missing .md files' % missing_count, file=sys.stderr)
     missing_count += check_for_orphans(data['syscalls'], outf)
     return missing_count
 

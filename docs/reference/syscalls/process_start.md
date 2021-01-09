@@ -110,4 +110,3 @@ does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** o
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_thread_start()`]: thread_start.md
 [`zx_vmo_create()`]: vmo_create.md
-[canonical address]: ../../concepts/kernel/sysret_problem.md
