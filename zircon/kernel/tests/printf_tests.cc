@@ -171,12 +171,68 @@ static bool formatting() {
   END_TEST;
 }
 
-static bool printf_field_width_test() {
+static bool printf_field_width_and_precision_test() {
   BEGIN_TEST;
 
-  char input[] = "0123456789";
+  const char input[] = "0123456789";
+
+  // Hard-coded width; no precision.
+  EXPECT_TRUE(test_printf("'0123456789'", "'%0s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%1s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%2s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%10s'", input));
+  EXPECT_TRUE(test_printf("' 0123456789'", "'%11s'", input));
+  EXPECT_TRUE(test_printf("'  0123456789'", "'%12s'", input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%15s'", input));
+  EXPECT_TRUE(test_printf("'          0123456789'", "'%20s'", input));
+
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-0s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-1s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-2s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-10s'", input));
+  EXPECT_TRUE(test_printf("'0123456789 '", "'%-11s'", input));
+  EXPECT_TRUE(test_printf("'0123456789  '", "'%-12s'", input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%-15s'", input));
+  EXPECT_TRUE(test_printf("'0123456789          '", "'%-20s'", input));
+
+  // variable width; no precision.
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", 0, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", 1, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", 2, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", 10, input));
+  EXPECT_TRUE(test_printf("' 0123456789'", "'%*s'", 11, input));
+  EXPECT_TRUE(test_printf("'  0123456789'", "'%*s'", 12, input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%*s'", 15, input));
+  EXPECT_TRUE(test_printf("'          0123456789'", "'%*s'", 20, input));
+
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", -1, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", -2, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", -5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*s'", -10, input));
+  EXPECT_TRUE(test_printf("'0123456789 '", "'%*s'", -11, input));
+  EXPECT_TRUE(test_printf("'0123456789  '", "'%*s'", -12, input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%*s'", -15, input));
+  EXPECT_TRUE(test_printf("'0123456789          '", "'%*s'", -20, input));
+
+  // No width; hard-coded precision.
   EXPECT_TRUE(test_printf("", "%.", input));
   EXPECT_TRUE(test_printf("", "%.s", input));
+  EXPECT_TRUE(test_printf("''", "'%.0s'", input));
+  EXPECT_TRUE(test_printf("'0'", "'%.1s'", input));
+  EXPECT_TRUE(test_printf("'01'", "'%.2s'", input));
+  EXPECT_TRUE(test_printf("'012'", "'%.3s'", input));
+  EXPECT_TRUE(test_printf("'0123'", "'%.4s'", input));
+  EXPECT_TRUE(test_printf("'01234'", "'%.5s'", input));
+  EXPECT_TRUE(test_printf("'012345'", "'%.6s'", input));
+  EXPECT_TRUE(test_printf("'0123456'", "'%.7s'", input));
+  EXPECT_TRUE(test_printf("'01234567'", "'%.8s'", input));
+  EXPECT_TRUE(test_printf("'012345678'", "'%.9s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%.10s'", input));
+
+  // No width; variable precision.
   EXPECT_TRUE(test_printf("'0'", "'%.*s'", 1, input));
   EXPECT_TRUE(test_printf("'01'", "'%.*s'", 2, input));
   EXPECT_TRUE(test_printf("'012'", "'%.*s'", 3, input));
@@ -187,6 +243,178 @@ static bool printf_field_width_test() {
   EXPECT_TRUE(test_printf("'01234567'", "'%.*s'", 8, input));
   EXPECT_TRUE(test_printf("'012345678'", "'%.*s'", 9, input));
   EXPECT_TRUE(test_printf("'0123456789'", "'%.*s'", 10, input));
+
+  // Hard-coded width; hard-coded precision.
+  EXPECT_TRUE(test_printf("''", "'%0.0s'", input));
+  EXPECT_TRUE(test_printf("'0'", "'%0.1s'", input));
+  EXPECT_TRUE(test_printf("'01'", "'%0.2s'", input));
+  EXPECT_TRUE(test_printf("'01234'", "'%0.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%0.10s'", input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%5.0s'", input));
+  EXPECT_TRUE(test_printf("'    0'", "'%5.1s'", input));
+  EXPECT_TRUE(test_printf("'   01'", "'%5.2s'", input));
+  EXPECT_TRUE(test_printf("'01234'", "'%5.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%5.10s'", input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%10.0s'", input));
+  EXPECT_TRUE(test_printf("'         0'", "'%10.1s'", input));
+  EXPECT_TRUE(test_printf("'        01'", "'%10.2s'", input));
+  EXPECT_TRUE(test_printf("'     01234'", "'%10.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%10.10s'", input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%15.0s'", input));
+  EXPECT_TRUE(test_printf("'              0'", "'%15.1s'", input));
+  EXPECT_TRUE(test_printf("'             01'", "'%15.2s'", input));
+  EXPECT_TRUE(test_printf("'          01234'", "'%15.5s'", input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%15.10s'", input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%-5.0s'", input));
+  EXPECT_TRUE(test_printf("'0    '", "'%-5.1s'", input));
+  EXPECT_TRUE(test_printf("'01   '", "'%-5.2s'", input));
+  EXPECT_TRUE(test_printf("'01234'", "'%-5.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-5.10s'", input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%-10.0s'", input));
+  EXPECT_TRUE(test_printf("'0         '", "'%-10.1s'", input));
+  EXPECT_TRUE(test_printf("'01        '", "'%-10.2s'", input));
+  EXPECT_TRUE(test_printf("'01234     '", "'%-10.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-10.10s'", input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%-15.0s'", input));
+  EXPECT_TRUE(test_printf("'0              '", "'%-15.1s'", input));
+  EXPECT_TRUE(test_printf("'01             '", "'%-15.2s'", input));
+  EXPECT_TRUE(test_printf("'01234          '", "'%-15.5s'", input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%-15.10s'", input));
+
+  // Variable width; hard-coded precision.
+  EXPECT_TRUE(test_printf("''", "'%*.0s'", 0, input));
+  EXPECT_TRUE(test_printf("'0'", "'%*.1s'", 0, input));
+  EXPECT_TRUE(test_printf("'01'", "'%*.2s'", 0, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.5s'", 0, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.10s'", 0, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%*.0s'", 5, input));
+  EXPECT_TRUE(test_printf("'    0'", "'%*.1s'", 5, input));
+  EXPECT_TRUE(test_printf("'   01'", "'%*.2s'", 5, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.5s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.10s'", 5, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%*.0s'", 10, input));
+  EXPECT_TRUE(test_printf("'         0'", "'%*.1s'", 10, input));
+  EXPECT_TRUE(test_printf("'        01'", "'%*.2s'", 10, input));
+  EXPECT_TRUE(test_printf("'     01234'", "'%*.5s'", 10, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.10s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%*.0s'", 15, input));
+  EXPECT_TRUE(test_printf("'              0'", "'%*.1s'", 15, input));
+  EXPECT_TRUE(test_printf("'             01'", "'%*.2s'", 15, input));
+  EXPECT_TRUE(test_printf("'          01234'", "'%*.5s'", 15, input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%*.10s'", 15, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%*.0s'", -5, input));
+  EXPECT_TRUE(test_printf("'0    '", "'%*.1s'", -5, input));
+  EXPECT_TRUE(test_printf("'01   '", "'%*.2s'", -5, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.5s'", -5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.10s'", -5, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%*.0s'", -10, input));
+  EXPECT_TRUE(test_printf("'0         '", "'%*.1s'", -10, input));
+  EXPECT_TRUE(test_printf("'01        '", "'%*.2s'", -10, input));
+  EXPECT_TRUE(test_printf("'01234     '", "'%*.5s'", -10, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.10s'", -10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%*.0s'", -15, input));
+  EXPECT_TRUE(test_printf("'0              '", "'%*.1s'", -15, input));
+  EXPECT_TRUE(test_printf("'01             '", "'%*.2s'", -15, input));
+  EXPECT_TRUE(test_printf("'01234          '", "'%*.5s'", -15, input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%*.10s'", -15, input));
+
+  // Hard-coded width; variable precision.
+  EXPECT_TRUE(test_printf("''", "'%0.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'0'", "'%0.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'01'", "'%0.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%0.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%0.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%5.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'    0'", "'%5.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'   01'", "'%5.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%5.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%5.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%10.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'         0'", "'%10.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'        01'", "'%10.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'     01234'", "'%10.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%10.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%15.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'              0'", "'%15.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'             01'", "'%15.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'          01234'", "'%15.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%15.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%-5.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'0    '", "'%-5.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'01   '", "'%-5.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%-5.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-5.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%-10.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'0         '", "'%-10.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'01        '", "'%-10.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'01234     '", "'%-10.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%-10.*s'", 10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%-15.*s'", 0, input));
+  EXPECT_TRUE(test_printf("'0              '", "'%-15.*s'", 1, input));
+  EXPECT_TRUE(test_printf("'01             '", "'%-15.*s'", 2, input));
+  EXPECT_TRUE(test_printf("'01234          '", "'%-15.*s'", 5, input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%-15.*s'", 10, input));
+
+  // Variable width; variable precision.
+  EXPECT_TRUE(test_printf("''", "'%*.*s'", 0, 0, input));
+  EXPECT_TRUE(test_printf("'0'", "'%*.*s'", 0, 1, input));
+  EXPECT_TRUE(test_printf("'01'", "'%*.*s'", 0, 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.*s'", 0, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.*s'", 0, 10, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%*.*s'", 5, 0, input));
+  EXPECT_TRUE(test_printf("'    0'", "'%*.*s'", 5, 1, input));
+  EXPECT_TRUE(test_printf("'   01'", "'%*.*s'", 5, 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.*s'", 5, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.*s'", 5, 10, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%*.*s'", 10, 0, input));
+  EXPECT_TRUE(test_printf("'         0'", "'%*.*s'", 10, 1, input));
+  EXPECT_TRUE(test_printf("'        01'", "'%*.*s'", 10, 2, input));
+  EXPECT_TRUE(test_printf("'     01234'", "'%*.*s'", 10, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.*s'", 10, 10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%*.*s'", 15, 0, input));
+  EXPECT_TRUE(test_printf("'              0'", "'%*.*s'", 15, 1, input));
+  EXPECT_TRUE(test_printf("'             01'", "'%*.*s'", 15, 2, input));
+  EXPECT_TRUE(test_printf("'          01234'", "'%*.*s'", 15, 5, input));
+  EXPECT_TRUE(test_printf("'     0123456789'", "'%*.*s'", 15, 10, input));
+
+  EXPECT_TRUE(test_printf("'     '", "'%*.*s'", -5, 0, input));
+  EXPECT_TRUE(test_printf("'0    '", "'%*.*s'", -5, 1, input));
+  EXPECT_TRUE(test_printf("'01   '", "'%*.*s'", -5, 2, input));
+  EXPECT_TRUE(test_printf("'01234'", "'%*.*s'", -5, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.*s'", -5, 10, input));
+
+  EXPECT_TRUE(test_printf("'          '", "'%*.*s'", -10, 0, input));
+  EXPECT_TRUE(test_printf("'0         '", "'%*.*s'", -10, 1, input));
+  EXPECT_TRUE(test_printf("'01        '", "'%*.*s'", -10, 2, input));
+  EXPECT_TRUE(test_printf("'01234     '", "'%*.*s'", -10, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789'", "'%*.*s'", -10, 10, input));
+
+  EXPECT_TRUE(test_printf("'               '", "'%*.*s'", -15, 0, input));
+  EXPECT_TRUE(test_printf("'0              '", "'%*.*s'", -15, 1, input));
+  EXPECT_TRUE(test_printf("'01             '", "'%*.*s'", -15, 2, input));
+  EXPECT_TRUE(test_printf("'01234          '", "'%*.*s'", -15, 5, input));
+  EXPECT_TRUE(test_printf("'0123456789     '", "'%*.*s'", -15, 10, input));
 
   END_TEST;
 }
@@ -222,6 +450,6 @@ UNITTEST("numbers", numbers)
 UNITTEST("hex", hex)
 UNITTEST("alt_and_sign", alt_and_sign)
 UNITTEST("formatting", formatting)
-UNITTEST("printf_field_width_tests", printf_field_width_test)
+UNITTEST("printf_field_width_and_precision_tests", printf_field_width_and_precision_test)
 UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
 UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests")

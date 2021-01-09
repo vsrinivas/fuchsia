@@ -27,6 +27,7 @@
 #define LEADZEROFLAG 0x00001000
 #define BLANKPOSFLAG 0x00002000
 #define FIELDWIDTHFLAG 0x00004000
+#define FIELDPRECISIONFLAG 0x00008000
 
 namespace {
 
@@ -106,7 +107,9 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
   unsigned long long n;
   void *ptr;
   int flags;
-  unsigned int format_num;
+  unsigned int *format_num;
+  unsigned int width;
+  unsigned int precision;
   char signchar;
   size_t chars_written = 0;
   char num_buffer[32];
@@ -129,7 +132,9 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
   for (;;) {
     /* reset the format state */
     flags = 0;
-    format_num = 0;
+    format_num = nullptr;
+    width = 0;
+    precision = 0;
     signchar = '\0';
 
     /* handle regular chars that aren't format related */
@@ -156,28 +161,38 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
 
     switch (c) {
       case '0' ... '9':
-        if (c == '0' && format_num == 0)
+        // Unless we are in the later phase of building up precision, assume we
+        // are building up width.
+        if (!(flags & FIELDPRECISIONFLAG)) {
+          flags |= FIELDWIDTHFLAG;
+          format_num = &width;
+        }
+        if (c == '0' && *format_num == 0) {
           flags |= LEADZEROFLAG;
-        format_num *= 10;
-        format_num += c - '0';
+        }
+        *format_num *= 10;
+        *format_num += c - '0';
         goto next_format;
       case '*': {
-        int width = va_arg(ap, int);
-        if (width < 0) {
+        flags |= FIELDWIDTHFLAG;
+        format_num = &width;
+        int signed_width = va_arg(ap, int);
+        if (signed_width < 0) {
           flags |= LEFTFORMATFLAG;
-          width = -width;
+          signed_width = -signed_width;
         }
-        format_num = width;
+        width = signed_width;
         goto next_format;
       }
       case '.':
         // Check the next character. It either should be * (if valid)
         // or something else (if invalid) that we consume as invalid.
         c = *fmt;
+        flags |= FIELDPRECISIONFLAG;
+        format_num = &precision;
         if (c == '*') {
           fmt++;
-          flags |= FIELDWIDTHFLAG;
-          format_num = va_arg(ap, int);
+          precision = va_arg(ap, int);
         } else if (c == 's') {
           // %.s is invalid, and testing glibc printf it
           // results in no output so force skipping the 's'
@@ -209,8 +224,8 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
 #endif
         s = sv.data();
         string_len = sv.size();
-        if (flags & FIELDWIDTHFLAG) {
-          string_len = ktl::min(string_len, static_cast<size_t>(format_num));
+        if (flags & FIELDPRECISIONFLAG) {
+          string_len = ktl::min(string_len, static_cast<size_t>(precision));
         }
         flags &= ~LEADZEROFLAG;  // Doesn't make sense for strings.
         goto _output_string_with_len;
@@ -320,9 +335,9 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
 
     /* shared output code */
   _output_string:
-    if (flags & FIELDWIDTHFLAG) {
+    if (flags & FIELDPRECISIONFLAG) {
       // Don't look past the specified length; the string can be unterminated.
-      string_len = strnlen(s, static_cast<size_t>(format_num));
+      string_len = strnlen(s, static_cast<size_t>(precision));
     } else {
       string_len = strlen(s);
     }
@@ -334,22 +349,22 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
       unsigned int written = err;
 
       /* pad to the right (if necessary) */
-      for (; format_num > written; format_num--)
+      for (; width > written; width--)
         OUTPUT_CHAR(' ');
     } else {
       /* right justify the text (digits) */
 
       /* if we're going to print a sign digit,
          it'll chew up one byte of the format size */
-      if (signchar != '\0' && format_num > 0)
-        format_num--;
+      if (signchar != '\0' && width > 0)
+        width--;
 
       /* output the sign char before the leading zeros */
       if (flags & LEADZEROFLAG && signchar != '\0')
         OUTPUT_CHAR(signchar);
 
       /* pad according to the format string */
-      for (; format_num > string_len; format_num--)
+      for (; width > string_len; width--)
         OUTPUT_CHAR(flags & LEADZEROFLAG ? '0' : ' ');
 
       /* if not leading zeros, output the sign char just before the number */
