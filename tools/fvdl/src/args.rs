@@ -90,6 +90,11 @@ pub struct StartCommand {
     #[argh(option, short = 'd')]
     pub vdl_path: Option<String>,
 
+    /// label used to download vdl from CIPD. Default is "latest".
+    /// Download only happens if vdl (device_launcher) binary cannot be found from known paths.
+    #[argh(option)]
+    pub vdl_version: Option<String>,
+
     /// enable WebRTC HTTP service on port, if set to 0 a random port will be picked
     #[argh(option, short = 'x')]
     pub grpcwebproxy: Option<usize>,

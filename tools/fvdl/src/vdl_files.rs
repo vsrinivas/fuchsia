@@ -76,7 +76,7 @@ impl VDLFiles {
             .arg(&zbi_out)
             .arg(&self.image_files.zbi)
             .arg("--entry")
-            .arg(format!("data/ssh/authorized_keys={}", self.ssh_files.public_key.display()))
+            .arg(format!("data/ssh/authorized_keys={}", self.ssh_files.auth_key.display()))
             .status()?;
         if status.success() {
             return Ok(zbi_out);
@@ -91,10 +91,9 @@ impl VDLFiles {
     fn assemble_system_images(&self, gcs_build_id: &String) -> Result<String> {
         if gcs_build_id.is_empty() {
             return Ok(format!(
-                "{},{},{},{},{},{},{},{}",
+                "{},{},{},{},{},{},{}",
                 self.ssh_files.private_key.display(),
-                self.ssh_files.public_key.display(),
-                self.ssh_files.config.display(),
+                self.ssh_files.auth_key.display(),
                 self.provision_zbi()?.display(),
                 self.image_files.kernel.display(),
                 self.image_files.fvm.display(),
@@ -103,10 +102,9 @@ impl VDLFiles {
             ));
         } else {
             return Ok(format!(
-                "{},{},{}",
+                "{},{}",
                 self.ssh_files.private_key.display(),
-                self.ssh_files.public_key.display(),
-                self.ssh_files.config.display(),
+                self.ssh_files.auth_key.display(),
             ));
         }
     }
@@ -147,7 +145,7 @@ impl VDLFiles {
                                 .as_ref()
                                 .unwrap_or(&String::from("integration"))
                                 .to_string(),
-                            "aemu".to_string(),
+                            "third_party/aemu".to_string(),
                         )?
                         .join("emulator")
                 } else {
@@ -166,9 +164,9 @@ impl VDLFiles {
                                 .as_ref()
                                 .unwrap_or(&String::from("latest"))
                                 .to_string(),
-                            "grpcwebproxy".to_string(),
+                            "third_party/grpcwebproxy".to_string(),
                         )?
-                        .join("emulator")
+                        .join("grpcwebproxy")
                 } else {
                     self.host_tools.grpcwebproxy.clone()
                 }
@@ -176,7 +174,22 @@ impl VDLFiles {
         };
         let vdl = match &start_command.vdl_path {
             Some(vdl_path) => PathBuf::from(vdl_path),
-            None => self.host_tools.vdl.clone(),
+            None => {
+                if !self.host_tools.vdl.exists() {
+                    self.host_tools
+                        .download_and_extract(
+                            start_command
+                                .vdl_version
+                                .as_ref()
+                                .unwrap_or(&String::from("latest"))
+                                .to_string(),
+                            "vdl".to_string(),
+                        )?
+                        .join("device_launcher")
+                } else {
+                    self.host_tools.vdl.clone()
+                }
+            }
         };
 
         let ssh_port = pick_unused_port().unwrap();
@@ -268,8 +281,14 @@ impl VDLFiles {
                 .output()?;
             Command::new("ssh")
                 .args(&[
-                    "-F",
-                    &self.ssh_files.config.to_str().unwrap(),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "CheckHostIP=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-i",
+                    &self.ssh_files.private_key.to_str().unwrap(),
                     str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),
                 ])
                 .spawn()?
@@ -277,8 +296,14 @@ impl VDLFiles {
         } else {
             Command::new("ssh")
                 .args(&[
-                    "-F",
-                    &self.ssh_files.config.to_str().unwrap(),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "CheckHostIP=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-i",
+                    &self.ssh_files.private_key.to_str().unwrap(),
                     "fuchsia@localhost",
                     "-p",
                     &ssh_port.to_string(),

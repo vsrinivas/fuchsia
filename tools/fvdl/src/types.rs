@@ -11,7 +11,7 @@ use hyper::{StatusCode, Uri};
 use std::convert::From;
 use std::env;
 use std::fs::{create_dir, create_dir_all, File};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
 
@@ -83,9 +83,11 @@ impl HostTools {
         };
 
         Ok(HostTools {
+            // prebuilt binaries that can be optionally fetched from cipd.
             aemu: PathBuf::new(),
             grpcwebproxy: PathBuf::new(),
-            vdl: sdk_tool_dir.join("device_launcher"),
+            vdl: PathBuf::new(),
+            // in-tree tools that are packaged with GN SDK.
             device_finder: sdk_tool_dir.join("device-finder"),
             far: sdk_tool_dir.join("far"),
             fvm: sdk_tool_dir.join("fvm"),
@@ -118,18 +120,23 @@ impl HostTools {
                 _ => "linux-amd64",
             };
             let url = format!(
-                "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/{}/{}/+/{}",
+                "https://chrome-infra-packages.appspot.com/dl/fuchsia/{}/{}/+/{}",
                 cipd_pkg, arch, label
             )
             .parse::<Uri>()?;
-            let aemu_zip = root_path.join(format!("{}.zip", cipd_pkg));
-            if aemu_zip.exists() {
-                return Ok(root_path);
+            let name = cipd_pkg
+                .split('/')
+                .last()
+                .ok_or(anyhow!("Cannot identify filename from {}", cipd_pkg))?;
+            let cipd_zip = root_path.join(format!("{}.zip", name));
+            let unzipped_root = root_path.join(name);
+            if unzipped_root.exists() {
+                return Ok(unzipped_root);
             }
-            let status = cipd::download(url.clone(), &aemu_zip).await?;
+            let status = cipd::download(url.clone(), &cipd_zip).await?;
             if status == StatusCode::OK {
-                cipd::extract_zip(&aemu_zip, &root_path)?;
-                Ok(root_path)
+                cipd::extract_zip(&cipd_zip, &unzipped_root)?;
+                Ok(unzipped_root)
             } else {
                 Err(format_err!(
                     "Cannot download file from cipd path {}. Got status code {}",
@@ -205,18 +212,14 @@ impl ImageFiles {
 
 pub struct SSHKeys {
     pub auth_key: PathBuf,
-    pub config: PathBuf,
     pub private_key: PathBuf,
-    pub public_key: PathBuf,
 }
 
 impl SSHKeys {
     #[allow(dead_code)]
     pub fn print(&self) {
         println!("private_key {:?}", self.private_key);
-        println!("public_key {:?}", self.public_key);
         println!("auth_key {:?}", self.auth_key);
-        println!("config {:?}", self.config);
     }
 
     /// Initialize SSH key files for in-tree usage.
@@ -229,16 +232,8 @@ impl SSHKeys {
 
         let private_key = PathBuf::from(lines.next().unwrap()?);
         let auth_key = PathBuf::from(lines.next().unwrap()?);
-        let mut pkey = private_key.clone();
-        pkey.set_extension("pub");
-        let public_key = pkey.to_path_buf();
 
-        Ok(SSHKeys {
-            auth_key: auth_key,
-            config: read_env_path("FUCHSIA_BUILD_DIR")?.join("ssh-keys/ssh_config"),
-            private_key: private_key,
-            public_key: public_key,
-        })
+        Ok(SSHKeys { auth_key: auth_key, private_key: private_key })
     }
 
     /// Initialize SSH key files for GN SDK usage.
@@ -247,65 +242,8 @@ impl SSHKeys {
     pub fn from_sdk_env() -> Result<SSHKeys> {
         let keys = SSHKeys {
             auth_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys"),
-            config: get_sdk_data_dir()?.join("sshconfig"),
             private_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519"),
-            public_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519.pub"),
         };
-        if !keys.config.exists() {
-            let config_content = format!(
-                "# Configure port 8022 for connecting to a device with the local address.
-# This makes it possible to forward 8022 to a device connected remotely.
-# The fuchsia private key is used for the identity.
-Host 127.0.0.1
-  Port 8022
-
-Host ::1
-  Port 8022
-
-Host *
-# Turn off refusing to connect to hosts whose key has changed
-StrictHostKeyChecking no
-CheckHostIP no
-
-# Disable recording the known hosts
-UserKnownHostsFile=/dev/null
-
-# Do not forward auth agent connection to remote, no X11
-ForwardAgent no
-ForwardX11 no
-
-# Connection timeout in seconds
-ConnectTimeout=10
-
-# Check for server alive in seconds, max count before disconnecting
-ServerAliveInterval 1
-ServerAliveCountMax 10
-
-# Try to keep the master connection open to speed reconnecting.
-ControlMaster auto
-ControlPersist yes
-
-# When expanded, the ControlPath below cannot have more than 90 characters
-# (total of 108 minus 18 used by a random suffix added by ssh).
-# '%C' expands to 40 chars and there are 9 fixed chars, so '~' can expand to
-# up to 41 chars, which is a reasonable limit for a user's home in most
-# situations. If '~' expands to more than 41 chars, the ssh connection
-# will fail with an error like:
-#     unix_listener: path \"...\" too long for Unix domain socket
-# A possible solution is to use /tmp instead of ~, but it has
-# its own security concerns.
-ControlPath=~/.ssh/fx-%C
-
-# Connect with user, use the identity specified.
-User fuchsia
-IdentitiesOnly yes
-IdentityFile {}
-GSSAPIDelegateCredentials no
-",
-                keys.private_key.display()
-            );
-            File::create(&keys.config)?.write_all(config_content.as_bytes())?;
-        }
         Ok(keys)
     }
 
@@ -316,14 +254,9 @@ GSSAPIDelegateCredentials no
         self.private_key = vdl_priv_key_dest.to_path_buf();
 
         let vdl_auth_key_dest = dir.join("id_ed25519.pub");
-        let vdl_auth_key_src = self.public_key.as_path();
+        let vdl_auth_key_src = self.auth_key.as_path();
         unix::fs::symlink(&vdl_auth_key_src, &vdl_auth_key_dest)?;
-        self.public_key = vdl_auth_key_dest.to_path_buf();
-
-        let vdl_ssh_config_dest = dir.join("ssh_config");
-        let vdl_ssh_config_src = self.config.as_path();
-        unix::fs::symlink(&vdl_ssh_config_src, &vdl_ssh_config_dest)?;
-        self.config = vdl_ssh_config_dest.to_path_buf();
+        self.auth_key = vdl_auth_key_dest.to_path_buf();
 
         Ok(())
     }
@@ -428,6 +361,7 @@ mod tests {
             grpcwebproxy_version: None,
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
+            vdl_version: None,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
@@ -496,10 +430,6 @@ mod tests {
             "/usr/local/home/foo/.ssh/fuchsia_ed25519"
         );
         assert_eq!(
-            ssh_files.public_key.to_str().unwrap(),
-            "/usr/local/home/foo/.ssh/fuchsia_ed25519.pub"
-        );
-        assert_eq!(
             ssh_files.auth_key.to_str().unwrap(),
             "/usr/local/home/foo/.ssh/fuchsia_authorized_keys"
         );
@@ -522,22 +452,18 @@ mod tests {
         let tmp_dir = TempDir::new()?.into_path();
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.to_str().unwrap());
         let host_tools = HostTools::from_sdk_env()?;
-        // Pick the smallest package I can find.
-        host_tools.download_and_extract("latest".to_string(), "ninja".to_string())?;
-        let mut has_zip = false;
+        let unzipped_root =
+            host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
+
         let mut has_extract = false;
-        for path in read_dir(&tmp_dir)? {
+        for path in read_dir(&unzipped_root)? {
             let entry = path?;
             let p = entry.path();
             println!("Found path {}", p.display());
-            if p.ends_with("ninja.zip") {
-                has_zip = true;
-            }
-            if p.ends_with("ninja") {
+            if p.ends_with("device_launcher") {
                 has_extract = true;
             }
         }
-        assert!(has_zip);
         assert!(has_extract);
         Ok(())
     }
