@@ -46,6 +46,7 @@ source_set("source") {
   ]
   deps = [
     ":camera_controller_bind",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
     "//zircon/public/lib/safemath",
   ]
   public_deps = [
@@ -58,8 +59,6 @@ source_set("source") {
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/controller/configs",

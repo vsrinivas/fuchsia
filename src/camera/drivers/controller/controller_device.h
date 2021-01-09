@@ -11,7 +11,7 @@
 #include <threads.h>
 #endif
 
-#include <fuchsia/hardware/camera/c/fidl.h>
+#include <fuchsia/hardware/camera/llcpp/fidl.h>
 #include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <fuchsia/hardware/ge2d/cpp/banjo.h>
@@ -38,7 +38,8 @@ class ControllerDevice;
 using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk::Messageable>;
 
 class ControllerDevice : public ControllerDeviceType,
-                         public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
+                         public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA>,
+                         public llcpp::fuchsia::hardware::camera::Device::Interface {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, ddk::CompositeProtocolClient& composite,
@@ -69,17 +70,11 @@ class ControllerDevice : public ControllerDeviceType,
   void ShutDown();
 
   // Fuchsia Hardware Camera FIDL implementation.
-  zx_status_t GetChannel2(zx_handle_t handle);
-  zx_status_t GetChannel(zx_handle_t handle) {
-    // Closing the handle to let the client know that this call is not supported.
-    zx::channel ch(handle);
-    return ZX_ERR_NOT_SUPPORTED;
+  void GetChannel2(zx::channel handle, GetChannel2Completer::Sync& completer) override;
+  // Call not supported
+  void GetChannel(zx::channel handle, GetChannelCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-
-  static constexpr fuchsia_hardware_camera_Device_ops_t fidl_ops = {
-      .GetChannel = fidl::Binder<ControllerDevice>::BindMember<&ControllerDevice::GetChannel>,
-      .GetChannel2 = fidl::Binder<ControllerDevice>::BindMember<&ControllerDevice::GetChannel2>,
-  };
 
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;

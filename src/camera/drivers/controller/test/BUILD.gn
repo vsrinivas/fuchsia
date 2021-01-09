@@ -29,6 +29,7 @@ executable("test") {
   deps = [
     ":constants",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/controller/sherlock:config",

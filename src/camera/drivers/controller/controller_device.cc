@@ -11,6 +11,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddktl/fidl.h>
 
 #include "src/camera/drivers/controller/bind.h"
 #include "src/lib/fsl/handles/object_info.h"
@@ -27,21 +28,24 @@ void ControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
 void ControllerDevice::DdkRelease() { delete this; }
 
 zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &fidl_ops);
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::camera::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
-zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
+void ControllerDevice::GetChannel2(zx::channel handle, GetChannel2Completer::Sync& completer) {
   if (handle == ZX_HANDLE_INVALID) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
+  zx::channel channel(std::move(handle));
   if (controller_ != nullptr) {
-    zx::channel channel(handle);
     zxlogf(ERROR, "%s: Camera2 Controller already running", __func__);
-    return ZX_ERR_INTERNAL;
+    completer.Close(ZX_ERR_INTERNAL);
+    return;
   }
 
-  zx::channel channel(handle);
   fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
@@ -49,7 +53,8 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
   auto status = sysmem_.Connect(sysmem_allocator.NewRequest().TakeChannel());
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Could not setup sysmem allocator";
-    return status;
+    completer.Close(status);
+    return;
   }
 
   sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
@@ -73,9 +78,10 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
     controller_ = std::make_unique<ControllerImpl>(
         parent(), std::move(control_interface), loop_.dispatcher(), isp_, gdc_, ge2d_,
         shutdown_callback, std::move(sysmem_allocator), shutdown_event_);
-    return ZX_OK;
+    completer.Close(ZX_OK);
+    return;
   }
-  return ZX_ERR_INTERNAL;
+  completer.Close(ZX_ERR_INTERNAL);
 }
 
 void ControllerDevice::ShutDown() { loop_.Shutdown(); }
