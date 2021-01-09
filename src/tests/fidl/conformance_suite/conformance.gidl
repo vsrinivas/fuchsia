@@ -699,7 +699,6 @@ decode_failure("OptionalXUnionInStructAbsentInvalidNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("OptionalXUnionInStructAbsentInvalidNumHandles") {
@@ -724,7 +723,6 @@ decode_failure("OptionalXUnionInStructAbsentInvalidNumHandles") {
         ],
     },
     err = INVALID_NUM_HANDLES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 success("OptionalXUnionInStructPresent") {
@@ -784,7 +782,6 @@ decode_failure("OptionalXUnionInStructPresentZeroNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("OptionalXUnionInStructPresentInvalidNumBytes") {
@@ -812,7 +809,6 @@ decode_failure("OptionalXUnionInStructPresentInvalidNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("OptionalXUnionInStructPresentInvalidNumHandles") {
@@ -840,7 +836,6 @@ decode_failure("OptionalXUnionInStructPresentInvalidNumHandles") {
         ],
     },
     err = INVALID_NUM_HANDLES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 success("XUnionInTableXUnionAbsent") {
@@ -920,7 +915,6 @@ decode_failure("XUnionInTableXUnionAbsentInvalidNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("XUnionInTableXUnionAbsentInvalidNumHandles") {
@@ -958,7 +952,6 @@ decode_failure("XUnionInTableXUnionAbsentInvalidNumHandles") {
         ],
     },
     err = INVALID_NUM_HANDLES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 success("XUnionInTableXUnionPresent") {
@@ -1056,7 +1049,6 @@ decode_failure("XUnionInTableXUnionPresentZeroNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("XUnionInTableXUnionPresentInvalidNumBytes") {
@@ -1102,7 +1094,6 @@ decode_failure("XUnionInTableXUnionPresentInvalidNumBytes") {
         ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 decode_failure("XUnionInTableXUnionPresentInvalidNumHandles") {
@@ -1148,7 +1139,6 @@ decode_failure("XUnionInTableXUnionPresentInvalidNumHandles") {
         ],
     },
     err = INVALID_NUM_HANDLES_IN_ENVELOPE,
-    bindings_allowlist = [dart,go,llcpp,rust],
 }
 
 success("StrictXUnion") {
