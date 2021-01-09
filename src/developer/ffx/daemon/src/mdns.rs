@@ -31,7 +31,7 @@ const MDNS_MCAST_V6: Ipv6Addr = Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 0x00fb);
 const MDNS_PORT: u16 = 5353;
 
 pub struct MdnsTargetFinder {
-    socket_tasks: Arc<Mutex<HashMap<SocketAddr, JoinHandle<()>>>>,
+    socket_tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
     interface_discovery_task: Option<JoinHandle<()>>,
     config: TargetFinderConfig,
 }
@@ -39,7 +39,7 @@ pub struct MdnsTargetFinder {
 // interface_discovery iterates over all multicast interfaces and adds them to
 // the socket_tasks if there is not already a task for that interface.
 async fn interface_discovery(
-    socket_tasks: Arc<Mutex<HashMap<SocketAddr, JoinHandle<()>>>>,
+    socket_tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
     e: events::Queue<events::DaemonEvent>,
     discovery_interval: Duration,
     query_interval: Duration,
@@ -122,7 +122,7 @@ async fn interface_discovery(
 
             for addr in iface.addrs.iter() {
                 let mut addr = addr.clone();
-                addr.set_port(MDNS_PORT);
+                addr.set_port(0);
 
                 // TODO(raggi): remove duplicate joins, log unexpected errors
                 if let SocketAddr::V4(addr) = addr {
@@ -131,7 +131,7 @@ async fn interface_discovery(
                     }
                 }
 
-                if socket_tasks.lock().await.get(&addr).is_some() {
+                if socket_tasks.lock().await.get(&addr.ip()).is_some() {
                     continue;
                 }
 
@@ -149,7 +149,7 @@ async fn interface_discovery(
 
                 if sock.is_some() {
                     socket_tasks.lock().await.insert(
-                        addr.clone(),
+                        addr.ip().clone(),
                         task::spawn(query_recv_loop(
                             Arc::new(sock.unwrap()),
                             e.clone(),
@@ -240,7 +240,11 @@ async fn query_loop(sock: Arc<UdpSocket>, interval: Duration) {
 
     loop {
         if let Err(err) = sock.send_to(&QUERY_BUF, to_addr).await {
-            log::info!("mdns query failed: {}", err);
+            log::info!(
+                "mdns query failed from {}: {}",
+                sock.local_addr().map(|a| a.to_string()).unwrap_or("unknown".to_string()),
+                err
+            );
             return;
         }
 
@@ -254,7 +258,7 @@ async fn query_recv_loop(
     sock: Arc<UdpSocket>,
     e: events::Queue<events::DaemonEvent>,
     interval: Duration,
-    tasks: Arc<Mutex<HashMap<SocketAddr, JoinHandle<()>>>>,
+    tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
 ) {
     let mut recv = recv_loop(sock.clone(), e).boxed().fuse();
     let mut query = query_loop(sock.clone(), interval).boxed().fuse();
@@ -277,7 +281,7 @@ async fn query_recv_loop(
     drop(recv);
     drop(query);
 
-    tasks.lock().await.remove(&addr).map(drop);
+    tasks.lock().await.remove(&addr.ip()).map(drop);
     log::info!("mdns: shut down query socket {}", &addr);
 }
 
@@ -400,8 +404,6 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             socket.set_ttl(ttl).context("set_ttl")?;
             socket.set_multicast_if_v4(&saddr.ip()).context("set_multicast_if_v4")?;
             socket.set_multicast_ttl_v4(ttl).context("set_multicast_ttl_v4")?;
-            socket.set_reuse_address(true).context("set_reuse_address")?;
-            socket.set_reuse_port(true).context("set_reuse_port")?;
             socket.bind(&addr.into()).context("bind")?;
             socket
         }
@@ -416,8 +418,6 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             socket.set_multicast_if_v6(interface_id).context("set_multicast_if_v6")?;
             socket.set_unicast_hops_v6(ttl).context("set_unicast_hops_v6")?;
             socket.set_multicast_hops_v6(ttl).context("set_multicast_hops_v6")?;
-            socket.set_reuse_address(true).context("set_reuse_address")?;
-            socket.set_reuse_port(true).context("set_reuse_port")?;
             socket.bind(&addr.into()).context("bind")?;
             socket
         }
