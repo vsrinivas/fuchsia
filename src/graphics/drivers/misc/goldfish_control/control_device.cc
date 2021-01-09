@@ -20,6 +20,7 @@
 #include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
 #include "src/graphics/drivers/misc/goldfish_control/goldfish_control_composite-bind.h"
 #include "src/graphics/drivers/misc/goldfish_control/host_visible_heap.h"
+#include "src/graphics/drivers/misc/goldfish_control/render_control_commands.h"
 
 namespace goldfish {
 namespace {
@@ -33,61 +34,6 @@ constexpr uint32_t kClientFlags = 0;
 constexpr uint32_t VULKAN_ONLY = 1;
 
 constexpr uint32_t kInvalidBufferHandle = 0U;
-
-struct CreateColorBufferCmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t width;
-  uint32_t height;
-  uint32_t internalformat;
-};
-constexpr uint32_t kOP_rcCreateColorBuffer = 10012;
-constexpr uint32_t kSize_rcCreateColorBuffer = 20;
-
-struct CloseColorBufferCmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t id;
-};
-constexpr uint32_t kOP_rcCloseColorBuffer = 10014;
-constexpr uint32_t kSize_rcCloseColorBuffer = 12;
-
-struct CloseBufferCmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t id;
-};
-constexpr uint32_t kOP_rcCloseBuffer = 10050;
-constexpr uint32_t kSize_rcCloseBuffer = 12;
-
-struct SetColorBufferVulkanMode2Cmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t id;
-  uint32_t mode;
-  uint32_t memory_property;
-};
-constexpr uint32_t kOP_rcSetColorBufferVulkanMode2 = 10051;
-constexpr uint32_t kSize_rcSetColorBufferVulkanMode2 = 20;
-
-struct __attribute__((__packed__)) MapGpaToBufferHandle2Cmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t id;
-  uint64_t gpa;
-  uint64_t map_size;
-};
-constexpr uint32_t kOP_rcMapGpaToBufferHandle2 = 10054;
-constexpr uint32_t kSize_rcMapGpaToBufferHandle2 = 28;
-
-struct __attribute__((__packed__)) CreateBuffer2Cmd {
-  uint32_t op;
-  uint32_t size;
-  uint64_t buffer_size;
-  uint32_t memory_property;
-};
-constexpr uint32_t kOP_rcCreateBuffer2 = 10053;
-constexpr uint32_t kSize_rcCreateBuffer2 = 20;
 
 zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   zx_info_handle_basic_t info;
@@ -800,7 +746,11 @@ zx_status_t Control::MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint6
 
 void Control::RemoveHeap(Heap* heap) {
   fbl::AutoLock lock(&lock_);
-  heaps_.erase(*heap);
+  // The async loop of heap is still running when calling this method, so that
+  // we cannot remove it directly from |heaps_| (otherwise async loop needs to
+  // wait for this to end before shutting down the loop, causing an infinite
+  // loop), instead we move it into a staging area for future deletion.
+  removed_heaps_.push_back(heaps_.erase(*heap));
 }
 
 }  // namespace goldfish
@@ -812,7 +762,6 @@ static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver
   return ops;
 }();
 
-// clang-format off
 ZIRCON_DRIVER(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1");
 
 // clang-format on

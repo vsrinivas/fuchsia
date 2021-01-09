@@ -124,6 +124,7 @@ class Control : public ControlType,
   ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
 
   fbl::DoublyLinkedList<std::unique_ptr<Heap>> heaps_ TA_GUARDED(lock_);
+  std::vector<std::unique_ptr<Heap>> removed_heaps_;
 
   zx::event pipe_event_;
 
