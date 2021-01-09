@@ -97,7 +97,6 @@ For documentation on the `select_variant` argument, see [Variants](variants.md).
 The next step is to run the actual build with Ninja:
 
 ```bash
-$ ninja -C out/default.zircon
 $ ninja -C out/default
 ```
 

@@ -11,7 +11,7 @@ To generate a test ZBI:
 cd ${FUCHSIA_DIR}/garnet/public/rust/fuchsia-bootfs
 
 # Generate an uncompressed test ZBI.
-${FUCHSIA_OUT_DIR}/default.zircon/tools/zbi -u --output testdata/basic.bootfs.full testdata/input
+${FUCHSIA_OUT_DIR}/default/host-tools/zbi -u --output testdata/basic.bootfs.full testdata/input
 
 # We don't want the ZBI item headers so remove them.
 dd if=testdata/basic.bootfs.full of=testdata/basic.bootfs.uncompresssed bs=1 skip=64

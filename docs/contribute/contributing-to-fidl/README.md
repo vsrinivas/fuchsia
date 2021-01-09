@@ -606,15 +606,14 @@ instructions for the example case where `fidlc --files test.fidl` is crashing:
 
 Note: Even with all optimizations turned off, the binaries in
 `out/default/host_x64` are stripped. For debugging, you should use the binaries
-with the `.debug` suffix, such as
-`out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug`.
+in the `exe.unstripped` sub-directory, such as `out/default/host_x64/exe.unstripped/fidlc`.
 
 ### GDB {#GDB}
 
 Start GDB:
 
 ```sh
-gdb --args out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug --files test.fidl
+gdb --args out/default/host_x64/exe.unstripped/fidlc --files test.fidl
 ```
 
 Then, enter "r" to start the program.
@@ -629,7 +628,7 @@ fx build host_x64/fidlc
 ```
 
 Then run `out/default/host_x64/fidlc --files test.fidl`. That binary should be
-the same as `out/default.zircon/host-x64-linux-asan/obj/tools/fidl/fidlc`.
+the same as `out/default/host_x64-asan/fidlc`.
 
 ### Valgrind {#Valgrind}
 
@@ -643,7 +642,7 @@ sudo apt-get install valgrind
 Then:
 
 ```sh
-valgrind -v -- out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc.debug --files test.fidl
+valgrind -v -- out/default/host_x64/exe.unstripped/fidlc --files test.fidl
 ```
 
 ## Workflows

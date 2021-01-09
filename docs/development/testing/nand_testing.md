@@ -74,7 +74,7 @@ $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --save --fi
 Transfer the image file to the host:
 
 ```shell
-$ out/default.zircon/tools/netcp :/tmp/image /tmp/saved_image_file
+$ out/default/host-tools/netcp :/tmp/image /tmp/saved_image_file
 ```
 
 ## Replay
@@ -85,7 +85,7 @@ First, transfer the image to a device running Zircon. For example, on the host:
 
 ```shell
 echo /nand.dmp=/tmp/saved_image_file > /tmp/manifest.txt
-out/default.zircon/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
+out/default/host-tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
 fx set bringup.x64
 fx build
 fx qemu -k -- -hda /tmp/image.dsk

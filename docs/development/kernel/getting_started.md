@@ -48,7 +48,7 @@ To execute the build, run the following command:
 fx build
 ```
 
-The build results are saved in `$FUCHSIA_DIR/out/default.zircon`.
+The build results are saved in `$FUCHSIA_DIR/out/default`.
 
 ## Explicitly set the target toolchain
 

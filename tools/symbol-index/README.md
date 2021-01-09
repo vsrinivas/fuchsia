@@ -18,7 +18,6 @@ following content in the file.
 
 ```
 /home/me/fuchsia/out/default/.build-id    /home/me/fuchsia/out/default
-/home/me/fuchsia/out/default.zircon/.build-id    /home/me/fuchsia/out/default.zircon
 /home/me/fuchsia/prebuilt/.build-id
 /home/me/fuchsia/prebuilt/third_party/clang/mac-x64/lib/debug/.build-id
 ```
