@@ -134,14 +134,16 @@ class ExecutionHandle {
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cmx".
   CommandTokens _getComponentTokens(List<String> runnerFlags) {
-    List<String> subCommand = ['shell', 'run-test-component'] + runnerFlags;
+    List<String> subCommand = ['shell', 'run-test-component']
+      ..addAll(runnerFlags.map((flag) => "'$flag'"));
     return CommandTokens(['fx', ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cm".
   CommandTokens _getSuiteTokens(List<String> runnerFlags) {
-    List<String> subCommand = ['shell', 'run-test-suite'] + runnerFlags;
+    List<String> subCommand = ['shell', 'run-test-suite']
+      ..addAll(runnerFlags.map((flag) => "'$flag'"));
     return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 

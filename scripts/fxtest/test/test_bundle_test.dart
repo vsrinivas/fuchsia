@@ -39,7 +39,7 @@ void main() {
           'fx',
           'shell',
           'run-test-component',
-          '--max-log-severity=WARN',
+          "'--max-log-severity=WARN'",
           componentUrl
         ].join(' '),
       );
@@ -96,8 +96,8 @@ void main() {
           'fx',
           'shell',
           'run-test-suite',
-          '--some-flag',
-          'some_val',
+          "'--some-flag'",
+          "'some_val'",
           componentUrl
         ].join(' '),
       );
