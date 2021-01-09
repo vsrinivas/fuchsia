@@ -49,7 +49,7 @@ const NOMINAL_RATE_MAX_ERROR: zx::Duration = zx::Duration::from_nanos(
 );
 
 /// The minimum change in value that causes reported error bound to be updated.
-const ERROR_BOUND_UPDATE: u64 = 200_000_000; // 200ms
+const ERROR_BOUND_UPDATE: u64 = 100_000_000; // 100ms
 
 /// Describes how a clock will be slewed in order to correct time.
 #[derive(PartialEq)]
@@ -499,64 +499,73 @@ mod tests {
             |seconds: i64| -> fasync::Time { fasync::Time::from_nanos(seconds * NANOS_PER_SECOND) };
 
         // A short slew should contain no error bound updates.
-        let bound_at_0 = estimator.error_bound(monotonic_ref);
-        let bound_at_10 = estimator.error_bound(monotonic_ref + 10.seconds());
+        let slew = Slew { rate_adjust: -50, duration: 10.seconds() };
+        let estimate_bound_at_ref = estimator.error_bound(monotonic_ref);
+        let bound_at_start = estimate_bound_at_ref + slew.correction().into_nanos().abs() as u64;
+        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
         assert_eq!(
-            clock_updates_for_slew(
-                &Slew { rate_adjust: -50, duration: 10.seconds() },
-                monotonic_ref,
-                &estimator
-            ),
+            clock_updates_for_slew(&slew, monotonic_ref, &estimator),
             vec![
                 (
                     time_seconds(0),
-                    full_update(-50, bound_at_0 + 500_000),
+                    full_update(slew.rate_adjust, bound_at_start),
                     ClockUpdateReason::BeginSlew
                 ),
-                (time_seconds(10), full_update(0, bound_at_10), ClockUpdateReason::EndSlew),
+                (
+                    time_seconds(slew.duration.into_seconds()),
+                    full_update(0, bound_at_end),
+                    ClockUpdateReason::EndSlew
+                ),
             ]
         );
 
         // A larger slew should contain as many error bound reductions as needed.
-        let bound_at_7200 = estimator.error_bound(monotonic_ref + 2.hours());
-        let initial_bound = bound_at_0 + 720.millis().into_nanos() as u64; // 2hr * 100ppm/1e6
-        let update_interval_nanos = ((2.hour().into_nanos() as i128 * ERROR_BOUND_UPDATE as i128)
-            / (initial_bound - bound_at_7200) as i128) as i64;
+        let slew = Slew { rate_adjust: 100, duration: 1.hour() };
+        let bound_at_start = estimate_bound_at_ref + slew.correction().into_nanos().abs() as u64;
+        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
+        let update_interval_nanos = ((slew.duration.into_nanos() as i128
+            * ERROR_BOUND_UPDATE as i128)
+            / (bound_at_start - bound_at_end) as i128) as i64;
         assert_eq!(
-            clock_updates_for_slew(
-                &Slew { rate_adjust: 100, duration: 2.hour() },
-                monotonic_ref,
-                &estimator
-            ),
+            clock_updates_for_slew(&slew, monotonic_ref, &estimator),
             vec![
-                (time_seconds(0), full_update(100, initial_bound), ClockUpdateReason::BeginSlew),
+                (
+                    time_seconds(0),
+                    full_update(slew.rate_adjust, bound_at_start),
+                    ClockUpdateReason::BeginSlew
+                ),
                 (
                     fasync::Time::from_nanos(update_interval_nanos),
-                    error_update(initial_bound - ERROR_BOUND_UPDATE),
+                    error_update(bound_at_start - ERROR_BOUND_UPDATE),
                     ClockUpdateReason::ReduceError,
                 ),
                 (
                     fasync::Time::from_nanos(2 * update_interval_nanos),
-                    error_update(initial_bound - 2 * ERROR_BOUND_UPDATE),
+                    error_update(bound_at_start - 2 * ERROR_BOUND_UPDATE),
                     ClockUpdateReason::ReduceError,
                 ),
-                (time_seconds(7200), full_update(0, bound_at_7200), ClockUpdateReason::EndSlew),
+                (
+                    time_seconds(slew.duration.into_seconds()),
+                    full_update(0, bound_at_end),
+                    ClockUpdateReason::EndSlew
+                ),
             ]
         );
 
         // When the error reduction from applying the correction is smaller than the growth from the
         // oscillator uncertainty the error bound should be fixed at the final value with no
         // intermediate updates.
-        let bound_at_72000 = estimator.error_bound(monotonic_ref + 20.hours());
+        let slew = Slew { rate_adjust: 1, duration: 10.hours() };
+        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
         assert_eq!(
-            clock_updates_for_slew(
-                &Slew { rate_adjust: 1, duration: 20.hours() },
-                monotonic_ref,
-                &estimator,
-            ),
+            clock_updates_for_slew(&slew, monotonic_ref, &estimator,),
             vec![
-                (time_seconds(0), full_update(1, bound_at_72000), ClockUpdateReason::BeginSlew),
-                (time_seconds(72000), full_update(0, bound_at_72000), ClockUpdateReason::EndSlew),
+                (time_seconds(0), full_update(1, bound_at_end), ClockUpdateReason::BeginSlew),
+                (
+                    time_seconds(slew.duration.into_seconds()),
+                    full_update(0, bound_at_end),
+                    ClockUpdateReason::EndSlew
+                ),
             ]
         );
     }
@@ -702,7 +711,7 @@ mod tests {
         // Calculate a small change in offset that will be corrected by slewing and is large enough
         // to require an error bound reduction. Note the tests doesn't have to actually wait this
         // long since we can manually trigger async timers.
-        let delta_offset = 800.millis();
+        let delta_offset = 600.millis();
         let filtered_delta_offset = delta_offset / 2;
 
         let clock = create_clock();
@@ -738,7 +747,7 @@ mod tests {
         // show that a rate change is in progress.
         assert_geq!(updated_utc, monotonic_before + OFFSET);
         assert_leq!(updated_utc, monotonic_after + OFFSET + filtered_delta_offset);
-        assert_eq!(details.mono_to_synthetic.rate.synthetic_ticks, 1000075);
+        assert_eq!(details.mono_to_synthetic.rate.synthetic_ticks, 1000056);
         assert_eq!(details.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_geq!(details.last_rate_adjust_update_ticks, details.last_value_update_ticks);
 
@@ -747,7 +756,7 @@ mod tests {
         assert!(executor.wake_next_timer().is_some());
         let _ = executor.run_until_stalled(&mut fut);
         let details2 = clock.get_details().unwrap();
-        assert_eq!(details2.mono_to_synthetic.rate.synthetic_ticks, 1000075);
+        assert_eq!(details2.mono_to_synthetic.rate.synthetic_ticks, 1000056);
         assert_eq!(details2.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_lt!(details2.error_bounds, details.error_bounds);
 
