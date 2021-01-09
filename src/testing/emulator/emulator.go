@@ -627,6 +627,23 @@ func (i *Instance) WaitForLogMessages(msgs []string) error {
 	return err
 }
 
+// WaitForAnyLogMessage reads log messages from the emulator instance looking for any line that contains a message from msgs.
+// Returns the first message that was found, or an error.
+func (i *Instance) WaitForAnyLogMessage(msgs ...string) (string, error) {
+	for {
+		line, err := i.stdout.ReadString('\n')
+		if err != nil {
+			i.printStderr()
+			return "", err
+		}
+		for _, msg := range msgs {
+			if strings.Contains(line, msg) {
+				return msg, nil
+			}
+		}
+	}
+}
+
 // WaitForLogMessageAssertNotSeen is the same as WaitForLogMessage() but with
 // the addition that it will panic if |notSeen| is contained in a retrieved
 // message.
@@ -693,19 +710,24 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 	return i.checkForLogMessages(b, []string{msg})
 }
 
+// printStderr prints all the lines from the instance's stderr stream.
+func (i *Instance) printStderr() {
+	for {
+		stderr, err := i.stderr.ReadString('\n')
+		if err != nil {
+			return
+		}
+		fmt.Print(stderr)
+	}
+}
+
 // Reads all messages from |b| and tests if all messages of |msgs| appear in *any* order. Returns
 // error if any.
 func (i *Instance) checkForLogMessages(b *bufio.Reader, msgs []string) error {
 	for {
 		line, err := b.ReadString('\n')
 		if err != nil {
-			for {
-				stderr, err2 := i.stderr.ReadString('\n')
-				if err2 != nil {
-					break
-				}
-				fmt.Print(stderr)
-			}
+			i.printStderr()
 			return err
 		}
 

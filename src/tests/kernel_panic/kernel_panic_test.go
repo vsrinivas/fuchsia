@@ -132,6 +132,15 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 	// Wait for the system to finish booting.
 	i.WaitForLogMessage("usage: k <command>")
 
+	// This test is incompatible with Address Sanitizer.
+	i.RunCommand("k build_instrumentation")
+	const kasan = "build_instrumentation: address_sanitizer"
+	if match, err := i.WaitForAnyLogMessage(kasan, "build_instrumentation: done"); err != nil {
+		t.Fatalf("failed to check for address_sanitizer instrumentation: %v", err)
+	} else if match == kasan {
+		t.Skipf("Skipping test. This test is incompatible with Address Sanitizer")
+	}
+
 	// Enable the pmm checker with action oops.
 	i.RunCommand("k pmm checker enable 4096 oops")
 	i.WaitForLogMessage("pmm checker enabled")
