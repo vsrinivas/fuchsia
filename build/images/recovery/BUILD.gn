@@ -71,12 +71,11 @@ assemble_system("recovery-eng") {
   ramdisk_fvm_in_zbi = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [
-              "console.shell=true",
-              "netsvc.disable=false",
-              "kernel.enable-debugging-syscalls=true",
-              "kernel.enable-serial-syscalls=true",
-            ] + zedboot_cmdline_args
-  cmdline_inputs = zedboot_cmdline_files
+    "console.shell=true",
+    "netsvc.disable=false",
+    "kernel.enable-debugging-syscalls=true",
+    "kernel.enable-serial-syscalls=true",
+  ]
 
   bootfs_labels = [
     "//build/info:bootfs",

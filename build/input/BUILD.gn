@@ -18,7 +18,10 @@ group("build_only") {
 
 group("recovery_bootfs") {
   testonly = true
-  deps = [ "board:recovery_bootfs_labels" ]
+  deps = [
+    "board:recovery_bootfs_labels",
+    "dev:recovery_bootfs_labels",
+  ]
 }
 
 group("system_image") {
@@ -32,5 +35,8 @@ group("system_image") {
 
 group("zedboot_bootfs") {
   testonly = true
-  deps = [ "board:zedboot_bootfs_labels" ]
+  deps = [
+    "board:zedboot_bootfs_labels",
+    "dev:zedboot_bootfs_labels",
+  ]
 }

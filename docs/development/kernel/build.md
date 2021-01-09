@@ -36,6 +36,10 @@ In the [board](/boards) or [product](/products) file, add the label(s) for the
 desired cmdline option(s) to [`board_bootfs_labels`](/build/board.gni) and
 [`product_bootfs_labels`](/build/product.gni) respectively.
 
+To alter kernel options for the zedboot or recovery build, add the labels
+respectively to [`board_zedboot_bootfs_labels`](/build/board.gni) and
+[`board_recovery_bootfs_labels`](/build/board.gni).
+
 ### Specifying options locally
 
 Create a `BUILD.gn` file somewhere under `//local` to host the options targets.
@@ -47,3 +51,9 @@ graph via `fx set`:
 ```posix-terminal
 fx set ... --args='dev_bootfs_labels=["//local/path/to/my:options"]'
 ```
+
+To locally alter kernel options for the zedboot or recovery build, follow the
+same procedure but use respectively
+[`dev_zedboot_bootfs_labels`](/build/dev.gni) and
+[`dev_recovery_bootfs_labels`](/build/dev.gni) to introduce the options into the
+build.

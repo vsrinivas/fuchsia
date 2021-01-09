@@ -11,6 +11,7 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
+import("//build/zbi/kernel_cmdline.gni")
 import("//build/zbi/zbi.gni")
 
 zedboot_deps = []
@@ -72,7 +73,6 @@ action("devmgr_config.txt") {
     ":zedboot.vbmeta",
     ":zedboot.vbmeta__vb_desc",
     ":zedboot.vbmeta__zbi_props",
-    "//build/unification/future/images:*",  # XXX
   ]
 
   script = "../manifest.py"
@@ -92,21 +92,14 @@ devmgr_config("devmgr_config") {
   label = ":devmgr_config.txt"
 }
 
-cmdline = [
-            "console.shell=true",
-            "netsvc.disable=false",
-            "kernel.enable-debugging-syscalls=true",
-            "kernel.enable-serial-syscalls=true",
-            "virtcon.colorscheme=special",
-          ] + zedboot_cmdline_args
-
-zbi_input("kernel_cmdline") {
-  type = "cmdline"
-  args = []
-  foreach(arg, cmdline) {
-    args += [ "--entry=$arg" ]
-  }
-  sources = zedboot_cmdline_files
+kernel_cmdline("cmdline") {
+  args = [
+    "console.shell=true",
+    "netsvc.disable=false",
+    "kernel.enable-debugging-syscalls=true",
+    "kernel.enable-serial-syscalls=true",
+    "virtcon.colorscheme=special",
+  ]
 }
 
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.
@@ -116,7 +109,7 @@ zbi("zbi") {
   testonly = true
 
   deps = [
-    ":kernel_cmdline",
+    ":cmdline",
     "//build/input:zedboot_bootfs",
     "//build/unification/zbi:kernel",
     "//src/sys/installer:bin",
