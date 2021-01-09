@@ -93,6 +93,14 @@ class CapturerNop : public Reporter::Capturer {
   void SendPacket(const fuchsia::media::StreamPacket& packet) override {}
   void Overflow(zx::time start_time, zx::time end_time) override {}
 };
+
+class VolumeControlNop : public Reporter::VolumeControl {
+ public:
+  void Destroy() override {}
+
+  void SetVolumeMute(float volume, bool mute) override {}
+  void AddBinding(std::string name) override {}
+};
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -457,6 +465,61 @@ class Reporter::ThermalStateTracker {
   async::TaskClosureMethod<ThermalStateTracker, &ThermalStateTracker::ResetInterval>
       restart_interval_timer_ FXL_GUARDED_BY(mutex_){this};
   Container<ThermalStateTransition, kThermalStatesToCache>::Ptr last_transition_;
+};
+
+class Reporter::VolumeSetting {
+ public:
+  explicit VolumeSetting(inspect::Node& parent, std::string name, float volume, bool mute)
+      : node_(parent.CreateChild(name)),
+        active_(node_.CreateBool("active", true)),
+        volume_(node_.CreateDouble("volume", volume)),
+        mute_(node_.CreateBool("mute", mute)) {}
+
+  void Destroy() { active_.Set(false); }
+
+ private:
+  inspect::Node node_;
+  inspect::BoolProperty active_;
+  inspect::DoubleProperty volume_;
+  inspect::BoolProperty mute_;
+};
+
+class Reporter::VolumeControlImpl : public Reporter::VolumeControl {
+ public:
+  VolumeControlImpl(Reporter::Impl& impl)
+      : node_(impl.volume_controls_node.CreateChild(impl.NextVolumeControlName())),
+        volume_settings_node_(node_.CreateChild("volume settings")),
+        name_(node_.CreateString("name", "unknown - no clients")),
+        client_count_(node_.CreateUint("client count", 0)),
+        last_volume_setting_(volume_settings_.New(new VolumeSetting(
+            volume_settings_node_, std::to_string(++next_volume_setting_name_), 0.0, false))) {}
+
+  void Destroy() override {}
+
+  void SetVolumeMute(float volume, bool mute) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    last_volume_setting_ = volume_settings_.New(new VolumeSetting(
+        volume_settings_node_, std::to_string(++next_volume_setting_name_), volume, mute));
+  }
+
+  void AddBinding(std::string name) override {
+    name_.Set(name);
+    client_count_.Add(1);
+  }
+
+ private:
+  static constexpr size_t kVolumeSettingsToCache = 10;
+
+  inspect::Node node_;
+  inspect::Node volume_settings_node_;
+  inspect::StringProperty name_;
+  inspect::UintProperty client_count_;
+
+  Container<VolumeSetting, kVolumeSettingsToCache> volume_settings_;
+
+  std::mutex mutex_;
+  uint64_t next_volume_setting_name_ FXL_GUARDED_BY(mutex_) = 0;
+  Container<VolumeSetting, kVolumeSettingsToCache>::Ptr last_volume_setting_ FXL_GUARDED_BY(mutex_);
 };
 
 class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
@@ -831,6 +894,7 @@ void Reporter::InitInspect() {
   impl_->renderers_node = root_node.CreateChild("renderers");
   impl_->capturers_node = root_node.CreateChild("capturers");
   impl_->thermal_state_transitions_node = root_node.CreateChild("thermal state transitions");
+  impl_->volume_controls_node = root_node.CreateChild("volume controls");
 
   impl_->thermal_state_tracker =
       std::make_unique<ThermalStateTracker>(*impl_, thermal_state_transitions_);
@@ -881,6 +945,13 @@ Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr Reporter
   std::lock_guard<std::mutex> lock(mutex_);
   return capturers_.New(impl_ ? static_cast<Capturer*>(new CapturerImpl(*impl_, thread_name))
                               : static_cast<Capturer*>(new CapturerNop));
+}
+
+Reporter::Container<Reporter::VolumeControl, Reporter::kVolumeControlsToCache>::Ptr
+Reporter::CreateVolumeControl() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return volume_controls_.New(impl_ ? static_cast<VolumeControl*>(new VolumeControlImpl(*impl_))
+                                    : static_cast<VolumeControl*>(new VolumeControlNop()));
 }
 
 void Reporter::FailedToOpenDevice(const std::string& name, bool is_input, int err) {

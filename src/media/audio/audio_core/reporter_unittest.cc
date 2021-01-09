@@ -112,7 +112,10 @@ TEST_F(ReporterTest, InitialState) {
               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
-                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
+          AllOf(NodeMatches(AllOf(NameMatches("volume controls"), PropertyList(IsEmpty()),
+                                  PropertyList(IsEmpty()))),
+                ChildrenMatch(IsEmpty())))));
 }
 
 // Tests methods that update metrics in the root node.
@@ -260,7 +263,8 @@ TEST_F(ReporterTest, DeviceMetrics) {
               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
-                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
+          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())))));
 
   output_device->StartSession(zx::time(0));
   output_device->DeviceUnderflow(zx::time(10), zx::time(15));
@@ -315,7 +319,8 @@ TEST_F(ReporterTest, DeviceSetGainInfo) {
               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
-                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
+          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())))));
 
   fuchsia::media::AudioGainInfo gain_info_a{
       .gain_db = -1.0f,
@@ -700,6 +705,52 @@ TEST_F(ReporterTest, CacheThermalStateTransitions) {
                   NameMatches("10"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "1")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
+}
+
+// Tests VolumeControl methods.
+TEST_F(ReporterTest, VolumeControlMetrics) {
+  auto volume_control = under_test_.CreateVolumeControl();
+
+  // Expect initial volume control metrics.
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("volume controls")),
+          ChildrenMatch(Contains(AllOf(
+              NodeMatches(AllOf(NameMatches("1"), PropertyList(UnorderedElementsAre(
+                                                      UintIs("client count", 0),
+                                                      StringIs("name", "unknown - no clients"))))),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("volume settings")),
+                        ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                            NameMatches("1"), PropertyList(UnorderedElementsAre(
+                                                  BoolIs("active", true), BoolIs("mute", false),
+                                                  DoubleIs("volume", 0.0)))))))))))))))));
+
+  volume_control->SetVolumeMute(0.5, true);
+  volume_control->AddBinding("RenderUsage::MEDIA");
+  volume_control->AddBinding("RenderUsage::MEDIA");
+
+  // Expect |volume_control| settings to be reflected, with past volume settings cached.
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("volume controls")),
+          ChildrenMatch(Contains(AllOf(
+              NodeMatches(AllOf(NameMatches("1"), PropertyList(UnorderedElementsAre(
+                                                      UintIs("client count", 2),
+                                                      StringIs("name", "RenderUsage::MEDIA"))))),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("volume settings")),
+                        ChildrenMatch(UnorderedElementsAre(
+                            NodeMatches(AllOf(NameMatches("1"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  BoolIs("active", false), BoolIs("mute", false),
+                                                  DoubleIs("volume", 0.0))))),
+                            NodeMatches(AllOf(NameMatches("2"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  BoolIs("active", true), BoolIs("mute", true),
+                                                  DoubleIs("volume", 0.5)))))))))))))))));
 }
 
 }  // namespace

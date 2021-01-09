@@ -28,13 +28,16 @@ class VolumeControlImpl : public fuchsia::media::audio::VolumeControl {
 }  // namespace
 
 VolumeControl::VolumeControl(VolumeSetting* volume_setting, async_dispatcher_t* dispatcher)
-    : volume_setting_(volume_setting), dispatcher_(dispatcher) {}
+    : volume_setting_(volume_setting),
+      dispatcher_(dispatcher),
+      reporter_(Reporter::Singleton().CreateVolumeControl()) {}
 
 void VolumeControl::AddBinding(fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request,
                                std::string name) {
   name_ = name;
   bindings_.AddBinding(std::make_unique<VolumeControlImpl>(this), std::move(request), dispatcher_);
   bindings_.bindings().back()->events().OnVolumeMuteChanged(current_volume_, muted_);
+  reporter_->AddBinding(name_);
 }
 
 void VolumeControl::SetVolume(float volume) {
@@ -49,7 +52,7 @@ void VolumeControl::SetVolume(float volume) {
   if (!muted_) {
     volume_setting_->SetVolume(current_volume_);
   }
-
+  reporter_->SetVolumeMute(current_volume_, muted_);
   NotifyClientsOfState();
 }
 
@@ -61,7 +64,9 @@ void VolumeControl::SetMute(bool mute) {
   FX_LOGS(INFO) << name_ << " VolumeControl::SetMute(" << mute << ")";
   muted_ = mute;
 
-  volume_setting_->SetVolume(muted_ ? fuchsia::media::audio::MIN_VOLUME : current_volume_);
+  auto vol = muted_ ? fuchsia::media::audio::MIN_VOLUME : current_volume_;
+  volume_setting_->SetVolume(vol);
+  reporter_->SetVolumeMute(vol, mute);
   NotifyClientsOfState();
 }
 

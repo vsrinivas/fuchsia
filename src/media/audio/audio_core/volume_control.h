@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/reporter.h"
+
 namespace media::audio {
 
 // An interface for a volume settings. Calls are made on the FIDL thread.
@@ -56,6 +58,8 @@ class VolumeControl {
   VolumeSetting* volume_setting_;
   async_dispatcher_t* dispatcher_;
   std::string name_;
+
+  Reporter::Container<Reporter::VolumeControl, Reporter::kVolumeControlsToCache>::Ptr reporter_;
 };
 
 }  // namespace media::audio

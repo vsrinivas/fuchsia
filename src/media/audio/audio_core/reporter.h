@@ -128,6 +128,16 @@ class Reporter {
     virtual void Overflow(zx::time start_time, zx::time end_time) = 0;
   };
 
+  class VolumeControl {
+   public:
+    virtual ~VolumeControl() = default;
+
+    virtual void Destroy() = 0;
+
+    virtual void SetVolumeMute(float volume, bool mute) = 0;
+    virtual void AddBinding(std::string name) = 0;
+  };
+
   // This class is an implementation detail.
   // Container::Ptr is a smart pointer that calls T::Destroy() when the Ptr is destructed.
   // The underlying object may be cached for some time afterwards.
@@ -197,6 +207,7 @@ class Reporter {
   ~Reporter();
 
   static constexpr size_t kObjectsToCache = 4;
+  static constexpr size_t kVolumeControlsToCache = 10;
 
   Container<OutputDevice, kObjectsToCache>::Ptr CreateOutputDevice(const std::string& name,
                                                                    const std::string& thread_name);
@@ -204,6 +215,7 @@ class Reporter {
                                                                  const std::string& thread_name);
   Container<Renderer, kObjectsToCache>::Ptr CreateRenderer();
   Container<Capturer, kObjectsToCache>::Ptr CreateCapturer(const std::string& thread_name);
+  Container<VolumeControl, kVolumeControlsToCache>::Ptr CreateVolumeControl();
 
   // Thermal state of Audio system.
   void SetNumThermalStates(size_t num);
@@ -237,6 +249,8 @@ class Reporter {
   class ClientPort;
   class RendererImpl;
   class CapturerImpl;
+  class VolumeControlImpl;
+  class VolumeSetting;
   struct Impl;
 
   friend class OverflowUnderflowTracker;
@@ -268,6 +282,7 @@ class Reporter {
     inspect::Node renderers_node;
     inspect::Node capturers_node;
     inspect::Node thermal_state_transitions_node;
+    inspect::Node volume_controls_node;
 
     std::unique_ptr<ThermalStateTracker> thermal_state_tracker;
 
@@ -277,6 +292,7 @@ class Reporter {
     uint64_t next_renderer_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_capturer_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_thermal_transition_name FXL_GUARDED_BY(mutex) = 0;
+    uint64_t next_volume_control_name FXL_GUARDED_BY(mutex) = 0;
 
     Impl(sys::ComponentContext& cc, ThreadingModel& tm);
     ~Impl();
@@ -293,6 +309,10 @@ class Reporter {
       std::lock_guard<std::mutex> lock(mutex);
       return std::to_string(++next_thermal_transition_name);
     }
+    std::string NextVolumeControlName() {
+      std::lock_guard<std::mutex> lock(mutex);
+      return std::to_string(++next_volume_control_name);
+    }
   };
 
   std::mutex mutex_;
@@ -304,6 +324,7 @@ class Reporter {
   Container<Renderer, kObjectsToCache> renderers_;
   Container<Capturer, kObjectsToCache> capturers_;
   Container<ThermalStateTransition, kThermalStatesToCache> thermal_state_transitions_;
+  Container<VolumeControl, kVolumeControlsToCache> volume_controls_;
 };
 
 }  // namespace media::audio
