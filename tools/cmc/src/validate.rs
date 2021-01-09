@@ -403,12 +403,16 @@ impl<'a> ValidationContext<'a> {
         if use_.service.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"service\""));
         }
+        if use_.from == Some(cml::UseFromRef::Debug) && use_.protocol.is_none() {
+            return Err(Error::validate("only \"protocol\" supports source from \"debug\""));
+        }
         if use_.protocol.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"protocol\""));
         }
         if use_.directory.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
         }
+
         if use_.runner.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" field cannot be used with \"runner\""));
         }
@@ -1242,7 +1246,7 @@ mod tests {
         assert_matches!(
             result,
             Err(Error::Parse { err, location: Some(l), filename: Some(f) })
-                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"#<capability-name>\", or none" &&
+                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none" &&
                 l == Location { line: 5, column: 21 } &&
                 f.ends_with("/test.cml")
         );
@@ -1310,6 +1314,7 @@ mod tests {
                   { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "CoolFonts", "path": "/svc/MyFonts" },
+                  { "protocol": "CoolFonts2", "path": "/svc/MyFonts2", "from": "debug" },
                   { "protocol": "fuchsia.test.hub.HubReport", "from": "framework" },
                   { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                   { "protocol": ["fuchsia.ui.scenic.Scenic", "fuchsia.logger.LogSink"] },
@@ -1377,11 +1382,23 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
         ),
+        test_cml_use_invalid_from_with_service(
+            json!({
+                "use": [ { "service": "foo", "from": "debug" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
+        ),
         test_cml_use_as_with_protocol(
             json!({
                 "use": [ { "protocol": "foo", "as": "xxx" } ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"protocol\""
+        ),
+        test_cml_use_invalid_from_with_directory(
+            json!({
+                "use": [ { "directory": "foo", "from": "debug" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
         ),
         test_cml_use_as_with_directory(
             json!({
@@ -1413,7 +1430,7 @@ mod tests {
                   { "service": "CoolFonts", "from": "self" }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"#<capability-name>\", or none"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none"
         ),
         test_cml_use_from_missing_capability(
             json!({
@@ -1524,6 +1541,17 @@ mod tests {
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `event` is supplied"
+        ),
+        test_cml_use_invalid_from_in_event(
+            json!({
+                "use": [
+                    {
+                        "event": ["destroyed"],
+                        "from": "debug",
+                    }
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
         ),
         test_cml_use_duplicate_events(
             json!({

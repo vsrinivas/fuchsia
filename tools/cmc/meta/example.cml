@@ -56,6 +56,10 @@
             path: "/svc/fuchsia.fonts.OldProvider",
         },
         {
+            protocol: "fuchsia.log.LegacyLog",
+            from: "debug",
+        },
+        {
             event: "started",
             from: "framework",
             as: "began",

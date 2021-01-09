@@ -47,6 +47,12 @@ fn main() {
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
                 ..UseProtocolDecl::EMPTY
             }),
+            UseDecl::Protocol(UseProtocolDecl {
+                source: Some(Ref::Debug(DebugRef {})),
+                source_name: Some("fuchsia.log.LegacyLog".to_string()),
+                target_path: Some("/svc/fuchsia.log.LegacyLog".to_string()),
+                ..UseProtocolDecl::EMPTY
+            }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),

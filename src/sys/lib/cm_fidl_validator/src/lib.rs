@@ -674,6 +674,7 @@ impl<'a> ValidationContext<'a> {
         match source {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
+            Some(fsys::Ref::Debug(_)) => {}
             Some(fsys::Ref::Capability(capability)) => {
                 if !self.all_capability_ids.contains(capability.name.as_str()) {
                     self.errors.push(Error::invalid_capability(decl, field, &capability.name));

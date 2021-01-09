@@ -677,6 +677,7 @@ fn extract_use_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        Some(cml::UseFromRef::Debug) => Ok(fsys::Ref::Debug(fsys::DebugRef {})),
         Some(cml::UseFromRef::Named(name)) => {
             Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
         }
@@ -693,6 +694,7 @@ fn clone_fsys_ref(fsys_ref: &fsys::Ref) -> Result<fsys::Ref, Error> {
         fsys::Ref::Collection(collection_ref) => Ok(fsys::Ref::Collection(collection_ref.clone())),
         fsys::Ref::Framework(framework_ref) => Ok(fsys::Ref::Framework(framework_ref.clone())),
         fsys::Ref::Capability(capability_ref) => Ok(fsys::Ref::Capability(capability_ref.clone())),
+        fsys::Ref::Debug(debug_ref) => Ok(fsys::Ref::Debug(debug_ref.clone())),
         _ => Err(Error::internal("Unknown fsys::Ref found.")),
     }
 }
@@ -703,6 +705,9 @@ fn extract_use_event_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         Some(cml::UseFromRef::Named(name)) => {
             Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+        }
+        Some(cml::UseFromRef::Debug) => {
+            Err(Error::internal(format!("Debug source not supported for \"use event\"")))
         }
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
@@ -1154,6 +1159,7 @@ mod tests {
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
+                    { "protocol": "fuchsia.sys2.DebugProto", "from": "debug" },
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
                     {
                         "directory": "config",
@@ -1222,6 +1228,14 @@ mod tests {
                             source: Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "data-storage".to_string() })),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..fsys::UseProtocolDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Debug(fsys::DebugRef {})),
+                            source_name: Some("fuchsia.sys2.DebugProto".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.DebugProto".to_string()),
                             ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
@@ -2587,6 +2601,7 @@ mod tests {
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": [ "ReallyGoodFonts", "IWouldNeverUseTheseFonts"]},
+                    { "protocol":  "DebugProtocol", "from": "debug"},
                     { "runner": "elf" },
                 ],
                 "expose": [
@@ -2696,6 +2711,14 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("IWouldNeverUseTheseFonts".to_string()),
                             target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
+                            ..fsys::UseProtocolDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Debug(fsys::DebugRef {})),
+                            source_name: Some("DebugProtocol".to_string()),
+                            target_path: Some("/svc/DebugProtocol".to_string()),
                             ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),

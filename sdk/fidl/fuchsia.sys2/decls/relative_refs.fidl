@@ -15,6 +15,7 @@ flexible union Ref {
     4: CollectionRef collection;
     5: FrameworkRef framework;
     6: CapabilityRef capability;
+    7: DebugRef debug;
 };
 
 /// A reference to a component’s parent instance.
@@ -23,6 +24,10 @@ struct ParentRef {
 
 /// A reference to the component itself.
 struct SelfRef {
+};
+
+/// A reference to the environment's debug capabilities.
+struct DebugRef {
 };
 
 /// A reference to one of the component's child instances.

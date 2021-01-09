@@ -394,6 +394,9 @@ pub enum AnyRef<'a> {
     Parent,
     /// A reference to the framework (component manager). Parsed as `framework`.
     Framework,
+
+    /// A reference to the debug. Parsed as `debug`.
+    Debug,
     /// A reference to this component. Parsed as `self`.
     Self_,
 }
@@ -405,6 +408,7 @@ impl fmt::Display for AnyRef<'_> {
             Self::Named(name) => write!(f, "#{}", name),
             Self::Parent => write!(f, "parent"),
             Self::Framework => write!(f, "framework"),
+            Self::Debug => write!(f, "debug"),
             Self::Self_ => write!(f, "self"),
         }
     }
@@ -412,12 +416,14 @@ impl fmt::Display for AnyRef<'_> {
 
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"parent\", \"framework\", \"#<capability-name>\", or none")]
+#[reference(expected = "\"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none")]
 pub enum UseFromRef {
     /// A reference to the parent.
     Parent,
     /// A reference to the framework.
     Framework,
+    /// A reference to debug.
+    Debug,
     /// A reference to a capability declared on self.
     ///
     /// This is only valid on use declarations for a protocol that references a storage capability

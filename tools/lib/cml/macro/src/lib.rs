@@ -491,6 +491,7 @@ fn parse_one_or_many_attributes(ast: &syn::DeriveInput) -> Result<OneOrManyAttri
 /// - Named(Name),
 /// - Parent,
 /// - Framework,
+/// - Debug,
 /// - Self_,
 ///
 /// Attributes:
@@ -549,6 +550,11 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                         Self::Framework => write!(f, "framework"),
                     });
                 }
+                if self.variants.contains("Debug") {
+                    tokens.append_all(quote! {
+                        Self::Debug => write!(f, "debug"),
+                    });
+                }
                 if self.variants.contains("Self_") {
                     tokens.append_all(quote! {
                         Self::Self_ => write!(f, "self"),
@@ -604,6 +610,11 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                             "framework" => Ok(Self::Framework),
                         });
                     }
+                    if self.variants.contains("Debug") {
+                        tokens.append_all(quote! {
+                            "debug" => Ok(Self::Debug),
+                        });
+                    }
                     if self.variants.contains("Self_") {
                         tokens.append_all(quote! {
                             "self" => Ok(Self::Self_),
@@ -648,6 +659,11 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error> {
                 if self.variants.contains("Framework") {
                     tokens.append_all(quote! {
                         #name::Framework => Self::Framework,
+                    });
+                }
+                if self.variants.contains("Debug") {
+                    tokens.append_all(quote! {
+                        #name::Debug => Self::Debug,
                     });
                 }
                 if self.variants.contains("Self_") {
@@ -743,6 +759,7 @@ fn parse_reference_attributes(ast: &syn::DeriveInput) -> Result<ReferenceAttribu
         "Named",
         "Parent",
         "Framework",
+        "Debug",
         "Self_",
     };
     for ty in variants.iter() {

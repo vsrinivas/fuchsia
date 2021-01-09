@@ -138,6 +138,7 @@ pub fn offer_source_from_ref(
             Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         AnyRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        AnyRef::Debug => Ok(fsys::Ref::Debug(fsys::DebugRef {})),
         AnyRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         AnyRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
     }
