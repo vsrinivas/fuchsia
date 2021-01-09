@@ -276,19 +276,6 @@ where
     P: PkgFs,
     MountsFn: FnOnce() -> Mounts,
 {
-    pub async fn build(self) -> TestEnv<P> {
-        TestEnv::new_with_pkg_fs_and_mounts_and_arguments_service(
-            (self.pkgfs)(),
-            (self.mounts)(),
-            self.boot_arguments_service,
-            self.local_mirror_repo,
-            self.allow_local_mirror,
-            self.tuf_metadata_timeout,
-            self.blob_network_header_timeout,
-            self.blob_network_body_timeout,
-        )
-        .await
-    }
     pub fn pkgfs<Pother>(
         self,
         pkgfs: Pother,
@@ -389,6 +376,132 @@ where
         );
         self.blob_network_body_timeout = Some(timeout);
         self
+    }
+
+    pub async fn build(self) -> TestEnv<P> {
+        let pkgfs = (self.pkgfs)();
+        let mounts = (self.mounts)();
+
+        let mut pkg_cache = AppBuilder::new(
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
+                .to_owned(),
+        )
+        .add_handle_to_namespace(
+            "/pkgfs".to_owned(),
+            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+        );
+
+        let local_mirror_dir = tempfile::tempdir().unwrap();
+        let mut local_mirror = if let Some((repo, url)) = self.local_mirror_repo {
+            let proxy = io_util::directory::open_in_namespace(
+                local_mirror_dir.path().to_str().unwrap(),
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )
+            .unwrap();
+            repo.copy_local_repository_to_dir(&proxy, &url).await;
+
+            Some(AppBuilder::new(
+                "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cmx"
+                    .to_owned(),
+            ).add_dir_to_namespace("/usb/0/fuchsia_pkg".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
+        } else {
+            None
+        };
+
+        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
+            .add_handle_to_namespace(
+                "/pkgfs".to_owned(),
+                pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+            )
+            .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
+            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data)
+            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
+            .unwrap();
+
+        let pkg_resolver = if self.allow_local_mirror {
+            pkg_resolver.args(vec!["--allow-local-mirror", "true"])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(timeout) = self.tuf_metadata_timeout {
+            pkg_resolver.args(vec![
+                "--tuf-metadata-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(timeout) = self.blob_network_header_timeout {
+            pkg_resolver.args(vec![
+                "--blob-network-header-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let pkg_resolver = if let Some(timeout) = self.blob_network_body_timeout {
+            pkg_resolver.args(vec![
+                "--blob-network-body-timeout-seconds".to_string(),
+                timeout.as_secs().to_string(),
+            ])
+        } else {
+            pkg_resolver
+        };
+
+        let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
+            .add_proxy_service_to::<PackageCacheMarker, _>(
+                pkg_cache.directory_request().unwrap().clone(),
+            );
+        if let Some(local_mirror) = local_mirror.as_mut() {
+            fs.add_proxy_service_to::<LocalMirrorMarker, _>(
+                local_mirror.directory_request().unwrap().clone(),
+            );
+        }
+
+        if let Some(boot_arguments_service) = self.boot_arguments_service {
+            let mock_arg_svc = Arc::new(boot_arguments_service);
+            fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
+                fasync::Task::spawn(Arc::clone(&mock_arg_svc).run_service(stream)).detach();
+            });
+        }
+
+        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory_clone = Arc::clone(&logger_factory);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+                .detach()
+        });
+
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        let environment_label = format!("pkg-resolver-env_{}", hex::encode(&salt));
+        let env = fs
+            .create_nested_environment(&environment_label)
+            .expect("nested environment to create successfully");
+        fasync::Task::spawn(fs.collect()).detach();
+
+        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
+        let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
+        let local_mirror =
+            local_mirror.map(|app| app.spawn(env.launcher()).expect("local mirror to launch"));
+
+        TestEnv {
+            env,
+            pkgfs,
+            proxies: Proxies::from_app(&pkg_resolver),
+            apps: Apps { pkg_cache, pkg_resolver, local_mirror },
+            _mounts: mounts,
+            nested_environment_label: environment_label,
+            mocks: Mocks { logger_factory },
+            local_mirror_dir,
+        }
     }
 }
 
@@ -617,138 +730,6 @@ impl MockLoggerFactory {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    async fn new_with_pkg_fs_and_mounts_and_arguments_service(
-        pkgfs: P,
-        mounts: Mounts,
-        boot_arguments_service: Option<BootArgumentsService<'static>>,
-        local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
-        allow_local_mirror: bool,
-        tuf_metadata_timeout: Option<Duration>,
-        blob_network_header_timeout: Option<Duration>,
-        blob_network_body_timeout: Option<Duration>,
-    ) -> Self {
-        let mut pkg_cache = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
-                .to_owned(),
-        )
-        .add_handle_to_namespace(
-            "/pkgfs".to_owned(),
-            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-        );
-
-        let local_mirror_dir = tempfile::tempdir().unwrap();
-        let mut local_mirror = if let Some((repo, url)) = local_mirror_repo {
-            let proxy = io_util::directory::open_in_namespace(
-                local_mirror_dir.path().to_str().unwrap(),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            )
-            .unwrap();
-            repo.copy_local_repository_to_dir(&proxy, &url).await;
-
-            Some(AppBuilder::new(
-                "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cmx"
-                    .to_owned(),
-            ).add_dir_to_namespace("/usb/0/fuchsia_pkg".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
-        } else {
-            None
-        };
-
-        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
-            .add_handle_to_namespace(
-                "/pkgfs".to_owned(),
-                pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-            )
-            .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
-            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data)
-            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
-            .unwrap();
-
-        let pkg_resolver = if allow_local_mirror {
-            pkg_resolver.args(vec!["--allow-local-mirror", "true"])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = tuf_metadata_timeout {
-            pkg_resolver.args(vec![
-                "--tuf-metadata-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = blob_network_header_timeout {
-            pkg_resolver.args(vec![
-                "--blob-network-header-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = blob_network_body_timeout {
-            pkg_resolver.args(vec![
-                "--blob-network-body-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
-            .add_proxy_service_to::<PackageCacheMarker, _>(
-                pkg_cache.directory_request().unwrap().clone(),
-            );
-        if let Some(local_mirror) = local_mirror.as_mut() {
-            fs.add_proxy_service_to::<LocalMirrorMarker, _>(
-                local_mirror.directory_request().unwrap().clone(),
-            );
-        }
-
-        if let Some(boot_arguments_service) = boot_arguments_service {
-            let mock_arg_svc = Arc::new(boot_arguments_service);
-            fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
-                fasync::Task::spawn(Arc::clone(&mock_arg_svc).run_service(stream)).detach();
-            });
-        }
-
-        let logger_factory = Arc::new(MockLoggerFactory::new());
-        let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
-                .detach()
-        });
-
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
-        let environment_label = format!("pkg-resolver-env_{}", hex::encode(&salt));
-        let env = fs
-            .create_nested_environment(&environment_label)
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
-
-        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
-        let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
-        let local_mirror =
-            local_mirror.map(|app| app.spawn(env.launcher()).expect("local mirror to launch"));
-
-        Self {
-            env,
-            pkgfs,
-            proxies: Proxies::from_app(&pkg_resolver),
-            apps: Apps { pkg_cache, pkg_resolver, local_mirror },
-            _mounts: mounts,
-            nested_environment_label: environment_label,
-            mocks: Mocks { logger_factory },
-            local_mirror_dir,
-        }
-    }
-
     pub async fn set_experiment_state(&self, experiment: Experiment, state: bool) {
         self.proxies
             .resolver_admin
