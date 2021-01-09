@@ -151,10 +151,10 @@ This is done as follows:
 ```json
 "facets": {
   "fuchsia.test": {
-    "system-services": {
+    "system-services": [
         "service_name1",
         "service_name2"
-    }
+    ]
   }
 }
 ```
