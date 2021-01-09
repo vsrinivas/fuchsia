@@ -404,10 +404,6 @@ zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
   return FsUnbind(mount_path);
 }
 
-template
-zx::status<std::unique_ptr<FilesystemInstance>> FilesystemImplWithDefaultMake<FxfsFilesystem, FxfsInstance>::Make(
-    const TestFilesystemOptions& options) const;
-
 // -- Minfs --
 
 class MinfsInstance : public FilesystemInstance {
@@ -448,6 +444,10 @@ class MinfsInstance : public FilesystemInstance {
   RamDevice device_;
   std::string device_path_;
 };
+
+std::unique_ptr<FilesystemInstance> MinfsFilesystem::Create(RamDevice device, std::string device_path) const {
+  return std::make_unique<MinfsInstance>(std::move(device), std::move(device_path));
+}
 
 zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
     const TestFilesystemOptions& options) const {
@@ -642,6 +642,10 @@ class BlobfsInstance : public FilesystemInstance {
   std::string device_path_;
   zx::channel outgoing_directory_;
 };
+
+std::unique_ptr<FilesystemInstance> BlobfsFilesystem::Create(RamDevice device, std::string device_path) const {
+  return std::make_unique<BlobfsInstance>(std::move(device), std::move(device_path));
+}
 
 zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Open(
     const TestFilesystemOptions& options) const {

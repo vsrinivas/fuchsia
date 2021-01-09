@@ -23,8 +23,14 @@ enum SubCommand {
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Format
-#[argh(subcommand, name = "format")]
+#[argh(subcommand, name = "mkfs")]
 struct FormatSubCommand {
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Mount
+#[argh(subcommand, name = "mount")]
+struct MountSubCommand {
 }
 
 #[fasync::run(10)]
@@ -33,7 +39,7 @@ async fn main() -> Result<(), Error> {
 
     // TODO: Does this need to be boxed and do we need Cache?
     // Open the remote block device.
-    let device = Box::new(remote_block_device::Cache::new(RemoteBlockDevice::new_sync(
+    let cache = remote_block_device::Cache::new(RemoteBlockDevice::new_sync(
         zx::Channel::from(
             fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
                 HandleType::User0,
@@ -41,9 +47,10 @@ async fn main() -> Result<(), Error> {
             ))
             .ok_or(format_err!("Missing device handle"))?,
         ),
-    )?)?);
+    )?)?;
 
     match args {
-        TopLevel{ nested: SubCommand::Format(_) } => mkfs::mkfs(device),
+        TopLevel{ nested: SubCommand::Format(_) } => mkfs::mkfs(cache),
+        TopLevel{ nested: SubCommand::Mount(_) } => mount(cache),
     }
 }

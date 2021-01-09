@@ -132,19 +132,12 @@ class FilesystemImpl : public Filesystem {
     static const auto* const kInstance = new T();
     return *kInstance;
   }
-
-  virtual std::unique_ptr<FilesystemInstance> Create(RamDevice device, std::string device_path) const {
-    std::cout << "Missing implementation for Create" << std::endl;
-    return nullptr;
-  }
 };
 
-template <typename T, typename Instance>
+template <typename T>
 class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
  public:
-  std::unique_ptr<FilesystemInstance> Create(RamDevice device, std::string device_path) const override {
-    return std::make_unique<Instance>(std::move(device), std::move(device_path));
-  }
+  virtual std::unique_ptr<FilesystemInstance> Create(RamDevice device, std::string device_path) const = 0;
 
   zx::status<std::unique_ptr<FilesystemInstance>> Make(
       const TestFilesystemOptions& options) const override {
@@ -156,7 +149,7 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
     // Call the base class virtual method here rather than just Create directly so that the Create
     // method isn't implicitly instantiated here (which might not be possible if the instance has
     // been forward declared).
-    auto instance = FilesystemImpl<T>::Create(std::move(device), std::move(device_path));
+    auto instance = Create(std::move(device), std::move(device_path));
     zx::status<> status = instance->Format(options);
     if (status.is_error()) {
       return status.take_error();

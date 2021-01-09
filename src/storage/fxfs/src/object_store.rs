@@ -46,8 +46,8 @@ pub struct StoreOptions {
 
 pub trait Device: Send + Sync {
     fn block_size(&self) -> u64;
-    fn read(&self, block: u64, buf: &mut [u8]) -> std::io::Result<()>;
-    fn write(&self, block: u64, buf: &[u8]) -> std::io::Result<()>;
+    fn read(&self, offset: u64, buf: &mut [u8]) -> std::io::Result<()>;
+    fn write(&self, offset: u64, buf: &[u8]) -> std::io::Result<()>;
 }
 
 pub struct StoreObjectHandle {
