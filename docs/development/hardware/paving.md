@@ -1,6 +1,6 @@
 # Installing Fuchsia on a device
 
-This guide will help you understand the device installation process for Fuchsia.
+This guide helps you understand the device installation process for Fuchsia.
 The Fuchsia install process, called 'paving', requires two machines, the machine
 on which you build Fuchsia ("host") and the device on which you want to run
 Fuchsia ("target"). The host and target must be able to communicate over a local
@@ -47,16 +47,17 @@ fx build
 To create your install media you should use a USB drive since these are
 well-supported as boot media by most systems.
 
-Note: Creating a USB drive **will wipe everything** from the USB drive being used.
+Note: Creating a USB drive **wipes everything** from the USB drive being used.
 
-To create a USB drive, insert a USB drive into the target machine and run:
+To create a USB drive, insert a USB drive into the host machine and run:
 
 ```
 fx mkzedboot <device_path>
 ```
 
 On Linux, `device_path` is typically `/dev/sd<X>` where X is a letter. On macOS
-it is typically `/dev/disk<N>` where 'N' is a number. **Be careful
+it is typically `/dev/disk<N>` where 'N' is a number. If you don't specify a 
+device path, `mkzedboot` lists the drives it detects. **Be careful
 not to select the wrong device**. Once this is done, remove the USB drive.
 
 ## Paving {#paving}
@@ -83,7 +84,7 @@ storage.
 At this point the USB key can be removed since the system has
 everything it needs stored locally. If you plan to re-pave frequently it may be
 useful to keep the USB drive inserted so your system boots into Zedboot by
-default where paving will happen automatically. After the initial pave on UEFI
+default where paving happens automatically. After the initial pave on UEFI
 systems that use Gigaboot, another option for re-paving is to press 'z' while in
 Gigaboot to select Zedboot.
 
