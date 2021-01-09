@@ -8,7 +8,7 @@
 #include <map>
 
 #include "lib/fit/function.h"
-#include "src/developer/debug/zxdb/client/curl.h"
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 
 namespace zxdb {
@@ -35,7 +35,8 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   // General dispatch from the result of a Curl transaction. Handles the error cases and converts
   // to a zxdb Err.
-  Err HandleRequestResult(Curl::Error result, long response_code, size_t previous_ready_count);
+  Err HandleRequestResult(debug_ipc::Curl::Error result, long response_code,
+                          size_t previous_ready_count);
 
   // Use the refresh token to get a new access token.
   void AuthRefresh();

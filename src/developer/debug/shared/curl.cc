@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/curl.h"
+#include "src/developer/debug/shared/curl.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 
-namespace zxdb {
+namespace debug_ipc {
+
 namespace {
 
 template <typename T>
@@ -304,4 +305,4 @@ long Curl::ResponseCode() {
   return ret;
 }
 
-}  // namespace zxdb
+}  // namespace debug_ipc

@@ -20,7 +20,6 @@ static_library("client") {
     "breakpoint_settings.h",
     "client_eval_context_impl.h",
     "client_object.h",
-    "curl.h",
     "disassembler.h",
     "exception_settings.h",
     "execution_scope.h",
@@ -80,7 +79,6 @@ static_library("client") {
     "client_eval_context_impl.cc",
     "client_object.cc",
     "cloud_storage_symbol_server.cc",
-    "curl.cc",
     "disassembler.cc",
     "exception_settings.cc",
     "exception_settings.h",
@@ -154,7 +152,6 @@ static_library("client") {
     "//src/lib/llvm:LLVMAArch64Disassembler",
     "//src/lib/llvm:LLVMX86Desc",
     "//src/lib/llvm:LLVMX86Disassembler",
-    "//third_party/curl:libcurl",
     "//zircon/public/lib/fit",
   ]
 

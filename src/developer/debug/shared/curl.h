@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CURL_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CURL_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_CURL_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_CURL_H_
 
 #include <map>
 #include <memory>
@@ -17,7 +17,7 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
-namespace zxdb {
+namespace debug_ipc {
 
 // Curl must be constructed through fxl::MakeShared<Curl>().
 class Curl : public fxl::RefCountedThreadSafe<Curl> {
@@ -98,6 +98,6 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
   FRIEND_MAKE_REF_COUNTED(Curl);
 };
 
-}  // namespace zxdb
+}  // namespace debug_ipc
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CURL_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_CURL_H_

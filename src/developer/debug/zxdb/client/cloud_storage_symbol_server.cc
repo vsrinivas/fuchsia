@@ -24,6 +24,9 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
+
+using ::debug_ipc::Curl;
+
 namespace {
 
 constexpr char kClientId[] =

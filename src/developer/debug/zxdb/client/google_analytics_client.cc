@@ -7,10 +7,12 @@
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/debug/zxdb/client/curl.h"
+#include "src/developer/debug/shared/curl.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace zxdb {
+
+using ::debug_ipc::Curl;
 
 namespace {
 
