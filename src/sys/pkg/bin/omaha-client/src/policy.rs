@@ -650,77 +650,77 @@ mod tests {
     }
 
     proptest! {
-       #[test]
-       fn test_fuchsia_update_policy_data_builder_doesnt_panic(interval_fuzz_seed: u64) {
-           let mock_time = MockTimeSource::new_from_now();
-           let now = mock_time.now();
-           UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
-       }
+        #[test]
+        fn test_fuchsia_update_policy_data_builder_doesnt_panic(interval_fuzz_seed: u64) {
+            let mock_time = MockTimeSource::new_from_now();
+            let now = mock_time.now();
+            UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
+        }
 
-       #[test]
-       fn test_compute_next_update_time(interval_fuzz_seed: u64) {
-           // TODO(fxbug.dev/58338) derive arbitrary on UpdateCheckSchedule, FuchsiaUpdatePolicyData
-           let mock_time = MockTimeSource::new_from_now();
-           let now = mock_time.now();
-           // The current context:
-           //   - the last update was recently in the past
-           let last_update_time = now - Duration::from_secs(1234);
-           let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
-           // Set up the state for this check:
-           //  - the time is "now"
-           let policy_data = UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
-           // Execute the policy check.
-           FuchsiaPolicy::compute_next_update_time(
-               &policy_data,
-               &[],
-               &schedule,
-               &ProtocolState::default(),
-           );
-       }
+        #[test]
+        fn test_compute_next_update_time(interval_fuzz_seed: u64) {
+            // TODO(fxbug.dev/58338) derive arbitrary on UpdateCheckSchedule, FuchsiaUpdatePolicyData
+            let mock_time = MockTimeSource::new_from_now();
+            let now = mock_time.now();
+            // The current context:
+            //   - the last update was recently in the past
+            let last_update_time = now - Duration::from_secs(1234);
+            let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+            // Set up the state for this check:
+            //  - the time is "now"
+            let policy_data = UpdatePolicyDataBuilder::new(now).interval_fuzz_seed(Some(interval_fuzz_seed)).build();
+            // Execute the policy check.
+            FuchsiaPolicy::compute_next_update_time(
+                &policy_data,
+                &[],
+                &schedule,
+                &ProtocolState::default(),
+            );
+        }
 
-       #[test]
-       fn test_fuzz_interval_lower_bounds(interval in arb_fuzzable_duration(),
-           interval_fuzz_seed: u64,
-           fuzz_percentage_range in 0u32..200u32) {
-           let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
+        #[test]
+        fn test_fuzz_interval_lower_bounds(interval in arb_fuzzable_duration(),
+            interval_fuzz_seed: u64,
+            fuzz_percentage_range in 0u32..200u32) {
+            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
-           let nanos = interval.as_nanos();
-           let lower_bound = nanos - (nanos * fuzz_percentage_range as u128 / 200);
-           assert!(
-               fuzzed_interval >= lower_bound,
-               "bound exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
-               lower_bound,
-               fuzzed_interval,
-               interval,
-               interval_fuzz_seed,
-               fuzz_percentage_range,
-           );
-       }
+            let nanos = interval.as_nanos();
+            let lower_bound = nanos - (nanos * fuzz_percentage_range as u128 / 200);
+            assert!(
+                fuzzed_interval >= lower_bound,
+                "bound exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
+                lower_bound,
+                fuzzed_interval,
+                interval,
+                interval_fuzz_seed,
+                fuzz_percentage_range,
+            );
+        }
 
-       #[test]
-       fn test_fuzz_interval_upper_bounds(interval in arb_fuzzable_duration(),
-           interval_fuzz_seed: u64,
-           fuzz_percentage_range in 0u32..200u32) {
-           let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
+        #[test]
+        fn test_fuzz_interval_upper_bounds(interval in arb_fuzzable_duration(),
+            interval_fuzz_seed: u64,
+            fuzz_percentage_range in 0u32..200u32) {
+            let fuzzed_interval = fuzz_interval(interval, interval_fuzz_seed, fuzz_percentage_range).as_nanos();
 
-           let nanos = interval.as_nanos();
-           let upper_bound = nanos + (nanos * fuzz_percentage_range as u128 / 200);
+            let nanos = interval.as_nanos();
+            let upper_bound = nanos + (nanos * fuzz_percentage_range as u128 / 200);
 
-           // The upper bound may overflow u64, but this doesn't mean that the interval itself
-           // would fuzz above u64. To avoid issues with duplicating the fuzz_interval function
-           // into this test, we compare nanos here -- if the function would've overflowed, it
-           // returns the original interval, which would still be within the calculated bounds
-           // after conversion to nanos.
-           assert!(
-               fuzzed_interval <= upper_bound,
-               "bounds exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
-               upper_bound,
-               fuzzed_interval,
-               interval,
-               interval_fuzz_seed,
-               fuzz_percentage_range,
-           );
-       }
+            // The upper bound may overflow u64, but this doesn't mean that the interval itself
+            // would fuzz above u64. To avoid issues with duplicating the fuzz_interval function
+            // into this test, we compare nanos here -- if the function would've overflowed, it
+            // returns the original interval, which would still be within the calculated bounds
+            // after conversion to nanos.
+            assert!(
+                fuzzed_interval <= upper_bound,
+                "bounds exceeded: {} <= {} for interval {:?}, seed {}, and range {}",
+                upper_bound,
+                fuzzed_interval,
+                interval,
+                interval_fuzz_seed,
+                fuzz_percentage_range,
+            );
+        }
     }
 
     /// The math performed in fuzz_interval can overflow for duration inputs that
