@@ -74,6 +74,7 @@ EXTRA_COPY = [
 EXTRA_PREBUILTS = {
     'fuchsia/third_party/aemu/${platform}': 'aemu',
     'fuchsia/third_party/grpcwebproxy/${platform}': 'grpcwebproxy',
+    'fuchsia/vdl/${platform}': 'device_launcher',
 }
 
 
@@ -90,7 +91,11 @@ class GNBuilder(Frontend):
   """
 
     def __init__(
-            self, local_dir, output, archive='', directory='',
+            self,
+            local_dir,
+            output,
+            archive='',
+            directory='',
             jiri_manifest=None):
         """Initializes an instance of the GNBuilder.
 
@@ -563,7 +568,11 @@ def main(args_list=None):
 
 
 def run_generator(
-        archive, directory, output, tests='', output_archive='',
+        archive,
+        directory,
+        output,
+        tests='',
+        output_archive='',
         jiri_manifest=None):
     """Run the generator. Returns 0 on success, non-zero otherwise.
 
@@ -602,7 +611,9 @@ def run_generator(
         # This must be done after the GN SDK is copied into the test workspace,
         # which would otherwise overwrite these contents.
         testdata = os.path.join(SCRIPT_DIR, 'testdata')
-        copy_tree(os.path.join(testdata, 'meta'), os.path.join(wrkspc_sdk_dir, 'meta'))
+        copy_tree(
+            os.path.join(testdata, 'meta'),
+            os.path.join(wrkspc_sdk_dir, 'meta'))
 
     if output_archive:
         if not create_archive(output_archive, output):

@@ -169,6 +169,7 @@ sdk://tools/arm64/fidlgen
 sdk://tools/arm64/fpublish
 sdk://tools/arm64/fserve
 sdk://tools/arm64/fssh
+sdk://tools/arm64/fvdl
 sdk://tools/arm64/fvm
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
@@ -203,6 +204,7 @@ sdk://tools/x64/fidlgen
 sdk://tools/x64/fpublish
 sdk://tools/x64/fserve
 sdk://tools/x64/fssh
+sdk://tools/x64/fvdl
 sdk://tools/x64/fvm
 sdk://tools/x64/merkleroot
 sdk://tools/x64/minfs

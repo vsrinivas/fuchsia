@@ -14,6 +14,11 @@
       name="fuchsia/third_party/grpcwebproxy/${platform}"
       version="git_revision:b123456789abcdef0123456789abcdef01234567"/>
     <package
+      name="fuchsia/vdl/${platform}"
+      path="prebuilt/vdl"
+      version="g3-revision:vdl_fuchsia_20200819_RC00"
+      platforms="linux-amd64,mac-amd64"/>
+    <package
       name="unused/${platform}"
       version="git_revision:c123456789abcdef0123456789abcdef01234567"/>
   </packages>
