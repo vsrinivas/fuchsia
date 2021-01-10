@@ -92,6 +92,11 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 	if *auto {
 		as := pmhttp.NewAutoServer()
 
+		// This needs to be the first defer to guarantee the channels ranged over in the
+		// waited-upon goroutines are closed by subsequent defer cleanup.
+		var wg sync.WaitGroup
+		defer wg.Wait()
+
 		w, err := fswatch.NewWatcher()
 		if err != nil {
 			return fmt.Errorf("failed to initialize fsnotify: %s", err)
@@ -101,7 +106,10 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		timestampPath := filepath.Join(*repoServeDir, "timestamp.json")
 		timestampMonitor := NewMetadataMonitor(timestampPath, w)
 		defer timestampMonitor.Close()
+
+		wg.Add(3)
 		go func() {
+			defer wg.Done()
 			for metadata := range timestampMonitor.Events {
 				if !*quiet {
 					log.Printf("[pm auto] notify new timestamp.json version: %v", metadata.Version)
@@ -111,6 +119,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}()
 
 		go func() {
+			defer wg.Done()
 			// Drain any watch errors encountered, or the first error will block the filesystem watcher
 			// forever.
 			for err := range w.Errors {
@@ -119,6 +128,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}()
 
 		go func() {
+			defer wg.Done()
 			for event := range w.Events {
 				switch event.Name {
 				case timestampPath:
@@ -135,7 +145,9 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 				return fmt.Errorf("[pm auto] unable to create incremental manifest watcher: %s", err)
 			}
 			defer mw.stop()
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				for manifests := range mw.PublishEvents {
 					_, err = repo.PublishManifests(manifests)
 					if err != nil {
