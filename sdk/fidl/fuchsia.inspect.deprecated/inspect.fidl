@@ -7,19 +7,14 @@
 
 library fuchsia.inspect.deprecated;
 
-const uint16 MAX_KEY_LENGTH = 1024;
-const uint16 MAX_VALUE_LENGTH = 16384;
-const uint16 MAX_VALUE_COUNT = 256;
-const uint16 MAX_CHILDREN_COUNT = 256;
-
 union PropertyValue {
-    1: string:MAX_VALUE_LENGTH str;
-    2: vector<uint8>:MAX_VALUE_LENGTH bytes;
+    1: string:MAX str;
+    2: vector<uint8>:MAX bytes;
 };
 
 // A string property on an `Object`. Consisting of a key and value.
 struct Property {
-    string:MAX_KEY_LENGTH key;
+    string:MAX key;
     PropertyValue value;
 };
 
@@ -32,15 +27,15 @@ union MetricValue {
 
 // A Metric is a string key and the associated numeric value.
 struct Metric {
-    string:MAX_KEY_LENGTH key;
+    string:MAX key;
     MetricValue value;
 };
 
 // An `Object` has a name and 0 or more properties and metrics.
 struct Object {
-    string:MAX_KEY_LENGTH name;
-    vector<Property>:MAX_VALUE_COUNT properties;
-    vector<Metric>:MAX_VALUE_COUNT metrics;
+    string:MAX name;
+    vector<Property>:MAX properties;
+    vector<Metric>:MAX metrics;
 };
 
 // The `Inspect` interface provides a point for Components to expose
@@ -48,8 +43,8 @@ struct Object {
 [Discoverable]
 protocol Inspect {
     ReadData() -> (Object object);
-    ListChildren() -> (vector<string:MAX_KEY_LENGTH>:MAX_CHILDREN_COUNT children_names);
+    ListChildren() -> (vector<string:MAX>:MAX children_names);
     // Open a child of this Object by name.
     // The name should match what is returned by ListChildren.
-    OpenChild(string:MAX_KEY_LENGTH child_name, request<Inspect> child_channel) -> (bool success);
+    OpenChild(string:MAX child_name, request<Inspect> child_channel) -> (bool success);
 };
