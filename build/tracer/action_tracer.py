@@ -9,6 +9,13 @@ import subprocess
 import sys
 
 
+def error(msg):
+    print(msg, file=sys.stderr)
+    print(
+        "See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions",
+        file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Traces a GN action and enforces strict inputs/outputs",
@@ -126,24 +133,21 @@ def main():
             op = line[0]
             if op == "r":
                 if not path in allowed_read:
-                    print(
-                        f"ERROR: {args.label} read {path} but it is not a specified input!",
-                        file=sys.stderr,
+                    error(
+                        f"ERROR: {args.label} read {path} but it is not a specified input!"
                     )
                     return 1
             elif op in ("w", "d", "t"):
                 if not path in allowed_write:
-                    print(
-                        f"ERROR: {args.label} wrote {path} but it is not a specified output!",
-                        file=sys.stderr,
+                    error(
+                        f"ERROR: {args.label} wrote {path} but it is not a specified output!"
                     )
                     return 1
             elif op == "m":
                 for path in path.split("|"):
                     if not path in allowed_write:
-                        print(
-                            f"ERROR: {args.label} wrote {path} but it is not a specified output!",
-                            file=sys.stderr,
+                        error(
+                            f"ERROR: {args.label} wrote {path} but it is not a specified output!"
                         )
                         return 1
 
