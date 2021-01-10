@@ -34,10 +34,12 @@ config("compiler") {
     # Rust links are always PIE on Linux.  C/C++ static library code that is
     # linked into Rust programs must be compiled as PIE too.  Since there's no
     # good way to distinguish code going into Rust links from other code, just
-    # do it for everything.  Note this doesn't cause linking as PIE, just code
-    # generation that's compatible.  Non-PIE links of Linux binaries will apply
-    # the relocations statically and just pay a little runtime overhead.
+    # do it for everything.
     cflags = [ "-fPIE" ]
+
+    # Since we're compiling as PIE, link as PIE too.
+    # This makes `#ifdef __PIE__` checks comport with link-time behavior.
+    ldflags += cflags + [ "-pie" ]
   }
 
   # TODO(fxbug.dev/26846) The implicitly linked static libc++.a depends on these.
