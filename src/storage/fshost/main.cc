@@ -25,6 +25,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -212,7 +213,7 @@ zx::status<llcpp::fuchsia::boot::WriteOnlyLog::SyncClient> ConnectToWriteLog() {
 // handle for logging. This is a short term fix for a bug where in on a
 // board with userdebug build, no logs show up on serial.
 // TODO(fxbug.dev/66476)
-void SetUpLog() {
+void UseDebugLog() {
   auto log_client_or = ConnectToWriteLog();
   if (log_client_or.is_error()) {
     std::cerr << "fshost: failed to get write log: "
@@ -227,48 +228,41 @@ void SetUpLog() {
   }
 }
 
-}  // namespace
-}  // namespace devmgr
-
-int main(int argc, char** argv) {
-  devmgr::SetUpLog();
-  bool disable_block_watcher = false;
-
-  enum {
-    kDisableBlockWatcher,
-  };
-  option options[] = {
-      {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
-  };
-
-  int opt;
-  while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
-    switch (opt) {
-      case kDisableBlockWatcher:
-        FX_LOGS(INFO) << "received --disable-block-watcher";
-        disable_block_watcher = true;
-        break;
-    }
+Config GetConfig(const FshostBootArgs& boot_args) {
+  std::ifstream file("/pkg/config/fshost");
+  Config::Options options;
+  if (file) {
+    options = Config::ReadOptions(file);
+  } else {
+    options = Config::DefaultOptions();
   }
-
-  // Setup the fshost loader service, which can load libraries from either /system/lib or /boot/lib.
-  // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new usages.
-  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx_status_t status = loader_loop.StartThread("fshost-loader");
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to start loader thread: " << zx_status_get_string(status);
-    return status;
+  if (boot_args.netboot()) {
+    options[Config::kNetboot] = std::string();
   }
+  if (boot_args.check_filesystems()) {
+    options[Config::kCheckFilesystems] = std::string();
+  }
+  if (boot_args.wait_for_data()) {
+    options[Config::kWaitForData] = std::string();
+  }
+  return Config(std::move(options));
+}
+
+std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop& loop) {
+  // Set up the fshost loader service, which can load libraries from either /system/lib or
+  // /boot/lib.
+  // TODO(fxbug.dev/34633): This loader is DEPRECATED and should be deleted. Do not add new
+  // usages.
   fbl::unique_fd root_fd;
-  status = fdio_open_fd(
-      "/", fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-      root_fd.reset_and_get_address());
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_open_fd(
+          "/", fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+          root_fd.reset_and_get_address());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);
-    return status;
+    return nullptr;
   }
-  auto loader = DeprecatedBootSystemLoaderService::Create(loader_loop.dispatcher(),
-                                                          std::move(root_fd), "fshost");
+  auto loader =
+      DeprecatedBootSystemLoaderService::Create(loop.dispatcher(), std::move(root_fd), "fshost");
 
   // Replace default loader service with a connection to our own.
   // TODO(bryanhenry): This is unnecessary and will be removed in a subsequent change. Left in to
@@ -276,53 +270,70 @@ int main(int argc, char** argv) {
   auto conn = loader->Connect();
   if (conn.is_error()) {
     FX_LOGS(ERROR) << "failed to create loader connection: " << conn.status_string();
-    return conn.status_value();
+    return nullptr;
   }
   zx_handle_close(dl_set_loader_service(std::move(conn).value().release()));
+  return loader;
+}
+
+int Main(bool disable_block_watcher) {
+  auto boot_args = FshostBootArgs::Create();
+  Config config = GetConfig(*boot_args);
+
+  if (!config.is_set(Config::kUseSyslog))
+    UseDebugLog();
+
+  FX_LOGS(INFO) << "Config: " << config;
+
+  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  std::shared_ptr<loader::LoaderServiceBase> loader;
+  if (!config.is_set(Config::kUseDefaultLoader)) {
+    zx_status_t status = loader_loop.StartThread("fshost-loader");
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "failed to start loader thread: " << zx_status_get_string(status);
+      return EXIT_FAILURE;
+    }
+    loader = SetUpLoaderService(loader_loop);
+    if (!loader) {
+      return EXIT_FAILURE;
+    }
+  }
 
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
+  FsManager fs_manager(boot_args, MakeMetrics());
 
-  auto boot_args = devmgr::FshostBootArgs::Create();
-
-  devmgr::FsManager fs_manager(boot_args, devmgr::MakeMetrics());
-
-  // Check relevant boot arguments
-  devmgr::FshostOptions fshost_options = {.netboot = boot_args->netboot(),
-                                          .check_filesystems = boot_args->check_filesystems(),
-                                          .wait_for_data = boot_args->wait_for_data()};
-
-  if (fshost_options.netboot) {
+  if (config.netboot()) {
     FX_LOGS(INFO) << "disabling automount";
   }
 
-  devmgr::BlockWatcher watcher(fs_manager, fshost_options);
+  BlockWatcher watcher(fs_manager, &config);
 
-  status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                 std::move(loader), watcher);
+  zx_status_t status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                             std::move(loader), watcher);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
-    return status;
+    return EXIT_FAILURE;
   }
 
   // Serve the root filesystems in our own namespace.
   zx::channel fs_root_client, fs_root_server;
   status = zx::channel::create(0, &fs_root_client, &fs_root_server);
   if (status != ZX_OK) {
-    return ZX_OK;
+    return EXIT_FAILURE;
   }
   status = fs_manager.ServeRoot(std::move(fs_root_server));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot serve devmgr's root filesystem";
-    return status;
+    return EXIT_FAILURE;
   }
 
   // Initialize namespace, and begin monitoring for a termination event.
-  status = devmgr::BindNamespace(std::move(fs_root_client));
+  status = BindNamespace(std::move(fs_root_client));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot bind namespace";
-    return status;
+    return EXIT_FAILURE;
   }
   // TODO(dgonyeo): call WatchExit from inside FsManager, instead of doing it
   // here.
@@ -330,15 +341,14 @@ int main(int argc, char** argv) {
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
-  status = devmgr::get_ramdisk(&ramdisk_vmo);
+  status = get_ramdisk(&ramdisk_vmo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to get ramdisk" << zx_status_get_string(status);
   } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
 
     int err = thrd_create_with_name(
-        &t, &devmgr::RamctlWatcher,
-        reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
+        &t, &RamctlWatcher, reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
         "ramctl-filesystems");
     if (err != thrd_success) {
       FX_LOGS(ERROR) << "failed to start ramctl-filesystems: " << err;
@@ -347,11 +357,26 @@ int main(int argc, char** argv) {
   }
 
   if (disable_block_watcher) {
+    FX_LOGS(INFO) << "block-watcher disabled";
     zx::nanosleep(zx::time::infinite());
   } else {
     watcher.Run();
   }
 
   FX_LOGS(INFO) << "terminating";
-  return 0;
+  return EXIT_SUCCESS;
+}
+
+}  // namespace
+}  // namespace devmgr
+
+int main(int argc, char** argv) {
+  int disable_block_watcher = false;
+  option options[] = {
+      {"disable-block-watcher", no_argument, &disable_block_watcher, true},
+  };
+  while (getopt_long(argc, argv, "", options, nullptr) != -1) {
+  }
+
+  return devmgr::Main(disable_block_watcher);
 }

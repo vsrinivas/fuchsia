@@ -13,9 +13,9 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 
+#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
-#include "src/storage/fshost/fshost-options.h"
 #include "src/storage/fshost/metrics.h"
 
 namespace devmgr {
@@ -24,8 +24,7 @@ namespace devmgr {
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
  public:
-  FilesystemMounter(FsManager& fshost, FshostOptions options)
-      : fshost_(fshost), options_(options) {}
+  FilesystemMounter(FsManager& fshost, const Config* config) : fshost_(fshost), config_(*config) {}
 
   virtual ~FilesystemMounter() = default;
 
@@ -35,8 +34,8 @@ class FilesystemMounter {
     return fshost_.InstallFs(path, std::move(h));
   }
 
-  bool Netbooting() const { return options_.netboot; }
-  bool ShouldCheckFilesystems() const { return options_.check_filesystems; }
+  bool Netbooting() const { return config_.netboot(); }
+  bool ShouldCheckFilesystems() const { return config_.check_filesystems(); }
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
@@ -84,7 +83,7 @@ class FilesystemMounter {
                               const mount_options_t& options, zx::channel block_device_client,
                               zx::channel diagnostics_dir, uint32_t fs_flags);
 
-  bool WaitForData() const { return options_.wait_for_data; }
+  bool WaitForData() const { return config_.wait_for_data(); }
 
   // Actually launches the filesystem process.
   //
@@ -93,7 +92,7 @@ class FilesystemMounter {
                                size_t len, uint32_t fs_flags);
 
   FsManager& fshost_;
-  const FshostOptions options_;
+  const Config& config_;
   bool data_mounted_ = false;
   bool durable_mounted_ = false;
   bool install_mounted_ = false;

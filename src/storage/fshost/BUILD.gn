@@ -131,6 +131,7 @@ source_set("block-watcher") {
     "block-device-manager.cc",
     "block-device.cc",
     "block-watcher.cc",
+    "config.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
@@ -305,13 +306,14 @@ fuchsia_unittest_component("fshost-metrics-test") {
   deps = [ ":fshost_metrics_test" ]
 }
 
-test("block_watcher_test") {
+test("fshost_integration_test") {
   sources = [
     "block-device-manager-test.cc",
     "block-device-test.cc",
     "block-watcher-test.cc",
     "filesystem-mounter-test.cc",
     "mock-block-device.h",
+    "recovery-test.cc",
   ]
   deps = [
     ":block-watcher",
@@ -323,6 +325,7 @@ test("block_watcher_test") {
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/blobfs",
     "//src/storage/minfs",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fs-management",
@@ -331,34 +334,21 @@ test("block_watcher_test") {
   ]
 }
 
-generated_file("block_watcher_test_config") {
-  contents = [
-    "default",
-
-    # Some of the tests requires us to be able to match against multiple GPT devices.
-    "gpt-all",
-  ]
-  output_conversion = "list lines"
-  outputs = [ "$target_gen_dir/block_watcher_test_config" ]
-}
-
-resource("block_watcher_test_config_resource") {
-  sources = [ "$target_gen_dir/block_watcher_test_config" ]
-  outputs = [ "config/fshost" ]
-}
-
 # This is a test version of fshost, not a component with fshost tests.
 fuchsia_component("test-fshost") {
   testonly = true
   manifest = "meta/fshost.cml"
-  deps = [ ":fshost" ]
+  deps = [
+    ":fshost",
+    "//src/security/policy/zxcrypt:null",
+  ]
 }
 
-isolated_devmgr_unittest_v2_component("block-watcher-test") {
-  manifest = "meta/block_watcher_test.cml"
+isolated_devmgr_unittest_v2_component("fshost-integration-test") {
+  manifest = "meta/fshost_integration_test.cml"
   deps = [
-    ":block_watcher_test",
-    ":block_watcher_test_config_resource",
+    ":fshost_integration_test",
+    ":integration_test_config",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",
@@ -374,7 +364,7 @@ fuchsia_test_package("fshost-tests") {
     }
   }
   test_components = [
-    ":block-watcher-test",
+    ":fshost-integration-test",
     ":fshost-test",
     ":fshost-inspect-test",
     ":fshost-metrics-test",
@@ -424,6 +414,12 @@ template("fshost_config") {
     if (!format_minfs_on_corruption) {
       contents += [ "-format-minfs-on-corruption" ]
     }
+    if (defined(invoker.use_syslog) && invoker.use_syslog) {
+      contents += [ "use-syslog" ]
+    }
+    if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
+      contents += [ "use-default-loader" ]
+    }
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -448,4 +444,12 @@ fshost_config("default_config") {
   minfs_ramdisk = false
   gpt_all = false
   no_minfs_zxcrypt = false
+}
+
+fshost_config("integration_test_config") {
+  # Some of the tests require us to be able to match against multiple GPT devices.
+  gpt_all = true
+
+  use_syslog = true
+  use_default_loader = true
 }

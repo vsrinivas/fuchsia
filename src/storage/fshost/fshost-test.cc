@@ -111,7 +111,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
 TEST(FsManagerTestCase, WatchExit) {
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
-  BlockWatcher watcher(manager, FshostOptions());
+  Config config;
+  BlockWatcher watcher(manager, &config);
   ASSERT_OK(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
   manager.WatchExit();
@@ -138,7 +139,8 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_OK(status);
 
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
-  BlockWatcher watcher(manager, FshostOptions());
+  Config config;
+  BlockWatcher watcher(manager, &config);
   ASSERT_OK(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
   manager.WatchExit();

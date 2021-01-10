@@ -41,8 +41,7 @@ std::unique_ptr<FsHostMetrics> MakeMetrics(cobalt_client::InMemoryLogger** logge
 
 class BlockDeviceTest : public testing::Test {
  public:
-  BlockDeviceTest()
-      : manager_(nullptr, MakeMetrics(&logger_)), watcher_(manager_, FshostOptions()) {}
+  BlockDeviceTest() : manager_(nullptr, MakeMetrics(&logger_)), watcher_(manager_, &config_) {}
 
   void SetUp() override {
     // Initialize FilesystemMounter.
@@ -90,6 +89,7 @@ class BlockDeviceTest : public testing::Test {
  protected:
   cobalt_client::InMemoryLogger* logger_ = nullptr;
   FsManager manager_;
+  Config config_;
 
  private:
   std::optional<isolated_devmgr::RamDisk> ramdisk_;
@@ -97,8 +97,7 @@ class BlockDeviceTest : public testing::Test {
 };
 
 TEST_F(BlockDeviceTest, TestBadHandleDevice) {
-  FshostOptions options;
-  FilesystemMounter mounter(manager_, options);
+  FilesystemMounter mounter(manager_, &config_);
   fbl::unique_fd fd;
   BlockDevice device(&mounter, {});
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
@@ -120,8 +119,7 @@ TEST_F(BlockDeviceTest, TestBadHandleDevice) {
 }
 
 TEST_F(BlockDeviceTest, TestEmptyDevice) {
-  FshostOptions options;
-  FilesystemMounter mounter(manager_, options);
+  FilesystemMounter mounter(manager_, &config_);
 
   // Initialize Ramdisk.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(/*use_guid=*/true));
@@ -148,8 +146,7 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
 }
 
 TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
-  FshostOptions options;
-  FilesystemMounter mounter(manager_, options);
+  FilesystemMounter mounter(manager_, &config_);
 
   // Initialize Ramdisk with an empty GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk());
@@ -167,8 +164,7 @@ TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
 }
 
 TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
-  FshostOptions options;
-  FilesystemMounter mounter(manager_, options);
+  FilesystemMounter mounter(manager_, &config_);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
@@ -183,9 +179,8 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
 }
 
 TEST_F(BlockDeviceTest, TestMinfsReformat) {
-  FshostOptions options;
-  options.check_filesystems = true;
-  FilesystemMounter mounter(manager_, options);
+  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
@@ -206,9 +201,8 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
 }
 
 TEST_F(BlockDeviceTest, TestBlobfs) {
-  FshostOptions options;
-  options.check_filesystems = true;
-  FilesystemMounter mounter(manager_, options);
+  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
@@ -229,9 +223,8 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
 }
 
 TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
-  FshostOptions options;
-  options.check_filesystems = true;
-  FilesystemMounter mounter(manager_, options);
+  Config config(Config::Options{{Config::kCheckFilesystems, {}}});
+  FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));

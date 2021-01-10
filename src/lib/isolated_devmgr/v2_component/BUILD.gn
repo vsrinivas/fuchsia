@@ -45,6 +45,7 @@ group("storage_drivers") {
     "//src/devices/block/drivers/ftl",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk:ramdisk",
+    "//src/devices/block/drivers/zxcrypt",
     "//src/devices/nand/drivers/ram-nand",
     "//src/storage/fvm/driver",
   ]

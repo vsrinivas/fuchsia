@@ -24,7 +24,6 @@ group("tests") {
     "fidl-utils:tests",
     "fpu:tests",
     "fs-management:tests",
-    "fs-recovery:tests",
     "fs-test-utils:tests",
     "fvm:tests",
     "getentropy:tests",

@@ -4,7 +4,7 @@
         "src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
-        binary: "test/block_watcher_test",
+        binary: "test/fshost_integration_test",
     },
     children: [
         {

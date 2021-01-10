@@ -34,7 +34,7 @@
 namespace zxcrypt {
 
 // The zxcrypt driver
-const char* kDriverLib = "/boot/driver/zxcrypt.so";
+const char* kDriverLib = "zxcrypt.so";
 
 namespace {
 
@@ -44,7 +44,7 @@ const char kHardwareKeyInfo[] = "zxcrypt";
 
 // How many bytes to read from /boot/config/zxcrypt?
 const size_t kMaxKeySourcePolicyLength = 32;
-const char kZxcryptConfigFile[] = "/boot/config/zxcrypt";
+const char kZxcryptConfigFile[] = "/pkg/config/zxcrypt";
 
 // Reads /boot/config/zxcrypt to determine what key source policy was selected for this product at
 // build time.

@@ -89,7 +89,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
   // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
   zx::channel diagnostics_dir;
 
-  zx_status_t status = MountFilesystem(PATH_DATA, "/boot/bin/minfs", options,
+  zx_status_t status = MountFilesystem(PATH_DATA, "/pkg/bin/minfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);
   if (status != ZX_OK) {
     return status;
@@ -108,7 +108,7 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
   // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
   zx::channel diagnostics_dir;
 
-  zx_status_t status = MountFilesystem(PATH_INSTALL, "/boot/bin/minfs", options,
+  zx_status_t status = MountFilesystem(PATH_INSTALL, "/pkg/bin/minfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);
   if (status != ZX_OK) {
     return status;
@@ -127,7 +127,7 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
   // TODO(fxbug.dev/54525): The Inspect API has not been connected for FactoryFs yet.
   zx::channel diagnostics_dir;
 
-  zx_status_t status = MountFilesystem(PATH_FACTORY, "/boot/bin/factoryfs", options,
+  zx_status_t status = MountFilesystem(PATH_FACTORY, "/pkg/bin/factoryfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);
 
   if (status != ZX_OK) {
@@ -146,7 +146,7 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
 
   // TODO(fxbug.dev/54525): The Inspect API has not been connected for durable partition yet.
   zx::channel diagnostics_dir;
-  zx_status_t status = MountFilesystem(PATH_DURABLE, "/boot/bin/minfs", options,
+  zx_status_t status = MountFilesystem(PATH_DURABLE, "/pkg/bin/minfs", options,
                                        std::move(block_device), std::move(diagnostics_dir), FS_SVC);
   if (status != ZX_OK) {
     return status;
@@ -176,7 +176,7 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
                    << zx_status_get_string(status);
   }
 
-  status = MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options, std::move(block_device),
+  status = MountFilesystem(PATH_BLOB, "/pkg/bin/blobfs", options, std::move(block_device),
                            std::move(fs_diagnostics_dir_server), FS_SVC | FS_SVC_BLOBFS);
   if (status != ZX_OK) {
     return status;

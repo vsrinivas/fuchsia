@@ -61,7 +61,11 @@ zx::status<std::string> CreateFvmInstance(const std::string& device_path, int sl
   return zx::ok(fvm_disk_path);
 }
 
-zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size) {
+zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size,
+                                           const FvmOptions& options) {
+  if (options.name.size() >= BLOCK_NAME_LEN)
+    return zx::error(ZX_ERR_INVALID_ARGS);
+
   // Format the raw device to support FVM, and bind the FVM driver to it.
   zx::status<std::string> fvm_disk_path_or = CreateFvmInstance(device_path, slice_size);
   if (fvm_disk_path_or.is_error()) {
@@ -78,8 +82,9 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  strcpy(request.name, "fs-test-partition");
-  memcpy(request.type, kTestPartGUID, sizeof(request.type));
+  memcpy(request.name, options.name.data(), options.name.size());
+  request.name[options.name.size()] = 0;
+  memcpy(request.type, options.type ? options.type->data() : kTestPartGUID, sizeof(request.type));
   memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
   fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
@@ -90,7 +95,7 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
   close(fvm_fd.release());
 
   char partition_path[PATH_MAX];
-  fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, partition_path));
+  fd.reset(open_partition(kTestUniqueGUID, request.type, 0, partition_path));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not locate FVM partition";
     return zx::error(ZX_ERR_BAD_STATE);

@@ -31,9 +31,9 @@ class FshostBootArgs {
   // use in unit tests; use Create for non-test code.
   explicit FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::SyncClient> boot_args);
 
-  bool netboot() { return netsvc_netboot_ || zircon_system_disable_automount_; }
-  bool check_filesystems() { return zircon_system_filesystem_check_; }
-  bool wait_for_data() { return zircon_system_wait_for_data_; }
+  bool netboot() const { return netsvc_netboot_ || zircon_system_disable_automount_; }
+  bool check_filesystems() const { return zircon_system_filesystem_check_; }
+  bool wait_for_data() const { return zircon_system_wait_for_data_; }
 
   zx::status<std::string> pkgfs_cmd();
   zx::status<std::string> pkgfs_file_with_path(std::string path);

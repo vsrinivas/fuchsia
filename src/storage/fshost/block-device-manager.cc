@@ -184,16 +184,15 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
         variant_(variant),
         max_nonram_size_(max_nonram_size) {}
 
-  static Variant GetVariantFromOptions(const BlockDeviceManager::Options& options) {
+  static Variant GetVariantFromConfig(const Config& config) {
     Variant variant;
-    if (options.is_set(BlockDeviceManager::Options::kNoZxcrypt)) {
+    if (config.is_set(Config::kNoZxcrypt)) {
       variant.zxcrypt = ZxcryptVariant::kNoZxcrypt;
     } else {
       variant.zxcrypt = ZxcryptVariant::kNormal;
     }
 
-    variant.format_minfs_on_corruption =
-        options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption);
+    variant.format_minfs_on_corruption = config.is_set(Config::kFormatMinfsOnCorruption);
     return variant;
   }
 
@@ -331,109 +330,52 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
 
 MinfsMatcher::PartitionNames GetMinfsPartitionNames() { return {"minfs", GUID_DATA_NAME, "data"}; }
 
-// Reads the given named option from the given key/value store, defaulting to the given value if
-// not found.
-uint64_t ReadUint64OptionValue(const std::map<std::string, std::string, std::less<>>& options,
-                               const std::string& key, uint64_t default_value) {
-  auto found = options.find(key);
-  if (found == options.end())
-    return default_value;
-
-  uint64_t value = 0;
-  if (sscanf(found->second.c_str(), "%" PRIu64, &value) != 1) {
-    FX_LOGS(ERROR) << "fshost: Can't read integer option value for " << key << ", got "
-                   << found->second;
-    return default_value;
-  }
-
-  return value;
-}
-
 }  // namespace
 
-BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream) {
-  std::map<std::string, std::string, std::less<>> options;
-  for (std::string line; std::getline(stream, line);) {
-    if (line == Options::kDefault) {
-      auto default_options = DefaultOptions();
-      options.insert(default_options.options.begin(), default_options.options.end());
-    } else if (line.size() > 0) {
-      if (line[0] == '#')
-        continue;  // Treat as comment; ignore;
-
-      std::string key, value;
-      if (auto separator_index = line.find('='); separator_index != std::string::npos) {
-        key = line.substr(0, separator_index);
-        value = line.substr(separator_index + 1);
-      } else {
-        key = line;  // No value, just a bare key.
-      }
-
-      if (key[0] == '-') {
-        options.erase(key.substr(1));
-      } else {
-        options[key] = std::move(value);
-      }
-    }
-  }
-  return {.options = std::move(options)};
-}
-
-BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
-  return {.options = {{Options::kBlobfs, {}},
-                      {Options::kBootpart, {}},
-                      {Options::kFvm, {}},
-                      {Options::kGpt, {}},
-                      {Options::kMinfs, {}},
-                      {Options::kFormatMinfsOnCorruption, {}}}};
-}
-
-BlockDeviceManager::BlockDeviceManager(const Options& options) : options_(options) {
+BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) {
   static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
 
-  if (options.is_set(Options::kBootpart)) {
+  if (config_.is_set(Config::kBootpart)) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
   }
 
-  auto gpt = std::make_unique<PartitionMapMatcher>(
-      DISK_FORMAT_GPT, options.is_set(Options::kGptAll), "", /*ramdisk_required=*/false);
+  auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, config_.is_set(Config::kGptAll),
+                                                   "", /*ramdisk_required=*/false);
   auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false,
-                                                   "/fvm", options.is_set(Options::kFvmRamdisk));
+                                                   "/fvm", config_.is_set(Config::kFvmRamdisk));
 
-  bool gpt_required = options.is_set(Options::kGpt) || options.is_set(Options::kGptAll);
-  bool fvm_required = options.is_set(Options::kFvm);
+  bool gpt_required = config_.is_set(Config::kGpt) || config_.is_set(Config::kGptAll);
+  bool fvm_required = config_.is_set(Config::kFvm);
 
-  uint64_t blobfs_nonram_max_bytes =
-      ReadUint64OptionValue(options_.options, Options::kBlobfsMaxBytes, 0);
-  uint64_t minfs_nonram_max_bytes =
-      ReadUint64OptionValue(options_.options, Options::kMinfsMaxBytes, 0);
+  uint64_t blobfs_nonram_max_bytes = config_.ReadUint64OptionValue(Config::kBlobfsMaxBytes, 0);
+  uint64_t minfs_nonram_max_bytes = config_.ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
 
-  if (!options.is_set(Options::kNetboot)) {
+  if (!config_.is_set(Config::kNetboot)) {
     // GPT partitions:
-    if (options.is_set(Options::kDurable)) {
+    if (config_.is_set(Config::kDurable)) {
       static constexpr fuchsia_hardware_block_partition_GUID durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<MinfsMatcher>(
           *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid,
-          MinfsMatcher::GetVariantFromOptions(options)));
+          MinfsMatcher::GetVariantFromConfig(config_)));
       gpt_required = true;
     }
-    if (options.is_set(Options::kFactory)) {
+    if (config_.is_set(Config::kFactory)) {
       matchers_.push_back(std::make_unique<FactoryfsMatcher>(*gpt));
       gpt_required = true;
     }
 
     // FVM partitions:
-    if (options.is_set(Options::kBlobfs)) {
+    if (config_.is_set(Config::kBlobfs)) {
       static constexpr fuchsia_hardware_block_partition_GUID blobfs_type_guid = GUID_BLOB_VALUE;
       matchers_.push_back(std::make_unique<SimpleMatcher>(
           *fvm, "blobfs", blobfs_type_guid, DISK_FORMAT_BLOBFS, blobfs_nonram_max_bytes));
       fvm_required = true;
     }
-    if (options.is_set(Options::kMinfs)) {
+    if (config_.is_set(Config::kMinfs)) {
       matchers_.push_back(std::make_unique<MinfsMatcher>(
           *fvm, GetMinfsPartitionNames(), minfs_type_guid,
-          MinfsMatcher::GetVariantFromOptions(options), minfs_nonram_max_bytes));
+          MinfsMatcher::GetVariantFromConfig(config_), minfs_nonram_max_bytes));
       fvm_required = true;
     }
   }
@@ -441,13 +383,13 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) : options_(option
   // The partition map matchers go last because they match on content.
   if (fvm_required) {
     std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
-    if (options.is_set(Options::kFvmRamdisk)) {
+    if (config_.is_set(Config::kFvmRamdisk)) {
       // Add another matcher for the non-ramdisk version of FVM.
       non_ramdisk_fvm =
           std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false, "/fvm",
                                                 /*ramdisk_required=*/false);
 
-      if (options.is_set(Options::kAttachZxcryptToNonRamdisk)) {
+      if (config_.is_set(Config::kAttachZxcryptToNonRamdisk)) {
         matchers_.push_back(std::make_unique<MinfsMatcher>(
             *non_ramdisk_fvm, GetMinfsPartitionNames(), minfs_type_guid,
             MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
@@ -462,7 +404,7 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) : options_(option
   if (gpt_required) {
     matchers_.push_back(std::move(gpt));
   }
-  if (options.is_set(Options::kMbr)) {
+  if (config_.is_set(Config::kMbr)) {
     // Default to allowing multiple devices because mbr support is disabled by default and if it's
     // enabled, it's likely required for removable devices and so supporting multiple devices is
     // probably appropriate.

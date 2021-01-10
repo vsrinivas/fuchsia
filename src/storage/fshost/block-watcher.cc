@@ -64,31 +64,10 @@ constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 // Signal that is set on the watcher channel we want to stop watching.
 constexpr zx_signals_t kSignalWatcherPaused = ZX_USER_SIGNAL_0;
 
-// Class used to pause/resume the block watcher.
-BlockDeviceManager::Options GetDeviceManagerOptions(bool netboot) {
-  std::ifstream file("/boot/config/fshost");
-  BlockDeviceManager::Options options;
-  if (file) {
-    options = BlockDeviceManager::ReadOptions(file);
-  } else {
-    // fshost might be running from within a package (e.g. in tests).
-    file = std::ifstream("/pkg/config/fshost");
-    if (file) {
-      options = BlockDeviceManager::ReadOptions(file);
-    } else {
-      options = BlockDeviceManager::DefaultOptions();
-    }
-  }
-  if (netboot) {
-    options.options[BlockDeviceManager::Options::kNetboot] = std::string();
-  }
-  return options;
-}
-
 }  // namespace
 
-BlockWatcher::BlockWatcher(FsManager& fshost, FshostOptions options)
-    : mounter_(fshost, options), device_manager_(GetDeviceManagerOptions(options.netboot)) {
+BlockWatcher::BlockWatcher(FsManager& fshost, const Config* config)
+    : mounter_(fshost, config), device_manager_(config) {
   zx_status_t status = zx::event::create(0, &pause_event_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create block watcher pause event: "

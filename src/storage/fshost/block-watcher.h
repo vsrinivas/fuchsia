@@ -15,13 +15,14 @@
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/fshost-options.h"
 
 namespace devmgr {
 
 class BlockWatcher {
  public:
-  BlockWatcher(FsManager& fshost, FshostOptions options);
+  // Does not take ownership of |config|, which must refer to a valid object that outlives this
+  // object.
+  BlockWatcher(FsManager& fshost, const Config* config);
 
   void Run();
 
