@@ -26,7 +26,7 @@ static SUCCESS_MESSAGE_MACOS: &str = "MacOS provides networking for the Fuchsia 
 
 lazy_static! {
     // Regex to match the output of `ip tuntap list` looking for a tuntap named "qemu".
-    static ref TUNTAP_RE: Regex = Regex::new(r"qemu: tap persist user (\d+)").unwrap();
+    static ref TUNTAP_RE: Regex = Regex::new(r"qemu: tap.* persist user (\d+)").unwrap();
 }
 
 pub struct EmuNetworking<'a> {
@@ -49,7 +49,6 @@ impl<'a> EmuNetworking<'a> {
 
     async fn run_linux(&self) -> Result<PreflightCheckResult> {
         let (_status, stdout, _) = (self.command_runner)(&vec!["ip", "tuntap", "list"])?;
-
         let caps = TUNTAP_RE.captures(&stdout);
         match &caps {
             Some(c) => self.ensure_is_same_user(&c[1]),
@@ -75,7 +74,7 @@ impl PreflightCheck for EmuNetworking<'_> {
 mod test {
     use {super::*, crate::command_runner::ExitStatus};
 
-    static IP_TUNTAP_OUTPUT_FOUND: &str = "qemu: tap persist user 12345\n";
+    static IP_TUNTAP_OUTPUT_FOUND: &str = "qemu: tap one_queue vnet_hdr persist user 12345\n";
     static IP_TUNTAP_OUTPUT_NOT_FOUND: &str = "\n";
 
     #[fuchsia_async::run_singlethreaded(test)]
