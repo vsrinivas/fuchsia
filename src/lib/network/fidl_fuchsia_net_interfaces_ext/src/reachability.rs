@@ -57,7 +57,8 @@ pub fn is_globally_routable(
 
 /// Wraps `event_stream` and returns a stream which yields the reachability status as a bool (true
 /// iff there exists an interface with properties that satisfy [`is_globally_routable`]) whenever
-/// it changes.
+/// it changes. The first item the returned stream yields is the reachability status of the first
+/// interface discovered through an `Added` or `Existing` event on `event_stream`.
 pub fn to_reachability_stream(
     event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
 ) -> impl Stream<Item = Result<bool, WatcherOperationError<HashMap<u64, Properties>>>> {
@@ -67,30 +68,34 @@ pub fn to_reachability_stream(
     event_stream.map_err(WatcherOperationError::EventStream).try_filter_map(move |event| {
         futures::future::ready(if_map.update(event).map_err(WatcherOperationError::Update).map(
             |changed| {
-                match changed {
+                let reachable_ids_changed = match changed {
                     UpdateResult::Existing(properties)
                     | UpdateResult::Added(properties)
-                    | UpdateResult::Changed(properties) => {
-                        if is_globally_routable(properties) {
-                            let _present: bool = reachable_ids.insert(properties.id);
-                        } else {
-                            let _removed: bool = reachable_ids.remove(&properties.id);
-                        }
+                    | UpdateResult::Changed { previous: _, current: properties }
+                        if is_globally_routable(properties) =>
+                    {
+                        reachable_ids.insert(properties.id)
                     }
-                    UpdateResult::Removed(id) => {
-                        let _removed: bool = reachable_ids.remove(&id);
+                    UpdateResult::Existing(_) | UpdateResult::Added(_) => false,
+                    UpdateResult::Changed { previous: _, current: properties } => {
+                        reachable_ids.remove(&properties.id)
                     }
-                    UpdateResult::NoChange => {
-                        return None;
+                    UpdateResult::Removed(properties) => reachable_ids.remove(&properties.id),
+                    UpdateResult::NoChange => return None,
+                };
+                // If the stream hasn't yielded anything yet, do so even if the set of reachable
+                // interfaces hasn't changed.
+                if reachable.is_none() {
+                    reachable = Some(!reachable_ids.is_empty());
+                    return reachable;
+                } else if reachable_ids_changed {
+                    let new_reachable = Some(!reachable_ids.is_empty());
+                    if reachable != new_reachable {
+                        reachable = new_reachable;
+                        return reachable;
                     }
                 }
-                let new_reachable = Some(!reachable_ids.is_empty());
-                if reachable != new_reachable {
-                    reachable = new_reachable;
-                    reachable
-                } else {
-                    None
-                }
+                None
             },
         ))
     })

@@ -22,9 +22,9 @@ pub(crate) fn config_for_device(
     topological_path: &str,
     metric: u32,
     rules: &Vec<InterfaceSpec>,
-    filepath: &std::path::PathBuf,
+    filepath: &std::path::Path,
 ) -> InterfaceConfig {
-    rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
+    rules.iter().filter_map(|spec| matches_info(spec, topological_path, device_info)).fold(
         InterfaceConfig {
             fidl: fidl_fuchsia_netstack::InterfaceConfig {
                 name,
@@ -206,7 +206,7 @@ mod tests {
                 mac: fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: [0; 6] },
                 mtu: 0,
             },
-            "".to_string(),
+            String::new(),
             "",
             100,
             &vec![
@@ -223,7 +223,7 @@ mod tests {
                     )),
                 },
             ],
-            &std::path::PathBuf::from("filepath"),
+            std::path::Path::new("filepath"),
         );
 
         assert_eq!(

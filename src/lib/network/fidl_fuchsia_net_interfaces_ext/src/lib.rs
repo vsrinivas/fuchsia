@@ -82,7 +82,7 @@ pub enum UpdateError {
 }
 
 /// The result of updating network interface state with an event.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum UpdateResult<'a> {
     /// The update did not change the local state.
     NoChange,
@@ -91,9 +91,18 @@ pub enum UpdateResult<'a> {
     /// The update inserted an added interface into the local state.
     Added(&'a Properties),
     /// The update changed an existing interface in the local state.
-    Changed(&'a Properties),
+    Changed {
+        /// The previous values of any properties which changed.
+        ///
+        /// This is sparsely populated: none of the immutable properties are present (they can
+        /// all be found on `current`), and a mutable property is present with its value pre-update
+        /// iff it has changed as a result of the update.
+        previous: fnet_interfaces::Properties,
+        /// The properties of the interface post-update.
+        current: &'a Properties,
+    },
     /// The update removed a removed interface from the local state.
-    Removed(u64),
+    Removed(Properties),
 }
 
 /// A trait for types holding interface state that can be updated by change events.
@@ -119,31 +128,70 @@ impl Update for Properties {
                     return Err(UpdateError::DuplicateAdded(added.into()));
                 }
             }
-            fnet_interfaces::Event::Changed(change) => {
-                if let Some(id) = change.id {
+            fnet_interfaces::Event::Changed(mut change) => {
+                let fnet_interfaces::Properties {
+                    id,
+                    name: _,
+                    device_class: _,
+                    online,
+                    has_default_ipv4_route,
+                    has_default_ipv6_route,
+                    addresses,
+                    ..
+                } = &mut change;
+                if let Some(id) = *id {
                     if self.id == id {
                         let mut changed = false;
-                        if let Some(online) = change.online {
-                            self.online = online;
-                            changed = true;
+                        macro_rules! swap_if_some {
+                            ($field:ident) => {
+                                if let Some($field) = $field {
+                                    if self.$field != *$field {
+                                        std::mem::swap(&mut self.$field, $field);
+                                        changed = true;
+                                    }
+                                }
+                            };
                         }
-                        if let Some(has_default_ipv4_route) = change.has_default_ipv4_route {
-                            self.has_default_ipv4_route = has_default_ipv4_route;
-                            changed = true;
+                        swap_if_some!(online);
+                        swap_if_some!(has_default_ipv4_route);
+                        swap_if_some!(has_default_ipv6_route);
+                        if let Some(addresses) = addresses {
+                            // NB The following iterator comparison assumes that the server is
+                            // well-behaved and will not send a permutation of the existing
+                            // addresses with no actual changes (additions or removals). Making the
+                            // comparison via set equality is possible, but more expensive than
+                            // it's worth.
+                            // TODO(https://github.com/rust-lang/rust/issues/64295) Use `eq_by` to
+                            // compare the iterators once stabilized.
+                            if addresses.len() != self.addresses.len()
+                                || !addresses
+                                    .iter()
+                                    .zip(
+                                        self.addresses
+                                            .iter()
+                                            .cloned()
+                                            .map(fnet_interfaces::Address::from),
+                                    )
+                                    .all(|(a, b)| *a == b)
+                            {
+                                let previous_len = self.addresses.len();
+                                // NB This is equivalent to Vec::try_extend, if such a method
+                                // existed.
+                                let () = self.addresses.reserve(addresses.len());
+                                for address in addresses.drain(..).map(Address::try_from) {
+                                    let () = self.addresses.push(address?);
+                                }
+                                let () = addresses
+                                    .extend(self.addresses.drain(..previous_len).map(Into::into));
+                                changed = true;
+                            }
                         }
-                        if let Some(has_default_ipv6_route) = change.has_default_ipv6_route {
-                            self.has_default_ipv6_route = has_default_ipv6_route;
-                            changed = true;
-                        }
-                        if let Some(addresses) = change.addresses {
-                            self.addresses = addresses
-                                .into_iter()
-                                .map(Address::try_from)
-                                .collect::<Result<Vec<_>, _>>()?;
-                        } else if !changed {
+                        if changed {
+                            change.id = None;
+                            return Ok(UpdateResult::Changed { previous: change, current: self });
+                        } else {
                             return Err(UpdateError::EmptyChange(change));
                         }
-                        return Ok(UpdateResult::Changed(self));
                     }
                 } else {
                     return Err(UpdateError::MissingId(change));
@@ -243,10 +291,11 @@ impl Update for HashMap<u64, Properties> {
                 }
             }
             fnet_interfaces::Event::Removed(removed_id) => {
-                if self.remove(&removed_id).is_none() {
-                    return Err(UpdateError::UnknownRemoved(removed_id));
+                if let Some(properties) = self.remove(&removed_id) {
+                    Ok(UpdateResult::Removed(properties))
+                } else {
+                    Err(UpdateError::UnknownRemoved(removed_id))
                 }
-                Ok(UpdateResult::Removed(removed_id))
             }
             fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => Ok(UpdateResult::NoChange),
         }
@@ -307,7 +356,7 @@ where
                 Ok(changed) => match changed {
                     UpdateResult::Existing(_)
                     | UpdateResult::Added(_)
-                    | UpdateResult::Changed(_)
+                    | UpdateResult::Changed { .. }
                     | UpdateResult::Removed(_) => {
                         if let Some(rtn) = predicate(acc) {
                             Ok(async_utils::fold::FoldWhile::Done(rtn))
@@ -389,6 +438,7 @@ pub fn event_stream_from_state(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_net as fnet;
     use fuchsia_async as fasync;
     use matches::assert_matches;
     use net_declare::fidl_subnet;
@@ -413,8 +463,18 @@ mod tests {
         fidl_properties(id).try_into().expect("failed to validate FIDL Properties")
     }
 
-    const ID: u64 = 1;
+    fn fidl_address(addr: fnet::Subnet) -> fnet_interfaces::Address {
+        fnet_interfaces::Address { addr: Some(addr), ..fnet_interfaces::Address::EMPTY }
+    }
 
+    fn address(addr: fnet::Subnet) -> Address {
+        fidl_address(addr).try_into().expect("failed to validate FIDL Address")
+    }
+
+    const ID: u64 = 1;
+    const ADDR: fnet::Subnet = fidl_subnet!("1.2.3.4/5");
+
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_duplicate_added_error() {
         assert_matches!(
@@ -429,6 +489,7 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_duplicate_existing_error() {
         assert_matches!(
@@ -443,6 +504,7 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_unknown_changed_error() {
         let unknown_changed = || fnet_interfaces::Properties {
@@ -460,6 +522,7 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_unknown_removed_error() {
         assert_matches!(
@@ -472,6 +535,7 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_removed_error() {
         assert_matches!(
@@ -480,6 +544,7 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_missing_id_error() {
         let missing_id = || fnet_interfaces::Properties {
@@ -500,20 +565,69 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/66928) Make this test less repetitive.
     #[test]
     fn test_empty_change_error() {
         let empty_change =
-            || fnet_interfaces::Properties { id: Some(ID), ..fnet_interfaces::Properties::EMPTY };
+            fnet_interfaces::Properties { id: Some(ID), ..fnet_interfaces::Properties::EMPTY };
+        let net_zero_change =
+            fnet_interfaces::Properties { name: None, device_class: None, ..fidl_properties(ID) };
         assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Changed(empty_change())),
-            Err(UpdateError::EmptyChange(properties)) if properties == empty_change()
+            properties(ID).update(fnet_interfaces::Event::Changed(empty_change.clone())),
+            Err(UpdateError::EmptyChange(properties)) if properties == empty_change
+        );
+        assert_matches!(
+            properties(ID).update(fnet_interfaces::Event::Changed(net_zero_change.clone())),
+            Err(UpdateError::EmptyChange(properties)) if properties == net_zero_change
         );
     }
 
+    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
+    // they end up calling into `Properties`'s implementation.
+    #[test]
+    fn test_update_changed_result() {
+        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
+        for (change, want_prev, want_current) in &[
+            (
+                fnet_interfaces::Properties {
+                    id: Some(ID),
+                    online: Some(true),
+                    ..fnet_interfaces::Properties::EMPTY
+                },
+                fnet_interfaces::Properties {
+                    online: Some(false),
+                    ..fnet_interfaces::Properties::EMPTY
+                },
+                Properties { online: true, ..properties(ID) },
+            ),
+            (
+                fnet_interfaces::Properties {
+                    id: Some(ID),
+                    addresses: Some(vec![fidl_address(ADDR)]),
+                    ..fnet_interfaces::Properties::EMPTY
+                },
+                fnet_interfaces::Properties {
+                    addresses: Some(vec![]),
+                    ..fnet_interfaces::Properties::EMPTY
+                },
+                Properties { addresses: vec![address(ADDR)], ..properties(ID) },
+            ),
+        ] {
+            let mut properties = properties(ID);
+            assert_matches!(
+                properties.update(fnet_interfaces::Event::Changed(change.clone())),
+                Ok(UpdateResult::Changed { ref previous, current }) if previous == want_prev && current == want_current
+            );
+            assert_eq!(properties, *want_current);
+        }
+    }
+
+    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
+    // they end up calling into `Properties`'s implementation.
     #[fasync::run_singlethreaded(test)]
     async fn test_wait_one_interface() -> Result {
         let mut state = InterfaceState::Unknown(ID);
-        let addr = fidl_subnet!("192.168.0.1/16");
+        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
         for (event, want) in vec![
             (fnet_interfaces::Event::Existing(fidl_properties(ID)), properties(ID)),
             (
@@ -531,7 +645,7 @@ mod tests {
                 fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(ID),
                     addresses: Some(vec![fnet_interfaces::Address {
-                        addr: Some(addr),
+                        addr: Some(ADDR),
                         ..fnet_interfaces::Address::EMPTY
                     }]),
                     ..fnet_interfaces::Properties::EMPTY
@@ -539,7 +653,7 @@ mod tests {
                 Properties::try_from(fnet_interfaces::Properties {
                     online: Some(true),
                     addresses: Some(vec![fnet_interfaces::Address {
-                        addr: Some(addr),
+                        addr: Some(ADDR),
                         ..fnet_interfaces::Address::EMPTY
                     }]),
                     ..fidl_properties(ID)
@@ -560,10 +674,13 @@ mod tests {
         Ok(())
     }
 
+    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
+    // they end up calling into `Properties`'s implementation.
     #[fasync::run_singlethreaded(test)]
     async fn test_wait_all_interfaces() -> Result {
         const ID2: u64 = 2;
         let mut properties_map = HashMap::new();
+        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
         for (event, want) in vec![
             (
                 fnet_interfaces::Event::Existing(fidl_properties(ID)),
