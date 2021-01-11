@@ -64,6 +64,9 @@ enum Role {
 
     /// Role used to represent immutable text.
     STATIC_TEXT = 13;
+
+    /// Role used to represent toggle switch.
+    TOGGLE_SWITCH = 14;
 };
 
 /// Slider / range control attributes.
@@ -133,6 +136,16 @@ enum CheckedState {
     MIXED = 4;
 };
 
+/// Represents the state of a UI toggle switch.
+enum ToggledState {
+    /// Toggle switch is on.
+    ON = 1;
+    /// Toggle switch is off.
+    OFF = 2;
+    /// Toggle switch is in Indeterminate state.
+    INDETERMINATE = 3;
+};
+
 /// A state is a dynamic property of an element that may change in response to
 /// user action or automated processes. Thus, they are different from attributes
 /// in an important point, which is frequency of change.
@@ -141,6 +154,7 @@ table States {
     1: bool checked;
 
     /// State of a checkbox.
+    /// This field is mutually exclusive with ToggledState.
     2: CheckedState checked_state;
 
     /// Whether the element is currently selected.
@@ -164,6 +178,11 @@ table States {
     // reflect the current scrolling of the element.   There are no constraints
     // on these values other than they must be finite.
     7: fuchsia.ui.gfx.vec2 viewport_offset;
+
+    /// State of a toggle switch.
+    /// This field must only be set if the element is a toggle switch element
+    /// and is mutually exclusive with CheckedState.
+    8: ToggledState toggled_state;
 };
 
 /// The Node represents a semantic element on an interface. This may
