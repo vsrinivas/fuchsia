@@ -129,22 +129,22 @@ zx_status_t base_close(const zx::channel& channel) {
   }
   if ((status = response->s) != ZX_OK) {
     return status;
-  };
+  }
   if ((status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr)) != ZX_OK) {
     return status;
   }
   return ZX_OK;
 }
 
-zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, socklen_t addrlen,
-                      int16_t* out_code) {
+zx_status_t base_bind(const zx::unowned_channel& channel, const struct sockaddr* addr,
+                      socklen_t addrlen, int16_t* out_code) {
   SocketAddress fidl_addr;
   zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
   if (status != ZX_OK) {
     return status;
   }
 
-  auto response = fsocket::BaseSocket::Call::Bind(std::move(channel), std::move(fidl_addr.address));
+  auto response = fsocket::BaseSocket::Call::Bind(channel, std::move(fidl_addr.address));
   status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -158,11 +158,11 @@ zx_status_t base_bind(zx::unowned_channel channel, const struct sockaddr* addr, 
   return ZX_OK;
 }
 
-zx_status_t base_connect(zx::unowned_channel channel, const struct sockaddr* addr,
+zx_status_t base_connect(const zx::unowned_channel& channel, const struct sockaddr* addr,
                          socklen_t addrlen, int16_t* out_code) {
   // If address is AF_UNSPEC we should call disconnect.
   if (addr->sa_family == AF_UNSPEC) {
-    auto response = fsocket::BaseSocket::Call::Disconnect(std::move(channel));
+    auto response = fsocket::BaseSocket::Call::Disconnect(channel);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -182,8 +182,7 @@ zx_status_t base_connect(zx::unowned_channel channel, const struct sockaddr* add
     return status;
   }
 
-  auto response =
-      fsocket::BaseSocket::Call::Connect(std::move(channel), std::move(fidl_addr.address));
+  auto response = fsocket::BaseSocket::Call::Connect(channel, std::move(fidl_addr.address));
   status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -218,16 +217,14 @@ zx_status_t base_getname(R response, struct sockaddr* addr, socklen_t* addrlen, 
   return ZX_OK;
 }
 
-zx_status_t base_getsockname(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
-                             int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetSockName(std::move(channel)), addr, addrlen,
-                      out_code);
+zx_status_t base_getsockname(const zx::unowned_channel& channel, struct sockaddr* addr,
+                             socklen_t* addrlen, int16_t* out_code) {
+  return base_getname(fsocket::BaseSocket::Call::GetSockName(channel), addr, addrlen, out_code);
 }
 
-zx_status_t base_getpeername(zx::unowned_channel channel, struct sockaddr* addr, socklen_t* addrlen,
-                             int16_t* out_code) {
-  return base_getname(fsocket::BaseSocket::Call::GetPeerName(std::move(channel)), addr, addrlen,
-                      out_code);
+zx_status_t base_getpeername(const zx::unowned_channel& channel, struct sockaddr* addr,
+                             socklen_t* addrlen, int16_t* out_code) {
+  return base_getname(fsocket::BaseSocket::Call::GetPeerName(channel), addr, addrlen, out_code);
 }
 
 void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, int optname,
@@ -283,10 +280,10 @@ void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, i
   *optlen = static_cast<socklen_t>(copy_len);
 }
 
-zx_status_t base_getsockopt(zx::unowned_channel channel, int level, int optname, void* optval,
-                            socklen_t* optlen, int16_t* out_code) {
-  auto response = fsocket::BaseSocket::Call::GetSockOpt(
-      std::move(channel), static_cast<int16_t>(level), static_cast<int16_t>(optname));
+zx_status_t base_getsockopt(const zx::unowned_channel& channel, int level, int optname,
+                            void* optval, socklen_t* optlen, int16_t* out_code) {
+  auto response = fsocket::BaseSocket::Call::GetSockOpt(channel, static_cast<int16_t>(level),
+                                                        static_cast<int16_t>(optname));
   zx_status_t status = response.status();
   if (status != ZX_OK) {
     return status;
@@ -302,10 +299,10 @@ zx_status_t base_getsockopt(zx::unowned_channel channel, int level, int optname,
   return ZX_OK;
 }
 
-zx_status_t base_setsockopt(zx::unowned_channel channel, int level, int optname, const void* optval,
-                            socklen_t optlen, int16_t* out_code) {
+zx_status_t base_setsockopt(const zx::unowned_channel& channel, int level, int optname,
+                            const void* optval, socklen_t optlen, int16_t* out_code) {
   auto response = fsocket::BaseSocket::Call::SetSockOpt(
-      std::move(channel), static_cast<int16_t>(level), static_cast<int16_t>(optname),
+      channel, static_cast<int16_t>(level), static_cast<int16_t>(optname),
       fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(const_cast<void*>(optval))),
                        optlen));
   zx_status_t status = response.status();
@@ -420,7 +417,8 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
         }
         return Errno(fdio_status_to_errno(result.err()));
       }
-      ifr->ifr_flags = static_cast<uint16_t>(result.response().flags);
+      ifr->ifr_flags =
+          static_cast<uint16_t>(result.response().flags);  // NOLINT(bugprone-narrowing-conversions)
       return Errno(Errno::Ok);
     }
     case SIOCGIFCONF: {
@@ -532,7 +530,7 @@ static zx_status_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flag
 
 static zx_status_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags,
                                         size_t* out_actual, int16_t* out_code) {
-  // TODO: support flags and control messages
+  // TODO(https://fxbug.dev/21106): support flags and control messages
   switch (*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
     case 0:
       return ZX_ERR_BAD_STATE;
@@ -547,7 +545,7 @@ static zx_status_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, in
 static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_t* ioflag,
                                    uint32_t events, zx_handle_t* handle,
                                    zx_signals_t* out_signals) {
-  // TODO: locking for flags/state
+  // TODO(https://fxbug.dev/67465): locking for flags/state
   if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
     // check the connection state
     zx_signals_t observed;
@@ -642,11 +640,11 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
 }
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
-typedef struct zxio_datagram_socket {
+using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
   zx::eventpair event;
   ::llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client;
-} zxio_datagram_socket_t;
+};
 
 static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
               "zxio_datagram_socket_t must fit inside zxio_storage_t.");
@@ -947,13 +945,13 @@ fdio_t* fdio_datagram_socket_create(
 }
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
-typedef struct zxio_stream_socket {
+using zxio_stream_socket_t = struct zxio_stream_socket {
   zxio_t io;
 
   zxio_pipe_t pipe;
 
   ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client;
-} zxio_stream_socket_t;
+};
 
 static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
               "zxio_stream_socket_t must fit inside zxio_storage_t.");
