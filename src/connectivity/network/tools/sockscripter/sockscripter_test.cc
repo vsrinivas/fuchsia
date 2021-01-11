@@ -50,6 +50,8 @@ class TestApi : ApiAbstraction {
 
   MOCK_METHOD(int, bind, (int fd, const struct sockaddr* addr, socklen_t len), (override));
 
+  MOCK_METHOD(int, shutdown, (int fd, int how), (override));
+
   MOCK_METHOD(int, connect, (int fd, const struct sockaddr* addr, socklen_t len), (override));
 
   MOCK_METHOD(int, accept, (int fd, struct sockaddr* addr, socklen_t* len), (override));
@@ -233,6 +235,45 @@ TEST(CommandLine, TcpBindConnectSendRecv) {
   EXPECT_CALL(test, recv(kSockFd, testing::_, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, close(kSockFd)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp bind any:0 connect 192.168.0.1:2021 send recv close"), 0);
+}
+
+TEST(CommandLine, TcpShutdown) {
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+
+  // Missing argument.
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown"), -1);
+
+  // Nonsense argument.
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown foobar"), -1);
+
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, shutdown(kSockFd, SHUT_RD)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown rd"), 0);
+
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, shutdown(kSockFd, SHUT_WR)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown wr"), 0);
+
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown rdwr"), 0);
+
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown wrrd"), 0);
+
+  // Overlapping specifier. Probably should not allow this?
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp shutdown wrd"), 0);
 }
 
 TEST(CommandLine, JoinDropMcast) {

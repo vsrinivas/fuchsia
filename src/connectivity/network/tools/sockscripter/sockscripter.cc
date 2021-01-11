@@ -104,6 +104,7 @@ const struct Command {
 } kCommands[] = {
     {"close", nullptr, "close socket", &SockScripter::Close},
     {"bind", "<bind-ip>:<bind-port>", "bind to the given local address", &SockScripter::Bind},
+    {"shutdown", "<how>", "shutdown socket", &SockScripter::Shutdown},
     {"bound", nullptr, "log bound-to-address", &SockScripter::LogBoundToAddress},
     {"log-peername", nullptr, "log peer name", &SockScripter::LogPeerAddress},
     {"connect", "<connect-ip>:<connect-port>", "connect to the given remote address",
@@ -667,6 +668,43 @@ bool SockScripter::Bind(char* arg) {
 
   if (api_->bind(sockfd_, addr, addr_len) < 0) {
     LOG(ERROR) << "Error-Bind(fd:" << sockfd_ << ") failed-"
+               << "[" << errno << "]" << strerror(errno);
+    return false;
+  }
+  return LogBoundToAddress(nullptr);
+}
+
+bool SockScripter::Shutdown(char* arg) {
+  std::string howStr(arg);
+
+  bool read = false;
+  if (howStr.find("rd") != std::string::npos) {
+    read = true;
+  }
+  bool write = false;
+  if (howStr.find("wr") != std::string::npos) {
+    write = true;
+  }
+
+  int how;
+  if (read && write) {
+    how = SHUT_RDWR;
+    howStr = "SHUT_RDWR";
+  } else if (read) {
+    how = SHUT_RD;
+    howStr = "SHUT_RD";
+  } else if (write) {
+    how = SHUT_WR;
+    howStr = "SHUT_WR";
+  } else {
+    LOG(ERROR) << "Error-Cannot parse how='" << arg << "'";
+    return false;
+  }
+
+  LOG(INFO) << "Shutdown(fd:" << sockfd_ << ", " << howStr << ")";
+
+  if (api_->shutdown(sockfd_, how) < 0) {
+    LOG(ERROR) << "Error-Shutdown(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }

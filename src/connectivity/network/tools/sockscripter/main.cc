@@ -38,6 +38,8 @@ class PosixCalls : public ApiAbstraction {
     return ::bind(fd, addr, len);
   }
 
+  int shutdown(int fd, int how) override { return ::shutdown(fd, how); }
+
   int connect(int fd, const struct sockaddr* addr, socklen_t len) override {
     return ::connect(fd, addr, len);
   }

@@ -74,6 +74,7 @@ class SockScripter {
   bool LogBoundToAddress(char* arg);
   bool LogPeerAddress(char* arg);
   bool Bind(char* arg);
+  bool Shutdown(char* arg);
   bool Connect(char* arg);
   bool Disconnect(char* arg);
   bool JoinOrDrop4(const char* func, char* arg, int optname, const char* optname_str);

@@ -14,6 +14,7 @@ class ApiAbstraction {
   virtual int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) = 0;
   virtual int getsockopt(int fd, int level, int optname, void* optval, socklen_t* optlen) = 0;
   virtual int bind(int fd, const struct sockaddr* addr, socklen_t len) = 0;
+  virtual int shutdown(int fd, int how) = 0;
   virtual int connect(int fd, const struct sockaddr* addr, socklen_t len) = 0;
   virtual int accept(int fd, struct sockaddr* addr, socklen_t* len) = 0;
   virtual int listen(int fd, int backlog) = 0;
