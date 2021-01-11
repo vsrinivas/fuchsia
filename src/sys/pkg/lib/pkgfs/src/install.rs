@@ -268,6 +268,24 @@ impl MockBlob {
         self.fail_write_with_status(Status::IO_DATA_INTEGRITY).await
     }
 
+    /// Succeeds the open request, then verifies the blob is immediately closed (possibly after
+    /// handling a single Close request).
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_close(mut self) {
+        self.send_on_open(Status::OK);
+
+        match self.stream.next().await {
+            None => {}
+            Some(Ok(FileRequest::Close { responder })) => {
+                let _ = responder.send(Status::OK.into_raw());
+            }
+            Some(other) => panic!("unexpected request: {:?}", other),
+        }
+    }
+
     /// Succeeds the open request, then verifies the blob is truncated, written, and closed with
     /// the given `expected` payload.
     ///

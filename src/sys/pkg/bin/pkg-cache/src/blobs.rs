@@ -4,7 +4,7 @@
 
 use fuchsia_hash::Hash;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum BlobKind {
     /// The blob should be interpreted as a package.
     Package,
