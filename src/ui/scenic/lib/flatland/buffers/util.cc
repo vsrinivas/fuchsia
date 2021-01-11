@@ -27,6 +27,8 @@ void SetClientConstraintsAndWaitForAllocated(
   zx_status_t status =
       sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
   FX_DCHECK(status == ZX_OK);
+  // Use a name with a priority thats > the vulkan implementation, but < what any client would use.
+  buffer_collection->SetName(10u, "FlatlandImage");
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   if (memory_constraints) {
     constraints.has_buffer_memory_constraints = true;
@@ -77,6 +79,8 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
   zx_status_t status =
       sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
   FX_DCHECK(status == ZX_OK);
+  // Use a name with a priority thats > the vulkan implementation, but < what any client would use.
+  buffer_collection->SetName(10u, "FlatlandClientPointer");
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   if (memory_constraints) {
     constraints.has_buffer_memory_constraints = true;

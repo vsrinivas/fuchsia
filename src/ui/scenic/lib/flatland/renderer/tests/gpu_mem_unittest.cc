@@ -174,6 +174,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     zx_status_t status = sysmem_allocator_->BindSharedCollection(std::move(tokens.local_token),
                                                                  client_collection.NewRequest());
     EXPECT_EQ(status, ZX_OK);
+    client_collection->SetName(100u, "FlatlandImageReadWriteTest");
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.cpu_domain_supported = true;

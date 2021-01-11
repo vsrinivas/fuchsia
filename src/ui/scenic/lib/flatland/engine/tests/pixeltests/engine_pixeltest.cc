@@ -116,6 +116,8 @@ class EnginePixelTest : public EngineTestBase {
                                                                  collection.NewRequest());
     EXPECT_EQ(status, ZX_OK);
 
+    collection->SetName(100u, "FlatlandTestCaptureImage");
+
     // Set the client constraints.
     {
       fuchsia::sysmem::BufferCollectionConstraints constraints;

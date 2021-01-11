@@ -34,6 +34,9 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     return fitx::failed();
   }
 
+  // Use a name with a priority thats > the vulkan implementation, but < what any client would use.
+  buffer_collection->SetName(10u, "FlatlandImageMemory");
+
   // Set basic usage constraints, such as requiring at least one buffer and using Vulkan. This is
   // necessary because all clients with a token need to set constraints before the buffer collection
   // can be allocated.
@@ -75,12 +78,6 @@ bool BufferCollectionInfo::BuffersAreAllocated() {
     // Perform a DCHECK here as well to insure the collection has at least one vmo, because
     // it shouldn't have been able to be allocated with less than that.
     FX_DCHECK(buffer_collection_info_.buffer_count > 0);
-
-    // Tag the vmos as being a part of flatland.
-    for (uint32_t i = 0; i < buffer_collection_info_.buffer_count; ++i) {
-      static const char* kVmoName = "FlatlandImageMemory";
-      buffer_collection_info_.buffers[i].vmo.set_property(ZX_PROP_NAME, kVmoName, strlen(kVmoName));
-    }
   }
   return true;
 }

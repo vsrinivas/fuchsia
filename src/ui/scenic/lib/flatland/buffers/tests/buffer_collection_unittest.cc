@@ -64,6 +64,7 @@ TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
     zx_status_t status = sysmem_allocator_->BindSharedCollection(std::move(tokens.local_token),
                                                                  buffer_collection.NewRequest());
+    buffer_collection->SetName(100u, "FlatlandAllocationWithoutExtraConstraints");
     EXPECT_EQ(status, ZX_OK);
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.has_buffer_memory_constraints = true;
@@ -155,6 +156,7 @@ TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
     zx_status_t status = sysmem_allocator_->BindSharedCollection(std::move(tokens.local_token),
                                                                  client_collection.NewRequest());
     EXPECT_EQ(status, ZX_OK);
+    client_collection->SetName(100u, "FlatlandIncompatibleConstraintsTest");
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.cpu_domain_supported = true;
