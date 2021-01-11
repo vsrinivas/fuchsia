@@ -124,7 +124,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     if (arg == "--all" || arg == "--names" || arg == "-n") {
       use_default_globs = true;
       if (arg == "--names" || arg == "-n") {
-        if (optind > argc) {
+        if (optind >= argc) {
           fprintf(stderr, "Missing argument for %s\n", arg.c_str());
           return EXIT_FAILURE;
         }
@@ -134,7 +134,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
 
     if (arg == "--output" || arg == "-o") {
-      if (optind > argc) {
+      if (optind >= argc) {
         fprintf(stderr, "Missing argument for %s\n", arg.c_str());
         return EXIT_FAILURE;
       }
@@ -143,7 +143,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
 
     if (arg == "--realm-label") {
-      if (optind > argc) {
+      if (optind >= argc) {
         fprintf(stderr, "Missing argument for %s\n", arg.c_str());
         return EXIT_FAILURE;
       }
@@ -160,7 +160,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       case 'h':
         return Usage(argv[0], default_test_dirs);
       case 'r': {
-        if (optind > argc) {
+        if (optind >= argc) {
           fprintf(stderr, "Missing argument for -r\n");
           return EXIT_FAILURE;
         }
@@ -175,7 +175,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         break;
       }
       case 'i': {
-        if (optind > argc) {
+        if (optind >= argc) {
           fprintf(stderr, "Missing argument for %s\n", arg.data());
           return EXIT_FAILURE;
         }
