@@ -5,6 +5,8 @@
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
         "src/lib/fuchsia-hyper/hyper.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "bin/pkg_resolver_lib_test",
@@ -13,11 +15,6 @@
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        { runner: "rust_test_runner" },
-        {
-            storage: "temp",
-            path: "/tmp",
-        },
         {
             protocol: [ "fuchsia.process.Launcher" ],
         },
@@ -25,12 +22,6 @@
             directory: "config-ssl",
             rights: [ "r*" ],
             path: "/config/ssl",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }
