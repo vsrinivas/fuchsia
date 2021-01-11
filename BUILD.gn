@@ -90,12 +90,10 @@ declare_args() {
   # Any individual Zircon build argument set in `zircon_extra_args` will
   # silently clobber the default value shown here.
   zircon_args = {
-    experimental_cxx_version = experimental_cxx_version
     use_ccache = use_ccache
     use_goma = use_goma
     output_gsym = output_gsym
     goma_dir = rebase_path(goma_dir)
-    zbi_compression = zbi_compression
     if (clang_prefix != default_clang_prefix) {
       # Propagate a custom value to override Zircon's default.  But don't
       # propagate the default because Zircon has proper incremental build
@@ -106,7 +104,6 @@ declare_args() {
     if (rustc_prefix != default_rustc_prefix) {
       rustc_tool_dir = rebase_path(rustc_prefix, "", root_build_dir)
     }
-    rustc_version_string = rustc_version_string
     if (host_os == "mac") {
       mac_sdk_path = mac_sdk_path
     }
@@ -123,13 +120,6 @@ declare_args() {
       optimize = optimize
     }
     default_deps = [ "//:legacy_unification-$target_cpu" ] + zircon_extra_deps
-    forward_variables_from(zircon_extra_args, "*")
-
-    # TODO(fxbug.dev/32978): This is temporary until the kernel build is unified or
-    # kernel PCI is removed.
-    disable_kernel_pci = platform_enable_user_pci
-
-    zx_fidl_trace_level = fidl_trace_level
   }
 }
 
@@ -144,21 +134,6 @@ if (current_toolchain == default_toolchain) {
   template("_run_zircon_gn") {
     assert(target_name == "zircon")
 
-    # Stuff in sanitizer_default_options arguments separately.  These can't be
-    # included in zircon_args via forward_variables_from() because GN diagnoses
-    # setting the same name in the scope object as "clobbering" a nonempty list
-    # variable in the global scope.
-    sanitizer_args = ""
-    foreach(arg, sanitizer_default_options_args) {
-      sanitizer_arg_value = []  # Reset after previous iteration.
-      sanitizer_arg_value = invoker[arg]
-      if (sanitizer_arg_value == "$sanitizer_arg_value") {
-        # The argument is in the old string form.  Make it a list.
-        sanitizer_arg_value = [ sanitizer_arg_value ]
-      }
-      sanitizer_args += "$arg = $sanitizer_arg_value "
-    }
-
     # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
     # the first thing that happens at all and it's synchronous so after this
     # point we can read in files written by this gen step.
@@ -169,7 +144,7 @@ if (current_toolchain == default_toolchain) {
       "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
           "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
           "# zircon_extra_args = { ... } to override settings below.$0x0a" +
-          sanitizer_args + "forward_variables_from($zircon_args, \"*\")",
+          "forward_variables_from($zircon_args, \"*\")",
       "--export-compile-commands=$zircon_compdb_filter",
       rebase_path(zircon_root_build_dir, root_build_dir),
     ]
@@ -179,6 +154,8 @@ if (current_toolchain == default_toolchain) {
     }
 
     exec_script("//prebuilt/third_party/gn/${host_platform}/gn", gn_cmd)
+
+    not_needed([ "invoker" ])
   }
   _run_zircon_gn("zircon") {
   }
