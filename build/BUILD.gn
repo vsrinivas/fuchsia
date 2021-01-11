@@ -462,7 +462,6 @@ group("deprecated_package") {
     "//src/lib/syslog/go/*",
     "//src/lib/syslog/rust/*",
     "//src/lib/syslog/rust/tests/*",
-    "//src/lib/tcp-stream-ext/*",
     "//src/lib/test_executor/rust/*",
     "//src/lib/test_util/*",
     "//src/lib/testing/fuchsia-hyper-test-support/*",

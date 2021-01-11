@@ -4,8 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("tcp-stream-ext") {
   name = "tcp_stream_ext"
@@ -45,20 +44,24 @@ rustc_test("stub-netstack-test") {
   sources = [ "src/stub_netstack_test.rs" ]
 }
 
-test_package("tcp-stream-ext-tests") {
+fuchsia_unittest_component("stub-netstack-test-component") {
+  component_name = "stub-netstack-test"
+  deps = [ ":stub-netstack-test" ]
+}
+
+fuchsia_unittest_component("tcp-stream-ext_test-component") {
+  component_name = "tcp-stream-ext_test"
   deps = [
-    ":stub-netstack-test",
     ":tcp-stream-ext_test",
+    "//src/connectivity/network/netstack:component-debug",
   ]
-  tests = [
-    {
-      name = "tcp_stream_ext_lib_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "stub_netstack_test"
-      environments = [ emu_env ]
-    },
+  manifest = "meta/tcp_stream_ext_lib_test.cmx"
+}
+
+fuchsia_test_package("tcp-stream-ext-tests") {
+  test_components = [
+    ":stub-netstack-test-component",
+    ":tcp-stream-ext_test-component",
   ]
 }
 
