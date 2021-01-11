@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1285
+From //build/config/BUILDCONFIG.gn:1305
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -121,7 +121,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:89
+From //BUILD.gn:67
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -136,7 +136,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:35
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -144,7 +144,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:35
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -555,7 +555,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2217
+From //build/config/BUILDCONFIG.gn:2239
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -578,7 +578,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:43
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -586,7 +586,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:43
 
 ### camera_debug
 
@@ -840,12 +840,26 @@ build time.
 
 From //build/dev.gni:19
 
+### dev_recovery_bootfs_labels
+List of binary labels to include in the recovery ZBI.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:28
+
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
 
 **Current value (from the default):** `[]`
 
 From //build/dev.gni:10
+
+### dev_zedboot_bootfs_labels
+List of binary labels to include in the zedboot ZBI.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:25
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -1016,7 +1030,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1048
+From //build/config/BUILDCONFIG.gn:1084
 
 ### fastboot_product
 
@@ -1256,12 +1270,6 @@ From //build/go/go_build.gni:22
 
 From //build/go/go_build.gni:18
 
-### goldfish_control_use_composite_device
-
-**Current value (from the default):** `true`
-
-From //src/graphics/drivers/misc/goldfish_control/BUILD.gn:20
-
 ### goma_dir
 Directory containing the Goma source code.  This can be a GN
 source-absolute path ("//...") or a system absolute path.
@@ -1338,7 +1346,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:62
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1346,7 +1354,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:62
 
 ### host_os
 
@@ -1637,17 +1645,17 @@ Each element of the list is one variant, which is a scope defining:
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["instrumented", "instrumentation-runtime", "ubsan"]
+  tags = ["instrumented", "instrumentation-runtime", "kernel-excluded", "ubsan"]
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov"]
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["instrumented", "instrumentation-runtime", "sancov", "ubsan"]
+  tags = ["instrumented", "instrumentation-runtime", "kernel-excluded", "sancov", "ubsan"]
 }, {
   configs = ["//build/config/sanitizers:asan"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:ubsan"]
@@ -1655,14 +1663,30 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "ubsan"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "ubsan"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:sancov"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "sancov"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "sancov"]
+  toolchain_args = { }
+}, {
+  configs = ["//build/config/sanitizers:asan", "//build/config/zircon:no_safestack"]
+  host_only = {
+  remove_shared_configs = ["//build/config:symbol_no_undefined"]
+}
+  name = "kasan"
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-only"]
+  toolchain_args = { }
+}, {
+  configs = ["//build/config/sanitizers:asan", "//build/config/zircon:no_safestack", "//build/config/sanitizers:sancov"]
+  host_only = {
+  remove_shared_configs = ["//build/config:symbol_no_undefined"]
+}
+  name = "kasan-sancov"
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-only", "sancov"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/fuzzer", "//build/config/sanitizers:rust-asan", "//build/config:icf"]
@@ -1672,7 +1696,7 @@ Each element of the list is one variant, which is a scope defining:
   name = "asan-fuzzer"
   remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "fuzzer"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "fuzzer"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:detect_stack_use_after_return=1:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
 }
@@ -1688,7 +1712,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:940
+From //build/config/BUILDCONFIG.gn:959
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2080,7 +2104,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:13
 
 ### openthread_config_assert_enable
 Enable assertions.
@@ -2648,7 +2672,7 @@ From //src/recovery/system/system_recovery_args.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:15](https://fuchsia.googlesource.com/third_party/boringssl/+/9abd03b7341faf48d05b38aec3f80c94f0525d1b/BUILD.gn#15)
+From [//third_party/boringssl/BUILD.gn:15](https://fuchsia.googlesource.com/third_party/boringssl/+/bca4036276214a2ba502a765cbfbd3a3b006535d/BUILD.gn#15)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -2895,7 +2919,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1275
+From //build/config/BUILDCONFIG.gn:1295
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2904,7 +2928,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1280
+From //build/config/BUILDCONFIG.gn:1300
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2933,16 +2957,10 @@ a list that can be spliced into [`select_variant`](#select_variant).
   host = true
   variant = "profile"
 }]
-}, {
-  name = "kasan"
-  select_variant = []
-}, {
-  name = "kasan-sancov"
-  select_variant = []
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1094
+From //build/config/BUILDCONFIG.gn:1130
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3099,7 +3117,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:47
+From //BUILD.gn:49
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3212,7 +3230,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1078
+From //build/config/BUILDCONFIG.gn:1114
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3228,7 +3246,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:57
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
 
@@ -3236,7 +3254,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:57
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -3535,31 +3553,12 @@ where `LEVEL` can be an integer or "max".
 
 From //build/zbi/zbi.gni:12
 
-### zedboot_cmdline_args
-List of kernel command line arguments to bake into the Zedboot image.
-See //docs/reference/kernel_cmdline.md and
-[`zedboot_devmgr_config`](#zedboot_devmgr_config).
-
-**Current value (from the default):** `[]`
-
-From //build/images/zedboot/zedboot_args.gni:9
-
-### zedboot_cmdline_files
-Files containing additional kernel command line arguments to bake into
-the Zedboot image.  The contents of these files (in order) come after any
-arguments directly in [`zedboot_cmdline_args`](#zedboot_cmdline_args).
-These can be GN `//` source pathnames or absolute system pathnames.
-
-**Current value (from the default):** `[]`
-
-From //build/images/zedboot/zedboot_args.gni:15
-
 ### zedboot_devmgr_config
 List of arguments to populate /boot/config/devmgr in the Zedboot image.
 
 **Current value (from the default):** `[]`
 
-From //build/images/zedboot/zedboot_args.gni:18
+From //build/images/zedboot/zedboot_args.gni:7
 
 ### zircon_a_partition
 Arguments to `fx flash` script (along with any `firmware_prebuilts` which
@@ -3591,20 +3590,15 @@ silently clobber the default value shown here.
 ```
 {
   default_deps = ["//:legacy_unification-arm64"]
-  disable_kernel_pci = false
-  experimental_cxx_version = 17
   goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
-  rustc_version_string = "gH0XPhgIPun0tFV5pRc_8iKk8PBwmxqyKIq5oq6ktUUC"
   use_ccache = false
   use_goma = false
   variants = []
-  zbi_compression = "zstd"
-  zx_fidl_trace_level = 0
 }
 ```
 
-From //BUILD.gn:114
+From //BUILD.gn:92
 
 ### zircon_asserts
 
@@ -3629,7 +3623,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //BUILD.gn:84
+From //build/zircon/build_args.gni:33
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -3650,7 +3644,7 @@ From //out/not-default/args.gn:4
 
 **Overridden from the default:** `{ }`
 
-From //BUILD.gn:73
+From //build/zircon/build_args.gni:17
 
 **Current value for `target_cpu = "x64"`:** `{ }`
 
@@ -3658,14 +3652,23 @@ From //out/not-default/args.gn:4
 
 **Overridden from the default:** `{ }`
 
-From //BUILD.gn:73
+From //build/zircon/build_args.gni:17
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:77
+From //build/zircon/build_args.gni:21
+
+### zircon_kernel_disable_asserts
+Forcibly disable all assertions for the Zircon kernel. If this is set, the
+default is to use the value of zx_assert_level to control assertions when
+building the kernel.
+
+**Current value (from the default):** `false`
+
+From //build/zircon/build_args.gni:26
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -3711,7 +3714,7 @@ From //out/not-default/args.gn:13
 
 **Overridden from the default:** `""`
 
-From //BUILD.gn:81
+From //build/zircon/build_args.gni:30
 
 **Current value for `target_cpu = "x64"`:** `"/b/s/w/ir/x/w/out/not-default/zircon_gn_trace.json"`
 
@@ -3719,7 +3722,7 @@ From //out/not-default/args.gn:13
 
 **Overridden from the default:** `""`
 
-From //BUILD.gn:81
+From //build/zircon/build_args.gni:30
 
 ### zvb_partition_name
 Partition name from where image will be verified
