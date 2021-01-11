@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"reflect"
 	"runtime"
@@ -28,7 +29,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/io"
+	fidlio "fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/posix"
 	"fidl/fuchsia/posix/socket"
@@ -44,7 +45,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-// TODO(fxbug.dev/44347) We shouldn't need any of this includes after we remove
+// TODO(https://fxbug.dev/44347) We shouldn't need any of this includes after we remove
 // C structs from the wire.
 
 /*
@@ -58,6 +59,19 @@ import (
 */
 import "C"
 
+var _ io.Writer = (*socketWriter)(nil)
+
+type socketWriter struct {
+	socket    zx.Socket
+	lastError error
+}
+
+func (w *socketWriter) Write(p []byte) (int, error) {
+	n, err := w.socket.Write(p, 0)
+	w.lastError = err
+	return n, err
+}
+
 type hardError struct {
 	mu struct {
 		sync.Mutex
@@ -67,8 +81,8 @@ type hardError struct {
 
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
-	// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
-	*io.NodeWithCtxTransitionalBase
+	// TODO(https://fxbug.dev/37419): Remove TransitionalBase after methods landed.
+	*fidlio.NodeWithCtxTransitionalBase
 
 	wq *waiter.Queue
 	ep tcpip.Endpoint
@@ -131,13 +145,13 @@ func (ep *endpoint) Sync(fidl.Context) (int32, error) {
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
+func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", ep)
 
-	return 0, io.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+	return 0, fidlio.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeAttributes) (int32, error) {
+func (ep *endpoint) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
@@ -485,14 +499,14 @@ type endpointWithEvent struct {
 	entry waiter.Entry
 }
 
-func (epe *endpointWithEvent) Describe(fidl.Context) (io.NodeInfo, error) {
-	var info io.NodeInfo
+func (epe *endpointWithEvent) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	var info fidlio.NodeInfo
 	event, err := epe.peer.Duplicate(zx.RightsBasic)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
 	if err != nil {
 		return info, err
 	}
-	info.SetDatagramSocket(io.DatagramSocket{Event: event})
+	info.SetDatagramSocket(fidlio.DatagramSocket{Event: event})
 	return info, nil
 }
 
@@ -714,7 +728,7 @@ func (eps *endpointWithSocket) loopWrite() {
 				<-resCh
 				continue
 			}
-			// TODO(fxb.dev/35006): Handle all transport write errors.
+			// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 			switch err {
 			case nil:
 				if eps.transProto != tcp.ProtocolNumber {
@@ -802,187 +816,183 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 		}()
 	}
 
-	var b bytes.Buffer
+	writer := socketWriter{
+		socket: eps.local,
+	}
 	for {
-		for {
-			// Acquire hard error lock across ep calls to avoid races and store the
-			// hard error deterministically.
-			eps.hardError.mu.Lock()
-			const count = 1 << 16 // 64 KiB
-			_, err := eps.ep.Read(&b, count, tcpip.ReadOptions{})
-			hardError := eps.hardError.storeAndRetrieveLocked(err)
-			eps.hardError.mu.Unlock()
-			if err == tcpip.ErrNotConnected {
-				if connected {
-					panic(fmt.Sprintf("connected endpoint returned %s", err))
+		// Acquire hard error lock across ep calls to avoid races and store the
+		// hard error deterministically.
+		eps.hardError.mu.Lock()
+		const maxInt = int(^uint(0) >> 1)
+		res, err := eps.ep.Read(&writer, maxInt, tcpip.ReadOptions{})
+		var hardError *tcpip.Error
+		if err != tcpip.ErrBadBuffer {
+			hardError = eps.hardError.storeAndRetrieveLocked(err)
+		}
+		eps.hardError.mu.Unlock()
+		if err == tcpip.ErrNotConnected {
+			if connected {
+				panic(fmt.Sprintf("connected endpoint returned %s", err))
+			}
+			// We're not connected; unblock the caller before waiting for incoming packets.
+			initDone()
+			select {
+			case <-eps.closing:
+				// We're shutting down.
+				return
+			case <-inCh:
+				// We got an incoming connection; we must be a listening socket.
+				// Because we are a listening socket, we don't expect anymore
+				// outbound events so there's no harm in letting outEntry remain
+				// registered until the end of the function.
+				var err error
+				eps.incoming.mu.Lock()
+				if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
+					err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
+					eps.incoming.mu.asserted = true
 				}
-				// We're not connected; unblock the caller before waiting for incoming packets.
-				initDone()
-				select {
-				case <-eps.closing:
-					// We're shutting down.
-					return
-				case <-inCh:
-					// We got an incoming connection; we must be a listening socket.
-					// Because we are a listening socket, we don't expect anymore
-					// outbound events so there's no harm in letting outEntry remain
-					// registered until the end of the function.
-					var err error
-					eps.incoming.mu.Lock()
-					if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
-						err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
-						eps.incoming.mu.asserted = true
-					}
-					eps.incoming.mu.Unlock()
-					if err != nil {
-						panic(err)
-					}
-					continue
-				case <-outCh:
-					// We became connected; the next Read will reflect this.
-					continue
+				eps.incoming.mu.Unlock()
+				if err != nil {
+					panic(err)
 				}
-			} else if !connected {
-				var signals zx.Signals = zxsocket.SignalOutgoing
-				switch err {
-				case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
-					connected = true
-					eps.wq.EventUnregister(&outEntry)
+				continue
+			case <-outCh:
+				// We became connected; the next Read will reflect this.
+				continue
+			}
+		} else if !connected {
+			var signals zx.Signals = zxsocket.SignalOutgoing
+			switch err {
+			case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
+				connected = true
+				eps.wq.EventUnregister(&outEntry)
 
-					signals |= zxsocket.SignalConnected
-				}
+				signals |= zxsocket.SignalConnected
+			}
 
-				if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
+			if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
+				panic(err)
+			}
+		}
+		// Either we're connected or not; unblock the caller.
+		initDone()
+		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
+		switch err {
+		case tcpip.ErrNoLinkAddress:
+			// TODO(https://github.com/google/gvisor/issues/751): revisit this assertion.
+			if connected {
+				panic(fmt.Sprintf("Endpoint.Read() = %s on a connected socket should never happen", err))
+			}
+			// At the time of writing, this error is only possible when link
+			// address resolution fails during an outbound TCP connection attempt.
+			// This happens via the following call hierarchy:
+			//
+			//  (*tcp.endpoint).protocolMainLoop
+			//    (*tcp.handshake).execute
+			//      (*tcp.handshake).resolveRoute
+			//        (*stack.Route).Resolve
+			//          (*stack.Stack).GetLinkAddress
+			//            (*stack.linkAddrCache).get
+			//
+			// This is equivalent to the connection having been refused.
+			fallthrough
+		case tcpip.ErrTimeout:
+			// At the time of writing, this error indicates that a TCP connection
+			// has failed. This can occur during the TCP handshake if the peer
+			// fails to respond to a SYN within 60 seconds, or if the retransmit
+			// logic gives up after 60 seconds of missing ACKs from the peer, or if
+			// the maximum number of unacknowledged keepalives is reached.
+			if connected {
+				// The connection was alive but now is dead - this is equivalent to
+				// having received a TCP RST.
+				triggerClose = true
+				return
+			}
+			// The connection was never created. This is equivalent to the
+			// connection having been refused.
+			fallthrough
+		case tcpip.ErrConnectionRefused:
+			// Linux allows sockets with connection errors to be reused. If the
+			// client calls connect() again (and the underlying Endpoint correctly
+			// permits the attempt), we need to wait for an outbound event again.
+			select {
+			case <-outCh:
+				continue
+			case <-eps.closing:
+				// We're shutting down.
+				return
+			}
+		case tcpip.ErrWouldBlock:
+			select {
+			case <-inCh:
+				continue
+			case <-eps.closing:
+				// We're shutting down.
+				return
+			}
+		case tcpip.ErrClosedForReceive:
+			// Closed for receive can be issued when the endpoint is in an error
+			// state, which is encoded by the presence of a hard error having been
+			// observed.
+			// To avoid racing signals with the closing caused by a hard error,
+			// we won't signal here if a hard error is already observed.
+			if hardError == nil {
+				if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
 					panic(err)
 				}
 			}
-			// Either we're connected or not; unblock the caller.
-			initDone()
-			// TODO(fxb.dev/35006): Handle all transport read errors.
-			switch err {
+			return
+		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+			triggerClose = true
+			return
+		case nil:
+			eps.ep.ModerateRecvBuf(res.Count)
+			// `tcpip.Endpoint.Read` returns a nil error if _anything_ was written -
+			// even if the writer returned an error - we always want to handle those
+			// errors.
+			fallthrough
+		case tcpip.ErrBadBuffer:
+			switch err := writer.lastError.(type) {
 			case nil:
-			case tcpip.ErrNoLinkAddress:
-				// TODO(tamird/iyerm): revisit this assertion when
-				// https://github.com/google/gvisor/issues/751 is fixed.
-				if connected {
-					panic(fmt.Sprintf("Endpoint.Read() = %s on a connected socket should never happen", err))
-				}
-				// At the time of writing, this error is only possible when link
-				// address resolution fails during an outbound TCP connection attempt.
-				// This happens via the following call hierarchy:
-				//
-				//  (*tcp.endpoint).protocolMainLoop
-				//    (*tcp.handshake).execute
-				//      (*tcp.handshake).resolveRoute
-				//        (*stack.Route).Resolve
-				//          (*stack.Stack).GetLinkAddress
-				//            (*stack.linkAddrCache).get
-				//
-				// This is equivalent to the connection having been refused.
-				fallthrough
-			case tcpip.ErrTimeout:
-				// At the time of writing, this error indicates that a TCP connection
-				// has failed. This can occur during the TCP handshake if the peer
-				// fails to respond to a SYN within 60 seconds, or if the retransmit
-				// logic gives up after 60 seconds of missing ACKs from the peer, or if
-				// the maximum number of unacknowledged keepalives is reached.
-				if connected {
-					// The connection was alive but now is dead - this is equivalent to
-					// having received a TCP RST.
-					triggerClose = true
-					return
-				}
-				// The connection was never created. This is equivalent to the
-				// connection having been refused.
-				fallthrough
-			case tcpip.ErrConnectionRefused:
-				// Linux allows sockets with connection errors to be reused. If the
-				// client calls connect() again (and the underlying Endpoint correctly
-				// permits the attempt), we need to wait for an outbound event again.
-				select {
-				case <-outCh:
-					continue
-				case <-eps.closing:
-					// We're shutting down.
-					return
-				}
-			case tcpip.ErrWouldBlock:
-				select {
-				case <-inCh:
-					continue
-				case <-eps.closing:
-					// We're shutting down.
-					return
-				}
-			case tcpip.ErrClosedForReceive:
-				// Closed for receive can be issued when the endpoint is in an error
-				// state, which is encoded by the presence of a hard error having been
-				// observed.
-				// To avoid racing signals with the closing caused by a hard error,
-				// we won't signal here if a hard error is already observed.
-				if hardError == nil {
-					if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
-						panic(err)
-					}
-				}
-				return
-			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
-				triggerClose = true
-				return
-			default:
-				syslog.Errorf("Endpoint.Read(): %s", err)
-			}
-			break
-		}
-
-		for v := b.Bytes(); len(v) != 0; {
-			n, err := eps.local.Write(v, 0)
-			if err != nil {
-				if err, ok := err.(*zx.Error); ok {
-					switch err.Status {
-					case zx.ErrBadState:
-						// Writing has been disabled for this socket endpoint.
-						if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
-							// An ErrNotConnected while connected is expected if there
-							// is pending data to be read and the connection has been
-							// reset by the other end of the endpoint. The endpoint will
-							// allow the pending data to be read without error but will
-							// return ErrNotConnected if Shutdown is called. Otherwise
-							// this is unexpected, panic.
-							if !(connected && err == tcpip.ErrNotConnected) {
-								panic(err)
-							}
-							syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint with %d bytes pending data; ep info: %+v", eps, len(v), eps.endpoint.ep.Info())
-						}
-						return
-					case zx.ErrShouldWait:
-						obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
-						if err != nil {
+			case *zx.Error:
+				switch err.Status {
+				case zx.ErrBadState:
+					// Writing has been disabled for this socket endpoint.
+					if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+						// An ErrNotConnected while connected is expected if there
+						// is pending data to be read and the connection has been
+						// reset by the other end of the endpoint. The endpoint will
+						// allow the pending data to be read without error but will
+						// return ErrNotConnected if Shutdown is called. Otherwise
+						// this is unexpected, panic.
+						if !(connected && err == tcpip.ErrNotConnected) {
 							panic(err)
 						}
-						switch {
-						case obs&zx.SignalSocketWriteDisabled != 0:
-							// The next Write will return zx.ErrBadState.
-							continue
-						case obs&zx.SignalSocketWritable != 0:
-							continue
-						case obs&localSignalClosing != 0:
-							// We're shutting down.
-							return
-						}
+						syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
+					}
+					return
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+					if err != nil {
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketWriteDisabled != 0:
+						// The next Write will return zx.ErrBadState.
+						continue
+					case obs&zx.SignalSocketWritable != 0:
+						continue
+					case obs&localSignalClosing != 0:
+						// We're shutting down.
+						return
 					}
 				}
+			default:
 				panic(err)
 			}
-			if eps.transProto != tcp.ProtocolNumber {
-				if n < len(v) {
-					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
-				}
-			}
-			v = v[n:]
-			eps.ep.ModerateRecvBuf(n)
+		default:
+			syslog.Errorf("Endpoint.Read(): %s", err)
 		}
-		b.Reset()
 	}
 }
 
@@ -1021,7 +1031,7 @@ func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) {
+func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
 		s := &sCopy
@@ -1049,7 +1059,7 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtx
 	}
 }
 
-func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithEvent, flags)
@@ -1059,7 +1069,7 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.Nod
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
 	var b bytes.Buffer
-	// TODO(fxbug.dev/21106): do something with control messages.
+	// TODO(https://fxbug.dev/21106): do something with control messages.
 	res, err := s.ep.Read(&b, int(dataLen), tcpip.ReadOptions{
 		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
 		NeedRemoteAddr: wantAddr,
@@ -1141,7 +1151,7 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 	s := &streamSocketImpl{
 		endpointWithSocket: eps,
 	}
-	s.addConnection(context.Background(), io.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
@@ -1208,7 +1218,7 @@ func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) {
+func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
 		s := &sCopy
@@ -1236,7 +1246,7 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxIn
 	}
 }
 
-func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
 	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithSocket, flags)
@@ -1244,14 +1254,14 @@ func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeW
 	return nil
 }
 
-func (s *streamSocketImpl) Describe(fidl.Context) (io.NodeInfo, error) {
-	var info io.NodeInfo
+func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	var info fidlio.NodeInfo
 	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
 	if err != nil {
 		return info, err
 	}
-	info.SetStreamSocket(io.StreamSocket{Socket: zx.Socket(h)})
+	info.SetStreamSocket(fidlio.StreamSocket{Socket: zx.Socket(h)})
 	return info, nil
 }
 
@@ -1414,7 +1424,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 
 	s.wq.EventRegister(&s.entry, waiter.EventIn)
 
-	s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
 	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
@@ -1554,7 +1564,7 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 		// gVisor assumes interfaces are always up, which is not the case on Fuchsia,
 		// so overwrite it with Fuchsia's interface state.
 		bits := nicInfoFlagsToFIDL(info)
-		// TODO(fxbug.dev/64758): don't `SetFlags` once all clients are
+		// TODO(https://fxbug.dev/64758): don't `SetFlags` once all clients are
 		// transitioned to use `interface_flags`.
 		resultInfo.SetFlags(uint32(bits))
 		resultInfo.SetInterfaceFlags(bits)
