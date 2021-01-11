@@ -109,6 +109,16 @@ static SpinLock uart_spinlock;
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 #define SOCREG(reg) (*(volatile uint32_t*)((soc_base) + (reg)))
 
+static inline void uartreg_and_eq(ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(uart_base + reg);
+  *ptr = *ptr & flags;
+}
+
+static inline void uartreg_or_eq(ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(uart_base + reg);
+  *ptr = *ptr | flags;
+}
+
 static interrupt_eoi uart_irq_handler(void* arg) {
   // read interrupt status and mask
   while (UARTREG(UART_LSR) & UART_LSR_DR) {
@@ -121,7 +131,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 
   // Signal if anyone is waiting to TX
   if (UARTREG(UART_LSR) & UART_LSR_THRE) {
-    UARTREG(UART_IER) &= ~UART_IER_ETBEI;  // Disable TX interrupt
+    uartreg_and_eq(UART_IER, ~UART_IER_ETBEI);  // Disable TX interrupt
     uart_spinlock.Acquire();
     // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
     // 1. The reschedule flag is not supposed to be true in interrupt context.
@@ -175,7 +185,7 @@ static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
     while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
       uart_spinlock.ReleaseIrqRestore(state);
       if (block) {
-        UARTREG(UART_IER) |= UART_IER_ETBEI;  // Enable TX interrupt.
+        uartreg_or_eq(UART_IER, UART_IER_ETBEI);  // Enable TX interrupt.
         uart_dputc_event.Wait();
       } else {
         arch::Yield();
@@ -232,7 +242,7 @@ static void mt8167_uart_init(const void* driver_data, uint32_t length) {
     return;
   }
 
-  UARTREG(UART_IER) |= UART_IER_ERBFI;  // Enable RX interrupt.
+  uartreg_or_eq(UART_IER, UART_IER_ERBFI);  // Enable RX interrupt.
   initialized = true;
 
   // Start up tx driven output.

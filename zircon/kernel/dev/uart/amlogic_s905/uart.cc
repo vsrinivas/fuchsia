@@ -107,6 +107,16 @@ static AutounsignalEvent uart_dputc_event{true};
 
 static SpinLock uart_spinlock;
 
+static inline void uartreg_and_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr & flags;
+}
+
+static inline void uartreg_or_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr | flags;
+}
+
 static interrupt_eoi uart_irq(void* arg) {
   uintptr_t base = (uintptr_t)arg;
 
@@ -126,7 +136,7 @@ static interrupt_eoi uart_irq(void* arg) {
   /* handle any framing/parity errors */
   if (UARTREG(base, S905_UART_STATUS) & (S905_UART_STATUS_FRAMEERR | S905_UART_STATUS_PARERR)) {
     /* clear the status by writing to the control register */
-    UARTREG(base, S905_UART_CONTROL) |= S905_UART_CONTROL_CLRERR;
+    uartreg_or_eq(base, S905_UART_CONTROL, S905_UART_CONTROL_CLRERR);
   }
 
   /* handle TX */
@@ -151,19 +161,19 @@ static void s905_uart_init(const void* driver_data, uint32_t length) {
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
   // reset the port
-  UARTREG(s905_uart_base, S905_UART_CONTROL) |=
-      S905_UART_CONTROL_RSTRX | S905_UART_CONTROL_RSTTX | S905_UART_CONTROL_CLRERR;
-  UARTREG(s905_uart_base, S905_UART_CONTROL) &=
-      ~(S905_UART_CONTROL_RSTRX | S905_UART_CONTROL_RSTTX | S905_UART_CONTROL_CLRERR);
+  uartreg_or_eq(s905_uart_base, S905_UART_CONTROL,
+                S905_UART_CONTROL_RSTRX | S905_UART_CONTROL_RSTTX | S905_UART_CONTROL_CLRERR);
+  uartreg_and_eq(s905_uart_base, S905_UART_CONTROL,
+                 ~(S905_UART_CONTROL_RSTRX | S905_UART_CONTROL_RSTTX | S905_UART_CONTROL_CLRERR));
   // enable rx and tx
-  UARTREG(s905_uart_base, S905_UART_CONTROL) |= S905_UART_CONTROL_TXEN | S905_UART_CONTROL_RXEN;
+  uartreg_or_eq(s905_uart_base, S905_UART_CONTROL, S905_UART_CONTROL_TXEN | S905_UART_CONTROL_RXEN);
 
   uint32_t val;
   val = S905_UART_CONTROL_INVRTS | S905_UART_CONTROL_RXINTEN | S905_UART_CONTROL_TWOWIRE;
   if (dlog_bypass() == false) {
     val |= S905_UART_CONTROL_TXINTEN;
   }
-  UARTREG(s905_uart_base, S905_UART_CONTROL) |= val;
+  uartreg_or_eq(s905_uart_base, S905_UART_CONTROL, val);
 
   // Set to interrupt every 1 rx byte
   uint32_t temp2 = UARTREG(s905_uart_base, S905_UART_IRQ_CONTROL);

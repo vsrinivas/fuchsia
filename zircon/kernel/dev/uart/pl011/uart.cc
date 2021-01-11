@@ -64,13 +64,23 @@ static AutounsignalEvent uart_dputc_event{true};
 
 static SpinLock uart_spinlock;
 
+static inline void uartreg_and_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr & flags;
+}
+
+static inline void uartreg_or_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) {
+  volatile uint32_t* ptr = reinterpret_cast<volatile uint32_t*>(base + reg);
+  *ptr = *ptr | flags;
+}
+
 // clear and set txim (transmit interrupt mask)
-static inline void pl011_mask_tx() { UARTREG(uart_base, UART_IMSC) &= ~(1 << 5); }
-static inline void pl011_unmask_tx() { UARTREG(uart_base, UART_IMSC) |= (1 << 5); }
+static inline void pl011_mask_tx() { uartreg_and_eq(uart_base, UART_IMSC, ~(1 << 5)); }
+static inline void pl011_unmask_tx() { uartreg_or_eq(uart_base, UART_IMSC, (1 << 5)); }
 
 // clear and set rtim and rxim (receive timeout and interrupt mask)
-static inline void pl011_mask_rx() { UARTREG(uart_base, UART_IMSC) &= ~((1 << 6) | (1 << 4)); }
-static inline void pl011_unmask_rx() { UARTREG(uart_base, UART_IMSC) |= (1 << 6) | (1 << 4); }
+static inline void pl011_mask_rx() { uartreg_and_eq(uart_base, UART_IMSC, ~((1 << 6) | (1 << 4))); }
+static inline void pl011_unmask_rx() { uartreg_or_eq(uart_base, UART_IMSC, (1 << 6) | (1 << 4)); }
 
 static interrupt_eoi pl011_uart_irq(void* arg) {
   /* read interrupt status and mask */
@@ -122,7 +132,7 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
                                   (1 << 6);   //  rtim
 
   // enable receive
-  UARTREG(uart_base, UART_CR) |= (1 << 9);  // rxen
+  uartreg_or_eq(uart_base, UART_CR, (1 << 9));  // rxen
 
   // enable interrupt
   unmask_interrupt(uart_irq);
