@@ -189,11 +189,9 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   auto builder = audio_fidl::GainState::UnownedBuilder();
   fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
   builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-  auto status =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status.status());
-  auto gain_state =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
   server->DdkAsyncRemove();
@@ -213,20 +211,18 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   auto builder = audio_fidl::GainState::UnownedBuilder();
   fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
   builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-  auto status =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status.status());
 
   // One watch for initial reply.
-  auto gain_state =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
 
   // A second watch with no reply since there is no change of gain.
   auto f = [](void* arg) -> int {
     auto ch = static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
-    audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel((*ch)->channel));
+    audio_fidl::StreamConfig::Call::WatchGainState((*ch)->channel);
     return 0;
   };
   thrd_t th;
@@ -257,21 +253,17 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
 
   fidl::aligned<bool> target_agc1 = true;
   builder.set_agc_enabled(fidl::unowned_ptr(&target_agc1));
-  auto status1 =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status1.status());
-  auto gain_state1 =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.agc_enabled());
 
   fidl::aligned<bool> target_agc2 = false;
   builder.set_agc_enabled(fidl::unowned_ptr(&target_agc2));
-  auto status2 =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status2 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status2.status());
-  auto gain_state2 =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
   server->DdkAsyncRemove();
@@ -292,21 +284,17 @@ TEST(SimpleAudioTest, SetAndGetMute) {
 
   fidl::aligned<bool> muted1 = true;
   builder.set_muted(fidl::unowned_ptr(&muted1));
-  auto status1 =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status1.status());
-  auto gain_state1 =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.muted());
 
   fidl::aligned<bool> muted2 = false;
   builder.set_muted(fidl::unowned_ptr(&muted2));
-  auto status2 =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status2 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status2.status());
-  auto gain_state2 =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.muted());
   server->DdkAsyncRemove();
@@ -335,11 +323,9 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
 
   fidl::aligned<bool> muted1 = true;
   builder.set_muted(fidl::unowned_ptr(&muted1));
-  auto status1 =
-      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
   ASSERT_OK(status1.status());
-  auto gain_state1 =
-      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_FALSE(gain_state1->gain_state.has_muted());
   server->DdkAsyncRemove();
@@ -356,7 +342,6 @@ TEST(SimpleAudioTest, Enumerate1) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
   auto ret = client.GetSupportedFormats();
@@ -412,7 +397,6 @@ TEST(SimpleAudioTest, Enumerate2) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
   auto ret = client.GetSupportedFormats();
@@ -466,17 +450,17 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
   fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
   auto builder = audio_fidl::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   client.CreateRingBuffer(builder.build(), std::move(remote));
 
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
@@ -507,11 +491,11 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
   audio_fidl::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = 4;
   pcm_format.channels_to_use_bitmask = 0x0f;
@@ -523,7 +507,7 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
   client.CreateRingBuffer(builder.build(), std::move(remote));
 
-  auto result = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
   server->DdkAsyncRemove();
@@ -540,11 +524,11 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
 
   // Define a pretty bad format.
   audio_fidl::PcmFormat pcm_format = {};
@@ -558,7 +542,7 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   auto result1 = client.GetSupportedFormats();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result1.status());  // With a bad format we get a channel close.
 
-  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -574,11 +558,11 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
 
   // Define an almost good format.
   audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
@@ -592,7 +576,7 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   auto result1 = client.GetSupportedFormats();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result1.status());  // With a bad format we get a channel close.
 
-  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  auto result2 = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
   server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -608,7 +592,7 @@ TEST(SimpleAudioTest, GetIds) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto result = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch->channel));
+  auto result = audio_fidl::StreamConfig::Call::GetProperties(ch->channel);
   ASSERT_OK(result.status());
 
   audio_stream_unique_id_t mic = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
@@ -635,8 +619,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch1->channel));
-  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch2->channel));
+  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(ch1->channel);
+  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(ch2->channel);
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
@@ -645,8 +629,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
             audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
-  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch1->channel));
-  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch2->channel));
+  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
+  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_FALSE(state1->plug_state.plugged());
@@ -668,8 +652,8 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch1->channel));
-  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch2->channel));
+  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(ch1->channel);
+  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(ch2->channel);
   ASSERT_OK(prop1.status());
   ASSERT_OK(prop2.status());
 
@@ -679,8 +663,8 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
             audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
 
   // Watch each channel for initial reply.
-  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch1->channel));
-  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch2->channel));
+  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
+  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_FALSE(state1->plug_state.plugged());
@@ -690,7 +674,7 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   auto f = [](void* arg) -> int {
     audio_fidl::Device::ResultOf::GetChannel* ch =
         static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
-    audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel((*ch)->channel));
+    audio_fidl::StreamConfig::Call::WatchPlugState((*ch)->channel);
     return 0;
   };
   thrd_t th1;
@@ -728,9 +712,9 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  auto state1a = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch1->channel));
-  auto state2a = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch2->channel));
-  auto state3a = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch3->channel));
+  auto state1a = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
+  auto state2a = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
+  auto state3a = audio_fidl::StreamConfig::Call::WatchPlugState(ch3->channel);
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
@@ -740,9 +724,9 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
 
   server->PostSetPlugState(true, zx::duration(zx::msec(100)));
 
-  auto state1b = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch1->channel));
-  auto state2b = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch2->channel));
-  auto state3b = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch3->channel));
+  auto state1b = audio_fidl::StreamConfig::Call::WatchPlugState(ch1->channel);
+  auto state2b = audio_fidl::StreamConfig::Call::WatchPlugState(ch2->channel);
+  auto state3b = audio_fidl::StreamConfig::Call::WatchPlugState(ch3->channel);
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
@@ -766,8 +750,8 @@ TEST(SimpleAudioTest, MultipleChannelsGainState) {
   ASSERT_EQ(ch1.status(), ZX_OK);
   ASSERT_EQ(ch2.status(), ZX_OK);
 
-  auto state1 = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch1->channel));
-  auto state2 = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch2->channel));
+  auto state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
+  auto state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
   ASSERT_OK(state1.status());
   ASSERT_OK(state2.status());
   ASSERT_EQ(0.f, state1->gain_state.gain_db());
@@ -791,9 +775,9 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  auto state1a = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch1->channel));
-  auto state2a = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch2->channel));
-  auto state3a = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch3->channel));
+  auto state1a = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
+  auto state2a = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
+  auto state3a = audio_fidl::StreamConfig::Call::WatchGainState(ch3->channel);
   ASSERT_OK(state1a.status());
   ASSERT_OK(state2a.status());
   ASSERT_OK(state3a.status());
@@ -813,15 +797,15 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
     fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
     builder.set_gain_db(fidl::unowned_ptr(&target_gain));
 
-    audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel((*ch1)->channel), builder.build());
+    audio_fidl::StreamConfig::Call::SetGain((*ch1)->channel, builder.build());
     return 0;
   };
   thrd_t th;
   ASSERT_OK(thrd_create_with_name(&th, f, &ch1, "test-thread"));
 
-  auto state1b = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch1->channel));
-  auto state2b = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch2->channel));
-  auto state3b = audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch3->channel));
+  auto state1b = audio_fidl::StreamConfig::Call::WatchGainState(ch1->channel);
+  auto state2b = audio_fidl::StreamConfig::Call::WatchGainState(ch2->channel);
+  auto state3b = audio_fidl::StreamConfig::Call::WatchGainState(ch3->channel);
   ASSERT_OK(state1b.status());
   ASSERT_OK(state2b.status());
   ASSERT_OK(state3b.status());
@@ -846,31 +830,32 @@ TEST(SimpleAudioTest, RingBufferTests) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
   fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
   auto builder = audio_fidl::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(zx::unowned_channel(ch->channel),
-                                                             builder.build(), std::move(remote));
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
+                                                             std::move(remote));
   ASSERT_OK(rb.status());
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
   // per ring buffer (i.e. per second) we set the time waiting for the watch below to 200ms+.
 
-  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(
-      zx::unowned_channel(local), MockSimpleAudio::kTestFrameRate, kNumberOfPositionNotifications);
+  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, MockSimpleAudio::kTestFrameRate,
+                                                  kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
-  auto start = audio_fidl::RingBuffer::Call::Start(zx::unowned_channel(local));
+  auto start = audio_fidl::RingBuffer::Call::Start(local);
   ASSERT_OK(start.status());
 
-  auto position =
-      audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(zx::unowned_channel(local));
+  auto position = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(local);
   ASSERT_EQ(MockSimpleAudio::kTestPositionNotify, position->position_info.position);
 
-  auto stop = audio_fidl::RingBuffer::Call::Stop(zx::unowned_channel(local));
+  auto stop = audio_fidl::RingBuffer::Call::Stop(local);
   ASSERT_OK(stop.status());
   server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -886,30 +871,32 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
   fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
   auto builder = audio_fidl::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(zx::unowned_channel(ch->channel),
-                                                             builder.build(), std::move(remote));
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
+                                                             std::move(remote));
   ASSERT_OK(rb.status());
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
   // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
   // per ring buffer (i.e. per second) the time waiting before getting a position reply is 200ms+.
 
-  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(
-      zx::unowned_channel(local), MockSimpleAudio::kTestFrameRate, kNumberOfPositionNotifications);
+  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, MockSimpleAudio::kTestFrameRate,
+                                                  kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
-  auto start = audio_fidl::RingBuffer::Call::Start(zx::unowned_channel(local));
+  auto start = audio_fidl::RingBuffer::Call::Start(local);
   ASSERT_OK(start.status());
 
   // Watch position notifications.
   auto f = [](void* arg) -> int {
-    auto ch = static_cast<zx::channel*>(arg);
-    audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(zx::unowned_channel(*ch));
+    auto ch = static_cast<fidl::ClientEnd<audio_fidl::RingBuffer>*>(arg);
+    audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(*ch);
     return 0;
   };
   thrd_t th;
@@ -952,7 +939,6 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
   zx::channel local, remote;
@@ -979,7 +965,6 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
   audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto channel = zx::unowned_channel(ch->channel);
   audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
 
   zx::channel local, remote;
@@ -1014,7 +999,7 @@ TEST(SimpleAudioTest, NonPriviledged) {
   auto builder = audio_fidl::Format::UnownedBuilder();
   builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
-  auto channel1 = zx::unowned_channel(ch1->channel);
+  auto channel1 = zx::unowned_channel(ch1->channel.channel());
   audio_fidl::StreamConfig::SyncClient client1(std::move(ch1->channel));
   zx::channel local1, remote1;
   ASSERT_OK(zx::channel::create(0, &local1, &remote1));
@@ -1024,7 +1009,7 @@ TEST(SimpleAudioTest, NonPriviledged) {
   auto stop1 = ringbuffer1.Stop();
   ASSERT_OK(stop1.status());  // Priviledged channel.
 
-  auto channel2 = zx::unowned_channel(ch2->channel);
+  auto channel2 = zx::unowned_channel(ch2->channel.channel());
   audio_fidl::StreamConfig::SyncClient client2(std::move(ch2->channel));
   zx::channel local2, remote2;
   ASSERT_OK(zx::channel::create(0, &local2, &remote2));
@@ -1034,7 +1019,7 @@ TEST(SimpleAudioTest, NonPriviledged) {
   auto stop2 = ringbuffer2.Stop();
   ASSERT_NOT_OK(stop2.status());  // Non-priviledged channel.
 
-  auto channel3 = zx::unowned_channel(ch3->channel);
+  auto channel3 = zx::unowned_channel(ch3->channel.channel());
   audio_fidl::StreamConfig::SyncClient client3(std::move(ch3->channel));
   zx::channel local3, remote3;
   ASSERT_OK(zx::channel::create(0, &local3, &remote3));

@@ -22,9 +22,11 @@
 #include <variant>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -66,8 +68,10 @@ class Parent final {
   struct GetChildResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel c;
-    explicit GetChildResponse(::zx::channel& c) : c(std::move(c)) {
+    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c;
+    explicit GetChildResponse(
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
+        : c(std::move(c)) {
       _InitHeader();
     }
     GetChildResponse() { _InitHeader(); }
@@ -85,8 +89,9 @@ class Parent final {
 
     class UnownedEncodedMessage final {
      public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::zx::channel& c)
+      UnownedEncodedMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
           : message_(_bytes, _byte_size, sizeof(GetChildResponse), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL GetChildResponse _response{c};
@@ -128,7 +133,8 @@ class Parent final {
 
     class OwnedEncodedMessage final {
      public:
-      explicit OwnedEncodedMessage(::zx::channel& c)
+      explicit OwnedEncodedMessage(
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
           : message_(bytes_, sizeof(bytes_), c) {}
       explicit OwnedEncodedMessage(GetChildResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -366,8 +372,10 @@ class Parent final {
   struct GetChildRequestResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel r;
-    explicit GetChildRequestResponse(::zx::channel& r) : r(std::move(r)) {
+    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r;
+    explicit GetChildRequestResponse(
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
+        : r(std::move(r)) {
       _InitHeader();
     }
     GetChildRequestResponse() { _InitHeader(); }
@@ -385,8 +393,9 @@ class Parent final {
 
     class UnownedEncodedMessage final {
      public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::zx::channel& r)
+      UnownedEncodedMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
           : message_(_bytes, _byte_size, sizeof(GetChildRequestResponse),
                      handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
@@ -430,7 +439,8 @@ class Parent final {
 
     class OwnedEncodedMessage final {
      public:
-      explicit OwnedEncodedMessage(::zx::channel& r)
+      explicit OwnedEncodedMessage(
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
           : message_(bytes_, sizeof(bytes_), r) {}
       explicit OwnedEncodedMessage(GetChildRequestResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -669,8 +679,10 @@ class Parent final {
   struct TakeChildRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel c;
-    explicit TakeChildRequest(zx_txid_t _txid, ::zx::channel& c)
+    ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c;
+    explicit TakeChildRequest(
+        zx_txid_t _txid,
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
         : c(std::move(c)) {
       _InitHeader(_txid);
     }
@@ -691,8 +703,9 @@ class Parent final {
 
     class UnownedEncodedMessage final {
      public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid, ::zx::channel& c)
+      UnownedEncodedMessage(
+          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
           : message_(_bytes, _byte_size, sizeof(TakeChildRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL TakeChildRequest _request(_txid, c);
@@ -734,7 +747,9 @@ class Parent final {
 
     class OwnedEncodedMessage final {
      public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::channel& c)
+      explicit OwnedEncodedMessage(
+          zx_txid_t _txid,
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c)
           : message_(bytes_, sizeof(bytes_), _txid, c) {}
       explicit OwnedEncodedMessage(TakeChildRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
@@ -829,8 +844,10 @@ class Parent final {
   struct TakeChildRequestRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel r;
-    explicit TakeChildRequestRequest(zx_txid_t _txid, ::zx::channel& r)
+    ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r;
+    explicit TakeChildRequestRequest(
+        zx_txid_t _txid,
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
         : r(std::move(r)) {
       _InitHeader(_txid);
     }
@@ -851,8 +868,9 @@ class Parent final {
 
     class UnownedEncodedMessage final {
      public:
-      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            zx_txid_t _txid, ::zx::channel& r)
+      UnownedEncodedMessage(
+          uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
           : message_(_bytes, _byte_size, sizeof(TakeChildRequestRequest),
                      handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
@@ -896,7 +914,9 @@ class Parent final {
 
     class OwnedEncodedMessage final {
      public:
-      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::channel& r)
+      explicit OwnedEncodedMessage(
+          zx_txid_t _txid,
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r)
           : message_(bytes_, sizeof(bytes_), _txid, r) {}
       explicit OwnedEncodedMessage(TakeChildRequestRequest* request)
           : message_(bytes_, sizeof(bytes_), request) {}
@@ -1092,7 +1112,7 @@ class Parent final {
       explicit TakeChild(
           ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
               _client,
-          ::zx::channel& c);
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c);
       explicit TakeChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChild(TakeChild&&) = delete;
@@ -1108,7 +1128,7 @@ class Parent final {
       explicit TakeChildRequest(
           ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
               _client,
-          ::zx::channel& r);
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r);
       explicit TakeChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChildRequest(TakeChildRequest&&) = delete;
@@ -1211,7 +1231,7 @@ class Parent final {
           ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::zx::channel& c);
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>& c);
       explicit TakeChild(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChild(TakeChild&&) = delete;
@@ -1226,7 +1246,7 @@ class Parent final {
           ::fidl::UnownedClientEnd<::llcpp::fidl::test::protocolrequest::Parent>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::zx::channel& r);
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child>& r);
       explicit TakeChildRequest(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
       TakeChildRequest(TakeChildRequest&&) = delete;
@@ -1237,7 +1257,9 @@ class Parent final {
     };
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // Methods to make a sync FIDL call directly on an unowned channel or a
+  // const reference to a
+  // |fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Parent>|, avoiding
   // setting up a client.
   class Call final {
     Call() = delete;
@@ -1278,7 +1300,8 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeChild TakeChild(
-        ::fidl::UnownedClientEnd<Parent> _client_end, ::zx::channel c) {
+        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return ResultOf::TakeChild(_client_end, c);
     }
 
@@ -1286,7 +1309,8 @@ class Parent final {
     // response buffers.
     static UnownedResultOf::TakeChild TakeChild(
         ::fidl::UnownedClientEnd<Parent> _client_end,
-        ::fidl::BufferSpan _request_buffer, ::zx::channel c) {
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return UnownedResultOf::TakeChild(_client_end, _request_buffer.data,
                                         _request_buffer.capacity, c);
     }
@@ -1294,7 +1318,8 @@ class Parent final {
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::TakeChildRequest TakeChildRequest(
-        ::fidl::UnownedClientEnd<Parent> _client_end, ::zx::channel r) {
+        ::fidl::UnownedClientEnd<Parent> _client_end,
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return ResultOf::TakeChildRequest(_client_end, r);
     }
 
@@ -1302,7 +1327,8 @@ class Parent final {
     // response buffers.
     static UnownedResultOf::TakeChildRequest TakeChildRequest(
         ::fidl::UnownedClientEnd<Parent> _client_end,
-        ::fidl::BufferSpan _request_buffer, ::zx::channel r) {
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return UnownedResultOf::TakeChildRequest(
           _client_end, _request_buffer.data, _request_buffer.capacity, r);
     }
@@ -1354,14 +1380,16 @@ class Parent final {
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::TakeChild TakeChild(::zx::channel c) {
+    ResultOf::TakeChild TakeChild(
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return ResultOf::TakeChild(this->client_end(), c);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
-    UnownedResultOf::TakeChild TakeChild(::fidl::BufferSpan _request_buffer,
-                                         ::zx::channel c) {
+    UnownedResultOf::TakeChild TakeChild(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c) {
       return UnownedResultOf::TakeChild(this->client_end(),
                                         _request_buffer.data,
                                         _request_buffer.capacity, c);
@@ -1369,14 +1397,16 @@ class Parent final {
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation
     // necessary.
-    ResultOf::TakeChildRequest TakeChildRequest(::zx::channel r) {
+    ResultOf::TakeChildRequest TakeChildRequest(
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return ResultOf::TakeChildRequest(this->client_end(), r);
     }
 
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     UnownedResultOf::TakeChildRequest TakeChildRequest(
-        ::fidl::BufferSpan _request_buffer, ::zx::channel r) {
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r) {
       return UnownedResultOf::TakeChildRequest(this->client_end(),
                                                _request_buffer.data,
                                                _request_buffer.capacity, r);
@@ -1392,12 +1422,18 @@ class Parent final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
+  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+  // and |fidl::ServerEnd<SomeProtocol>|).
+  // TODO(fxbug.dev/65212): Rename this to |Interface| after all users have
+  // migrated to the typed channels API.
+  class TypedChannelInterface
+      : public ::fidl::internal::IncomingMessageDispatcher {
    public:
-    Interface() = default;
-    virtual ~Interface() = default;
+    TypedChannelInterface() = default;
+    virtual ~TypedChannelInterface() = default;
 
-    // The marker protocol type within which this |Interface| class is defined.
+    // The marker protocol type within which this |TypedChannelInterface| class
+    // is defined.
     using _EnclosingProtocol = Parent;
 
     class GetChildCompleterBase : public ::fidl::CompleterBase {
@@ -1412,8 +1448,11 @@ class Parent final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::zx::channel c);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::channel c);
+      ::fidl::Result Reply(
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c);
+      ::fidl::Result Reply(
+          ::fidl::BufferSpan _buffer,
+          ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1435,8 +1474,11 @@ class Parent final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::zx::channel r);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::channel r);
+      ::fidl::Result Reply(
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r);
+      ::fidl::Result Reply(
+          ::fidl::BufferSpan _buffer,
+          ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1450,17 +1492,60 @@ class Parent final {
 
     using TakeChildCompleter = ::fidl::Completer<>;
 
-    virtual void TakeChild(::zx::channel c,
-                           TakeChildCompleter::Sync& _completer) = 0;
+    virtual void TakeChild(
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c,
+        TakeChildCompleter::Sync& _completer) = 0;
 
     using TakeChildRequestCompleter = ::fidl::Completer<>;
 
     virtual void TakeChildRequest(
-        ::zx::channel r, TakeChildRequestCompleter::Sync& _completer) = 0;
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r,
+        TakeChildRequestCompleter::Sync& _completer) = 0;
 
    private:
     ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
                                             ::fidl::Transaction* txn) final;
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface : public TypedChannelInterface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using TypedChannelInterface::_EnclosingProtocol;
+    using TypedChannelInterface::GetChildCompleter;
+
+    using TypedChannelInterface::GetChildRequestCompleter;
+
+    using TypedChannelInterface::TakeChildCompleter;
+
+    virtual void TakeChild(
+        ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c,
+        TakeChildCompleter::Sync& _completer) final {
+      TakeChild(std::move(c.channel()), _completer);
+    }
+
+    // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
+    // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
+    // Please move to overriding the typed channel overload above instead.
+    virtual void TakeChild(::zx::channel c,
+                           TakeChildCompleter::Sync& _completer) = 0;
+
+    using TypedChannelInterface::TakeChildRequestCompleter;
+
+    virtual void TakeChildRequest(
+        ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r,
+        TakeChildRequestCompleter::Sync& _completer) final {
+      TakeChildRequest(std::move(r.channel()), _completer);
+    }
+
+    // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
+    // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
+    // Please move to overriding the typed channel overload above instead.
+    virtual void TakeChildRequest(
+        ::zx::channel r, TakeChildRequestCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1468,7 +1553,7 @@ class Parent final {
   // leaving the message and transaction intact. In all other cases, it consumes
   // the message and returns true. It is possible to chain multiple TryDispatch
   // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
+  static ::fidl::DispatchResult TryDispatch(TypedChannelInterface* impl,
                                             fidl_incoming_msg_t* msg,
                                             ::fidl::Transaction* txn);
 
@@ -1476,17 +1561,18 @@ class Parent final {
   // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
+  static ::fidl::DispatchResult Dispatch(TypedChannelInterface* impl,
                                          fidl_incoming_msg_t* msg,
                                          ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
-  // Only used with |fidl::BindServer| to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
+  // Same as |Dispatch|, but takes a |void*| instead of
+  // |TypedChannelInterface*|. Only used with |fidl::BindServer| to reduce
+  // template expansion. Do not call this method manually. Use |Dispatch|
+  // instead.
   static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+    return Dispatch(static_cast<TypedChannelInterface*>(impl), msg, txn);
   }
 
   class EventSender;
@@ -1518,7 +1604,9 @@ class Child final {
    public:
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // Methods to make a sync FIDL call directly on an unowned channel or a
+  // const reference to a
+  // |fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child>|, avoiding
   // setting up a client.
   class Call final {
     Call() = delete;
@@ -1551,12 +1639,18 @@ class Child final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
+  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+  // and |fidl::ServerEnd<SomeProtocol>|).
+  // TODO(fxbug.dev/65212): Rename this to |Interface| after all users have
+  // migrated to the typed channels API.
+  class TypedChannelInterface
+      : public ::fidl::internal::IncomingMessageDispatcher {
    public:
-    Interface() = default;
-    virtual ~Interface() = default;
+    TypedChannelInterface() = default;
+    virtual ~TypedChannelInterface() = default;
 
-    // The marker protocol type within which this |Interface| class is defined.
+    // The marker protocol type within which this |TypedChannelInterface| class
+    // is defined.
     using _EnclosingProtocol = Child;
 
    private:
@@ -1564,12 +1658,22 @@ class Child final {
                                             ::fidl::Transaction* txn) final;
   };
 
+  // Pure-virtual interface to be implemented by a server.
+  class Interface : public TypedChannelInterface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using TypedChannelInterface::_EnclosingProtocol;
+  };
+
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
   // leaving the message and transaction intact. In all other cases, it consumes
   // the message and returns true. It is possible to chain multiple TryDispatch
   // functions in this manner.
-  static ::fidl::DispatchResult TryDispatch(Interface* impl,
+  static ::fidl::DispatchResult TryDispatch(TypedChannelInterface* impl,
                                             fidl_incoming_msg_t* msg,
                                             ::fidl::Transaction* txn);
 
@@ -1577,17 +1681,18 @@ class Child final {
   // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
-  static ::fidl::DispatchResult Dispatch(Interface* impl,
+  static ::fidl::DispatchResult Dispatch(TypedChannelInterface* impl,
                                          fidl_incoming_msg_t* msg,
                                          ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
-  // Only used with |fidl::BindServer| to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
+  // Same as |Dispatch|, but takes a |void*| instead of
+  // |TypedChannelInterface*|. Only used with |fidl::BindServer| to reduce
+  // template expansion. Do not call this method manually. Use |Dispatch|
+  // instead.
   static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
                                                    fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+    return Dispatch(static_cast<TypedChannelInterface*>(impl), msg, txn);
   }
 
   class EventSender;
@@ -1767,20 +1872,25 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result TakeChild(::zx::channel c);
+  ::fidl::Result TakeChild(
+      ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result TakeChild(::fidl::BufferSpan _request_buffer, ::zx::channel c);
+  ::fidl::Result TakeChild(
+      ::fidl::BufferSpan _request_buffer,
+      ::fidl::ClientEnd<::llcpp::fidl::test::protocolrequest::Child> c);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result TakeChildRequest(::zx::channel r);
+  ::fidl::Result TakeChildRequest(
+      ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r);
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::Result TakeChildRequest(::fidl::BufferSpan _request_buffer,
-                                  ::zx::channel r);
+  ::fidl::Result TakeChildRequest(
+      ::fidl::BufferSpan _request_buffer,
+      ::fidl::ServerEnd<::llcpp::fidl::test::protocolrequest::Child> r);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
 

@@ -322,14 +322,15 @@ zx_status_t DeviceInterface::OpenSession(fidl::StringView name, netdev::SessionI
   }
   fbl::AutoLock lock(&sessions_lock_);
 
-  zx::channel req;
-  zx_status_t status;
-  if ((status = zx::channel::create(0, &req, &rsp->session)) != ZX_OK) {
-    return status;
+  auto endpoints = fidl::CreateEndpoints<netdev::Session>();
+  if (!endpoints.is_ok()) {
+    return endpoints.status_value();
   }
+  rsp->session = std::move(endpoints->client);
+  zx_status_t status;
   std::unique_ptr<Session> session;
   if ((status = Session::Create(dispatcher_, std::move(session_info), std::move(name), this,
-                                std::move(req), &session, &rsp->fifos)) != ZX_OK) {
+                                std::move(endpoints->server), &session, &rsp->fifos)) != ZX_OK) {
     return status;
   }
 

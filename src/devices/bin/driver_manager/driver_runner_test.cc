@@ -206,13 +206,13 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                        .build();
     auto url = fidl::unowned_str(driver.url);
     fidl::VectorView<frunner::ComponentNamespaceEntry> ns;
-    zx::channel outgoing_client_end, outgoing_server_end;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0, &outgoing_client_end, &outgoing_server_end));
+    auto outgoing_endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+    EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
     auto start_info = frunner::ComponentStartInfo::UnownedBuilder()
                           .set_resolved_url(fidl::unowned_ptr(&url))
                           .set_program(fidl::unowned_ptr(&program))
                           .set_ns(fidl::unowned_ptr(&ns))
-                          .set_outgoing_dir(fidl::unowned_ptr(&outgoing_server_end));
+                          .set_outgoing_dir(fidl::unowned_ptr((&outgoing_endpoints->server)));
     zx::channel controller_client_end, controller_server_end;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
     TestTransaction transaction(driver.close);

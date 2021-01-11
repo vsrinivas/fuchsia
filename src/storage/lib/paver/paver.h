@@ -23,6 +23,9 @@
 namespace paver {
 
 class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
+  using Interface::FindSysconfig;
+  using Interface::UseBlockDevice;
+
  public:
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& completer) override;
 

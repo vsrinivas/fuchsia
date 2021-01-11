@@ -118,8 +118,8 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
 namespace methods {
 
 void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  Top::Interface::GetFooCompleter::Sync completer(txn);
-  reinterpret_cast<Top::Interface*>(interface)->GetFoo(completer);
+  Top::TypedChannelInterface::GetFooCompleter::Sync completer(txn);
+  reinterpret_cast<Top::TypedChannelInterface*>(interface)->GetFoo(completer);
 }
 
 }  // namespace methods
@@ -132,7 +132,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Top::TryDispatch(Interface* impl,
+::fidl::DispatchResult Top::TryDispatch(TypedChannelInterface* impl,
                                         fidl_incoming_msg_t* msg,
                                         ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -141,7 +141,8 @@ namespace entries {
           sizeof(entries::Top) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Top::Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
+::fidl::DispatchResult Top::Dispatch(TypedChannelInterface* impl,
+                                     fidl_incoming_msg_t* msg,
                                      ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -152,18 +153,18 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Top::Interface::dispatch_message(
+::fidl::DispatchResult Top::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Top::Dispatch(this, msg, txn);
 }
 
-::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
+::fidl::Result Top::TypedChannelInterface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::Foo foo) {
   GetFooResponse::OwnedEncodedMessage _response{foo};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
+::fidl::Result Top::TypedChannelInterface::GetFooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, ::llcpp::bottom::Foo foo) {
   GetFooResponse::UnownedEncodedMessage _response(_buffer.data,
                                                   _buffer.capacity, foo);

@@ -67,13 +67,14 @@ TEST(LoggerTest, CreateAndLog) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Setup namespace.
-  zx::channel svc_client_end, svc_server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc_client_end, &svc_server_end));
+  auto svc = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  EXPECT_EQ(ZX_OK, svc.status_value());
   frunner::ComponentNamespaceEntry ns_entries[] = {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/svc"))
-          .set_directory(std::make_unique<zx::channel>(std::move(svc_client_end)))
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+              std::move(svc->client)))
           .build(),
   };
   auto ns_vec = fidl::unowned_vec(ns_entries);
@@ -92,7 +93,7 @@ TEST(LoggerTest, CreateAndLog) {
     log_binding.Bind(object.TakeChannel(), loop.dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(std::move(svc_server_end), loop.dispatcher());
+  svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
 
   auto logger = Logger::Create(ns.value(), loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_ok());
@@ -121,13 +122,14 @@ TEST(LoggerTest, Create_NoLogSink) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Setup namespace.
-  zx::channel pkg_client_end, pkg_server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &pkg_client_end, &pkg_server_end));
+  auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  EXPECT_EQ(ZX_OK, pkg.status_value());
   frunner::ComponentNamespaceEntry ns_entries[] = {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>(std::move(pkg_client_end)))
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+              std::move(pkg->client)))
           .build(),
   };
   auto ns_vec = fidl::unowned_vec(ns_entries);

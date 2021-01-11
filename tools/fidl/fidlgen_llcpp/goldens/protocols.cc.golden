@@ -295,16 +295,16 @@ namespace methods {
 void TransitionalDispatchRequest(void* interface, void* bytes,
                                  ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::RequestRequest*>(bytes);
-  Transitional::Interface::RequestCompleter::Sync completer(txn);
-  reinterpret_cast<Transitional::Interface*>(interface)->Request(
+  Transitional::TypedChannelInterface::RequestCompleter::Sync completer(txn);
+  reinterpret_cast<Transitional::TypedChannelInterface*>(interface)->Request(
       std::move(message->x), completer);
 }
 
 void TransitionalDispatchOneWay(void* interface, void* bytes,
                                 ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::OneWayRequest*>(bytes);
-  Transitional::Interface::OneWayCompleter::Sync completer(txn);
-  reinterpret_cast<Transitional::Interface*>(interface)->OneWay(
+  Transitional::TypedChannelInterface::OneWayCompleter::Sync completer(txn);
+  reinterpret_cast<Transitional::TypedChannelInterface*>(interface)->OneWay(
       std::move(message->x), completer);
 }
 
@@ -321,7 +321,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Transitional::TryDispatch(Interface* impl,
+::fidl::DispatchResult Transitional::TryDispatch(TypedChannelInterface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -330,7 +330,7 @@ namespace entries {
                                   sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
+::fidl::DispatchResult Transitional::Dispatch(TypedChannelInterface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -342,17 +342,18 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Transitional::Interface::dispatch_message(
+::fidl::DispatchResult Transitional::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Transitional::Dispatch(this, msg, txn);
 }
 
-::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
+::fidl::Result Transitional::TypedChannelInterface::RequestCompleterBase::Reply(
+    int64_t y) {
   RequestResponse::OwnedEncodedMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
+::fidl::Result Transitional::TypedChannelInterface::RequestCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   RequestResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, y);
@@ -877,33 +878,35 @@ namespace methods {
 void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodARequest*>(bytes);
-  ChannelProtocol::Interface::MethodACompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodA(
+  ChannelProtocol::TypedChannelInterface::MethodACompleter::Sync completer(txn);
+  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)->MethodA(
       std::move(message->a), std::move(message->b), completer);
 }
 
 void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodBRequest*>(bytes);
-  ChannelProtocol::Interface::MethodBCompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodB(
+  ChannelProtocol::TypedChannelInterface::MethodBCompleter::Sync completer(txn);
+  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)->MethodB(
       std::move(message->a), std::move(message->b), completer);
 }
 
 void ChannelProtocolDispatchTakeHandle(void* interface, void* bytes,
                                        ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::TakeHandleRequest*>(bytes);
-  ChannelProtocol::Interface::TakeHandleCompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::Interface*>(interface)->TakeHandle(
-      std::move(message->h), completer);
+  ChannelProtocol::TypedChannelInterface::TakeHandleCompleter::Sync completer(
+      txn);
+  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)
+      ->TakeHandle(std::move(message->h), completer);
 }
 
 void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MutateSocketRequest*>(bytes);
-  ChannelProtocol::Interface::MutateSocketCompleter::Sync completer(txn);
-  reinterpret_cast<ChannelProtocol::Interface*>(interface)->MutateSocket(
-      std::move(message->a), completer);
+  ChannelProtocol::TypedChannelInterface::MutateSocketCompleter::Sync completer(
+      txn);
+  reinterpret_cast<ChannelProtocol::TypedChannelInterface*>(interface)
+      ->MutateSocket(std::move(message->a), completer);
 }
 
 }  // namespace methods
@@ -925,7 +928,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult ChannelProtocol::TryDispatch(Interface* impl,
+::fidl::DispatchResult ChannelProtocol::TryDispatch(TypedChannelInterface* impl,
                                                     fidl_incoming_msg_t* msg,
                                                     ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -934,7 +937,7 @@ namespace entries {
                                      sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
+::fidl::DispatchResult ChannelProtocol::Dispatch(TypedChannelInterface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -946,36 +949,41 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult ChannelProtocol::Interface::dispatch_message(
+::fidl::DispatchResult ChannelProtocol::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ChannelProtocol::Dispatch(this, msg, txn);
 }
 
-::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
+::fidl::Result
+ChannelProtocol::TypedChannelInterface::MethodBCompleterBase::Reply(
     int64_t result) {
   MethodBResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
+::fidl::Result
+ChannelProtocol::TypedChannelInterface::MethodBCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, int64_t result) {
   MethodBResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result ChannelProtocol::Interface::TakeHandleCompleterBase::Reply() {
+::fidl::Result
+ChannelProtocol::TypedChannelInterface::TakeHandleCompleterBase::Reply() {
   TakeHandleResponse::OwnedEncodedMessage _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
+::fidl::Result
+ChannelProtocol::TypedChannelInterface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
   MutateSocketResponse::OwnedEncodedMessage _response{b};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
+::fidl::Result
+ChannelProtocol::TypedChannelInterface::MutateSocketCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, ::zx::socket b) {
   MutateSocketResponse::UnownedEncodedMessage _response(_buffer.data,
                                                         _buffer.capacity, b);
@@ -1740,25 +1748,28 @@ namespace methods {
 
 void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestNoResponseCompleter::Sync
-      completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      NoRequestNoResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->NoRequestNoResponse(completer);
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestEmptyResponseCompleter::
-      Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      NoRequestEmptyResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->NoRequestEmptyResponse(completer);
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleter::Sync
-      completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      NoRequestWithResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->NoRequestWithResponse(completer);
 }
 
@@ -1766,9 +1777,10 @@ void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestNoResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestNoResponseCompleter::Sync
-      completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      WithRequestNoResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->WithRequestNoResponse(std::move(message->arg), completer);
 }
 
@@ -1776,9 +1788,10 @@ void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestEmptyResponseCompleter::
-      Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      WithRequestEmptyResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->WithRequestEmptyResponse(std::move(message->arg), completer);
 }
 
@@ -1786,9 +1799,10 @@ void WithAndWithoutRequestResponseDispatchWithRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestWithResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleter::
-      Sync completer(txn);
-  reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
+  WithAndWithoutRequestResponse::TypedChannelInterface::
+      WithRequestWithResponseCompleter::Sync completer(txn);
+  reinterpret_cast<WithAndWithoutRequestResponse::TypedChannelInterface*>(
+      interface)
       ->WithRequestWithResponse(std::move(message->arg), completer);
 }
 
@@ -1820,7 +1834,8 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult WithAndWithoutRequestResponse::TryDispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    TypedChannelInterface* impl, fidl_incoming_msg_t* msg,
+    ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::WithAndWithoutRequestResponse,
       entries::WithAndWithoutRequestResponse +
@@ -1829,7 +1844,8 @@ namespace entries {
 }
 
 ::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
-    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+    TypedChannelInterface* impl, fidl_incoming_msg_t* msg,
+    ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
@@ -1840,24 +1856,24 @@ namespace entries {
 }
 
 ::fidl::DispatchResult
-WithAndWithoutRequestResponse::Interface::dispatch_message(
+WithAndWithoutRequestResponse::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return WithAndWithoutRequestResponse::Dispatch(this, msg, txn);
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     NoRequestEmptyResponseCompleterBase::Reply() {
   NoRequestEmptyResponseResponse::OwnedEncodedMessage _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   NoRequestWithResponseResponse::OwnedEncodedMessage _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                               ::fidl::StringView ret) {
   NoRequestWithResponseResponse::UnownedEncodedMessage _response(
@@ -1865,19 +1881,19 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     WithRequestEmptyResponseCompleterBase::Reply() {
   WithRequestEmptyResponseResponse::OwnedEncodedMessage _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
   WithRequestWithResponseResponse::OwnedEncodedMessage _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result WithAndWithoutRequestResponse::Interface::
+::fidl::Result WithAndWithoutRequestResponse::TypedChannelInterface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::BufferSpan _buffer,
                                                 ::fidl::StringView ret) {
   WithRequestWithResponseResponse::UnownedEncodedMessage _response(
@@ -2321,23 +2337,26 @@ namespace methods {
 
 void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ResponseAsStructCompleter::Sync completer(txn);
-  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ResponseAsStruct(
-      completer);
+  WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleter::Sync
+      completer(txn);
+  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+      ->ResponseAsStruct(completer);
 }
 
 void WithErrorSyntaxDispatchErrorAsPrimitive(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ErrorAsPrimitiveCompleter::Sync completer(txn);
-  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsPrimitive(
-      completer);
+  WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleter::Sync
+      completer(txn);
+  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+      ->ErrorAsPrimitive(completer);
 }
 
 void WithErrorSyntaxDispatchErrorAsEnum(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ErrorAsEnumCompleter::Sync completer(txn);
-  reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsEnum(
-      completer);
+  WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleter::Sync completer(
+      txn);
+  reinterpret_cast<WithErrorSyntax::TypedChannelInterface*>(interface)
+      ->ErrorAsEnum(completer);
 }
 
 }  // namespace methods
@@ -2358,7 +2377,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult WithErrorSyntax::TryDispatch(Interface* impl,
+::fidl::DispatchResult WithErrorSyntax::TryDispatch(TypedChannelInterface* impl,
                                                     fidl_incoming_msg_t* msg,
                                                     ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -2367,7 +2386,7 @@ namespace entries {
                                      sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult WithErrorSyntax::Dispatch(Interface* impl,
+::fidl::DispatchResult WithErrorSyntax::Dispatch(TypedChannelInterface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -2379,20 +2398,21 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult WithErrorSyntax::Interface::dispatch_message(
+::fidl::DispatchResult WithErrorSyntax::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return WithErrorSyntax::Dispatch(this, msg, txn);
 }
 
-::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
         result) {
   ResponseAsStructResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
-    int64_t a, int64_t b, int64_t c) {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ResponseAsStructCompleterBase::ReplySuccess(int64_t a, int64_t b,
+                                                int64_t c) {
   ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> _response;
   _response.value.a = std::move(a);
   _response.value.b = std::move(b);
@@ -2401,14 +2421,14 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
   return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
       ::fidl::unowned_ptr(&_response)));
 }
-::fidl::Result
-WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
-    uint32_t error) {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ResponseAsStructCompleterBase::ReplyError(uint32_t error) {
   return Reply(WithErrorSyntax_ResponseAsStruct_Result::WithErr(
       ::fidl::unowned_ptr(&error)));
 }
 
-::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
         result) {
@@ -2416,9 +2436,10 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
-    ::fidl::BufferSpan _buffer, int64_t a, int64_t b, int64_t c) {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ResponseAsStructCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer,
+                                                int64_t a, int64_t b,
+                                                int64_t c) {
   ::fidl::aligned<WithErrorSyntax_ResponseAsStruct_Response> response;
   response.value.a = std::move(a);
   response.value.b = std::move(b);
@@ -2429,27 +2450,28 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
                    ::fidl::unowned_ptr(&response)));
 }
 
-::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
         result) {
   ErrorAsPrimitiveResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> _response;
 
   return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
       ::fidl::unowned_ptr(&_response)));
 }
-::fidl::Result
-WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
-    uint32_t error) {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ErrorAsPrimitiveCompleterBase::ReplyError(uint32_t error) {
   return Reply(WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(
       ::fidl::unowned_ptr(&error)));
 }
 
-::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
         result) {
@@ -2457,9 +2479,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
-    ::fidl::BufferSpan _buffer) {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BufferSpan _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsPrimitive_Response> response;
 
   return Reply(std::move(_buffer),
@@ -2467,25 +2488,28 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
                    ::fidl::unowned_ptr(&response)));
 }
 
-::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
+::fidl::Result WithErrorSyntax::TypedChannelInterface::
+    ErrorAsEnumCompleterBase::ReplySuccess() {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> _response;
 
   return Reply(WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
       ::fidl::unowned_ptr(&_response)));
 }
-::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplyError(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::ReplyError(
     ErrorEnun error) {
   return Reply(
       WithErrorSyntax_ErrorAsEnum_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
-::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
+::fidl::Result
+WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
     ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
   ErrorAsEnumResponse::UnownedEncodedMessage _response(
@@ -2493,7 +2517,7 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
-WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
+WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
   ::fidl::aligned<WithErrorSyntax_ErrorAsEnum_Response> response;
 

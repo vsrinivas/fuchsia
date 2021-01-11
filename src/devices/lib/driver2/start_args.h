@@ -44,7 +44,7 @@ inline zx::status<std::string> program_value(const llcpp::fuchsia::data::Diction
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<zx::unowned_channel> ns_value(
+inline zx::status<fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory>> ns_value(
     const fidl::VectorView<llcpp::fuchsia::component::runner::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {

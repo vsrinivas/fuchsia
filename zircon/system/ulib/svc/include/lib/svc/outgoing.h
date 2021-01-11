@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SVC_OUTGOING_H_
+#define LIB_SVC_OUTGOING_H_
+
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/zx/channel.h>
 
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-#include <lib/zx/channel.h>
 
 namespace svc {
 
@@ -20,7 +23,7 @@ class Outgoing {
   const fbl::RefPtr<fs::PseudoDir>& svc_dir() const { return svc_dir_; }
 
   // Start serving the root directory on the given channel.
-  zx_status_t Serve(zx::channel dir_request);
+  zx_status_t Serve(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_server_end);
 
   // Start serving the root directory on the channel provided to this process at
   // startup as PA_DIRECTORY_REQUEST.
@@ -35,3 +38,5 @@ class Outgoing {
 };
 
 }  // namespace svc
+
+#endif  // LIB_SVC_OUTGOING_H_

@@ -378,7 +378,7 @@ zx_status_t fumount(int mount_fd) {
   if (resp.value().s != ZX_OK) {
     return resp.value().s;
   }
-  return fs::Vfs::UnmountHandle(std::move(resp.value().remote), zx::time::infinite());
+  return fs::Vfs::UnmountHandle(std::move(resp.value().remote.channel()), zx::time::infinite());
 }
 
 __EXPORT

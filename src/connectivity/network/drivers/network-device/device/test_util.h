@@ -180,7 +180,7 @@ class TestSession {
 
   zx_status_t Init(uint16_t descriptor_count, uint64_t buffer_size);
   zx_status_t GetInfo(netdev::SessionInfo* info);
-  void Setup(zx::channel session, netdev::Fifos fifos);
+  void Setup(fidl::ClientEnd<netdev::Session> session, netdev::Fifos fifos);
   zx_status_t SetPaused(bool paused);
   zx_status_t Close();
   zx_status_t WaitClosed(zx::time deadline);
@@ -215,14 +215,14 @@ class TestSession {
     return SendTx(&descriptor, 1, &actual);
   }
 
-  zx::channel& channel() { return session_; }
+  fidl::ClientEnd<netdev::Session>& session() { return session_; }
 
   uint64_t canonical_offset(uint16_t index) { return buffer_length_ * index; }
 
  private:
   uint16_t descriptors_count_{};
   uint64_t buffer_length_{};
-  zx::channel session_;
+  fidl::ClientEnd<netdev::Session> session_;
   zx::vmo data_vmo_;
   fzl::VmoMapper data_;
   zx::vmo descriptors_vmo_;

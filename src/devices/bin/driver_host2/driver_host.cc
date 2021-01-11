@@ -134,7 +134,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     return;
   }
   status =
-      fdio_open_at(pkg->get(), binary->data(),
+      fdio_open_at(pkg->channel(), binary->data(),
                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, server_end.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary->data(),

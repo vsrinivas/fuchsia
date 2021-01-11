@@ -1035,9 +1035,9 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	case fidl.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
-		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
-			c.compileCompoundIdentifier(val.RequestSubtype, "", "", true))
-		r.LLDecl = "::zx::channel"
+		marker := c.compileCompoundIdentifier(val.RequestSubtype, "", "", true)
+		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", marker)
+		r.LLDecl = fmt.Sprintf("::fidl::ServerEnd<%s>", marker)
 		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
@@ -1059,7 +1059,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		if declType == fidl.ProtocolDeclType {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
-			r.LLDecl = "::zx::channel"
+			r.LLDecl = fmt.Sprintf("::fidl::ClientEnd<%s>", ft)
 			r.LLFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol

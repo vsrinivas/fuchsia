@@ -33,6 +33,8 @@ class AddressSpaceDevice
     : public DeviceType,
       public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
       public llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface {
+  using Interface::OpenChildDriver;
+
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

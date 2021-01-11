@@ -174,7 +174,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     for (size_t i = 0; i < count; i++) {
       const char* path = flat->path[i];
       data[i].path = fidl::unowned_str(path, strlen(path));
-      data[i].directory.reset(flat->handle[i]);
+      data[i].directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[i]));
     }
     fidl::VectorView<fprocess::NameInfo> names(fidl::unowned_ptr(data), count);
     fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(std::move(names));

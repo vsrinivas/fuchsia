@@ -51,23 +51,24 @@ TEST(StartArgsTest, ProgramValue) {
 }
 
 TEST(StartArgsTest, NsValue) {
-  zx::channel client_end, server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
   frunner::ComponentNamespaceEntry ns_entries[] = {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/svc"))
-          .set_directory(std::make_unique<zx::channel>(std::move(client_end)))
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+              std::move(endpoints->client)))
           .build(),
   };
   auto entries = fidl::unowned_vec(ns_entries);
 
   auto svc = start_args::ns_value(entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};
-  ASSERT_EQ(ZX_OK, svc.value()->get_info(ZX_INFO_HANDLE_BASIC, &client_info, sizeof(client_info),
-                                         nullptr, nullptr));
-  ASSERT_EQ(ZX_OK, server_end.get_info(ZX_INFO_HANDLE_BASIC, &server_info, sizeof(server_info),
-                                       nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, zx_object_get_info(svc.value().channel(), ZX_INFO_HANDLE_BASIC, &client_info,
+                                      sizeof(client_info), nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, endpoints->server.channel().get_info(ZX_INFO_HANDLE_BASIC, &server_info,
+                                                        sizeof(server_info), nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);
 
   auto pkg = start_args::ns_value(entries, "/pkg");

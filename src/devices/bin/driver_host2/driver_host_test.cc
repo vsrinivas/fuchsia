@@ -115,8 +115,9 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                         fbl::MakeRefCounted<fs::Service>(std::move(connector))));
   }
 
-  StartDriverResult StartDriver(fidl::VectorView<fdf::NodeSymbol> symbols = {},
-                                fidl::tracking_ptr<zx::channel> node = nullptr) {
+  StartDriverResult StartDriver(
+      fidl::VectorView<fdf::NodeSymbol> symbols = {},
+      fidl::tracking_ptr<fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node>> node = nullptr) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(&epitaph);
 
@@ -128,12 +129,14 @@ class DriverHostTest : public gtest::TestLoopFixture {
         frunner::ComponentNamespaceEntry::Builder(
             std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
             .set_path(std::make_unique<fidl::StringView>("/pkg"))
-            .set_directory(std::make_unique<zx::channel>(std::move(pkg_client_end)))
+            .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+                std::move(pkg_client_end)))
             .build(),
         frunner::ComponentNamespaceEntry::Builder(
             std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
             .set_path(std::make_unique<fidl::StringView>("/svc"))
-            .set_directory(std::make_unique<zx::channel>(std::move(svc_client_end)))
+            .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+                std::move(svc_client_end)))
             .build(),
     };
     TestFile file("/pkg/driver/test_driver.so");
@@ -172,9 +175,10 @@ class DriverHostTest : public gtest::TestLoopFixture {
                       .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
                           fidl::unowned_vec(program_entries)))
                       .build()))
-              .set_outgoing_dir(std::make_unique<zx::channel>(std::move(outgoing_dir_server_end)))
+              .set_outgoing_dir(std::make_unique<fidl::ServerEnd<llcpp::fuchsia::io::Directory>>(
+                  std::move(outgoing_dir_server_end)))
               .build(),
-          std::move(driver_server_end), completer);
+          fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
     }
     loop().RunUntilIdle();
     EXPECT_EQ(ZX_OK, epitaph);
@@ -299,6 +303,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   // DriverStartArgs::ns is missing "/pkg" entry.
+  // TODO(fxbug.dev/65212): Migrate the use of |zx::channel::create| to |fidl::CreateEndpoints|.
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
   {
     Completer completer(&transaction);
@@ -306,7 +311,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
         fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
             .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>())
             .build(),
-        std::move(driver_server_end), completer);
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 
@@ -315,7 +320,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>())
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>())
           .build(),
   };
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
@@ -326,7 +331,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
             .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
                 fidl::unowned_vec(entries1)))
             .build(),
-        std::move(driver_server_end), completer);
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -335,7 +340,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>())
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>())
           .build(),
   };
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
@@ -347,7 +352,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
                 fidl::unowned_vec(entries2)))
             .set_program(std::make_unique<fdata::Dictionary>())
             .build(),
-        std::move(driver_server_end), completer);
+        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)), completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
@@ -361,8 +366,9 @@ TEST_F(DriverHostTest, InvalidHandleRights) {
   zx::channel client, server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
   ASSERT_EQ(ZX_OK, client.replace(ZX_RIGHT_TRANSFER, &client));
+  fidl::ClientEnd<fdf::Node> client_end(std::move(client));
   // This should fail when node rights are not ZX_DEFAULT_CHANNEL_RIGHTS.
-  StartDriver({}, fidl::unowned_ptr(&client));
+  StartDriver({}, fidl::unowned_ptr(&client_end));
   EXPECT_FALSE(connected);
 }
 
@@ -377,7 +383,8 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>(std::move(pkg_client_end)))
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+              std::move(pkg_client_end)))
           .build(),
   };
   TestFile file("/pkg/driver/test_not_driver.so");

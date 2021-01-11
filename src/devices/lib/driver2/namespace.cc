@@ -16,7 +16,7 @@ zx::status<Namespace> Namespace::Create(
   Namespace self(ns);
   for (auto& entry : entries) {
     std::string path(entry.path().data(), entry.path().size());
-    status = fdio_ns_bind(ns, path.data(), entry.directory().release());
+    status = fdio_ns_bind(ns, path.data(), entry.directory().TakeChannel().release());
     if (status != ZX_OK) {
       return zx::error(status);
     }

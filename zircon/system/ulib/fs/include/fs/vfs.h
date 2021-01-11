@@ -142,11 +142,14 @@ class Vfs {
 
   // Serves a Vnode over the specified channel (used for creating new filesystems); the Vnode must
   // be a directory.
-  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel, Rights rights);
+  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn,
+                             fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end,
+                             Rights rights);
 
   // Convenience wrapper over |ServeDirectory| with maximum rights.
-  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn, zx::channel channel) {
-    return ServeDirectory(vn, std::move(channel), fs::Rights::All());
+  zx_status_t ServeDirectory(fbl::RefPtr<Vnode> vn,
+                             fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end) {
+    return ServeDirectory(vn, std::move(server_end), fs::Rights::All());
   }
 
   // Closes all connections to a Vnode and calls |callback| after all connections are closed. The

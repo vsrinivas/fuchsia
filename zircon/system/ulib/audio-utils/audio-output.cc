@@ -147,13 +147,12 @@ zx_status_t AudioOutput::PlayToCompletion(AudioSource& source) {
     if (res != ZX_OK)
       break;
 
-    auto position =
-        audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(zx::unowned_channel(rb_ch_));
+    auto position = audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(rb_ch_);
 
     rd = position->position_info.position;
 
     // rd has moved.  If the source has finished and rd has moved at least
-    // the playout distance, we are finsihed.
+    // the playout distance, we are finshed.
     if (source.finished()) {
       uint32_t dist = (rb_sz_ + rd - playout_rd) % rb_sz_;
 

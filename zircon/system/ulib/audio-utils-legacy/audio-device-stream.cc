@@ -111,7 +111,7 @@ zx_status_t AudioDeviceStream::Open() {
   using Device = ::llcpp::fuchsia::hardware::audio::Device;
   Device::SyncClient client_wrap(std::move(local));
   Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
-  stream_ch_ = std::move(channel_wrap->channel);
+  stream_ch_ = std::move(channel_wrap->channel.channel());
 
   return res;
 }

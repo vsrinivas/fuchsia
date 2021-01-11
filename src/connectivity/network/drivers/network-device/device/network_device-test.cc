@@ -423,15 +423,15 @@ TEST_F(NetworkDeviceTest, SessionEpitaph) {
   // closing the session should cause a stop:
   ASSERT_OK(WaitStop());
   // wait for epitaph to show up in channel
-  ASSERT_OK(session.channel().wait_one(ZX_CHANNEL_READABLE, TEST_DEADLINE, nullptr));
+  ASSERT_OK(session.session().channel().wait_one(ZX_CHANNEL_READABLE, TEST_DEADLINE, nullptr));
   fidl_epitaph_t epitaph;
   uint32_t actual_bytes;
-  ASSERT_OK(
-      session.channel().read(0, &epitaph, nullptr, sizeof(epitaph), 0, &actual_bytes, nullptr));
+  ASSERT_OK(session.session().channel().read(0, &epitaph, nullptr, sizeof(epitaph), 0,
+                                             &actual_bytes, nullptr));
   ASSERT_EQ(actual_bytes, sizeof(epitaph));
   ASSERT_EQ(epitaph.error, ZX_ERR_CANCELED);
   // also the channel must be closed after:
-  ASSERT_OK(session.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
+  ASSERT_OK(session.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
 }
 
 TEST_F(NetworkDeviceTest, SessionPauseUnpause) {
@@ -611,8 +611,8 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_EQ(rx_buff->buff().data.parts_list[0].length, kDefaultBufferLength / 2);
   // let's close session_a, it should not be closed until we return the buffers
   ASSERT_OK(session_a.Close());
-  ASSERT_EQ(session_a.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)),
-                                         nullptr),
+  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                   zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   // and now return data.
   rx_buff->return_buffer().total_length = 5;
@@ -696,8 +696,8 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   ASSERT_OK(session_a.Close());
   ASSERT_OK(WaitStop());
   // Session must not have been closed yet:
-  ASSERT_EQ(session_a.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)),
-                                         nullptr),
+  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                   zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   ASSERT_TRUE(impl_.TriggerStop());
   ASSERT_OK(session_a.WaitClosed(TEST_DEADLINE));

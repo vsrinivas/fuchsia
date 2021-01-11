@@ -155,8 +155,9 @@ namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  Interface::Interface::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<Interface::Interface*>(interface)->Method(completer);
+  Interface::TypedChannelInterface::MethodCompleter::Sync completer(txn);
+  reinterpret_cast<Interface::TypedChannelInterface*>(interface)->Method(
+      completer);
 }
 
 }  // namespace methods
@@ -170,7 +171,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Interface::TryDispatch(Interface* impl,
+::fidl::DispatchResult Interface::TryDispatch(TypedChannelInterface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -179,7 +180,7 @@ namespace entries {
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Interface::Dispatch(Interface* impl,
+::fidl::DispatchResult Interface::Dispatch(TypedChannelInterface* impl,
                                            fidl_incoming_msg_t* msg,
                                            ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -191,7 +192,7 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult Interface::Interface::dispatch_message(
+::fidl::DispatchResult Interface::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return Interface::Dispatch(this, msg, txn);
 }

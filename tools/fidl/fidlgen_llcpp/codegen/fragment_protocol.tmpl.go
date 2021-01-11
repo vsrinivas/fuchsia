@@ -66,6 +66,24 @@ class {{ .Name }};
   {{- end -}}
 {{- end }}
 
+{{- define "CommaForwardParams" -}}
+  {{- range $index, $param := . -}}
+    , std::move({{ $param.Name }})
+  {{- end -}}
+{{- end }}
+
+{{- define "ForwardMessageParamsUnwrapTypedChannels" -}}
+  {{- range $index, $param := . -}}
+    {{- if $index }}, {{ end -}} std::move(
+      {{- if or (eq .Type.Kind TypeKinds.Protocol) (eq .Type.Kind TypeKinds.Request) -}}
+        {{ $param.Name }}.channel()
+      {{- else -}}
+        {{ $param.Name }}
+      {{- end -}}
+    )
+  {{- end -}}
+{{- end }}
+
 {{- /* All the parameters for a response method/constructor which uses values with references */}}
 {{- /* or trivial copy. */}}
 {{- define "PassthroughMessageParams" -}}
@@ -705,7 +723,9 @@ class {{ .Name }} final {
     {{- end }}
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel or a
+  // const reference to a |fidl::ClientEnd<{{ .Namespace }}::{{ .Name }}>|,
+  // avoiding setting up a client.
   class Call final {
     Call() = delete;
    public:
@@ -805,13 +825,18 @@ class {{ .Name }} final {
 
 {{ "" }}
   // Pure-virtual interface to be implemented by a server.
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
+  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+  // and |fidl::ServerEnd<SomeProtocol>|).
+  // TODO(fxbug.dev/65212): Rename this to |Interface| after all users have
+  // migrated to the typed channels API.
+  class TypedChannelInterface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
-    Interface() = default;
-    virtual ~Interface() = default;
+    TypedChannelInterface() = default;
+    virtual ~TypedChannelInterface() = default;
 
-    // The marker protocol type within which this |Interface| class is defined.
+    // The marker protocol type within which this |TypedChannelInterface| class is defined.
     using _EnclosingProtocol = {{ $protocol.Name }};
+
 {{ "" }}
     {{- range .Methods }}
       {{- if .HasRequest }}
@@ -847,6 +872,10 @@ class {{ .Name }} final {
     using {{ .Name }}Completer = ::fidl::Completer<>;
         {{- end }}
 
+{{ "" }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
     virtual void {{ .Name }}(
         {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
         {{- if .Transitional -}}
@@ -864,6 +893,42 @@ class {{ .Name }} final {
                                             ::fidl::Transaction* txn) final;
   };
 
+  // Pure-virtual interface to be implemented by a server.
+  class Interface : public TypedChannelInterface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using TypedChannelInterface::_EnclosingProtocol;
+
+    {{- range .ClientMethods }}
+    using TypedChannelInterface::{{ .Name }}Completer;
+
+{{ "" }}
+      {{- if .ShouldEmitTypedChannelCascadingInheritance }}
+    virtual void {{ .Name }}(
+        {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
+        {{ .Name }}Completer::Sync& _completer) final {
+      {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .Request }}
+        {{- if .Request }}, {{ end -}} _completer);
+    }
+
+    // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
+    // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
+    // Please move to overriding the typed channel overload above instead.
+    virtual void {{ .Name }}(
+      {{- template "ParamsNoTypedChannels" .Request }}{{ if .Request }}, {{ end -}}
+        {{- if .Transitional -}}
+          {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        {{- else -}}
+          {{ .Name }}Completer::Sync& _completer) = 0;
+        {{- end }}
+{{ "" }}
+      {{- end }}
+    {{- end }}
+  };
+
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
   // If there is no matching handler, it returns false, leaving the message and transaction intact.
   // In all other cases, it consumes the message and returns true.
@@ -875,12 +940,12 @@ class {{ .Name }} final {
   // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
   static ::fidl::DispatchResult Dispatch{{ template "SyncServerDispatchMethodSignature" }};
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Same as |Dispatch|, but takes a |void*| instead of |TypedChannelInterface*|.
   // Only used with |fidl::BindServer| to reduce template expansion.
   // Do not call this method manually. Use |Dispatch| instead.
   static ::fidl::DispatchResult TypeErasedDispatch(
       void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+    return Dispatch(static_cast<TypedChannelInterface*>(impl), msg, txn);
   }
 
   class EventSender;

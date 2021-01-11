@@ -158,7 +158,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
   }
 
   *out_executable = std::move(response->executable);
-  *out_ldsvc = std::move(response->ldsvc);
+  *out_ldsvc = std::move(response->ldsvc.channel());
 
   return ZX_OK;
 }
@@ -504,7 +504,7 @@ static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size
       auto* name = &names[n];
       auto path = flat->path[n];
       name->path = fidl::unowned_str(path, strlen(path));
-      name->directory.reset(flat->handle[n]);
+      name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[n]));
       flat->handle[n] = ZX_HANDLE_INVALID;
       n++;
     }
@@ -515,7 +515,7 @@ static zx_status_t send_namespace(fprocess::Launcher::SyncClient* launcher, size
       auto* name = &names[n];
       auto path = actions[i].ns.prefix;
       name->path = fidl::unowned_str(path, strlen(path));
-      name->directory.reset(actions[i].ns.handle);
+      name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(actions[i].ns.handle));
       n++;
     }
   }

@@ -549,7 +549,9 @@ void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {
   UnregisterConnection(connection);
 }
 
-zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, Rights rights) {
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
+                                fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server_end,
+                                Rights rights) {
   VnodeConnectionOptions options;
   options.flags.directory = true;
   options.rights = rights;
@@ -561,13 +563,13 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, 
   }
 
   // Tell the calling process that we've mounted the directory.
-  zx_status_t r = channel.signal_peer(0, ZX_USER_SIGNAL_0);
+  zx_status_t r = server_end.channel().signal_peer(0, ZX_USER_SIGNAL_0);
   // ZX_ERR_PEER_CLOSED is ok because the channel may still be readable.
   if (r != ZX_OK && r != ZX_ERR_PEER_CLOSED) {
     return r;
   }
 
-  return Serve(std::move(vn), std::move(channel), validated_options.value());
+  return Serve(std::move(vn), server_end.TakeChannel(), validated_options.value());
 }
 
 #endif  // ifdef __Fuchsia__

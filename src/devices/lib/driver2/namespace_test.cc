@@ -18,13 +18,14 @@ namespace frunner = llcpp::fuchsia::component::runner;
 TEST(NamespaceTest, CreateAndConnect) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  zx::channel pkg_client_end, pkg_server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &pkg_client_end, &pkg_server_end));
+  auto pkg = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  EXPECT_EQ(ZX_OK, pkg.status_value());
   frunner::ComponentNamespaceEntry ns_entries[] = {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>(std::move(pkg_client_end)))
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>(
+              std::move(pkg->client)))
           .build(),
   };
   auto ns_vec = fidl::unowned_vec(ns_entries);
@@ -33,7 +34,7 @@ TEST(NamespaceTest, CreateAndConnect) {
 
   TestDirectory pkg_directory;
   fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
-  pkg_binding.Bind(std::move(pkg_server_end), loop.dispatcher());
+  pkg_binding.Bind(pkg->server.TakeChannel(), loop.dispatcher());
 
   zx::channel server_end;
   pkg_directory.SetOpenHandler([&server_end](std::string path, auto object) {
@@ -61,7 +62,7 @@ TEST(NamespaceTest, CreateFailed) {
       frunner::ComponentNamespaceEntry::Builder(
           std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
           .set_path(std::make_unique<fidl::StringView>("/pkg"))
-          .set_directory(std::make_unique<zx::channel>())
+          .set_directory(std::make_unique<fidl::ClientEnd<llcpp::fuchsia::io::Directory>>())
           .build(),
   };
   auto ns_vec = fidl::unowned_vec(ns_entries);

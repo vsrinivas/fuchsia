@@ -406,19 +406,19 @@ namespace methods {
 
 void TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  TestProtocol::Interface::
+  TestProtocol::TypedChannelInterface::
       StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync completer(
           txn);
-  reinterpret_cast<TestProtocol::Interface*>(interface)
+  reinterpret_cast<TestProtocol::TypedChannelInterface*>(interface)
       ->StrictXUnionHenceResponseMayBeStackAllocated(completer);
 }
 
 void TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  TestProtocol::Interface::
+  TestProtocol::TypedChannelInterface::
       FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync completer(
           txn);
-  reinterpret_cast<TestProtocol::Interface*>(interface)
+  reinterpret_cast<TestProtocol::TypedChannelInterface*>(interface)
       ->FlexibleXUnionHenceResponseMustBeHeapAllocated(completer);
 }
 
@@ -438,7 +438,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult TestProtocol::TryDispatch(Interface* impl,
+::fidl::DispatchResult TestProtocol::TryDispatch(TypedChannelInterface* impl,
                                                  fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -447,7 +447,7 @@ namespace entries {
                                   sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult TestProtocol::Dispatch(Interface* impl,
+::fidl::DispatchResult TestProtocol::Dispatch(TypedChannelInterface* impl,
                                               fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -459,12 +459,12 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult TestProtocol::Interface::dispatch_message(
+::fidl::DispatchResult TestProtocol::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return TestProtocol::Dispatch(this, msg, txn);
 }
 
-::fidl::Result TestProtocol::Interface::
+::fidl::Result TestProtocol::TypedChannelInterface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::union_::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedResponse::OwnedEncodedMessage
@@ -472,7 +472,7 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result TestProtocol::Interface::
+::fidl::Result TestProtocol::TypedChannelInterface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
         ::llcpp::fidl::test::union_::StrictBoundedXUnion xu) {
@@ -481,7 +481,7 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result TestProtocol::Interface::
+::fidl::Result TestProtocol::TypedChannelInterface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::union_::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::OwnedEncodedMessage
@@ -489,7 +489,7 @@ namespace entries {
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result TestProtocol::Interface::
+::fidl::Result TestProtocol::TypedChannelInterface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::fidl::BufferSpan _buffer,
         ::llcpp::fidl::test::union_::OlderSimpleUnion xu) {

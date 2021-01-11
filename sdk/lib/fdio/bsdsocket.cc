@@ -91,7 +91,7 @@ int socket(int domain, int type, int protocol) {
           if (result->result.is_err()) {
             return ERRNO(static_cast<int32_t>(result->result.err()));
           }
-          socket_channel = std::move(result->result.mutable_response().s);
+          socket_channel = std::move(result->result.mutable_response().s.channel());
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -126,7 +126,7 @@ int socket(int domain, int type, int protocol) {
       if (result->result.is_err()) {
         return ERRNO(static_cast<int32_t>(result->result.err()));
       }
-      socket_channel = std::move(result->result.mutable_response().s);
+      socket_channel = std::move(result->result.mutable_response().s.channel());
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);

@@ -292,17 +292,18 @@ namespace methods {
 void EmptyProtocolDispatchSend(void* interface, void* bytes,
                                ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendRequest*>(bytes);
-  EmptyProtocol::Interface::SendCompleter::Sync completer(txn);
-  reinterpret_cast<EmptyProtocol::Interface*>(interface)->Send(
+  EmptyProtocol::TypedChannelInterface::SendCompleter::Sync completer(txn);
+  reinterpret_cast<EmptyProtocol::TypedChannelInterface*>(interface)->Send(
       std::move(message->e), completer);
 }
 
 void EmptyProtocolDispatchSendAndReceive(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendAndReceiveRequest*>(bytes);
-  EmptyProtocol::Interface::SendAndReceiveCompleter::Sync completer(txn);
-  reinterpret_cast<EmptyProtocol::Interface*>(interface)->SendAndReceive(
-      std::move(message->e), completer);
+  EmptyProtocol::TypedChannelInterface::SendAndReceiveCompleter::Sync completer(
+      txn);
+  reinterpret_cast<EmptyProtocol::TypedChannelInterface*>(interface)
+      ->SendAndReceive(std::move(message->e), completer);
 }
 
 }  // namespace methods
@@ -319,7 +320,7 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult EmptyProtocol::TryDispatch(Interface* impl,
+::fidl::DispatchResult EmptyProtocol::TryDispatch(TypedChannelInterface* impl,
                                                   fidl_incoming_msg_t* msg,
                                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
@@ -328,7 +329,7 @@ namespace entries {
                                    sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult EmptyProtocol::Dispatch(Interface* impl,
+::fidl::DispatchResult EmptyProtocol::Dispatch(TypedChannelInterface* impl,
                                                fidl_incoming_msg_t* msg,
                                                ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
@@ -340,18 +341,20 @@ namespace entries {
   return dispatch_result;
 }
 
-::fidl::DispatchResult EmptyProtocol::Interface::dispatch_message(
+::fidl::DispatchResult EmptyProtocol::TypedChannelInterface::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return EmptyProtocol::Dispatch(this, msg, txn);
 }
 
-::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+::fidl::Result
+EmptyProtocol::TypedChannelInterface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::emptystruct::Empty e) {
   SendAndReceiveResponse::OwnedEncodedMessage _response{e};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
+::fidl::Result
+EmptyProtocol::TypedChannelInterface::SendAndReceiveCompleterBase::Reply(
     ::fidl::BufferSpan _buffer, ::llcpp::fidl::test::emptystruct::Empty e) {
   SendAndReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
                                                           _buffer.capacity, e);

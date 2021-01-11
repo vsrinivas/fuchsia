@@ -50,7 +50,8 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
 }
 
 zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
-                            fidl::StringView name, DeviceInterface* parent, zx::channel control,
+                            fidl::StringView name, DeviceInterface* parent,
+                            fidl::ServerEnd<netdev::Session> control,
                             std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos) {
   fbl::AllocChecker checker;
 
@@ -122,7 +123,7 @@ Session::~Session() {
   ZX_ASSERT(vmo_id_ == MAX_VMOS);
   // attempts to send an epitaph, signaling that the buffers are reclaimed:
   if (control_channel_.has_value()) {
-    fidl_epitaph_write(control_channel_->get(), ZX_ERR_CANCELED);
+    fidl_epitaph_write(control_channel_->channel().get(), ZX_ERR_CANCELED);
   }
 
   LOGF_TRACE("network-device(%s): Session destroyed", name());
@@ -193,7 +194,7 @@ zx_status_t Session::Init(netdev::Fifos* out) {
   return ZX_OK;
 }
 
-zx_status_t Session::Bind(zx::channel channel) {
+zx_status_t Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
   auto result = fidl::BindServer(
       dispatcher_, std::move(channel), this,
       fidl::OnUnboundFn<Session>([](Session* self, fidl::UnbindInfo info, zx::channel channel) {
@@ -207,7 +208,7 @@ zx_status_t Session::Bind(zx::channel channel) {
   }
 }
 
-void Session::OnUnbind(fidl::UnbindInfo::Reason reason, zx::channel channel) {
+void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel) {
   LOGF_TRACE("network-device(%s): session unbound, reason=%d", name(), reason);
 
   // Stop the Tx thread immediately, so we stop fetching more tx buffers from the client.

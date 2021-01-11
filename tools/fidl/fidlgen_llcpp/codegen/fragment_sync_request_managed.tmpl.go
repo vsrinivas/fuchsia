@@ -5,6 +5,12 @@
 package codegen
 
 const fragmentSyncRequestManagedTmpl = `
+{{- define "ParamsNoTypedChannels" -}}
+  {{- range $index, $param := . -}}
+    {{- if $index }}, {{ end -}}{{ $param.Type.LLDeclNoTypedChannels }} {{ $param.Name }}
+  {{- end -}}
+{{- end }}
+
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.LLDecl }} {{ $param.Name }}

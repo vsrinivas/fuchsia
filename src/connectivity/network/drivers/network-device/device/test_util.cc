@@ -297,21 +297,19 @@ zx_status_t TestSession::GetInfo(netdev::SessionInfo* info) {
   return ZX_OK;
 }
 
-void TestSession::Setup(zx::channel session, netdev::Fifos fifos) {
+void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::Fifos fifos) {
   session_ = std::move(session);
   fifos_ = std::move(fifos);
 }
 
 zx_status_t TestSession::SetPaused(bool paused) {
-  return netdev::Session::Call::SetPaused(zx::unowned_channel(session_.get()), paused).status();
+  return netdev::Session::Call::SetPaused(session_, paused).status();
 }
 
-zx_status_t TestSession::Close() {
-  return netdev::Session::Call::Close(zx::unowned_channel(session_.get())).status();
-}
+zx_status_t TestSession::Close() { return netdev::Session::Call::Close(session_).status(); }
 
 zx_status_t TestSession::WaitClosed(zx::time deadline) {
-  return session_.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
+  return session_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
 }
 
 buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {

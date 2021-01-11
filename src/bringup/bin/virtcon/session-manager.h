@@ -17,6 +17,8 @@ namespace virtcon {
 // the sessions until they are closed.
 // This class is not thread safe.
 class SessionManager final : public llcpp::fuchsia::virtualconsole::SessionManager::Interface {
+  using Interface::CreateSession;
+
  public:
   // Create a SessionManager. The pointers to `dispatcher` and `color_scheme` are unowned and
   // must outlive the SessionManager class.

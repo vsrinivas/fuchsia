@@ -36,11 +36,13 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
   zx::status<zx::channel> Start(
-      zx::channel node, fidl::VectorView<fidl::StringView> offers,
+      fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
+      fidl::VectorView<fidl::StringView> offers,
       fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
       llcpp::fuchsia::data::Dictionary program,
       fidl::VectorView<llcpp::fuchsia::component::runner::ComponentNamespaceEntry> ns,
-      zx::channel outgoing_dir, zx::channel exposed_dir);
+      fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,
+      fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir);
 
  private:
   fidl::Client<llcpp::fuchsia::driver::framework::DriverHost> driver_host_;

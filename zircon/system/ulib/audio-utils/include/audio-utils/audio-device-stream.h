@@ -53,8 +53,8 @@ class AudioDeviceStream {
 
   zx_status_t WatchPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const;
 
-  bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_); }
-  bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_); }
+  bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_.channel()); }
+  bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_.channel()); }
 
   // Available for unit tests.
   void SetStreamChannel(zx::channel channel) { stream_ch_ = std::move(channel); }
@@ -80,8 +80,8 @@ class AudioDeviceStream {
   AudioDeviceStream(StreamDirection direction, const char* dev_path);
   virtual ~AudioDeviceStream();
 
-  zx::channel stream_ch_;
-  zx::channel rb_ch_;
+  fidl::ClientEnd<audio_fidl::StreamConfig> stream_ch_;
+  fidl::ClientEnd<audio_fidl::RingBuffer> rb_ch_;
   zx::vmo rb_vmo_;
 
   const StreamDirection direction_;

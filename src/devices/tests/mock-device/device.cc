@@ -39,8 +39,9 @@ using MockDeviceType = ddk::FullDevice<MockDevice>;
 
 class MockDevice : public MockDeviceType {
  public:
-  MockDevice(zx_device_t* device, zx::channel controller);
-  static zx_status_t Create(zx_device_t* parent, zx::channel controller,
+  MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDevice> controller);
+  static zx_status_t Create(zx_device_t* parent,
+                            fidl::ClientEnd<device_mock::MockDevice> controller,
                             std::unique_ptr<MockDevice>* out);
 
   // Device protocol implementation.
@@ -62,8 +63,8 @@ class MockDevice : public MockDeviceType {
   device_mock::HookInvocation ConstructHookInvocation();
   static device_mock::HookInvocation ConstructHookInvocation(uint64_t device_id);
 
-  // Create a new thread that will serve a MockDeviceThread interface over |c|
-  void CreateThread(zx::channel channel);
+  // Create a new thread that will serve a MockDeviceThread interface over |server_end|
+  void CreateThread(fidl::ServerEnd<device_mock::MockDeviceThread> server_end);
 
  private:
   // Retrieve the current thread's process and thread koids
@@ -73,7 +74,7 @@ class MockDevice : public MockDeviceType {
   struct ThreadFuncArg {
     // channel that the thread will use to serve a MockDeviceThread
     // interface over
-    zx::channel channel;
+    fidl::ServerEnd<device_mock::MockDeviceThread> server_end;
     // Device this thread is executing for
     MockDevice* dev;
   };
@@ -155,14 +156,14 @@ matchers(Ts...) -> matchers<Ts...>;
 zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
                            ProcessActionsContext* context);
 
-MockDevice::MockDevice(zx_device_t* device, zx::channel controller)
+MockDevice::MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDevice> controller)
     : MockDeviceType(device),
       controller_(device_mock::MockDevice::SyncClient(std::move(controller))) {}
 
 int MockDevice::ThreadFunc(void* raw_arg) {
   auto arg = std::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
   std::variant<zx::unowned_channel, device_mock::MockDeviceThread::EventSender> event_sender =
-      device_mock::MockDeviceThread::EventSender(std::move(arg->channel));
+      device_mock::MockDeviceThread::EventSender(std::move(arg->server_end));
 
   while (true) {
     fbl::Array<device_mock::Action> actions;
@@ -185,9 +186,9 @@ int MockDevice::ThreadFunc(void* raw_arg) {
   return 0;
 }
 
-void MockDevice::CreateThread(zx::channel channel) {
+void MockDevice::CreateThread(fidl::ServerEnd<device_mock::MockDeviceThread> server_end) {
   auto arg = std::make_unique<ThreadFuncArg>();
-  arg->channel = std::move(channel);
+  arg->server_end = std::move(server_end);
   arg->dev = this;
 
   fbl::AutoLock guard(&lock_);
@@ -374,7 +375,8 @@ zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
   return ctx.hook_status;
 }
 
-zx_status_t MockDevice::Create(zx_device_t* parent, zx::channel controller,
+zx_status_t MockDevice::Create(zx_device_t* parent,
+                               fidl::ClientEnd<device_mock::MockDevice> controller,
                                std::unique_ptr<MockDevice>* out) {
   auto dev = std::make_unique<MockDevice>(parent, std::move(controller));
   *out = std::move(dev);

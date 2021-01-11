@@ -64,7 +64,7 @@ class Client final {
   // |Protocol::AsyncEventHandler::Unbound| is invoked asynchronously on a dispatcher thread.
   // NOTE: Bind() must have been called before this.
   // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
-  // |Protocol::AsyncEventHandler::Unbound from a dispatcher thread, as that will likely deadlock.
+  // |Protocol::AsyncEventHandler::Unbound| from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
     ZX_ASSERT(client_);
     client_->ClientBase::Unbind();

@@ -53,7 +53,8 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // The resulting session is stored in `out_session`, and the created FIFO objects used for the
   // data path are stored in `out_fifos` upon successful creation.
   static zx_status_t Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
-                            fidl::StringView name, DeviceInterface* parent, zx::channel control,
+                            fidl::StringView name, DeviceInterface* parent,
+                            fidl::ServerEnd<netdev::Session> control,
                             std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos);
   bool IsPrimary() const;
   bool IsListen() const;
@@ -118,9 +119,9 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
   zx_status_t Init(netdev::Fifos* out);
-  zx_status_t Bind(zx::channel channel);
+  zx_status_t Bind(fidl::ServerEnd<netdev::Session> channel);
   void StopTxThread();
-  void OnUnbind(fidl::UnbindInfo::Reason reason, zx::channel channel);
+  void OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel);
   int Thread();
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
   zx_status_t FetchTx();
@@ -149,7 +150,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
   // the `binding_` Server.
-  fit::optional<zx::channel> control_channel_;
+  fit::optional<fidl::ServerEnd<netdev::Session>> control_channel_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;
   fbl::RefPtr<RefCountedFifo> fifo_rx_;

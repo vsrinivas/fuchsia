@@ -1630,7 +1630,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
   EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
 
-  zx::channel channel = std::move(result->result.mutable_response().volume);
+  zx::channel channel = std::move(result->result.mutable_response().volume.channel());
   std::string path = storage::GetTopologicalPath(channel).value().substr(5);  // strip "/dev/"
   ASSERT_FALSE(path.empty());
 

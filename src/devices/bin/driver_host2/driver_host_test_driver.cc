@@ -34,7 +34,7 @@ class TestDriver {
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    status = fdio_service_connect_at(svc_dir.value()->get(), ftest::Incoming::Name,
+    status = fdio_service_connect_at(svc_dir.value().channel(), ftest::Incoming::Name,
                                      server_end.release());
     if (status != ZX_OK) {
       return zx::error(status);

@@ -11,7 +11,7 @@ Reply({{ template "Params" .Response }})
 
 {{- define "ReplyManagedMethodDefinition" }}
 ::fidl::Result
-{{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::
+{{ .LLProps.ProtocolName }}::TypedChannelInterface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedMethodSignature" . }} {
   {{ .Name }}Response::OwnedEncodedMessage _response{
       {{- template "PassthroughMessageParams" .Response -}}
@@ -26,7 +26,7 @@ ReplySuccess({{ template "Params" .Result.ValueMembers }})
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}
 ::fidl::Result
-{{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::
+{{ .LLProps.ProtocolName }}::TypedChannelInterface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> _response;
   {{- range .Result.ValueMembers }}
@@ -43,7 +43,7 @@ ReplyError({{ .Result.ErrorDecl }} error)
 
 {{- define "ReplyManagedResultErrorMethodDefinition" }}
 ::fidl::Result
-{{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::
+{{ .LLProps.ProtocolName }}::TypedChannelInterface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedResultErrorMethodSignature" . }} {
   return Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }

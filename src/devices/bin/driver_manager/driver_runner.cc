@@ -47,10 +47,12 @@ DriverHostComponent::DriverHostComponent(
                    std::make_shared<EventHandler>(this, driver_hosts)) {}
 
 zx::status<zx::channel> DriverHostComponent::Start(
-    zx::channel node, fidl::VectorView<fidl::StringView> offers,
+    fidl::ClientEnd<llcpp::fuchsia::driver::framework::Node> node,
+    fidl::VectorView<fidl::StringView> offers,
     fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
     fdata::Dictionary program, fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
-    zx::channel outgoing_dir, zx::channel exposed_dir) {
+    fidl::ServerEnd<llcpp::fuchsia::io::Directory> outgoing_dir,
+    fidl::ClientEnd<llcpp::fuchsia::io::Directory> exposed_dir) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
   if (status != ZX_OK) {

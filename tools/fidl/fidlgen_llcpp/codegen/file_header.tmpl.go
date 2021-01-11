@@ -30,9 +30,11 @@ const fileHeaderTmpl = `
 #include <lib/fit/optional.h>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
