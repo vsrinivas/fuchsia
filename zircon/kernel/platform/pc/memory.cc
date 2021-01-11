@@ -80,8 +80,13 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
   snprintf(base_arena.name, sizeof(base_arena.name), "%s", "memory");
   base_arena.flags = 0;
 
-  zx_status_t status;
-  for (const auto& range : ranges) {
+  // Iterate over the ranges, merging continguous ranges as we go.
+  //
+  // Some platforms gives us hundreds of entries (hitting a static ceiling in
+  // the arena code) that can be merged down to just a few. (c.f.
+  // http://fxbug.dev/66742).
+  zbitl::MemRangeMerger merged_ranges(ranges.begin(), ranges.end());
+  for (const zbi_mem_range_t& range : merged_ranges) {
     LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n", range.paddr, range.length,
             range.type == ZBI_MEM_RANGE_RAM ? "" : "not ");
     if (range.type != ZBI_MEM_RANGE_RAM) {
@@ -103,6 +108,7 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
     }
 
     mark_mmio_region_to_reserve(base, static_cast<size_t>(size));
+    zx_status_t status;
     if (have_limit) {
       status = memory_limit_add_range(base, size, base_arena);
     }
