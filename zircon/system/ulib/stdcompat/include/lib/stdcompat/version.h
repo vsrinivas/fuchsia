@@ -8,9 +8,9 @@
 // This <version> polyfills is meant to provide the feature testing macros for the rest of
 // the stdcompat library. It is not meant to be a full polyfill of <version>.
 
-#if __has_include(<version>)
+#if __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 #include <version>
-#elif __cplusplus > 201703L
+#elif __cplusplus > 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 #error "cpp=std20 must provide a '<version>' header."
 #else
 
@@ -18,6 +18,6 @@
 #define __cpp_lib_string_view 201606L
 #endif
 
-#endif
+#endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_VERSION_H_

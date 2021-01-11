@@ -1,0 +1,14 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "test/stdcompat-unit-test",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

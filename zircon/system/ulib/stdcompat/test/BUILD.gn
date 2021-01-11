@@ -3,34 +3,66 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//src/sys/build/fuchsia_unittest_package.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":stdcompat-test",
+    ":stdcompat-polyfills-unit-test($host_toolchain)",
+    ":stdcompat-tests",
     ":stdcompat-unit-test($host_toolchain)",
   ]
 }
 
-fuchsia_unittest_package("stdcompat-test") {
-  deps = [ ":stdcompat-unit-test" ]
-}
+stdcompat_test_sources = [ "version_test.cc" ]
 
-test("stdcompat-fit-transition-unittest") {
-  sources = [ "string_view_test.cc" ]
-  deps = [
-    "//zircon/system/ulib/stdcompat",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-test("stdcompat-unit-test") {
-  sources = [ "version_test.cc" ]
-  deps = [
+group("stdcompat-test-deps") {
+  testonly = true
+  visibility = [ ":*" ]
+  public_deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/stdcompat",
   ]
+}
+
+# This target will be forced to compile using stdcompat provided polyfills.
+test("stdcompat-polyfills-unit-test") {
+  sources = stdcompat_test_sources
+  deps = [ ":stdcompat-test-deps" ]
+  configs += [ ":stdcompat-select-polyfills" ]
+}
+
+# This target will let the feature-test macro pick std implementation if available.
+test("stdcompat-unit-test") {
+  sources = stdcompat_test_sources
+  deps = [ ":stdcompat-test-deps" ]
+}
+
+fuchsia_component("stdcompat-test") {
+  testonly = true
+  component_name = "stdcompat-test"
+  manifest = "meta/stdcompat-test.cml"
+  deps = [ ":stdcompat-unit-test" ]
+}
+
+fuchsia_component("stdcompat-polyfills-test") {
+  testonly = true
+  component_name = "stdcompat-polyfills-test"
+  manifest = "meta/stdcompat-polyfills-test.cml"
+  deps = [ ":stdcompat-polyfills-unit-test" ]
+}
+
+fuchsia_test_package("stdcompat-tests") {
+  test_components = [
+    ":stdcompat-test",
+    ":stdcompat-polyfills-test",
+  ]
+}
+
+config("stdcompat-select-polyfills") {
+  visibility = [ ":*" ]
+  defines = [ "LIB_STDCOMPAT_USE_POLYFILLS" ]
 }
