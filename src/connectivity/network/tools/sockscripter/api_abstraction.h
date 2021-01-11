@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_API_ABSTRACTION_H_
 #define SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_API_ABSTRACTION_H_
 
+#include <sys/socket.h>
+
 class ApiAbstraction {
  public:
   virtual int socket(int domain, int type, int protocol) = 0;

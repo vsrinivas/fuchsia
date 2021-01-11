@@ -4,14 +4,12 @@
 
 #include "sockscripter.h"
 
-#include <iomanip>
-#include <utility>
+#include <arpa/inet.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "addr.h"
-#include "src/lib/fxl/strings/split_string.h"
 
 TEST(SendBufferGenTest, LoadHexBuffer) {
   SendBufferGenerator gen;

@@ -6,12 +6,7 @@
 
 #include <getopt.h>
 #include <net/if.h>
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
-
-#include <climits>
-#include <iostream>
 
 #include "addr.h"
 #include "log.h"
@@ -97,7 +92,7 @@ struct SocketType {
     {"raw6", "<protocol>", "open new AF_INET6 SOCK_RAW socket", AF_INET6, SOCK_RAW},
 };
 
-typedef bool (SockScripter::*SockScripterHandler)(char* arg);
+using SockScripterHandler = bool (SockScripter::*)(char*);
 const struct Command {
   // Command name as used on the commandline.
   const char* name;
@@ -182,12 +177,11 @@ const struct Command {
     {"sleep", "<sleep-secs>", "sleeps", &SockScripter::Sleep},
 };
 
-int print_socket_types() {
+void print_socket_types() {
   for (const auto& socket_type : socket_types) {
     std::cout << socket_type.name << " ";
   }
   std::cout << std::endl;
-  return 0;
 }
 
 int check_socket_type_has_proto(const char* stype) {
@@ -275,7 +269,8 @@ int SockScripter::Execute(int argc, char* const argv[]) {
   while ((opt = getopt(argc, argv, "hsp:ca:")) != -1) {
     switch (opt) {
       case 's':
-        return print_socket_types();
+        print_socket_types();
+        return 0;
       case 'p':
         return check_socket_type_has_proto(optarg);
       case 'c':
@@ -292,31 +287,34 @@ int SockScripter::Execute(int argc, char* const argv[]) {
     return usage(argv[0]);
   }
 
-  bool found = false;
-  for (const auto& socket_type : socket_types) {
-    if (strcmp(argv[optind], socket_type.name) == 0) {
-      found = true;
-      int proto = 0;
-      if (socket_type.arg) {
-        optind++;
-        if (optind >= argc) {
-          fprintf(stderr, "Error-Need protocol# for RAW socket!\n\n");
+  {
+    bool found = false;
+    for (const auto& socket_type : socket_types) {
+      if (strcmp(argv[optind], socket_type.name) == 0) {
+        found = true;
+        int proto = 0;
+        if (socket_type.arg) {
+          optind++;
+          if (optind >= argc) {
+            fprintf(stderr, "Error-Need protocol# for RAW socket!\n\n");
+            return -1;
+          }
+          if (!str2int(argv[optind], &proto)) {
+            fprintf(stderr, "Error-Invalid protocol# (%s) for RAW socket!\n\n", argv[optind]);
+            return -1;
+          }
+        }
+        if (!Open(socket_type.domain, socket_type.type, proto)) {
           return -1;
         }
-        if (!str2int(argv[optind], &proto)) {
-          fprintf(stderr, "Error-Invalid protocol# (%s) for RAW socket!\n\n", argv[optind]);
-          return -1;
-        }
+        break;
       }
-      if (!Open(socket_type.domain, socket_type.type, proto)) {
-        return -1;
-      }
-      break;
     }
-  }
-  if (!found) {
-    fprintf(stderr, "Error-first parameter needs to be socket type:");
-    print_socket_types();
+    if (!found) {
+      fprintf(stderr, "Error-first parameter needs to be socket type:");
+      print_socket_types();
+      return -1;
+    }
   }
 
   optind++;
@@ -332,34 +330,36 @@ int SockScripter::Execute(int argc, char* const argv[]) {
       cmd_arg = argv[optind];
     }
 
-    bool found = false;
-    for (const auto& cmd : kCommands) {
-      if (strcmp(cmd_arg, cmd.name) == 0) {
-        found = true;
-        optind++;
-        char* arg = nullptr;
-        if (cmd.opt_arg_descr) {
-          if (optind < argc) {
-            arg = argv[optind];
-            optind++;
-          } else {
-            fprintf(stderr, "Missing argument %s for %s!\n\n", cmd.opt_arg_descr, cmd.name);
-            return -1;
+    {
+      bool found = false;
+      for (const auto& cmd : kCommands) {
+        if (strcmp(cmd_arg, cmd.name) == 0) {
+          found = true;
+          optind++;
+          char* arg = nullptr;
+          if (cmd.opt_arg_descr) {
+            if (optind < argc) {
+              arg = argv[optind];
+              optind++;
+            } else {
+              fprintf(stderr, "Missing argument %s for %s!\n\n", cmd.opt_arg_descr, cmd.name);
+              return -1;
+            }
           }
-        }
-        for (int i = 0; i < cfg.repeat_count; i++) {
-          auto handler = cmd.handler;
-          if (!(this->*(handler))(arg)) {
-            return -1;
+          for (int i = 0; i < cfg.repeat_count; i++) {
+            auto handler = cmd.handler;
+            if (!(this->*(handler))(arg)) {
+              return -1;
+            }
+            usleep(1000 * cfg.delay_ms);
           }
-          usleep(1000 * cfg.delay_ms);
+          break;
         }
-        break;
       }
-    }
-    if (!found) {
-      fprintf(stderr, "Error: Cannot find command '%s'!\n\n", argv[optind]);
-      return -1;
+      if (!found) {
+        fprintf(stderr, "Error: Cannot find command '%s'!\n\n", argv[optind]);
+        return -1;
+      }
     }
   }
   return 0;
@@ -398,10 +398,10 @@ bool SockScripter::SetBroadcast(char* arg) {
     LOG(ERROR) << "Error: Invalid broadcast flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_BROADCAST, flag);
+  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_BROADCAST, flag)
 }
 
-bool SockScripter::LogBroadcast(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_BROADCAST, int); }
+bool SockScripter::LogBroadcast(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_BROADCAST, int) }
 
 bool SockScripter::SetReuseaddr(char* arg) {
   int flag;
@@ -409,7 +409,7 @@ bool SockScripter::SetReuseaddr(char* arg) {
     LOG(ERROR) << "Error: Invalid reuseaddr flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEADDR, flag);
+  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEADDR, flag)
 }
 
 bool SockScripter::SetReuseport(char* arg) {
@@ -418,12 +418,12 @@ bool SockScripter::SetReuseport(char* arg) {
     LOG(ERROR) << "Error: Invalid reuseport flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEPORT, flag);
+  SET_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEPORT, flag)
 }
 
-bool SockScripter::LogReuseaddr(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEADDR, int); }
+bool SockScripter::LogReuseaddr(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEADDR, int) }
 
-bool SockScripter::LogReuseport(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEPORT, int); }
+bool SockScripter::LogReuseport(char* arg) { LOG_SOCK_OPT_VAL(SOL_SOCKET, SO_REUSEPORT, int) }
 
 bool SockScripter::SetIpUnicastTTL(char* arg) {
   int ttl;
@@ -431,7 +431,7 @@ bool SockScripter::SetIpUnicastTTL(char* arg) {
     LOG(ERROR) << "Error: Invalid unicast TTL='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_TTL, ttl);
+  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_TTL, ttl)
 }
 
 bool SockScripter::SetIpUnicastHops(char* arg) {
@@ -440,11 +440,11 @@ bool SockScripter::SetIpUnicastHops(char* arg) {
     LOG(ERROR) << "Error: Invalid unicast hops='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_UNICAST_HOPS, hops);
+  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_UNICAST_HOPS, hops)
 }
 
 bool SockScripter::LogIpUnicastHops(char* arg) {
-  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_UNICAST_HOPS, int);
+  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_UNICAST_HOPS, int)
 }
 
 bool SockScripter::SetIpMcastTTL(char* arg) {
@@ -453,12 +453,12 @@ bool SockScripter::SetIpMcastTTL(char* arg) {
     LOG(ERROR) << "Error: Invalid mcast TTL='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_TTL, ttl);
+  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_TTL, ttl)
 }
 
-bool SockScripter::LogIpMcastTTL(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_TTL, int); }
+bool SockScripter::LogIpMcastTTL(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_TTL, int) }
 
-bool SockScripter::LogIpUnicastTTL(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_TTL, int); }
+bool SockScripter::LogIpUnicastTTL(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_TTL, int) }
 
 bool SockScripter::SetIpMcastLoop4(char* arg) {
   int flag;
@@ -466,11 +466,11 @@ bool SockScripter::SetIpMcastLoop4(char* arg) {
     LOG(ERROR) << "Error: Invalid loop4 flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_LOOP, flag);
+  SET_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_LOOP, flag)
 }
 
 bool SockScripter::LogIpMcastLoop4(char* arg) {
-  LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_LOOP, int);
+  LOG_SOCK_OPT_VAL(IPPROTO_IP, IP_MULTICAST_LOOP, int)
 }
 
 bool SockScripter::SetIpMcastHops(char* arg) {
@@ -479,11 +479,11 @@ bool SockScripter::SetIpMcastHops(char* arg) {
     LOG(ERROR) << "Error: Invalid mcast hops='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_HOPS, hops);
+  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_HOPS, hops)
 }
 
 bool SockScripter::LogIpMcastHops(char* arg) {
-  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_HOPS, int);
+  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_HOPS, int)
 }
 
 bool SockScripter::SetIpV6Only(char* arg) {
@@ -492,10 +492,10 @@ bool SockScripter::SetIpV6Only(char* arg) {
     LOG(ERROR) << "Error: Invalid ipv6-only flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_V6ONLY, flag);
+  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_V6ONLY, flag)
 }
 
-bool SockScripter::LogIpV6Only(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_V6ONLY, int); }
+bool SockScripter::LogIpV6Only(char* arg) { LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_V6ONLY, int) }
 
 bool SockScripter::SetIpMcastLoop6(char* arg) {
   int flag;
@@ -503,11 +503,11 @@ bool SockScripter::SetIpMcastLoop6(char* arg) {
     LOG(ERROR) << "Error: Invalid loop6 flag='" << arg << "'!";
     return false;
   }
-  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_LOOP, flag);
+  SET_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_LOOP, flag)
 }
 
 bool SockScripter::LogIpMcastLoop6(char* arg) {
-  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_LOOP, int);
+  LOG_SOCK_OPT_VAL(IPPROTO_IPV6, IPV6_MULTICAST_LOOP, int)
 }
 
 bool SockScripter::SetBindToDevice(char* arg) {

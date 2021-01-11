@@ -5,9 +5,6 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_SOCKSCRIPTER_H_
 #define SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_SOCKSCRIPTER_H_
 
-#include <arpa/inet.h>
-#include <unistd.h>
-
 #include <string>
 
 #include "api_abstraction.h"
