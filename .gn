@@ -51,3 +51,5 @@ exec_script_whitelist = [
   "//topaz/tools/protobuf/protobuf_dart.gni",
   "//zircon/kernel/arch/x86/phys/BUILD.gn",
 ]
+
+check_system_includes = true
