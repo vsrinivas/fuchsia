@@ -424,7 +424,7 @@ class PreemptionState {
     DEBUG_ASSERT(PreemptDisableCount() < 0xffff);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    ++disable_counts_;
+    disable_counts_ = disable_counts_ + 1;
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
@@ -434,7 +434,8 @@ class PreemptionState {
     DEBUG_ASSERT(PreemptDisableCount() > 0);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    uint32_t new_count = --disable_counts_;
+    disable_counts_ = disable_counts_ - 1;
+    uint32_t new_count = disable_counts_;
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
 
     if (new_count == 0) {
@@ -451,7 +452,7 @@ class PreemptionState {
     DEBUG_ASSERT(PreemptDisableCount() > 0);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    --disable_counts_;
+    disable_counts_ = disable_counts_ - 1;
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
@@ -471,7 +472,7 @@ class PreemptionState {
     DEBUG_ASSERT(ReschedDisableCount() < 0xffff);
 
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_counts_ += 1 << 16;
+    disable_counts_ = disable_counts_ + (1 << 16);
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
@@ -584,14 +585,14 @@ class MemoryAllocationState {
  public:
   void Disable() {
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_count_++;
+    disable_count_ = disable_count_ + 1;
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 
   void Enable() {
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
     DEBUG_ASSERT(disable_count_ > 0);
-    disable_count_--;
+    disable_count_ = disable_count_ - 1;
     ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
   }
 

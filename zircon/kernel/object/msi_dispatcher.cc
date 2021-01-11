@@ -222,7 +222,7 @@ void MsiDispatcherImpl::MaskInterrupt() {
   }
 
   if (has_cap_pvm_) {
-    *mask_bits_reg_ |= (1 << msi_id());
+    *mask_bits_reg_ = *mask_bits_reg_ | (1 << msi_id());
     arch::DeviceMemoryBarrier();
   }
 }
@@ -236,7 +236,7 @@ void MsiDispatcherImpl::UnmaskInterrupt() {
   }
 
   if (has_cap_pvm_) {
-    *mask_bits_reg_ &= ~(1 << msi_id());
+    *mask_bits_reg_ = *mask_bits_reg_ & ~(1 << msi_id());
     arch::DeviceMemoryBarrier();
   }
 }
