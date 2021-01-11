@@ -13,6 +13,7 @@ go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
+    "c/conformance.go",
     "config/defaults.go",
     "dart/benchmarks.go",
     "dart/common.go",

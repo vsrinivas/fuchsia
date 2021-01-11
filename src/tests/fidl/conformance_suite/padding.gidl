@@ -5,7 +5,7 @@
 // In this file "0xee" is a bad padding byte. The rest of the object is correct.
 
 success("CorrectPaddingBetweenFieldsInt8Int16") {
-    bindings_denylist = [llcpp],
+    bindings_denylist = [c, llcpp],
     value = PaddingBetweenFieldsInt8Int16{
         a: 0x01,
         b: 0x0203,
@@ -364,7 +364,7 @@ decode_failure("BadPaddingEndOfInlineObject2ByteUpperByte") {
 }
 
 success("CorrectPaddingEndOfInlineObject3Byte") {
-    bindings_denylist = [llcpp],
+    bindings_denylist = [c, llcpp],
     value = PaddingEndOfInlineObject3Byte{
         a: Struct3Byte{
             a: 0x0102,

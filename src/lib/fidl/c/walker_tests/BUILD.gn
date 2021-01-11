@@ -6,6 +6,24 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_deps = []
+foreach(gidl_file, conformance_suite_gidl_files) {
+  gidl_name = get_path_info(gidl_file, "name")
+  target = "conformance_suite__${gidl_name}"
+  gidl_deps += [ ":" + target ]
+  gidl_c_conformance(target) {
+    testonly = true
+    inputs = [ gidl_file ]
+    fidl = conformance_suite_fidl_target
+    deps = [ "//third_party/googletest:gtest" ]
+    if (is_fuchsia) {
+      deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
+    }
+  }
+}
 
 source_set("test_sources") {
   testonly = true
@@ -29,6 +47,7 @@ source_set("test_sources") {
     ":fidl.test.coding.fuchsia_llcpp",
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -54,7 +73,7 @@ if (is_fuchsia) {
     }
     testonly = true
     sources = []
-    deps = [ ":test_sources" ]
+    deps = [ ":test_sources" ] + gidl_deps
   }
 
   fuchsia_unittest_package("fidl-walker-tests") {
@@ -111,6 +130,7 @@ source_set("host_test_sources") {
   ]
   public_deps = [
     ":fidl.test.coding_llcpp",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zxtest",
   ]
@@ -127,7 +147,7 @@ if (is_linux || is_mac) {
     }
     testonly = true
     sources = []
-    deps = [ ":host_test_sources" ]
+    deps = [ ":host_test_sources" ] + gidl_deps
   }
 }
 

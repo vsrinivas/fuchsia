@@ -1,8 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package llcpp
+package c
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <conformance/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fidl/llcpp/tests/test_utils.h"
+#include "src/lib/fidl/c/walker_tests/conformance_test_utils.h"
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
@@ -37,7 +37,7 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
 {{- end }}
-TEST(Conformance, {{ .Name }}_Encode) {
+TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
@@ -46,29 +46,8 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
-	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&obj, expected_bytes, expected_handles));
-}
-{{- if .FuchsiaOnly }}
-#endif  // __Fuchsia__
-{{- end }}
-{{ end }}
-
-{{ range .DecodeSuccessCases }}
-{{- if .FuchsiaOnly }}
-#ifdef __Fuchsia__
-{{- end }}
-TEST(Conformance, {{ .Name }}_Decode) {
-	{{- if .HandleDefs }}
-	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
-	{{- end }}
-	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
-	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
-	{{ .ValueBuild }}
-	auto bytes = {{ .Bytes }};
-	auto handles = {{ .Handles }};
-	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles)));
+	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeSuccess(obj.Type, &obj, expected_bytes, expected_handles));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -79,15 +58,15 @@ TEST(Conformance, {{ .Name }}_Decode) {
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
 {{- end }}
-TEST(Conformance, {{ .Name }}_Encode_Failure) {
+TEST(C_Conformance, {{ .Name }}_LinearizeAndEncode_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
-	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, {{ .ErrorCode }}));
+	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(c_conformance_utils::LinearizeAndEncodeFailure(obj.Type, &obj, {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (const auto handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -99,17 +78,38 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 {{- end }}
 {{ end }}
 
+{{ range .DecodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
+TEST(C_Conformance, {{ .Name }}_Decode) {
+	{{- if .HandleDefs }}
+	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	{{- end }}
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	{{ .ValueBuild }}
+	auto bytes = {{ .Bytes }};
+	auto handles = {{ .Handles }};
+	auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(c_conformance_utils::DecodeSuccess(obj.Type, std::move(bytes), std::move(handles)));
+}
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
+{{ end }}
+
 {{ range .DecodeFailureCases }}
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
 {{- end }}
-TEST(Conformance, {{ .Name }}_Decode_Failure) {
+TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }}));
+	EXPECT_TRUE(c_conformance_utils::DecodeFailure({{ .ValueType }}::Type, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (const auto handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -149,7 +149,7 @@ type decodeFailureCase struct {
 	FuchsiaOnly                                            bool
 }
 
-// Generate generates Low-Level C++ tests.
+// Generate generates C tests.
 func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)

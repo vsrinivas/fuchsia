@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -57,4 +58,13 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	parts := strings.Split(decl.Name(), "/")
 	parts = append([]string{"llcpp"}, parts...)
 	return strings.Join(parts, "::")
+}
+
+func ConformanceType(gidlTypeString string) string {
+	return "llcpp::conformance::" + gidlTypeString
+}
+
+func LlcppErrorCode(code gidlir.ErrorCode) string {
+	// TODO(fxbug.dev/35381) Implement different codes for different FIDL error cases.
+	return "ZX_ERR_INVALID_ARGS"
 }

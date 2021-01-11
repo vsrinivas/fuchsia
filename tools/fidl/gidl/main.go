@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	gidlc "go.fuchsia.dev/fuchsia/tools/fidl/gidl/c"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
 	gidlcorpus "go.fuchsia.dev/fuchsia/tools/fidl/gidl/fuzzer_corpus"
@@ -36,6 +37,7 @@ import (
 type Generator func(gidlir.All, fidl.Root, gidlconfig.GeneratorConfig) ([]byte, error)
 
 var conformanceGenerators = map[string]Generator{
+	"c":             gidlc.GenerateConformanceTests,
 	"go":            gidlgolang.GenerateConformanceTests,
 	"llcpp":         gidlllcpp.GenerateConformanceTests,
 	"hlcpp":         gidlhlcpp.GenerateConformanceTests,
