@@ -7,6 +7,7 @@
 
 #include <align.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -22,6 +23,9 @@
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
+
+// The maximum number of page runs examined while performing a contiguous allocation.
+KCOUNTER_DECLARE(counter_max_runs_examined, "vm.pmm.max_runs_examined", Max)
 
 zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
   // TODO: validate that info is sane (page aligned, etc)
@@ -109,15 +113,21 @@ vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
     return 0;
   }
 
+  vm_page_t* result = nullptr;
   paddr_t aligned_offset = (rounded_base - base()) / PAGE_SIZE;
   paddr_t start = aligned_offset;
   LTRACEF("starting search at aligned offset %#" PRIxPTR "\n", start);
   LTRACEF("arena base %#" PRIxPTR " size %zu\n", base(), size());
 
+  // Keep track of how many runs of pages we must examine before finding a
+  // sufficiently long contiguous run.
+  int64_t num_runs_examined = 0;
+
 retry:
   // search while we're still within the arena and have a chance of finding a slot
   // (start + count < end of arena)
   while ((start < size() / PAGE_SIZE) && ((start + count) <= size() / PAGE_SIZE)) {
+    num_runs_examined++;
     vm_page_t* p = &page_array_[start];
     for (uint i = 0; i < count; i++) {
       if (!p->is_free()) {
@@ -131,14 +141,18 @@ retry:
     }
 
     // we found a run
-    p = &page_array_[start];
-    LTRACEF("found run from pa %#" PRIxPTR " to %#" PRIxPTR "\n", p->paddr(),
-            p->paddr() + count * PAGE_SIZE);
-
-    return p;
+    result = &page_array_[start];
+    LTRACEF("found run from pa %#" PRIxPTR " to %#" PRIxPTR "\n", result->paddr(),
+            result->paddr() + count * PAGE_SIZE);
+    break;
   }
 
-  return nullptr;
+  int64_t max = counter_max_runs_examined.Value();
+  if (num_runs_examined > max){
+    counter_max_runs_examined.Set(num_runs_examined);
+  }
+
+  return result;
 }
 
 void PmmArena::CountStates(size_t state_count[VM_PAGE_STATE_COUNT_]) const {
