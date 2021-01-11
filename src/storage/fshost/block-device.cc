@@ -147,8 +147,12 @@ std::string GetTopologicalPath(int fd) {
 
 }  // namespace
 
-BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd)
-    : mounter_(mounter), fd_(std::move(fd)), topological_path_(GetTopologicalPath(fd_.get())) {}
+BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
+                         const Config* device_config)
+    : mounter_(mounter),
+      fd_(std::move(fd)),
+      device_config_(device_config),
+      topological_path_(GetTopologicalPath(fd_.get())) {}
 
 disk_format_t BlockDevice::content_format() const {
   if (content_format_) {
@@ -514,6 +518,9 @@ zx_status_t BlockDevice::MountFilesystem() {
       }
       options.write_compression_algorithm = algorithm ? algorithm->c_str() : nullptr;
       options.cache_eviction_policy = eviction_policy ? eviction_policy->c_str() : nullptr;
+      if (device_config_->is_set(Config::kSandboxDecompression)) {
+        options.sandbox_decompression = true;
+      }
       zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount blobfs partition: " << zx_status_get_string(status)

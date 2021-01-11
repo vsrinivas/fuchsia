@@ -99,7 +99,7 @@ class BlockDeviceTest : public testing::Test {
 TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   FilesystemMounter mounter(manager_, &config_);
   fbl::unique_fd fd;
-  BlockDevice device(&mounter, {});
+  BlockDevice device(&mounter, {}, &config_);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
@@ -124,7 +124,7 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
   // Initialize Ramdisk.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(/*use_guid=*/true));
 
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config_);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_OK);
@@ -153,7 +153,7 @@ TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
 
   // We started with an empty block device, but let's lie and say it
   // should have been a minfs device.
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config_);
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
@@ -169,7 +169,7 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config_);
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
@@ -185,7 +185,7 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config);
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
 
@@ -207,7 +207,7 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config);
   device.SetFormat(DISK_FORMAT_BLOBFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_BLOBFS);
 
@@ -229,7 +229,7 @@ TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, GetRamdiskFd(), &config);
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   // Format minfs.

@@ -16,8 +16,9 @@
 #include <fbl/string_buffer.h>
 #include <fs-management/mount.h>
 
-#include "block-device-interface.h"
-#include "filesystem-mounter.h"
+#include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/config.h"
+#include "src/storage/fshost/filesystem-mounter.h"
 
 namespace devmgr {
 
@@ -27,7 +28,8 @@ namespace devmgr {
 // incoming block devices.
 class BlockDevice final : public BlockDeviceInterface {
  public:
-  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd);
+  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
+              const Config* device_config);
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
@@ -55,6 +57,7 @@ class BlockDevice final : public BlockDeviceInterface {
  private:
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
+  const Config* device_config_;
   mutable std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
   mutable std::optional<disk_format_t> content_format_;
   disk_format_t format_ = DISK_FORMAT_UNKNOWN;

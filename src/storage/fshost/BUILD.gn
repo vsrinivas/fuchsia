@@ -420,6 +420,10 @@ template("fshost_config") {
     if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
       contents += [ "use-default-loader" ]
     }
+    if (defined(invoker.sandbox_decompression) &&
+        invoker.sandbox_decompression) {
+      contents += [ "sandbox-decompression" ]
+    }
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -436,6 +440,12 @@ fshost_config("no_minfs_zxcrypt") {
 # A configuration that allows access to multiple devices with GUID partition schemes; the default
 # will only attach a driver to the first device that appears to have a GUID partition scheme.
 fshost_config("gpt_all") {
+  gpt_all = true
+}
+
+# Maintains the above semantics for target gpt_all while adding the blobfs decompression sandbox.
+fshost_config("sandbox_decompression_with_gpt_all") {
+  sandbox_decompression = true
   gpt_all = true
 }
 

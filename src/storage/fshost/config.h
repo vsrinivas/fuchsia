@@ -51,6 +51,8 @@ struct Config {
   static constexpr char kUseSyslog[] = "use-syslog";       // Use syslog rather than debug-log.
   static constexpr char kUseDefaultLoader[] =
       "use-default-loader";  // Use the default loader rather than a custom one.
+  static constexpr char kSandboxDecompression[] =
+      "sandbox-decompression";  // Perform decompression in a sandboxed component.
 
   // Reads options from the stream which consist of one option per line. "default" means include the
   // default options, and lines with a leading '-' negate the option.

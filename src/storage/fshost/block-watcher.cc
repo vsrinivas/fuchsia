@@ -245,7 +245,7 @@ bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
     return false;
   }
 
-  BlockDevice device(&mounter_, std::move(device_fd));
+  BlockDevice device(&mounter_, std::move(device_fd), device_manager_.config());
   zx_status_t status = device_manager_.AddDevice(device);
   if (status == ZX_ERR_NOT_SUPPORTED) {
     // The femu tests watch for the following message and will need updating if this changes.

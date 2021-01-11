@@ -43,6 +43,8 @@ class BlockDeviceManager {
   // it does.
   zx_status_t AddDevice(BlockDeviceInterface& device);
 
+  const Config* config() const { return &config_; }
+
  private:
   const Config& config_;
 
