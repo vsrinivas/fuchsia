@@ -576,17 +576,25 @@ mod tests {
         let (mut mock_peer, mut observer_stream, env_vars) =
             create_mock_peer(id1).expect("Mock peer creation should succeed");
 
-        let profile_url1 = fuchsia_single_component_package_url!("bt-a2dp-source").to_string();
+        let profile_url1 = fuchsia_single_component_package_url!("bt-a2dp").to_string();
         let launch_info1 = LaunchInfo {
             url: profile_url1.clone(),
-            arguments: vec!["-c".to_string(), "basic".to_string()],
+            arguments: vec![
+                "-c".to_string(),
+                "basic".to_string(),
+                "--enable-sink".to_string(),
+                "false".to_string(),
+            ],
         };
         let component_stream1 = do_launch_profile(&mut exec, &mut mock_peer, launch_info1);
         pin_mut!(component_stream1);
 
         // Launching the same profile is OK.
-        let profile_url2 = fuchsia_single_component_package_url!("bt-a2dp-source").to_string();
-        let launch_info2 = LaunchInfo { url: profile_url2.clone(), arguments: vec![] };
+        let profile_url2 = fuchsia_single_component_package_url!("bt-a2dp").to_string();
+        let launch_info2 = LaunchInfo {
+            url: profile_url2.clone(),
+            arguments: vec!["--enable-sink".to_string(), "false".to_string()],
+        };
         let component_stream2 = do_launch_profile(&mut exec, &mut mock_peer, launch_info2);
         pin_mut!(component_stream2);
 

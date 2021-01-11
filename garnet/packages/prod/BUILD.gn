@@ -81,7 +81,7 @@ group("atheros") {
 
 group("bluetooth_a2dp") {
   testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp-sink" ]
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp" ]
 }
 
 group("bluetooth_all") {

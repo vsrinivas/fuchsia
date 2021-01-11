@@ -7,12 +7,6 @@ group("profiles") {
   deps = [
     "bt-a2dp",
     "bt-a2dp:tests",
-    "bt-a2dp-manager",
-    "bt-a2dp-manager:bt-a2dp-manager-tests",
-    "bt-a2dp-sink",
-    "bt-a2dp-sink:tests",
-    "bt-a2dp-source",
-    "bt-a2dp-source:tests",
     "bt-avrcp",
     "bt-avrcp:tests",
     "bt-avrcp-target",
