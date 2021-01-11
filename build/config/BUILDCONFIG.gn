@@ -2362,14 +2362,12 @@ foreach(_target_type,
           ]
         }
 
-        # TODO(shayba): uncommenting the below causes:
-        # ninja: fatal: cycle in rule variables: rspfile -> rspfile
-        #if (defined(response_file_contents)) {
-        #  args += [
-        #    "--response-file-name",
-        #    "{{response_file_name}}",
-        #  ]
-        #}
+        if (defined(response_file_contents) && response_file_contents != []) {
+          args += [
+            "--response-file-name",
+            "{{response_file_name}}",
+          ]
+        }
 
         args += [ "--" ] + _invoker_args
       }
