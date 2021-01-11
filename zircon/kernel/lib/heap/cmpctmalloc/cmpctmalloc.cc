@@ -139,6 +139,8 @@ KCOUNTER(malloc_size_le_512, "malloc.size_le_512")
 KCOUNTER(malloc_size_le_1024, "malloc.size_le_1024")
 KCOUNTER(malloc_size_le_2048, "malloc.size_le_2048")
 KCOUNTER(malloc_size_other, "malloc.size_other")
+// The number of failed attempts at growing the heap.
+KCOUNTER(malloc_heap_grow_fail, "malloc.heap_grow_fail")
 
 #else
 
@@ -568,6 +570,9 @@ NO_ASAN static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
   if (ptr == NULL) {
     ptr = heap_page_alloc(size >> ZX_PAGE_SHIFT);
     if (ptr == NULL) {
+#ifdef _KERNEL
+      kcounter_add(malloc_heap_grow_fail, 1);
+#endif
       return ZX_ERR_NO_MEMORY;
     }
     LTRACEF("Growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
