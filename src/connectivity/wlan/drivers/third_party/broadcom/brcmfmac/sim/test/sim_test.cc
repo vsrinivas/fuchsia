@@ -284,7 +284,7 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   }
 }
 
-void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlan_deauth_reason_t reason) {
+void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlanif_reason_code_t reason) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);

@@ -5,7 +5,7 @@
 use {
     crate::auth,
     anyhow::{bail, Error},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::error,
     wlan_common::{mac, time::TimeUnit},
 };
@@ -32,14 +32,14 @@ pub trait AkmAction {
         &mut self,
         auth_type: mac::AuthAlgorithmNumber,
         seq_num: u16,
-        result_code: mac::StatusCode,
+        status_code: mac::StatusCode,
         auth_content: &[u8],
     ) -> Result<(), Error>;
     /// Transmit information for an SME-managed SAE handshaek
     fn forward_sme_sae_rx(
         &mut self,
         seq_num: u16,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        status_code: fidl_ieee80211::StatusCode,
         sae_fields: Vec<u8>,
     );
     fn forward_sae_handshake_ind(&mut self);
@@ -77,40 +77,37 @@ impl<T> AkmAlgorithm<T> {
     }
 }
 
-pub fn convert_auth_result_code(result: fidl_mlme::AuthenticateResultCodes) -> mac::StatusCode {
-    match result {
-        fidl_mlme::AuthenticateResultCodes::Success => mac::StatusCode::SUCCESS,
-        fidl_mlme::AuthenticateResultCodes::Refused => mac::StatusCode::REFUSED,
-        fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired => {
+pub fn convert_ieee80211_status_code(status: fidl_ieee80211::StatusCode) -> mac::StatusCode {
+    match status {
+        fidl_ieee80211::StatusCode::Success => mac::StatusCode::SUCCESS,
+        fidl_ieee80211::StatusCode::RefusedReasonUnspecified => mac::StatusCode::REFUSED,
+        fidl_ieee80211::StatusCode::AntiCloggingTokenRequired => {
             mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
         }
-        fidl_mlme::AuthenticateResultCodes::FiniteCyclicGroupNotSupported => {
+        fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup => {
             mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
         }
-        fidl_mlme::AuthenticateResultCodes::AuthenticationRejected => mac::StatusCode::REFUSED,
-        fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => {
+        fidl_ieee80211::StatusCode::RejectedSequenceTimeout => {
             mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT
         }
+        _ => mac::StatusCode::REFUSED,
     }
 }
 
-pub fn convert_mac_status_code(status: mac::StatusCode) -> fidl_mlme::AuthenticateResultCodes {
+pub fn convert_mac_status_code(status: mac::StatusCode) -> fidl_ieee80211::StatusCode {
     match status {
-        mac::StatusCode::SUCCESS => fidl_mlme::AuthenticateResultCodes::Success,
-        mac::StatusCode::REFUSED => fidl_mlme::AuthenticateResultCodes::Refused,
+        mac::StatusCode::SUCCESS => fidl_ieee80211::StatusCode::Success,
+        mac::StatusCode::REFUSED => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
         mac::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED => {
-            fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired
+            fidl_ieee80211::StatusCode::AntiCloggingTokenRequired
         }
         mac::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP => {
-            fidl_mlme::AuthenticateResultCodes::FiniteCyclicGroupNotSupported
+            fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup
         }
         mac::StatusCode::REJECTED_SEQUENCE_TIMEOUT => {
-            fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout
+            fidl_ieee80211::StatusCode::RejectedSequenceTimeout
         }
-        _ => {
-            error!("Unexpected mac status code: {:?}", status);
-            fidl_mlme::AuthenticateResultCodes::Refused
-        }
+        _ => fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
     }
 }
 
@@ -188,7 +185,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
     pub fn handle_sae_resp<A: AkmAction<EventId = T>>(
         &mut self,
         actions: &mut A,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        status_code: fidl_ieee80211::StatusCode,
     ) -> Result<AkmState, Error> {
         match self {
             AkmAlgorithm::_OpenAp => bail!("OpenAp akm not yet implemented"),
@@ -197,8 +194,8 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
             }
             AkmAlgorithm::Sae { timeout, .. } => {
                 timeout.take().map(|timeout| actions.cancel_auth_timeout(timeout));
-                match result_code {
-                    fidl_mlme::AuthenticateResultCodes::Success => Ok(AkmState::AuthComplete),
+                match status_code {
+                    fidl_ieee80211::StatusCode::Success => Ok(AkmState::AuthComplete),
                     _ => Ok(AkmState::Failed),
                 }
             }
@@ -209,7 +206,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
         &mut self,
         actions: &mut A,
         seq_num: u16,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        status_code: fidl_ieee80211::StatusCode,
         sae_fields: &[u8],
     ) -> Result<AkmState, Error> {
         match self {
@@ -221,7 +218,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 actions.send_auth_frame(
                     mac::AuthAlgorithmNumber::SAE,
                     seq_num,
-                    convert_auth_result_code(result_code),
+                    convert_ieee80211_status_code(status_code),
                     sae_fields,
                 )?;
                 // The handshake may be complete at this point, but we wait for an SaeResp.
@@ -266,7 +263,7 @@ mod tests {
 
     struct MockAkmAction {
         sent_frames: Vec<(mac::AuthAlgorithmNumber, u16, mac::StatusCode, Vec<u8>)>,
-        sent_sae_rx: Vec<(u16, fidl_mlme::AuthenticateResultCodes, Vec<u8>)>,
+        sent_sae_rx: Vec<(u16, fidl_ieee80211::StatusCode, Vec<u8>)>,
         accept_frames: bool,
         published_pmks: Vec<fidl_mlme::PmkInfo>,
         scheduled_timers: Vec<u16>,
@@ -294,11 +291,11 @@ mod tests {
             &mut self,
             auth_type: mac::AuthAlgorithmNumber,
             seq_num: u16,
-            result_code: mac::StatusCode,
+            status_code: mac::StatusCode,
             auth_content: &[u8],
         ) -> Result<(), Error> {
             if self.accept_frames {
-                self.sent_frames.push((auth_type, seq_num, result_code, auth_content.to_vec()));
+                self.sent_frames.push((auth_type, seq_num, status_code, auth_content.to_vec()));
                 Ok(())
             } else {
                 bail!("send_auth_frames disabled by test");
@@ -308,10 +305,10 @@ mod tests {
         fn forward_sme_sae_rx(
             &mut self,
             seq_num: u16,
-            result_code: fidl_mlme::AuthenticateResultCodes,
+            status_code: fidl_ieee80211::StatusCode,
             sae_fields: Vec<u8>,
         ) {
-            self.sent_sae_rx.push((seq_num, result_code, sae_fields))
+            self.sent_sae_rx.push((seq_num, status_code, sae_fields))
         }
 
         fn forward_sae_handshake_ind(&mut self) {
@@ -456,7 +453,7 @@ mod tests {
             supplicant.handle_sme_sae_tx(
                 &mut actions,
                 1,
-                fidl_mlme::AuthenticateResultCodes::Success,
+                fidl_ieee80211::StatusCode::Success,
                 &[0x12, 0x34][..],
             ),
             Ok(AkmState::InProgress)
@@ -480,12 +477,12 @@ mod tests {
         assert_eq!(actions.sent_sae_rx.len(), 1);
         assert_eq!(
             actions.sent_sae_rx[0],
-            (1, fidl_mlme::AuthenticateResultCodes::Success, vec![0x56, 0x78])
+            (1, fidl_ieee80211::StatusCode::Success, vec![0x56, 0x78])
         );
         actions.sent_sae_rx.clear();
 
         assert_variant!(
-            supplicant.handle_sae_resp(&mut actions, fidl_mlme::AuthenticateResultCodes::Success),
+            supplicant.handle_sae_resp(&mut actions, fidl_ieee80211::StatusCode::Success),
             Ok(AkmState::AuthComplete)
         );
     }
@@ -510,7 +507,10 @@ mod tests {
 
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_variant!(
-            supplicant.handle_sae_resp(&mut actions, fidl_mlme::AuthenticateResultCodes::Refused),
+            supplicant.handle_sae_resp(
+                &mut actions,
+                fidl_ieee80211::StatusCode::RefusedReasonUnspecified
+            ),
             Ok(AkmState::Failed)
         );
     }

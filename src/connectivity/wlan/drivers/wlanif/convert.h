@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <net/ethernet.h>
@@ -32,7 +33,8 @@ void ConvertBssDescription(::fuchsia::wlan::internal::BssDescription* fidl_bss_d
 void ConvertAssocInd(::fuchsia::wlan::mlme::AssociateIndication* fidl_ind,
                      const wlanif_assoc_ind_t& assoc_ind);
 uint8_t ConvertAuthType(::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
-uint16_t ConvertDeauthReasonCode(::fuchsia::wlan::mlme::ReasonCode reason);
+uint16_t ConvertReasonCode(::fuchsia::wlan::mlme::ReasonCode reason);
+uint16_t ConvertStatusCode(::fuchsia::wlan::ieee80211::StatusCode status);
 uint8_t ConvertKeyType(::fuchsia::wlan::mlme::KeyType key_type);
 void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const ::fuchsia::wlan::mlme::SetKeyDescriptor& fidl_key_desc);
@@ -41,7 +43,8 @@ void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
 ::fuchsia::wlan::internal::BssTypes ConvertBssType(uint8_t bss_type);
 ::fuchsia::wlan::common::CBW ConvertCBW(wlan_channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);
-::fuchsia::wlan::mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason);
+::fuchsia::wlan::mlme::ReasonCode ConvertReasonCode(uint16_t reason);
+::fuchsia::wlan::ieee80211::StatusCode ConvertStatusCode(uint16_t status);
 ::fuchsia::wlan::mlme::ScanResultCodes ConvertScanResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::JoinResultCodes ConvertJoinResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::AuthenticateResultCodes ConvertAuthResultCode(uint8_t code);

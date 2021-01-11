@@ -20,6 +20,7 @@
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/errors.h>
@@ -79,6 +80,8 @@
       WorkQueue::ScheduleDefault(&cfg->worker);                           \
     }                                                                     \
   }
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
@@ -3186,7 +3189,7 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   return result;
 }
 
-// Deauthenticate with specified STA. The reason provided should be from WLAN_DEAUTH_REASON_*
+// Deauthenticate with specified STA. The reason provided should be from WLANIF_REASON_CODE_*
 static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, const uint8_t* mac,
                                               uint8_t reason) {
   BRCMF_DBG(TRACE, "Enter: reason: %d", reason);
@@ -3420,15 +3423,15 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
   switch (ind->result_code) {
     case WLAN_AUTH_RESULT_REFUSED:
     case WLAN_AUTH_RESULT_REJECTED:
-      reason = WLAN_DEAUTH_REASON_NOT_AUTHENTICATED;
+      reason = WLANIF_REASON_CODE_NOT_AUTHENTICATED;
       break;
     case WLAN_AUTH_RESULT_FAILURE_TIMEOUT:
-      reason = WLAN_DEAUTH_REASON_TIMEOUT;
+      reason = WLANIF_REASON_CODE_TIMEOUT;
       break;
     case WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED:
     case WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED:
     default:
-      reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
+      reason = WLANIF_REASON_CODE_UNSPECIFIED;
       break;
   }
   brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
@@ -3516,10 +3519,10 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
   uint8_t reason;
   switch (ind->result_code) {
     case WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED:
-      reason = WLAN_DEAUTH_REASON_NOT_AUTHENTICATED;
+      reason = WLANIF_REASON_CODE_NOT_AUTHENTICATED;
       break;
     case WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH:
-      reason = WLAN_DEAUTH_REASON_INVALID_RSNE_CAPABILITIES;
+      reason = WLANIF_REASON_CODE_INVALID_RSNE_CAPABILITIES;
       break;
     case WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED:
     case WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON:
@@ -3528,7 +3531,7 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
     case WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
     case WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY:
     default:
-      reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
+      reason = WLANIF_REASON_CODE_UNSPECIFIED;
       break;
   }
   brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
@@ -4561,14 +4564,14 @@ zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* fr
 
   BRCMF_DBG(CONN,
             "The peer_sta_address: " MAC_FMT_STR ", the ifp mac is: " MAC_FMT_STR
-            ", the seq_num is %u, the result_code is %u",
+            ", the seq_num is %u, the status_code is %u",
             MAC_FMT_ARGS(frame->peer_sta_address), MAC_FMT_ARGS(ifp->mac_addr), frame->seq_num,
-            frame->result_code);
+            frame->status_code);
 
   // Fill the authentication frame header fields.
   sae_frame->auth_hdr.auth_algorithm_number = BRCMF_AUTH_MODE_SAE;
   sae_frame->auth_hdr.auth_txn_seq_number = frame->seq_num;
-  sae_frame->auth_hdr.status_code = frame->result_code;
+  sae_frame->auth_hdr.status_code = frame->status_code;
 
   BRCMF_DBG(CONN, "auth_algorithm_number: %u, auth_txn_seq_number: %u, status_code: %u",
             sae_frame->auth_hdr.auth_algorithm_number, sae_frame->auth_hdr.auth_txn_seq_number,
@@ -4887,7 +4890,7 @@ static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t data
 
   // Copy authentication frame header information.
   memcpy(frame.peer_sta_address, &ifp->bss.bssid, ETH_ALEN);
-  frame.result_code = pframe_hdr->status_code;
+  frame.status_code = pframe_hdr->status_code;
   frame.seq_num = pframe_hdr->auth_txn_seq_number;
 
   // Copy challenge text to sae_fields.
@@ -5677,7 +5680,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0);
+    brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_UNSPECIFIED, 0);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep
@@ -5805,7 +5808,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
       return brcmf_cfg80211_del_ap_iface(cfg, wdev);
     case WLAN_INFO_MAC_ROLE_CLIENT:
       // Dissconnect the client in an attempt to exit gracefully.
-      brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, false);
+      brcmf_link_down(ifp->vif, WLANIF_REASON_CODE_UNSPECIFIED, false);
       // The default client iface 0 is always assumed to exist by the driver, and is never
       // explicitly deleted.
       ndev->sme_channel.reset();

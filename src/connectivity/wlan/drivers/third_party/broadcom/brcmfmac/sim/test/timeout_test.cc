@@ -99,7 +99,7 @@ TEST_F(TimeoutTest, DisassocTimeout) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_DISASSOC, ZX_OK, BCME_OK, client_ifc_.iface_id_);
   SCHEDULE_CALL(zx::msec(10), &SimInterface::DeauthenticateFrom, &client_ifc_, kDefaultBssid,
-                WLAN_DEAUTH_REASON_UNSPECIFIED);
+                WLANIF_REASON_CODE_UNSPECIFIED);
 
   env_->Run(kTestDuration);
 
@@ -122,7 +122,7 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   // There are three timers for them, and all have been cancelled.
   client_ifc_.AssociateWith(ap, zx::msec(10));
   SCHEDULE_CALL(zx::sec(1), &SimInterface::DeauthenticateFrom, &client_ifc_, kDefaultBssid,
-                WLAN_DEAUTH_REASON_UNSPECIFIED);
+                WLANIF_REASON_CODE_UNSPECIFIED);
   SCHEDULE_CALL(zx::sec(3), &SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false);
 
   env_->Run(kTestDuration);

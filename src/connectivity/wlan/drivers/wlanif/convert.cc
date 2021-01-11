@@ -17,9 +17,188 @@
 namespace wlanif {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
+
+namespace {
+
+template <typename T>
+constexpr bool IsValidReasonCode(T reason_code) {
+  switch (reason_code) {
+    case static_cast<T>(wlan_mlme::ReasonCode::UNSPECIFIED_REASON):
+    case static_cast<T>(wlan_mlme::ReasonCode::INVALID_AUTHENTICATION):
+    case static_cast<T>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INACTIVITY):
+    case static_cast<T>(wlan_mlme::ReasonCode::NO_MORE_STAS):
+    case static_cast<T>(wlan_mlme::ReasonCode::INVALID_CLASS2_FRAME):
+    case static_cast<T>(wlan_mlme::ReasonCode::INVALID_CLASS3_FRAME):
+    case static_cast<T>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC):
+    case static_cast<T>(wlan_mlme::ReasonCode::NOT_AUTHENTICATED):
+    case static_cast<T>(wlan_mlme::ReasonCode::UNACCEPTABLE_POWER_CA):
+    case static_cast<T>(wlan_mlme::ReasonCode::UNACCEPTABLE_SUPPORTED_CHANNELS):
+    case static_cast<T>(wlan_mlme::ReasonCode::BSS_TRANSITION_DISASSOC):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_ELEMENT):
+    case static_cast<T>(wlan_mlme::ReasonCode::MIC_FAILURE):
+    case static_cast<T>(wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT):
+    case static_cast<T>(wlan_mlme::ReasonCode::GK_HANDSHAKE_TIMEOUT):
+    case static_cast<T>(wlan_mlme::ReasonCode::HANDSHAKE_ELEMENT_MISMATCH):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_GROUP_CIPHER):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_PAIRWISE_CIPHER):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_AKMP):
+    case static_cast<T>(wlan_mlme::ReasonCode::UNSUPPORTED_RSNE_VERSION):
+    case static_cast<T>(wlan_mlme::ReasonCode::INVALID_RSNE_CAPABILITIES):
+    case static_cast<T>(wlan_mlme::ReasonCode::IEEE802_1_X_AUTH_FAILED):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_CIPHER_OUT_OF_POLICY):
+    case static_cast<T>(wlan_mlme::ReasonCode::TDLS_PEER_UNREACHABLE):
+    case static_cast<T>(wlan_mlme::ReasonCode::TDLS_UNSPECIFIED_REASON):
+    case static_cast<T>(wlan_mlme::ReasonCode::SSP_REQUESTED_DISASSOC):
+    case static_cast<T>(wlan_mlme::ReasonCode::NO_SSP_ROAMING_AGREEMENT):
+    case static_cast<T>(wlan_mlme::ReasonCode::BAD_CIPHER_OR_AKM):
+    case static_cast<T>(wlan_mlme::ReasonCode::NOT_AUTHORIZED_THIS_LOCATION):
+    case static_cast<T>(wlan_mlme::ReasonCode::SERVICE_CHANGE_PRECLUDES_TS):
+    case static_cast<T>(wlan_mlme::ReasonCode::UNSPECIFIED_QOS_REASON):
+    case static_cast<T>(wlan_mlme::ReasonCode::NOT_ENOUGH_BANDWIDTH):
+    case static_cast<T>(wlan_mlme::ReasonCode::MISSING_ACKS):
+    case static_cast<T>(wlan_mlme::ReasonCode::EXCEEDED_TXOP):
+    case static_cast<T>(wlan_mlme::ReasonCode::STA_LEAVING):
+    case static_cast<T>(wlan_mlme::ReasonCode::END_TS_BA_DLS):
+    case static_cast<T>(wlan_mlme::ReasonCode::UNKNOWN_TS_BA):
+    case static_cast<T>(wlan_mlme::ReasonCode::TIMEOUT):
+    case static_cast<T>(wlan_mlme::ReasonCode::PEERKEY_MISMATCH):
+    case static_cast<T>(wlan_mlme::ReasonCode::PEER_INITIATED):
+    case static_cast<T>(wlan_mlme::ReasonCode::AP_INITIATED):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_FT_ACTION_FRAME_COUNT):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_PMKID):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_MDE):
+    case static_cast<T>(wlan_mlme::ReasonCode::REASON_INVALID_FTE):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_PEERING_CANCELED):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_MAX_PEERS):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_CONFIGURATION_POLICY_VIOLATION):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_CLOSE_RCVD):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_MAX_RETRIES):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_CONFIRM_TIMEOUT):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_INVALID_GTK):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_INCONSISTENT_PARAMETERS):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_INVALID_SECURITY_CAPABILITY):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_PROXY_INFORMATION):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_PATH_ERROR_DESTINATION_UNREACHABLE):
+    case static_cast<T>(wlan_mlme::ReasonCode::MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS):
+    case static_cast<T>(wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_UNSPECIFIED):
+      return true;
+    default:
+      return false;
+  }
+}
+
+template <typename T>
+constexpr bool IsValidStatusCode(T status_code) {
+  switch (status_code) {
+    case static_cast<T>(wlan_ieee80211::StatusCode::SUCCESS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TDLS_REJECTED_ALTERNATIVE_PROVIDED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TDLS_REJECTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::SECURITY_DISABLED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::UNACCEPTABLE_LIFETIME):
+    case static_cast<T>(wlan_ieee80211::StatusCode::NOT_IN_SAME_BSS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_CAPABILITIES_MISMATCH):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_NO_ASSOCIATION_EXISTS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_OTHER_REASON):
+    case static_cast<T>(wlan_ieee80211::StatusCode::UNSUPPORTED_AUTH_ALGORITHM):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TRANSACTION_SEQUENCE_ERROR):
+    case static_cast<T>(wlan_ieee80211::StatusCode::CHALLENGE_FAILURE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_SEQUENCE_TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_NO_MORE_STAS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_BASIC_RATES_MISMATCH):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_NO_SHORT_PREAMBLE_SUPPORT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_SPECTRUM_MANAGEMENT_REQUIRED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_BAD_POWER_CAPABILITY):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_BAD_SUPPORTED_CHANNELS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_NO_SHORT_SLOT_TIME_SUPPORT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_NO_HT_SUPPORT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::R0KH_UNREACHABLE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_PCO_TIME_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY):
+    case static_cast<T>(wlan_ieee80211::StatusCode::ROBUST_MANAGEMENT_POLICY_VIOLATION):
+    case static_cast<T>(wlan_ieee80211::StatusCode::UNSPECIFIED_QOS_FAILURE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_INSUFFICIENT_BANDWIDTH):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_POOR_CHANNEL_CONDITIONS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_QOS_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REQUEST_DECLINED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::INVALID_PARAMETERS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_WITH_SUGGESTED_CHANGES):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_ELEMENT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_GROUP_CIPHER):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_PAIRWISE_CIPHER):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_AKMP):
+    case static_cast<T>(wlan_ieee80211::StatusCode::UNSUPPORTED_RSNE_VERSION):
+    case static_cast<T>(wlan_ieee80211::StatusCode::INVALID_RSNE_CAPABILITIES):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_CIPHER_OUT_OF_POLICY):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_FOR_DELAY_PERIOD):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DLS_NOT_ALLOWED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::NOT_PRESENT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::NOT_QOS_STA):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_LISTEN_INTERVAL_TOO_LARGE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_FT_ACTION_FRAME_COUNT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_PMKID):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_MDE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::STATUS_INVALID_FTE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REQUESTED_TCLAS_NOT_SUPPORTED_BY_AP):
+    case static_cast<T>(wlan_ieee80211::StatusCode::INSUFFICIENT_TCLAS_PROCESSING_RESOURCES):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TRY_ANOTHER_BSS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::GAS_ADVERTISEMENT_PROTOCOL_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::NO_OUTSTANDING_GAS_REQUEST):
+    case static_cast<T>(wlan_ieee80211::StatusCode::GAS_RESPONSE_NOT_RECEIVED_FROM_SERVER):
+    case static_cast<T>(wlan_ieee80211::StatusCode::GAS_QUERY_TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::GAS_QUERY_RESPONSE_TOO_LARGE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_HOME_WITH_SUGGESTED_CHANGES):
+    case static_cast<T>(wlan_ieee80211::StatusCode::SERVER_UNREACHABLE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_FOR_SSP_PERMISSIONS):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::INVALID_RSNE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::U_APSD_COEXISTANCE_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::U_APSD_COEX_MODE_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::BAD_INTERVAL_WITH_U_APSD_COEX):
+    case static_cast<T>(wlan_ieee80211::StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP):
+    case static_cast<T>(wlan_ieee80211::StatusCode::CANNOT_FIND_ALTERNATIVE_TBTT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TRANSMISSION_FAILURE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REQUESTED_TCLAS_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TCLAS_RESOURCES_EXHAUSTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_WITH_SUGGESTED_BSS_TRANSITION):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECT_WITH_SCHEDULE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECT_NO_WAKEUP_SPECIFIED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::SUCCESS_POWER_SAVE_MODE):
+    case static_cast<T>(wlan_ieee80211::StatusCode::PENDING_ADMITTING_FST_SESSION):
+    case static_cast<T>(wlan_ieee80211::StatusCode::PERFORMING_FST_NOW):
+    case static_cast<T>(wlan_ieee80211::StatusCode::PENDING_GAP_IN_BA_WINDOW):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECT_U_PID_SETTING):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_EXTERNAL_REASON):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REFUSED_AP_OUT_OF_MEMORY):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::QUERY_RESPONSE_OUTSTANDING):
+    case static_cast<T>(wlan_ieee80211::StatusCode::REJECT_DSE_BAND):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TCLAS_PROCESSING_TERMINATED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::TS_SCHEDULE_CONFLICT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_WITH_SUGGESTED_BAND_AND_CHANNEL):
+    case static_cast<T>(wlan_ieee80211::StatusCode::MCCAOP_RESERVATION_CONFLICT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::MAF_LIMIT_EXCEEDED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::MCCA_TRACK_LIMIT_EXCEEDED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_DUE_TO_SPECTRUM_MANAGEMENT):
+    case static_cast<T>(wlan_ieee80211::StatusCode::DENIED_VHT_NOT_SUPPORTED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::ENABLEMENT_DENIED):
+    case static_cast<T>(wlan_ieee80211::StatusCode::RESTRICTION_FROM_AUTHORIZED_GDB):
+    case static_cast<T>(wlan_ieee80211::StatusCode::AUTHORIZATION_DEENABLED):
+      return true;
+    default:
+      return false;
+  }
+}
+
+}  // namespace
 
 uint8_t ConvertBssType(wlan_internal::BssTypes bss_type) {
   switch (bss_type) {
@@ -275,133 +454,14 @@ uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {
   }
 }
 
-uint16_t ConvertDeauthReasonCode(wlan_mlme::ReasonCode reason) {
-  switch (reason) {
-    case wlan_mlme::ReasonCode::UNSPECIFIED_REASON:
-      return WLAN_DEAUTH_REASON_UNSPECIFIED;
-    case wlan_mlme::ReasonCode::INVALID_AUTHENTICATION:
-      return WLAN_DEAUTH_REASON_INVALID_AUTHENTICATION;
-    case wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH:
-      return WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH;
-    case wlan_mlme::ReasonCode::REASON_INACTIVITY:
-      return WLAN_DEAUTH_REASON_INACTIVITY;
-    case wlan_mlme::ReasonCode::NO_MORE_STAS:
-      return WLAN_DEAUTH_REASON_NO_MORE_STAS;
-    case wlan_mlme::ReasonCode::INVALID_CLASS2_FRAME:
-      return WLAN_DEAUTH_REASON_INVALID_CLASS2_FRAME;
-    case wlan_mlme::ReasonCode::INVALID_CLASS3_FRAME:
-      return WLAN_DEAUTH_REASON_INVALID_CLASS3_FRAME;
-    case wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC:
-      return WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC;
-    case wlan_mlme::ReasonCode::NOT_AUTHENTICATED:
-      return WLAN_DEAUTH_REASON_NOT_AUTHENTICATED;
-    case wlan_mlme::ReasonCode::UNACCEPTABLE_POWER_CA:
-      return WLAN_DEAUTH_REASON_UNACCEPTABLE_POWER_CA;
-    case wlan_mlme::ReasonCode::UNACCEPTABLE_SUPPORTED_CHANNELS:
-      return WLAN_DEAUTH_REASON_UNACCEPTABLE_SUPPORTED_CHANNELS;
-    case wlan_mlme::ReasonCode::BSS_TRANSITION_DISASSOC:
-      return WLAN_DEAUTH_REASON_BSS_TRANSITION_DISASSOC;
-    case wlan_mlme::ReasonCode::REASON_INVALID_ELEMENT:
-      return WLAN_DEAUTH_REASON_INVALID_ELEMENT;
-    case wlan_mlme::ReasonCode::MIC_FAILURE:
-      return WLAN_DEAUTH_REASON_MIC_FAILURE;
-    case wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT:
-      return WLAN_DEAUTH_REASON_FOURWAY_HANDSHAKE_TIMEOUT;
-    case wlan_mlme::ReasonCode::GK_HANDSHAKE_TIMEOUT:
-      return WLAN_DEAUTH_REASON_GK_HANDSHAKE_TIMEOUT;
-    case wlan_mlme::ReasonCode::HANDSHAKE_ELEMENT_MISMATCH:
-      return WLAN_DEAUTH_REASON_HANDSHAKE_ELEMENT_MISMATCH;
-    case wlan_mlme::ReasonCode::REASON_INVALID_GROUP_CIPHER:
-      return WLAN_DEAUTH_REASON_INVALID_GROUP_CIPHER;
-    case wlan_mlme::ReasonCode::REASON_INVALID_PAIRWISE_CIPHER:
-      return WLAN_DEAUTH_REASON_INVALID_PAIRWISE_CIPHER;
-    case wlan_mlme::ReasonCode::REASON_INVALID_AKMP:
-      return WLAN_DEAUTH_REASON_INVALID_AKMP;
-    case wlan_mlme::ReasonCode::UNSUPPORTED_RSNE_VERSION:
-      return WLAN_DEAUTH_REASON_UNSUPPORTED_RSNE_VERSION;
-    case wlan_mlme::ReasonCode::INVALID_RSNE_CAPABILITIES:
-      return WLAN_DEAUTH_REASON_INVALID_RSNE_CAPABILITIES;
-    case wlan_mlme::ReasonCode::IEEE802_1_X_AUTH_FAILED:
-      return WLAN_DEAUTH_REASON_IEEE802_1_X_AUTH_FAILED;
-    case wlan_mlme::ReasonCode::REASON_CIPHER_OUT_OF_POLICY:
-      return WLAN_DEAUTH_REASON_CIPHER_OUT_OF_POLICY;
-    case wlan_mlme::ReasonCode::TDLS_PEER_UNREACHABLE:
-      return WLAN_DEAUTH_REASON_TDLS_PEER_UNREACHABLE;
-    case wlan_mlme::ReasonCode::TDLS_UNSPECIFIED_REASON:
-      return WLAN_DEAUTH_REASON_TDLS_UNSPECIFIED;
-    case wlan_mlme::ReasonCode::SSP_REQUESTED_DISASSOC:
-      return WLAN_DEAUTH_REASON_SSP_REQUESTED_DISASSOC;
-    case wlan_mlme::ReasonCode::NO_SSP_ROAMING_AGREEMENT:
-      return WLAN_DEAUTH_REASON_NO_SSP_ROAMING_AGREEMENT;
-    case wlan_mlme::ReasonCode::BAD_CIPHER_OR_AKM:
-      return WLAN_DEAUTH_REASON_BAD_CIPHER_OR_AKM;
-    case wlan_mlme::ReasonCode::NOT_AUTHORIZED_THIS_LOCATION:
-      return WLAN_DEAUTH_REASON_NOT_AUTHORIZED_THIS_LOCATION;
-    case wlan_mlme::ReasonCode::SERVICE_CHANGE_PRECLUDES_TS:
-      return WLAN_DEAUTH_REASON_SERVICE_CHANGE_PRECLUDES_TS;
-    case wlan_mlme::ReasonCode::UNSPECIFIED_QOS_REASON:
-      return WLAN_DEAUTH_REASON_UNSPECIFIED_QOS;
-    case wlan_mlme::ReasonCode::NOT_ENOUGH_BANDWIDTH:
-      return WLAN_DEAUTH_REASON_NOT_ENOUGH_BANDWIDTH;
-    case wlan_mlme::ReasonCode::MISSING_ACKS:
-      return WLAN_DEAUTH_REASON_MISSING_ACKS;
-    case wlan_mlme::ReasonCode::EXCEEDED_TXOP:
-      return WLAN_DEAUTH_REASON_EXCEEDED_TXOP;
-    case wlan_mlme::ReasonCode::STA_LEAVING:
-      return WLAN_DEAUTH_REASON_STA_LEAVING;
-    case wlan_mlme::ReasonCode::END_TS_BA_DLS:
-      return WLAN_DEAUTH_REASON_END_TS_BA_DLS;
-    case wlan_mlme::ReasonCode::UNKNOWN_TS_BA:
-      return WLAN_DEAUTH_REASON_UNKNOWN_TS_BA;
-    case wlan_mlme::ReasonCode::TIMEOUT:
-      return WLAN_DEAUTH_REASON_TIMEOUT;
-    case wlan_mlme::ReasonCode::PEERKEY_MISMATCH:
-      return WLAN_DEAUTH_REASON_PEERKEY_MISMATCH;
-    case wlan_mlme::ReasonCode::PEER_INITIATED:
-      return WLAN_DEAUTH_REASON_PEER_INITIATED;
-    case wlan_mlme::ReasonCode::AP_INITIATED:
-      return WLAN_DEAUTH_REASON_AP_INITIATED;
-    case wlan_mlme::ReasonCode::REASON_INVALID_FT_ACTION_FRAME_COUNT:
-      return WLAN_DEAUTH_REASON_INVALID_FT_ACTION_FRAME_COUNT;
-    case wlan_mlme::ReasonCode::REASON_INVALID_PMKID:
-      return WLAN_DEAUTH_REASON_INVALID_PMKID;
-    case wlan_mlme::ReasonCode::REASON_INVALID_MDE:
-      return WLAN_DEAUTH_REASON_INVALID_MDE;
-    case wlan_mlme::ReasonCode::REASON_INVALID_FTE:
-      return WLAN_DEAUTH_REASON_INVALID_FTE;
-    case wlan_mlme::ReasonCode::MESH_PEERING_CANCELED:
-      return WLAN_DEAUTH_REASON_MESH_PEERING_CANCELED;
-    case wlan_mlme::ReasonCode::MESH_MAX_PEERS:
-      return WLAN_DEAUTH_REASON_MESH_MAX_PEERS;
-    case wlan_mlme::ReasonCode::MESH_CONFIGURATION_POLICY_VIOLATION:
-      return WLAN_DEAUTH_REASON_MESH_CONFIGURATION_POLICY_VIOLATION;
-    case wlan_mlme::ReasonCode::MESH_CLOSE_RCVD:
-      return WLAN_DEAUTH_REASON_MESH_CLOSE_RCVD;
-    case wlan_mlme::ReasonCode::MESH_MAX_RETRIES:
-      return WLAN_DEAUTH_REASON_MESH_MAX_RETRIES;
-    case wlan_mlme::ReasonCode::MESH_CONFIRM_TIMEOUT:
-      return WLAN_DEAUTH_REASON_MESH_CONFIRM_TIMEOUT;
-    case wlan_mlme::ReasonCode::MESH_INVALID_GTK:
-      return WLAN_DEAUTH_REASON_MESH_INVALID_GTK;
-    case wlan_mlme::ReasonCode::MESH_INCONSISTENT_PARAMETERS:
-      return WLAN_DEAUTH_REASON_MESH_INCONSISTENT_PARAMETERS;
-    case wlan_mlme::ReasonCode::MESH_INVALID_SECURITY_CAPABILITY:
-      return WLAN_DEAUTH_REASON_MESH_INVALID_SECURITY_CAPABILITY;
-    case wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_PROXY_INFORMATION:
-      return WLAN_DEAUTH_REASON_MESH_PATH_ERROR_NO_PROXY_INFORMATION;
-    case wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION:
-      return WLAN_DEAUTH_REASON_MESH_PATH_ERROR_NO_FORWARDING_INFORMATION;
-    case wlan_mlme::ReasonCode::MESH_PATH_ERROR_DESTINATION_UNREACHABLE:
-      return WLAN_DEAUTH_REASON_MESH_PATH_ERROR_DESTINATION_UNREACHABLE;
-    case wlan_mlme::ReasonCode::MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS:
-      return WLAN_DEAUTH_REASON_MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS;
-    case wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS:
-      return WLAN_DEAUTH_REASON_MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS;
-    case wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_UNSPECIFIED:
-      return WLAN_DEAUTH_REASON_MESH_CHANNEL_SWITCH_UNSPECIFIED;
-    default:
-      ZX_ASSERT(0);
-  }
+uint16_t ConvertReasonCode(wlan_mlme::ReasonCode reason) {
+  ZX_ASSERT(IsValidReasonCode(reason));
+  return static_cast<uint16_t>(reason);
+}
+
+uint16_t ConvertStatusCode(wlan_ieee80211::StatusCode status) {
+  ZX_ASSERT(IsValidStatusCode(status));
+  return static_cast<uint16_t>(status);
 }
 
 uint8_t ConvertKeyType(wlan_mlme::KeyType key_type) {
@@ -476,19 +536,6 @@ wlan_mlme::ScanResultCodes ConvertScanResultCode(uint8_t code) {
   }
 }
 
-wlan_mlme::JoinResultCodes ConvertJoinResultCode(uint8_t code) {
-  switch (code) {
-    case WLAN_JOIN_RESULT_SUCCESS:
-      return wlan_mlme::JoinResultCodes::SUCCESS;
-    case WLAN_JOIN_RESULT_FAILURE_TIMEOUT:
-      __FALLTHROUGH;
-    case WLAN_JOIN_RESULT_INTERNAL_ERROR:
-      return wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT;
-    default:
-      ZX_ASSERT(0);
-  }
-}
-
 wlan_mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type) {
   switch (auth_type) {
     case WLAN_AUTH_TYPE_OPEN_SYSTEM:
@@ -499,6 +546,35 @@ wlan_mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type) {
       return wlan_mlme::AuthenticationTypes::FAST_BSS_TRANSITION;
     case WLAN_AUTH_TYPE_SAE:
       return wlan_mlme::AuthenticationTypes::SAE;
+    default:
+      ZX_ASSERT(0);
+  }
+}
+
+wlan_mlme::ReasonCode ConvertReasonCode(uint16_t reason) {
+  // Use a default for invalid uint16_t reason codes from external sources.
+  if (!IsValidReasonCode(reason)) {
+    return wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
+  }
+  return static_cast<wlan_mlme::ReasonCode>(reason);
+}
+
+wlan_ieee80211::StatusCode ConvertStatusCode(uint16_t status) {
+  // Use a default for invalid uint16_t status codes from external sources.
+  if (!IsValidStatusCode(status)) {
+    return wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED;
+  }
+  return static_cast<wlan_ieee80211::StatusCode>(status);
+}
+
+wlan_mlme::JoinResultCodes ConvertJoinResultCode(uint8_t code) {
+  switch (code) {
+    case WLAN_JOIN_RESULT_SUCCESS:
+      return wlan_mlme::JoinResultCodes::SUCCESS;
+    case WLAN_JOIN_RESULT_FAILURE_TIMEOUT:
+      __FALLTHROUGH;
+    case WLAN_JOIN_RESULT_INTERNAL_ERROR:
+      return wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT;
     default:
       ZX_ASSERT(0);
   }
@@ -537,135 +613,6 @@ uint8_t ConvertAuthResultCode(wlan_mlme::AuthenticateResultCodes code) {
       return WLAN_AUTH_RESULT_REJECTED;
     case wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT:
       return WLAN_AUTH_RESULT_FAILURE_TIMEOUT;
-    default:
-      ZX_ASSERT(0);
-  }
-}
-
-wlan_mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason) {
-  switch (reason) {
-    case WLAN_DEAUTH_REASON_UNSPECIFIED:
-      return wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
-    case WLAN_DEAUTH_REASON_INVALID_AUTHENTICATION:
-      return wlan_mlme::ReasonCode::INVALID_AUTHENTICATION;
-    case WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH:
-      return wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
-    case WLAN_DEAUTH_REASON_INACTIVITY:
-      return wlan_mlme::ReasonCode::REASON_INACTIVITY;
-    case WLAN_DEAUTH_REASON_NO_MORE_STAS:
-      return wlan_mlme::ReasonCode::NO_MORE_STAS;
-    case WLAN_DEAUTH_REASON_INVALID_CLASS2_FRAME:
-      return wlan_mlme::ReasonCode::INVALID_CLASS2_FRAME;
-    case WLAN_DEAUTH_REASON_INVALID_CLASS3_FRAME:
-      return wlan_mlme::ReasonCode::INVALID_CLASS3_FRAME;
-    case WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC:
-      return wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC;
-    case WLAN_DEAUTH_REASON_NOT_AUTHENTICATED:
-      return wlan_mlme::ReasonCode::NOT_AUTHENTICATED;
-    case WLAN_DEAUTH_REASON_UNACCEPTABLE_POWER_CA:
-      return wlan_mlme::ReasonCode::UNACCEPTABLE_POWER_CA;
-    case WLAN_DEAUTH_REASON_UNACCEPTABLE_SUPPORTED_CHANNELS:
-      return wlan_mlme::ReasonCode::UNACCEPTABLE_SUPPORTED_CHANNELS;
-    case WLAN_DEAUTH_REASON_BSS_TRANSITION_DISASSOC:
-      return wlan_mlme::ReasonCode::BSS_TRANSITION_DISASSOC;
-    case WLAN_DEAUTH_REASON_INVALID_ELEMENT:
-      return wlan_mlme::ReasonCode::REASON_INVALID_ELEMENT;
-    case WLAN_DEAUTH_REASON_MIC_FAILURE:
-      return wlan_mlme::ReasonCode::MIC_FAILURE;
-    case WLAN_DEAUTH_REASON_FOURWAY_HANDSHAKE_TIMEOUT:
-      return wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
-    case WLAN_DEAUTH_REASON_GK_HANDSHAKE_TIMEOUT:
-      return wlan_mlme::ReasonCode::GK_HANDSHAKE_TIMEOUT;
-    case WLAN_DEAUTH_REASON_HANDSHAKE_ELEMENT_MISMATCH:
-      return wlan_mlme::ReasonCode::HANDSHAKE_ELEMENT_MISMATCH;
-    case WLAN_DEAUTH_REASON_INVALID_GROUP_CIPHER:
-      return wlan_mlme::ReasonCode::REASON_INVALID_GROUP_CIPHER;
-    case WLAN_DEAUTH_REASON_INVALID_PAIRWISE_CIPHER:
-      return wlan_mlme::ReasonCode::REASON_INVALID_PAIRWISE_CIPHER;
-    case WLAN_DEAUTH_REASON_INVALID_AKMP:
-      return wlan_mlme::ReasonCode::REASON_INVALID_AKMP;
-    case WLAN_DEAUTH_REASON_UNSUPPORTED_RSNE_VERSION:
-      return wlan_mlme::ReasonCode::UNSUPPORTED_RSNE_VERSION;
-    case WLAN_DEAUTH_REASON_INVALID_RSNE_CAPABILITIES:
-      return wlan_mlme::ReasonCode::INVALID_RSNE_CAPABILITIES;
-    case WLAN_DEAUTH_REASON_IEEE802_1_X_AUTH_FAILED:
-      return wlan_mlme::ReasonCode::IEEE802_1_X_AUTH_FAILED;
-    case WLAN_DEAUTH_REASON_CIPHER_OUT_OF_POLICY:
-      return wlan_mlme::ReasonCode::REASON_CIPHER_OUT_OF_POLICY;
-    case WLAN_DEAUTH_REASON_TDLS_PEER_UNREACHABLE:
-      return wlan_mlme::ReasonCode::TDLS_PEER_UNREACHABLE;
-    case WLAN_DEAUTH_REASON_TDLS_UNSPECIFIED:
-      return wlan_mlme::ReasonCode::TDLS_UNSPECIFIED_REASON;
-    case WLAN_DEAUTH_REASON_SSP_REQUESTED_DISASSOC:
-      return wlan_mlme::ReasonCode::SSP_REQUESTED_DISASSOC;
-    case WLAN_DEAUTH_REASON_NO_SSP_ROAMING_AGREEMENT:
-      return wlan_mlme::ReasonCode::NO_SSP_ROAMING_AGREEMENT;
-    case WLAN_DEAUTH_REASON_BAD_CIPHER_OR_AKM:
-      return wlan_mlme::ReasonCode::BAD_CIPHER_OR_AKM;
-    case WLAN_DEAUTH_REASON_NOT_AUTHORIZED_THIS_LOCATION:
-      return wlan_mlme::ReasonCode::NOT_AUTHORIZED_THIS_LOCATION;
-    case WLAN_DEAUTH_REASON_SERVICE_CHANGE_PRECLUDES_TS:
-      return wlan_mlme::ReasonCode::SERVICE_CHANGE_PRECLUDES_TS;
-    case WLAN_DEAUTH_REASON_UNSPECIFIED_QOS:
-      return wlan_mlme::ReasonCode::UNSPECIFIED_QOS_REASON;
-    case WLAN_DEAUTH_REASON_NOT_ENOUGH_BANDWIDTH:
-      return wlan_mlme::ReasonCode::NOT_ENOUGH_BANDWIDTH;
-    case WLAN_DEAUTH_REASON_MISSING_ACKS:
-      return wlan_mlme::ReasonCode::MISSING_ACKS;
-    case WLAN_DEAUTH_REASON_EXCEEDED_TXOP:
-      return wlan_mlme::ReasonCode::EXCEEDED_TXOP;
-    case WLAN_DEAUTH_REASON_STA_LEAVING:
-      return wlan_mlme::ReasonCode::STA_LEAVING;
-    case WLAN_DEAUTH_REASON_END_TS_BA_DLS:
-      return wlan_mlme::ReasonCode::END_TS_BA_DLS;
-    case WLAN_DEAUTH_REASON_UNKNOWN_TS_BA:
-      return wlan_mlme::ReasonCode::UNKNOWN_TS_BA;
-    case WLAN_DEAUTH_REASON_TIMEOUT:
-      return wlan_mlme::ReasonCode::TIMEOUT;
-    case WLAN_DEAUTH_REASON_PEERKEY_MISMATCH:
-      return wlan_mlme::ReasonCode::PEERKEY_MISMATCH;
-    case WLAN_DEAUTH_REASON_PEER_INITIATED:
-      return wlan_mlme::ReasonCode::PEER_INITIATED;
-    case WLAN_DEAUTH_REASON_AP_INITIATED:
-      return wlan_mlme::ReasonCode::AP_INITIATED;
-    case WLAN_DEAUTH_REASON_INVALID_FT_ACTION_FRAME_COUNT:
-      return wlan_mlme::ReasonCode::REASON_INVALID_FT_ACTION_FRAME_COUNT;
-    case WLAN_DEAUTH_REASON_INVALID_PMKID:
-      return wlan_mlme::ReasonCode::REASON_INVALID_PMKID;
-    case WLAN_DEAUTH_REASON_INVALID_MDE:
-      return wlan_mlme::ReasonCode::REASON_INVALID_MDE;
-    case WLAN_DEAUTH_REASON_INVALID_FTE:
-      return wlan_mlme::ReasonCode::REASON_INVALID_FTE;
-    case WLAN_DEAUTH_REASON_MESH_PEERING_CANCELED:
-      return wlan_mlme::ReasonCode::MESH_PEERING_CANCELED;
-    case WLAN_DEAUTH_REASON_MESH_MAX_PEERS:
-      return wlan_mlme::ReasonCode::MESH_MAX_PEERS;
-    case WLAN_DEAUTH_REASON_MESH_CONFIGURATION_POLICY_VIOLATION:
-      return wlan_mlme::ReasonCode::MESH_CONFIGURATION_POLICY_VIOLATION;
-    case WLAN_DEAUTH_REASON_MESH_CLOSE_RCVD:
-      return wlan_mlme::ReasonCode::MESH_CLOSE_RCVD;
-    case WLAN_DEAUTH_REASON_MESH_MAX_RETRIES:
-      return wlan_mlme::ReasonCode::MESH_MAX_RETRIES;
-    case WLAN_DEAUTH_REASON_MESH_CONFIRM_TIMEOUT:
-      return wlan_mlme::ReasonCode::MESH_CONFIRM_TIMEOUT;
-    case WLAN_DEAUTH_REASON_MESH_INVALID_GTK:
-      return wlan_mlme::ReasonCode::MESH_INVALID_GTK;
-    case WLAN_DEAUTH_REASON_MESH_INCONSISTENT_PARAMETERS:
-      return wlan_mlme::ReasonCode::MESH_INCONSISTENT_PARAMETERS;
-    case WLAN_DEAUTH_REASON_MESH_INVALID_SECURITY_CAPABILITY:
-      return wlan_mlme::ReasonCode::MESH_INVALID_SECURITY_CAPABILITY;
-    case WLAN_DEAUTH_REASON_MESH_PATH_ERROR_NO_PROXY_INFORMATION:
-      return wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_PROXY_INFORMATION;
-    case WLAN_DEAUTH_REASON_MESH_PATH_ERROR_NO_FORWARDING_INFORMATION:
-      return wlan_mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION;
-    case WLAN_DEAUTH_REASON_MESH_PATH_ERROR_DESTINATION_UNREACHABLE:
-      return wlan_mlme::ReasonCode::MESH_PATH_ERROR_DESTINATION_UNREACHABLE;
-    case WLAN_DEAUTH_REASON_MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS:
-      return wlan_mlme::ReasonCode::MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS;
-    case WLAN_DEAUTH_REASON_MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS:
-      return wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS;
-    case WLAN_DEAUTH_REASON_MESH_CHANNEL_SWITCH_UNSPECIFIED:
-      return wlan_mlme::ReasonCode::MESH_CHANNEL_SWITCH_UNSPECIFIED;
     default:
       ZX_ASSERT(0);
   }
@@ -1101,7 +1048,7 @@ wlan_mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags) {
 void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
                          wlanif_sae_frame_t* frame_out) {
   memcpy(frame_out->peer_sta_address, frame_in.peer_sta_address.data(), ETH_ALEN);
-  frame_out->result_code = ConvertAuthResultCode(frame_in.result_code);
+  frame_out->status_code = ConvertStatusCode(frame_in.status_code);
   frame_out->seq_num = frame_in.seq_num;
 
   frame_out->sae_fields_count = frame_in.sae_fields.size();
@@ -1111,7 +1058,7 @@ void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
 void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
                          ::fuchsia::wlan::mlme::SaeFrame& frame_out) {
   memcpy(frame_out.peer_sta_address.data(), frame_in->peer_sta_address, ETH_ALEN);
-  frame_out.result_code = ConvertAuthResultCode(frame_in->result_code);
+  frame_out.status_code = ConvertStatusCode(frame_in->status_code);
   frame_out.seq_num = frame_in->seq_num;
 
   frame_out.sae_fields.resize(frame_in->sae_fields_count);

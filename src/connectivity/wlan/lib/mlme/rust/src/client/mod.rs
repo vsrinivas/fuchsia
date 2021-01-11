@@ -26,8 +26,8 @@ use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     scanner::Scanner,
     state::States,
@@ -474,10 +474,10 @@ impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
     fn forward_sme_sae_rx(
         &mut self,
         seq_num: u16,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        status_code: fidl_ieee80211::StatusCode,
         sae_fields: Vec<u8>,
     ) {
-        self.forward_sae_frame_rx(seq_num, result_code, sae_fields)
+        self.forward_sae_frame_rx(seq_num, status_code, sae_fields)
     }
 
     fn forward_sae_handshake_ind(&mut self) {
@@ -960,14 +960,14 @@ impl<'a> BoundClient<'a> {
     fn forward_sae_frame_rx(
         &mut self,
         seq_num: u16,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        status_code: fidl_ieee80211::StatusCode,
         sae_fields: Vec<u8>,
     ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_on_sae_frame_rx(&mut fidl_mlme::SaeFrame {
                 peer_sta_address: self.sta.bssid.0,
                 seq_num,
-                result_code,
+                status_code,
                 sae_fields,
             })
         });

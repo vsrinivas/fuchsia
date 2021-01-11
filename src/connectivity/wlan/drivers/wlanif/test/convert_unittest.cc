@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -18,6 +19,7 @@
 
 namespace wlanif {
 namespace {
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
@@ -507,12 +509,12 @@ TEST(ConvertTest, ToWlanifBssDescription) {
 TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {
   std::array<uint8_t, 6> peer_sta_address = {1, 1, 2, 2, 3, 4};
   std::vector<unsigned char> sae_fields = {9, 8, 7, 6, 5, 5, 4, 3, 2, 2, 1};
-  uint8_t result_code = WLAN_AUTH_RESULT_SUCCESS;
-  wlan_mlme::AuthenticateResultCodes fidl_result_code = wlan_mlme::AuthenticateResultCodes::SUCCESS;
+  wlan_ieee80211::StatusCode fidl_status_code = wlan_ieee80211::StatusCode::SUCCESS;
+  uint16_t status_code = static_cast<uint16_t>(fidl_status_code);
 
   wlan_mlme::SaeFrame fidl_frame = {
       .peer_sta_address = peer_sta_address,
-      .result_code = fidl_result_code,
+      .status_code = fidl_status_code,
       .seq_num = 1,
       .sae_fields = sae_fields,
   };
@@ -522,7 +524,7 @@ TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {
   ConvertSaeAuthFrame(fidl_frame, &frame);
 
   EXPECT_EQ(memcmp(frame.peer_sta_address, fidl_frame.peer_sta_address.data(), ETH_ALEN), 0);
-  EXPECT_EQ(frame.result_code, result_code);
+  EXPECT_EQ(frame.status_code, status_code);
   EXPECT_EQ(frame.seq_num, 1);
   EXPECT_EQ(frame.sae_fields_count, fidl_frame.sae_fields.size());
   EXPECT_EQ(memcmp(frame.sae_fields_list, fidl_frame.sae_fields.data(), frame.sae_fields_count), 0);
@@ -530,7 +532,7 @@ TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {
   ConvertSaeAuthFrame(&frame, fidl_frame);
 
   EXPECT_EQ(memcmp(frame.peer_sta_address, fidl_frame.peer_sta_address.data(), ETH_ALEN), 0);
-  EXPECT_EQ(fidl_frame.result_code, fidl_result_code);
+  EXPECT_EQ(fidl_frame.status_code, fidl_status_code);
   EXPECT_EQ(frame.seq_num, 1);
   EXPECT_EQ(frame.sae_fields_count, fidl_frame.sae_fields.size());
   EXPECT_EQ(memcmp(frame.sae_fields_list, fidl_frame.sae_fields.data(), frame.sae_fields_count), 0);

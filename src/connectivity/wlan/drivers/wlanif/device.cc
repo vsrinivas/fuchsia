@@ -368,7 +368,7 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
 
   // reason_code
-  impl_req.reason_code = ConvertDeauthReasonCode(req.reason_code);
+  impl_req.reason_code = ConvertReasonCode(req.reason_code);
 
   wlanif_impl_deauth_req(&wlanif_impl_, &impl_req);
 }
@@ -659,7 +659,7 @@ void Device::SaeHandshakeResp(::fuchsia::wlan::mlme::SaeHandshakeResponse resp) 
   wlanif_sae_handshake_resp_t handshake_resp = {};
 
   memcpy(handshake_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
-  handshake_resp.result_code = ConvertAuthResultCode(resp.result_code);
+  handshake_resp.status_code = ConvertStatusCode(resp.status_code);
   wlanif_impl_sae_handshake_resp(&wlanif_impl_, &handshake_resp);
 }
 
@@ -797,7 +797,7 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
   // reason_code
-  fidl_ind.reason_code = ConvertDeauthReasonCode(ind->reason_code);
+  fidl_ind.reason_code = ConvertReasonCode(ind->reason_code);
 
   // locally_initiated
   fidl_ind.locally_initiated = ind->locally_initiated;

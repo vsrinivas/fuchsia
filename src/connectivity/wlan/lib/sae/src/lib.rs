@@ -17,7 +17,7 @@ pub use frame::{CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
-    fidl_fuchsia_wlan_mlme::AuthenticateResultCodes as ResultCode,
+    fidl_fuchsia_wlan_ieee80211::StatusCode,
     log::warn,
     mundane::{hash::Digest, hmac},
     wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
@@ -71,14 +71,14 @@ impl From<Error> for RejectReason {
 #[derive(Debug)]
 pub struct AuthFrameRx<'a> {
     pub seq: u16,
-    pub result_code: ResultCode,
+    pub status_code: StatusCode,
     pub body: &'a [u8],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AuthFrameTx {
     pub seq: u16,
-    pub result_code: ResultCode,
+    pub status_code: StatusCode,
     pub body: Vec<u8>,
 }
 
@@ -369,7 +369,7 @@ mod tests {
     struct ConfirmRx<'a>(AuthFrameRx<'a>);
 
     fn to_rx(frame: &AuthFrameTx) -> AuthFrameRx {
-        AuthFrameRx { seq: frame.seq, result_code: frame.result_code, body: &frame.body[..] }
+        AuthFrameRx { seq: frame.seq, status_code: frame.status_code, body: &frame.body[..] }
     }
 
     impl CommitTx {

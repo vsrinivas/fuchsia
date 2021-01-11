@@ -155,7 +155,7 @@ impl Authenticating {
         sta: &mut BoundClient<'_>,
         resp: fidl_mlme::SaeHandshakeResponse,
     ) -> akm::AkmState {
-        let state = self.algorithm.handle_sae_resp(sta, resp.result_code);
+        let state = self.algorithm.handle_sae_resp(sta, resp.status_code);
         self.akm_state_update_notify_sme(sta, state)
     }
 
@@ -166,7 +166,7 @@ impl Authenticating {
         tx: fidl_mlme::SaeFrame,
     ) -> akm::AkmState {
         let state =
-            self.algorithm.handle_sme_sae_tx(sta, tx.seq_num, tx.result_code, &tx.sae_fields[..]);
+            self.algorithm.handle_sme_sae_tx(sta, tx.seq_num, tx.status_code, &tx.sae_fields[..]);
         self.akm_state_update_notify_sme(sta, state)
     }
 

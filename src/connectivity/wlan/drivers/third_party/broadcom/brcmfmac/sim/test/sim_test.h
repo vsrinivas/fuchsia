@@ -126,7 +126,7 @@ class SimInterface {
                      std::optional<zx::duration> delay = std::nullopt);
 
   void DeauthenticateFrom(const common::MacAddr& bssid,
-                          wlan_deauth_reason_t reason = WLAN_DEAUTH_REASON_UNSPECIFIED);
+                          wlanif_reason_code_t reason = WLANIF_REASON_CODE_UNSPECIFIED);
 
   // Scan operations
   void StartScan(uint64_t txn_id = 0, bool active = false);

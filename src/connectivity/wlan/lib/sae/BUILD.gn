@@ -9,7 +9,7 @@ rustc_library("wlan-sae") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//src/lib/mundane",

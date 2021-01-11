@@ -349,7 +349,7 @@ void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
   device_.EthStart(&eth_proto_);
 
   SetEthernetOnline();
-  wlanif_deauth_indication_t deauth_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
+  wlanif_deauth_indication_t deauth_ind{.reason_code = WLANIF_REASON_CODE_AP_INITIATED};
   device_.DeauthenticateInd(&deauth_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
@@ -359,7 +359,7 @@ void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
-  wlanif_disassoc_indication_t disassoc_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
+  wlanif_disassoc_indication_t disassoc_ind{.reason_code = WLANIF_REASON_CODE_AP_INITIATED};
   device_.DisassociateInd(&disassoc_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 

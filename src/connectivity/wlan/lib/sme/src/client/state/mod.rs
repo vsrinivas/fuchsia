@@ -24,7 +24,7 @@ use {
         MlmeRequest,
     },
     anyhow::bail,
-    fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
@@ -1089,10 +1089,14 @@ fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: 
             SecAssocUpdate::SaeAuthStatus(status) => context.mlme_sink.send(
                 MlmeRequest::SaeHandshakeResp(fidl_mlme::SaeHandshakeResponse {
                     peer_sta_address,
-                    result_code: match status {
-                        AuthStatus::Success => fidl_mlme::AuthenticateResultCodes::Success,
-                        AuthStatus::Rejected => fidl_mlme::AuthenticateResultCodes::Refused,
-                        AuthStatus::InternalError => fidl_mlme::AuthenticateResultCodes::Refused,
+                    status_code: match status {
+                        AuthStatus::Success => fidl_ieee80211::StatusCode::Success,
+                        AuthStatus::Rejected => {
+                            fidl_ieee80211::StatusCode::RefusedReasonUnspecified
+                        }
+                        AuthStatus::InternalError => {
+                            fidl_ieee80211::StatusCode::RefusedReasonUnspecified
+                        }
                     },
                 }),
             ),
@@ -2369,13 +2373,13 @@ mod tests {
         let mut h = TestHelper::new();
         let frame_rx = fidl_mlme::SaeFrame {
             peer_sta_address: [0xaa; 6],
-            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_ieee80211::StatusCode::Success,
             seq_num: 1,
             sae_fields: vec![1, 2, 3, 4, 5],
         };
         let frame_tx = fidl_mlme::SaeFrame {
             peer_sta_address: [0xbb; 6],
-            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_ieee80211::StatusCode::Success,
             seq_num: 2,
             sae_fields: vec![1, 2, 3, 4, 5, 6, 7, 8],
         };
@@ -2420,7 +2424,7 @@ mod tests {
         let resp = assert_variant!(
             h.mlme_stream.try_next(),
             Ok(Some(MlmeRequest::SaeHandshakeResp(resp))) => resp);
-        assert_eq!(resp.result_code, fidl_mlme::AuthenticateResultCodes::Success);
+        assert_eq!(resp.status_code, fidl_ieee80211::StatusCode::Success);
         state
     }
 
@@ -2449,7 +2453,7 @@ mod tests {
         let mut h = TestHelper::new();
         let frame_tx = fidl_mlme::SaeFrame {
             peer_sta_address: [0xbb; 6],
-            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_ieee80211::StatusCode::Success,
             seq_num: 2,
             sae_fields: vec![1, 2, 3, 4, 5, 6, 7, 8],
         };

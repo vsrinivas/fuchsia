@@ -157,7 +157,7 @@ impl Method {
                 let mut sae_update_sink = sae::SaeUpdateSink::default();
                 let frame_rx = sae::AuthFrameRx {
                     seq: frame.seq_num,
-                    result_code: frame.result_code,
+                    status_code: frame.status_code,
                     body: &frame.sae_fields[..],
                 };
                 sae_data.handshake.handle_frame(&mut sae_update_sink, &frame_rx);
@@ -200,7 +200,7 @@ fn process_sae_updates(
             sae::SaeUpdate::SendFrame(frame) => {
                 let sae_frame = SaeFrame {
                     peer_sta_address: sae_data.peer.clone(),
-                    result_code: frame.result_code,
+                    status_code: frame.status_code,
                     seq_num: frame.seq,
                     sae_fields: frame.body,
                 };
@@ -241,6 +241,7 @@ fn process_sae_updates(
 #[cfg(test)]
 mod test {
     use super::*;
+    use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
     use std::sync::{Arc, Mutex};
     use wlan_common::assert_variant;
 
@@ -252,7 +253,7 @@ mod test {
         auth.on_sae_handshake_ind(&mut sink).expect_err("PSK auth method accepted SAE ind");
         let frame = SaeFrame {
             peer_sta_address: [0xaa; 6],
-            result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_ieee80211::StatusCode::Success,
             seq_num: 1,
             sae_fields: vec![0u8; 10],
         };
@@ -277,7 +278,7 @@ mod test {
             self.0.lock().unwrap().initiated = true;
             sink.push(sae::SaeUpdate::SendFrame(sae::AuthFrameTx {
                 seq: 1,
-                result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+                status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
                 body: vec![],
             }));
         }
@@ -294,7 +295,7 @@ mod test {
             self.0.lock().unwrap().handled_confirms += 1;
             sink.push(sae::SaeUpdate::SendFrame(sae::AuthFrameTx {
                 seq: 2,
-                result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+                status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
                 body: vec![],
             }));
             sink.push(sae::SaeUpdate::Success(sae::Key { pmk: vec![0xaa], pmkid: vec![0xbb] }))
@@ -338,7 +339,7 @@ mod test {
 
         let commit_frame = SaeFrame {
             peer_sta_address: [0xaa; 6],
-            result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
             seq_num: 1,
             sae_fields: COMMIT.to_vec(),
         };
@@ -348,7 +349,7 @@ mod test {
 
         let confirm_frame = SaeFrame {
             peer_sta_address: [0xaa; 6],
-            result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
             seq_num: 2,
             sae_fields: CONFIRM.to_vec(),
         };
@@ -451,7 +452,7 @@ mod test {
         auth.on_sae_handshake_ind(&mut sink).expect_err("Driver SAE shouldn't handle SAE ind");
         let frame = SaeFrame {
             peer_sta_address: [0xaa; 6],
-            result_code: fidl_fuchsia_wlan_mlme::AuthenticateResultCodes::Success,
+            status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
             seq_num: 1,
             sae_fields: COMMIT.to_vec(),
         };

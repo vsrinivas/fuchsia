@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
@@ -13,6 +14,8 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::brcmfmac {
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
@@ -546,10 +549,11 @@ void AuthTest::OnSaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
     return;
   }
 
-  wlanif_sae_frame_t frame = {.result_code = WLAN_AUTH_RESULT_SUCCESS,
-                              .seq_num = 1,
-                              .sae_fields_list = kCommitSaeFields,
-                              .sae_fields_count = kCommitSaeFieldsLen};
+  wlanif_sae_frame_t frame = {
+      .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
+      .seq_num = 1,
+      .sae_fields_list = kCommitSaeFields,
+      .sae_fields_count = kCommitSaeFieldsLen};
 
   kDefaultBssid.CopyTo(frame.peer_sta_address);
 
@@ -562,13 +566,14 @@ void AuthTest::OnSaeFrameRx(const wlanif_sae_frame_t* frame) {
 
   if (sae_auth_state_ == COMMIT) {
     ASSERT_EQ(frame->seq_num, 1);
-    EXPECT_EQ(frame->result_code, WLAN_AUTH_RESULT_SUCCESS);
+    EXPECT_EQ(frame->status_code, static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS));
     EXPECT_EQ(frame->sae_fields_count, kCommitSaeFieldsLen);
     EXPECT_EQ(memcmp(frame->sae_fields_list, kCommitSaeFields, kCommitSaeFieldsLen), 0);
-    wlanif_sae_frame_t next_frame = {.result_code = WLAN_AUTH_RESULT_SUCCESS,
-                                     .seq_num = 2,
-                                     .sae_fields_list = kConfirmSaeFields,
-                                     .sae_fields_count = kConfirmSaeFieldsLen};
+    wlanif_sae_frame_t next_frame = {
+        .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
+        .seq_num = 2,
+        .sae_fields_list = kConfirmSaeFields,
+        .sae_fields_count = kConfirmSaeFieldsLen};
 
     kDefaultBssid.CopyTo(next_frame.peer_sta_address);
 
@@ -576,14 +581,15 @@ void AuthTest::OnSaeFrameRx(const wlanif_sae_frame_t* frame) {
     sae_auth_state_ = CONFIRM;
   } else if (sae_auth_state_ == CONFIRM) {
     ASSERT_EQ(frame->seq_num, 2);
-    EXPECT_EQ(frame->result_code, WLAN_AUTH_RESULT_SUCCESS);
+    EXPECT_EQ(frame->status_code, static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS));
     EXPECT_EQ(frame->sae_fields_count, kConfirmSaeFieldsLen);
     EXPECT_EQ(memcmp(frame->sae_fields_list, kConfirmSaeFields, kConfirmSaeFieldsLen), 0);
 
     if (sae_ignore_confirm)
       return;
 
-    wlanif_sae_handshake_resp_t resp = {.result_code = WLAN_AUTH_RESULT_SUCCESS};
+    wlanif_sae_handshake_resp_t resp = {
+        .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS)};
     kDefaultBssid.CopyTo(resp.peer_sta_address);
     client_ifc_.if_impl_ops_->sae_handshake_resp(client_ifc_.if_impl_ctx_, &resp);
     sae_auth_state_ = DONE;
@@ -862,10 +868,11 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  wlanif_sae_frame_t frame = {.result_code = WLAN_AUTH_RESULT_REFUSED,
-                              .seq_num = 1,
-                              .sae_fields_list = kCommitSaeFields,
-                              .sae_fields_count = kCommitSaeFieldsLen};
+  wlanif_sae_frame_t frame = {
+      .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED),
+      .seq_num = 1,
+      .sae_fields_list = kCommitSaeFields,
+      .sae_fields_count = kCommitSaeFieldsLen};
 
   kDefaultBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;
@@ -889,10 +896,11 @@ TEST_F(AuthTest, WPA3WrongBssid) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  wlanif_sae_frame_t frame = {.result_code = WLAN_AUTH_RESULT_SUCCESS,
-                              .seq_num = 1,
-                              .sae_fields_list = kCommitSaeFields,
-                              .sae_fields_count = kCommitSaeFieldsLen};
+  wlanif_sae_frame_t frame = {
+      .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
+      .seq_num = 1,
+      .sae_fields_list = kCommitSaeFields,
+      .sae_fields_count = kCommitSaeFieldsLen};
   // Use wrong bssid.
   kWrongBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;

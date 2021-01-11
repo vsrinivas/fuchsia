@@ -1236,14 +1236,14 @@ bool SimFirmware::FindAndRemoveClient(const common::MacAddr client_mac, bool mot
                             softap_ifidx_.value(), nullptr, 0, deauth_reason, client_mac);
           SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
                             softap_ifidx_.value(), nullptr, BRCMF_EVENT_MSG_LINK,
-                            WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, client_mac);
+                            WLANIF_REASON_CODE_LEAVING_NETWORK_DISASSOC, client_mac);
         }
       } else {
         BRCMF_DBG(SIM, "deauth_reason is not used.");
         // The removal is triggered by a disassoc frame.
         SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
                           softap_ifidx_.value(), nullptr, BRCMF_EVENT_MSG_LINK,
-                          WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, client_mac);
+                          WLANIF_REASON_CODE_LEAVING_NETWORK_DISASSOC, client_mac);
       }
 
       clients.remove(client);

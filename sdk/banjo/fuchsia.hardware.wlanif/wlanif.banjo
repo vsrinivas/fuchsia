@@ -103,7 +103,7 @@ struct WlanifAuthInd {
 };
 
 /// Deauthentication reasons: IEEE Std 802.11-2016, 9.4.1.7 (Table 9-45)
-enum WlanDeauthReason : uint16 {
+enum WlanifReasonCode : uint16 {
     /// 0 Reserved
     UNSPECIFIED = 1;
     INVALID_AUTHENTICATION = 2;
@@ -173,7 +173,7 @@ enum WlanDeauthReason : uint16 {
 
 struct WlanifDeauthReq {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
-    WlanDeauthReason reason_code;
+    WlanifReasonCode reason_code;
 };
 
 struct WlanifAssocReq {
@@ -256,17 +256,17 @@ struct WlanifEapolReq {
 
 /// This struct is sent from SME to wlanif, indicating the result of SAE handshake process.
 struct WlanifSaeHandshakeResp {
-   array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
-   WlanAuthResult result_code;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    uint16 status_code;
 };
 
 /// This struct is sent in both directions, containing the information of SAE authentication
 /// frames, sae_fields maps to challenge text, see IEEE Std 802.11-2016, 9.3.3.12.
 struct WlanifSaeFrame {
-   array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
-   WlanAuthResult result_code;
-   uint16 seq_num;
-   vector<uint8> sae_fields;
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+    uint16 status_code;
+    uint16 seq_num;
+    vector<uint8> sae_fields;
 };
 
 /// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
@@ -355,7 +355,7 @@ struct WlanifDeauthConfirm {
 
 struct WlanifDeauthIndication {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
-    WlanDeauthReason reason_code;
+    WlanifReasonCode reason_code;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
     bool locally_initiated;
@@ -392,7 +392,7 @@ struct WlanifDisassocConfirm {
 
 struct WlanifDisassocIndication {
     array<uint8>:MAC_ARRAY_LENGTH PeerStaAddress;
-    WlanDeauthReason reason_code;
+    WlanifReasonCode reason_code;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
     bool locally_initiated;
