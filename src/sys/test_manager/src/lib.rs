@@ -13,9 +13,9 @@ use {
     ftest_manager::{LaunchError, SuiteControllerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog::fx_log_err,
     futures::prelude::*,
     thiserror::Error,
+    tracing::error,
     uuid::Uuid,
 };
 
@@ -46,8 +46,8 @@ pub async fn run_test_manager(
                 responder,
             } => {
                 let controller = match controller.into_stream() {
-                    Err(e) => {
-                        fx_log_err!("invalid controller channel for `{}`: {}", test_url, e);
+                    Err(error) => {
+                        error!(%error, component_url = %test_url, "invalid controller channel");
                         responder
                             .send(&mut Err(LaunchError::InvalidArgs))
                             .map_err(TestManagerError::Response)?;
@@ -61,8 +61,8 @@ pub async fn run_test_manager(
                     Ok(test) => {
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
                         fasync::Task::spawn(async move {
-                            test.serve_controller(controller).await.unwrap_or_else(|e| {
-                                fx_log_err!("serve_controller failed for `{}`: {}", test_url, e)
+                            test.serve_controller(controller).await.unwrap_or_else(|error| {
+                                error!(%error, component_url = %test_url, "serve_controller failed");
                             });
                         })
                         .detach();
@@ -87,7 +87,7 @@ impl Drop for RunningTest {
         fasync::Task::spawn(async move {
             Self::destroy_test(child)
                 .await
-                .unwrap_or_else(|e| fx_log_err!("cannot destroy test child  {}", e));
+                .unwrap_or_else(|error| error!(%error, "cannot destroy test child"));
         })
         .detach();
     }
@@ -129,8 +129,8 @@ impl RunningTest {
         test_url: &String,
         suite_request: ServerEnd<SuiteMarker>,
     ) -> Result<Self, LaunchError> {
-        let realm = client::connect_to_service::<fsys::RealmMarker>().map_err(|e| {
-            fx_log_err!("Cannot connect to realm service: {}", e);
+        let realm = client::connect_to_service::<fsys::RealmMarker>().map_err(|error| {
+            error!(%error, "Cannot connect to realm service");
             LaunchError::InternalError
         })?;
 
@@ -146,20 +146,20 @@ impl RunningTest {
         realm
             .create_child(&mut collection_ref, child_decl)
             .await
-            .map_err(|e| {
-                fx_log_err!("Failed to call realm to instantiate test component `{}`: {}", test_url, e);
+            .map_err(|error| {
+                error!(%error, component_url = %test_url, "Failed to call realm to instantiate test component");
                 LaunchError::InternalError
             })?
             .map_err(|e| match e {
                 ComponentError::InvalidArguments
                 | ComponentError::CollectionNotFound
                 | ComponentError::InstanceAlreadyExists => {
-                    fx_log_err!("Failed to instantiate test component `{}` because an instance with the same name already exists (this should not happen)", test_url);
+                    error!(component_url = %test_url, "Failed to instantiate test component because an instance with the same name already exists (this should not happen)");
                     LaunchError::InternalError
                 }
                 ComponentError::ResourceUnavailable => LaunchError::ResourceUnavailable,
-                e => {
-                    fx_log_err!("Failed to instantiate test component `{}` due to an unexpected error: {:?}", test_url, e);
+                error => {
+                    error!(?error, component_url = %test_url, "Failed to instantiate test component due to an unexpected error");
                     LaunchError::InternalError
                 }
             })?;
@@ -171,29 +171,29 @@ impl RunningTest {
         realm
             .bind_child(&mut child_ref, server_end)
             .await
-            .map_err(|e| {
-                fx_log_err!("Failed to call realm to bind to test component `{}`: {}", test_url, e);
+            .map_err(|error| {
+                error!(%error, component_url = %test_url, "Failed to call realm to bind to test component");
                 LaunchError::InternalError
             })?
             .map_err(|e| match e {
                 ComponentError::InvalidArguments
                 | ComponentError::InstanceNotFound
                 | ComponentError::InstanceCannotStart => {
-                    fx_log_err!("Test component `{}` could not be started", test_url);
+                    error!(component_url = %test_url, "Test component could not be started");
                     LaunchError::InternalError
                 }
                 ComponentError::InstanceCannotResolve => LaunchError::InstanceCannotResolve,
-                e => {
-                    fx_log_err!("Test component `{}` could not be resolved: {:?}", test_url, e);
+                error => {
+                    error!(?error, component_url = %test_url, "Test component could not be resolved");
                     LaunchError::InternalError
                 }
             })?;
 
-        Self::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|e| {
-            fx_log_err!(
-                "Failed to connect to `fuchsia.test.Suite` protocol for `{}`: {}",
-                test_url,
-                e
+        Self::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|error| {
+            error!(
+                %error,
+                component_url = %test_url,
+                "Failed to connect to `fuchsia.test.Suite` protocol"
             );
             LaunchError::InternalError
         })?;
