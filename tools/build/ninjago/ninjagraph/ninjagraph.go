@@ -372,6 +372,12 @@ func FromDOT(r io.Reader) (Graph, error) {
 // populates build time on edges.
 //
 // `steps` should be deduplicated, so they have a 1-to-1 mapping to edges.
+// Although the mapping can be partial, which means not all edges from the graph
+// have a corresponding step from the input.
+//
+// If any non-phony edges are missing steps, subsequent attempt to calculate
+// critical path will fail. To avoid this, use `WithStepsOnly` to extract a
+// partial graph.
 func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 	stepByOut := make(map[string]ninjalog.Step)
 
@@ -395,8 +401,10 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 	}
 
 	for _, edge := range g.Edges {
-		// Skip "phony" builds. For example "build default: phony obj/default.stamp"
-		// can be included in the graph.
+		// Skip "phony" builds because they don't actually run any build commands.
+		//
+		// For example "build default: phony obj/default.stamp" can be included in
+		// the graph.
 		if edge.Rule == "phony" {
 			continue
 		}
@@ -419,17 +427,19 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 		for _, node := range nodes {
 			s, ok := stepByOut[node.Path]
 			if !ok {
-				return fmt.Errorf("no steps are producing output %s, yet an edge claims to produce it", node.Path)
+				break
 			}
 			if step != nil && step.CmdHash != s.CmdHash {
 				return fmt.Errorf("multiple steps match the same edge on outputs %v, previous step: %#v, this step: %#v", pathsOf(nodes), step, s)
 			}
 			step = &s
 		}
-		if step == nil {
-			return fmt.Errorf("no build steps found for build edge with output(s): %v", pathsOf(nodes))
+		// Steps can be missing if they are from a partial build, for example
+		// incremental builds and failed builds. In this case, some edges in the
+		// graphs have not been reached.
+		if step != nil {
+			edge.Step = step
 		}
-		edge.Step = step
 	}
 	return nil
 }
@@ -440,4 +450,83 @@ func pathsOf(nodes []*Node) []string {
 		paths = append(paths, n.Path)
 	}
 	return paths
+}
+
+// WithStepsOnly returns an extracted subgraph that contains edges that either
+// have `Step`s associated with them, or are phonies. Only nodes with edges
+// connected to them are kept in the returned graph.
+//
+// This function is useful, after `Step`s are populated, for extracting a
+// partial build graph from, for example, incremental builds and failed builds.
+//
+// If this function returns successfully, the returned Graph is guaranteed to
+// have steps associated to all non-phony edges. All phony edges are kept to
+// preserve dependencies.
+func WithStepsOnly(g Graph) (Graph, error) {
+	subGraph := Graph{
+		Nodes: make(map[int64]*Node),
+	}
+
+	for _, edge := range g.Edges {
+		// Steps can be missing when analyzing partial builds, for example
+		// incremental and failed builds. Missing a step means this edge is not
+		// reached in this partial build (build command for this edge is not
+		// executed), so we simply omit them.
+		if edge.Rule != "phony" && edge.Step == nil {
+			continue
+		}
+		subGraph.Edges = append(subGraph.Edges, &Edge{
+			// Avoid reusing the existing edge or copying over memoized pointer
+			// fields, so when memoized fields are set on the new graph, it won't
+			// affect the old one.
+			Inputs:  edge.Inputs,
+			Outputs: edge.Outputs,
+			Rule:    edge.Rule,
+			Step:    edge.Step,
+		})
+	}
+
+	for _, edge := range subGraph.Edges {
+		for _, id := range edge.Inputs {
+			node, ok := subGraph.Nodes[id]
+			if !ok {
+				n, ok := g.Nodes[id]
+				if !ok {
+					return Graph{}, fmt.Errorf("node %x not found, yet an edge claims it as input, invalid graph", id)
+				}
+				node = &Node{
+					// Avoid reusing the existing node or copying over memoized pointer
+					// fields, so when memoized fields are set on the new graph, it won't
+					// affect the old one.
+					ID:   n.ID,
+					Path: n.Path,
+				}
+				subGraph.Nodes[id] = node
+			}
+			node.Outs = append(node.Outs, edge)
+		}
+
+		for _, id := range edge.Outputs {
+			node, ok := subGraph.Nodes[id]
+			if !ok {
+				n, ok := g.Nodes[id]
+				if !ok {
+					return Graph{}, fmt.Errorf("node %x not found, yet an edge claims to produce it, invalid graph", id)
+				}
+				node = &Node{
+					// Avoid reusing the existing node or copying over memoized pointer
+					// fields, so when memoized fields are set on the new graph, it won't
+					// affect the old one.
+					ID:   n.ID,
+					Path: n.Path,
+				}
+				subGraph.Nodes[id] = node
+			}
+			if node.In != nil {
+				return Graph{}, fmt.Errorf("multiple edges claim to produce %x as output, invalid graph", id)
+			}
+			node.In = edge
+		}
+	}
+	return subGraph, nil
 }

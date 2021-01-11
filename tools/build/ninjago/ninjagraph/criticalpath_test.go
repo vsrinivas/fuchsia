@@ -690,3 +690,46 @@ func mustDuration(t *testing.T, edge *Edge, f func(*Edge) (time.Duration, error)
 	}
 	return d
 }
+
+func TestIsEmpty(t *testing.T) {
+	edge := &Edge{Inputs: []int64{1}, Outputs: []int64{2}, Step: &ninjalog.Step{Out: "2"}}
+
+	for _, tc := range []struct {
+		g    Graph
+		want bool
+	}{
+		{
+			g:    Graph{},
+			want: true,
+		},
+		{
+			g: Graph{
+				Nodes: make(map[int64]*Node),
+				Edges: make([]*Edge, 0),
+			},
+			want: true,
+		},
+		{
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1},
+				},
+			},
+			want: false,
+		},
+		{
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge}},
+					2: {ID: 2, In: edge},
+				},
+				Edges: []*Edge{edge, edge},
+			},
+			want: false,
+		},
+	} {
+		if got := tc.g.IsEmpty(); got != tc.want {
+			t.Errorf("IsEmpty() = %t, want: %t, graph:\n%#v", got, tc.want, tc.g)
+		}
+	}
+}

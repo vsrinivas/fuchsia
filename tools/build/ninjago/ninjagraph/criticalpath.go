@@ -93,7 +93,7 @@ func (g *Graph) CriticalPath() ([]ninjalog.Step, error) {
 			continue
 		}
 		// Phony edges don't have steps associated with them.
-		if n.In.Step == nil {
+		if n.In.Rule == "phony" {
 			continue
 		}
 		criticalPath = append(criticalPath, *n.In.Step)
@@ -113,7 +113,7 @@ func (g *Graph) CriticalPath() ([]ninjalog.Step, error) {
 // float, because floats of actions are calculated against the completion of the
 // whole build.
 func (g *Graph) addSink() error {
-	if len(g.Edges) == 0 || g.sink != nil {
+	if g.IsEmpty() || g.sink != nil {
 		return nil
 	}
 
@@ -259,7 +259,7 @@ func (g *Graph) latestFinish(edge *Edge) (time.Duration, error) {
 // A critical path is the path through the build that results in the latest
 // completion of the build.
 func (g *Graph) CriticalPathV2() ([]ninjalog.Step, error) {
-	if len(g.Edges) == 0 {
+	if g.IsEmpty() {
 		return nil, nil
 	}
 
@@ -417,7 +417,7 @@ func (g *Graph) drag(edge *Edge) (time.Duration, error) {
 // graph through `PopulateEdges`, but with `OnCriticalPath`, `TotalFloat` and
 // `Drag` set.
 func (g *Graph) PopulatedSteps() ([]ninjalog.Step, error) {
-	if len(g.Edges) == 0 {
+	if g.IsEmpty() {
 		return nil, nil
 	}
 
@@ -462,4 +462,9 @@ func (g *Graph) PopulatedSteps() ([]ninjalog.Step, error) {
 		steps = append(steps, s)
 	}
 	return steps, nil
+}
+
+// IsEmpty returns true iff the graph has no nodes and no edges.
+func (g Graph) IsEmpty() bool {
+	return len(g.Nodes) == 0 && len(g.Edges) == 0
 }

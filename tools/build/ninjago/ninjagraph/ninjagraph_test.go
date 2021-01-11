@@ -438,6 +438,39 @@ func TestPopulateEdges(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "partial graph with missing steps",
+			steps: []ninjalog.Step{
+				{Out: "bar"},
+			},
+			graph: Graph{
+				// `In` and `Outs` edges on nodes are omitted since they don't affect
+				// this test.
+				Nodes: map[int64]*Node{
+					0: {ID: 0, Path: "foo"},
+					1: {ID: 1, Path: "bar"},
+				},
+				Edges: []*Edge{
+					{Outputs: []int64{0}},
+					{Outputs: []int64{1}},
+				},
+			},
+			wantGraph: Graph{
+				Nodes: map[int64]*Node{
+					0: {ID: 0, Path: "foo"},
+					1: {ID: 1, Path: "bar"},
+				},
+				Edges: []*Edge{
+					{
+						Outputs: []int64{0},
+					},
+					{
+						Outputs: []int64{1},
+						Step:    &ninjalog.Step{Out: "bar"},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			if err := tc.graph.PopulateEdges(tc.steps); err != nil {
@@ -464,40 +497,10 @@ func TestPopulateEdgesErrors(t *testing.T) {
 			},
 		},
 		{
-			desc: "missing step for edge",
-			graph: Graph{
-				// `In` and `Outs` edges on the Node are not spelled out since they
-				// don't affect this test.
-				Nodes: map[int64]*Node{
-					0: {ID: 0, Path: "foo"},
-				},
-				Edges: []*Edge{
-					{Outputs: []int64{0}},
-				},
-			},
-		},
-		{
 			desc: "multiple steps match the same edge",
 			steps: []ninjalog.Step{
 				{Out: "foo", CmdHash: 123},
 				{Out: "bar", CmdHash: 456},
-			},
-			graph: Graph{
-				// `In` and `Outs` edges on the Node are not spelled out since they
-				// don't affect this test.
-				Nodes: map[int64]*Node{
-					0: {ID: 0, Path: "foo"},
-					1: {ID: 1, Path: "bar"},
-				},
-				Edges: []*Edge{
-					{Outputs: []int64{0, 1}},
-				},
-			},
-		},
-		{
-			desc: "outputs in step don't match edge",
-			steps: []ninjalog.Step{
-				{Out: "foo", CmdHash: 123},
 			},
 			graph: Graph{
 				// `In` and `Outs` edges on the Node are not spelled out since they
@@ -572,5 +575,184 @@ func TestPopulateEdgesWithRealBuild(t *testing.T) {
 			}
 			t.Errorf("Invalid edge after `PopulateEdges`, isPhony (%t) != gotNilStep (%t), outputs of this edge: %v", isPhony, gotNilStep, outputs)
 		}
+	}
+}
+
+func TestWithStepsOnly(t *testing.T) {
+	edge2 := &Edge{Inputs: []int64{1}, Outputs: []int64{2}, Step: &ninjalog.Step{Out: "2"}}
+	edge2NoStep := &Edge{Inputs: []int64{1}, Outputs: []int64{2}}
+
+	edge4Phony := &Edge{Inputs: []int64{3}, Outputs: []int64{4}, Rule: "phony"}
+	edge4NoStep := &Edge{Inputs: []int64{3}, Outputs: []int64{4}}
+
+	edge5 := &Edge{Inputs: []int64{2, 4}, Outputs: []int64{5}, Step: &ninjalog.Step{Out: "5"}}
+	edge5NoStep := &Edge{Inputs: []int64{2, 4}, Outputs: []int64{5}}
+
+	edge6 := &Edge{Inputs: []int64{5}, Outputs: []int64{6}, Step: &ninjalog.Step{Out: "6"}}
+	edge6NoStep := &Edge{Inputs: []int64{5}, Outputs: []int64{6}}
+
+	for _, tc := range []struct {
+		desc string
+		g    Graph
+		want Graph
+	}{
+		{
+			desc: "empty graph",
+			g:    Graph{},
+			want: Graph{},
+		},
+		{
+			desc: "partial graph",
+			//     1 -> 2 -no step-> 5 -> 6
+			//               /
+			// 3 -phony-> 4 -
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2, Outs: []*Edge{edge5NoStep}},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony, Outs: []*Edge{edge5NoStep}},
+					5: {ID: 5, In: edge5NoStep, Outs: []*Edge{edge6}},
+					6: {ID: 6, In: edge6},
+				},
+				Edges: []*Edge{edge2, edge4Phony, edge5NoStep, edge6},
+			},
+			// 1 -> 2  5 -> 6
+			// 3 -phony-> 4
+			want: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony},
+					5: {ID: 5, Outs: []*Edge{edge6}},
+					6: {ID: 6, In: edge6},
+				},
+				Edges: []*Edge{edge2, edge4Phony, edge6},
+			},
+		},
+		{
+			desc: "yet another partial graph",
+			// 1 -no step-> 2 ---> 5 -no step-> 6
+			//                 /
+			//   3 -phony-> 4 -
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2NoStep}},
+					2: {ID: 2, In: edge2NoStep, Outs: []*Edge{edge5}},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony, Outs: []*Edge{edge5}},
+					5: {ID: 5, In: edge5, Outs: []*Edge{edge6NoStep}},
+					6: {ID: 6, In: edge6NoStep},
+				},
+				Edges: []*Edge{edge2NoStep, edge4Phony, edge5, edge6NoStep},
+			},
+			//              2 ---> 5
+			//                 /
+			//   3 -phony-> 4 -
+			want: Graph{
+				Nodes: map[int64]*Node{
+					2: {ID: 2, Outs: []*Edge{edge5}},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony, Outs: []*Edge{edge5}},
+					5: {ID: 5, In: edge5},
+				},
+				Edges: []*Edge{edge4Phony, edge5},
+			},
+		},
+		{
+			desc: "full graph because all steps are populated",
+			//        1 -> 2 --> 5 -> 6
+			//               /
+			// 3 -phony-> 4 -
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2, Outs: []*Edge{edge5}},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony, Outs: []*Edge{edge5}},
+					5: {ID: 5, In: edge5, Outs: []*Edge{edge6}},
+					6: {ID: 6, In: edge6},
+				},
+				Edges: []*Edge{edge2, edge4Phony, edge5, edge6},
+			},
+			// 1 -> 2  5 -> 6
+			// 3 -phony-> 4
+			want: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2}},
+					2: {ID: 2, In: edge2, Outs: []*Edge{edge5}},
+					3: {ID: 3, Outs: []*Edge{edge4Phony}},
+					4: {ID: 4, In: edge4Phony, Outs: []*Edge{edge5}},
+					5: {ID: 5, In: edge5, Outs: []*Edge{edge6}},
+					6: {ID: 6, In: edge6},
+				},
+				Edges: []*Edge{edge2, edge4Phony, edge5, edge6},
+			},
+		},
+		{
+			desc: "result graph empty because no steps are populated",
+			// 1 -no step-> 2 -no step-> 5 -no step-> 6
+			//                   /
+			//   3 -no step-> 4 -
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge2NoStep}},
+					2: {ID: 2, In: edge2NoStep, Outs: []*Edge{edge5NoStep}},
+					3: {ID: 3, Outs: []*Edge{edge4NoStep}},
+					4: {ID: 4, In: edge4NoStep, Outs: []*Edge{edge5NoStep}},
+					5: {ID: 5, In: edge5NoStep, Outs: []*Edge{edge6NoStep}},
+					6: {ID: 6, In: edge6NoStep},
+				},
+				Edges: []*Edge{edge2NoStep, edge4NoStep, edge5NoStep, edge6NoStep},
+			},
+			want: Graph{},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got, err := WithStepsOnly(tc.g)
+			if err != nil {
+				t.Errorf("WithStepsOnly got error: %v", err)
+			}
+			opts := []cmp.Option{
+				cmpopts.EquateEmpty(),
+				cmpopts.IgnoreUnexported(Graph{}, Node{}, Edge{}),
+			}
+			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
+				t.Errorf("WithStepsOnly got output graph diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestWithStepsOnlyErrors(t *testing.T) {
+	edge := &Edge{Inputs: []int64{1}, Outputs: []int64{2}, Step: &ninjalog.Step{Out: "2"}}
+
+	for _, tc := range []struct {
+		desc string
+		g    Graph
+	}{
+		{
+			desc: "missing node",
+			g: Graph{
+				Edges: []*Edge{edge},
+			},
+		},
+		{
+			desc: "duplicate edges",
+			g: Graph{
+				Nodes: map[int64]*Node{
+					1: {ID: 1, Outs: []*Edge{edge}},
+					2: {ID: 2, In: edge},
+				},
+				Edges: []*Edge{edge, edge},
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			if _, err := WithStepsOnly(tc.g); err == nil {
+				t.Error("WithStepsOnly got no error, want non-nil error")
+			}
+		})
 	}
 }

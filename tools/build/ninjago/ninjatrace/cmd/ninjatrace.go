@@ -46,21 +46,24 @@ func join(as artifacts, criticalPath bool) ([]ninjalog.Step, error) {
 	if len(as.commands) > 0 {
 		steps = ninjalog.Populate(steps, as.commands)
 	}
-
-	if criticalPath {
-		s, err := func() ([]ninjalog.Step, error) {
-			if err := as.graph.PopulateEdges(steps); err != nil {
-				return nil, err
-			}
-			return as.graph.PopulatedSteps()
-		}()
-		if err != nil {
-			log.Print("No critical path information will be availabe in trace because the Ninja graph provided does not match the build.")
-		} else {
-			steps = s
-		}
+	if !criticalPath {
+		return steps, nil
 	}
-	return steps, nil
+
+	if err := as.graph.PopulateEdges(steps); err != nil {
+		return nil, fmt.Errorf("populating edges: %v", err)
+	}
+	// To calculate critical path, we need a graph fully populated, that is a
+	// graph with steps on all non-phony edges. However this is not always
+	// possible on the full graph because the build can be partial, for example
+	// incremental builds and failed builds. To accommodate for these cases we
+	// extract a partial graph including only edges that are actually reached in
+	// the partial build.
+	g, err := ninjagraph.WithStepsOnly(as.graph)
+	if err != nil {
+		return nil, fmt.Errorf("extracting partial graph in case this build is incremental, or failed midway: %v", err)
+	}
+	return g.PopulatedSteps()
 }
 
 func readArtifacts(logPath, compdbPath, graphPath string) (artifacts, error) {

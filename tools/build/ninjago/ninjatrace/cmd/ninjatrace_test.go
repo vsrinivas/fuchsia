@@ -14,13 +14,13 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
 )
 
-var (
-	edge1 = &ninjagraph.Edge{Outputs: []int64{1}}
-	edge2 = &ninjagraph.Edge{Inputs: []int64{1}, Outputs: []int64{2}}
-	edge3 = &ninjagraph.Edge{Inputs: []int64{1}, Outputs: []int64{3}}
-)
-
 func TestJoin(t *testing.T) {
+	// Alaways create new copies of test edges so their memoized fields don't
+	// carry between tests.
+	edge1 := func() *ninjagraph.Edge { return &ninjagraph.Edge{Outputs: []int64{1}} }
+	edge2 := func() *ninjagraph.Edge { return &ninjagraph.Edge{Inputs: []int64{1}, Outputs: []int64{2}} }
+	edge3 := func() *ninjagraph.Edge { return &ninjagraph.Edge{Inputs: []int64{1}, Outputs: []int64{3}} }
+
 	for _, v := range []struct {
 		name         string
 		artifacts    artifacts
@@ -98,13 +98,13 @@ func TestJoin(t *testing.T) {
 						1: {
 							ID:   1,
 							Path: "1",
-							In:   edge1,
-							Outs: []*ninjagraph.Edge{edge2, edge3},
+							In:   edge1(),
+							Outs: []*ninjagraph.Edge{edge2(), edge3()},
 						},
-						2: {ID: 2, Path: "2", In: edge2},
-						3: {ID: 3, Path: "3", In: edge3},
+						2: {ID: 2, Path: "2", In: edge2()},
+						3: {ID: 3, Path: "3", In: edge3()},
 					},
-					Edges: []*ninjagraph.Edge{edge1, edge2, edge3},
+					Edges: []*ninjagraph.Edge{edge1(), edge2(), edge3()},
 				},
 			},
 			criticalPath: true,
@@ -135,24 +135,28 @@ func TestJoin(t *testing.T) {
 		{
 			name: "missing step",
 			artifacts: artifacts{
-				// The graph is expecting an edge to output 3, but it's missing from `steps`.
+				// The graph is expecting a step to for edge3, but it's missing.
 				steps: []ninjalog.Step{{Out: "1"}, {Out: "2"}},
 				graph: ninjagraph.Graph{
 					Nodes: map[int64]*ninjagraph.Node{
 						1: {
 							ID:   1,
 							Path: "1",
-							In:   edge1,
-							Outs: []*ninjagraph.Edge{edge2, edge3},
+							In:   edge1(),
+							Outs: []*ninjagraph.Edge{edge2(), edge3()},
 						},
-						2: {ID: 2, Path: "2", In: edge2},
-						3: {ID: 3, Path: "3", In: edge3},
+						2: {ID: 2, Path: "2", In: edge2()},
+						3: {ID: 3, Path: "3", In: edge3()},
 					},
-					Edges: []*ninjagraph.Edge{edge1, edge2, edge3},
+					Edges: []*ninjagraph.Edge{edge1(), edge2(), edge3()},
 				},
 			},
 			criticalPath: true,
-			wantSteps:    []ninjalog.Step{{Out: "1"}, {Out: "2"}},
+			wantSteps: []ninjalog.Step{
+				{Out: "1", OnCriticalPath: true},
+				{Out: "2", OnCriticalPath: true},
+				// edge3 is excluded because it has no step associated.
+			},
 		},
 	} {
 		t.Run(v.name, func(t *testing.T) {

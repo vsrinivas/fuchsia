@@ -131,6 +131,10 @@ func constructGraph(ins inputs) (ninjagraph.Graph, error) {
 	if err := graph.PopulateEdges(steps); err != nil {
 		return ninjagraph.Graph{}, fmt.Errorf("populating graph edges with build steps: %v", err)
 	}
+	graph, err = ninjagraph.WithStepsOnly(graph)
+	if err != nil {
+		return ninjagraph.Graph{}, fmt.Errorf("extracting partial graph: %v", err)
+	}
 	return graph, nil
 }
 
