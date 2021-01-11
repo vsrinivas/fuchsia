@@ -15,6 +15,7 @@
 #include <set>
 #include <unordered_map>
 
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -268,9 +269,7 @@ class Reporter {
     sys::ComponentContext& component_context;
     ThreadingModel& threading_model;
     std::unique_ptr<sys::ComponentInspector> inspector;
-
-    fuchsia::cobalt::LoggerFactoryPtr cobalt_factory;
-    fuchsia::cobalt::LoggerPtr cobalt_logger;
+    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
 
     inspect::UintProperty failed_to_open_device_count;
     inspect::UintProperty failed_to_obtain_fdio_service_channel_count;

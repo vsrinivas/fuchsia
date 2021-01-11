@@ -190,6 +190,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fsl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/effects_loader",

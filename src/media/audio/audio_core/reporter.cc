@@ -19,6 +19,42 @@ namespace {
 static std::mutex singleton_mutex;
 static Reporter* const singleton_nop = new Reporter();
 static Reporter* singleton_real;
+
+class TokenBucket {
+ public:
+  TokenBucket(zx::duration period, uint64_t tokens_per_period)
+      : period_(period),
+        tokens_per_period_(tokens_per_period),
+        start_time_(zx::clock::get_monotonic()),
+        tokens_(tokens_per_period) {}
+
+  bool Acquire() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto now = zx::clock::get_monotonic();
+    if (now - start_time_ >= period_) {
+      start_time_ = now;
+      tokens_ = tokens_per_period_;
+    }
+    if (tokens_ == 0) {
+      return false;
+    }
+    --tokens_;
+    return true;
+  }
+
+ private:
+  const zx::duration period_;
+  const uint64_t tokens_per_period_;
+
+  std::mutex mutex_;
+  zx::time start_time_ FXL_GUARDED_BY(mutex_);
+  uint64_t tokens_ FXL_GUARDED_BY(mutex_);
+};
+
+// To avoid overloading cobalt, throttle cobalt RPCs. See fxbug.dev/67416.
+// In a typical worst case, we might expect about 1 RPC every 10ms, or 6000 RPCs per minute.
+// Throttle to 30 per minute.
+static TokenBucket* const cobalt_token_bucket = new TokenBucket(zx::min(1), 30);
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -179,7 +215,8 @@ class Reporter::ObjectTracker {
       return;
     }
 
-    // Log exactly once.
+    // Log exactly once. Don't bother throttling: if we're creating objects quickly enough
+    // to overload cobalt with these RPCs, we'll hit many other problems first.
     if (enabled_ || !format_) {
       return;
     }
@@ -242,18 +279,7 @@ class Reporter::ObjectTracker {
         .payload =
             fuchsia::cobalt::EventPayload::WithEventCount(fuchsia::cobalt::CountEvent{.count = 1}),
     };
-    impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
-      logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
-        if (status == fuchsia::cobalt::Status::OK) {
-          return;
-        }
-        if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
-          FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
-        } else {
-          FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
-        }
-      });
-    });
+    logger->LogCobaltEvent(std::move(e));
   }
 
  private:
@@ -901,21 +927,8 @@ void Reporter::InitInspect() {
 }
 
 void Reporter::InitCobalt() {
-  impl_->component_context.svc()->Connect(impl_->cobalt_factory.NewRequest());
-  if (!impl_->cobalt_factory) {
-    FX_LOGS(ERROR) << "audio_core could not connect to cobalt. No metrics will be captured.";
-    return;
-  }
-
-  impl_->cobalt_factory->CreateLoggerFromProjectId(
-      kProjectId, impl_->cobalt_logger.NewRequest(), [this](fuchsia::cobalt::Status status) {
-        if (status != fuchsia::cobalt::Status::OK) {
-          FX_LOGS(ERROR) << "audio_core could not create Cobalt logger, status = "
-                         << fidl::ToUnderlying(status);
-          std::lock_guard<std::mutex> lock(mutex_);
-          impl_->cobalt_logger = nullptr;
-        }
-      });
+  impl_->cobalt_logger = ::cobalt::NewCobaltLoggerFromProjectId(
+      impl_->threading_model.FidlDomain().dispatcher(), impl_->component_context.svc(), kProjectId);
 }
 
 Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr
@@ -1155,7 +1168,7 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
                                                            std::vector<uint32_t> event_codes,
                                                            zx::duration d) {
   auto& logger = impl_.cobalt_logger;
-  if (!logger) {
+  if (!logger || !cobalt_token_bucket->Acquire()) {
     return;
   }
 
@@ -1164,19 +1177,7 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
       .event_codes = event_codes,
       .payload = fuchsia::cobalt::EventPayload::WithElapsedMicros(d.get()),
   };
-
-  impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
-    logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
-      if (status == fuchsia::cobalt::Status::OK) {
-        return;
-      }
-      if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
-        FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
-      } else {
-        FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
-      }
-    });
-  });
+  logger->LogCobaltEvent(std::move(e));
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -1277,11 +1278,11 @@ void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
     FX_LOGS_FIRST_N(INFO, 10)
         << "Cobalt logging of audio_thermal_state_transitions has exceeded maximum of 50: " << event
         << " = " << transition_count << "transitions";
-  } else {
+  } else if (cobalt_token_bucket->Acquire()) {
     std::vector<fuchsia::cobalt::HistogramBucket> histogram{
         {.index = transition_count, .count = 1}};
     logger->LogIntHistogram(kAudioThermalStateTransitionsMetricId, event, "" /*component*/,
-                            histogram, [](auto) {});
+                            histogram);
   }
 }
 
@@ -1294,26 +1295,15 @@ void Reporter::ThermalStateTracker::LogCobaltStateDuration(State& old_state, Sta
   auto now = zx::clock::get_monotonic();
 
   // Record duration of |old_state|, if interval has started.
-  if (auto start_time = old_state.interval_start_time; start_time) {
+  if (auto start_time = old_state.interval_start_time;
+      start_time && cobalt_token_bucket->Acquire()) {
     auto e = fuchsia::cobalt::CobaltEvent{
         .metric_id = kAudioThermalStateDurationMetricId,
         .event_codes = {active_state_},
         .payload =
             fuchsia::cobalt::EventPayload::WithElapsedMicros((now - start_time.value()).get()),
     };
-
-    impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
-      logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
-        if (status == fuchsia::cobalt::Status::OK) {
-          return;
-        }
-        if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
-          FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
-        } else {
-          FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
-        }
-      });
-    });
+    logger->LogCobaltEvent(std::move(e));
   }
 
   // End |old_state| and start |new_state| logging interval.
