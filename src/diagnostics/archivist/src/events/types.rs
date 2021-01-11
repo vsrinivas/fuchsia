@@ -457,7 +457,7 @@ impl PartialEq for DiagnosticsReadyEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::testing::create_capability_requested_event;
+    use crate::logs::testing::create_log_sink_requested_event;
     use std::convert::TryInto;
 
     #[test]
@@ -485,7 +485,7 @@ mod tests {
         let target_url = "http://foo.com".to_string();
         let (_log_sink_proxy, log_sink_server_end) =
             fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
-        let raw_event = create_capability_requested_event(
+        let raw_event = create_log_sink_requested_event(
             target_moniker.clone(),
             target_url.clone(),
             log_sink_server_end.into_channel(),

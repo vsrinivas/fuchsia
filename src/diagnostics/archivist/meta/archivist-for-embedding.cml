@@ -27,6 +27,7 @@
         {
             event: "capability_requested",
             from: "parent",
+            as: "log_sink_requested",
             filter: { name: "fuchsia.logger.LogSink" },
             modes: [ "async" ],
         },
@@ -47,7 +48,7 @@
             modes: [ "async" ],
         },
         {
-            event_stream: [ "capability_requested" ],
+            event_stream: [ "log_sink_requested" ],
             path: "/svc/fuchsia.sys2.EventStream",
         },
     ],

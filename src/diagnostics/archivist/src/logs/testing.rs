@@ -42,7 +42,7 @@ pub struct TestHarness {
     sinks: Option<Vec<LogSinkProxy>>,
 }
 
-pub fn create_capability_requested_event(
+pub fn create_log_sink_requested_event(
     target_moniker: String,
     target_url: String,
     capability: zx::Channel,
@@ -320,7 +320,7 @@ impl LogReader for EventStreamLogReader {
         let (log_sink_proxy, log_sink_server_end) =
             fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
         event_stream_proxy
-            .on_event(create_capability_requested_event(
+            .on_event(create_log_sink_requested_event(
                 self.target_moniker.clone(),
                 self.target_url.clone(),
                 log_sink_server_end.into_channel(),
