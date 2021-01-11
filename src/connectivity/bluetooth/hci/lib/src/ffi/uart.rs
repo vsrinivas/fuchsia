@@ -218,13 +218,13 @@ pub extern "C" fn serial_write_complete(arc_event_ptr: *const zx::Event, status:
         bt_log_warn!("Async write error {}", status);
     }
     let _ = event.signal_handle(zx::Signals::NONE, status_to_signal(status));
-    std::mem::forget(event);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use fuchsia_zircon::DurationNum;
+    use std::sync::Arc;
 
     // The Drop trait must be implemented for `Serial` to free owned memory.
     // This test will fail to compile if this is not the case.
@@ -247,7 +247,7 @@ mod tests {
     fn serial_write_complete_succeeds() {
         let event = Arc::new(zx::Event::create().unwrap());
         let event_ = event.clone();
-        std::thread::spawn(move || serial_write_complete(Arc::into_raw(event_), zx::sys::ZX_OK));
+        std::thread::spawn(move || serial_write_complete(Arc::as_ptr(&event_), zx::sys::ZX_OK));
         // wait_handle call will be terminated if signal is not set for 5s.
         let res = event.wait_handle(IO_COMPLETE | IO_ERROR, zx::Time::after(5.seconds()));
         assert_eq!(res.unwrap(), IO_COMPLETE);
@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn serial_write_null_arc_event_panics() {
+    fn serial_write_null_event_panics() {
         serial_write_complete(std::ptr::null(), zx::sys::ZX_OK);
     }
 }

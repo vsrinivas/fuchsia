@@ -80,8 +80,6 @@ impl WorkerHandle {
             if let Err(e) = result {
                 bt_log_err!("error running worker thread: {}", e);
             };
-
-            unsafe { zx::sys::zx_thread_exit() }
         })?;
 
         // Error receiving the worker thread handle indicates that the worker thread died before it
