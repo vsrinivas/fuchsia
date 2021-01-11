@@ -10,7 +10,6 @@
 #include <zircon/assert.h>
 #include <zircon/hw/usb/ums.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
@@ -18,6 +17,7 @@
 #include <fbl/auto_lock.h>
 
 #include "block.h"
+#include "src/devices/block/drivers/usb-mass-storage/usb_mass_storage_bind.h"
 
 // comment the next line if you don't want debug messages
 #define DEBUG 0
@@ -970,11 +970,5 @@ static constexpr zx_driver_ops_t usb_mass_storage_driver_ops = []() {
   return ops;
 }();
 }  // namespace ums
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_mass_storage, ums::usb_mass_storage_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
-ZIRCON_DRIVER_END(usb_mass_storage)
-    // clang-format on
+
+ZIRCON_DRIVER(usb_mass_storage, ums::usb_mass_storage_driver_ops, "zircon", "0.1");

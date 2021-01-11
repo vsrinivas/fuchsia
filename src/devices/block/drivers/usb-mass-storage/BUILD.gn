@@ -2,11 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("usb_mass_storage_bind") {
+  rules = "usb_mass_storage.bind"
+  output = "usb_mass_storage_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.mass_storage",
+  ]
+}
 
 driver_module("usb-mass-storage") {
   configs += [
@@ -25,15 +36,13 @@ source_set("block") {
   visibility = [ ":*" ]
   sources = [ "block.cc" ]
   public_deps = [
+    ":usb_mass_storage_bind",
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -125,5 +134,6 @@ group("tests") {
     ":ums-block-test",
     ":ums-integration-test",
     ":ums-test",
+    ":usb_mass_storage_bind_test",
   ]
 }
