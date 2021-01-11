@@ -91,44 +91,37 @@ impl FileData {
             }
         }
     }
-}
-
-pub struct FileDataFactory {
-    rng: SmallRng,
-}
-
-impl FileDataFactory {
-    pub fn new(rng: SmallRng) -> Self {
-        Self { rng }
-    }
 
     /// Create a file whose uncompressed size is reasonable (between 8KiB and 4MiB)
     #[must_use]
-    pub fn create_with_reasonable_size(&mut self, compressibility: Compressibility) -> FileData {
-        self.create_with_uncompressed_size_in_range(EIGHT_KIB, FOUR_MB, compressibility)
+    pub fn new_with_reasonable_size(
+        rng: &mut SmallRng,
+        compressibility: Compressibility,
+    ) -> FileData {
+        Self::new_with_uncompressed_size_in_range(rng, EIGHT_KIB, FOUR_MB, compressibility)
     }
 
     /// Create a file whose uncompressed size is in the range requested.
     /// The exact size of the file is chosen from a uniform distribution.
     #[must_use]
-    pub fn create_with_uncompressed_size_in_range(
-        &mut self,
+    pub fn new_with_uncompressed_size_in_range(
+        rng: &mut SmallRng,
         min_uncompressed_size_bytes: u64,
         max_uncompressed_size_bytes: u64,
         compressibility: Compressibility,
     ) -> FileData {
         let uncompressed_size =
-            self.rng.gen_range(min_uncompressed_size_bytes, max_uncompressed_size_bytes);
-        self.create_with_exact_uncompressed_size(uncompressed_size, compressibility)
+            rng.gen_range(min_uncompressed_size_bytes, max_uncompressed_size_bytes);
+        Self::new_with_exact_uncompressed_size(rng, uncompressed_size, compressibility)
     }
 
     /// Create a file whose uncompressed size is exactly as requested
     #[must_use]
-    pub fn create_with_exact_uncompressed_size(
-        &mut self,
+    pub fn new_with_exact_uncompressed_size(
+        rng: &mut SmallRng,
         uncompressed_size_bytes: u64,
         compressibility: Compressibility,
     ) -> FileData {
-        FileData::new(self.rng.gen(), uncompressed_size_bytes, compressibility)
+        Self::new(rng.gen(), uncompressed_size_bytes, compressibility)
     }
 }

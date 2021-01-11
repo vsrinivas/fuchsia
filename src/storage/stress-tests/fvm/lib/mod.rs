@@ -15,7 +15,7 @@ use {
     operator::VolumeOperator,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{thread::sleep, time::Duration},
-    stress_test_utils::TestInstance,
+    stress_test_utils::fvm::FvmInstance,
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
@@ -42,7 +42,7 @@ pub async fn run_test(
     let vmo = Vmo::create(vmo_size).unwrap();
 
     // Initialize the ramdisk and setup FVM.
-    let mut instance = TestInstance::init(&vmo, fvm_slice_size, ramdisk_block_size).await;
+    let mut instance = FvmInstance::new(true, &vmo, fvm_slice_size, ramdisk_block_size).await;
 
     let mut tasks = vec![];
     let mut senders = vec![];
@@ -89,7 +89,8 @@ pub async fn run_test(
                     // This will cause the component tree to be taken down abruptly.
                     debug!("Killing component manager");
                     instance.kill_component_manager();
-                    instance = TestInstance::existing(&vmo, ramdisk_block_size).await;
+                    instance =
+                        FvmInstance::new(false, &vmo, fvm_slice_size, ramdisk_block_size).await;
                 }
 
                 // Give the new block path to the operators.

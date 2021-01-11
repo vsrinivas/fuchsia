@@ -126,16 +126,36 @@ impl File {
 
     // Get the size of this file as it exists on disk
     pub async fn size_on_disk(&self) -> Result<u64, Status> {
-        let (raw_status_code, attr) = self.proxy.get_attr().await.unwrap();
-        Status::ok(raw_status_code)?;
-        Ok(attr.storage_size)
+        match self.proxy.get_attr().await {
+            Ok((raw_status_code, attr)) => {
+                Status::ok(raw_status_code)?;
+                Ok(attr.storage_size)
+            }
+            Err(e) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during size_on_disk: {}", e)
+                }
+            }
+        }
     }
 
     // Get the uncompressed size of this file (as it would exist in memory)
     pub async fn uncompressed_size(&self) -> Result<u64, Status> {
-        let (raw_status_code, attr) = self.proxy.get_attr().await.unwrap();
-        Status::ok(raw_status_code)?;
-        Ok(attr.content_size)
+        match self.proxy.get_attr().await {
+            Ok((raw_status_code, attr)) => {
+                Status::ok(raw_status_code)?;
+                Ok(attr.content_size)
+            }
+            Err(e) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during size_on_disk: {}", e)
+                }
+            }
+        }
     }
 
     // Read `num_bytes` of the file from the current offset.

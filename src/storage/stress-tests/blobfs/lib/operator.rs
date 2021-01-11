@@ -8,9 +8,9 @@ use {
     fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon::Status,
     log::{debug, info, warn},
-    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     stress_test_utils::{
-        data::{Compressibility, FileDataFactory},
+        data::{Compressibility, FileData},
         io::Directory,
     },
 };
@@ -37,11 +37,8 @@ pub struct BlobfsOperator {
     // In-memory representations of all blobs as they exist on disk
     blobs: Vec<Blob>,
 
-    // Random number generator used for selecting operations and blobs
+    // Random number generator used for creating blobs and selecting operations
     rng: SmallRng,
-
-    // Factory for creating blob data that meets certain specifications
-    factory: FileDataFactory,
 }
 
 async fn wait_for_blobfs_dir() -> Directory {
@@ -59,15 +56,9 @@ async fn wait_for_blobfs_dir() -> Directory {
 }
 
 impl BlobfsOperator {
-    pub async fn new(mut initial_rng: SmallRng) -> Self {
-        // Setup the RNGs
+    pub async fn new(rng: SmallRng) -> Self {
         let root_dir = wait_for_blobfs_dir().await;
-        let factory_rng = SmallRng::from_seed(initial_rng.gen());
-        let state_rng = SmallRng::from_seed(initial_rng.gen());
-
-        let factory = FileDataFactory::new(factory_rng);
-
-        Self { root_dir, blobs: vec![], rng: state_rng, factory }
+        Self { root_dir, blobs: vec![], rng }
     }
 
     // Deletes blob at [index] from the filesystem and from the list of known blobs.
@@ -129,7 +120,8 @@ impl BlobfsOperator {
         for _ in 0..num_blobs_to_create {
             // Create a blob whose uncompressed size is reasonable, or exactly the requested size
             // if the requested size is too small.
-            let data = self.factory.create_with_reasonable_size(Compressibility::Compressible);
+            let data =
+                FileData::new_with_reasonable_size(&mut self.rng, Compressibility::Compressible);
             let blob = Blob::create(data, &self.root_dir).await?;
             self.blobs.push(blob);
         }
@@ -237,9 +229,11 @@ impl BlobfsOperator {
     async fn fill_disk_with_small_blobs(&mut self) -> Result<(), Status> {
         loop {
             // Keep making |BLOCK_SIZE| uncompressible blobs
-            let data = self
-                .factory
-                .create_with_exact_uncompressed_size(BLOCK_SIZE, Compressibility::Uncompressible);
+            let data = FileData::new_with_exact_uncompressed_size(
+                &mut self.rng,
+                BLOCK_SIZE,
+                Compressibility::Uncompressible,
+            );
 
             let blob = Blob::create(data, &self.root_dir).await?;
 

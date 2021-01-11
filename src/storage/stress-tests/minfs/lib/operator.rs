@@ -9,9 +9,9 @@ use {
     },
     fuchsia_zircon::Status,
     log::{debug, info},
-    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     stress_test_utils::{
-        data::{Compressibility, FileDataFactory},
+        data::{Compressibility, FileData},
         io::Directory,
     },
 };
@@ -31,11 +31,8 @@ pub struct MinfsOperator {
     // The path to the minfs root
     root_dir: Directory,
 
-    // Random number generator used for selecting operations
+    // Random number generator used for selecting operations and generating data
     rng: SmallRng,
-
-    // Factory for creating file data that meets certain specifications
-    factory: FileDataFactory,
 }
 
 async fn wait_for_minfs_dir() -> Directory {
@@ -51,15 +48,9 @@ async fn wait_for_minfs_dir() -> Directory {
 }
 
 impl MinfsOperator {
-    pub async fn new(mut initial_rng: SmallRng) -> Self {
-        // Setup the RNGs
+    pub async fn new(rng: SmallRng) -> Self {
         let root_dir = wait_for_minfs_dir().await;
-        let factory_rng = SmallRng::from_seed(initial_rng.gen());
-        let state_rng = SmallRng::from_seed(initial_rng.gen());
-
-        let factory = FileDataFactory::new(factory_rng);
-
-        Self { root_dir, rng: state_rng, factory }
+        Self { root_dir, rng }
     }
 
     // Creates reasonable-sized files to fill a percentage of the free space
@@ -74,7 +65,8 @@ impl MinfsOperator {
             // if the requested size is too small.
             let filename = format!("file_{}", self.rng.gen::<u128>());
 
-            let data = self.factory.create_with_reasonable_size(Compressibility::Compressible);
+            let data =
+                FileData::new_with_reasonable_size(&mut self.rng, Compressibility::Compressible);
             let bytes = data.generate_bytes();
 
             let file = self

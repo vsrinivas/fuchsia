@@ -15,7 +15,7 @@ use {
     rand::rngs::SmallRng,
     std::thread::sleep,
     std::time::Duration,
-    stress_test_utils::{get_volume_path, TestInstance},
+    stress_test_utils::fvm::{get_volume_path, FvmInstance},
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
@@ -49,7 +49,7 @@ pub async fn run_test(
     let vmo = Vmo::create(vmo_size).unwrap();
 
     // Initialize the ramdisk and setup FVM.
-    let mut instance = TestInstance::init(&vmo, fvm_slice_size, ramdisk_block_size).await;
+    let mut instance = FvmInstance::new(true, &vmo, fvm_slice_size, ramdisk_block_size).await;
 
     // Create a blobfs volume
     let volume_instance_guid = instance.new_volume("blobfs", TYPE_GUID).await;
@@ -86,7 +86,7 @@ pub async fn run_test(
                 }
 
                 // Start up a new instance
-                instance = TestInstance::existing(&vmo, ramdisk_block_size).await;
+                instance = FvmInstance::new(false, &vmo, fvm_slice_size, ramdisk_block_size).await;
                 let block_path = instance.block_path();
                 volume_path = get_volume_path(block_path, &volume_instance_guid).await;
             }

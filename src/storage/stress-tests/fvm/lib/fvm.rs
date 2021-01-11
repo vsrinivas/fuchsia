@@ -12,7 +12,7 @@ use {
     log::debug,
     remote_block_device::{BufferSlice, MutableBufferSlice, RemoteBlockDevice},
     std::path::PathBuf,
-    stress_test_utils::get_volume_path,
+    stress_test_utils::fvm::get_volume_path,
 };
 
 struct VolumeConnection {
