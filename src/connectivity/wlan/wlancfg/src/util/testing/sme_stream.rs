@@ -20,6 +20,7 @@ pub fn poll_sme_req(
     })
 }
 
+#[track_caller]
 pub fn validate_sme_scan_request_and_send_results(
     exec: &mut fasync::Executor,
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
