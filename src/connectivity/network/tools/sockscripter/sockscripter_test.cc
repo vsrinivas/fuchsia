@@ -30,7 +30,7 @@ struct DataBuffer {
 
   DataBuffer(const DataBuffer& other) : DataBuffer(other.data.get(), other.len) {}
 
-  DataBuffer(DataBuffer&& other) : data(std::move(other.data)), len(other.len) {}
+  DataBuffer(DataBuffer&& other) noexcept : data(std::move(other.data)), len(other.len) {}
 
   DataBuffer(std::initializer_list<uint8_t> l) {
     data.reset(new uint8_t[l.size()]);
@@ -74,7 +74,7 @@ struct DataBuffer {
     auto blen = b.len;
     std::ios_base::fmtflags f(os.flags());
     while (blen--) {
-      os << std::hex << std::setfill('0') << std::setw(2) << (int)*p++ << " ";
+      os << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(*p++) << " ";
     }
     os.flags(f);
     return os;
@@ -142,11 +142,10 @@ class TestApi : ApiAbstraction {
           memcpy(optval, set.val.data.get(), set.val.len);
           *optlen = set.val.len;
           return return_value;
-        } else {
-          // some sockopts's reverse operation do not use the same struct (like IP_MULTICAST_IF)
-          // the trick of reading it back to get pretty log lines won't work.
-          break;
         }
+        // some sockoptss reverse operation do not use the same struct (like IP_MULTICAST_IF)
+        // the trick of reading it back to get pretty log lines won't work.
+        break;
       }
     }
     memset(optval, 0x00, *optlen);
@@ -183,9 +182,8 @@ class TestApi : ApiAbstraction {
     call_info.send.push_back(SendStorage{.data = DataBuffer(buf, len)});
     if (succeed_data_calls) {
       return len;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
   ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
@@ -197,9 +195,8 @@ class TestApi : ApiAbstraction {
     EXPECT_TRUE(storage.to.Set(addr, addrlen));
     if (succeed_data_calls) {
       return buflen;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
   ssize_t recv(int fd, void* buf, size_t len, int flags) override {
@@ -207,9 +204,8 @@ class TestApi : ApiAbstraction {
     call_info.recv++;
     if (succeed_data_calls) {
       return len;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
   ssize_t recvfrom(int fd, void* buf, size_t buflen, int flags, struct sockaddr* addr,
@@ -219,9 +215,8 @@ class TestApi : ApiAbstraction {
     call_info.recvfrom++;
     if (succeed_data_calls) {
       return buflen;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
   int getsockname(int fd, struct sockaddr* addr, socklen_t* len) override {
@@ -236,7 +231,6 @@ class TestApi : ApiAbstraction {
     return return_value;
   }
 
- public:
   void Reset() {
     memset(&call_info.socket, 0x00, sizeof(call_info.socket));
     call_info.close = 0;
@@ -270,7 +264,7 @@ class TestApi : ApiAbstraction {
         start = p;
       }
       if (*p == ' ') {
-        if (start && strlen(start)) {
+        if (strlen(start)) {
           args.push_back(start);
           start = nullptr;
         }
@@ -281,7 +275,7 @@ class TestApi : ApiAbstraction {
     if (start && strlen(start)) {
       args.push_back(start);
     }
-    return scripter.Execute(args.size(), &args[0]);
+    return scripter.Execute(args.size(), args.data());
   }
 
   struct {
