@@ -5,10 +5,13 @@
 #include "src/sys/pkg/lib/far/archive_reader.h"
 
 #include <inttypes.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <limits>
 #include <utility>
+
+#include <fbl/algorithm.h>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
@@ -33,7 +36,12 @@ ArchiveReader::ArchiveReader(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
 ArchiveReader::~ArchiveReader() = default;
 
-bool ArchiveReader::Read() { return ReadIndex() && ReadDirectory(); }
+bool ArchiveReader::Read() {
+  if (ReadIndex() && ReadDirectory()) {
+    return ContentChunksOK();
+  }
+  return false;
+}
 
 bool ArchiveReader::Extract(std::string_view output_dir) const {
   for (const auto& entry : directory_table_) {
@@ -146,6 +154,7 @@ bool ArchiveReader::ReadIndex() {
   }
 
   uint64_t next_offset = sizeof(IndexChunk) + index_chunk.length;
+  uint64_t prev_type = 0;
   for (const auto& entry : index_) {
     if (entry.offset != next_offset) {
       fprintf(stderr, "error: Chunk at offset %" PRIu64 " not tightly packed.\n", entry.offset);
@@ -161,6 +170,18 @@ bool ArchiveReader::ReadIndex() {
               entry.length);
       return false;
     }
+    if (prev_type == entry.type) {
+      fprintf(stderr, "error: duplicate chunk of type 0x%" PRIx64 " in the index.\n", entry.type);
+      return false;
+    }
+    if (prev_type > entry.type) {
+      fprintf(stderr,
+              "error: invalid index entry order, chunk type 0x%" PRIx64
+              " before chunk type 0x%" PRIx64 ".\n",
+              prev_type, entry.type);
+      return false;
+    }
+    prev_type = entry.type;
     next_offset = entry.offset + entry.length;
   }
 
@@ -205,7 +226,156 @@ bool ArchiveReader::ReadDirectory() {
     return false;
   }
 
+  return DirEntriesOK();
+}
+
+bool ArchiveReader::DirEntriesOK() const {
+  for (size_t i = 0; i < directory_table_.size(); i++) {
+    const DirectoryTableEntry& cur = directory_table_[i];
+    uint64_t cur_start = cur.name_offset;
+    if (cur_start + cur.name_length > path_data_.size()) {
+      fprintf(stderr, "error: invalid dir name length.\n");
+      return false;
+    }
+
+    // Validate directory name.
+    std::string_view cur_name = GetPathView(cur);
+    if (!DirNameOK(cur_name)) {
+      return false;
+    }
+
+    // Verify lexicographical order of dir name strings.
+    if (i == 0)
+      continue;
+    const DirectoryTableEntry& prev = directory_table_[i - 1];
+    uint64_t prev_start = prev.name_offset;
+    std::string_view prev_name(reinterpret_cast<const char*>(&path_data_[prev_start]),
+                               prev.name_length);
+    if (prev_name >= cur_name) {
+      fprintf(stderr, "invalid order of dir names.\n");
+      return false;
+    }
+  }
   return true;
+}
+
+bool ArchiveReader::ContentChunksOK() const {
+  uint64_t prev_end = index_.back().offset + index_.back().length;
+  for (size_t i = 0; i < directory_table_.size(); i++) {
+    const DirectoryTableEntry& cur = directory_table_[i];
+    uint64_t cur_start = cur.data_offset;
+    if (cur_start % kContentAlignment != 0) {
+      fprintf(stderr, "content chunk at index %zu not aligned on a 4096 byte boundary.\n", i);
+      return false;
+    }
+
+    // Verify packing and ordering versus the previous chunk.
+    if (prev_end > cur_start) {
+      fprintf(stderr, "content chunk at index %lu starts before the previous chunk ends.\n", i);
+      return false;
+    }
+    uint64_t expected_offset = fbl::round_up(prev_end, kContentAlignment);
+    if (cur_start != expected_offset) {
+      fprintf(stderr,
+              "content chunk violates the tightly packed constraint: expected offset: 0x%" PRIx64
+              ", actual offset: 0x%" PRIx64 ".\n",
+              expected_offset, cur_start);
+      return false;
+    }
+    prev_end = cur_start + cur.data_length;
+  }
+
+  // Ensure the last content chunk does not extend beyond the end of the file.
+  if (directory_table_.size() != 0) {
+    const DirectoryTableEntry& last_entry = directory_table_.back();
+    uint64_t expected_size =
+        fbl::round_up(last_entry.data_offset + last_entry.data_length, kContentAlignment);
+    struct stat sb;
+    if (fstat(fd_.get(), &sb) == -1) {
+      fprintf(stderr, "can't check archive size. fstat() on underlying file descriptor failed.\n");
+      return false;
+    }
+    if (static_cast<uint64_t>(sb.st_size) != expected_size) {
+      fprintf(stderr, "last content chunk extends beyond end of file.\n");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// ArchiveReader::DirNameOK checks the argument for compliance to the FAR archive spec.
+bool ArchiveReader::DirNameOK(std::string_view name) const {
+  if (name.size() == 0) {
+    fprintf(stderr, "error: name has zero length.\n");
+    return false;
+  }
+  if (name[0] == '/') {
+    fprintf(stderr, "error: name must not start with '/'.\n");
+    return false;
+  }
+  if (name.back() == '/') {
+    fprintf(stderr, "error: name must not end with '/'.\n");
+    return false;
+  }
+
+  enum ParserState {
+    kEmpty = 0,
+    kDot,
+    kDotDot,
+    kOther,
+  };
+
+  ParserState state = kEmpty;
+
+  for (auto& c : name) {
+    switch (c) {
+      case '\0':
+        fprintf(stderr, "error: name contains a null byte.\n");
+        return false;
+      case '/':
+        switch (state) {
+          case kEmpty:
+            fprintf(stderr, "error: name contains empty segment.\n");
+            return false;
+          case kDot:
+            fprintf(stderr, "error: name contains '.' segment.\n");
+            return false;
+          case kDotDot:
+            fprintf(stderr, "error: name contains '..' segment.\n");
+            return false;
+          case kOther:
+            state = kEmpty;
+        }
+        break;
+      case '.':
+        switch (state) {
+          case kEmpty:
+            state = kDot;
+            break;
+          case kDot:
+            state = kDotDot;
+            break;
+          case kDotDot:
+          case kOther:
+            state = kOther;
+        }
+        break;
+      default:
+        state = kOther;
+    }
+  }
+
+  switch (state) {
+    case kDot:
+      fprintf(stderr, "error: name contains '.' segment.\n");
+      return false;
+    case kDotDot:
+      fprintf(stderr, "error: name contains '..' segment.\n");
+      return false;
+    default:
+      return true;
+  }
 }
 
 const IndexEntry* ArchiveReader::GetIndexEntry(uint64_t type) const {

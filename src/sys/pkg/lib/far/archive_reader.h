@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
+#include <gtest/gtest_prod.h>
 
 #include "src/sys/pkg/lib/far/format.h"
 
@@ -53,7 +54,13 @@ class ArchiveReader {
   bool ReadIndex();
   bool ReadDirectory();
 
+  bool DirEntriesOK() const;
+  bool ContentChunksOK() const;
   const IndexEntry* GetIndexEntry(uint64_t type) const;
+
+  FRIEND_TEST(ValidateDirName, NameIsValid);
+  FRIEND_TEST(ValidateDirName, NameIsInvalid);
+  bool DirNameOK(std::string_view name) const;
 
   fbl::unique_fd fd_;
   std::vector<IndexEntry> index_;

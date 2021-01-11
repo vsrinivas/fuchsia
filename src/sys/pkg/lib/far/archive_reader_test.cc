@@ -88,6 +88,13 @@ bool TestReadArchive(const uint8_t* data, ssize_t len) {
   return ArchiveReader(std::move(fd)).Read();
 }
 
+bool ReadArchive(const std::string& path) {
+  fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
+  EXPECT_TRUE(fd);
+
+  return ArchiveReader(std::move(fd)).Read();
+}
+
 TEST(ValidateArchive, EmptyArchiveIsInvalid) {
   // The empty archive is invalid according to spec.
   // It does not contain the mandatory directory chunk.
@@ -99,6 +106,82 @@ TEST(ValidateArchive, ValidExampleArchive) {
   ASSERT_TRUE(TestReadArchive(kExampleArchive.data(), kExampleArchive.size()));
 }
 
+TEST(ValidateArchive, GeneratedArchiveIsInvalid) {
+  // Generated invalid archives from the "//src/sys/pkg/testing/invalid-fars:resource"
+  // target to test various constraints mandated by the spec.
+  const std::array<std::string, 33> test_files = {
+      "invalid-magic-bytes.far",
+      "index-entries-length-not-a-multiple-of-24-bytes.far",
+      "directory-names-index-entry-before-directory-index-entry.far",
+      "two-directory-index-entries.far",
+      "two-directory-names-index-entries.far",
+      "no-directory-index-entry.far",
+      "no-directory-names-index-entry.far",
+      "directory-chunk-length-not-a-multiple-of-32-bytes.far",
+      "directory-chunk-not-tightly-packed.far",
+      "duplicate-index-entries-of-unknown-type.far",
+      "path-data-offset-too-large.far",
+      "path-data-length-too-large.far",
+      "directory-entries-not-sorted.far",
+      "directory-entries-with-same-name.far",
+      "directory-names-chunk-length-not-a-multiple-of-8-bytes.far",
+      "directory-names-chunk-not-tightly-packed.far",
+      "directory-names-chunk-before-directory-chunk.far",
+      "directory-names-chunk-overlaps-directory-chunk.far",
+      "zero-length-name.far",
+      "name-with-null-character.far",
+      "name-with-leading-slash.far",
+      "name-with-trailing-slash.far",
+      "name-with-empty-segment.far",
+      "name-with-dot-segment.far",
+      "name-with-dot-dot-segment.far",
+      "content-chunk-starts-early.far",
+      "content-chunk-starts-late.far",
+      "second-content-chunk-starts-early.far",
+      "second-content-chunk-starts-late.far",
+      "content-chunk-not-zero-padded.far",
+      "content-chunk-overlap.far",
+      "content-chunk-not-tightly-packed.far",
+      "content-chunk-offset-past-end-of-file.far"};
+  for (const auto& file : test_files) {
+    auto path = "/pkg/data/invalid-fars/" + file;
+    ASSERT_FALSE(ReadArchive(path)) << "Invalid archive passed validation: " << path;
+  }
+}
+
 }  // namespace
+
+// Tests for DirNameOK must be placed in the archive namespace, see
+// https://github.com/google/googletest/blob/3306848f697568aacf4bcca330f6bdd5ce671899/googletest/include/gtest/gtest_prod.h#L55
+
+TEST(ValidateDirName, NameIsValid) {
+  const auto test_names = {"a",   "a/a",  "a/a/a", ".a",   "a.",   "..a",
+                           "a..", "a./a", "a../a", "a/.a", "a/..a"};
+
+  // The content of the /tmp dir does not matter, since we are not
+  // going to Read() from it anyway. We just need a valid ArchiveReader
+  // object to run the FRIEND_TEST on ArchiveReader::DirNameOK().
+  fbl::unique_fd fd(open("/tmp", O_RDONLY));
+  ArchiveReader r(std::move(fd));
+  for (const auto& name : test_names) {
+    ASSERT_TRUE(r.DirNameOK(name)) << "Valid dir name was not accepted: " << name;
+  }
+}
+
+TEST(ValidateDirName, NameIsInvalid) {
+  using namespace std::string_literals;
+  const auto test_names = {"/"s,     "/a"s,   "a/"s,   "aa/"s,    "\0"s,    "a\0"s, "\0a"s,
+                           "a/\0"s,  "\0/a"s, "a//a"s, "a/a//a"s, "."s,     "./a"s, "a/."s,
+                           "a/./a"s, ".."s,   "../a"s, "a/.."s,   "a/../a"s};
+
+  // The content of the /tmp dir does not matter, since we are not
+  // going to Read() from it anyway. We just need a valid ArchiveReader
+  // object to run the FRIEND_TEST on ArchiveReader::DirNameOK().
+  fbl::unique_fd fd(open("/tmp", O_RDONLY));
+  ArchiveReader reader(std::move(fd));
+  for (const auto& name : test_names) {
+    ASSERT_FALSE(reader.DirNameOK(name)) << "Invalid dir name was accepted: " << name;
+  }
+}
 
 }  // namespace archive

@@ -26,6 +26,7 @@ source_set("far") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
+  public_deps = [ "//third_party/googletest:gtest_prod" ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
@@ -48,7 +49,10 @@ executable("validate-fars") {
 
 fuchsia_unittest_package("cpp-fars-tests") {
   manifest = "meta/validate-fars.cml"
-  deps = [ ":validate-fars" ]
+  deps = [
+    ":validate-fars",
+    "//src/sys/pkg/testing/invalid-fars:resource",
+  ]
 }
 
 group("tests") {

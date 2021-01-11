@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_FORMAT_H_
-#define GARNET_LIB_FAR_FORMAT_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_FORMAT_H_
+#define SRC_SYS_PKG_LIB_FAR_FORMAT_H_
 
 #include <stdint.h>
 
 namespace archive {
 
+// Constants for processing Fuchsia archives, as defined by the FAR specification:
+// https://fuchsia.dev/fuchsia-src/concepts/source_code/archive_format
 constexpr uint64_t kMagic = 0x11c5abad480bbfc8;
 constexpr uint64_t kMagicLength = 8u;
 constexpr uint64_t kDirType = 0x2d2d2d2d2d524944;
 constexpr uint64_t kDirnamesType = 0x53454d414e524944;
+constexpr uint64_t kContentAlignment = 4096;
 
 struct IndexChunk {
   uint64_t magic = kMagic;
@@ -37,4 +40,4 @@ struct DirectoryTableEntry {
 
 }  // namespace archive
 
-#endif  // GARNET_LIB_FAR_FORMAT_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_FORMAT_H_
