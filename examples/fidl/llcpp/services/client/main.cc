@@ -28,30 +28,30 @@ fidl::InterfaceHandle<fuchsia::io::Directory> StartEchoServer(
   return svc;
 }
 
-zx_status_t llcpp_example(zx::unowned_channel svc) {
-  fidl::result<EchoService::ServiceClient> open_result =
+zx::status<> llcpp_example(zx::unowned_channel svc) {
+  zx::status<EchoService::ServiceClient> open_result =
       llcpp::sys::OpenServiceAt<EchoService>(std::move(svc));
   if (open_result.is_error()) {
-    std::cerr << "failed to open default instance of EchoService: " << open_result.error()
+    std::cerr << "failed to open default instance of EchoService: " << open_result.status_string()
               << std::endl;
-    return open_result.error();
+    return open_result.take_error();
   }
 
-  EchoService::ServiceClient service = open_result.take_value();
+  EchoService::ServiceClient service = std::move(open_result.value());
 
-  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.connect_regular_echo();
+  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_regular_echo();
   if (connect_result.is_error()) {
     std::cerr << "failed to connect to member protocol regular_echo of EchoService: "
-              << connect_result.error() << std::endl;
-    return connect_result.error();
+              << connect_result.status_string() << std::endl;
+    return connect_result.take_error();
   }
 
-  Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
+  Echo::SyncClient client = fidl::BindSyncClient(std::move(connect_result.value()));
   Echo::ResultOf::EchoString echo_result = client.EchoString(fidl::StringView("hello"));
   if (!echo_result.ok()) {
     std::cerr << "failed to make EchoString call to member protocol regular_echo of EchoService: "
               << echo_result.error() << std::endl;
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   auto response = echo_result.Unwrap();
@@ -60,9 +60,9 @@ zx_status_t llcpp_example(zx::unowned_channel svc) {
   if (result_string != "hello") {
     std::cerr << "got unexpected response '" << result_string << "'. expected 'hello'."
               << std::endl;
-    return ZX_ERR_INTERNAL;
+    return zx::error(ZX_ERR_INTERNAL);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 int main(int argc, const char** argv) {
@@ -76,9 +76,9 @@ int main(int argc, const char** argv) {
   fuchsia::sys::ComponentControllerPtr controller;
   auto svc = StartEchoServer(context.get(), controller.NewRequest());
 
-  zx_status_t result = llcpp_example(zx::unowned_channel(svc.channel()));
-  if (result != ZX_OK) {
-    std::cerr << "llcpp_example failed with status: " << result << std::endl;
+  zx::status<> result = llcpp_example(zx::unowned_channel(svc.channel()));
+  if (result.is_error()) {
+    std::cerr << "llcpp_example failed with status: " << result.status_string() << std::endl;
     return 1;
   }
   return 0;

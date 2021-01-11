@@ -14,7 +14,7 @@
 namespace llcpp::sys {
 
 // A handler for an instance of a FIDL Service.
-class ServiceHandler : public ::llcpp::fidl::ServiceHandlerInterface {
+class ServiceHandler final : public ::fidl::ServiceHandlerInterface {
  public:
   ServiceHandler() = default;
 
@@ -26,26 +26,26 @@ class ServiceHandler : public ::llcpp::fidl::ServiceHandlerInterface {
   ServiceHandler(ServiceHandler&&) = default;
   ServiceHandler& operator=(ServiceHandler&&) = default;
 
-  // Add a |member| to the instance, whose connection will be handled by |handler|.
-  //
-  // # Errors
-  //
-  // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  zx_status_t AddMember(fit::string_view member, MemberHandler handler) override {
-    // Bridge between fit::function and fbl::Function.
-    auto bridge_func = [handler = std::move(handler)](::zx::channel request_channel) {
-      return handler(std::move(request_channel));
-    };
-    return dir_->AddEntry(std::move(member),
-                          fbl::MakeRefCounted<fs::Service>(std::move(bridge_func)));
-  }
-
   // Take the underlying pseudo-directory from the service handler.
   //
   // Once taken, the service handler is no longer safe to use.
   fbl::RefPtr<fs::PseudoDir> TakeDirectory() { return std::move(dir_); }
 
  private:
+  // Add a |member| to the instance, whose connection will be handled by |handler|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: The member already exists.
+  ::zx::status<> AddAnyMember(fit::string_view member, AnyMemberHandler handler) override {
+    // Bridge between fit::function and fbl::Function.
+    auto bridge_func = [handler = std::move(handler)](::zx::channel request_channel) {
+      return handler(std::move(request_channel)).status_value();
+    };
+    return ::zx::make_status(
+        dir_->AddEntry(member, fbl::MakeRefCounted<fs::Service>(std::move(bridge_func))));
+  }
+
   fbl::RefPtr<fs::PseudoDir> dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };
 

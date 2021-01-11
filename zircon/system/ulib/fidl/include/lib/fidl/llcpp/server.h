@@ -198,6 +198,8 @@ class ServerBindingRef {
 //
 // The following |BindServer()| APIs infer the protocol type based on the server implementation
 // which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
+//
+// TODO(fxbug.dev/67062): |fidl::BindServer| and associated API should return a |zx::status|.
 template <typename ServerImpl>
 fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher,

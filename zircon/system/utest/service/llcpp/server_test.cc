@@ -73,13 +73,27 @@ class ServerTest : public zxtest::Test {
     llcpp::sys::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 
-    my_service.add_foo([this, foo_impl](zx::channel request_channel) {
-      return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(request_channel), foo_impl);
-    });
+    auto add_foo_result =
+        my_service.add_foo([this, foo_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
+          // TODO(fxbug.dev/67062): |fidl::BindServer| should return a |zx::status|,
+          // which would simplify this code.
+          auto result = fidl::BindServer(loop_.dispatcher(), std::move(request_channel), foo_impl);
+          if (result.is_ok())
+            return zx::ok();
+          return zx::make_status(result.take_error());
+        });
+    ZX_ASSERT(add_foo_result.is_ok());
 
-    my_service.add_bar([this, bar_impl](zx::channel request_channel) {
-      return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(request_channel), bar_impl);
-    });
+    auto add_bar_result =
+        my_service.add_bar([this, bar_impl](fidl::ServerEnd<Echo> request_channel) -> zx::status<> {
+          // TODO(fxbug.dev/67062): |fidl::BindServer| should return a |zx::status|,
+          // which would simplify this code.
+          auto result = fidl::BindServer(loop_.dispatcher(), std::move(request_channel), bar_impl);
+          if (result.is_ok())
+            return zx::ok();
+          return zx::make_status(result.take_error());
+        });
+    ZX_ASSERT(add_bar_result.is_ok());
 
     return handler;
   }
@@ -118,17 +132,17 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
   ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
 
   // Connect to the `EchoService` at the 'default' instance.
-  fidl::result<EchoService::ServiceClient> open_result =
+  zx::status<EchoService::ServiceClient> open_result =
       llcpp::sys::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
   ASSERT_TRUE(open_result.is_ok());
 
-  EchoService::ServiceClient service = open_result.take_value();
+  EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'foo'.
-  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.connect_foo();
+  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
+  Echo::SyncClient client = fidl::BindSyncClient(std::move(connect_result.value()));
   Echo::ResultOf::EchoString echo_result = client.EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
@@ -148,17 +162,17 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
   ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
 
   // Connect to the `EchoService` at the 'default' instance.
-  fidl::result<EchoService::ServiceClient> open_result =
+  zx::status<EchoService::ServiceClient> open_result =
       llcpp::sys::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
   ASSERT_TRUE(open_result.is_ok());
 
-  EchoService::ServiceClient service = open_result.take_value();
+  EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'foo'.
-  fidl::result<fidl::ClientChannel<Echo>> connect_result = service.connect_foo();
+  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  Echo::SyncClient client = fidl::BindSyncClient(connect_result.take_value());
+  Echo::SyncClient client = fidl::BindSyncClient(std::move(connect_result.value()));
   Echo::ResultOf::EchoString echo_result = client.EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 

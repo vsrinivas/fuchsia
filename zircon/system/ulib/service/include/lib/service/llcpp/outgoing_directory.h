@@ -66,7 +66,7 @@ class OutgoingDirectory final {
   // when |Serve(zx::channel)| or |ServeFromStartupInfo()| is called.
   //
   // |dispatcher| must not be null. See |async_get_default_dispatcher()|.
-  OutgoingDirectory(async_dispatcher_t* dispatcher);
+  explicit OutgoingDirectory(async_dispatcher_t* dispatcher);
 
   // Outgoing objects cannot be copied.
   OutgoingDirectory(const OutgoingDirectory&) = delete;
@@ -120,9 +120,8 @@ class OutgoingDirectory final {
   // ```
   // llcpp::sys::ServiceHandler handler;
   // ::llcpp::lib::example::MyService::Handler my_handler(&handler);
-  // my_handler.add_my_member([dispatcher](zx::channel request) {
-  //   fidl::BindSingleInFlightOnly(dispatcher, std::move(request),
-  //   std::make_unique<FooProtocolImpl>());
+  // my_handler.add_my_member([dispatcher](fidl::ServerEnd<FooProtocol> server_end) {
+  //   fidl::BindServer(dispatcher, std::move(server_end), std::make_unique<FooProtocolImpl>());
   // });
   // outgoing.AddService<::llcpp::lib::example::MyService>(std::move(handler), "my-instance");
   // ```

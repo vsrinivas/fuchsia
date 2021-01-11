@@ -12,35 +12,59 @@
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #endif  // __Fuchsia__
 
-namespace llcpp::fidl {
+namespace fidl {
 
 #ifdef __Fuchsia__
 
 // Interface used by generated FIDL code for adding protocol members to a Service instance.
-// NOTE: This class is copied from the high-level C++ FIDL library in //sdk/lib/fidl/cpp.
 class ServiceHandlerInterface {
  public:
   virtual ~ServiceHandlerInterface() = default;
 
-  // User-defined action for handling a connection attempt to a member protocol.
-  using MemberHandler = fit::function<zx_status_t(zx::channel)>;
+  // User-defined action for handling a connection attempt to a
+  // member FIDL protocol defined by |Protocol|.
+  template <typename Protocol>
+  using MemberHandler = fit::function<zx::status<>(::fidl::ServerEnd<Protocol>)>;
 
-  // Add a |member| to the instance, whose connection will be handled by |handler|.
+  // Add a |member| to the instance, which will be handled by |handler|.
+  //
+  // This method specifies the exact protocol |Protocol|, hence should be
+  // used by end-users adding service member handlers to a service directory.
   //
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  virtual zx_status_t AddMember(fit::string_view member, MemberHandler handler) = 0;
+  template <typename Protocol>
+  zx::status<> AddMember(fit::string_view member, MemberHandler<Protocol> handler) {
+    return AddAnyMember(member, [handler = std::move(handler)](zx::channel channel) {
+      return handler(::fidl::ServerEnd<Protocol>(std::move(channel)));
+    });
+  }
 
-  // NOTE: This class is missing an |AddMember| overload that uses types only present
-  // in the high-level C++ library.
+ protected:
+  // User-defined action for handling a connection attempt to any
+  // member FIDL protocol.
+  using AnyMemberHandler = fit::function<zx::status<>(zx::channel)>;
+
+  // Add a |member| to the instance, whose connection will be handled by |handler|.
+  //
+  // This variant does not restrict on the protocol type, hence should be
+  // implemented by service directories (typically filesystem servers)
+  // which host arbitrary member protocols under |member| paths.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: The member already exists.
+  virtual zx::status<> AddAnyMember(fit::string_view member, AnyMemberHandler handler) = 0;
 };
 
 #endif  // __Fuchsia__
 
-}  // namespace llcpp::fidl
+}  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_SERVICE_HANDLER_INTERFACE_H_

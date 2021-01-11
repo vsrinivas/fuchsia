@@ -31,31 +31,34 @@ class {{ .Name }} final {
     {{- end }}
     {{- range .Members }}
   {{ "" }}
-    // Connects to the member protocol "{{ .Name }}". Returns a |fidl::ClientChannel| on
-    // success, which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client.
+    // Connects to the member protocol "{{ .Name }}".
+    // Returns a |fidl::ClientEnd<{{ .ProtocolType }}>| on success,
+    // which can be used with |fidl::BindSyncClient| to create a synchronous
+    // client, or |fidl::Client| to create a client that supports both
+    // asynchronous and synchronous operations.
     //
     // # Errors
     //
-    // On failure, returns a fit::error with zx_status_t != ZX_OK.
+    // On failure, returns a |zx::error| with status != ZX_OK.
     // Failures can occur if channel creation failed, or if there was an issue making
-    // a |fuchsia.io.Directory::Open| call.
+    // a |fuchsia.io.Directory/Open| call.
     //
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
-    // the |ClientChannel| returned from this method.
-    ::fidl::result<::fidl::ClientChannel<{{ .ProtocolType }}>> connect_{{ .Name }}() {
-      ::zx::channel local, remote;
-      zx_status_t result = ::zx::channel::create(0, &local, &remote);
-      if (result != ZX_OK) {
-        return ::fit::error(result);
+    // the |ClientEnd| returned from this method.
+    ::zx::status<::fidl::ClientEnd<{{ .ProtocolType }}>> connect_{{ .Name }}() {
+      auto endpoints = ::fidl::CreateEndpoints<{{ .ProtocolType }}>();
+      if (endpoints.is_error()) {
+        return endpoints.take_error();
       }
-      result =
-          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("{{ .Name }}"), std::move(remote));
-      if (result != ZX_OK) {
-        return ::fit::error(result);
+      auto connection = connect_func_(
+          ::zx::unowned_channel(dir_),
+          ::fidl::StringView("{{ .Name }}"),
+          endpoints->server.TakeChannel());
+      if (connection.is_error()) {
+        return connection.take_error();
       }
-      return ::fit::ok(::fidl::ClientChannel<{{ .ProtocolType}}>(std::move(local)));
+      return ::zx::ok(std::move(endpoints->client));
     }
     {{- end }}
 
@@ -70,7 +73,7 @@ class {{ .Name }} final {
   class Handler final {
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
-    explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler)
+    explicit Handler(::fidl::ServiceHandlerInterface* service_handler)
     {{- with .Members }}
         : service_handler_(service_handler) {}
     {{- else }}
@@ -85,14 +88,15 @@ class {{ .Name }} final {
     // # Errors
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-    zx_status_t add_{{ .Name }}(::llcpp::fidl::ServiceHandlerInterface::MemberHandler handler) {
+    ::zx::status<> add_{{ .Name }}(
+        ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType }}> handler) {
       return service_handler_->AddMember("{{ .Name }}", std::move(handler));
     }
     {{- end }}
 
    private:
    {{- with .Members }}
-    ::llcpp::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+    ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
    {{- end }}
   };
 };
