@@ -102,22 +102,43 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+# Device discovery and building missing symbolizer are slow operations that
+# don't need to happen when the user requests specific operations, like help and
+# info.
+skip_slow_setup=false
+for arg in "$@"; do
+  if [[ "$arg" == "--help" || "$arg" == "-h" || "$arg" == "--info" || "$arg" == "--dry" ]]; then
+    skip_slow_setup=true
+    break
+  fi
+  if [[ "$arg" == "--" ]]; then
+    break
+  fi
+done
 
-if [[ "$FUCHSIA_DEVICE_ADDR" == "::1" && -z "$SL4F_HTTP_PORT" ]]; then
-  # Device addr is localhost, assume that means that ports were forwarded with
-  # fx serve-remote from a remote workstation/laptop with a device attached.
-  export SL4F_HTTP_PORT=9080
+if ! $skip_slow_setup; then
+  # force build of required symbolizer host tools if they don't exist:
+  fx-command-run host-tool --print symbolizer > /dev/null
+  fx-command-run host-tool --print symbol-index > /dev/null
+
+  # initialize some variables required for E2E tests:
+  export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+
+  if [[ "$FUCHSIA_DEVICE_ADDR" == "::1" && -z "$SL4F_HTTP_PORT" ]]; then
+    # Device addr is localhost, assume that means that ports were forwarded with
+    # fx serve-remote from a remote workstation/laptop with a device attached.
+    export SL4F_HTTP_PORT=9080
+  fi
+
+  port="$(get-device-ssh-port)"
+  if [[ -n "${port}" ]]; then
+    export FUCHSIA_SSH_PORT="${port}"
+  fi
+
+  FUCHSIA_SSH_KEY="$(get-ssh-privkey)" || exit $?
+  export FUCHSIA_SSH_KEY
+  export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 fi
-
-port="$(get-device-ssh-port)"
-if [[ -n "${port}" ]]; then
-  export FUCHSIA_SSH_PORT="${port}"
-fi
-
-FUCHSIA_SSH_KEY="$(get-ssh-privkey)" || exit $?
-export FUCHSIA_SSH_KEY
-export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 
 _args=(
   "${PREBUILT_DART_DIR}/bin/dart"
