@@ -10,11 +10,12 @@
 #include <limits>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-dhub-regs.h>
 #include <soc/as370/as370-hw.h>
+
+#include "src/devices/shareddma/drivers/syn-dma/syn_dhub_bind.h"
 
 namespace {
 constexpr uint64_t kPortKeyIrqMsg = 0x00;
@@ -346,8 +347,8 @@ void SynDhub::ProcessIrq(uint32_t channel_id) {
       fbl::AutoLock lock(&position_lock_);
       dma_current_[channel_id] += channel_info_[channel_id].dma_mtus * kMtuSize;
       if (dma_current_[channel_id] == dma_base_[channel_id] + dma_size_[channel_id]) {
-        zxlogf(DEBUG, "dhub: dma channel id %u  wraparound current 0x%lX  limit 0x%lX",
-               channel_id, dma_current_[channel_id], dma_base_[channel_id] + dma_size_[channel_id]);
+        zxlogf(DEBUG, "dhub: dma channel id %u  wraparound current 0x%lX  limit 0x%lX", channel_id,
+               dma_current_[channel_id], dma_base_[channel_id] + dma_size_[channel_id]);
         dma_current_[channel_id] = dma_base_[channel_id];
       } else if (dma_current_[channel_id] > dma_base_[channel_id] + dma_size_[channel_id]) {
         zxlogf(ERROR, "dhub: dma channel id %u  current 0x%lX  exceeded 0x%lX", channel_id,
@@ -388,9 +389,4 @@ static constexpr zx_driver_ops_t syn_dhub_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(syn_dhub, syn_dhub_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_DHUB),
-ZIRCON_DRIVER_END(syn_dhub)
-    // clang-format on
+ZIRCON_DRIVER(syn_dhub, syn_dhub_driver_ops, "zircon", "0.1");
