@@ -1,0 +1,34 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/zircon/standard.gni")
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+
+if (current_toolchain == default_toolchain) {
+  foreach(cpu, standard_fuchsia_cpus) {
+    zircon_toolchain_suite("bionic_$cpu") {
+      cpu = cpu
+      os = "fuchsia"
+      environment = "user"
+      with_shared = false
+      is_pic_default = true
+      strip = "--strip-sections"
+    }
+  }
+
+  _bionic_toolchain = "//src/proc/lib/bionic:bionic_$target_cpu"
+
+  group("bionic") {
+    public_deps = [ ":bionic($_bionic_toolchain)" ]
+  }
+} else if (toolchain_variant.base ==
+           "//src/proc/lib/bionic:bionic_$target_cpu") {
+  group("bionic") {
+    public_deps = [
+      # This directory does not actually exist in the source tree yet.
+      # See fxb/67132 for progress on addition this repository.
+      "//third_party/android/platform/bionic/libc",
+    ]
+  }
+}
