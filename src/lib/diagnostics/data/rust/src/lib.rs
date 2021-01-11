@@ -93,6 +93,9 @@ pub trait DiagnosticsData {
     fn has_errors(metadata: &Self::Metadata) -> bool {
         Self::errors(metadata).as_ref().map(|e| !e.is_empty()).unwrap_or_default()
     }
+    /// Transforms a Metdata string into a errorful metadata, overriding any other
+    /// errors.
+    fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata;
 }
 
 /// Lifecycle events track the start, stop, and diagnostics directory readiness of components.
@@ -115,6 +118,15 @@ impl DiagnosticsData for Lifecycle {
 
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
         &metadata.errors
+    }
+
+    fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata {
+        LifecycleEventMetadata {
+            lifecycle_event_type: metadata.lifecycle_event_type,
+            component_url: metadata.component_url,
+            timestamp: metadata.timestamp,
+            errors: Some(vec![Error { message: error.into() }]),
+        }
     }
 }
 
@@ -139,6 +151,15 @@ impl DiagnosticsData for Inspect {
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
         &metadata.errors
     }
+
+    fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata {
+        InspectMetadata {
+            filename: metadata.filename,
+            component_url: metadata.component_url,
+            timestamp: metadata.timestamp,
+            errors: Some(vec![Error { message: error.into() }]),
+        }
+    }
 }
 
 /// Logs carry streams of structured events from components.
@@ -161,6 +182,16 @@ impl DiagnosticsData for Logs {
 
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
         &metadata.errors
+    }
+
+    fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata {
+        LogsMetadata {
+            severity: metadata.severity,
+            size_bytes: metadata.size_bytes,
+            component_url: metadata.component_url,
+            timestamp: metadata.timestamp,
+            errors: Some(vec![LogError::Other(Error { message: error })]),
+        }
     }
 }
 
@@ -354,6 +385,24 @@ pub struct Data<D: DiagnosticsData> {
     /// Schema version.
     #[serde(default)]
     pub version: u64,
+}
+
+impl<D> Data<D>
+where
+    D: DiagnosticsData,
+{
+    pub fn dropped_payload_schema(self, error_string: String) -> Data<D>
+    where
+        D: DiagnosticsData,
+    {
+        Data {
+            metadata: D::override_error(self.metadata, error_string),
+            moniker: self.moniker,
+            data_source: self.data_source,
+            version: self.version,
+            payload: None,
+        }
+    }
 }
 
 /// A diagnostics data object containing inspect data.

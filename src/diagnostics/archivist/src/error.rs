@@ -53,14 +53,18 @@ pub enum AccessorError {
         #[from]
         source: serde_json::Error,
     },
+
+    #[error("batch timeout was set on StreamParameter and on PerformanceConfiguration")]
+    DuplicateBatchTimeout,
 }
 
 impl AccessorError {
     pub fn close(self, control: BatchIteratorControlHandle) {
         warn!(error = %self, "Closing BatchIterator.");
         let epitaph = match self {
-            AccessorError::MissingDataType => ZxStatus::INVALID_ARGS,
-            AccessorError::EmptySelectors
+            AccessorError::DuplicateBatchTimeout
+            | AccessorError::MissingDataType
+            | AccessorError::EmptySelectors
             | AccessorError::MissingSelectors
             | AccessorError::InvalidSelectors(_)
             | AccessorError::ParseSelectors(_) => ZxStatus::INVALID_ARGS,

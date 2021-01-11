@@ -4,10 +4,11 @@
 
 use {
     crate::{
+        accessor::PerformanceConfig,
         constants,
         container::{ReadSnapshot, SnapshotData},
         diagnostics::ConnectionStats,
-        pipeline::Pipeline,
+        inspect::container::UnpopulatedInspectDataContainer,
     },
     anyhow::Error,
     collector::Moniker,
@@ -17,7 +18,6 @@ use {
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    parking_lot::RwLock,
     selectors,
     std::{
         convert::{TryFrom, TryInto},
@@ -107,18 +107,16 @@ pub struct BatchResultItem {
 impl ReaderServer {
     /// Create a stream of filtered inspect data, ready to serve.
     pub fn stream(
-        inspect_pipeline: Arc<RwLock<Pipeline>>,
-        timeout: Option<i64>,
-        selectors: Option<Vec<Selector>>,
+        unpopulated_diagnostics_sources: Vec<UnpopulatedInspectDataContainer>,
+        performance_configuration: PerformanceConfig,
+        selectors: Option<Vec<Arc<Selector>>>,
         stats: Arc<ConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
-        let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
-        let repo_data = inspect_pipeline.read().fetch_inspect_data(&selectors).into_iter();
-
         let server = Self { selectors };
-        let timeout = timeout.unwrap_or(constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS);
 
-        futures::stream::iter(repo_data)
+        let batch_timeout = performance_configuration.batch_timeout_sec;
+
+        futures::stream::iter(unpopulated_diagnostics_sources.into_iter())
             // make a stream of futures of populated Vec's
             .map(move |unpopulated| {
                 let global_stats = stats.global_stats().clone();
@@ -127,8 +125,9 @@ impl ReaderServer {
                 async move {
                     let start_time = zx::Time::get_monotonic();
                     let global_stats_2 = global_stats.clone();
-                    let result =
-                        unpopulated.populate(timeout, move || global_stats.add_timeout()).await;
+                    let result = unpopulated
+                        .populate(batch_timeout, move || global_stats.add_timeout())
+                        .await;
                     global_stats_2.record_component_duration(
                         &result.identity.relative_moniker.join("/"),
                         zx::Time::get_monotonic() - start_time,
@@ -332,10 +331,12 @@ mod tests {
             container::ComponentIdentity,
             diagnostics,
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
+            pipeline::Pipeline,
             repository::DataRepo,
         },
         anyhow::format_err,
-        diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy},
+        diagnostics_hierarchy::trie::TrieIterableNode,
+        diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableService},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
@@ -348,12 +349,13 @@ mod tests {
         fuchsia_zircon::Peered,
         futures::future::join_all,
         futures::{FutureExt, StreamExt},
+        parking_lot::RwLock,
         serde_json::json,
         std::path::PathBuf,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
-    const BATCH_RETRIEVAL_TIMEOUT_SECONDS: Option<i64> = Some(300);
+    const BATCH_RETRIEVAL_TIMEOUT_SECONDS: i64 = 300;
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
         let vmo = zx::Vmo::create(4096).unwrap();
@@ -1083,9 +1085,14 @@ mod tests {
         inspect_pipeline: Arc<RwLock<Pipeline>>,
         stats: Arc<ConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
+        let test_performance_config = PerformanceConfig {
+            batch_timeout_sec: BATCH_RETRIEVAL_TIMEOUT_SECONDS,
+            aggregated_content_limit_bytes: None,
+        };
+
         let reader_server = Box::pin(ReaderServer::stream(
-            inspect_pipeline,
-            BATCH_RETRIEVAL_TIMEOUT_SECONDS,
+            inspect_pipeline.read().fetch_inspect_data(&None),
+            test_performance_config,
             None,
             stats.clone(),
         ));
@@ -1099,6 +1106,7 @@ mod tests {
                     batch_iterator_requests,
                     StreamMode::Snapshot,
                     stats,
+                    None,
                 )
                 .unwrap()
                 .run()

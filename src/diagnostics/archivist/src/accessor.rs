@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        constants::FORMATTED_CONTENT_CHUNK_SIZE_TARGET,
+        constants::{self, FORMATTED_CONTENT_CHUNK_SIZE_TARGET},
         diagnostics::{AccessorStats, ConnectionStats},
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
@@ -16,8 +16,8 @@ use {
     diagnostics_data::{Data, DiagnosticsData},
     fidl_fuchsia_diagnostics::{
         self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorRequest,
-        BatchIteratorRequestStream, ClientSelectorConfiguration, DataType, Format, Selector,
-        SelectorArgument, StreamMode,
+        BatchIteratorRequestStream, ClientSelectorConfiguration, DataType, Format,
+        PerformanceConfiguration, Selector, SelectorArgument, StreamMode, StreamParameters,
     },
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
@@ -26,6 +26,8 @@ use {
     parking_lot::RwLock,
     selectors,
     serde::Serialize,
+    std::collections::HashMap,
+    std::convert::{TryFrom, TryInto},
     std::sync::Arc,
     tracing::warn,
 };
@@ -76,7 +78,7 @@ impl ArchiveAccessor {
     async fn run_server(
         pipeline: Arc<RwLock<Pipeline>>,
         requests: BatchIteratorRequestStream,
-        params: fidl_fuchsia_diagnostics::StreamParameters,
+        params: StreamParameters,
         accessor_stats: Arc<AccessorStats>,
     ) -> Result<(), AccessorError> {
         let format = params.format.ok_or(AccessorError::MissingFormat)?;
@@ -84,6 +86,8 @@ impl ArchiveAccessor {
             return Err(AccessorError::UnsupportedFormat);
         }
         let mode = params.stream_mode.ok_or(AccessorError::MissingMode)?;
+
+        let performance_config: PerformanceConfig = (&params).try_into()?;
 
         match params.data_type.ok_or(AccessorError::MissingDataType)? {
             DataType::Inspect => {
@@ -94,6 +98,7 @@ impl ArchiveAccessor {
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
+
                 let selectors = match selectors {
                     ClientSelectorConfiguration::Selectors(selectors) => {
                         Some(validate_and_parse_inspect_selectors(selectors)?)
@@ -102,16 +107,29 @@ impl ArchiveAccessor {
                     _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
                 };
 
+                let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
+
+                let unpopulated_container_vec = pipeline.read().fetch_inspect_data(&selectors);
+
+                let per_component_budget_opt = if unpopulated_container_vec.is_empty() {
+                    None
+                } else {
+                    performance_config
+                        .aggregated_content_limit_bytes
+                        .map(|limit| (limit as usize) / unpopulated_container_vec.len())
+                };
+
                 BatchIterator::new(
                     inspect::ReaderServer::stream(
-                        pipeline,
-                        params.batch_retrieval_timeout_seconds,
+                        unpopulated_container_vec,
+                        performance_config,
                         selectors,
                         stats.clone(),
                     ),
                     requests,
                     mode,
                     stats,
+                    per_component_budget_opt,
                 )?
                 .run()
                 .await
@@ -133,7 +151,7 @@ impl ArchiveAccessor {
 
                 let events = LifecycleServer::new(pipeline);
 
-                BatchIterator::new(events, requests, mode, stats)?.run().await
+                BatchIterator::new(events, requests, mode, stats, None)?.run().await
             }
             DataType::Logs => {
                 let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
@@ -189,28 +207,74 @@ pub struct BatchIterator {
     data: FormattedStream,
 }
 
+// Checks if a given schema is within a components budget, and if it is, updates the budget,
+// then returns true. Otherwise, if the schema is not within budget, returns false.
+fn maybe_update_budget(
+    budget_map: &mut HashMap<String, usize>,
+    moniker: &String,
+    bytes: usize,
+    byte_limit: usize,
+) -> bool {
+    let remaining_budget = budget_map.entry(moniker.to_string()).or_insert(0);
+    if *remaining_budget + bytes > byte_limit {
+        false
+    } else {
+        *remaining_budget += bytes;
+        true
+    }
+}
+
 impl BatchIterator {
     pub fn new<Items, D>(
         data: Items,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
         stats: Arc<ConnectionStats>,
+        per_component_byte_limit_opt: Option<usize>,
     ) -> Result<Self, AccessorError>
     where
         Items: Stream<Item = Data<D>> + Send + 'static,
         D: DiagnosticsData,
     {
         let result_stats = stats.clone();
+
+        let mut budget_tracker: HashMap<String, usize> = HashMap::new();
+
         let data = data.map(move |d| {
             if D::has_errors(&d.metadata) {
                 result_stats.add_result_error();
             }
-            let res = JsonString::serialize(&d);
-            if res.is_err() {
-                result_stats.add_result_error();
+
+            match JsonString::serialize(&d) {
+                Err(e) => {
+                    result_stats.add_result_error();
+                    Err(e)
+                }
+                Ok(contents) => {
+                    result_stats.add_result();
+                    match per_component_byte_limit_opt {
+                        Some(x) => {
+                            if maybe_update_budget(
+                                &mut budget_tracker,
+                                &d.moniker,
+                                contents.len(),
+                                x,
+                            ) {
+                                Ok(contents)
+                            } else {
+                                let new_data = d.dropped_payload_schema(
+                                    "Schema failed to fit component budget.".to_string(),
+                                );
+                                // TODO(66085): If a payload is truncated, cache the
+                                // new schema so that we can reuse if other schemas from
+                                // the same component get dropped.
+                                JsonString::serialize(&new_data)
+                            }
+                        }
+                        None => Ok(contents),
+                    }
+                }
             }
-            result_stats.add_result();
-            res
         });
 
         Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
@@ -267,5 +331,56 @@ impl BatchIterator {
 impl Drop for BatchIterator {
     fn drop(&mut self) {
         self.stats.close_connection();
+    }
+}
+
+pub struct PerformanceConfig {
+    pub batch_timeout_sec: i64,
+    pub aggregated_content_limit_bytes: Option<u64>,
+}
+
+impl TryFrom<&StreamParameters> for PerformanceConfig {
+    type Error = AccessorError;
+    fn try_from(params: &StreamParameters) -> Result<PerformanceConfig, Self::Error> {
+        let batch_timeout_sec_opt = match params {
+            // If only nested batch retrieval timeout is definitely not set,
+            // use the optional outer field.
+            StreamParameters {
+                batch_retrieval_timeout_seconds,
+                performance_configuration: None,
+                ..
+            }
+            | StreamParameters {
+                batch_retrieval_timeout_seconds,
+                performance_configuration:
+                    Some(PerformanceConfiguration { batch_retrieval_timeout_seconds: None, .. }),
+                ..
+            } => batch_retrieval_timeout_seconds,
+            // If the outer field is definitely not set, and the inner field might be,
+            // use the inner field.
+            StreamParameters {
+                batch_retrieval_timeout_seconds: None,
+                performance_configuration:
+                    Some(PerformanceConfiguration { batch_retrieval_timeout_seconds, .. }),
+                ..
+            } => batch_retrieval_timeout_seconds,
+            // Both the inner and outer fields are set, which is an error.
+            _ => return Err(AccessorError::DuplicateBatchTimeout),
+        };
+
+        let aggregated_content_limit_bytes = match params {
+            StreamParameters {
+                performance_configuration:
+                    Some(PerformanceConfiguration { max_aggregate_content_size_bytes, .. }),
+                ..
+            } => max_aggregate_content_size_bytes.clone(),
+            _ => None,
+        };
+
+        Ok(PerformanceConfig {
+            batch_timeout_sec: batch_timeout_sec_opt
+                .unwrap_or(constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS),
+            aggregated_content_limit_bytes,
+        })
     }
 }

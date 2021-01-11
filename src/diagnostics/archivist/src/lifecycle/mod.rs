@@ -214,11 +214,17 @@ mod tests {
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
         let _server = Task::spawn(async move {
-            BatchIterator::new(reader_server, batch_iterator_requests, StreamMode::Snapshot, stats)
-                .unwrap()
-                .run()
-                .await
-                .unwrap()
+            BatchIterator::new(
+                reader_server,
+                batch_iterator_requests,
+                StreamMode::Snapshot,
+                stats,
+                None,
+            )
+            .unwrap()
+            .run()
+            .await
+            .unwrap()
         });
 
         let mut result_vec: Vec<String> = Vec::new();

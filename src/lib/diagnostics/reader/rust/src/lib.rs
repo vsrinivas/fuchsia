@@ -8,8 +8,8 @@ use diagnostics_data::{DiagnosticsData, InspectData};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
-    ClientSelectorConfiguration, Format, FormattedContent, SelectorArgument, StreamMode,
-    StreamParameters,
+    ClientSelectorConfiguration, Format, FormattedContent, PerformanceConfiguration,
+    SelectorArgument, StreamMode, StreamParameters,
 };
 use fuchsia_async::{self as fasync, DurationExt, Task, TimeoutExt};
 use fuchsia_component::client;
@@ -100,6 +100,7 @@ pub struct ArchiveReader {
     minimum_schema_count: usize,
     timeout: Option<Duration>,
     batch_retrieval_timeout_seconds: Option<i64>,
+    max_aggregated_content_size_bytes: Option<u64>,
 }
 
 impl ArchiveReader {
@@ -114,6 +115,7 @@ impl ArchiveReader {
             archive: Arc::new(Mutex::new(None)),
             minimum_schema_count: 1,
             batch_retrieval_timeout_seconds: None,
+            max_aggregated_content_size_bytes: None,
         }
     }
 
@@ -153,6 +155,11 @@ impl ArchiveReader {
     /// Do not use in tests unless timeout is the expected behavior.
     pub fn with_timeout(mut self, duration: Duration) -> Self {
         self.timeout = Some(duration);
+        self
+    }
+
+    pub fn with_aggregated_result_bytes_limit(mut self, limit_bytes: u64) -> Self {
+        self.max_aggregated_content_size_bytes = Some(limit_bytes);
         self
     }
 
@@ -248,7 +255,7 @@ impl ArchiveReader {
         stream_parameters.stream_mode = Some(mode);
         stream_parameters.data_type = Some(data_type);
         stream_parameters.format = Some(Format::Json);
-        stream_parameters.batch_retrieval_timeout_seconds = self.batch_retrieval_timeout_seconds;
+
         stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
             Some(ClientSelectorConfiguration::SelectAll(true))
         } else {
@@ -259,6 +266,12 @@ impl ArchiveReader {
                     .collect(),
             ))
         };
+
+        stream_parameters.performance_configuration = Some(PerformanceConfiguration {
+            max_aggregate_content_size_bytes: self.max_aggregated_content_size_bytes,
+            batch_retrieval_timeout_seconds: self.batch_retrieval_timeout_seconds,
+            ..PerformanceConfiguration::EMPTY
+        });
 
         archive.stream_diagnostics(stream_parameters, server_end).context("get BatchIterator")?;
         Ok(iterator)
