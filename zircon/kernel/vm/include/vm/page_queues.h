@@ -100,8 +100,6 @@ class PageQueues {
   // use. This can be done by acquiring the returned vmo's lock and then validating that the page is
   // still contained at the offset.
   struct VmoBacklink {
-    VmoBacklink() = default;
-
     fbl::RefPtr<VmCowPages> cow;
     vm_page_t* page = nullptr;
     uint64_t offset = 0;
