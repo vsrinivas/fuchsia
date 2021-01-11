@@ -31,7 +31,11 @@ func TestOOMSignal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -43,34 +47,55 @@ func TestOOMSignal(t *testing.T) {
 		AppendCmdline: cmdline,
 	})
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Trigger a simulated OOM, without leaking any memory.
-	i.RunCommand("k pmm oom signal")
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
+	if err = i.RunCommand("k pmm oom signal"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("Successfully waited for VFS exit completion")
+	if err = i.WaitForLogMessage("Successfully waited for VFS exit completion"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure the OOM thread reboots the target.
-	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
+	if err = i.WaitForLogMessage("memory-pressure: rebooting due to OOM"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure that the reboot has stowed a correct crashlog.
-	i.WaitForLogMessage("memory-pressure: stowing crashlog")
-	i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)")
+	if err = i.WaitForLogMessage("memory-pressure: stowing crashlog"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure that the system reboots without panicking.
-	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC")
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
@@ -80,7 +105,11 @@ func TestOOM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -92,20 +121,29 @@ func TestOOM(t *testing.T) {
 		AppendCmdline: cmdline,
 	})
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Trigger an OOM.
-	i.RunCommand("k pmm oom")
+	if err = i.RunCommand("k pmm oom"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure the memory state transition happens.
 	//
@@ -120,10 +158,14 @@ func TestOOM(t *testing.T) {
 	// we have a separate test |TestOOMSignal| to verify that a simulated OOM signal, i.e. an
 	// OOM signal without actually leaking any memory, results in the expected sequence of
 	// events.
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure that the system reboots without panicking.
-	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC")
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Similar to |TestOOM| this test will trigger an out of memory situation and verify the system
@@ -136,7 +178,11 @@ func TestOOMHard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -148,22 +194,35 @@ func TestOOMHard(t *testing.T) {
 		AppendCmdline: cmdline,
 	})
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - Normal"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Trigger an OOM.
-	i.RunCommand("k pmm oom hard")
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
+	if err = i.RunCommand("k pmm oom hard"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Ensure that the system reboots without panicking.
-	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC")
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
 }

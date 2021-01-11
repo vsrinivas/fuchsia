@@ -5,6 +5,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
@@ -16,7 +17,11 @@ func TestKtraceWorksWhenEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -35,6 +40,12 @@ func TestKtraceWorksWhenEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	support.EnsureDoesNotContain(t, stdout, "ZX_ERR_NOT_SUPPORTED")
-	support.EnsureDoesNotContain(t, stderr, "ZX_ERR_NOT_SUPPORTED")
+	ensureDoesNotContain(t, stdout, "ZX_ERR_NOT_SUPPORTED")
+	ensureDoesNotContain(t, stderr, "ZX_ERR_NOT_SUPPORTED")
+}
+
+func ensureDoesNotContain(t *testing.T, output, lookFor string) {
+	if strings.Contains(output, lookFor) {
+		t.Fatalf("output contains '%s'", lookFor)
+	}
 }

@@ -37,9 +37,3 @@ func EnsureContains(t *testing.T, output string, lookFor string) {
 		t.Fatalf("output did not contain '%s'", lookFor)
 	}
 }
-
-func EnsureDoesNotContain(t *testing.T, output string, lookFor string) {
-	if strings.Contains(output, lookFor) {
-		t.Fatalf("output contains '%s'", lookFor)
-	}
-}
