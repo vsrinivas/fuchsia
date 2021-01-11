@@ -40,12 +40,20 @@ kernel_cmdline("kernel.enable-serial-syscalls--output-only") {
   args = [ "kernel.enable-serial-syscalls=output-only" ]
 }
 
+kernel_cmdline("kernel.halt-on-panic--true") {
+  args = [ "kernel.halt-on-panic=true" ]
+}
+
 kernel_cmdline("kernel.oom.behavior--jobkill") {
   args = [ "kernel.oom.behavior=jobkill" ]
 }
 
 kernel_cmdline("kernel.oom.behavior--reboot") {
   args = [ "kernel.oom.behavior=reboot" ]
+}
+
+kernel_cmdline("kernel.serial--legacy") {
+  args = [ "kernel.serial=legacy" ]
 }
 
 kernel_cmdline("kernel.serial--none") {
