@@ -4,8 +4,6 @@
 
 
 success("RecursiveOptionalStructUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -82,8 +80,6 @@ success("RecursiveOptionalStructUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -157,8 +153,6 @@ encode_failure("RecursiveOptionalStructExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalStruct,
     bytes = {
         v1 = [
@@ -170,8 +164,6 @@ decode_failure("RecursiveOptionalStructExceedLimit") {
 }
 
 success("RecursiveOptionalStructArrayWrapperUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
     RecursiveOptionalStruct { // 0
@@ -252,8 +244,6 @@ success("RecursiveOptionalStructArrayWrapperUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
     RecursiveOptionalStruct { // 0
@@ -331,8 +321,6 @@ encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalStructArrayWrapper,
     bytes = {
         v1 = [
@@ -344,8 +332,6 @@ decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 success("RecursiveOptionalAndUnionUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
     recursive_optional: RecursiveOptionalStruct { // 1
@@ -427,8 +413,6 @@ success("RecursiveOptionalAndUnionUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndUnionExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
     recursive_optional: RecursiveOptionalStruct { // 1
@@ -504,8 +488,6 @@ encode_failure("RecursiveOptionalAndUnionExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndUnionExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalAndUnionStruct,
     bytes = {
         v1 = [
@@ -520,8 +502,6 @@ decode_failure("RecursiveOptionalAndUnionExceedLimit") {
 }
 
 success("RecursiveOptionalAndTableUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
     recursive_optional: RecursiveOptionalStruct { // 2
@@ -602,8 +582,6 @@ success("RecursiveOptionalAndTableUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndTableExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
     recursive_optional: RecursiveOptionalStruct { // 2
@@ -677,8 +655,6 @@ encode_failure("RecursiveOptionalAndTableExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndTableExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalAndTableStruct,
     bytes = {
         v1 = [
@@ -694,8 +670,6 @@ decode_failure("RecursiveOptionalAndTableExceedLimit") {
 }
 
 success("RecursiveOptionalAndVectorUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -775,8 +749,6 @@ success("RecursiveOptionalAndVectorUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndVectorExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -851,8 +823,6 @@ encode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalAndVectorExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalAndVectorStruct,
     bytes = {
         v1 = [
@@ -866,8 +836,6 @@ decode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 success("RecursiveOptionalStructWithStringUnderLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
     inner: RecursiveOptionalStructWithString { // 2
@@ -1070,8 +1038,6 @@ success("RecursiveOptionalStructWithStringUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
     inner: RecursiveOptionalStructWithString { // 2
@@ -1143,8 +1109,6 @@ encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
 }
 
 decode_failure("RecursiveOptionalStructWithStringExceedLimit") {
-    // TODO(fxbug.dev/53616) Enable in all bindings.
-    bindings_allowlist = [dart, go, llcpp, rust],
     type = RecursiveOptionalStructWithString,
     bytes = {
         v1 = [
