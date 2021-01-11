@@ -479,9 +479,9 @@ TEST_F(PrinterUnitTest, OutputDigest) {
   Printer p(oss);
   p.OutputDigest(d);
   ConfirmLines(oss, {"1234,B,200", "1234,A,100", "1234,Undigested,300", "1234,Orphaned,100",
-                     "1234,PagerTotal,300", "1234,PagerNewest,50", "1234,PagerOldest,150",
-                     "1234,DiscardableLocked,60", "1234,DiscardableUnlocked,40", "1234,Kernel,10",
-                     "1234,Free,100"});
+                     "1234,Kernel,10", "1234,Free,100", "1234,[Addl]PagerTotal,300",
+                     "1234,[Addl]PagerNewest,50", "1234,[Addl]PagerOldest,150",
+                     "1234,[Addl]DiscardableLocked,60", "1234,[Addl]DiscardableUnlocked,40"});
 }
 
 TEST_F(PrinterUnitTest, FormatSize) {
