@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <utility>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "addr.h"
@@ -25,65 +26,6 @@ TEST(SendBufferGenTest, LoadHexBuffer) {
   EXPECT_FALSE(gen.SetSendBufHex("-08"));
 }
 
-struct DataBuffer {
-  DataBuffer() = default;
-
-  DataBuffer(const DataBuffer& other) : DataBuffer(other.data.get(), other.len) {}
-
-  DataBuffer(DataBuffer&& other) noexcept : data(std::move(other.data)), len(other.len) {}
-
-  DataBuffer(std::initializer_list<uint8_t> l) {
-    data.reset(new uint8_t[l.size()]);
-    len = l.size();
-    auto* p = data.get();
-    for (auto& v : l) {
-      *p++ = v;
-    }
-  }
-
-  explicit DataBuffer(const std::string& str) {
-    data.reset(new uint8_t[str.length() + 1]);
-    memcpy(data.get(), str.data(), str.length());
-    data[str.length()] = 0;
-    len = str.length();
-  }
-
-  DataBuffer(const void* src, size_t l) {
-    if (src && l) {
-      data.reset(new uint8_t[l]);
-      memcpy(data.get(), src, l);
-      len = l;
-    } else {
-      data.reset();
-      len = 0;
-    }
-  }
-
-  bool operator==(const DataBuffer& rhs) const {
-    return len == rhs.len && memcmp(rhs.data.get(), data.get(), len) == 0;
-  }
-
-  bool operator!=(const DataBuffer& rhs) const { return !(rhs == *this); }
-
-  friend std::ostream& operator<<(std::ostream& os, const DataBuffer& b) {
-    os << "Buffer(" << b.len << ")";
-    if (b.len != 0) {
-      os << ": ";
-    }
-    auto* p = b.data.get();
-    auto blen = b.len;
-    std::ios_base::fmtflags f(os.flags());
-    while (blen--) {
-      os << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(*p++) << " ";
-    }
-    os.flags(f);
-    return os;
-  }
-
-  std::unique_ptr<uint8_t[]> data;
-  size_t len = 0;
-};
-
 TEST(SendBufferGenTest, CounterBuffer) {
   // SendBufferGenerator defaults to sending strings with incrementing packet count.
   SendBufferGenerator gen;
@@ -98,157 +40,43 @@ TEST(SendBufferGenTest, CounterBuffer) {
 
 class TestApi : ApiAbstraction {
  public:
-  TestApi() { Reset(); }
+  MOCK_METHOD(int, socket, (int domain, int type, int protocol), (override));
 
-  struct SockOptStorage {
-    int level;
-    int optname;
-    DataBuffer val;
-  };
+  MOCK_METHOD(int, close, (int fd), (override));
 
-  struct SendStorage {
-    DataBuffer data;
-    SockAddrIn to;
-  };
+  MOCK_METHOD(int, setsockopt,
+              (int fd, int level, int optname, const void* optval, socklen_t optlen), (override));
 
-  static constexpr int kSockFd = 15;
+  MOCK_METHOD(int, getsockopt, (int fd, int level, int optname, void* optval, socklen_t* optlen),
+              (override));
 
-  int socket(int domain, int type, int protocol) override {
-    call_info.socket.domain = domain;
-    call_info.socket.type = type;
-    call_info.socket.protocol = protocol;
-    return kSockFd;
-  }
+  MOCK_METHOD(int, bind, (int fd, const struct sockaddr* addr, socklen_t len), (override));
 
-  int close(int fd) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.close++;
-    return return_value;
-  }
+  MOCK_METHOD(int, connect, (int fd, const struct sockaddr* addr, socklen_t len), (override));
 
-  int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.setsockopt.push_back(
-        SockOptStorage{.level = level, .optname = optname, .val = DataBuffer(optval, optlen)});
-    return return_value;
-  }
+  MOCK_METHOD(int, accept, (int fd, struct sockaddr* addr, socklen_t* len), (override));
 
-  int getsockopt(int fd, int level, int optname, void* optval, socklen_t* optlen) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.getsockopt.push_back(SockOptStorage{.level = level, .optname = optname});
-    for (const auto& set : call_info.setsockopt) {
-      if (set.optname == optname && set.level == level) {
-        if (*optlen >= set.val.len) {
-          memcpy(optval, set.val.data.get(), set.val.len);
-          *optlen = set.val.len;
-          return return_value;
-        }
-        // some sockoptss reverse operation do not use the same struct (like IP_MULTICAST_IF)
-        // the trick of reading it back to get pretty log lines won't work.
-        break;
-      }
-    }
-    memset(optval, 0x00, *optlen);
-    return return_value;
-  }
+  MOCK_METHOD(int, listen, (int fd, int backlog), (override));
 
-  int bind(int fd, const struct sockaddr* addr, socklen_t len) override {
-    EXPECT_EQ(fd, kSockFd);
-    EXPECT_TRUE(call_info.bind.emplace_back().Set(addr, len));
-    return return_value;
-  }
+  MOCK_METHOD(ssize_t, send, (int fd, const void* buf, size_t len, int flags), (override));
 
-  int connect(int fd, const struct sockaddr* addr, socklen_t len) override {
-    EXPECT_EQ(fd, kSockFd);
-    EXPECT_TRUE(call_info.connect.emplace_back().Set(addr, len));
-    return return_value;
-  }
+  MOCK_METHOD(ssize_t, sendto,
+              (int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
+               socklen_t addrlen),
+              (override));
 
-  int accept(int fd, struct sockaddr* addr, socklen_t* len) override {
-    EXPECT_EQ(fd, kSockFd);
-    memset(addr, 0x00, *len);
-    call_info.accept++;
-    return kSockFd;
-  }
+  MOCK_METHOD(ssize_t, recv, (int fd, void* buf, size_t len, int flags), (override));
 
-  int listen(int fd, int backlog) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.listen++;
-    return return_value;
-  }
+  MOCK_METHOD(ssize_t, recvfrom,
+              (int fd, void* buf, size_t buflen, int flags, struct sockaddr* addr,
+               socklen_t* addrlen),
+              (override));
 
-  ssize_t send(int fd, const void* buf, size_t len, int flags) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.send.push_back(SendStorage{.data = DataBuffer(buf, len)});
-    if (succeed_data_calls) {
-      return len;
-    }
-    return -1;
-  }
+  MOCK_METHOD(int, getsockname, (int fd, struct sockaddr* addr, socklen_t* len), (override));
 
-  ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
-                 socklen_t addrlen) override {
-    EXPECT_EQ(fd, kSockFd);
-    auto& storage = call_info.sendto.emplace_back(SendStorage{
-        .data = DataBuffer(buf, buflen),
-    });
-    EXPECT_TRUE(storage.to.Set(addr, addrlen));
-    if (succeed_data_calls) {
-      return buflen;
-    }
-    return -1;
-  }
-
-  ssize_t recv(int fd, void* buf, size_t len, int flags) override {
-    EXPECT_EQ(fd, kSockFd);
-    call_info.recv++;
-    if (succeed_data_calls) {
-      return len;
-    }
-    return -1;
-  }
-
-  ssize_t recvfrom(int fd, void* buf, size_t buflen, int flags, struct sockaddr* addr,
-                   socklen_t* addrlen) override {
-    EXPECT_EQ(fd, kSockFd);
-    memset(addr, 0x00, *addrlen);
-    call_info.recvfrom++;
-    if (succeed_data_calls) {
-      return buflen;
-    }
-    return -1;
-  }
-
-  int getsockname(int fd, struct sockaddr* addr, socklen_t* len) override {
-    EXPECT_EQ(fd, kSockFd);
-    memset(addr, 0x00, *len);
-    return return_value;
-  }
-
-  int getpeername(int fd, struct sockaddr* addr, socklen_t* len) override {
-    EXPECT_EQ(fd, kSockFd);
-    memset(addr, 0x00, *len);
-    return return_value;
-  }
-
-  void Reset() {
-    memset(&call_info.socket, 0x00, sizeof(call_info.socket));
-    call_info.close = 0;
-    call_info.setsockopt.clear();
-    call_info.getsockopt.clear();
-    call_info.bind.clear();
-    call_info.connect.clear();
-    call_info.accept = 0;
-    call_info.listen = 0;
-    call_info.send.clear();
-    call_info.sendto.clear();
-    call_info.recv = 0;
-    call_info.recvfrom = 0;
-    return_value = 0;
-  }
+  MOCK_METHOD(int, getpeername, (int fd, struct sockaddr* addr, socklen_t* len), (override));
 
   int RunCommandLine(const std::string& line) {
-    Reset();
     SockScripter scripter(this);
 
     std::unique_ptr<char[]> parsing(new char[line.length() + 1]);
@@ -277,34 +105,12 @@ class TestApi : ApiAbstraction {
     }
     return scripter.Execute(args.size(), args.data());
   }
-
-  struct {
-    struct {
-      int domain;
-      int type;
-      int protocol;
-    } socket;
-    int close;
-    std::vector<SockOptStorage> setsockopt;
-    // only fills level and optname, always just sets the incoming struct to all zeros.
-    std::vector<SockOptStorage> getsockopt;
-    std::vector<SockAddrIn> bind;
-    std::vector<SockAddrIn> connect;
-    int accept;
-    int listen;
-    std::vector<SendStorage> send;
-    std::vector<SendStorage> sendto;
-    int recv;
-    int recvfrom;
-  } call_info{};
-  int return_value = 0;
-  bool succeed_data_calls = true;
 };
 
-DataBuffer TestPacketNumber(int c) {
+std::string TestPacketNumber(int c) {
   std::stringstream ss;
   ss << "Packet number " << c << ".";
-  return DataBuffer(ss.str());
+  return ss.str();
 }
 
 TEST(CommandLine, RepeatConfig) {
@@ -329,164 +135,264 @@ TEST(CommandLine, RepeatConfig) {
 
 TEST(CommandLine, SocketBuild) {
   TestApi test;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0));
   EXPECT_EQ(test.RunCommandLine("udp"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_DGRAM);
-  EXPECT_EQ(test.call_info.socket.protocol, 0);
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0));
   EXPECT_EQ(test.RunCommandLine("tcp"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_STREAM);
-  EXPECT_EQ(test.call_info.socket.protocol, 0);
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_DGRAM, 0));
   EXPECT_EQ(test.RunCommandLine("udp6"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET6);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_DGRAM);
-  EXPECT_EQ(test.call_info.socket.protocol, 0);
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_STREAM, 0));
   EXPECT_EQ(test.RunCommandLine("tcp6"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET6);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_STREAM);
-  EXPECT_EQ(test.call_info.socket.protocol, 0);
+  EXPECT_CALL(test, socket(AF_INET, SOCK_RAW, 1));
   EXPECT_EQ(test.RunCommandLine("raw 1"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_RAW);
-  EXPECT_EQ(test.call_info.socket.protocol, 1);
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_RAW, 2));
   EXPECT_EQ(test.RunCommandLine("raw6 2"), 0);
-  EXPECT_EQ(test.call_info.socket.domain, AF_INET6);
-  EXPECT_EQ(test.call_info.socket.type, SOCK_RAW);
-  EXPECT_EQ(test.call_info.socket.protocol, 2);
   EXPECT_NE(test.RunCommandLine("raw bind"), 0);
 }
 
+constexpr int kSockFd = 15;
+
 TEST(CommandLine, UdpBindSendToRecvFrom) {
-  TestApi test;
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, bind(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
+        const struct sockaddr_in expected_addr = {
+            .sin_family = AF_INET,
+            .sin_port = htons(2020),
+            .sin_addr =
+                {
+                    .s_addr = htonl(INADDR_ANY),
+                },
+        };
+        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
+        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, sendto(kSockFd, testing::_, testing::_, 0, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const void* buf, size_t len, testing::Unused,
+                   const struct sockaddr* addr, socklen_t addrlen) {
+        EXPECT_EQ(std::string(static_cast<const char*>(buf), len), TestPacketNumber(0));
+        struct sockaddr_in expected_addr = {
+            .sin_family = AF_INET,
+            .sin_port = htons(2021),
+        };
+        EXPECT_EQ(1, inet_pton(expected_addr.sin_family, "192.168.0.1", &expected_addr.sin_addr))
+            << strerror(errno);
+        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
+        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        return len;
+      });
+  EXPECT_CALL(test, recvfrom(kSockFd, testing::_, testing::_, testing::_, testing::_, testing::_))
+      .WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("udp bind any:2020 sendto 192.168.0.1:2021 recvfrom"), 0);
-  ASSERT_EQ(test.call_info.bind.size(), 1ul);
-  ASSERT_EQ(test.call_info.sendto.size(), 1ul);
-  EXPECT_EQ(test.call_info.bind[0].Name(), "ANY:2020");
-  EXPECT_EQ(test.call_info.sendto[0].to.Name(), "192.168.0.1:2021");
-  EXPECT_EQ(test.call_info.sendto[0].data, TestPacketNumber(0));
-  EXPECT_EQ(test.call_info.recvfrom, 1);
 }
 
 TEST(CommandLine, TcpBindConnectSendRecv) {
-  TestApi test;
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, bind(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
+        const struct sockaddr_in expected_addr = {
+            .sin_family = AF_INET,
+            .sin_addr =
+                {
+                    .s_addr = htonl(INADDR_ANY),
+                },
+        };
+        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
+        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, connect(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
+        struct sockaddr_in expected_addr = {
+            .sin_family = AF_INET,
+            .sin_port = htons(2021),
+        };
+        EXPECT_EQ(1, inet_pton(expected_addr.sin_family, "192.168.0.1", &expected_addr.sin_addr))
+            << strerror(errno);
+        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
+        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, send(kSockFd, testing::_, testing::_, 0))
+      .WillOnce([](testing::Unused, const void* buf, size_t len, testing::Unused) {
+        EXPECT_EQ(std::string(static_cast<const char*>(buf), len), TestPacketNumber(0));
+        return len;
+      });
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, getpeername(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, recv(kSockFd, testing::_, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, close(kSockFd)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp bind any:0 connect 192.168.0.1:2021 send recv close"), 0);
-  ASSERT_EQ(test.call_info.bind.size(), 1ul);
-  ASSERT_EQ(test.call_info.send.size(), 1ul);
-  EXPECT_EQ(test.call_info.bind[0].Name(), "ANY:0");
-  EXPECT_EQ(test.call_info.connect[0].Name(), "192.168.0.1:2021");
-  EXPECT_EQ(test.call_info.send[0].data, TestPacketNumber(0));
-  EXPECT_EQ(test.call_info.recv, 1);
-  EXPECT_EQ(test.call_info.close, 1);
 }
 
 TEST(CommandLine, JoinDropMcast) {
-  TestApi test;
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  struct ip_mreqn expected = {
+      .imr_ifindex = 1,
+  };
+  ASSERT_EQ(1, inet_pton(AF_INET, "224.0.0.1", &expected.imr_multiaddr)) << strerror(errno);
+  ASSERT_EQ(1, inet_pton(AF_INET, "192.168.0.1", &expected.imr_address)) << strerror(errno);
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_ADD_MEMBERSHIP, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                            socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        const auto& mreq = *reinterpret_cast<const struct ip_mreqn*>(optval);
+        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_DROP_MEMBERSHIP, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                            socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        const auto& mreq = *reinterpret_cast<const struct ip_mreqn*>(optval);
+        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        return 0;
+      });
   EXPECT_EQ(test.RunCommandLine("udp join4 224.0.0.1-192.168.0.1%1 drop4 224.0.0.1-192.168.0.1%1"),
             0);
-  ASSERT_EQ(test.call_info.setsockopt.size(), 2ul);
-
-  InAddr mcast;
-  ASSERT_TRUE(mcast.Set("224.0.0.1"));
-  LocalIfAddr ifaddr;
-  ASSERT_TRUE(ifaddr.Set("192.168.0.1%1"));
-  struct ip_mreqn mreq = {.imr_multiaddr = mcast.GetAddr4(),
-                          .imr_address = ifaddr.GetAddr4(),
-                          .imr_ifindex = ifaddr.GetId()};
-
-  EXPECT_EQ(test.call_info.setsockopt[0].level, IPPROTO_IP);
-  EXPECT_EQ(test.call_info.setsockopt[0].optname, IP_ADD_MEMBERSHIP);
-  EXPECT_EQ(test.call_info.setsockopt[0].val, DataBuffer(&mreq, sizeof(mreq)));
-  EXPECT_EQ(test.call_info.setsockopt[1].level, IPPROTO_IP);
-  EXPECT_EQ(test.call_info.setsockopt[1].optname, IP_DROP_MEMBERSHIP);
-  EXPECT_EQ(test.call_info.setsockopt[1].val, DataBuffer(&mreq, sizeof(mreq)));
 }
 
 TEST(CommandLine, JoinDropMcast6) {
-  TestApi test;
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  struct ipv6_mreq expected = {
+      .ipv6mr_interface = 1,
+  };
+  ASSERT_EQ(1, inet_pton(AF_INET6, "ff02:0::01", &expected.ipv6mr_multiaddr)) << strerror(errno);
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                            socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        const auto& mreq = *reinterpret_cast<const struct ipv6_mreq*>(optval);
+        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IPV6, IPV6_LEAVE_GROUP, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                            socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        const auto& mreq = *reinterpret_cast<const struct ipv6_mreq*>(optval);
+        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        return 0;
+      });
   EXPECT_EQ(test.RunCommandLine("udp join6 ff02:0::01-ff02:0::02%1 drop6 ff02:0::01-ff02:0::02%1"),
             0);
-  ASSERT_EQ(test.call_info.setsockopt.size(), 2ul);
-
-  InAddr mcast;
-  ASSERT_TRUE(mcast.Set("ff02:0::01"));
-  LocalIfAddr ifaddr;
-  ASSERT_TRUE(ifaddr.Set("ff02:0::02%1"));
-  struct ipv6_mreq mreq = {.ipv6mr_multiaddr = mcast.GetAddr6(),
-                           .ipv6mr_interface = static_cast<unsigned int>(ifaddr.GetId())};
-
-  EXPECT_EQ(test.call_info.setsockopt[0].level, IPPROTO_IPV6);
-  EXPECT_EQ(test.call_info.setsockopt[0].optname, IPV6_JOIN_GROUP);
-  EXPECT_EQ(test.call_info.setsockopt[0].val, DataBuffer(&mreq, sizeof(mreq)));
-  EXPECT_EQ(test.call_info.setsockopt[1].level, IPPROTO_IPV6);
-  EXPECT_EQ(test.call_info.setsockopt[1].optname, IPV6_LEAVE_GROUP);
-  EXPECT_EQ(test.call_info.setsockopt[1].val, DataBuffer(&mreq, sizeof(mreq)));
 }
 
 struct SockOptParam {
-  SockOptParam(std::string opt, std::string strValue, int level, int optname, DataBuffer value)
-      : opt(std::move(opt)),
-        str_value(std::move(strValue)),
+  SockOptParam(std::string name, std::string arg, int level, int optname,
+               std::vector<uint8_t> optval)
+      : name(std::move(name)),
+        arg(std::move(arg)),
         level(level),
         optname(optname),
-        value(std::move(value)) {}
+        optval(std::move(optval)){};
 
-  SockOptParam(std::string opt, std::string strValue, int level, int optname, int int_value)
-      : opt(std::move(opt)),
-        str_value(std::move(strValue)),
-        level(level),
-        optname(optname),
-        value(&int_value, sizeof(int_value)) {}
-
-  friend std::ostream& operator<<(std::ostream& os, const SockOptParam& param) {
-    return os << "SockOptParam(" << param.opt << ")";
-  }
-
-  std::string opt;
-  std::string str_value;
+  std::string name;
+  std::string arg;
   int level;
   int optname;
-  DataBuffer value;
+  std::vector<uint8_t> optval;
+};
+
+SockOptParam MakeSockOptParam(std::string name, std::string arg, int level, int optname,
+                              int optval) {
+  const auto* start = reinterpret_cast<const uint8_t*>(&optval);
+  const auto* end = start + sizeof(optval);
+  std::vector<uint8_t> buf(start, end);
+  return SockOptParam(std::move(name), std::move(arg), level, optname, buf);
+};
+
+SockOptParam MakeSockOptParam(std::string name, std::string arg, int level, int optname,
+                              const char* optval) {
+  const auto* start = reinterpret_cast<const uint8_t*>(optval);
+  const auto* end = start + strlen(optval);
+  std::vector<uint8_t> buf(start, end);
+  return SockOptParam(std::move(name), std::move(arg), level, optname, buf);
 };
 
 class SockOptTest : public testing::TestWithParam<SockOptParam> {};
 
-TEST_P(SockOptTest, SetGetParams) {
-  TestApi test;
+TEST_P(SockOptTest, SetGetParam) {
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
   std::stringstream cmd;
   auto& param = GetParam();
-  cmd << "tcp set-" << param.opt << " " << param.str_value << " log-" << param.opt;
-  ASSERT_EQ(test.RunCommandLine(cmd.str()), 0);
-  ASSERT_EQ(test.call_info.setsockopt.size(), 1ul);
-  EXPECT_EQ(test.call_info.setsockopt[0].level, param.level);
-  EXPECT_EQ(test.call_info.setsockopt[0].optname, param.optname);
-  EXPECT_EQ(test.call_info.setsockopt[0].val, param.value);
-  ASSERT_EQ(test.call_info.getsockopt.size(), 1ul);
-  EXPECT_EQ(test.call_info.getsockopt[0].level, param.level);
-  EXPECT_EQ(test.call_info.getsockopt[0].optname, param.optname);
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, setsockopt(kSockFd, param.level, param.optname, testing::_, testing::_))
+      .WillOnce([&param](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                         socklen_t optlen) {
+        EXPECT_EQ(optlen, param.optval.size());
+        EXPECT_EQ(memcmp(optval, param.optval.data(), param.optval.size()), 0);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockopt(kSockFd, param.level, param.optname, testing::_, testing::_))
+      .WillOnce([&param](testing::Unused, testing::Unused, testing::Unused, void* optval,
+                         socklen_t* optlen) {
+        auto expected = param.optval;
+        EXPECT_GE(*optlen, param.optval.size());
+        memcpy(optval, param.optval.data(), param.optval.size());
+        *optlen = param.optval.size();
+        return 0;
+      });
+  cmd << "tcp set-" << param.name << " " << param.arg << " log-" << param.name;
+  EXPECT_EQ(test.RunCommandLine(cmd.str()), 0);
 }
 
-const struct {
-  uint32_t a;
-  uint8_t addr[4];
-  int idx;
-} kMulticastMreq = {.a = 0, .addr = {192, 168, 0, 1}, .idx = 1};
+TEST(SockOptTestMulticastIf, SetGetParam) {
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  std::stringstream cmd;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  struct ip_mreqn expected;
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_MULTICAST_IF, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
+                            socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        memcpy(&expected, optval, optlen);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockopt(kSockFd, IPPROTO_IP, IP_MULTICAST_IF, testing::_, testing::_))
+      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, void* optval,
+                            socklen_t* optlen) {
+        EXPECT_EQ(*optlen, sizeof(struct in_addr));
+        memcpy(optval, &expected.imr_address, *optlen);
+        *optlen = sizeof(expected.imr_address);
+        return 0;
+      });
+  cmd << "tcp set-mcast-if4 192.168.0.1%1 log-mcast-if4";
+  EXPECT_EQ(test.RunCommandLine(cmd.str()), 0);
+}
 
 INSTANTIATE_TEST_SUITE_P(
     ParameterizedSockOpt, SockOptTest,
-    testing::Values(SockOptParam("broadcast", "1", SOL_SOCKET, SO_BROADCAST, 1),
+    testing::Values(
+        MakeSockOptParam("broadcast", "1", SOL_SOCKET, SO_BROADCAST, 1),
 #ifdef SO_BINDTODEVICE
-                    SockOptParam("bindtodevice", "device", SOL_SOCKET, SO_BINDTODEVICE,
-                                 DataBuffer("device")),
+        MakeSockOptParam("bindtodevice", "device", SOL_SOCKET, SO_BINDTODEVICE, "device"),
 #endif
-                    SockOptParam("reuseaddr", "1", SOL_SOCKET, SO_REUSEADDR, 1),
-                    SockOptParam("reuseport", "1", SOL_SOCKET, SO_REUSEPORT, 1),
-                    SockOptParam("unicast-ttl", "20", IPPROTO_IP, IP_TTL, 20),
-                    SockOptParam("unicast-hops", "10", IPPROTO_IPV6, IPV6_UNICAST_HOPS, 10),
-                    SockOptParam("mcast-ttl", "10", IPPROTO_IP, IP_MULTICAST_TTL, 10),
-                    SockOptParam("mcast-loop4", "1", IPPROTO_IP, IP_MULTICAST_LOOP, 1),
-                    SockOptParam("mcast-hops", "15", IPPROTO_IPV6, IPV6_MULTICAST_HOPS, 15),
-                    SockOptParam("mcast-loop6", "1", IPPROTO_IPV6, IPV6_MULTICAST_LOOP, 1),
-                    SockOptParam("mcast-if4", "192.168.0.1%1", IPPROTO_IP, IP_MULTICAST_IF,
-                                 DataBuffer(&kMulticastMreq, sizeof(kMulticastMreq))),
-                    SockOptParam("mcast-if6", "ff02:0::01%1", IPPROTO_IPV6, IPV6_MULTICAST_IF, 1),
-                    SockOptParam("ipv6-only", "1", IPPROTO_IPV6, IPV6_V6ONLY, 1)));
+        MakeSockOptParam("reuseaddr", "1", SOL_SOCKET, SO_REUSEADDR, 1),
+        MakeSockOptParam("reuseport", "1", SOL_SOCKET, SO_REUSEPORT, 1),
+        MakeSockOptParam("unicast-ttl", "20", IPPROTO_IP, IP_TTL, 20),
+        MakeSockOptParam("unicast-hops", "10", IPPROTO_IPV6, IPV6_UNICAST_HOPS, 10),
+        MakeSockOptParam("mcast-ttl", "10", IPPROTO_IP, IP_MULTICAST_TTL, 10),
+        MakeSockOptParam("mcast-loop4", "1", IPPROTO_IP, IP_MULTICAST_LOOP, 1),
+        MakeSockOptParam("mcast-hops", "15", IPPROTO_IPV6, IPV6_MULTICAST_HOPS, 15),
+        MakeSockOptParam("mcast-loop6", "1", IPPROTO_IPV6, IPV6_MULTICAST_LOOP, 1),
+        MakeSockOptParam("mcast-if6", "ff02:0::01%1", IPPROTO_IPV6, IPV6_MULTICAST_IF, 1),
+        MakeSockOptParam("ipv6-only", "1", IPPROTO_IPV6, IPV6_V6ONLY, 1)));
