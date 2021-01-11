@@ -85,24 +85,72 @@ config_data("tennis_sysmgr_config") {
 
 #### Components v1
 
-The component that wants to consume configuration data must request this feature
-in its component manifest, which might look something like the below.
+Include the following in your component manifest (`.cmx`) file:
 
-```
+```json
 {
-    "program": {
-        "binary": "bin/myapp"
-        },
-        "sandbox": {
-            "features": [
-                "config-data"
-            ]
-        }
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
     }
 }
 ```
 
-The component consuming the configuration can look in its `/config/data`
-directory to see all the configuration files supplied to it.
+At runtime your component will be able to access the config files at the path
+`/config/data`. The files will be read-only.
+
+#### Components v2
+
+Include the following in your component manifest (`.cml`) file:
+
+```json
+{
+    use: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+}
+```
+
+At runtime your component will be able to access the config files at the path
+`/config/data`. The files will be read-only.
+
+For the above to work, `"config-data"` must be offered to your component.
+For instance your parent may have a declaration that looks like this:
+
+```json
+{
+    children: [
+        {
+            name: "foo-component",
+            url: "fuchsia-pkg://fuchsia.com/foo-package#meta/foo-component.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#foo-component" ],
+            subdir: "foo-package",
+        },
+    ],
+}
+```
+
+Note that by convention a sub-directory of the parent's `"config-data"`, named
+according to the child's package name, is offered to the child component.
+
+### Updating
+
+The `config-data` package is part of the base set.
+Base packages are part of the system image and can only be updated by a system
+OTA or by repaving. As such, configs cannot be updated at runtime.
+
+For instance, if working with an emulator, rebuild the system image and restart
+the emulator for your configuration changes to take effect.
 
 [gn-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
