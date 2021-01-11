@@ -46,7 +46,7 @@ class Input {
   /// These defaults are set in the input facade.
   Future<bool> tap(Point<int> coord,
       {Rotation screenRotation, int tapEventCount, int duration}) async {
-    final tcoord = _rotate(coord, screenRotation ?? _screenRotation);
+    final tcoord = _rotate(coord, screenRotation);
     final result = await _sl4f.request('input_facade.Tap', {
       'x': tcoord.x,
       'y': tcoord.y,
@@ -76,7 +76,7 @@ class Input {
     //   {'finger_id': 1, 'x': 0, 'y': 0, 'width': 0, 'height': 0}
     List<Map<String, int>> fingersJson = [];
     for (var i = 0; i < fingers.length; i++) {
-      final tcoord = _rotate(fingers[i], screenRotation ?? _screenRotation);
+      final tcoord = _rotate(fingers[i], screenRotation);
 
       fingersJson.add({
         'finger_id': i + 1, // finger_id starts at 1.
@@ -207,21 +207,30 @@ class Input {
     return result == 'Success';
   }
 
-  /// Compensates for the given [screenRotation].
+  /// Compensates for the given [screenRotation] (or the class's default
+  /// rotation) and clamps the coordinates to the valid range [0, 1000].
   ///
   /// If null is provided, the default specified in the constructor is used.
   Point<int> _rotate(Point<int> coord, Rotation screenRotation) {
     final rotation = screenRotation ?? _screenRotation;
+    Point<int> rotatedCoord;
     switch (rotation) {
       case Rotation.degrees0:
-        return coord;
+        rotatedCoord = coord;
+        break;
       case Rotation.degrees90:
-        return Point<int>(1000 - coord.y, coord.x);
+        rotatedCoord = Point<int>(1000 - coord.y, coord.x);
+        break;
       case Rotation.degrees180:
-        return Point<int>(1000 - coord.x, 1000 - coord.y);
+        rotatedCoord = Point<int>(1000 - coord.x, 1000 - coord.y);
+        break;
       case Rotation.degrees270:
-        return Point<int>(coord.y, 1000 - coord.x);
+        rotatedCoord = Point<int>(coord.y, 1000 - coord.x);
     }
-    return coord;
+    return _clamp(rotatedCoord);
   }
+
+  /// Clamps coordinates so they remain in the [0, 1000] range.
+  Point<int> _clamp(Point<int> coord) =>
+      Point(coord.x.clamp(0, 1000), coord.y.clamp(0, 1000));
 }

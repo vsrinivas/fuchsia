@@ -138,6 +138,18 @@ void main(List<String> args) {
     })).called(1);
   });
 
+  test('input rotates and clamps when values out of range', () async {
+    await Input(sl4f, Rotation.degrees270)
+        .swipe(Point<int>(488, -1), Point<int>(1171, 1001));
+    verify(sl4f.request('input_facade.Swipe', {
+      'x0': 0,
+      'y0': 512,
+      'x1': 1000,
+      'y1': 0,
+      'duration': duration.inMilliseconds,
+    })).called(1);
+  });
+
   group('keyboard', () {
     Input input;
     setUp(() {
