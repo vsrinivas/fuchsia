@@ -831,24 +831,24 @@ mod tests {
         assert_data_tree!(diagnostics_hierarchy, key: {
             "@linear-uints": linear_assertion,
             "@linear-ints": vec![
-                Bucket { floor: i64::MIN, upper: 6, count: 8 },
-                Bucket { floor: 6, upper: 13, count: 9 },
-                Bucket { floor: 13, upper: i64::MAX, count: 10 }
+                Bucket { floor: i64::MIN, ceiling: 6, count: 8 },
+                Bucket { floor: 6, ceiling: 13, count: 9 },
+                Bucket { floor: 13, ceiling: i64::MAX, count: 10 }
             ],
             "@linear-doubles": vec![
-                Bucket { floor: f64::MIN, upper: 1.0, count: 4.0 },
-                Bucket { floor: 1.0, upper: 3.0, count: 5.0 },
-                Bucket { floor: 3.0, upper: f64::MAX, count: 6.0 }
+                Bucket { floor: f64::MIN, ceiling: 1.0, count: 4.0 },
+                Bucket { floor: 1.0, ceiling: 3.0, count: 5.0 },
+                Bucket { floor: 3.0, ceiling: f64::MAX, count: 6.0 }
             ],
             "@exp-uints": vec![
-                Bucket { floor: 0, upper: 2, count: 8 },
-                Bucket { floor: 2, upper: 6, count: 10 },
-                Bucket { floor: 6, upper: u64::MAX, count: 12 }
+                Bucket { floor: 0, ceiling: 2, count: 8 },
+                Bucket { floor: 2, ceiling: 6, count: 10 },
+                Bucket { floor: 6, ceiling: u64::MAX, count: 12 }
             ],
             "@exp-ints": vec![
-                Bucket { floor: i64::MIN, upper: 1, count: 7 },
-                Bucket { floor: 1, upper: 4, count: 9 },
-                Bucket { floor: 4, upper: i64::MAX, count: 11 }
+                Bucket { floor: i64::MIN, ceiling: 1, count: 7 },
+                Bucket { floor: 1, ceiling: 4, count: 9 },
+                Bucket { floor: 4, ceiling: i64::MAX, count: 11 }
             ],
             "@exp-doubles": exponential_assertion,
         });

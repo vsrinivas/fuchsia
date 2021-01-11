@@ -96,7 +96,7 @@ macro_rules! impl_serialize_for_array_bucket {
                     let mut s = serializer.serialize_map(Some(3))?;
                     s.serialize_entry("count", &self.count)?;
                     s.serialize_entry("floor", &self.floor)?;
-                    s.serialize_entry("upper_bound", &self.upper)?;
+                    s.serialize_entry("ceiling", &self.ceiling)?;
                     s.end()
                 }
             }
@@ -107,7 +107,7 @@ macro_rules! impl_serialize_for_array_bucket {
 impl<'a> Serialize for Bucket<f64> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut s = serializer.serialize_map(Some(3))?;
-        let parts = [("count", self.count), ("floor", self.floor), ("upper_bound", self.upper)];
+        let parts = [("count", self.count), ("floor", self.floor), ("ceiling", self.ceiling)];
         for (entry_key, value) in parts.iter() {
             if *value == std::f64::MAX || *value == std::f64::INFINITY {
                 s.serialize_entry(entry_key, &std::f64::MAX)?;
@@ -207,17 +207,17 @@ mod tests {
           {
             "count": 1.0,
             "floor": -1.7976931348623157e308,
-            "upper_bound": 0.0
+            "ceiling": 0.0
           },
           {
             "count": 3.0,
             "floor": 0.0,
-            "upper_bound": 2.0
+            "ceiling": 2.0
           },
           {
             "count": 4.0,
             "floor": 2.0,
-            "upper_bound": 1.7976931348623157e308
+            "ceiling": 1.7976931348623157e308
           }
         ]
       }
@@ -228,17 +228,17 @@ mod tests {
           {
             "count": 4,
             "floor": -9223372036854775808,
-            "upper_bound": 0
+            "ceiling": 0
           },
           {
             "count": 1,
             "floor": 0,
-            "upper_bound": 2
+            "ceiling": 2
           },
           {
             "count": 3,
             "floor": 2,
-            "upper_bound": 9223372036854775807
+            "ceiling": 9223372036854775807
           }
         ]
       },

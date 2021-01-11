@@ -89,7 +89,7 @@ fn output_array<
                 format!(
                     "[{},{})={}",
                     bucket.floor.format(),
-                    bucket.upper.format(),
+                    bucket.ceiling.format(),
                     bucket.count.format()
                 )
             })

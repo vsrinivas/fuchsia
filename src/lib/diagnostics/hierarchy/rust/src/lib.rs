@@ -550,17 +550,15 @@ pub struct Bucket<T> {
     pub floor: T,
 
     /// The ceiling of the bucket range.
-    // TODO(fxbug.dev/55833): rename to upper in serialization.
-    #[serde(rename = "upper_bound")]
-    pub upper: T,
+    pub ceiling: T,
 
     /// The number of items in this bucket.
     pub count: T,
 }
 
 impl<T> Bucket<T> {
-    fn new(floor: T, upper: T, count: T) -> Self {
-        Self { floor, upper, count }
+    fn new(floor: T, ceiling: T, count: T) -> Self {
+        Self { floor, ceiling, count }
     }
 }
 
@@ -633,10 +631,10 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayContent<T
         let mut offset = initial_step;
         let mut current_floor = floor;
         for i in 4..values.len() - 1 {
-            let upper = floor + offset;
-            result.push(Bucket::new(current_floor, upper, values[i]));
+            let ceiling = floor + offset;
+            result.push(Bucket::new(current_floor, ceiling, values[i]));
             offset *= step_multiplier;
-            current_floor = upper;
+            current_floor = ceiling;
         }
 
         result.push(Bucket::new(current_floor, T::max_value(), values[values.len() - 1]));
@@ -1145,11 +1143,11 @@ mod tests {
         let values = vec![1, 2, 5, 7, 9, 11, 13];
         let array = ArrayContent::<i64>::new(values, ArrayFormat::LinearHistogram);
         assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
-            Bucket { floor: std::i64::MIN, upper: 1, count: 5 },
-            Bucket { floor: 1, upper: 3, count: 7 },
-            Bucket { floor: 3, upper: 5, count: 9 },
-            Bucket { floor: 5, upper: 7, count: 11 },
-            Bucket { floor: 7, upper: std::i64::MAX, count: 13 },
+            Bucket { floor: std::i64::MIN, ceiling: 1, count: 5 },
+            Bucket { floor: 1, ceiling: 3, count: 7 },
+            Bucket { floor: 3, ceiling: 5, count: 9 },
+            Bucket { floor: 5, ceiling: 7, count: 11 },
+            Bucket { floor: 7, ceiling: std::i64::MAX, count: 13 },
         ]);
     }
 
@@ -1158,10 +1156,10 @@ mod tests {
         let values = vec![1.0, 2.0, 5.0, 7.0, 9.0, 11.0, 15.0];
         let array = ArrayContent::<f64>::new(values, ArrayFormat::ExponentialHistogram);
         assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
-                Bucket { floor: std::f64::MIN, upper: 1.0, count: 7.0 },
-                Bucket { floor: 1.0, upper: 3.0, count: 9.0 },
-                Bucket { floor: 3.0, upper: 11.0, count: 11.0 },
-                Bucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 },
+                Bucket { floor: std::f64::MIN, ceiling: 1.0, count: 7.0 },
+                Bucket { floor: 1.0, ceiling: 3.0, count: 9.0 },
+                Bucket { floor: 3.0, ceiling: 11.0, count: 11.0 },
+                Bucket { floor: 11.0, ceiling: std::f64::MAX, count: 15.0 },
         ]);
     }
 
@@ -1170,12 +1168,12 @@ mod tests {
         let values = vec![0, 2, 4, 0, 1, 2, 3, 4, 5];
         let array = ArrayContent::new(values, ArrayFormat::ExponentialHistogram);
         assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
-                Bucket { floor: i64::min_value(), upper: 0, count: 0 },
-                Bucket { floor: 0, upper: 2, count: 1 },
-                Bucket { floor: 2, upper: 8, count: 2 },
-                Bucket { floor: 8, upper: 32, count: 3 },
-                Bucket { floor: 32, upper: 128, count: 4 },
-                Bucket { floor: 128, upper: i64::max_value(), count: 5 },
+                Bucket { floor: i64::min_value(), ceiling: 0, count: 0 },
+                Bucket { floor: 0, ceiling: 2, count: 1 },
+                Bucket { floor: 2, ceiling: 8, count: 2 },
+                Bucket { floor: 8, ceiling: 32, count: 3 },
+                Bucket { floor: 32, ceiling: 128, count: 4 },
+                Bucket { floor: 128, ceiling: i64::max_value(), count: 5 },
         ]);
     }
 

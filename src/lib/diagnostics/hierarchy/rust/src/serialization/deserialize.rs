@@ -341,7 +341,7 @@ macro_rules! parse_numeric_vec_impls {
                             Some(f) => f,
                             _ => return None,
                         };
-                        let upper = match bucket.upper.[<as_ $type>]() {
+                        let ceiling = match bucket.ceiling.[<as_ $type>]() {
                             Some(u) => u,
                             _ => return None,
                         };
@@ -349,7 +349,7 @@ macro_rules! parse_numeric_vec_impls {
                             Some(c) => c,
                             _ => return None,
                         };
-                        Some(Bucket { floor, upper, count })
+                        Some(Bucket { floor, ceiling, count })
                     })
                     .collect::<Option<Vec<_>>>()
                 }
@@ -437,12 +437,12 @@ mod tests {
             "root": {
                 "histogram": {
                     "buckets": [
-                        {"count": 1, "floor": 0, "upper_bound": 1000},
-                        {"count": 2, "floor": 1000, "upper_bound": 2000},
-                        {"count": 3, "floor": 2000, "upper_bound": 3000},
-                        {"count": 4, "floor": 3000, "upper_bound": 5000},
-                        {"count": 5, "floor": 5000, "upper_bound": 9000},
-                        {"count": 6, "floor": 9000, "upper_bound": u64::MAX}
+                        {"count": 1, "floor": 0, "ceiling": 1000},
+                        {"count": 2, "floor": 1000, "ceiling": 2000},
+                        {"count": 3, "floor": 2000, "ceiling": 3000},
+                        {"count": 4, "floor": 3000, "ceiling": 5000},
+                        {"count": 5, "floor": 5000, "ceiling": 9000},
+                        {"count": 6, "floor": 9000, "ceiling": u64::MAX}
                     ]
                 }
             }
@@ -512,24 +512,24 @@ mod tests {
                     \"histogram\": {
                         \"buckets\": [
                             {
+                                \"ceiling\": 0.0,
                                 \"count\": 1.0,
-                                \"floor\": -1.7976931348623157e308,
-                                \"upper_bound\": 0.0
+                                \"floor\": -1.7976931348623157e308
                             },
                             {
                                 \"count\": 3.0,
                                 \"floor\": 0.0,
-                                \"upper_bound\": 2.0
+                                \"ceiling\": 2.0
                             },
                             {
                                 \"count\": 4.0,
                                 \"floor\": 2.0,
-                                \"upper_bound\": 8.0
+                                \"ceiling\": 8.0
                             },
                             {
+                                \"ceiling\": 1.7976931348623157e308,
                                 \"count\": 7.0,
-                                \"floor\": 8.0,
-                                \"upper_bound\": 1.7976931348623157e308
+                                \"floor\": 8.0
                             }
                         ]
                     }
@@ -547,17 +547,17 @@ mod tests {
                             {
                                 \"count\": 4,
                                 \"floor\": -9223372036854775808,
-                                \"upper_bound\": 0
+                                \"ceiling\": 0
                             },
                             {
                                 \"count\": 1,
                                 \"floor\": 0,
-                                \"upper_bound\": 2
+                                \"ceiling\": 2
                             },
                             {
                                 \"count\": 3,
                                 \"floor\": 2,
-                                \"upper_bound\": 9223372036854775807
+                                \"ceiling\": 9223372036854775807
                             }
                         ]
                     },

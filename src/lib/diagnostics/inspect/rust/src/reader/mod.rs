@@ -569,22 +569,22 @@ mod tests {
                 "property-bool": true,
                 "property-string": string_data,
                 "property-int-array": vec![
-                    Bucket { floor: i64::MIN, upper: 1, count: 1 },
-                    Bucket { floor: 1, upper: 3, count: 1 },
-                    Bucket { floor: 3, upper: 5, count: 1 },
-                    Bucket { floor: 5, upper: 7, count: 1 },
-                    Bucket { floor: 7, upper: i64::MAX, count: 1 }
+                    Bucket { floor: i64::MIN, ceiling: 1, count: 1 },
+                    Bucket { floor: 1, ceiling: 3, count: 1 },
+                    Bucket { floor: 3, ceiling: 5, count: 1 },
+                    Bucket { floor: 5, ceiling: 7, count: 1 },
+                    Bucket { floor: 7, ceiling: i64::MAX, count: 1 }
                 ],
                 "child-1-1": {
                     "property-int": -9i64,
                     "property-bytes": bytes_data,
                     "property-uint-array": vec![
-                        Bucket { floor: 0, upper: 1, count: 0 },
-                        Bucket { floor: 1, upper: 2, count: 1 },
-                        Bucket { floor: 2, upper: 3, count: 1 },
-                        Bucket { floor: 3, upper: 5, count: 2 },
-                        Bucket { floor: 5, upper: 9, count: 0 },
-                        Bucket { floor: 9, upper: u64::MAX, count: 0 },
+                        Bucket { floor: 0, ceiling: 1, count: 0 },
+                        Bucket { floor: 1, ceiling: 2, count: 1 },
+                        Bucket { floor: 2, ceiling: 3, count: 1 },
+                        Bucket { floor: 3, ceiling: 5, count: 2 },
+                        Bucket { floor: 5, ceiling: 9, count: 0 },
+                        Bucket { floor: 9, ceiling: u64::MAX, count: 0 },
                     ],
                 }
             },
