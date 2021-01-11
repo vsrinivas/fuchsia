@@ -82,6 +82,7 @@ class DiagnosticsBatchIteratorDelayedBatches : public DiagnosticsBatchIterator {
  private:
   async_dispatcher_t* dispatcher_;
   zx::duration delay_between_batches_;
+  bool delay_response_{false};
 };
 
 }  // namespace stubs

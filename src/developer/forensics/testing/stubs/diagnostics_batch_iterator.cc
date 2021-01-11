@@ -61,9 +61,6 @@ void DiagnosticsBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
 }
 
 void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
-  // Don't delay executing |callback| the first time GetNext is called.
-  static bool delay_response{false};
-
   async::PostDelayedTask(
       dispatcher_,
       [this, callback = std::move(callback)]() {
@@ -73,8 +70,8 @@ void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
 
         callback(::fit::ok(ToVmo(*next_json_batch_++)));
       },
-      delay_between_batches_ * delay_response);
-  delay_response = true;
+      delay_between_batches_ * delay_response_);
+  delay_response_ = true;
 }
 
 }  // namespace stubs
