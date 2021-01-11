@@ -19,7 +19,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -30,6 +29,7 @@
 
 #include "pci-bus.h"
 #include "sata.h"
+#include "src/devices/block/drivers/ahci/ahci_bind.h"
 
 namespace ahci {
 
@@ -353,10 +353,4 @@ constexpr zx_driver_ops_t ahci_driver_ops = []() {
 
 }  // namespace ahci
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ahci, ahci::ahci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
-ZIRCON_DRIVER_END(ahci)
+ZIRCON_DRIVER(ahci, ahci::ahci_driver_ops, "zircon", "0.1");
