@@ -8,11 +8,13 @@
 #include <align.h>
 #include <inttypes.h>
 #include <lib/counters.h>
+#include <lib/zx/status.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <kernel/range_check.h>
 #include <ktl/limits.h>
 #include <pretty/sizes.h>
 #include <vm/bootalloc.h>
@@ -91,6 +93,12 @@ zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
   return ZX_OK;
 }
 
+zx_status_t PmmArena::InitForTest(const pmm_arena_info_t& info, vm_page_t* page_array) {
+  info_ = info;
+  page_array_ = page_array;
+  return ZX_OK;
+}
+
 vm_page_t* PmmArena::FindSpecific(paddr_t pa) {
   if (!address_in_arena(pa)) {
     return nullptr;
@@ -103,52 +111,90 @@ vm_page_t* PmmArena::FindSpecific(paddr_t pa) {
   return get_page(index);
 }
 
+// Computes and returns the offset from |page_array_| of the first element at or
+// after |offset| whose physical address alignment satisfies |alignment_log2|.
+//
+// Note, the returned value may exceed the bounds of |page_array_|.
+static uint64_t Align(uint64_t offset, uint8_t alignment_log2, uint64_t first_aligned_offset) {
+  if (offset < first_aligned_offset) {
+    return first_aligned_offset;
+  }
+  DEBUG_ASSERT(alignment_log2 >= PAGE_SIZE_SHIFT);
+  // The "extra" alignment required above and beyond PAGE_SIZE alignment.
+  const uint64_t offset_alignment = alignment_log2 - PAGE_SIZE_SHIFT;
+  return ROUNDUP(offset - first_aligned_offset, 1UL << (offset_alignment)) + first_aligned_offset;
+}
+
+zx::status<uint64_t> PmmArena::FindLastNonFree(uint64_t offset, size_t count) const {
+  uint64_t i = offset + count - 1;
+  do {
+    if (!page_array_[i].is_free()) {
+      return zx::ok(i);
+    }
+  } while (i-- > offset);
+
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
 vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
-  // walk the list starting at alignment boundaries.
-  // calculate the starting offset into this arena, based on the
-  // base address of the arena to handle the case where the arena
-  // is not aligned on the same boundary requested.
-  paddr_t rounded_base = ROUNDUP(base(), 1UL << alignment_log2);
-  if (rounded_base < base() || rounded_base > base() + size() - 1) {
-    return 0;
+  DEBUG_ASSERT(count > 0);
+
+  if (alignment_log2 < PAGE_SIZE_SHIFT) {
+    alignment_log2 = PAGE_SIZE_SHIFT;
   }
 
-  vm_page_t* result = nullptr;
-  paddr_t aligned_offset = (rounded_base - base()) / PAGE_SIZE;
-  paddr_t start = aligned_offset;
-  LTRACEF("starting search at aligned offset %#" PRIxPTR "\n", start);
-  LTRACEF("arena base %#" PRIxPTR " size %zu\n", base(), size());
-
-  // Keep track of how many runs of pages we must examine before finding a
+  // Number of pages in this arena.
+  const uint64_t arena_count = size() / PAGE_SIZE;
+  // Offset of the first page that satisfies the required alignment.
+  const uint64_t first_aligned_offset =
+      (ROUNDUP(base(), 1UL << alignment_log2) - base()) / PAGE_SIZE;
+  // Start our search at the hint so that we can skip over regions previously
+  // known to be in use.
+  const uint64_t initial = search_hint_;
+  DEBUG_ASSERT_MSG(initial < arena_count, "initial %lu\n", initial);
+  uint64_t candidate = Align(initial, alignment_log2, first_aligned_offset);
+  // Keep track of how many runs of pages we examine before finding a
   // sufficiently long contiguous run.
   int64_t num_runs_examined = 0;
+  // Indicates whether we have wrapped around back to the start of the arena.
+  bool wrapped = false;
+  vm_page_t* result = nullptr;
 
-retry:
-  // search while we're still within the arena and have a chance of finding a slot
-  // (start + count < end of arena)
-  while ((start < size() / PAGE_SIZE) && ((start + count) <= size() / PAGE_SIZE)) {
+  // Keep searching until we've wrapped and "lapped" our initial starting point.
+  while (!wrapped || candidate < initial) {
+    LTRACEF(
+        "num_runs_examined=%ld candidate=%lu count=%zu alignment_log2=%d arena_count=%lu "
+        "initial=%lu\n",
+        num_runs_examined, candidate, count, alignment_log2, arena_count, initial);
     num_runs_examined++;
-    vm_page_t* p = &page_array_[start];
-    for (uint i = 0; i < count; i++) {
-      if (!p->is_free()) {
-        // this run is broken, break out of the inner loop.
-        // start over at the next alignment boundary
-        start = ROUNDUP(start - aligned_offset + i + 1, 1UL << (alignment_log2 - PAGE_SIZE_SHIFT)) +
-                aligned_offset;
-        goto retry;
+    if (!InRange(candidate, count, arena_count)) {
+      if (wrapped) {
+        break;
       }
-      p++;
-    }
+      wrapped = true;
+      candidate = first_aligned_offset;
+    } else {
+      // Is the candidate region free?  Walk the pages of the region back to
+      // front, stopping at the first non-free page.
 
-    // we found a run
-    result = &page_array_[start];
-    LTRACEF("found run from pa %#" PRIxPTR " to %#" PRIxPTR "\n", result->paddr(),
-            result->paddr() + count * PAGE_SIZE);
-    break;
+      zx::status<uint64_t> last_non_free = FindLastNonFree(candidate, count);
+      if (last_non_free.is_error()) {
+        // Candidate region is free.  We're done.
+        search_hint_ = (candidate + count) % arena_count;
+        result = &page_array_[candidate];
+        DEBUG_ASSERT_MSG(candidate < arena_count, "candidate=%lu arena_count=%lu\n", candidate,
+                         arena_count);
+        break;
+      }
+
+      // Candidate region is not completely free.  Skip over the "broken" run,
+      // maintaining alignment.
+      candidate = Align(last_non_free.value() + 1, alignment_log2, first_aligned_offset);
+    }
   }
 
   int64_t max = counter_max_runs_examined.Value();
-  if (num_runs_examined > max){
+  if (num_runs_examined > max) {
     counter_max_runs_examined.Set(num_runs_examined);
   }
 
@@ -165,7 +211,7 @@ void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) const {
   char pbuf[16];
   printf("  arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) flags 0x%x\n", this,
          name(), base(), format_size(pbuf, sizeof(pbuf), size()), size(), flags());
-  printf("\tpage_array %p\n", page_array_);
+  printf("\tpage_array %p search_hint %lu\n", page_array_, search_hint_);
 
   // dump all of the pages
   if (dump_pages) {

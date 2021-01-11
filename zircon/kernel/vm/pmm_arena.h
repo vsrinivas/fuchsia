@@ -6,6 +6,7 @@
 #ifndef ZIRCON_KERNEL_VM_PMM_ARENA_H_
 #define ZIRCON_KERNEL_VM_PMM_ARENA_H_
 
+#include <lib/zx/status.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -24,6 +25,8 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
 
   // initialize the arena and allocate memory for internal data structures
   zx_status_t Init(const pmm_arena_info_t* info, PmmNode* node);
+
+  zx_status_t InitForTest(const pmm_arena_info_t& info, vm_page_t* page_array);
 
   // accessors
   const pmm_arena_info_t& info() const { return info_; }
@@ -57,8 +60,18 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
   void Dump(bool dump_pages, bool dump_free_ranges) const;
 
  private:
+  // Walks the region defined by |offset| and |count| and returns the index of
+  // the last non-free page or ZX_ERR_NOT_FOUND if all pages are free.
+  //
+  // It is an error if the range specified by |offset| and |count| is not
+  // completely contained within the arena.
+  zx::status<uint64_t> FindLastNonFree(uint64_t offset, size_t count) const;
+
   pmm_arena_info_t info_ = {};
   vm_page_t* page_array_ = nullptr;
+  // The index into |page_array_| at which the next |FindFreeContiguous| serach
+  // should begin.  Used to optimize |FindFreeContiguous|.
+  uint64_t search_hint_ = 0;
 };
 
 #endif  // ZIRCON_KERNEL_VM_PMM_ARENA_H_

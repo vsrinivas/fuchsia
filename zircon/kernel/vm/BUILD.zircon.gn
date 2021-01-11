@@ -61,6 +61,9 @@ zx_library("vm") {
 
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
     "$zx/kernel/lib/crypto:headers",
+
+    # "pmm_arena.h" has #include <lib/zx/status.h>.
+    "$zx/system/ulib/zxc:headers",
   ]
 }
 

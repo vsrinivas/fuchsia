@@ -625,6 +625,83 @@ static bool pmm_get_arena_info_test() {
   END_TEST;
 }
 
+static void SetPageStateRange(enum vm_page_state state, vm_page_t* start, int count) {
+  for (int i = 0; i < count; ++i) {
+    (start + i)->set_state(state);
+  }
+}
+
+static bool pmm_arena_find_free_contiguous_test() {
+  BEGIN_TEST;
+
+  static constexpr size_t kNumPages = 8;
+  const vaddr_t base = 0x1001000;
+  const pmm_arena_info_t info{"test arena", 0, base, kNumPages * PAGE_SIZE};
+
+  vm_page_t page_array[kNumPages]{};
+  PmmArena arena;
+  ASSERT_EQ(ZX_OK, arena.InitForTest(info, page_array));
+
+  // page_array is as follow (0 == free, 1 == allocated):
+  //
+  // [00000000]
+  //
+  // Ask for some sizes and alignments that can't possibly succeed.
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(kNumPages + 1, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(kNumPages + 2, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(kNumPages + 3, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(kNumPages + 4, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(1, 24));  // 16MB aligned
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(1, 25));  // 32MB aligned
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(1, 26));  // 64MB aligned
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(1, 27));  // 128MB aligned
+
+  // [00000000]
+  //
+  // Ask for 4 pages,  aligned on a 2-page boundary.  See that the first page is skipped.
+  vm_page_t* result = arena.FindFreeContiguous(4, PAGE_SIZE_SHIFT + 1);
+  ASSERT_EQ(&page_array[1], result);
+  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 4);
+
+  // [01111000]
+  //
+  // Ask for various sizes and see that they all fail.
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(4, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(5, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(6, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(7, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(8, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(9, PAGE_SIZE_SHIFT));
+
+  // [01111000]
+  //
+  // Ask for 3 pages.
+  result = arena.FindFreeContiguous(3, PAGE_SIZE_SHIFT);
+  ASSERT_EQ(&page_array[5], result);
+  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 3);
+
+  // [01111111]
+  //
+  // Ask for various sizes and see that they all fail.
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(2, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(3, PAGE_SIZE_SHIFT));
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(4, PAGE_SIZE_SHIFT));
+
+  // [01111111]
+  //
+  // Ask for the last remaining page.
+  result = arena.FindFreeContiguous(1, PAGE_SIZE_SHIFT);
+  ASSERT_EQ(&page_array[0], result);
+  SetPageStateRange(VM_PAGE_STATE_ALLOC, result, 1);
+
+  // [11111111]
+  //
+  // See there are none left.
+  ASSERT_EQ(nullptr, arena.FindFreeContiguous(1, PAGE_SIZE_SHIFT));
+
+  END_TEST;
+}
+
 static bool pq_add_remove() {
   BEGIN_TEST;
 
@@ -937,6 +1014,7 @@ VM_UNITTEST(pmm_checker_test)
 VM_UNITTEST(pmm_checker_action_from_string_test)
 VM_UNITTEST(pmm_checker_is_valid_fill_size_test)
 VM_UNITTEST(pmm_get_arena_info_test)
+VM_UNITTEST(pmm_arena_find_free_contiguous_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")
 
 UNITTEST_START_TESTCASE(page_queues_tests)
