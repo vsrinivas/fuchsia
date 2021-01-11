@@ -233,23 +233,23 @@ void Namespace::MaybeAddComponentEventProvider() {
   }
 }
 
-void Namespace::RunShutdownIfNoChildren() {
-  if (status_ == Status::SHUTTING_DOWN && children_.empty()) {
-    vfs_.CloseAllConnectionsForVnode(*services_, [this]() {
-      status_ = Status::STOPPED;
-      for (auto& callback : shutdown_callbacks_) {
+void Namespace::RunShutdownIfNoChildren(fxl::RefPtr<Namespace> ns) {
+  if (ns->status_ == Status::SHUTTING_DOWN && ns->children_.empty()) {
+    ns->vfs_.CloseAllConnectionsForVnode(*ns->services_, [ns]() {
+      ns->status_ = Status::STOPPED;
+      for (auto& callback : ns->shutdown_callbacks_) {
         async::PostTask(async_get_default_dispatcher(),
                         [callback = std::move(callback)]() mutable { callback(); });
       }
-      shutdown_callbacks_.clear();
-      vfs_.Shutdown([this](zx_status_t /*unused*/) { self_for_shutdown_.reset(); });
+      ns->shutdown_callbacks_.clear();
+      ns->vfs_.Shutdown([ns](zx_status_t /*unused*/) mutable { ns.reset(); });
     });
   }
 }
 
-void Namespace::ExtractChild(Namespace* child) {
-  children_.erase(child);
-  RunShutdownIfNoChildren();
+void Namespace::ExtractChild(fxl::RefPtr<Namespace> ns, Namespace* child) {
+  ns->children_.erase(child);
+  RunShutdownIfNoChildren(std::move(ns));
 }
 
 void Namespace::FlushAndShutdown(fxl::RefPtr<Namespace> self,
@@ -277,15 +277,14 @@ void Namespace::FlushAndShutdown(fxl::RefPtr<Namespace> self,
   status_ = Status::SHUTTING_DOWN;
   environment_bindings_.CloseAll();
   launcher_bindings_.CloseAll();
-  self_for_shutdown_ = std::move(self);
   if (children_.empty()) {
-    RunShutdownIfNoChildren();
+    RunShutdownIfNoChildren(std::move(self));
     return;
   }
 
   for (auto& child : children_) {
-    async::PostTask(async_get_default_dispatcher(), [this, ns = child.second]() {
-      ns->FlushAndShutdown(ns, [this, ptr = ns.get()]() { ExtractChild(ptr); });
+    async::PostTask(async_get_default_dispatcher(), [ns = child.second, self]() {
+      ns->FlushAndShutdown(ns, [ptr = ns.get(), self]() { ExtractChild(self, ptr); });
     });
   }
 }

@@ -130,8 +130,8 @@ class Namespace : public fuchsia::sys::Environment,
 
   void AddChild(fxl::RefPtr<Namespace> child);
 
-  void ExtractChild(Namespace* child);
-  void RunShutdownIfNoChildren();
+  static void ExtractChild(fxl::RefPtr<Namespace> ns, Namespace* child);
+  static void RunShutdownIfNoChildren(fxl::RefPtr<Namespace> ns);
 
   fidl::BindingSet<fuchsia::sys::Environment> environment_bindings_;
   fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings_;
@@ -163,9 +163,6 @@ class Namespace : public fuchsia::sys::Environment,
 
   // store parent reference
   fxl::WeakPtr<Namespace> parent_;
-
-  // store self while shutting down.
-  fxl::RefPtr<Namespace> self_for_shutdown_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Namespace);
 };
