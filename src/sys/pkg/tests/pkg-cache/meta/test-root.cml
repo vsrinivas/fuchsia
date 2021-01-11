@@ -59,6 +59,15 @@
             to: [ "#pkg_cache_integration_test" ],
         },
 
+        // This event is not needed for the test, but it's needed for proper archivist routing.
+        {
+            event: [ "capability_requested" ],
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "fuchsia.logger.LogSink" },
+            modes: [ "async" ],
+        },
+
         // These events are not needed for the test to pass, but including them
         // reduces log noise.
         {

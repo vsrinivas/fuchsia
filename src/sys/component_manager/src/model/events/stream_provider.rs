@@ -15,15 +15,10 @@ use {
             serve::serve_event_stream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-        resolver::ResolverError,
         rights::{Rights, WRITE_RIGHTS},
     },
-    anyhow::format_err,
     async_trait::async_trait,
-    cm_rust::{
-        CapabilityName, ComponentDecl, OfferDecl, OfferEventDecl, UseDecl, UseEventDecl,
-        UseEventStreamDecl, UseSource,
-    },
+    cm_rust::{CapabilityName, ComponentDecl, UseDecl, UseEventStreamDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -114,40 +109,11 @@ impl EventStreamProvider {
     async fn on_component_resolved(
         self: &Arc<Self>,
         target_moniker: &AbsoluteMoniker,
-        component_url: String,
         decl: &ComponentDecl,
     ) -> Result<(), ModelError> {
-        // Make sure the CapabilityRequested event is not offered.
-        // TODO(fxbug.dev/53702): Consider moving this validation to cml/cm compilation.
-        for offer_decl in &decl.offers {
-            match offer_decl {
-                OfferDecl::Event(OfferEventDecl { source_name, .. })
-                    if *source_name == EventType::CapabilityRequested.into() =>
-                {
-                    return Err(ResolverError::manifest_invalid(
-                        component_url,
-                        format_err!("Cannot offer `CapabilityRequested` event"),
-                    )
-                    .into());
-                }
-                _ => {}
-            }
-        }
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         for use_decl in &decl.uses {
             match use_decl {
-                // Make sure the CapabilityRequested event is only used from framework.
-                // TODO(fxbug.dev/53702): Consider moving this validation to cml/cm compilation.
-                UseDecl::Event(UseEventDecl { source_name, source, .. })
-                    if *source_name == EventType::CapabilityRequested.into()
-                        && *source != UseSource::Framework =>
-                {
-                    return Err(ResolverError::manifest_invalid(
-                        component_url,
-                        format_err!("Can only request `CapabilityRequested` event from framework"),
-                    )
-                    .into());
-                }
                 UseDecl::EventStream(UseEventStreamDecl { target_path, events }) => {
                     let events = events.iter().map(|e| CapabilityName(e.to_string())).collect();
                     self.create_static_event_stream(
@@ -200,12 +166,7 @@ impl Hook for EventStreamProvider {
                 self.on_component_destroyed(&event.target_moniker).await?;
             }
             Ok(EventPayload::Resolved { decl }) => {
-                self.on_component_resolved(
-                    &event.target_moniker,
-                    event.component_url.clone(),
-                    decl,
-                )
-                .await?;
+                self.on_component_resolved(&event.target_moniker, decl).await?;
             }
             Ok(EventPayload::Started { runtime, .. }) => {
                 if let Some(outgoing_dir) = &runtime.outgoing_dir {

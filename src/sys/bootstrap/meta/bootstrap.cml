@@ -642,15 +642,21 @@
                 "stopped",
             ],
             from: "parent",
-            modes: ["async"],
             to: [ "#archivist" ],
+            modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
             to: [ "#archivist" ],
-            modes: ["async"],
             filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_requested",
+            from: "parent",
+            to: [ "#archivist" ],
+            filter: { name: "fuchsia.logger.LogSink" },
         },
 
         // Required services

@@ -26,16 +26,16 @@
         },
         {
             event: "capability_requested",
-            from: "framework",
+            from: "parent",
             filter: { name: "fuchsia.logger.LogSink" },
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
             filter: { name: "diagnostics" },
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event: [
@@ -44,7 +44,7 @@
                 "stopped",
             ],
             from: "parent",
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event_stream: [ "capability_requested" ],

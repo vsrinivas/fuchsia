@@ -49,7 +49,7 @@
         },
         {
             event: "capability_requested",
-            from: "framework",
+            from: "parent",
             filter: { name: "fuchsia.logger.LogSink" },
             modes: [ "async" ],
         },

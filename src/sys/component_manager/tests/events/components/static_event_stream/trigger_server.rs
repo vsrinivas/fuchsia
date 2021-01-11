@@ -49,7 +49,7 @@ fn run_main_event_stream(
         let mut event_stream = EventStream::new(stream);
         let mut capability_request =
             EventMatcher::ok().expect_match::<CapabilityRequested>(&mut event_stream).await;
-        assert_eq!(".\\trigger_server:0/trigger_client:0", capability_request.target_moniker());
+        assert_eq!("./trigger_client:0", capability_request.target_moniker());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
             capability_request.component_url());

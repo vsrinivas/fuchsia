@@ -177,6 +177,11 @@ fuchsia_component("static_event_stream_trigger_server") {
   manifest = "components/static_event_stream/meta/trigger_server.cml"
 }
 
+fuchsia_component("static_event_stream_components_realm") {
+  testonly = true
+  manifest = "components/static_event_stream/meta/components_realm.cml"
+}
+
 fuchsia_component("trigger_realm") {
   testonly = true
   manifest = "components/static_event_stream/meta/trigger_realm.cml"
@@ -228,6 +233,7 @@ fuchsia_unittest_package("events_integration_test") {
     ":realm_offered_reporter",
     ":realm_offered_root",
     ":resolved_error_reporter",
+    ":static_event_stream_components_realm",
     ":static_event_stream_trigger_client",
     ":static_event_stream_trigger_server",
     ":stub_component",

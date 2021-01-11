@@ -2751,55 +2751,66 @@ async fn use_event_from_framework() {
 ///
 /// a; attempts to offer event "capability_requested" to b.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn cannot_offer_capability_requested_event() {
-    let components = vec![(
-        "a",
-        ComponentDeclBuilder::new()
-            .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferServiceSource::Parent,
-                source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                target: OfferTarget::Child("b".to_string()),
-                dependency_type: DependencyType::Strong,
-            }))
-            .offer(OfferDecl::Event(OfferEventDecl {
-                source: OfferEventSource::Framework,
-                source_name: "capability_requested".into(),
-                target_name: "capability_requested_on_a".into(),
-                target: OfferTarget::Child("b".to_string()),
-                filter: None,
-                mode: cm_rust::EventMode::Sync,
-            }))
-            .add_lazy_child("b")
-            .build(),
-    )];
+async fn can_offer_capability_requested_event() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "capability_requested".into(),
+                    target_name: "capability_requested_on_a".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Parent,
+                    source_name: "capability_requested_on_a".into(),
+                    target_name: "capability_requested_from_parent".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .build(),
+        ),
+    ];
     let test = RoutingTest::new("a", components).await;
-    assert_matches!(
-        test.bind_instance(&vec!["a:0", "b:0"].into()).await,
-        Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
-    );
-}
-
-/// a; attempts to use event "capability_requested" from realm and fails.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn cannot_use_capability_requested_event_from_realm() {
-    let components = vec![(
-        "a",
-        ComponentDeclBuilder::new()
-            .use_(UseDecl::Event(UseEventDecl {
-                source: UseSource::Parent,
-                source_name: "capability_requested".into(),
-                target_name: "capability_requested_from_parent".into(),
-                filter: None,
-                mode: cm_rust::EventMode::Sync,
-            }))
-            .build(),
-    )];
-    let test = RoutingTest::new("a", components).await;
-    assert_matches!(
-        test.bind_instance(&vec!["a:0"].into()).await,
-        Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
-    );
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event {
+            requests: vec![EventSubscription::new(
+                "capability_requested_from_parent".into(),
+                EventMode::Sync,
+            )],
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
 }
 
 ///   a
