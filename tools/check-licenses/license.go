@@ -48,6 +48,21 @@ type License struct {
 	matches map[string]*Match
 }
 
+// licenseByPattern implements sort.Interface for []*License based on the length of the Pattern field.
+// Licenses with a "fuchsia" category are sorted above all other licenses.
+type licenseByPattern []*License
+
+func (a licenseByPattern) Len() int      { return len(a) }
+func (a licenseByPattern) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a licenseByPattern) Less(i, j int) bool {
+	l := strings.Contains(a[i].Category, "fuchsia")
+	r := strings.Contains(a[j].Category, "fuchsia")
+	if l != r {
+		return l
+	}
+	return len(a[i].pattern.String()) < len(a[j].pattern.String())
+}
+
 // Match is used to store a single match result alongside the License along
 // with a list of all matching files
 type Match struct {

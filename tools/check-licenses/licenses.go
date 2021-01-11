@@ -43,15 +43,9 @@ func NewLicenses(ctx context.Context, config *Config) (*Licenses, error) {
 	if len(l.licenses) == 0 {
 		return nil, errors.New("no licenses")
 	}
-	// Reorder the files putting fuchsia licenses first, then shortest first.
-	sort.Slice(l.licenses, func(i, j int) bool {
-		a := strings.Contains(l.licenses[i].Category, "fuchsia")
-		b := strings.Contains(l.licenses[j].Category, "fuchsia")
-		if a != b {
-			return a
-		}
-		return len(l.licenses[i].pattern.String()) < len(l.licenses[j].pattern.String())
-	})
+
+	sort.Sort(licenseByPattern(l.licenses))
+
 	return l, nil
 }
 
