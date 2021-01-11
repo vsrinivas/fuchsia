@@ -116,9 +116,6 @@ static_library("lib") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/third_party/ulib/ngunwind",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (include_test_app) {
@@ -147,9 +144,6 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/cmdline",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("debug_agent") {
@@ -205,9 +199,6 @@ source_set("test_lib") {
     ":lib",
     "//src/developer/debug/shared:test_support",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unit_tests") {
@@ -253,9 +244,6 @@ executable("unit_tests") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("debug_agent_tests") {

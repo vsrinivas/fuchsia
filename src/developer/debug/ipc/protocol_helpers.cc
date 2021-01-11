@@ -22,8 +22,8 @@ bool Deserialize(MessageReader* reader, int32_t* data) { return reader->ReadInt3
 
 void Serialize(const Register& reg, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
-  writer->WriteUint32(reg.data.size());
-  writer->WriteBytes(&reg.data[0], reg.data.size());
+  writer->WriteUint32(static_cast<uint32_t>(reg.data.size()));
+  writer->WriteBytes(&reg.data[0], static_cast<uint32_t>(reg.data.size()));
 }
 
 bool Deserialize(MessageReader* reader, Register* reg) {

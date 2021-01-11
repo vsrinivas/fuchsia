@@ -12,7 +12,7 @@ Register CreateRegisterWithTestData(RegisterID id, size_t length) {
 
   reg.data.reserve(length);
   // So that we get the number backwards (0x0102...).
-  uint8_t base = length;
+  size_t base = length;
   for (size_t i = 0; i < length; i++)
     reg.data.emplace_back(base - i);
 

@@ -78,7 +78,10 @@ int main() {
   FX_LOGS(INFO) << "Waiting for output.";
   std::vector<char> current_line;
   while (true) {
-    char c = getc(stdin);
+    int i = getc(stdin);
+    if (i < 0)
+      break;
+    char c = static_cast<char>(i);
     printf("%c", c);
     fflush(stdout);
 

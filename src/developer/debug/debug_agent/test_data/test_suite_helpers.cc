@@ -421,7 +421,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
   uint8_t bas = 0;
   uint8_t extra_bas = 0;
   for (uint32_t i = 0; i < length; i++) {
-    uint32_t index = i + diff;
+    uint64_t index = i + diff;
 
     // We cannot go the beyond the BAS boundary.
     if (index > 7) {

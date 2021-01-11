@@ -229,7 +229,7 @@ void Curl::set_post_data(const std::map<std::string, std::string>& items) {
 
 std::string Curl::Escape(const std::string& input) {
   // It's legal to pass a null Curl_easy to curl_easy_escape (actually Curl_convert_to_network).
-  auto escaped = curl_easy_escape(nullptr, input.c_str(), input.size());
+  auto escaped = curl_easy_escape(nullptr, input.c_str(), static_cast<int>(input.size()));
   // std::string(nullptr) is an UB.
   if (!escaped)
     return "";

@@ -133,7 +133,7 @@ uint64_t MessageLoopPoll::GetMonotonicNowNS() const {
 
 void MessageLoopPoll::RunImpl() {
   std::vector<pollfd> poll_vect;
-  std::vector<size_t> map_indices;
+  std::vector<int> map_indices;
 
   while (!should_quit()) {
     // This could be optimized to avoid recomputing every time.
@@ -191,7 +191,7 @@ void MessageLoopPoll::OnFDReady(int fd, bool readable, bool, bool) {
 
   // Remove and discard the wakeup byte.
   char buf;
-  int nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
+  auto nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
   FX_DCHECK(nread == 1);
 
   // This is just here to wake us up and run the loop again. We don't need to
@@ -201,12 +201,12 @@ void MessageLoopPoll::OnFDReady(int fd, bool readable, bool, bool) {
 void MessageLoopPoll::SetHasTasks() {
   // Wake up the poll() by writing to the pipe.
   char buf = 0;
-  int written = HANDLE_EINTR(write(wakeup_pipe_in_.get(), &buf, 1));
+  auto written = HANDLE_EINTR(write(wakeup_pipe_in_.get(), &buf, 1));
   FX_DCHECK(written == 1 || errno == EAGAIN);
 }
 
 void MessageLoopPoll::ConstructFDMapping(std::vector<pollfd>* poll_vect,
-                                         std::vector<size_t>* map_indices) const {
+                                         std::vector<int>* map_indices) const {
   // The watches_ vector is not threadsafe.
   FX_DCHECK(Current() == this);
 

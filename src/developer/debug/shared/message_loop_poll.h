@@ -43,7 +43,7 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   // Prepares the pollfd vector with all the handles we will be watching for poll(). The map_indices
   // vector will be of the same length and will contain the key into watches_ of each item in the
   // pollfd vector.
-  void ConstructFDMapping(std::vector<pollfd>* poll_vect, std::vector<size_t>* map_indices) const;
+  void ConstructFDMapping(std::vector<pollfd>* poll_vect, std::vector<int>* map_indices) const;
 
   // Called when poll detects an event. The poll event mask is in |events|.
   void OnHandleSignaled(int fd, short events, int watch_id);

@@ -101,9 +101,6 @@ static_library("expr") {
     "//zircon/public/lib/fit",
   ]
   configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-
     # TODO(fxbug.dev/62511): delete the below and fix UB from signed integer
     # overflow in eval_operators.cc
     "//build/config:temporarily_disable_ubsan_do_not_use",
@@ -184,9 +181,6 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
   configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-
     # TODO(fxbug.dev/62511): delete the below and fix UB from signed integer
     # overflow in eval_operators.cc
     "//build/config:temporarily_disable_ubsan_do_not_use",

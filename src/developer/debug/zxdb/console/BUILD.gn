@@ -207,10 +207,6 @@ static_library("console") {
       "//zircon/public/lib/zx",
     ]
   }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("tests") {
@@ -273,10 +269,6 @@ source_set("tests") {
     "//src/developer/debug/zxdb/expr:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
-  ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }
 

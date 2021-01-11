@@ -41,9 +41,6 @@ static_library("shared") {
   ]
 
   public_deps = [ "//src/lib/fxl" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 static_library("agent") {
@@ -53,9 +50,6 @@ static_library("agent") {
   ]
 
   public_deps = [ ":shared" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 static_library("client") {
@@ -87,7 +81,4 @@ source_set("tests") {
     ":agent",
     ":client",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

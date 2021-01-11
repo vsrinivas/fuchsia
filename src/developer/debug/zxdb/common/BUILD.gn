@@ -58,11 +58,6 @@ static_library("common") {
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("test_support") {

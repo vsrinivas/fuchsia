@@ -22,7 +22,7 @@ class MessageReader {
   bool has_error() const { return has_error_; }
 
   // Returns the number of bytes available still to read.
-  uint32_t remaining() const { return message_.size() - offset_; }
+  size_t remaining() const { return message_.size() - offset_; }
   size_t message_size() const { return message_.size(); }
 
   // These functions return true on success.
@@ -44,7 +44,7 @@ class MessageReader {
 
   const std::vector<char> message_;
 
-  uint32_t offset_ = 0;  // Current read offset.
+  size_t offset_ = 0;  // Current read offset.
 
   bool has_error_ = false;
 };

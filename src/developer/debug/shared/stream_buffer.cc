@@ -80,8 +80,8 @@ size_t StreamBuffer::ReadOrPeek(char* buffer, size_t buffer_len, bool erase_cons
 void StreamBuffer::FlushWriteBuffer() {
   while (!write_buffer_.empty()) {
     const std::vector<char>& cur = write_buffer_.front();
-    int32_t written = writer_->ConsumeStreamBufferData(&cur[first_write_buffer_offset_],
-                                                       cur.size() - first_write_buffer_offset_);
+    size_t written = writer_->ConsumeStreamBufferData(&cur[first_write_buffer_offset_],
+                                                      cur.size() - first_write_buffer_offset_);
     first_write_buffer_offset_ += written;
 
     if (first_write_buffer_offset_ < cur.size()) {
