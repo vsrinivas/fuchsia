@@ -12,7 +12,9 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::client::connect_to_service,
+    fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
     log::{debug, error, info, warn},
     std::{collections::HashMap, sync::Arc},
@@ -21,6 +23,8 @@ use {
 
 // Arbitrary count of networks (ssid/security pairs) to output per request
 const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
+// Delay between scanning retries when the firmware returns "ShouldWait" error code
+const SCAN_RETRY_DELAY_MS: i64 = 100;
 
 /// Allows for consumption of updated scan results.
 #[async_trait]
@@ -31,42 +35,66 @@ pub trait ScanResultUpdate: Sync + Send {
 /// Requests a new SME scan and returns the results.
 async fn sme_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
-    mut scan_request: fidl_sme::ScanRequest,
+    scan_request: fidl_sme::ScanRequest,
 ) -> Result<Vec<fidl_sme::BssInfo>, ()> {
-    let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
-        error!("Failed to create FIDL proxy for scan: {:?}", e);
-        ()
-    })?;
-    let txn = {
-        match sme_proxy.scan(&mut scan_request, remote) {
-            Ok(()) => local,
-            Err(error) => {
-                error!("Scan initiation error: {:?}", error);
-                return Err(());
-            }
-        }
+    enum SmeScanError {
+        ShouldRetryLater,
+        Other,
     };
-    debug!("Sent scan request to SME successfully");
-    let mut stream = txn.take_event_stream();
-    let mut scanned_networks = vec![];
-    while let Some(Ok(event)) = stream.next().await {
-        match event {
-            fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
-                debug!("Received scan results from SME");
-                scanned_networks.extend(new_aps);
-            }
-            fidl_sme::ScanTransactionEvent::OnFinished {} => {
-                debug!("Finished getting scan results from SME");
-                return Ok(scanned_networks);
-            }
-            fidl_sme::ScanTransactionEvent::OnError { error } => {
-                error!("Scan error from SME: {:?}", error);
-                return Err(());
+
+    async fn sme_scan_internal(
+        sme_proxy: &fidl_sme::ClientSmeProxy,
+        mut scan_request: fidl_sme::ScanRequest,
+    ) -> Result<Vec<fidl_sme::BssInfo>, SmeScanError> {
+        let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
+            error!("Failed to create FIDL proxy for scan: {:?}", e);
+            SmeScanError::Other
+        })?;
+        let txn = {
+            match sme_proxy.scan(&mut scan_request, remote) {
+                Ok(()) => local,
+                Err(error) => {
+                    error!("Scan initiation error: {:?}", error);
+                    return Err(SmeScanError::Other);
+                }
             }
         };
+        debug!("Sent scan request to SME successfully");
+        let mut stream = txn.take_event_stream();
+        let mut scanned_networks = vec![];
+        while let Some(Ok(event)) = stream.next().await {
+            match event {
+                fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
+                    debug!("Received scan results from SME");
+                    scanned_networks.extend(new_aps);
+                }
+                fidl_sme::ScanTransactionEvent::OnFinished {} => {
+                    debug!("Finished getting scan results from SME");
+                    return Ok(scanned_networks);
+                }
+                fidl_sme::ScanTransactionEvent::OnError { error } => {
+                    error!("Scan error from SME: {:?}", error);
+                    return Err(if error.code == fidl_sme::ScanErrorCode::ShouldWait {
+                        SmeScanError::ShouldRetryLater
+                    } else {
+                        SmeScanError::Other
+                    });
+                }
+            };
+        }
+        error!("SME closed scan result channel without sending OnFinished");
+        Err(SmeScanError::Other)
     }
-    error!("SME closed scan result channel without sending OnFinished");
-    Err(())
+
+    match sme_scan_internal(sme_proxy, scan_request.clone()).await {
+        Ok(results) => Ok(results),
+        Err(SmeScanError::ShouldRetryLater) => {
+            info!("Driver requested a delay before retrying scan");
+            fasync::Timer::new(zx::Duration::from_millis(SCAN_RETRY_DELAY_MS).after_now()).await;
+            sme_scan_internal(sme_proxy, scan_request.clone()).await.map_err(|_| ())
+        }
+        Err(_) => Err(()),
+    }
 }
 
 /// Handles incoming scan requests by creating a new SME scan request.
@@ -360,6 +388,7 @@ mod tests {
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         std::sync::Arc,
+        test_case::test_case,
         wlan_common::assert_variant,
     };
 
@@ -902,6 +931,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
             assert_eq!(result, Ok(input_aps));
         });
+
+        // No further requests to the sme
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
     #[test]
@@ -941,16 +973,20 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
             assert_eq!(result, Ok(input_aps));
         });
+
+        // No further requests to the sme
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
-    #[test]
-    fn sme_scan_error() {
+    #[test_case(fidl_sme::ScanErrorCode::InternalError; "SME scan error InternalError")]
+    #[test_case(fidl_sme::ScanErrorCode::NotSupported; "SME scan error NotSupported")]
+    fn sme_scan_error(error_code: fidl_sme::ScanErrorCode) {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(&sme_proxy, scan_request);
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -966,17 +1002,105 @@ mod tests {
                 let (_stream, ctrl) = txn
                     .into_stream_and_control_handle().expect("error accessing control handle");
                 ctrl.send_on_error(&mut fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
+                    code: error_code,
                     message: "Failed to scan".to_string()
                 })
                     .expect("failed to send scan error");
             }
         );
 
-        // Check for results
+        // No retry expected, check for results on the scan request
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
             assert_eq!(result, Err(()));
         });
+
+        // No further requests to the sme
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+    }
+
+    #[test_case(fidl_sme::ScanErrorCode::ShouldWait, false; "SME scan error ShouldWait with failed retry")]
+    #[test_case(fidl_sme::ScanErrorCode::ShouldWait, true; "SME scan error ShouldWait with successful retry")]
+    fn sme_scan_error_with_retry(error_code: fidl_sme::ScanErrorCode, retry_succeeds: bool) {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+
+        // Issue request to scan.
+        let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
+        pin_mut!(scan_fut);
+
+        // Request scan data from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back an error
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: error_code,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+
+        // Advance the scanning future
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // There shouldn't yet be a request in the SME stream, since there should be
+        // some delay before the scan is retried
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+        // Wake up the timer and advance the scanning future
+        assert!(exec.wake_next_timer().is_some());
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Expect a retry: we should now see a new request in the SME stream
+        if retry_succeeds {
+            // Validate the SME received the scan_request and send back mock data
+            let aps = vec![];
+            validate_sme_scan_request_and_send_results(
+                &mut exec,
+                &mut sme_stream,
+                &scan_request,
+                aps,
+            );
+
+            // Check for results
+            assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+                assert_eq!(result, Ok(vec![]));
+            });
+        } else {
+            // Check that a scan request was sent to the sme and send back an error
+            assert_variant!(
+                exec.run_until_stalled(&mut sme_stream.next()),
+                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                    txn, ..
+                }))) => {
+                    // Send failed scan response.
+                    let (_stream, ctrl) = txn
+                        .into_stream_and_control_handle().expect("error accessing control handle");
+                    ctrl.send_on_error(&mut fidl_sme::ScanError {
+                        code: error_code,
+                        message: "Failed to scan".to_string()
+                    })
+                        .expect("failed to send scan error");
+                }
+            );
+
+            // Check for results
+            assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+                assert_eq!(result, Err(()));
+            });
+        }
+
+        // No further requests to the sme
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
     #[test]
@@ -1007,6 +1131,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
             assert_eq!(result, Err(()));
         });
+
+        // No further requests to the sme
+        assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
     #[test]
