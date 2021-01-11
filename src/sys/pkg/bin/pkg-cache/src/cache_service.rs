@@ -6,7 +6,7 @@ use {
     crate::blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, FileRequest, FileRequestStream},
     fidl_fuchsia_pkg::{
         BlobInfoIteratorNextResponder, BlobInfoIteratorRequest, BlobInfoIteratorRequestStream,
@@ -21,7 +21,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
-    futures::{prelude::*, stream::FuturesUnordered},
+    futures::prelude::*,
     std::{collections::HashSet, sync::Arc},
     system_image::StaticPackages,
 };
@@ -248,168 +248,174 @@ async fn serve_needed_blobs(
     pkgfs_install: &pkgfs::install::Client,
     pkgfs_needs: &pkgfs::needs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
-    let tasks = FuturesUnordered::new();
+    let res = async {
+        // Step 1: Open and write the meta.far, or determine it is not needed.
+        let () = handle_open_meta_blob(&mut stream, meta_far_info, pkgfs_install).await?;
 
-    enum State {
-        ExpectOpenMetaBlob,
-        ExpectGetMissingBlobs,
-        ExpectOpenContentBlob { needs: HashSet<Hash> },
+        // Step 2: Determine which data blobs are needed and report them to the client.
+        let (serve_iterator, needs) =
+            handle_get_missing_blobs(&mut stream, meta_far_info, pkgfs_needs).await?;
+
+        // Step 3: Open and write all needed data blobs.
+        let () = handle_open_blobs(&mut stream, needs, pkgfs_install).await?;
+        serve_iterator.await;
+
+        Ok(())
     }
+    .await;
 
-    impl State {
-        fn expectation(&self) -> &'static str {
-            match self {
-                State::ExpectOpenMetaBlob => "open_meta_blob",
-                State::ExpectGetMissingBlobs => "get_missing_blobs",
-                State::ExpectOpenContentBlob { .. } => "open_blob",
+    // TODO in the Err(_) case, a responder was likely dropped, which would have already shutdown
+    // the stream without our custom epitaph value.  Need to find a nice way to always shutdown
+    // with a custom epitaph without copy/pasting something to every return site.
+
+    let epitaph = match res {
+        Ok(_) => Status::OK,
+        Err(_) => Status::BAD_STATE,
+    };
+    stream.control_handle().shutdown_with_epitaph(epitaph);
+
+    res
+}
+
+async fn handle_open_meta_blob(
+    stream: &mut NeededBlobsRequestStream,
+    meta_far_info: BlobInfo,
+    pkgfs_install: &pkgfs::install::Client,
+) -> Result<(), ServeNeededBlobsError> {
+    loop {
+        let (file, responder) =
+            match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
+                Some(NeededBlobsRequest::OpenMetaBlob { file, responder }) => Ok((file, responder)),
+                Some(other) => Err(ServeNeededBlobsError::UnexpectedRequest {
+                    received: other.method_name(),
+                    expected: "open_meta_blob",
+                }),
+                None => Err(ServeNeededBlobsError::UnexpectedClose),
+            }?;
+
+        let file_stream = file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
+
+        let open_res =
+            open_blob(pkgfs_install, meta_far_info.blob_id.into(), BlobKind::Package).await;
+
+        // Always respond to the OpenMetaBlob request, then worry about actually handling the
+        // result.
+        responder
+            .send(&mut match &open_res {
+                Ok(OpenBlobSuccess::Needed(_)) => Ok(true),
+                Ok(OpenBlobSuccess::AlreadyExists) => Ok(false),
+                Err(OpenBlobError::ConcurrentWrite) => {
+                    Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite)
+                }
+                Err(OpenBlobError::Io(_)) => Err(fidl_fuchsia_pkg::OpenBlobError::UnspecifiedIo),
+            })
+            .map_err(ServeNeededBlobsError::SendResponse)?;
+
+        match open_res {
+            Ok(OpenBlobSuccess::Needed(blob)) => match serve_write_blob(file_stream, blob).await {
+                Ok(()) => break,
+                Err(e) if e.is_fatal() => {
+                    return Err(ServeNeededBlobsError::WriteBlob {
+                        context: BlobContext {
+                            kind: BlobKind::Package,
+                            hash: meta_far_info.blob_id.into(),
+                        },
+                        source: e,
+                    });
+                }
+                Err(e) => {
+                    fx_log_warn!("Non-fatal error while writing metadata blob: {:#}", anyhow!(e));
+                    continue;
+                }
+            },
+            Ok(OpenBlobSuccess::AlreadyExists) => break,
+            Err(OpenBlobError::ConcurrentWrite) => {
+                fx_log_warn!(
+                    "Non-fatal error while opening metadata blob: {:#}",
+                    anyhow!(OpenBlobError::ConcurrentWrite)
+                );
+                continue;
+            }
+            Err(e @ OpenBlobError::Io(_)) => {
+                return Err(ServeNeededBlobsError::OpenBlob {
+                    context: BlobContext {
+                        kind: BlobKind::Package,
+                        hash: meta_far_info.blob_id.into(),
+                    },
+                    source: e,
+                });
             }
         }
     }
 
-    let mut state = State::ExpectOpenMetaBlob;
+    Ok(())
+}
 
-    loop {
-        let request = stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)?;
+async fn handle_get_missing_blobs(
+    stream: &mut NeededBlobsRequestStream,
+    meta_far_info: BlobInfo,
+    pkgfs_needs: &pkgfs::needs::Client,
+) -> Result<(Task<()>, HashSet<Hash>), ServeNeededBlobsError> {
+    let iterator = match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
+        Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }) => Ok(iterator),
+        Some(other) => Err(ServeNeededBlobsError::UnexpectedRequest {
+            received: other.method_name(),
+            expected: "get_missing_blobs",
+        }),
+        None => Err(ServeNeededBlobsError::UnexpectedClose),
+    }?;
 
-        state = match (state, request) {
-            // Step 1: Open and write the meta.far, or determine it is not needed.
-            (
-                state @ State::ExpectOpenMetaBlob,
-                Some(NeededBlobsRequest::OpenMetaBlob { file, responder }),
-            ) => {
-                let file_stream =
-                    file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
+    let iter_stream = iterator.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
-                let open_res =
-                    open_blob(pkgfs_install, meta_far_info.blob_id.into(), BlobKind::Package).await;
+    // list_needs produces a stream that produces the full set of currently missing blobs on-demand
+    // as items are read from the stream.  We are only interested in querying the needs once, so we
+    // only need to read 1 item and can then drop the stream.
+    let needs = pkgfs_needs.list_needs(meta_far_info.blob_id.into());
+    futures::pin_mut!(needs);
+    let needs = match needs.try_next().await.map_err(ServeNeededBlobsError::ListNeeds)? {
+        Some(needs) => {
+            let mut needs = needs
+                .into_iter()
+                .map(|hash| BlobInfo { blob_id: hash.into(), length: 0 })
+                .collect::<Vec<_>>();
+            // The needs provided by the stream are stored in a HashSet, so needs are in an
+            // unspecified order here. Provide a deterministic ordering to test/callers by sorting
+            // on merkle root.
+            needs.sort_unstable();
+            needs
+        }
+        None => vec![],
+    };
 
-                // Always respond to the OpenMetaBlob request, then worry about actually handling
-                // the result.
-                responder
-                    .send(&mut match &open_res {
-                        Ok(OpenBlobSuccess::Needed(_)) => Ok(true),
-                        Ok(OpenBlobSuccess::AlreadyExists) => Ok(false),
-                        Err(OpenBlobError::ConcurrentWrite) => {
-                            Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite)
-                        }
-                        Err(OpenBlobError::Io(_)) => {
-                            Err(fidl_fuchsia_pkg::OpenBlobError::UnspecifiedIo)
-                        }
-                    })
-                    .map_err(ServeNeededBlobsError::SendResponse)?;
+    // Start serving the iterator in the background and internally move on to the next state. If
+    // this foreground task decides to bail out, this spawned task will be dropped which will abort
+    // the iterator serving task.
+    let serve_iterator = Task::spawn(serve_blob_info_iterator(
+        needs.iter().cloned().map(Into::into).collect::<Vec<fidl_fuchsia_pkg::BlobInfo>>(),
+        iter_stream,
+    ));
+    let needs = needs.into_iter().map(|need| need.blob_id.into()).collect::<HashSet<Hash>>();
 
-                match open_res {
-                    Ok(OpenBlobSuccess::Needed(blob)) => {
-                        match serve_write_blob(file_stream, blob).await {
-                            Ok(()) => State::ExpectGetMissingBlobs,
-                            Err(e) if e.is_fatal() => {
-                                return Err(ServeNeededBlobsError::WriteBlob {
-                                    context: BlobContext {
-                                        kind: BlobKind::Package,
-                                        hash: meta_far_info.blob_id.into(),
-                                    },
-                                    source: e,
-                                });
-                            }
-                            Err(e) => {
-                                fx_log_warn!(
-                                    "Non-fatal error while writing metadata blob: {:#}",
-                                    anyhow!(e)
-                                );
-                                state
-                            }
-                        }
-                    }
-                    Ok(OpenBlobSuccess::AlreadyExists) => State::ExpectGetMissingBlobs,
-                    Err(OpenBlobError::ConcurrentWrite) => {
-                        fx_log_warn!(
-                            "Non-fatal error while opening metadata blob: {:#}",
-                            anyhow!(OpenBlobError::ConcurrentWrite)
-                        );
-                        state
-                    }
-                    Err(e @ OpenBlobError::Io(_)) => {
-                        return Err(ServeNeededBlobsError::OpenBlob {
-                            context: BlobContext {
-                                kind: BlobKind::Package,
-                                hash: meta_far_info.blob_id.into(),
-                            },
-                            source: e,
-                        });
-                    }
-                }
-            }
+    Ok((serve_iterator, needs))
+}
 
-            // Step 2: Determine which data blobs are needed and report them to the client.
-            (
-                State::ExpectGetMissingBlobs,
-                Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }),
-            ) => {
-                let iter_stream =
-                    iterator.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
+async fn handle_open_blobs(
+    stream: &mut NeededBlobsRequestStream,
+    mut needs: HashSet<Hash>,
+    pkgfs_install: &pkgfs::install::Client,
+) -> Result<(), ServeNeededBlobsError> {
+    // TODO(64622) implement
+    let _ = (&mut needs, pkgfs_install);
 
-                // list_needs produces a stream that produces the full set of currently missing
-                // blobs on-demand as items are read from the stream.  We are only interested in
-                // querying the needs once, so we only need to read 1 item and can then drop the
-                // stream.
-                let needs = pkgfs_needs.list_needs(meta_far_info.blob_id.into());
-                futures::pin_mut!(needs);
-                let needs =
-                    match needs.try_next().await.map_err(ServeNeededBlobsError::ListNeeds)? {
-                        Some(needs) => {
-                            let mut needs = needs
-                                .into_iter()
-                                .map(|hash| BlobInfo { blob_id: hash.into(), length: 0 })
-                                .collect::<Vec<_>>();
-                            // The needs provided by the stream are stored in a HashSet, so needs
-                            // are in an unspecified order here. Provide a deterministic ordering
-                            // to test/callers by sorting on merkle root.
-                            needs.sort_unstable();
-                            needs
-                        }
-                        None => vec![],
-                    };
+    match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
+        Some(other) => Err(ServeNeededBlobsError::UnexpectedRequest {
+            received: other.method_name(),
+            expected: "open_blob",
+        }),
+        None => Err(ServeNeededBlobsError::UnexpectedClose),
+    }?;
 
-                // Start serving the iterator in the background and internally move on to the next
-                // state. If this foreground task decides to bail out, tasks will be dropped which
-                // will cancel any incomplete background tasks.
-                let serve_iterator = Task::spawn(serve_blob_info_iterator(
-                    needs
-                        .iter()
-                        .cloned()
-                        .map(Into::into)
-                        .collect::<Vec<fidl_fuchsia_pkg::BlobInfo>>(),
-                    iter_stream,
-                ));
-                tasks.push(serve_iterator);
-
-                State::ExpectOpenContentBlob {
-                    needs: needs.into_iter().map(|need| need.blob_id.into()).collect(),
-                }
-            }
-
-            // Step 3: Open and write all needed data blobs.
-            (
-                State::ExpectOpenContentBlob { needs },
-                Some(NeededBlobsRequest::OpenBlob { blob_id, file, responder }),
-            ) => {
-                // TODO(64622) implement
-                let _ = (needs, blob_id, file, responder);
-                todo!();
-            }
-
-            (state, Some(request)) => {
-                return Err(ServeNeededBlobsError::UnexpectedRequest {
-                    received: request.method_name(),
-                    expected: state.expectation(),
-                });
-            }
-
-            (_, None) => {
-                return Err(ServeNeededBlobsError::UnexpectedClose);
-            }
-        };
-    }
+    todo!();
 }
 
 #[derive(thiserror::Error, Debug)]
