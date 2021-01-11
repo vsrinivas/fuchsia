@@ -303,6 +303,7 @@ macro_rules! create_event {
         }
     ) => {
         paste::paste! {
+            #[derive(Debug)]
             pub struct [<$event_type Payload>] {
                 $(pub $client_protocol_name: $client_protocol_ty,)*
                 $(pub $server_protocol_name: Option<zx::Channel>,)*
@@ -315,6 +316,7 @@ macro_rules! create_event {
                 pub description: String,
             }
 
+            #[derive(Debug)]
             pub struct $event_type {
                 header: EventHeader,
                 result: Result<[<$event_type Payload>], [<$event_type Error>]>,
@@ -377,7 +379,7 @@ macro_rules! create_event {
                             #[allow(unused)]
                             let payload = match payload {
                                 fsys::EventPayload::$event_type(payload) => Ok(payload),
-                                _ => Err(format_err!("Incorrect payload type")),
+                                _ => Err(format_err!("Incorrect payload type, {:?}", payload)),
                             }?;
 
                             // Extract the additional data from the Payload object.
