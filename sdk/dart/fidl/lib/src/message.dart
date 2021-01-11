@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:zircon/zircon.dart';
 
-import '../fidl.dart';
 import 'codec.dart';
 import 'error.dart';
 import 'types.dart';
@@ -90,6 +89,7 @@ void _validateEncoding(Encoder encoder) {
   }
 }
 
+/// Encodes a FIDL message that contains a single parameter.
 void encodeMessage<T>(
     Encoder encoder, int inlineSize, MemberType typ, T value) {
   encoder.alloc(inlineSize);
@@ -98,6 +98,12 @@ void encodeMessage<T>(
   _validateEncoding(encoder);
 }
 
+/// Encodes a FIDL message with multiple parameters.  The callback parameter
+/// provides a decoder that is initialized on the provided Message, which
+/// callers can use to decode specific types.  This functionality (encoding
+/// multiple parameters) is implemented using a callback because each call to
+/// MemberType.encode() must pass in a concrete type, rather than an element
+/// popped from a List<FidlType>.
 void encodeMessageWithCallback(Encoder encoder, int inlineSize, Function() f) {
   encoder.alloc(inlineSize);
   f();
@@ -132,9 +138,7 @@ void _validateDecoding(Decoder decoder) {
   }
 }
 
-/// Decodes a single FIDL message.  Most messages can be decoded using this
-/// entry point.  Such a messages generally take the form of header bytes
-/// followed immediately by the encoded message bytes.
+/// Decodes a FIDL message that contains a single parameter.
 T decodeMessage<T>(Message message, int inlineSize, MemberType typ) {
   final Decoder decoder = Decoder(message)
     ..claimMemory(kMessageHeaderSize + inlineSize);
@@ -144,10 +148,16 @@ T decodeMessage<T>(Message message, int inlineSize, MemberType typ) {
   return decoded;
 }
 
-/// Decodes a FIDL message with multiple parameters.  Such messages generally
-/// take the form of header bytes followed by the encoded bytes of each
-/// parameter in turn.  The generated bindings should then wrap the resulting
-/// parameter types into a single "Async___Class" inside the callback function.
+/// Decodes a FIDL message with multiple parameters.  The callback parameter
+/// provides a decoder that is initialized on the provided Message, which
+/// callers can use to decode specific types.  The return result of the callback
+/// (e.g. the decoded parameters, wrapped in a containing class/struct) is
+/// returned as the result of the function.  This functionality (decoding
+/// multiple parameters) is implemented using a callback because returning a
+/// list would be insufficient: the list would be of type List<FidlType>,
+/// whereas we want to retain concrete types of each decoded parameter.  The
+/// only way to accomplish this in Dart is to pass in a function that collects
+/// these multiple values into a bespoke, properly typed class.
 A decodeMessageWithCallback<A>(
     Message message, int inlineSize, A Function(Decoder decoder) f) {
   final Decoder decoder = Decoder(message)
