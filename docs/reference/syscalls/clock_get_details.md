@@ -64,14 +64,16 @@ out parameter.
 
 ## SEE ALSO
 
- - [clock transformations](/docs/concepts/kernel/clock_transformations.md)
- - [clocks](/docs/reference/kernel_objects/clock.md)
+ - [clock transformations]
+ - [clocks]
  - [`zx_clock_create()`]
  - [`zx_clock_read()`]
  - [`zx_clock_update()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[clock transformations]: /docs/concepts/kernel/clock_transformations.md
+[clocks]: /docs/reference/kernel_objects/clock.md
 [`zx_clock_create()`]: clock_create.md
 [`zx_clock_read()`]: clock_read.md
 [`zx_clock_update()`]: clock_update.md

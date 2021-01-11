@@ -88,13 +88,14 @@ None.
 
 ## SEE ALSO
 
- - [futex objects](/docs/reference/kernel_objects/futex.md)
+ - [futex objects]
  - [`zx_futex_requeue_single_owner()`]
  - [`zx_futex_wait()`]
  - [`zx_futex_wake()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[futex objects]: /docs/reference/kernel_objects/futex.md
 [`zx_futex_requeue_single_owner()`]: futex_requeue_single_owner.md
 [`zx_futex_wait()`]: futex_wait.md
 [`zx_futex_wake()`]: futex_wake.md

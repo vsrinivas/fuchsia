@@ -48,13 +48,14 @@ or `output-only` on the kernel command line.
 
 ## SEE ALSO
 
- - [kernel command line](/docs/reference/kernel/kernel_cmdline.md)
+ - [kernel command line]
  - [`zx_debug_read()`]
  - [`zx_debuglog_read()`]
  - [`zx_debuglog_write()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[kernel command line]: /docs/reference/kernel/kernel_cmdline.md
 [`zx_debug_read()`]: debug_read.md
 [`zx_debuglog_read()`]: debuglog_read.md
 [`zx_debuglog_write()`]: debuglog_write.md

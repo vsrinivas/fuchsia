@@ -104,13 +104,14 @@ and **ZX_RIGHT_WRITE** rights assigned to them.
 
 ## SEE ALSO
 
- - [clocks](/docs/reference/kernel_objects/clock.md)
+ - [clocks]
  - [`zx_clock_get_details()`]
  - [`zx_clock_read()`]
  - [`zx_clock_update()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[clocks]: /docs/reference/kernel_objects/clock.md
 [`zx_clock_get_details()`]: clock_get_details.md
 [`zx_clock_read()`]: clock_read.md
 [`zx_clock_update()`]: clock_update.md

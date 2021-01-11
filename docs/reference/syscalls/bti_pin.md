@@ -66,8 +66,8 @@ number of addresses returned depends on whether the **ZX_BTI_COMPRESS** or
 The pmt retains a reference to the associated vmo, so the underlying vmo won't be
 destroyed until the pmt is unpinned.
 
-Resizable vmos can be pinned. If a call to [`zx_set_size()`] would discard pinned pages,
-that call will fail.
+Resizable vmos can be pinned. If a call to [`zx_vmo_set_size()`] would discard
+pinned pages, that call will fail.
 
 ## OPTIONS
 
@@ -136,3 +136,4 @@ In a future build this error will no longer occur.
 [`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
 [`zx_vmo_create_physical()`]: vmo_create_physical.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
+[`zx_vmo_set_size()`]: vmo_set_size.md

@@ -113,13 +113,14 @@ not be waited upon.
 
 ## SEE ALSO
 
- - [timer slack](/docs/concepts/kernel/timer_slack.md)
+ - [timer slack]
  - [`zx_object_wait_async()`]
  - [`zx_port_create()`]
  - [`zx_port_queue()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[timer slack]: /docs/concepts/kernel/timer_slack.md
 [`zx_guest_set_trap()`]: guest_set_trap.md
 [`zx_interrupt_bind()`]: interrupt_bind.md
 [`zx_object_wait_async()`]: object_wait_async.md

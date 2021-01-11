@@ -31,7 +31,7 @@ incorporates the functionality of [`zx_channel_write_etc()`] and
 a full description of channel calls.
 
 The effect of a call to `zx_channel_call_etc()` is similar to performing a
-sequence of calls to [`zx_channel_write_etc()`], [`zx_channel_wait_one()`] and
+sequence of calls to [`zx_channel_write_etc()`], [`zx_object_wait_one()`] and
 [`zx_channel_read_etc()`] in that order. However, a key difference is that
 `zx_channel_call_etc()` will wait for an incoming message matches the outgoing
 message's transaction id. The arguments that would be supplied to
@@ -143,3 +143,4 @@ to contain the reply message.
 [`zx_channel_read_etc()`]: channel_read_etc.md
 [`zx_channel_write()`]: channel_write.md
 [`zx_channel_write_etc()`]: channel_write_etc.md
+[`zx_object_wait_one()`]: object_wait_one.md

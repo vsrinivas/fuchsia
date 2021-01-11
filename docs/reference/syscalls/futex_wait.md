@@ -80,12 +80,14 @@ None.
 
 ## SEE ALSO
 
- - [futex objects](/docs/reference/kernel_objects/futex.md)
- - [timer slack](/docs/concepts/kernel/timer_slack.md)
+ - [futex objects]
+ - [timer slack]
  - [`zx_futex_requeue()`]
  - [`zx_futex_wake()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[futex objects]: /docs/reference/kernel_objects/futex.md
+[timer slack]: /docs/concepts/kernel/timer_slack.md
 [`zx_futex_requeue()`]: futex_requeue.md
 [`zx_futex_wake()`]: futex_wake.md

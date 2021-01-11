@@ -119,13 +119,14 @@ On success, returns **ZX_OK**.
 
 ## SEE ALSO
 
- - [clocks](/docs/reference/kernel_objects/clock.md)
+ - [clocks]
  - [`zx_clock_create()`]
  - [`zx_clock_get_details()`]
  - [`zx_clock_read()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[clocks]: /docs/reference/kernel_objects/clock.md
 [`zx_clock_create()`]: clock_create.md
 [`zx_clock_get_details()`]: clock_get_details.md
 [`zx_clock_read()`]: clock_read.md

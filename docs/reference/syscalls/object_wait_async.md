@@ -118,7 +118,7 @@ See [signals] for more information about signals and their terminology.
 
 ## SEE ALSO
 
- - [signals](/docs/concepts/kernel/signals.md)
+ - [signals]
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
  - [`zx_port_cancel()`]
@@ -127,6 +127,7 @@ See [signals] for more information about signals and their terminology.
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[signals]: /docs/concepts/kernel/signals.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md
 [`zx_port_cancel()`]: port_cancel.md

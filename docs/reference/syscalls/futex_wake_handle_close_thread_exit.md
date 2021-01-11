@@ -66,7 +66,7 @@ is used for detached threads.
 
 ## SEE ALSO
 
- - [futex objects](/docs/reference/kernel_objects/futex.md)
+ - [futex objects]
  - [`zx_futex_wake()`]
  - [`zx_handle_close()`]
  - [`zx_thread_exit()`]
@@ -74,6 +74,7 @@ is used for detached threads.
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[futex objects]: /docs/reference/kernel_objects/futex.md
 [`zx_futex_wake()`]: futex_wake.md
 [`zx_handle_close()`]: handle_close.md
 [`zx_thread_exit()`]: thread_exit.md
