@@ -137,8 +137,6 @@ enum class SuperblockType {
 
 // FVM header which describes the contents and layout of the volume manager.
 struct Header {
-  Header() = default;
-
   // Creates headers representing structures with the given information. FVM allows for growth, so
   // the "growable" variants takes the initial size as well as the max size that the metadata tables
   // can represent to allow for future growth up until that limit. FromDiskSize()/FromSliceCount()
