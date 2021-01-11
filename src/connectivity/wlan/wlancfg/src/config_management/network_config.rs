@@ -16,10 +16,14 @@ use {
 /// For now this number is chosen arbitrarily.
 const NUM_DENY_REASONS: usize = 10;
 /// constants for the constraints on valid credential values
-const MIN_PASSWORD_LEN: usize = 8;
-const MAX_PASSWORD_LEN: usize = 63;
+const WEP_40_ASCII_LEN: usize = 5;
+const WEP_40_HEX_LEN: usize = 10;
+const WEP_104_ASCII_LEN: usize = 13;
+const WEP_104_HEX_LEN: usize = 26;
+const WPA_MIN_PASSWORD_LEN: usize = 8;
+const WPA_MAX_PASSWORD_LEN: usize = 63;
 /// The PSK provided must be the bytes form of the 64 hexadecimal character hash
-pub const PSK_BYTE_LEN: usize = 32;
+pub const WPA_PSK_LEN: usize = 32;
 /// constraint on valid SSID legnth
 const MAX_SSID_LEN: usize = 32;
 /// If we have seen a network in a passive scan, we will rarely actively scan for it.
@@ -327,21 +331,38 @@ fn check_config_errors(
     if ssid.as_ref().len() > MAX_SSID_LEN {
         return Err(NetworkConfigError::SsidLen);
     }
-    // Verify that credentials match security type
+    // Verify that credentials match the security type. This code only inspects the lengths of
+    // passphrases and PSKs; the underlying data is considered opaque here.
     match security_type {
         SecurityType::None => {
             if let Credential::Psk(_) | Credential::Password(_) = credential {
                 return Err(NetworkConfigError::OpenNetworkPassword);
             }
         }
+        // Note that some vendors allow WEP passphrase and PSK lengths that are not described by
+        // IEEE 802.11. These lengths are unsupported. See also the `wep_deprecated` crate.
+        SecurityType::Wep => match credential {
+            Credential::Password(ref password) => match password.len() {
+                // ASCII encoding.
+                WEP_40_ASCII_LEN | WEP_104_ASCII_LEN => {}
+                // Hexadecimal encoding.
+                WEP_40_HEX_LEN | WEP_104_HEX_LEN => {}
+                _ => {
+                    return Err(NetworkConfigError::PasswordLen);
+                }
+            },
+            _ => {
+                return Err(NetworkConfigError::MissingPasswordPsk);
+            }
+        },
         SecurityType::Wpa | SecurityType::Wpa2 | SecurityType::Wpa3 => match credential {
-            Credential::Password(pwd) => {
-                if pwd.clone().len() < MIN_PASSWORD_LEN || pwd.clone().len() > MAX_PASSWORD_LEN {
+            Credential::Password(ref pwd) => {
+                if pwd.len() < WPA_MIN_PASSWORD_LEN || pwd.len() > WPA_MAX_PASSWORD_LEN {
                     return Err(NetworkConfigError::PasswordLen);
                 }
             }
-            Credential::Psk(psk) => {
-                if psk.clone().len() != PSK_BYTE_LEN {
+            Credential::Psk(ref psk) => {
+                if psk.len() != WPA_PSK_LEN {
                     return Err(NetworkConfigError::PskLen);
                 }
             }
@@ -349,7 +370,6 @@ fn check_config_errors(
                 return Err(NetworkConfigError::MissingPasswordPsk);
             }
         },
-        _ => {}
     }
     Ok(())
 }
@@ -375,17 +395,13 @@ impl Debug for NetworkConfigError {
             NetworkConfigError::OpenNetworkPassword => {
                 write!(f, "can't have an open network with a password or PSK")
             }
-            NetworkConfigError::PasswordLen => write!(
-                f,
-                "password must be between {} and {} characters long",
-                MIN_PASSWORD_LEN, MAX_PASSWORD_LEN
-            ),
-            NetworkConfigError::PskLen => write!(f, "PSK must have length of {}", PSK_BYTE_LEN),
+            NetworkConfigError::PasswordLen => write!(f, "invalid password length"),
+            NetworkConfigError::PskLen => write!(f, "invalid PSK length"),
             NetworkConfigError::SsidLen => {
                 write!(f, "SSID has max allowed length of {}", MAX_SSID_LEN)
             }
             NetworkConfigError::MissingPasswordPsk => {
-                write!(f, "No password or PSK provided but required by security type")
+                write!(f, "no password or PSK provided but required by security type")
             }
             NetworkConfigError::ConfigMissingId => {
                 write!(f, "cannot create network config, network id is None")
@@ -466,7 +482,7 @@ mod tests {
 
     #[test]
     fn new_network_config_psk_credential() {
-        let credential = Credential::Psk([1; PSK_BYTE_LEN].to_vec());
+        let credential = Credential::Psk([1; WPA_PSK_LEN].to_vec());
 
         let network_config = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
@@ -525,7 +541,17 @@ mod tests {
     }
 
     #[test]
-    fn check_confing_errors_invalid_password() {
+    fn check_config_errors_invalid_wep_password() {
+        // Unsupported length (7).
+        let password = Credential::Password(b"1234567".to_vec());
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wep, &password),
+            Err(NetworkConfigError::PasswordLen)
+        );
+    }
+
+    #[test]
+    fn check_config_errors_invalid_wpa_password() {
         // password too short
         let short_password = Credential::Password(b"1234567".to_vec());
         assert_variant!(
@@ -542,16 +568,26 @@ mod tests {
     }
 
     #[test]
-    fn check_config_errors_invalid_psk() {
+    fn check_config_errors_invalid_wep_credential_variant() {
+        // Unsupported variant (`Psk`).
+        let psk = Credential::Psk(b"12345".to_vec());
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wep, &psk),
+            Err(NetworkConfigError::MissingPasswordPsk)
+        );
+    }
+
+    #[test]
+    fn check_config_errors_invalid_wpa_psk() {
         // PSK length not 32 characters
-        let short_psk = Credential::Psk([6; PSK_BYTE_LEN - 1].to_vec());
+        let short_psk = Credential::Psk([6; WPA_PSK_LEN - 1].to_vec());
 
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_psk),
             Err(NetworkConfigError::PskLen)
         );
 
-        let long_psk = Credential::Psk([7; PSK_BYTE_LEN + 1].to_vec());
+        let long_psk = Credential::Psk([7; WPA_PSK_LEN + 1].to_vec());
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_psk),
             Err(NetworkConfigError::PskLen)
@@ -567,7 +603,7 @@ mod tests {
             Err(NetworkConfigError::OpenNetworkPassword)
         );
 
-        let psk = Credential::Psk([1; PSK_BYTE_LEN].to_vec());
+        let psk = Credential::Psk([1; WPA_PSK_LEN].to_vec());
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &psk),
             Err(NetworkConfigError::OpenNetworkPassword)
@@ -672,8 +708,8 @@ mod tests {
         assert_eq!(Credential::from_bytes(vec![2; 63]), Credential::Password(vec![2; 63]));
         // credential from bytes should only be used to load legacy data, so PSK won't be supported
         assert_eq!(
-            Credential::from_bytes(vec![2; PSK_BYTE_LEN]),
-            Credential::Password(vec![2; PSK_BYTE_LEN])
+            Credential::from_bytes(vec![2; WPA_PSK_LEN]),
+            Credential::Password(vec![2; WPA_PSK_LEN])
         );
         assert_eq!(Credential::from_bytes(vec![]), Credential::None);
     }
