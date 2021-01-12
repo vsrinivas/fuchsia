@@ -184,6 +184,13 @@ executable("timer_test") {
   ]
 }
 
+executable("token_bucket_test") {
+  output_name = "token_bucket_test"
+  testonly = true
+  sources = [ "token_bucket_test.cc" ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
+}
+
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
@@ -214,6 +221,7 @@ unittest_package("brcmfmac_test") {
             "netbuf_test",
             "task_queue_test",
             "timer_test",
+            "token_bucket_test",
             "workqueue_test",
           ]) {
     deps += [ ":$test_name" ]

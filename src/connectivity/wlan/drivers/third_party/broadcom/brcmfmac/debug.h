@@ -25,6 +25,8 @@
 
 #include <ddk/debug.h>
 
+#include "token_bucket.h"
+
 // Some convenience macros for error and debug printing.
 #define BRCMF_ERR(fmt, ...) zxlogf(ERROR, "(%s): " fmt, __func__, ##__VA_ARGS__)
 
@@ -107,8 +109,30 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
     }                                     \
   } while (0)
 
+// Throttle calls to only happen at a specific rate per second. If an event is
+// throttled it will not be called at all and no additional operations will be
+// performed nor any additional logs created.
+#define BRCMF_THROTTLE(events_per_second, event)                  \
+  do {                                                            \
+    static wlan::brcmfmac::TokenBucket bucket(events_per_second); \
+    if (bucket.consume()) {                                       \
+      event;                                                      \
+    }                                                             \
+  } while (0)
+
+#define BRCMF_ERR_THROTTLE(fmt, ...) \
+  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_ERR(fmt, ##__VA_ARGS__))
+#define BRCMF_WARN_THROTTLE(fmt, ...) \
+  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_WARN(fmt, ##__VA_ARGS__))
+#define BRCMF_INFO_THROTTLE(fmt, ...) \
+  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_INFO(fmt, ##__VA_ARGS__))
+#define BRCMF_DBG_THROTTLE(filter, fmt, ...) \
+  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_DBG(filter, fmt, ##__VA_ARGS__))
+
 namespace wlan {
 namespace brcmfmac {
+
+constexpr double kLogThrottleEventsPerSec = 2.0;
 
 // This class implements debugging functionality for the brcmfmac driver.
 class Debug {

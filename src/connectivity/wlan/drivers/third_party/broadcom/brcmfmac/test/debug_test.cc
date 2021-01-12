@@ -58,4 +58,11 @@ TEST(DebugTest, DumpNoCrash) {
   }
 };
 
+TEST(DebugTest, ThrottleMacrosCompile) {
+  BRCMF_ERR_THROTTLE("Throttled error message: %d", 42);
+  BRCMF_WARN_THROTTLE("Throttled warning message: %s", "scary");
+  BRCMF_INFO_THROTTLE("Throttled info message: %x", 0xf00);
+  BRCMF_DBG_THROTTLE(WLANIF, "Throttled debug message: %c", '!');
+}
+
 }  // namespace
