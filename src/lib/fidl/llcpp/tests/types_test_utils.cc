@@ -15,6 +15,13 @@ void HandleChecker::AddEvent(const zx_handle_t event) {
   events_.emplace_back(zx::event(dupe));
 }
 
+void HandleChecker::AddEvent(const zx::event& event) {
+  ASSERT_TRUE(event.is_valid());
+  zx::event new_event;
+  ASSERT_EQ(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &new_event), ZX_OK);
+  events_.emplace_back(std::move(new_event));
+}
+
 void HandleChecker::CheckEvents() {
   for (size_t i = 0; i < events_.size(); ++i) {
     zx_info_handle_count_t info = {};

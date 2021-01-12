@@ -29,6 +29,7 @@ class HandleChecker {
   size_t size() const { return events_.size(); }
 
   void AddEvent(zx_handle_t event);
+  void AddEvent(const zx::event& event);
   void CheckEvents();
 
  private:

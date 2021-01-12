@@ -5,13 +5,13 @@
 #ifndef LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 #define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
+#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
 #include <iterator>
 #include <type_traits>
-
-#include "tracking_ptr.h"
 
 namespace {
 class LayoutChecker;
@@ -54,6 +54,9 @@ class VectorView {
     set_count(count);
   }
 
+  // Allocates a vector using the allocator.
+  VectorView(AnyAllocator& allocator, size_t count)
+      : count_(count), data_(allocator.AllocateVector<T>(count)) {}
   // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
   VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
@@ -129,6 +132,14 @@ class VectorView {
   const T* cend() const { return data() + count(); }
 
   fidl_vector_t* impl() { return this; }
+
+  void Allocate(AnyAllocator& allocator, size_t count) {
+    if (is_owned()) {
+      delete[] data_;
+    }
+    count_ = count;
+    data_ = allocator.AllocateVector<T>(count);
+  }
 
  private:
   void set_data_internal(tracking_ptr<T[]>&& data) {

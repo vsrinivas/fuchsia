@@ -5,11 +5,20 @@
 #ifndef LIB_FIDL_LLCPP_STRING_VIEW_H_
 #define LIB_FIDL_LLCPP_STRING_VIEW_H_
 
+#include <cstring>
+#include <string>
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#include <string_view>
+#else
+#include <lib/fit/string_view.h>
+#endif
+
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
 #include <type_traits>
 
+#include "fidl_allocator.h"
 #include "vector_view.h"
 
 namespace fidl {
@@ -25,6 +34,17 @@ class StringView final : private VectorView<const char> {
       : VectorView(std::move(data), size) {}
   explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
   explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
+  // Allocates a string using the allocator.
+#if defined(__cplusplus) && __cplusplus >= 201703L
+  StringView(AnyAllocator& allocator, std::string_view from) : VectorView(allocator, from.size()) {
+    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+  }
+#else
+  StringView(AnyAllocator& allocator, const std::string& from)
+      : VectorView(allocator, from.size()) {
+    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+  }
+#endif
 
   // Constructs a fidl::StringView referencing a string literal. For example:
   //
@@ -36,6 +56,23 @@ class StringView final : private VectorView<const char> {
       : VectorView(fidl::unowned_ptr_t<const char>(literal), size) {
     static_assert(N > 0, "String should not be empty");
   }
+
+  // Assigns a new value using the allocator.
+#if defined(__cplusplus) && __cplusplus >= 201703L
+  void Set(AnyAllocator& allocator, std::string_view from) {
+    Allocate(allocator, from.size());
+    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+  }
+#else
+  void Set(AnyAllocator& allocator, fit::string_view& from) {
+    Allocate(allocator, from.size());
+    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+  }
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201703L
+  std::string_view get() const { return std::string_view(data(), size()); }
+#endif
 
   uint64_t size() const { return count(); }
   void set_size(uint64_t size) { set_count(size); }
