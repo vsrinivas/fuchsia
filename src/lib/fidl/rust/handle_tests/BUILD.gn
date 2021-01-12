@@ -5,38 +5,32 @@
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-source_set("deps") {
-  deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-  ]
-  if (is_fuchsia) {
-    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
-  }
+handle_test_sources = [
+  "src/channel.rs",
+  "src/lib.rs",
+  "src/socket.rs",
+]
+
+handle_test_deps = [
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//third_party/rust_crates:async-trait",
+  "//third_party/rust_crates:futures",
+]
+
+if (is_fuchsia) {
+  handle_test_deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
 }
 
 rustc_test("fidl_rust_handle_tests") {
   edition = "2018"
-  deps = [ ":deps" ]
-
-  sources = [
-    "src/channel.rs",
-    "src/lib.rs",
-    "src/socket.rs",
-  ]
+  sources = handle_test_sources
+  deps = handle_test_deps
 }
 
 # Also build as a library for use in overnet tests.
 rustc_library("fidl_handle_tests") {
-  name = "fidl_handle_tests"
   edition = "2018"
-  deps = [ ":deps" ]
-
-  sources = [
-    "src/channel.rs",
-    "src/lib.rs",
-    "src/socket.rs",
-  ]
+  sources = handle_test_sources
+  deps = handle_test_deps
 }

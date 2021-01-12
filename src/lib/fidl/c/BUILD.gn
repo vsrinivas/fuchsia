@@ -4,7 +4,7 @@
 
 import("//build/test/test_package.gni")
 
-unittest_package("fidl-c-tests") {
+unittest_package("fidl_c_tests") {
   deps = [
     "coding_tables_tests:bin",
     "llcpp_interop_tests:bin",
@@ -31,7 +31,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":fidl-c-tests",
+    ":fidl_c_tests",
     "walker_tests:fidl-handle-closing-tests",
     "walker_tests:fidl-walker-host-tests($host_toolchain)",
     "walker_tests:fidl-walker-tests",

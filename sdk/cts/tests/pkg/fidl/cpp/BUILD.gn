@@ -138,7 +138,7 @@ cts_fuchsia_unittest_component("fidl_hlcpp_unit_tests") {
   deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
 
-cts_fuchsia_test_package("fidl-hlcpp-tests") {
+cts_fuchsia_test_package("fidl_hlcpp_tests") {
   test_components = [
     ":fidl_hlcpp_conformance_tests",
     ":fidl_hlcpp_unit_tests",
@@ -191,8 +191,8 @@ cts_source_set("handle_util") {
 group("tests") {
   testonly = true
   deps = [
-    ":fidl-hlcpp-tests",
     ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
+    ":fidl_hlcpp_tests",
     ":fidl_hlcpp_unit_tests_host($host_toolchain)",
   ]
 }

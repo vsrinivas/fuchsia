@@ -176,7 +176,7 @@ fuchsia_unittest_component("fidl_llcpp_builder_tests") {
   deps = [ ":fidl_llcpp_builder_tests_bin" ]
 }
 
-fuchsia_test_package("fidl-llcpp-tests") {
+fuchsia_test_package("fidl_llcpp_tests") {
   test_components = [
     ":fidl_llcpp_builder_tests",
     ":fidl_llcpp_conformance_tests",
@@ -187,7 +187,7 @@ fuchsia_test_package("fidl-llcpp-tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":fidl-llcpp-tests",
     ":fidl_llcpp_conformance_tests_host($host_toolchain)",
+    ":fidl_llcpp_tests",
   ]
 }

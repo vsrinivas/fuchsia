@@ -5,8 +5,7 @@ build system, respecting the following goals:
 
 *   **Name consistently**. If Rust uses `fx test fidl_rust_conformance_tests`,
     then Go should use `fx test fidl_go_conformance_tests`. There should be no
-    need to continually look these up in the contributing doc because they're
-    all different.
+    need to continually look these up because they're all different.
 *   **Run what you need**. If there are multiple test executables in a given
     category, it should be easy to only run the one you care about using `fx
     test`.
@@ -34,7 +33,7 @@ This document uses the following terminology:
 
 General guidelines:
 
-*   Use hyphens in [package names][package_names], and underscores in everything else.
+*   Use underscores, not hyphens.
 *   End names with the plural `_tests` rather than the singular `_test`.
 *   Use full, descriptive, unique names for packages, components, and binaries.
 
@@ -45,8 +44,7 @@ binary level. But the fact is that these names must be unique, and it is better
 to make them unique in a consistent way rather than remembering odd rules like
 `fidl-bindings-test` is for Dart and `fidl-test` is for C.
 
-Names should use the following scheme, joining parts with hyphens or
-underscores:
+Names should use the following scheme, joining parts with underscores:
 
 > _tool_ [ _bindings_ ] [ _category_ [ _subcategory_ ] ] **tests**
 
@@ -111,17 +109,14 @@ binary. To wrap this in a package, start with a `fuchsia_unittest_package`:
 ```gn
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_package("fidl-foo-tests") { # package names must use hyphens
-  component_name = "fidl_foo_tests"          # but we can use underscores here
+fuchsia_unittest_package("fidl_foo_tests") {
   executable_path = "bin/fidl_foo_tests"
   deps = [ ":fidl_foo_tests_bin" ]
 }
 ```
 
-We can now run the test by package name (`fx test fidl-foo-tests`) or by
-component name (`fx test fidl_foo_tests`). For single-test packages like this,
-**use the component name in documentation** (e.g.
-[Contributing to Fidl][contributing], `"Test:"` lines in commit messages).
+We can now run the test by package name or component name (they are the same in
+this case) with `fx test fidl_foo_tests`.
 
 For multiple device tests, collect them all in a **single package** with
 `fuchsia_test_package`. For example, suppose we split `fidl_foo_tests` into
@@ -140,7 +135,7 @@ fuchsia_unittest_component("fidl_foo_integration_tests") {
   deps = [ "fidl_foo_integration_tests_bin" ]
 }
 
-fuchsia_test_package("fidl-foo-tests") {
+fuchsia_test_package("fidl_foo_tests") {
   test_components = [
     ":fidl_foo_unit_tests",
     ":fidl_foo_integration_tests",
@@ -155,8 +150,7 @@ If your test requires any component features, services, etc. beyond the
 # BUILD.gn
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_package("fidl-foo-tests") {
-  component_name = "fidl_foo_tests"
+fuchsia_unittest_package("fidl_foo_tests") {
   manifest = "meta/fidl_foo_tests.cmx"
   deps = [ ":fidl_foo_tests_bin" ]
 }
@@ -224,12 +218,11 @@ category, the test target simply builds under either toolchain. For example:
 import("//src/sys/build/components.gni")
 
 rustc_test("fidl_rust_conformance_tests_bin") {
-  output_name = "fidl_rust_conformance_tests"          # host test name
+  output_name = "fidl_rust_conformance_tests"              # host test name
   ...
 }
 
-fuchsia_unittest_package("fidl-rust-tests") {
-  component_name = "fidl_rust_conformance_tests"       # device test name
+fuchsia_unittest_package("fidl_rust_conformance_tests") {  # device test name
   executable_path = "bin/fidl_rust_conformance_tests"
   deps = [ ":fidl_rust_conformance_tests_bin" ]
 }
@@ -238,7 +231,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fidl_rust_conformance_tests_bin($host_toolchain)",
-    ":fidl-rust-tests",
+    ":fidl_rust_conformance_tests",
   ]
 }
 ```
@@ -258,7 +251,7 @@ fuchsia_unittest_component("fidl_rust_conformance_tests") {  # device test name
   deps = [ ":fidl_rust_conformance_tests_bin" ]
 }
 
-fuchsia_test_package("fidl-rust-tests") {
+fuchsia_test_package("fidl_rust_tests") {
   test_components = [
     ":fidl_rust_conformance_tests",
     ...
@@ -269,7 +262,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fidl_rust_conformance_tests_bin($host_toolchain)",
-    ":fidl-rust-tests",
+    ":fidl_rust_tests",
   ]
 }
 ```
@@ -291,7 +284,6 @@ source_set("conformance_test_sources") {
   ...
 }
 
-
 test("fidl_hlcpp_conformance_tests_bin") {
   output_name = "fidl_hlcpp_conformance_tests"
   ...
@@ -303,7 +295,7 @@ test("fidl_hlcpp_conformance_tests_bin") {
 
 if (is_host) {
   test("fidl_hlcpp_conformance_tests_bin_host") {
-    output_name = "fidl_hlcpp_conformance_tests"        # host test name
+    output_name = "fidl_hlcpp_conformance_tests"            # host test name
     ...
     deps = [
       ":conformance_test_sources",
@@ -312,8 +304,7 @@ if (is_host) {
   }
 }
 
-fuchsia_unittest_package("fidl-hlcpp-tests") {
-  component_name = "fidl_hlcpp_conformance_tests"       # device test name
+fuchsia_unittest_package("fidl_hlcpp_conformance_tests") {  # device test name
   executable_path = "bin/fidl_hlcpp_conformance_tests"
   deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
@@ -322,7 +313,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fidl_hlcpp_conformance_tests_bin_host($host_toolchain)",
-    ":fidl-hlcpp-tests"
+    ":fidl_hlcpp_conformance_tests",
   ]
 }
 ```
@@ -421,7 +412,5 @@ tests. Using `fx test`, we can already
 [run_fuchsia_tests]: /docs/development/testing/run_fuchsia_tests.md
 [component_manifest]: /docs/concepts/components/v1/component_manifests.md
 [package_url]: /docs/concepts/packages/package_url.md
-[package_names]: /docs/concepts/packages/package_url.md#package_identity
 [source_code_layout]: /docs/concepts/source_code/layout.md
 [building_components]: /docs/development/components/build.md
-[contributing]: /docs/contribute/contributing-to-fidl

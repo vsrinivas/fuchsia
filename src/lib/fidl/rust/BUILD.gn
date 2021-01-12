@@ -50,7 +50,7 @@ fuchsia_unittest_component("fidl_rust_handle_tests") {
   deps = [ "handle_tests:fidl_rust_handle_tests" ]
 }
 
-fuchsia_test_package("fidl-rust-tests") {
+fuchsia_test_package("fidl_rust_tests") {
   test_components = [
     ":fidl_rust_conformance_tests",
     ":fidl_rust_external_tests",
@@ -62,8 +62,8 @@ fuchsia_test_package("fidl-rust-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":fidl-rust-tests",
     ":fidl_rust_conformance_tests_bin($host_toolchain)",
+    ":fidl_rust_tests",
     "compilation_tests:tests",
     "fidl:fidl_rust_lib_tests($host_toolchain)",
     "handle_tests:fidl_rust_handle_tests($host_toolchain)",
