@@ -33,8 +33,13 @@ rustc_library("utils") {
   ]
 
   sources = [
+    "actor.rs",
+    "actor_runner.rs",
+    "counter.rs",
     "data.rs",
+    "environment.rs",
     "fvm.rs",
+    "instance.rs",
     "io.rs",
     "mod.rs",
   ]
