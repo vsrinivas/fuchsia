@@ -108,7 +108,7 @@ impl Notify for RealStateNotifier {
 mod tests {
     use super::*;
     use crate::update_manager::tests::{
-        BlockingUpdateChecker, FakeCommitQuerier, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
+        BlockingUpdateChecker, FakeCommitQuerier, FakeCurrentChannelUpdater,
         FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker, LATEST_SYSTEM_IMAGE,
     };
     use crate::update_manager::{
@@ -142,7 +142,6 @@ mod tests {
                     Arc::new(current_channel_updater),
                     update_checker,
                     update_applier,
-                    FakeLastUpdateStorage::new(),
                     commit_status_provider,
                 )
                 .await

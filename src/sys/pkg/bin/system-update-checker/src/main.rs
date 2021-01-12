@@ -9,7 +9,6 @@ mod check;
 mod config;
 mod connect;
 mod errors;
-mod last_update_storage;
 mod poller;
 mod rate_limiter;
 mod update_manager;

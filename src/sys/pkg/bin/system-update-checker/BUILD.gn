@@ -65,7 +65,6 @@ rustc_binary("bin") {
     "src/config.rs",
     "src/connect.rs",
     "src/errors.rs",
-    "src/last_update_storage.rs",
     "src/main.rs",
     "src/poller.rs",
     "src/rate_limiter.rs",

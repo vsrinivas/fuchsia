@@ -53,9 +53,9 @@ mod tests {
     use crate::config::ConfigBuilder;
     use crate::update_manager::{
         tests::{
-            FakeCommitQuerier, FakeCurrentChannelUpdater, FakeLastUpdateStorage,
-            FakeTargetChannelUpdater, FakeUpdateChecker, FakeUpdateManagerControlHandle,
-            StateChangeCollector, UnreachableUpdateApplier,
+            FakeCommitQuerier, FakeCurrentChannelUpdater, FakeTargetChannelUpdater,
+            FakeUpdateChecker, FakeUpdateManagerControlHandle, StateChangeCollector,
+            UnreachableUpdateApplier,
         },
         UpdateManager, UpdateManagerRequest,
     };
@@ -149,7 +149,6 @@ mod tests {
                 Arc::new(FakeCurrentChannelUpdater::new()),
                 checker.clone(),
                 UnreachableUpdateApplier,
-                FakeLastUpdateStorage::new(),
                 FakeCommitQuerier::new(),
             )
             .boxed();

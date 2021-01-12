@@ -17,19 +17,12 @@ const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum SystemUpdateStatus {
-    UpToDate {
-        system_image: Hash,
-        update_package: Hash,
-    },
-    UpdateAvailable {
-        current_system_image: Hash,
-        latest_system_image: Hash,
-        latest_update_package: Hash,
-    },
+    UpToDate { system_image: Hash, update_package: Hash },
+    UpdateAvailable { current_system_image: Hash, latest_system_image: Hash },
 }
 
 pub async fn check_for_system_update(
-    last_known_update_merkle: Option<&Hash>,
+    last_known_update_package: Option<&Hash>,
 ) -> Result<SystemUpdateStatus, Error> {
     let mut file_system = RealFileSystem;
     let package_resolver =
@@ -40,7 +33,7 @@ pub async fn check_for_system_update(
         &mut file_system,
         &package_resolver,
         &paver,
-        last_known_update_merkle,
+        last_known_update_package,
     )
     .await
 }
@@ -66,22 +59,22 @@ async fn check_for_system_update_impl(
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
     paver: &PaverProxy,
-    last_known_update_merkle: Option<&Hash>,
+    last_known_update_package: Option<&Hash>,
 ) -> Result<SystemUpdateStatus, crate::errors::Error> {
     let update_pkg = latest_update_package(package_resolver).await?;
     let latest_update_merkle = update_pkg.hash().await.map_err(errors::UpdatePackage::Hash)?;
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
 
-    let update_available = Ok(SystemUpdateStatus::UpdateAvailable {
-        current_system_image,
-        latest_system_image,
-        latest_update_package: latest_update_merkle,
-    });
+    let update_available =
+        Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image });
 
-    if let Some(last_known_update_merkle) = last_known_update_merkle {
-        if *last_known_update_merkle != latest_update_merkle {
-            return update_available;
+    if let Some(last_known_update_package) = last_known_update_package {
+        if *last_known_update_package == latest_update_merkle {
+            return Ok(SystemUpdateStatus::UpToDate {
+                system_image: current_system_image,
+                update_package: latest_update_merkle,
+            });
         }
     }
 
@@ -148,13 +141,6 @@ async fn latest_update_package(
         .map_err(errors::UpdatePackage::ResolveFidl)?
         .map_err(|raw| errors::UpdatePackage::Resolve(zx::Status::from_raw(raw)))?;
     Ok(UpdatePackage::new(dir_proxy))
-}
-
-pub async fn latest_update_merkle(
-    package_resolver: &impl PackageResolverProxyInterface,
-) -> Result<Hash, errors::UpdatePackage> {
-    let update = latest_update_package(package_resolver).await?;
-    update.hash().await.map_err(errors::UpdatePackage::Hash)
 }
 
 async fn latest_system_image_merkle(
@@ -284,12 +270,6 @@ pub mod test_check_for_system_update_impl {
             let temp_dir = tempfile::tempdir().expect("create temp dir");
             fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
                 .expect("write meta");
-            PackageResolverProxyTempDir { temp_dir }
-        }
-
-        pub fn new_with_merkle(merkle: &Hash) -> PackageResolverProxyTempDir {
-            let temp_dir = tempfile::tempdir().expect("create temp dir");
-            fs::write(temp_dir.path().join("meta"), merkle.to_string()).expect("write meta");
             PackageResolverProxyTempDir { temp_dir }
         }
 
@@ -626,7 +606,7 @@ pub mod test_check_for_system_update_impl {
 
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package: _ })
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
             if
                 current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
@@ -638,7 +618,7 @@ pub mod test_check_for_system_update_impl {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_update_package_only_update_available() {
+    async fn test_different_update_package_hash_does_not_trigger_update() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
@@ -656,15 +636,11 @@ pub mod test_check_for_system_update_impl {
 
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
-            if
-                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
-                    .parse()
-                    .expect("active system image string literal") &&
-                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
-                    .parse()
-                    .expect("new system image string literal") &&
-                latest_update_package == *UPDATE_PACKAGE_MERKLE
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package})
+            if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal") &&
+            update_package == *UPDATE_PACKAGE_MERKLE
         );
     }
 
@@ -686,25 +662,19 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(
-            &mut file_system,
-            &package_resolver,
-            &paver,
-            Some(&UPDATE_PACKAGE_MERKLE),
-        )
-        .await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
             if
                 current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
                     .expect("active system image string literal") &&
                 latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
-                    .expect("new system image string literal") &&
-                latest_update_package == *UPDATE_PACKAGE_MERKLE
+                    .expect("new system image string literal")
         );
     }
 
@@ -726,25 +696,19 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(
-            &mut file_system,
-            &package_resolver,
-            &paver,
-            Some(&UPDATE_PACKAGE_MERKLE),
-        )
-        .await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
-            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
             if
                 current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
                     .expect("active system image string literal") &&
                 latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
                     .parse()
-                    .expect("new system image string literal") &&
-                latest_update_package == *UPDATE_PACKAGE_MERKLE
+                    .expect("new system image string literal")
         );
     }
 
@@ -766,13 +730,8 @@ pub mod test_check_for_system_update_impl {
         );
         let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(
-            &mut file_system,
-            &package_resolver,
-            &paver,
-            Some(&UPDATE_PACKAGE_MERKLE),
-        )
-        .await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
