@@ -4,8 +4,6 @@
 
 library zircon.device.sysmem;
 
-[repr = "C"]
-
 struct BufferCollectionInfo {
 };
 

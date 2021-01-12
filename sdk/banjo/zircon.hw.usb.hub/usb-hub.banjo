@@ -6,7 +6,7 @@ library zircon.hw.usb.hub;
 
 using zx;
 
-[Packed, repr="C"]
+[Packed]
 struct UsbHubDescriptor {
     uint8 bDescLength;
     uint8 bDescriptorType;

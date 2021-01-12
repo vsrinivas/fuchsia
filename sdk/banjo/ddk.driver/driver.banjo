@@ -5,27 +5,21 @@
 library ddk.driver;
 
 // TODO: Not need this anymore.
-[repr = "Hidden"]
 struct ZxDevice {
 };
 
 // TODO: Not need this anymore.
-[repr = "C"]
 struct ZxProtocolDevice {
 };
 
-[repr = "C"]
 struct ZxDeviceProp {
 };
 
-[repr = "C"]
 struct DeviceAddArgs {
 };
 
-[repr = "C"]
 struct DeviceFragment {
 };
 
-[repr = "C"]
 struct CompositeDeviceFragment {
 };

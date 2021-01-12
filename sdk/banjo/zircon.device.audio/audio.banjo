@@ -20,7 +20,7 @@ enum AudioSampleFormat : uint32 {
     FLAG_MASK = 0xC000;
 };
 
-[repr = "C", Packed]
+[Packed]
 struct AudioStreamFormatRange {
     AudioSampleFormat sample_formats;
     uint32 min_frames_per_second;

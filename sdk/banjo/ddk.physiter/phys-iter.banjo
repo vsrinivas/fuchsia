@@ -4,7 +4,6 @@
 
 library ddk.physiter;
 
-[repr = "C"]
 struct PhysIterSgEntry {
     /// length starting at the scatter gather entry offset, must be non zero
     usize length;

@@ -38,7 +38,7 @@ enum PipeError : int32 {
 
 /// Additional command parameters used for read/write commands.
 /// Note: This structure is known to both the virtual device and driver.
-[Packed, repr="C"]
+[Packed]
 struct PipeCmdReadWriteParams {
     uint32 buffers_count;
     int32 consumed_size;
@@ -49,7 +49,7 @@ struct PipeCmdReadWriteParams {
 
 /// Pipe command structure used for all commands.
 /// Note: This structure is known to both the virtual device and driver.
-[Packed, repr="C"]
+[Packed]
 struct PipeCmdBuffer {
     int32 cmd;
     int32 id;

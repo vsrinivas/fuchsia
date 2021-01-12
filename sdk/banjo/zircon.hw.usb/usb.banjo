@@ -10,7 +10,7 @@ enum UsbSpeed : uint32 {
 
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbSetup {
     uint8 bmRequestType;
     uint8 bRequest;
@@ -19,7 +19,7 @@ struct UsbSetup {
     uint16 wLength;
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbDeviceDescriptor {
     uint8 bLength;
     uint8 bDescriptorType;
@@ -37,7 +37,7 @@ struct UsbDeviceDescriptor {
     uint8 bNumConfigurations;
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbConfigurationDescriptor {
     uint8 bLength;
     uint8 bDescriptorType;
@@ -49,7 +49,7 @@ struct UsbConfigurationDescriptor {
     uint8 bMaxPower;
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbInterfaceDescriptor {
     uint8 bLength;
     uint8 bDescriptorType;
@@ -59,7 +59,7 @@ struct UsbInterfaceDescriptor {
     uint8 bInterval;
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbEndpointDescriptor {
     uint8 bLength;
     uint8 bDescriptorType;
@@ -71,7 +71,7 @@ struct UsbEndpointDescriptor {
     uint8 iInterface;
 };
 
-[Packed, repr="C"]
+[Packed]
 struct UsbSsEpCompDescriptor {
     uint8 bLength;
     uint8 bDescriptorType;
