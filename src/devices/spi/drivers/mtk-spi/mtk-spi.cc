@@ -7,7 +7,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
@@ -16,6 +15,7 @@
 #include <fbl/auto_call.h>
 
 #include "registers.h"
+#include "src/devices/spi/drivers/mtk-spi/mtk_spi_bind.h"
 
 namespace spi {
 
@@ -226,9 +226,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace spi
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mtk_spi, spi::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_SPI),
-ZIRCON_DRIVER_END(mtk_spi)
+ZIRCON_DRIVER(mtk_spi, spi::driver_ops, "zircon", "0.1");

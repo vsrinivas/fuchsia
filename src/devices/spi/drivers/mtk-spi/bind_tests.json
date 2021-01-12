@@ -1,0 +1,37 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.SPI"
+        }
+    },
+    {
+        "name": "Mismatch Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.SPI"
+
+        }
+    },
+    {
+        "name": "Mismatch VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.SPI"
+
+        }
+    },
+    {
+        "name": "Mismatch DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
+        }
+    }
+]

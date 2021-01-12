@@ -2,13 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":mtk-spi-test" ]
+  deps = [
+    ":mtk-spi-test",
+    ":mtk_spi_bind_test",
+  ]
+}
+
+bind_rules("mtk_spi_bind") {
+  rules = "mtk_spi.bind"
+  output = "mtk_spi_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.mediatek.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 driver_module("mtk-spi") {
@@ -21,15 +35,13 @@ driver_module("mtk-spi") {
   }
   sources = [ "mtk-spi.cc" ]
   deps = [
+    ":mtk_spi_bind",
     "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
@@ -44,6 +56,7 @@ test("mtk-spi-test-bin") {
     "mtk-spi.cc",
   ]
   deps = [
+    ":mtk_spi_bind",
     "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -52,9 +65,6 @@ test("mtk-spi-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
