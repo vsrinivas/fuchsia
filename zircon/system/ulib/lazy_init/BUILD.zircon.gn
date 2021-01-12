@@ -11,7 +11,8 @@ zx_library("lazy_init") {
   sources = []
   kernel = true
   static = true
-  if (!is_kernel) {
+  host = true
+  if (is_fuchsia && !is_kernel) {
     deps = [ "$zx/system/ulib/zx" ]
   }
 }
