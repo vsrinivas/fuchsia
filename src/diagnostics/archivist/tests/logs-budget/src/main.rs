@@ -27,6 +27,7 @@ use futures::{
 };
 use std::{
     collections::BTreeMap,
+    ops::Deref,
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
@@ -36,6 +37,8 @@ const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/archivist-with-small-caches.cmx";
 const PUPPET_URL: &str = "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet.cmx";
 const PUPPET_MONIKER: &str = "socket-puppet.cmx";
+
+const TEST_PACKET_LEN: usize = 49;
 
 static HAVE_REQUESTED_STOP: AtomicBool = AtomicBool::new(false);
 
@@ -47,170 +50,199 @@ async fn main() {
     info!("testing that the archivist's log buffers correctly enforce their budget");
 
     info!("creating nested environment for collecting diagnostics");
-    let (launcher, mut controllers) = create_diagnostics_env();
-
-    info!("starting our archivist");
-    let archivist = launch_archivist(&launcher).await;
-    let archivist_config = parse_config("/pkg/data/embedding-config.json").unwrap();
-    let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
-    let reader = ArchiveReader::new()
-        .with_archive(archive)
-        .with_minimum_schema_count(1)
-        .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
-        .add_selector("archivist-with-small-caches.cmx:root/sources");
+    let mut env = PuppetEnv::create().await;
 
     info!("check that archivist log state is clean");
-    until_archivist_state_matches(&reader, &[]).await;
+    env.until_archivist_state_matches(&[]).await;
 
-    info!("launching puppet");
-    let _puppet_app = launch_puppet(&launcher);
-
-    debug!("waiting for controller request");
-    let controller = controllers.next().await.unwrap();
-    debug!("waiting for ControlPuppet call");
-    let puppet = serve_controller(controller).await;
-
-    info!("having the puppet connect to LogSink");
-    puppet.connect_to_log_sink().await.unwrap();
-
-    info!("observe the puppet appears in archivist's inspect output");
-    until_archivist_state_matches(
-        &reader,
-        &[LogSource { moniker: PUPPET_MONIKER, messages: Count { total: 0, dropped: 0 } }],
-    )
-    .await;
-
-    info!("having the puppet log packets until overflow");
-    let packet_len = 49;
-    let messages_allowed_in_cache = archivist_config.logs.max_cached_original_bytes / packet_len;
-    let messages_to_send = messages_allowed_in_cache as u64 * 10;
-    for messages_sent in 1..messages_to_send {
-        let mut packet: fx_log_packet_t = Default::default();
-        packet.metadata.severity = fuchsia_syslog::levels::INFO;
-        packet.fill_data(1..(packet_len - METADATA_SIZE), b'A' as _);
-        puppet.emit_packet(packet.as_bytes()).await.unwrap();
-
-        let expected_dropped_count = messages_sent.saturating_sub(messages_allowed_in_cache as u64);
-        until_archivist_state_matches(
-            &reader,
-            &[LogSource {
-                moniker: PUPPET_MONIKER,
-                messages: Count { total: messages_sent, dropped: expected_dropped_count },
-            }],
-        )
-        .await;
-    }
+    let puppet = env.launch_puppet().await;
+    env.validate(&puppet).await;
 
     info!("stopping puppet");
     HAVE_REQUESTED_STOP.store(true, Ordering::SeqCst);
     puppet.stop().await.unwrap();
 }
 
-fn create_diagnostics_env() -> (LauncherProxy, Receiver<SocketPuppetControllerRequestStream>) {
-    let (mut sender, receiver) = mpsc::channel(1);
-    let mut fs = ServiceFs::new();
-    fs.add_fidl_service(move |requests: SocketPuppetControllerRequestStream| {
-        debug!("got controller request, forwarding back to main");
-        sender.start_send(requests).unwrap();
-    });
-
-    let env = fs.create_salted_nested_environment("diagnostics").unwrap();
-    let launcher = env.launcher().clone();
-    Task::spawn(async move {
-        let _env = env; // move env into the task so it stays alive
-        fs.collect::<()>().await
-    })
-    .detach();
-    (launcher, receiver)
+struct PuppetEnv {
+    launcher: LauncherProxy,
+    controllers: Receiver<SocketPuppetControllerRequestStream>,
+    archivist: App,
+    messages_allowed_in_cache: usize,
+    messages_sent: usize,
+    _serve_fs: Task<()>,
 }
 
-async fn launch_archivist(launcher: &LauncherProxy) -> App {
-    // creating a proxy to logsink in our own environment, otherwise embedded archivist just
-    // eats its own logs via logconnector
-    let options = {
-        let mut options = LaunchOptions::new();
-        let (dir_client, dir_server) = zx::Channel::create().unwrap();
+impl PuppetEnv {
+    async fn create() -> Self {
+        let (mut sender, controllers) = mpsc::channel(1);
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<LogSinkMarker, _>().serve_connection(dir_server).unwrap();
-        Task::spawn(fs.collect()).detach();
-        options.set_additional_services(vec![LogSinkMarker::NAME.to_string()], dir_client);
-        options
-    };
+        fs.add_fidl_service(move |requests: SocketPuppetControllerRequestStream| {
+            debug!("got controller request, forwarding back to main");
+            sender.start_send(requests).unwrap();
+        });
 
-    let archivist =
-        launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
+        let env = fs.create_salted_nested_environment("diagnostics").unwrap();
+        let launcher = env.launcher().clone();
+        let _serve_fs = Task::spawn(async move {
+            let _env = env; // move env into the task so it stays alive
+            fs.collect::<()>().await
+        });
 
-    let mut archivist_events = archivist.controller().take_event_stream();
-    if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
-        panic!("archivist terminated early");
+        // creating a proxy to logsink in our own environment, otherwise embedded archivist just
+        // eats its own logs via logconnector
+        let options = {
+            let mut options = LaunchOptions::new();
+            let (dir_client, dir_server) = zx::Channel::create().unwrap();
+            let mut fs = ServiceFs::new();
+            fs.add_proxy_service::<LogSinkMarker, _>().serve_connection(dir_server).unwrap();
+            Task::spawn(fs.collect()).detach();
+            options.set_additional_services(vec![LogSinkMarker::NAME.to_string()], dir_client);
+            options
+        };
+
+        info!("starting our archivist");
+        let archivist =
+            launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
+        let config = parse_config("/pkg/data/embedding-config.json").unwrap();
+
+        let mut archivist_events = archivist.controller().take_event_stream();
+        if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
+            panic!("archivist terminated early");
+        }
+
+        let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
+
+        Self {
+            launcher,
+            controllers,
+            archivist,
+            messages_allowed_in_cache,
+            messages_sent: 0,
+            _serve_fs,
+        }
     }
 
-    archivist
-}
+    fn reader(&self) -> ArchiveReader {
+        let archive = self.archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+        ArchiveReader::new()
+            .with_archive(archive)
+            .with_minimum_schema_count(1)
+            .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
+            .add_selector("archivist-with-small-caches.cmx:root/sources")
+    }
 
-fn launch_puppet(launcher: &LauncherProxy) -> App {
-    let puppet_app = launch(&launcher, PUPPET_URL.to_string(), None).unwrap();
+    async fn launch_puppet(&mut self) -> Puppet {
+        info!("launching puppet");
+        let _app = launch(&self.launcher, PUPPET_URL.to_string(), None).unwrap();
 
-    let mut puppet_events = puppet_app.controller().take_event_stream();
-    Task::spawn(async move {
-        if let OnTerminated { .. } = puppet_events.next().await.unwrap().unwrap() {
-            if !HAVE_REQUESTED_STOP.load(Ordering::SeqCst) {
-                panic!("puppet terminated early");
+        let mut puppet_events = _app.controller().take_event_stream();
+        let _panic_on_exit = Task::spawn(async move {
+            if let OnTerminated { .. } = puppet_events.next().await.unwrap().unwrap() {
+                if !HAVE_REQUESTED_STOP.load(Ordering::SeqCst) {
+                    panic!("puppet terminated early");
+                }
             }
-        }
-    })
-    .detach();
+        });
 
-    puppet_app
-}
+        debug!("waiting for controller request");
+        let mut controller = self.controllers.next().await.unwrap();
 
-async fn serve_controller(
-    mut controller: SocketPuppetControllerRequestStream,
-) -> SocketPuppetProxy {
-    loop {
-        match controller.next().await {
+        debug!("waiting for ControlPuppet call");
+        let proxy = match controller.next().await {
             Some(Ok(SocketPuppetControllerRequest::ControlPuppet {
                 to_control,
                 control_handle,
             })) => {
                 control_handle.shutdown();
-                break to_control.into_proxy().unwrap();
+                to_control.into_proxy().unwrap()
             }
             _ => panic!("did not expect that"),
+        };
+
+        let puppet = Puppet { _app, moniker: PUPPET_MONIKER.to_owned(), proxy, _panic_on_exit };
+
+        info!("having the puppet connect to LogSink");
+        puppet.connect_to_log_sink().await.unwrap();
+
+        info!("observe the puppet appears in archivist's inspect output");
+        self.until_archivist_state_matches(&[LogSource {
+            moniker: &puppet.moniker,
+            messages: Count { total: 0, dropped: 0 },
+        }])
+        .await;
+
+        puppet
+    }
+
+    async fn until_archivist_state_matches(&self, expected_sources: &[LogSource<'_>]) {
+        let expected_sources = expected_sources
+            .iter()
+            .map(|source| (source.moniker.to_string(), source.messages))
+            .collect::<BTreeMap<String, Count>>();
+
+        let reader = self.reader();
+        loop {
+            // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
+            let results = reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
+            let payload = results.payload.as_ref().unwrap();
+            let observed_sources = get_log_counts_by_moniker(&payload);
+            if observed_sources == expected_sources {
+                break;
+            } else {
+                debug!("archivist state did not match expected, sleeping");
+                debug!("sources observed={:?} expected={:?}", observed_sources, expected_sources);
+                Timer::new(Duration::from_millis(100)).await;
+            }
+        }
+    }
+
+    async fn send_message_and_verify(&mut self, puppet: &Puppet) {
+        let mut packet: fx_log_packet_t = Default::default();
+        packet.metadata.severity = fuchsia_syslog::levels::INFO;
+        packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
+        puppet.emit_packet(packet.as_bytes()).await.unwrap();
+
+        self.messages_sent += 1;
+        let expected_dropped_count =
+            self.messages_sent.saturating_sub(self.messages_allowed_in_cache);
+        self.until_archivist_state_matches(&[LogSource {
+            moniker: &puppet.moniker,
+            messages: Count { total: self.messages_sent, dropped: expected_dropped_count },
+        }])
+        .await;
+    }
+
+    async fn validate(mut self, puppet: &Puppet) {
+        info!("having the puppet log packets until overflow");
+        for _ in 0..self.messages_allowed_in_cache * 10 {
+            self.send_message_and_verify(puppet).await;
         }
     }
 }
 
-struct LogSource {
-    moniker: &'static str,
+struct Puppet {
+    proxy: SocketPuppetProxy,
+    moniker: String,
+    _app: App,
+    _panic_on_exit: Task<()>,
+}
+
+impl Deref for Puppet {
+    type Target = SocketPuppetProxy;
+    fn deref(&self) -> &Self::Target {
+        &self.proxy
+    }
+}
+
+struct LogSource<'a> {
+    moniker: &'a str,
     messages: Count,
-}
-
-async fn until_archivist_state_matches(reader: &ArchiveReader, expected_sources: &[LogSource]) {
-    let expected_sources = expected_sources
-        .iter()
-        .map(|source| (source.moniker.to_string(), source.messages))
-        .collect::<BTreeMap<String, Count>>();
-
-    loop {
-        // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
-        let results = reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
-        let payload = results.payload.as_ref().unwrap();
-        let observed_sources = get_log_counts_by_moniker(&payload);
-        if observed_sources == expected_sources {
-            break;
-        } else {
-            debug!("archivist state did not match expected, sleeping");
-            debug!("sources observed={:?} expected={:?}", observed_sources, expected_sources);
-            Timer::new(Duration::from_millis(100)).await;
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Count {
-    total: u64,
-    dropped: u64,
+    total: usize,
+    dropped: usize,
 }
 
 fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Count> {
@@ -219,8 +251,8 @@ fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Co
 
     for (moniker, source) in sources.get_children() {
         if let Some(logs) = source.get_child("logs") {
-            let total = *logs.get_property("total").unwrap().uint().unwrap();
-            let dropped = *logs.get_property("dropped").unwrap().uint().unwrap();
+            let total = *logs.get_property("total").unwrap().uint().unwrap() as usize;
+            let dropped = *logs.get_property("dropped").unwrap().uint().unwrap() as usize;
             counts.insert(moniker.clone(), Count { total, dropped });
         }
     }
