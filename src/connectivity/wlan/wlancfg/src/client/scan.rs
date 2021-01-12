@@ -40,7 +40,7 @@ async fn sme_scan(
     enum SmeScanError {
         ShouldRetryLater,
         Other,
-    };
+    }
 
     async fn sme_scan_internal(
         sme_proxy: &fidl_sme::ClientSmeProxy,
