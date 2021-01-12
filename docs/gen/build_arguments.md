@@ -121,7 +121,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:67
+From //BUILD.gn:58
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -136,7 +136,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -144,7 +144,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:26
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -578,7 +578,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:43
+From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -586,7 +586,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:43
+From //BUILD.gn:34
 
 ### camera_debug
 
@@ -1346,7 +1346,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:62
+From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1354,7 +1354,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:62
+From //BUILD.gn:53
 
 ### host_os
 
@@ -3117,7 +3117,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:49
+From //BUILD.gn:40
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3246,7 +3246,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:57
+From //BUILD.gn:48
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
 
@@ -3254,7 +3254,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:57
+From //BUILD.gn:48
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -3598,7 +3598,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:92
+From //BUILD.gn:83
 
 ### zircon_asserts
 
