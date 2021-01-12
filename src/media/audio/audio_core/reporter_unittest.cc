@@ -7,6 +7,7 @@
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -115,7 +116,13 @@ TEST_F(ReporterTest, InitialState) {
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
           AllOf(NodeMatches(AllOf(NameMatches("volume controls"), PropertyList(IsEmpty()),
                                   PropertyList(IsEmpty()))),
-                ChildrenMatch(IsEmpty())))));
+                ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("active usage policies"),
+                                  PropertyList(UnorderedElementsAre(
+                                      DoubleIs("none gain db", 0.0), DoubleIs("duck gain db", 0.0),
+                                      DoubleIs("mute gain db", 0.0))))),
+                ChildrenMatch(Contains(NodeMatches(
+                    AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", true)))))))))));
 }
 
 // Tests methods that update metrics in the root node.
@@ -264,7 +271,13 @@ TEST_F(ReporterTest, DeviceMetrics) {
                   NameMatches("1"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
-          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())))));
+          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("active usage policies"),
+                                  PropertyList(UnorderedElementsAre(
+                                      DoubleIs("none gain db", 0.0), DoubleIs("duck gain db", 0.0),
+                                      DoubleIs("mute gain db", 0.0))))),
+                ChildrenMatch(Contains(NodeMatches(
+                    AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", true)))))))))));
 
   output_device->StartSession(zx::time(0));
   output_device->DeviceUnderflow(zx::time(10), zx::time(15));
@@ -320,7 +333,13 @@ TEST_F(ReporterTest, DeviceSetGainInfo) {
                   NameMatches("1"),
                   PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))),
-          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())))));
+          AllOf(NodeMatches(NameMatches("volume controls")), ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("active usage policies"),
+                                  PropertyList(UnorderedElementsAre(
+                                      DoubleIs("none gain db", 0.0), DoubleIs("duck gain db", 0.0),
+                                      DoubleIs("mute gain db", 0.0))))),
+                ChildrenMatch(Contains(NodeMatches(
+                    AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", true)))))))))));
 
   fuchsia::media::AudioGainInfo gain_info_a{
       .gain_db = -1.0f,
@@ -753,5 +772,71 @@ TEST_F(ReporterTest, VolumeControlMetrics) {
                                                   DoubleIs("volume", 0.5)))))))))))))))));
 }
 
+// Tests methods that change audio policy metrics.
+TEST_F(ReporterTest, AudioPolicyMetrics) {
+  // Expect behavior gains to be logged, and initial active audio policy to have no active usages.
+  under_test_.SetAudioPolicyBehaviorGain(
+      AudioAdmin::BehaviorGain({.none_gain_db = 0., .duck_gain_db = -10., .mute_gain_db = -100.}));
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("active usage policies"),
+                            PropertyList(UnorderedElementsAre(DoubleIs("none gain db", 0.0),
+                                                              DoubleIs("duck gain db", -10.0),
+                                                              DoubleIs("mute gain db", -100.0))))),
+          ChildrenMatch(Contains(NodeMatches(
+              AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", true)))))))))));
+
+  // Structures to hold active usages and usage behaviors.
+  std::vector<fuchsia::media::Usage> active_usages;
+  std::array<fuchsia::media::Behavior, fuchsia::media::RENDER_USAGE_COUNT> render_usage_behaviors;
+  std::array<fuchsia::media::Behavior, fuchsia::media::CAPTURE_USAGE_COUNT> capture_usage_behaviors;
+  render_usage_behaviors.fill(fuchsia::media::Behavior::NONE);
+  capture_usage_behaviors.fill(fuchsia::media::Behavior::NONE);
+
+  // Expect active RenderUsage::MEDIA to be logged, with default policy NONE.
+  active_usages.push_back(
+      fuchsia::media::Usage::WithRenderUsage((fuchsia::media::AudioRenderUsage::MEDIA)));
+  under_test_.UpdateActiveUsagePolicy(active_usages, render_usage_behaviors,
+                                      capture_usage_behaviors);
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("active usage policies"),
+                            PropertyList(UnorderedElementsAre(DoubleIs("none gain db", 0.0),
+                                                              DoubleIs("duck gain db", -10.0),
+                                                              DoubleIs("mute gain db", -100.0))))),
+          ChildrenMatch(UnorderedElementsAre(
+              NodeMatches(AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", false))))),
+              NodeMatches(AllOf(
+                  NameMatches("2"),
+                  PropertyList(UnorderedElementsAre(
+                      BoolIs("active", true), StringIs("RenderUsage::MEDIA", "NONE")))))))))));
+
+  // Expect active RenderUsage::MEDIA and CaptureUsage::SYSTEM_AGENT to be logged, with DUCK applied
+  // to MEDIA.
+  active_usages.push_back(
+      fuchsia::media::Usage::WithCaptureUsage((fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)));
+  render_usage_behaviors[static_cast<int>(fuchsia::media::AudioRenderUsage::MEDIA)] =
+      fuchsia::media::Behavior::DUCK;
+  under_test_.UpdateActiveUsagePolicy(active_usages, render_usage_behaviors,
+                                      capture_usage_behaviors);
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("active usage policies"),
+                            PropertyList(UnorderedElementsAre(DoubleIs("none gain db", 0.0),
+                                                              DoubleIs("duck gain db", -10.0),
+                                                              DoubleIs("mute gain db", -100.0))))),
+          ChildrenMatch(UnorderedElementsAre(
+              NodeMatches(AllOf(NameMatches("1"), PropertyList(Contains(BoolIs("active", false))))),
+              NodeMatches(AllOf(NameMatches("2"), PropertyList(UnorderedElementsAre(
+                                                      BoolIs("active", false),
+                                                      StringIs("RenderUsage::MEDIA", "NONE"))))),
+              NodeMatches(AllOf(NameMatches("3"),
+                                PropertyList(UnorderedElementsAre(
+                                    BoolIs("active", true), StringIs("RenderUsage::MEDIA", "DUCK"),
+                                    StringIs("CaptureUsage::SYSTEM_AGENT", "NONE")))))))))));
+}
 }  // namespace
 }  // namespace media::audio

@@ -17,6 +17,7 @@
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/format/format.h"
@@ -205,10 +206,10 @@ class Reporter {
 
   Reporter() {}
   Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
-  ~Reporter();
 
   static constexpr size_t kObjectsToCache = 4;
   static constexpr size_t kVolumeControlsToCache = 10;
+  static constexpr size_t kActiveUsagePoliciesToCache = 10;
 
   Container<OutputDevice, kObjectsToCache>::Ptr CreateOutputDevice(const std::string& name,
                                                                    const std::string& thread_name);
@@ -221,6 +222,12 @@ class Reporter {
   // Thermal state of Audio system.
   void SetNumThermalStates(size_t num);
   void SetThermalState(uint32_t state);
+
+  // Audio policy logging of usage activity and behavior (none|duck|mute).
+  void SetAudioPolicyBehaviorGain(AudioAdmin::BehaviorGain behavior_gain);
+  void UpdateActiveUsagePolicy(const std::vector<fuchsia::media::Usage>& active_usages,
+                               const AudioAdmin::RendererPolicies& renderer_policies,
+                               const AudioAdmin::CapturerPolicies& capturer_policies);
 
   // Device creation failures.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);
@@ -252,6 +259,8 @@ class Reporter {
   class CapturerImpl;
   class VolumeControlImpl;
   class VolumeSetting;
+  class ActiveUsagePolicy;
+  class ActiveUsagePolicyTracker;
   struct Impl;
 
   friend class OverflowUnderflowTracker;
@@ -284,6 +293,7 @@ class Reporter {
     inspect::Node volume_controls_node;
 
     std::unique_ptr<ThermalStateTracker> thermal_state_tracker;
+    std::unique_ptr<ActiveUsagePolicyTracker> active_usage_policy_tracker;
 
     // These could be guarded by Reporter::mutex_, but clang's thread safety
     // analysis cannot represent that relationship.

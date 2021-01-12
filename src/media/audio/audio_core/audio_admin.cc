@@ -11,6 +11,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
+
 namespace media::audio {
 
 AudioAdmin::AudioAdmin(StreamVolumeManager* stream_volume_manager,
@@ -36,6 +39,7 @@ AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* stream_v
   FX_DCHECK(stream_volume_manager);
   FX_DCHECK(policy_action_reporter);
   FX_DCHECK(fidl_dispatcher);
+  Reporter::Singleton().SetAudioPolicyBehaviorGain(behavior_gain_);
 }
 
 void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
@@ -166,13 +170,16 @@ void AudioAdmin::ApplyNewPolicies(const RendererPolicies& new_renderer_policies,
 
 void AudioAdmin::UpdatePolicy() {
   TRACE_DURATION("audio", "AudioAdmin::UpdatePolicy");
+  // Hold |fidl_thread_checker_| for the duration of this method to prevent applying incorrect
+  // policy in the space between IsActive() and set_new_policies() calls below.
+  std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
   // Initialize new policies to `None`.
   RendererPolicies new_renderer_policies;
   CapturerPolicies new_capturer_policies;
   new_renderer_policies.fill(fuchsia::media::Behavior::NONE);
   new_capturer_policies.fill(fuchsia::media::Behavior::NONE);
   // Lambda to set new renderer and capturer policies based on an active usage.
-  auto set_new_policies = [this, &new_renderer_policies, &new_capturer_policies](auto& active) {
+  auto set_new_policies = [this, &new_renderer_policies, &new_capturer_policies](auto active) {
     std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; ++i) {
       auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
@@ -186,19 +193,25 @@ void AudioAdmin::UpdatePolicy() {
     }
   };
   // Loop through active usages and apply policies.
+  // Store |active_usages| for Reporter logging.
+  std::vector<fuchsia::media::Usage> active_usages;
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; ++i) {
     auto usage = static_cast<fuchsia::media::AudioRenderUsage>(i);
     if (IsActive(usage)) {
+      active_usages.push_back(fuchsia::media::Usage::WithRenderUsage(std::move(usage)));
       set_new_policies(usage);
     }
   }
   for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; ++i) {
     auto usage = static_cast<fuchsia::media::AudioCaptureUsage>(i);
     if (IsActive(usage)) {
+      active_usages.push_back(fuchsia::media::Usage::WithCaptureUsage(std::move(usage)));
       set_new_policies(usage);
     }
   }
   ApplyNewPolicies(new_renderer_policies, new_capturer_policies);
+  Reporter::Singleton().UpdateActiveUsagePolicy(active_usages, new_renderer_policies,
+                                                new_capturer_policies);
 }
 
 void AudioAdmin::UpdateRenderActivity() {

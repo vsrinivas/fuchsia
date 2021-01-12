@@ -403,8 +403,8 @@ class DeviceGainInfo {
 
 class Reporter::ThermalStateTransition {
  public:
-  explicit ThermalStateTransition(Reporter::Impl& impl, uint32_t state)
-      : node_(impl.thermal_state_transitions_node.CreateChild(impl.NextThermalTransitionName())),
+  ThermalStateTransition(inspect::Node& parent, std::string name, uint32_t state)
+      : node_(parent.CreateChild(name)),
         state_(node_.CreateString("state", state ? std::to_string(state) : "normal")),
         active_(node_.CreateBool("active", true)),
         duration_(node_.CreateLazyValues(
@@ -441,14 +441,10 @@ class Reporter::ThermalStateTransition {
 
 class Reporter::ThermalStateTracker {
  public:
-  ThermalStateTracker(
-      Reporter::Impl& impl,
-      Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions);
+  ThermalStateTracker(Reporter::Impl& impl);
 
   void SetNumThermalStates(size_t num);
   void SetThermalState(uint32_t state);
-
-  void DropLastTransition() { last_transition_.Drop(); }
 
  private:
   using CobaltStateTransition = AudioThermalStateTransitionsMetricDimensionStateTransition;
@@ -481,16 +477,109 @@ class Reporter::ThermalStateTracker {
   void ResetInterval();
 
   Reporter::Impl& impl_;
-  Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions_;
   inspect::Node root_;
   inspect::UintProperty num_thermal_states_;
+
+  inspect::Node transitions_node_;
+  Container<ThermalStateTransition, kThermalStatesToCache> thermal_state_transitions_;
 
   std::mutex mutex_;
   uint32_t active_state_ FXL_GUARDED_BY(mutex_);
   std::unordered_map<uint32_t, State> states_ FXL_GUARDED_BY(mutex_);
   async::TaskClosureMethod<ThermalStateTracker, &ThermalStateTracker::ResetInterval>
       restart_interval_timer_ FXL_GUARDED_BY(mutex_){this};
-  Container<ThermalStateTransition, kThermalStatesToCache>::Ptr last_transition_;
+
+  uint64_t next_thermal_transition_name_ FXL_GUARDED_BY(mutex_) = 0;
+  Container<ThermalStateTransition, kThermalStatesToCache>::Ptr last_transition_
+      FXL_GUARDED_BY(mutex_);
+};
+
+namespace {
+std::string UsageBehaviorToString(fuchsia::media::Behavior behavior) {
+  switch (behavior) {
+    case fuchsia::media::Behavior::NONE:
+      return "NONE";
+    case fuchsia::media::Behavior::DUCK:
+      return "DUCK";
+    case fuchsia::media::Behavior::MUTE:
+      return "MUTE";
+    default:
+      FX_CHECK(false) << "Invalid fuchsia::media::Behavior: " << static_cast<int>(behavior);
+  }
+}
+}  // namespace
+
+class Reporter::ActiveUsagePolicy {
+ public:
+  ActiveUsagePolicy(inspect::Node& parent, std::string name,
+                    const std::vector<fuchsia::media::Usage>& active_usages,
+                    const AudioAdmin::RendererPolicies& render_usage_behaviors,
+                    const AudioAdmin::CapturerPolicies& capture_usage_behaviors)
+      : node_(parent.CreateChild(name)), active_(node_.CreateBool("active", true)) {
+    for (auto& active_usage : active_usages) {
+      if (active_usage.is_render_usage()) {
+        auto usage = StreamUsage::WithRenderUsage(active_usage.render_usage()).ToString();
+        auto behavior = UsageBehaviorToString(
+            render_usage_behaviors[static_cast<int>(active_usage.render_usage())]);
+        renderer_policies_.emplace(node_.CreateString(usage, behavior));
+      } else {
+        auto usage = StreamUsage::WithCaptureUsage(active_usage.capture_usage()).ToString();
+        auto behavior = UsageBehaviorToString(
+            capture_usage_behaviors[static_cast<int>(active_usage.capture_usage())]);
+        capturer_policies_.emplace(node_.CreateString(usage, behavior));
+      }
+    }
+  }
+
+  void Destroy() { active_.Set(false); }
+
+ private:
+  inspect::Node node_;
+  inspect::BoolProperty active_;
+
+  std::queue<inspect::StringProperty> renderer_policies_;
+  std::queue<inspect::StringProperty> capturer_policies_;
+};
+
+class Reporter::ActiveUsagePolicyTracker {
+ public:
+  explicit ActiveUsagePolicyTracker(Reporter::Impl& impl)
+      : node_(impl.inspector->root().CreateChild("active usage policies")),
+        none_gain_(node_.CreateDouble("none gain db", 0.0)),
+        duck_gain_(node_.CreateDouble("duck gain db", 0.0)),
+        mute_gain_(node_.CreateDouble("mute gain db", 0.0)),
+        last_policy_(active_usage_policies_.New(new ActiveUsagePolicy(
+            node_, std::to_string(++next_active_usage_policy_name_),
+            std::vector<fuchsia::media::Usage>(), AudioAdmin::RendererPolicies(),
+            AudioAdmin::CapturerPolicies()))) {}
+
+  void SetAudioPolicyBehaviorGain(AudioAdmin::BehaviorGain behavior_gain) {
+    none_gain_.Set(behavior_gain.none_gain_db);
+    duck_gain_.Set(behavior_gain.duck_gain_db);
+    mute_gain_.Set(behavior_gain.mute_gain_db);
+  }
+
+  void UpdateActiveUsagePolicy(const std::vector<fuchsia::media::Usage>& active_usages,
+                               const AudioAdmin::RendererPolicies& renderer_policies,
+                               const AudioAdmin::CapturerPolicies& capturer_policies) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    last_policy_ = active_usage_policies_.New(
+        new ActiveUsagePolicy(node_, std::to_string(++next_active_usage_policy_name_),
+                              active_usages, renderer_policies, capturer_policies));
+  }
+
+ private:
+  inspect::Node node_;
+  inspect::DoubleProperty none_gain_;
+  inspect::DoubleProperty duck_gain_;
+  inspect::DoubleProperty mute_gain_;
+
+  Container<ActiveUsagePolicy, kActiveUsagePoliciesToCache> active_usage_policies_;
+
+  std::mutex mutex_;
+  uint64_t next_active_usage_policy_name_ FXL_GUARDED_BY(mutex_) = 0;
+  Container<ActiveUsagePolicy, kActiveUsagePoliciesToCache>::Ptr last_policy_
+      FXL_GUARDED_BY(mutex_);
 };
 
 class Reporter::VolumeSetting {
@@ -896,8 +985,6 @@ Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& thr
   InitCobalt();
 }
 
-Reporter::~Reporter() { impl_->thermal_state_tracker->DropLastTransition(); }
-
 void Reporter::InitInspect() {
   impl_->inspector = std::make_unique<sys::ComponentInspector>(&impl_->component_context);
   inspect::Node& root_node = impl_->inspector->root();
@@ -919,11 +1006,10 @@ void Reporter::InitInspect() {
   impl_->inputs_node = root_node.CreateChild("input devices");
   impl_->renderers_node = root_node.CreateChild("renderers");
   impl_->capturers_node = root_node.CreateChild("capturers");
-  impl_->thermal_state_transitions_node = root_node.CreateChild("thermal state transitions");
   impl_->volume_controls_node = root_node.CreateChild("volume controls");
 
-  impl_->thermal_state_tracker =
-      std::make_unique<ThermalStateTracker>(*impl_, thermal_state_transitions_);
+  impl_->thermal_state_tracker = std::make_unique<ThermalStateTracker>(*impl_);
+  impl_->active_usage_policy_tracker = std::make_unique<ActiveUsagePolicyTracker>(*impl_);
 }
 
 void Reporter::InitCobalt() {
@@ -1023,6 +1109,25 @@ void Reporter::SetThermalState(uint32_t state) {
     return;
   }
   impl_->thermal_state_tracker->SetThermalState(state);
+}
+
+void Reporter::SetAudioPolicyBehaviorGain(AudioAdmin::BehaviorGain behavior_gain) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->active_usage_policy_tracker->SetAudioPolicyBehaviorGain(behavior_gain);
+}
+
+void Reporter::UpdateActiveUsagePolicy(const std::vector<fuchsia::media::Usage>& active_usages,
+                                       const AudioAdmin::RendererPolicies& renderer_policies,
+                                       const AudioAdmin::CapturerPolicies& capturer_policies) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->active_usage_policy_tracker->UpdateActiveUsagePolicy(active_usages, renderer_policies,
+                                                              capturer_policies);
 }
 
 Reporter::Impl::Impl(sys::ComponentContext& cc, ThreadingModel& tm)
@@ -1183,16 +1288,14 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
 //////////////////////////////////////////////////////////////////////////////////
 // ThermalStateTracker implementation
 
-Reporter::ThermalStateTracker::ThermalStateTracker(
-    Reporter::Impl& impl,
-    Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions)
+Reporter::ThermalStateTracker::ThermalStateTracker(Reporter::Impl& impl)
     : impl_(impl),
-      thermal_state_transitions_(thermal_state_transitions),
       root_(impl.inspector->root().CreateChild("thermal state")),
       num_thermal_states_(root_.CreateUint("num thermal states", 1)),
+      transitions_node_(impl.inspector->root().CreateChild("thermal state transitions")),
       active_state_(0),
-      last_transition_(
-          thermal_state_transitions_.New(new ThermalStateTransition(impl_, active_state_))) {
+      last_transition_(thermal_state_transitions_.New(new ThermalStateTransition(
+          transitions_node_, std::to_string(++next_thermal_transition_name_), active_state_))) {
   states_[active_state_] = State({.node = root_.CreateChild("normal")});
   states_[active_state_].Activate();
   LogCobaltStateTransition(states_[active_state_], kCobaltStateTransitions[active_state_]);
@@ -1214,7 +1317,8 @@ void Reporter::ThermalStateTracker::SetThermalState(uint32_t state) {
     states_[state] = State({.node = root_.CreateChild(state ? std::to_string(state) : "normal")});
   }
   states_[state].Activate();
-  last_transition_ = thermal_state_transitions_.New(new ThermalStateTransition(impl_, state));
+  last_transition_ = thermal_state_transitions_.New(new ThermalStateTransition(
+      transitions_node_, std::to_string(++next_thermal_transition_name_), state));
   LogCobaltStateTransition(states_[state], kCobaltStateTransitions[state]);
   LogCobaltStateDuration(states_[active_state_], states_[state]);
 
