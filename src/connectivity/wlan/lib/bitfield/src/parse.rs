@@ -4,10 +4,9 @@
 
 use {
     proc_macro2::TokenStream,
+    quote::ToTokens,
     syn::{
-        braced,
-        export::ToTokens,
-        parenthesized,
+        braced, parenthesized,
         parse::{Parse, ParseStream},
         punctuated::Punctuated,
         token, Ident, LitInt, Path, Result, Token, Type,
