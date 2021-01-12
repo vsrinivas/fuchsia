@@ -471,7 +471,7 @@ func newSerialSocket(ctx context.Context, path string) (io.ReadWriteCloser, erro
 	// new cursor anyways when it is ready to receive input.
 	io.WriteString(socket, asSerialCmd([]string{}))
 	// Look for the cursor, which should indicate that the console is ready for input.
-	m := iomisc.NewSequenceMatchingReader(socket, serialConsoleCursor)
+	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(serialConsoleCursor)})
 	if _, err = iomisc.ReadUntilMatch(ctx, m, nil); err != nil {
 		return nil, fmt.Errorf("failed to find cursor: %v", err)
 	}

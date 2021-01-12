@@ -9,29 +9,28 @@ import (
 	"context"
 	"errors"
 	"io"
-	"regexp"
 	"testing"
 )
 
 func TestMatchingReader(t *testing.T) {
 	t.Run("sequence appears in a single read", func(t *testing.T) {
-		sequence := "ABCDE"
+		sequence := []byte("ABCDE")
 		var buf bytes.Buffer
-		m := NewSequenceMatchingReader(&buf, sequence)
+		m := NewMatchingReader(&buf, [][]byte{sequence})
 		assertMatch(t, m, nil)
 
-		buf.Write([]byte(sequence))
+		buf.Write(sequence)
 		p := make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
+		if _, err := m.Read(p); err != nil && !errors.Is(err, io.EOF) {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		assertMatch(t, m, []byte(sequence))
+		assertMatch(t, m, sequence)
 	})
 
 	t.Run("sequence appears across multiple reads", func(t *testing.T) {
-		sequence := "ABCDE"
+		sequence := []byte("ABCDE")
 		var buf bytes.Buffer
-		m := NewSequenceMatchingReader(&buf, sequence)
+		m := NewMatchingReader(&buf, [][]byte{sequence})
 		assertMatch(t, m, nil)
 
 		buf.Write([]byte("ABC"))
@@ -50,76 +49,65 @@ func TestMatchingReader(t *testing.T) {
 
 		buf.Write([]byte("EFGH"))
 		p = make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
+		if _, err := m.Read(p); err != nil && !errors.Is(err, io.EOF) {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		assertMatch(t, m, []byte(sequence))
-	})
-
-	t.Run("pattern appears in a single read", func(t *testing.T) {
-		pattern := "a[0-9]{1,2}[B-D]"
-		re := regexp.MustCompile(pattern)
-		var buf bytes.Buffer
-		m := NewPatternMatchingReader(&buf, re, 4)
-		assertMatch(t, m, nil)
-
-		buf.Write([]byte("a03C"))
-		p := make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		assertMatch(t, m, []byte("a03C"))
-	})
-
-	t.Run("pattern appears across multiple reads", func(t *testing.T) {
-		pattern := "a[0-9]{1,2}[B-D]"
-		re := regexp.MustCompile(pattern)
-		var buf bytes.Buffer
-		m := NewPatternMatchingReader(&buf, re, 4)
-		assertMatch(t, m, nil)
-
-		buf.Write([]byte("12345a"))
-		p := make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		assertMatch(t, m, []byte(nil))
-
-		buf.Write([]byte("03"))
-		p = make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		assertMatch(t, m, []byte(nil))
-
-		buf.Write([]byte("C"))
-		p = make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		assertMatch(t, m, []byte("a03C"))
+		assertMatch(t, m, sequence)
 	})
 
 	t.Run("Read throws EOFs after match", func(t *testing.T) {
-		pattern := "ABCDE"
-		re := regexp.MustCompile(pattern)
+		sequence := []byte("ABCDE")
 		var buf bytes.Buffer
-		m := NewPatternMatchingReader(&buf, re, len(pattern))
+		m := NewMatchingReader(&buf, [][]byte{sequence})
 		assertMatch(t, m, nil)
 
 		buf.Write([]byte("ABCDE"))
 		p := make([]byte, 1024)
-		if _, err := m.Read(p); err != nil {
+		if _, err := m.Read(p); err != nil && !errors.Is(err, io.EOF) {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		assertMatch(t, m, []byte(pattern))
+		assertMatch(t, m, sequence)
 
 		buf.Write([]byte("FGHIJK"))
 		p = make([]byte, 1024)
-		if _, err := m.Read(p); err != io.EOF {
+		if _, err := m.Read(p); !errors.Is(err, io.EOF) {
 			t.Fatalf("unexpected error: expected EOF; got %v", err)
 		}
-		assertMatch(t, m, []byte(pattern))
+		assertMatch(t, m, sequence)
+	})
+
+	t.Run("multiple sequences", func(t *testing.T) {
+		sequences := [][]byte{[]byte("ABCDE"), []byte("BCDEF")}
+		var buf bytes.Buffer
+		m := NewMatchingReader(&buf, sequences)
+		assertMatch(t, m, nil)
+
+		buf.Write([]byte("BCDE"))
+		p := make([]byte, 1024)
+		if _, err := m.Read(p); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		assertMatch(t, m, nil)
+
+		buf.Write([]byte("FGHIJK"))
+		p = make([]byte, 1024)
+		if _, err := m.Read(p); err != nil && !errors.Is(err, io.EOF) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		assertMatch(t, m, sequences[1])
+	})
+
+	t.Run("sequence appears mid-read", func(t *testing.T) {
+		sequence := []byte("BC")
+		var buf bytes.Buffer
+		m := NewMatchingReader(&buf, [][]byte{sequence})
+		assertMatch(t, m, nil)
+		buf.Write([]byte("ABCD"))
+		p := make([]byte, 1024)
+		if _, err := m.Read(p); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		assertMatch(t, m, sequence)
 	})
 }
 
@@ -136,7 +124,7 @@ func TestReadUntilMatch(t *testing.T) {
 		defer w.Close()
 		defer r.Close()
 
-		m := NewPatternMatchingReader(r, regexp.MustCompile("ABCD(E|F)"), 5)
+		m := NewMatchingReader(r, [][]byte{[]byte("ABCDE")})
 
 		go func() {
 			w.Write([]byte("ABC"))
@@ -158,7 +146,7 @@ func TestReadUntilMatch(t *testing.T) {
 		r, w := io.Pipe()
 		defer r.Close()
 
-		m := NewSequenceMatchingReader(r, "foo")
+		m := NewMatchingReader(r, [][]byte{[]byte("foo")})
 
 		go func() {
 			w.Write([]byte("bar"))

@@ -437,7 +437,7 @@ func (s *fakeSerialServer) Serve() error {
 	if _, err := conn.Write([]byte(serialConsoleCursor)); err != nil {
 		return fmt.Errorf("conn.Write() failed: %v", err)
 	}
-	reader := iomisc.NewSequenceMatchingReader(conn, s.shutdownString)
+	reader := iomisc.NewMatchingReader(conn, [][]byte{[]byte(s.shutdownString)})
 	for {
 		buf := make([]byte, 1024)
 		bytesRead, err := reader.Read(buf)

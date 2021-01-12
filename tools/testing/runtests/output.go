@@ -5,11 +5,10 @@
 package runtests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"regexp"
-	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 )
@@ -24,17 +23,12 @@ const (
 // one in
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/runtests-utils/fuchsia-run-test.cc
 func TestPassed(ctx context.Context, testOutput io.Reader, name string) (bool, error) {
-	resultSignature := fmt.Sprintf("(%s|%s) %s", regexp.QuoteMeta(SuccessSignature), regexp.QuoteMeta(FailureSignature), regexp.QuoteMeta(name))
-	resultSignatureRE, err := regexp.Compile(resultSignature)
-	if err != nil {
-		return false, fmt.Errorf("unable to compile regular expression for test name %v: %w", name, err)
-	}
-	resultMatchLength := len(SuccessSignature) + 1 + len(name) // Assumes len(SuccessSignature) == len(FailureSignature)
-
-	m := iomisc.NewPatternMatchingReader(testOutput, resultSignatureRE, resultMatchLength)
+	success := []byte(fmt.Sprintf("%s %s", SuccessSignature, name))
+	failure := []byte(fmt.Sprintf("%s %s", FailureSignature, name))
+	m := iomisc.NewMatchingReader(testOutput, [][]byte{success, failure})
 	match, err := iomisc.ReadUntilMatch(ctx, m, nil)
 	if err != nil {
 		return false, fmt.Errorf("unable to derive test result from runtests output: %w", err)
 	}
-	return strings.HasPrefix(string(match), SuccessSignature), nil
+	return bytes.Equal(match, success), nil
 }

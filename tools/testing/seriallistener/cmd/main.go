@@ -53,7 +53,7 @@ func execute(ctx context.Context, socketPath string, stdout io.Writer) error {
 	}
 	defer socket.Close()
 
-	m := iomisc.NewSequenceMatchingReader(socket, successString)
+	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(successString)})
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
