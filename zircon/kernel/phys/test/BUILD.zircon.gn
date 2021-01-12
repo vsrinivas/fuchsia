@@ -4,14 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# The common phys tests, built as QEMU executables and ZBI tests.
-common_tests = [
-  "hello-world-test",
-  "backtrace-test",
-  "phys-unittests",
-  "phys-memory-test",
-]
-
 if (current_toolchain != default_toolchain) {
   import("$zx/kernel/phys/phys_executable.gni")
   import("$zx/kernel/phys/qemu.gni")
@@ -148,26 +140,20 @@ if (current_toolchain != default_toolchain) {
     outputs = [ "$target_gen_dir/dummy.txt" ]
   }
 
-  # Build tests in both phys_qemu_test() and zbi_executable()/zbi_test()
-  # incarnations.
-  foreach(test, common_tests) {
-    phys_qemu_test("qemu-$test") {
-      deps = [ ":$test" ]
-    }
-
-    zbi_executable("zbi-$test.executable") {
+  # Build a ZBI test that uses the physboot framework.
+  template("phys_zbi_test") {
+    zbi_executable("$target_name.executable") {
       testonly = true
-      deps = [
-        ":$test",
-        ":zbi-test-main",
-      ]
+      deps = []
+      forward_variables_from(invoker, "*", [ "target_name" ])
+      deps += [ ":zbi-test-main" ]
     }
 
-    zbi_test("zbi-$test") {
+    zbi_test(target_name) {
       args = []
       deps = [
+        ":$target_name.executable",
         ":dummy.txt",
-        ":zbi-$test.executable",
       ]
 
       # TODO(mcgrathr): enable on hardware too
@@ -181,8 +167,30 @@ if (current_toolchain != default_toolchain) {
     }
   }
 
-  source_set("hello-world-test") {
-    testonly = true
+  # Build both a phys_qemu_test() and zbi_executable()/zbi_test() from the
+  # same sources.
+  #
+  # Generates a target with a name of the form "qemu-xxx" for the QEMU test,
+  # and "zbi-xxx" for the ZBI test.
+  template("common_test") {
+    phys_qemu_test("qemu-$target_name") {
+      forward_variables_from(invoker, "*", [ "target_name" ])
+    }
+
+    phys_zbi_test("zbi-$target_name") {
+      forward_variables_from(invoker, "*", [ "target_name" ])
+    }
+
+    group(target_name) {
+      testonly = true
+      deps = [
+        ":qemu-$target_name",
+        ":zbi-$target_name",
+      ]
+    }
+  }
+
+  common_test("hello-world-test") {
     sources = [ "hello-world-test.cc" ]
     deps = [
       ":test-main",
@@ -191,8 +199,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  source_set("backtrace-test") {
-    testonly = true
+  common_test("backtrace-test") {
     sources = [ "backtrace-test.cc" ]
     deps = [
       ":test-main",
@@ -208,8 +215,7 @@ if (current_toolchain != default_toolchain) {
   # x86 so we can't disable the ABI support for it there.  The start.S code only
   # enables extra stack support conditionally so as not to waste space, so there
   # isn't a good way to test non-default configurations.
-  source_set("phys-unittests") {
-    testonly = true
+  common_test("phys-unittests") {
     sources = [
       "phys-unittests.cc",
       "stack-tests.cc",
@@ -222,8 +228,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  source_set("phys-memory-test") {
-    testonly = true
+  common_test("phys-memory-test") {
     sources = [ "phys-memory-test.cc" ]
     deps = [
       ":test-main",
@@ -232,19 +237,6 @@ if (current_toolchain != default_toolchain) {
       "$zx/kernel/phys/lib/memalloc",
       "$zx/system/ulib/zbitl",
     ]
-  }
-
-  zbi_executable("decompress-test") {
-    testonly = true
-    sources = [ "decompress-test.cc" ]
-    deps = [
-      ":zbi-test-main",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
-      "$zx/system/ulib/zbitl",
-      "$zx/system/ulib/zxc",
-    ]
-    data_deps = [ ":decompress-test-data" ]
   }
 
   zbi_input("decompress-test-data") {
@@ -256,35 +248,30 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  zbi_test("phys-zbi-decompress-test") {
-    args = []
-
+  # Test the zbitl decompression code.
+  #
+  # This requires a zbi_input, so we only run it as a ZBI test.
+  phys_zbi_test("zbi-decompress-test") {
+    sources = [ "decompress-test.cc" ]
     deps = [
-      ":decompress-test",
-      ":dummy.txt",
+      ":test-main",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+      "$zx/system/ulib/zbitl",
+      "$zx/system/ulib/zxc",
     ]
-
-    # TODO(mcgrathr): enable on hardware too
-    device_types = [
-      "QEMU",
-      "AEMU",
-    ]
-
-    # Set a short timeout since the tests don't reliably reboot the machine.
-    timeout = qemu_short_timeout
+    data_deps = [ ":decompress-test-data" ]
   }
 
   group("test") {
     testonly = true
-
-    deps = [ ":phys-zbi-decompress-test" ]
-
-    foreach(test, common_tests) {
-      deps += [
-        ":qemu-$test",
-        ":zbi-$test",
-      ]
-    }
+    deps = [
+      ":backtrace-test",
+      ":hello-world-test",
+      ":phys-memory-test",
+      ":phys-unittests",
+      ":zbi-decompress-test",
+    ]
   }
 } else {  # current_toolchain == default_toolchain
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
@@ -294,11 +281,18 @@ if (current_toolchain != default_toolchain) {
   # directly, instead of sifting through zircon's zbi_tests.json to synthesize
   # targets in this build.
   test_deps = []
-  foreach(test, common_tests) {
+  foreach(test,
+          [
+            "zbi-backtrace-test",
+            "zbi-hello-world-test",
+            "zbi-phys-memory-test",
+            "zbi-phys-unittests",
+            "zbi-decompress-test",
+          ]) {
     mexec_zbi_test("mexec-$test") {
-      child_zbi = ":zbi-$test(//zircon/kernel/phys:kernel.phys_$current_cpu)"
+      child_zbi = ":$test(//zircon/kernel/phys:kernel.phys_$current_cpu)"
       child_zbi_file =
-          get_label_info(child_zbi, "target_out_dir") + "/zbi-$test.zbi"
+          get_label_info(child_zbi, "target_out_dir") + "/$test.zbi"
     }
 
     test_deps += [ ":mexec-$test" ]
