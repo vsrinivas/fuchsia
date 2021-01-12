@@ -523,10 +523,10 @@ mod tests {
     async fn test_dir_contains_with_timeout() {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         let dir = create_nested_dir(&tempdir).await;
-        let first = dir_contains_with_timeout(&dir, "notin", 1.seconds())
+        let first = dir_contains_with_timeout(&dir, "notin", 60.seconds())
             .await
             .context("error checking dir contains notin");
-        let second = dir_contains_with_timeout(&dir, "a", 1.seconds())
+        let second = dir_contains_with_timeout(&dir, "a", 60.seconds())
             .await
             .context("error checking dir contains a");
         matches::assert_matches!((first, second), (Ok(false), Ok(true)));
