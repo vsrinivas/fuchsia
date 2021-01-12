@@ -113,11 +113,36 @@ source_set("bcdc") {
   ]
   public = [ "bcdc.h" ]
   deps = [
+    ":bus",
     ":core",
     ":debug",
     ":linuxisms",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/public",
+  ]
+}
+
+# Source set for bus interface.
+source_set("bus") {
+  public = [ "bus.h" ]
+  public_deps = [
+    ":linuxisms",
+    "//src/lib/ddk",
+  ]
+}
+
+# Sources for timer implementation.
+source_set("timer") {
+  sources = [ "timer.cc" ]
+  public = [ "timer.h" ]
+  deps = [
+    ":bus",
+    ":debug",
+  ]
+  public_deps = [
+    ":bus",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/sync",
   ]
 }
 
@@ -140,7 +165,6 @@ source_set("core") {
     "fwil.cc",
     "pno.cc",
     "pno.h",
-    "timer.cc",
     "utils.cc",
     "wlan_interface.cc",
     "wlan_interface.h",
@@ -151,7 +175,6 @@ source_set("core") {
     "brcmu_d11.h",
     "brcmu_utils.h",
     "brcmu_wifi.h",
-    "bus.h",
     "calls.h",
     "cfg80211.h",
     "chip.h",
@@ -168,11 +191,12 @@ source_set("core") {
     "proto.h",
     "regs.h",
     "soc.h",
-    "timer.h",
     "wlan_interface.h",
   ]
   deps = [
+    ":bus",
     ":debug",
+    ":timer",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/lib/common/cpp:common",

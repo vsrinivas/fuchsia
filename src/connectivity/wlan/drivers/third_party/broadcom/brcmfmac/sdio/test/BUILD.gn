@@ -22,6 +22,7 @@ executable("sdio_test") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.sdio",
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_mock",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bus",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
     "//src/connectivity/wlan/lib/common/cpp:common",
