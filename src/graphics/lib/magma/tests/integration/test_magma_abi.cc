@@ -515,7 +515,7 @@ class TestConnection {
 #endif
   }
 
-  void SemaphoreExport(uint32_t* handle_out, uint64_t* id_out) {
+  void SemaphoreExport(magma_handle_t* handle_out, uint64_t* id_out) {
     ASSERT_TRUE(connection_);
 
     magma_semaphore_t semaphore;
@@ -525,20 +525,17 @@ class TestConnection {
     magma_release_semaphore(connection_, semaphore);
   }
 
-  void SemaphoreImport(uint32_t handle, uint64_t id) {
+  void SemaphoreImport(magma_handle_t handle, uint64_t expected_id) {
     ASSERT_TRUE(connection_);
 
     magma_semaphore_t semaphore;
     ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
-    EXPECT_EQ(magma_get_semaphore_id(semaphore), id);
+    EXPECT_EQ(magma_get_semaphore_id(semaphore), expected_id);
     magma_release_semaphore(connection_, semaphore);
   }
 
   static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2) {
-    if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxbug.dev/13278)
-
-    uint32_t handle;
+    magma_handle_t handle;
     uint64_t id;
     test1->SemaphoreExport(&handle, &id);
     test2->SemaphoreImport(handle, id);
