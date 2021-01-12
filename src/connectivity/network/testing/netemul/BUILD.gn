@@ -4,7 +4,7 @@
 
 group("netemul") {
   testonly = true
-  public_deps = [
+  deps = [
     "runner:netemul-sandbox",
     "runner/runner:netemul-runner",
 
@@ -15,7 +15,7 @@ group("netemul") {
 
 group("guest") {
   testonly = true
-  public_deps = [
+  deps = [
     ":netemul",
 
     # The following packages are needed to run the netemul guest integration test.
@@ -27,7 +27,7 @@ group("guest") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":guest",
     ":netemul",
     "lib:netemul-lib-tests",

@@ -72,7 +72,7 @@ rustc_library("lib") {
 
 # Root target
 group("at-commands") {
-  public_deps = [ ":lib" ]
+  deps = [ ":lib" ]
 }
 
 # Tests

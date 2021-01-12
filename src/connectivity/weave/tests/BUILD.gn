@@ -4,5 +4,5 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "weave_ip_forward:weave-ip-fwd-tests" ]
+  deps = [ "weave_ip_forward:weave-ip-fwd-tests" ]
 }

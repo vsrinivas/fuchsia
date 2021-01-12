@@ -9,7 +9,7 @@ group("testing") {
   testonly = true
   public_deps = [
     ":wlanphy-testdev",
-    "//src/connectivity/wlan/drivers/testing/util",
+    "util",
   ]
 }
 
@@ -25,6 +25,7 @@ group("tests") {
   testonly = true
   deps = [ ":wlanphy_test_bind_test" ]
 }
+
 driver_module("wlanphy-testdev") {
   sources = [
     "driver.cc",

@@ -23,8 +23,6 @@ executable("unittests") {
     "stack_utils_test.cc",
   ]
 
-  deps = []
-
   public_deps = [
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",

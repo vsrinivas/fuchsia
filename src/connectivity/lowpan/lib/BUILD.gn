@@ -11,7 +11,7 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     "lowpan_driver_common:tests",
     "spinel_pack:tests",
   ]

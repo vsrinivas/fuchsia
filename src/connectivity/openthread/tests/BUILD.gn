@@ -4,7 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     "fake-drivers",
     "fake-drivers/fake-ot-radio:tests",
     "test-components:ot-radio-component-tests",
@@ -13,8 +13,9 @@ group("tests") {
 
 group("all-tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":tests",
+    "fake-drivers",
     "test-components:ot-radio-tests",
   ]
 }

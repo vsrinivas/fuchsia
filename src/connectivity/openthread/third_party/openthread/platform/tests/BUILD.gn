@@ -7,7 +7,7 @@ import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":threadstack-bootstrap-unittests",
     ":threadstack-unittests",
   ]
@@ -45,9 +45,7 @@ executable("unittests-bin") {
     "settings_test.cc",
   ]
 
-  deps = []
-
-  public_deps = [
+  deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
@@ -76,9 +74,7 @@ executable("bootstrap-unittests-bin") {
 
   sources = [ "bootstrap_fidl_impl_tests.cc" ]
 
-  deps = []
-
-  public_deps = [
+  deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",

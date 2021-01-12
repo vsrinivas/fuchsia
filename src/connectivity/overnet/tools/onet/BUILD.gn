@@ -44,7 +44,6 @@ package("onet") {
 
 group("tests") {
   testonly = true
-  deps = []
 }
 
 install_host_tools("host") {

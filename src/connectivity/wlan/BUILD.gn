@@ -30,63 +30,63 @@ group("drivers") {
 # product configs, rather than other group targets, to avoid conflicts) should
 # also include an appropriate target under config/.
 group("packages") {
-  public_deps = [
+  deps = [
+    "wlancfg",
+    "wlanstack",
     "//src/connectivity/location/regulatory_region",
-    "//src/connectivity/wlan/wlancfg",
-    "//src/connectivity/wlan/wlanstack",
   ]
 }
 
 group("tests") {
   testonly = true
 
-  public_deps = [
-    "//src/connectivity/wlan/drivers/realtek:tests",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device/test:sim_device_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env/test:wlan-sim-env-test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_tests",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:tests",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
-    "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
-    "//src/connectivity/wlan/drivers/wlanif/test:wlanif_unittest",
-    "//src/connectivity/wlan/drivers/wlanphy:wlanphy-unittests",
-    "//src/connectivity/wlan/lib/bitfield/wlan-bitfield-tests",
-    "//src/connectivity/wlan/lib/common/cpp:mcs_rate_lookup_tests",
-    "//src/connectivity/wlan/lib/common/rust:wlan-common-tests",
-    "//src/connectivity/wlan/lib/eapol:eapol-tests",
-    "//src/connectivity/wlan/lib/frame_writer:wlan-frame-writer-tests",
-    "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
-    "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
-    "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",
-    "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c-tests",
-    "//src/connectivity/wlan/lib/rsn:wlan-rsn-tests",
-    "//src/connectivity/wlan/lib/sae:wlan-sae-tests",
-    "//src/connectivity/wlan/lib/sme:wlan-sme-tests",
-    "//src/connectivity/wlan/lib/span:wlan-span-tests",
-    "//src/connectivity/wlan/lib/stash:wlan-stash-tests",
-    "//src/connectivity/wlan/lib/statemachine:wlan-statemachine-tests",
-    "//src/connectivity/wlan/lib/wep_deprecated:wep-deprecated-tests",
-    "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
-    "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test",
-    "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test-tests",
-    "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
-    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-lib-tests",
-    "//src/connectivity/wlan/testing/hw-sim/test:rate-selection-package",
-    "//src/connectivity/wlan/testing/hw-sim/test:wlan-hw-sim-test",
-    "//src/connectivity/wlan/testing/wlan-service-util:wlan-service-util-tests",
-    "//src/connectivity/wlan/testing/wlantap-client",
-    "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
-    "//src/connectivity/wlan/tools/wlantool:wlantool-tests",
-    "//src/connectivity/wlan/wlancfg:wlancfg-tests",
-    "//src/connectivity/wlan/wlancfg/tool:donut-tests",
-    "//src/connectivity/wlan/wlanstack:wlanstack-tests",
+  deps = [
+    "drivers/realtek:tests",
+    "drivers/testing/lib/sim-device/test:sim_device_test",
+    "drivers/testing/lib/sim-env/test:wlan-sim-env-test",
+    "drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
+    "drivers/third_party/broadcom/brcmfmac:brcmfmac_tests",
+    "drivers/third_party/intel/iwlwifi:tests",
+    "drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
+    "drivers/wlan:wlan_drivers_tests",
+    "drivers/wlanif/test:wlanif_unittest",
+    "drivers/wlanphy:wlanphy-unittests",
+    "lib/bitfield/wlan-bitfield-tests",
+    "lib/common/cpp:mcs_rate_lookup_tests",
+    "lib/common/rust:wlan-common-tests",
+    "lib/eapol:eapol-tests",
+    "lib/frame_writer:wlan-frame-writer-tests",
+    "lib/inspect:wlan-inspect-tests",
+    "lib/mlme/cpp/tests:wlan_tests",
+    "lib/mlme/rust:wlan-mlme-tests",
+    "lib/mlme/rust/c-binding:wlan-mlme-c-tests",
+    "lib/rsn:wlan-rsn-tests",
+    "lib/sae:wlan-sae-tests",
+    "lib/sme:wlan-sme-tests",
+    "lib/span:wlan-span-tests",
+    "lib/stash:wlan-stash-tests",
+    "lib/statemachine:wlan-statemachine-tests",
+    "lib/wep_deprecated:wep-deprecated-tests",
+    "testing/ap-smoke-test:wlan-ap-smoke-test",
+    "testing/client-smoke-test:wlan-smoke-test",
+    "testing/client-smoke-test:wlan-smoke-test-tests",
+    "testing/client-stress-test:wlan-stress-test",
+    "testing/hw-sim:wlan-hw-sim-lib-tests",
+    "testing/hw-sim/test:rate-selection-package",
+    "testing/hw-sim/test:wlan-hw-sim-test",
+    "testing/wlan-service-util:wlan-service-util-tests",
+    "testing/wlantap-client",
+    "testing/wlantap-driver:wlantap",
+    "tools/wlantool:wlantool-tests",
+    "wlancfg:wlancfg-tests",
+    "wlancfg/tool:donut-tests",
+    "wlanstack:wlanstack-tests",
   ]
 }
 
 group("tools") {
-  public_deps = [
-    "//src/connectivity/wlan/tools/wlantool:wlan",
-    "//src/connectivity/wlan/wlancfg/tool:donut",
+  deps = [
+    "tools/wlantool:wlan",
+    "wlancfg/tool:donut",
   ]
 }

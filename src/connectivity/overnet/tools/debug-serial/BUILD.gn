@@ -38,5 +38,5 @@ fuchsia_unittest_package("debug-serial-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":debug-serial-tests" ]
+  deps = [ ":debug-serial-tests" ]
 }

@@ -57,8 +57,10 @@ executable("bin") {
 }
 
 group("ot-stack") {
-  public_deps = [ ":pkg" ]
-  deps = [ "config" ]
+  deps = [
+    ":pkg",
+    "config",
+  ]
 }
 
 fuchsia_component("component") {

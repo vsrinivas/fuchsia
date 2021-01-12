@@ -4,7 +4,7 @@
 
 group("helpers") {
   testonly = true
-  public_deps = [
+  deps = [
     "mock_device_settings",
     "netstack_cfg",
     "netstack_intermediary",

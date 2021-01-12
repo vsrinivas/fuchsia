@@ -6,7 +6,7 @@ import("//src/sys/build/components.gni")
 
 group("dhcp_integration_tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":netemul-dhcp-tests",
     "//src/connectivity/network/testing/netemul:guest",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",

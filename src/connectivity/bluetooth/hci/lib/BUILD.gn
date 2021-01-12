@@ -48,7 +48,7 @@ rustc_staticlib("bt-hci") {
 static_library("serial_impl_async_wrapper") {
   sources = [ "serial_impl_async_wrapper.cc" ]
 
-  public_deps = [
+  deps = [
     "//sdk/banjo/fuchsia.hardware.serialimpl.async",
     "//src/lib/ddk",
   ]

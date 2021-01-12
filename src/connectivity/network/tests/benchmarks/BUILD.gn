@@ -14,9 +14,7 @@ executable("udp_benchmark_bin") {
     "util.h",
   ]
 
-  deps = []
-
-  public_deps = [
+  deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",

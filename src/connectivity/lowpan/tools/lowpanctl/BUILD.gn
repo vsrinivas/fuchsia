@@ -30,8 +30,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  non_rust_deps = []
-
   sources = [
     "src/context.rs",
     "src/energy_scan_command.rs",

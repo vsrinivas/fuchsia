@@ -39,7 +39,7 @@ group("drivers") {
 # This group includes all of the non-system components.
 # System package components are defined in "core-system"
 group("core") {
-  public_deps = [
+  deps = [
     "core/bt-gap",
     "core/bt-init",
     "profiles/bt-rfcomm",
@@ -49,16 +49,10 @@ group("core") {
 
 # This is the part of core group which must go into the system package.
 group("core-system") {
-  public_deps = [
+  deps = [
     "core/bt-host",
     "profiles/bt-hog",
   ]
-}
-
-# Includes hci and transport drivers for broadcom controllers which communicate over a uart
-# transport.
-group("broadcom_uart") {
-  public_deps = []
 }
 
 group("tests") {

@@ -44,5 +44,5 @@ executable("cpp-test") {
 group("tests") {
   testonly = true
 
-  public_deps = [ ":cpp-test" ]
+  deps = [ ":cpp-test" ]
 }

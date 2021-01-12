@@ -9,5 +9,5 @@ group("tools") {
 
 group("tests") {
   testonly = true
-  public_deps = [ "lowpanctl:tests" ]
+  deps = [ "lowpanctl:tests" ]
 }
