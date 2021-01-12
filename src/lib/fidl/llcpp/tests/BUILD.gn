@@ -54,11 +54,11 @@ if (is_host) {
     output_name = "fidl_llcpp_conformance_tests"
     sources = [ "test_utils.cc" ]
     deps = [
-      "//src/lib/fxl/test:gtest_main",
-      "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-      "//third_party/googletest:gtest",
-      "//zircon/public/lib/fbl",
-    ]
+             "//src/lib/fxl/test:gtest_main",
+             "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
+             "//third_party/googletest:gtest",
+             "//zircon/public/lib/fbl",
+           ] + gidl_deps
   }
 }
 
