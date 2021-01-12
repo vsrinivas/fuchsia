@@ -2,4 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-include: ../../../../../topaz/tools/analysis_options.yaml
+name: fuchsia_logger_integ
+environment:
+  sdk: '>=2.0.0 <3.0.0'
+
+dependencies:
+  logging: ^0.11.0
