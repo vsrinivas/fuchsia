@@ -25,13 +25,12 @@ use futures::{
     channel::mpsc::{self, Receiver},
     StreamExt,
 };
+use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, ops::Deref, time::Duration};
 use tracing::{debug, info};
 
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/archivist-with-small-caches.cmx";
-const PUPPET_URL: &str = "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet.cmx";
-const PUPPET_MONIKER: &str = "socket-puppet.cmx";
 
 const TEST_PACKET_LEN: usize = 49;
 
@@ -48,8 +47,14 @@ async fn main() {
     info!("check that archivist log state is clean");
     env.until_archivist_state_matches_expected().await;
 
-    let puppet = env.launch_puppet().await;
-    env.validate(&puppet).await;
+    let puppets = [
+        env.launch_puppet(0).await,
+        env.launch_puppet(1).await,
+        env.launch_puppet(2).await,
+        env.launch_puppet(3).await,
+        env.launch_puppet(4).await,
+    ];
+    env.validate(&puppets).await;
 }
 
 struct PuppetEnv {
@@ -59,6 +64,7 @@ struct PuppetEnv {
     messages_allowed_in_cache: usize,
     messages_sent: Vec<MessageReceipt>,
     launched_monikers: Vec<String>,
+    rng: StdRng,
     _serve_fs: Task<()>,
 }
 
@@ -109,6 +115,7 @@ impl PuppetEnv {
             messages_allowed_in_cache,
             messages_sent: vec![],
             launched_monikers: vec![],
+            rng: StdRng::seed_from_u64(0xA455),
             _serve_fs,
         }
     }
@@ -122,9 +129,11 @@ impl PuppetEnv {
             .add_selector("archivist-with-small-caches.cmx:root/sources")
     }
 
-    async fn launch_puppet(&mut self) -> Puppet {
-        info!("launching puppet");
-        let _app = launch(&self.launcher, PUPPET_URL.to_string(), None).unwrap();
+    async fn launch_puppet(&mut self, id: usize) -> Puppet {
+        let url =
+            format!("fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet{}.cmx", id);
+        info!(%url, "launching puppet");
+        let _app = launch(&self.launcher, url, None).unwrap();
 
         let mut puppet_events = _app.controller().take_event_stream();
         let _panic_on_exit = Task::spawn(async move {
@@ -148,7 +157,8 @@ impl PuppetEnv {
             _ => panic!("did not expect that"),
         };
 
-        let puppet = Puppet { _app, moniker: PUPPET_MONIKER.to_owned(), proxy, _panic_on_exit };
+        let moniker = format!("socket-puppet{}.cmx", id);
+        let puppet = Puppet { _app, moniker, proxy, _panic_on_exit };
 
         info!("having the puppet connect to LogSink");
         puppet.connect_to_log_sink().await.unwrap();
@@ -198,9 +208,10 @@ impl PuppetEnv {
         }
     }
 
-    async fn validate(mut self, puppet: &Puppet) {
-        info!("having the puppet log packets until overflow");
-        for _ in 0..self.messages_allowed_in_cache * 10 {
+    async fn validate(mut self, puppets: &[Puppet]) {
+        info!("having the puppets log packets until overflow");
+        for _ in 0..self.messages_allowed_in_cache * 30 {
+            let puppet = puppets.choose(&mut self.rng).unwrap();
             let receipt = puppet.emit_packet().await;
             self.messages_sent.push(receipt);
             self.until_archivist_state_matches_expected().await;
