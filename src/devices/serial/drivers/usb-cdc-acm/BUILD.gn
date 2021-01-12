@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("cdc_acm_bind") {
+  rules = "cdc_acm.bind"
+  output = "cdc_acm_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.comm",
+  ]
+}
 
 driver_module("usb-cdc-acm") {
   configs += [
@@ -14,6 +25,7 @@ driver_module("usb-cdc-acm") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm.cc" ]
   deps = [
+    ":cdc_acm_bind",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/banjo/fuchsia.hardware.serialimpl",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -22,13 +34,20 @@ driver_module("usb-cdc-acm") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+  ]
+}
+
+bind_rules("usb_cdc_acm_function_bind") {
+  rules = "usb_cdc_acm_function.bind"
+  output = "usb_cdc_acm_function_bind.h"
+  tests = "function_bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.comm",
   ]
 }
 
@@ -40,6 +59,7 @@ driver_module("fake-usb-cdc-acm") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-function.cc" ]
   deps = [
+    ":usb_cdc_acm_function_bind",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
     "//sdk/banjo/fuchsia.hardware.usb.function",
@@ -47,9 +67,6 @@ driver_module("fake-usb-cdc-acm") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -91,5 +108,9 @@ isolated_devmgr_unittest_package("usb-cdc-acm-integration-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":usb-cdc-acm-integration-test" ]
+  deps = [
+    ":cdc_acm_bind_test",
+    ":usb-cdc-acm-integration-test",
+    ":usb_cdc_acm_function_bind_test",
+  ]
 }

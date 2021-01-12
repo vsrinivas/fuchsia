@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.comm;
+
+extend uint fuchsia.BIND_USB_SUBCLASS {
+  LINE = 0x01,
+  ABSTRACT = 0x02,
+  TELEPHONE = 0x03,
+  CHANNEL = 0x04,
+  CAPI = 0x05,
+  ETHERNET = 0x06,
+  ATM = 0x07,
+  HANDSET = 0x08,
+  MGMT = 0x09,
+  DIRECT = 0x0A,
+  OBEX = 0x0B,
+  EMU = 0x0C,
+  CTRL = 0x0D,
+};

@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -33,6 +32,8 @@
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/devices/serial/drivers/usb-cdc-acm/usb_cdc_acm_function_bind.h"
 
 #define BULK_MAX_PACKET 512
 
@@ -339,9 +340,5 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace fake_usb_cdc_acm_function
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_cdc_acm_function, fake_usb_cdc_acm_function::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
-    BI_MATCH_IF(EQ, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ABSTRACT),
-ZIRCON_DRIVER_END(usb_cdc_acm_function)
-    // clang-format on
+ZIRCON_DRIVER(usb_cdc_acm_function, fake_usb_cdc_acm_function::driver_ops, "zircon", "0.1");
+// clang-format on

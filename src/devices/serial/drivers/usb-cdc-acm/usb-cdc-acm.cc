@@ -9,13 +9,14 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/devices/serial/drivers/usb-cdc-acm/cdc_acm_bind.h"
 
 namespace usb_cdc_acm_serial {
 
@@ -415,9 +416,5 @@ constexpr zx_driver_ops_t cdc_acm_driver_ops = []() {
 }  // namespace
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(cdc_acm, cdc_acm_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-  BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
-  BI_MATCH_IF(EQ, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ABSTRACT),
-ZIRCON_DRIVER_END(cdc_acm)
+ZIRCON_DRIVER(cdc_acm, cdc_acm_driver_ops, "zircon", "0.1");
 // clang-form   at on
