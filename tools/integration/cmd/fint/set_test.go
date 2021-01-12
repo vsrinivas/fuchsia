@@ -222,7 +222,6 @@ func TestGenArgs(t *testing.T) {
 			expectedArgs: []string{
 				`target_cpu="x64"`,
 				`is_debug=true`,
-				fmt.Sprintf(`zircon_tracelog="%s"`, filepath.Join(buildDir, zirconGNTrace)),
 			},
 		},
 		{

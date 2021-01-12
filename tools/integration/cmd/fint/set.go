@@ -29,7 +29,6 @@ const (
 	fuchsiaDirEnvVar = "FUCHSIA_DIR"
 
 	// Locations of GN trace files in the build directory.
-	zirconGNTrace  = "zircon_gn_trace.json"
 	fuchsiaGNTrace = "gn_trace.json"
 
 	// Name of the file (in `contextSpec.ArtifactsDir`) that will expose
@@ -343,8 +342,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 			vars["thinlto_cache_dir"] = filepath.Join(contextSpec.CacheDir, "thinlto")
 		}
 	}
-
-	vars["zircon_tracelog"] = filepath.Join(contextSpec.BuildDir, zirconGNTrace)
 
 	var normalArgs []string
 	var importArgs []string
