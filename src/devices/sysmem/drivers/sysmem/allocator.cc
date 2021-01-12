@@ -4,8 +4,6 @@
 
 #include "allocator.h"
 
-#include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/fidl/internal.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -17,31 +15,23 @@
 
 namespace sysmem_driver {
 
-namespace {
-
-constexpr uint32_t kConcurrencyCap = 64;
-
-}  // namespace
-
-const fuchsia_sysmem_Allocator_ops_t Allocator::kOps = {
-    fidl::Binder<Allocator>::BindMember<&Allocator::AllocateNonSharedCollection>,
-    fidl::Binder<Allocator>::BindMember<&Allocator::AllocateSharedCollection>,
-    fidl::Binder<Allocator>::BindMember<&Allocator::BindSharedCollection>,
-    fidl::Binder<Allocator>::BindMember<&Allocator::ValidateBufferCollectionToken>,
-    fidl::Binder<Allocator>::BindMember<&Allocator::SetDebugClientInfo>,
-};
-
 Allocator::Allocator(Device* parent_device)
-    : FidlServer(parent_device->dispatcher(), "sysmem allocator", kConcurrencyCap),
-      parent_device_(parent_device) {
+    : LoggingMixin("allocator"), parent_device_(parent_device) {
   // nothing else to do here
 }
 
 Allocator::~Allocator() { LogInfo("~Allocator"); }
 
-zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection_request_param) {
+// static
+void Allocator::CreateChannelOwned(zx::channel request, Device* device) {
+  auto allocator = std::unique_ptr<Allocator>(new Allocator(device));
+  // Ignore the result - allocator will be destroyed and the channel will be closed on error.
+  fidl::BindServer(device->dispatcher(), std::move(request), std::move(allocator));
+}
+
+void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_request,
+                                            AllocateNonSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::AllocateNonSharedCollection");
-  zx::channel buffer_collection_request(buffer_collection_request_param);
 
   // The AllocateCollection() message skips past the token stage because the
   // client is also the only participant (probably a temp/test client).  Real
@@ -71,7 +61,8 @@ zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection
     // Returning an error here causes the sysmem connection to drop also,
     // which seems like a good idea (more likely to recover overall) given
     // the nature of the error.
-    return status;
+    completer.Close(status);
+    return;
   }
 
   // The server end of the local token goes to Create(), and the client end
@@ -86,12 +77,11 @@ zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection
   // client didn't have to hassle with the BufferCollectionToken, which is the
   // sole upside of the client using this message over
   // AllocateSharedCollection().
-  return ZX_OK;
 }
 
-zx_status_t Allocator::AllocateSharedCollection(zx_handle_t token_request_param) {
+void Allocator::AllocateSharedCollection(zx::channel token_request,
+                                         AllocateSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::AllocateSharedCollection");
-  zx::channel token_request(token_request_param);
 
   // The LogicalBufferCollection is self-owned / owned by all the channels it
   // serves.
@@ -105,14 +95,11 @@ zx_status_t Allocator::AllocateSharedCollection(zx_handle_t token_request_param)
   // LogicalBufferCollection associates all the BufferCollectionToken and
   // BufferCollection bindings to the same LogicalBufferCollection.
   LogicalBufferCollection::Create(std::move(token_request), parent_device_);
-  return ZX_OK;
 }
 
-zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
-                                            zx_handle_t buffer_collection_request_param) {
+void Allocator::BindSharedCollection(zx::channel token, zx::channel buffer_collection_request,
+                                     BindSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::BindSharedCollection");
-  zx::channel token(token_param);
-  zx::channel buffer_collection_request(buffer_collection_request_param);
 
   // The BindSharedCollection() message is about a supposed-to-be-pre-existing
   // logical BufferCollection, but the only association we have to that
@@ -123,22 +110,21 @@ zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
   LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token),
                                                 std::move(buffer_collection_request),
                                                 client_info_ ? &*client_info_ : nullptr);
-  return ZX_OK;
 }
 
-zx_status_t Allocator::ValidateBufferCollectionToken(zx_koid_t token_server_koid, fidl_txn_t* txn) {
-  BindingType::Txn::RecognizeTxn(txn);
+void Allocator::ValidateBufferCollectionToken(
+    zx_koid_t token_server_koid, ValidateBufferCollectionTokenCompleter::Sync& completer) {
   zx_status_t status =
       LogicalBufferCollection::ValidateBufferCollectionToken(parent_device_, token_server_koid);
   ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
-  return fuchsia_sysmem_AllocatorValidateBufferCollectionToken_reply(txn, status == ZX_OK);
+  completer.Reply(status == ZX_OK);
 }
 
-zx_status_t Allocator::SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id) {
+void Allocator::SetDebugClientInfo(fidl::StringView name, uint64_t id,
+                                   SetDebugClientInfoCompleter::Sync& completer) {
   client_info_.emplace();
-  client_info_->name = std::string(name_data, name_size);
+  client_info_->name = std::string(name.begin(), name.end());
   client_info_->id = id;
-  return ZX_OK;
 }
 
 }  // namespace sysmem_driver

@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_ALLOCATOR_H_
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/zx/channel.h>
+
 #include "device.h"
-#include "fuchsia/sysmem/c/fidl.h"
-#include "lib/fidl-async-2/fidl_server.h"
-#include "lib/fidl-async-2/simple_binding.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
 
@@ -19,25 +19,27 @@ namespace sysmem_driver {
 //
 // Because Allocator is essentially self-contained and handling the server end
 // of a channel, most of Allocator is private.
-class Allocator : public FidlServer<Allocator,
-                                    SimpleBinding<Allocator, fuchsia_sysmem_Allocator_ops_t,
-                                                  fuchsia_sysmem_Allocator_dispatch>,
-                                    vLog> {
+class Allocator : public llcpp::fuchsia::sysmem::Allocator::Interface, public LoggingMixin {
  public:
   // Public for std::unique_ptr<Allocator>:
   ~Allocator();
 
+  static void CreateChannelOwned(zx::channel request, Device* device);
+
  private:
-  friend class FidlServer;
   Allocator(Device* parent_device);
 
-  static const fuchsia_sysmem_Allocator_ops_t kOps;
-
-  zx_status_t AllocateNonSharedCollection(zx_handle_t buffer_collection_request_param);
-  zx_status_t AllocateSharedCollection(zx_handle_t token_request);
-  zx_status_t BindSharedCollection(zx_handle_t token, zx_handle_t buffer_collection);
-  zx_status_t ValidateBufferCollectionToken(zx_koid_t token_server_koid, fidl_txn_t* txn);
-  zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
+  void AllocateNonSharedCollection(zx::channel buffer_collection_request,
+                                   AllocateNonSharedCollectionCompleter::Sync& completer) override;
+  void AllocateSharedCollection(zx::channel token_request,
+                                AllocateSharedCollectionCompleter::Sync& completer) override;
+  void BindSharedCollection(zx::channel token, zx::channel buffer_collection,
+                            BindSharedCollectionCompleter::Sync& completer) override;
+  void ValidateBufferCollectionToken(
+      zx_koid_t token_server_koid,
+      ValidateBufferCollectionTokenCompleter::Sync& completer) override;
+  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
+                          SetDebugClientInfoCompleter::Sync& completer) override;
 
   Device* parent_device_ = nullptr;
 
