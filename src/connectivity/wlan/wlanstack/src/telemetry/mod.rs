@@ -1174,6 +1174,7 @@ mod tests {
                         },
                         last_rssi: -90i64,
                         last_snr: 1i64,
+                        locally_initiated: true,
                         reason_code: 1u64,
                         disconnect_source: "mlme",
                         disconnect_reason: "UnspecifiedReason",
