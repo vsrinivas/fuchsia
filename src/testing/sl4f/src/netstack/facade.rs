@@ -200,6 +200,39 @@ impl NetstackFacade {
         }
         Ok(addresses)
     }
+
+    /// Returns the ipv6 link local addresses that are registered with the PairingStateWatcher.
+    pub async fn get_link_local_ipv6_addresses(&self) -> Result<Vec<AddressDto>, Error> {
+        let mut addresses: Vec<AddressDto> = Vec::new();
+        let watcher = self.watcher()?;
+        loop {
+            match watcher.watch().await {
+                Ok(Event::Existing(existing)) => {
+                    addresses.append(
+                        &mut existing
+                            .addresses
+                            .unwrap()
+                            .into_iter()
+                            .filter(|addr: &Address| match addr.addr {
+                                Some(subnet) => match subnet.addr {
+                                    IpAddress::Ipv6(ipv6) => {
+                                        ipv6.addr[0] == 254 && ipv6.addr[1] == 128
+                                    }
+                                    _ => false,
+                                },
+                                None => false,
+                            })
+                            .map(|addr: Address| addr.into())
+                            .collect(),
+                    );
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+        Ok(addresses)
+    }
 }
 
 #[cfg(test)]
@@ -295,6 +328,50 @@ mod tests {
             assert!(result_address
                 .into_iter()
                 .zip(ipv6_addresses.iter())
+                .all(|a: (AddressDto, &Address)| Into::<Address>::into(a.0) == (*a.1)));
+        };
+        future::join(facade_fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_link_local_ipv6_addresses() {
+        let ipv6_address = Address {
+            addr: Some(Subnet {
+                addr: IpAddress::Ipv6(Ipv6Address {
+                    addr: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                }),
+                prefix_len: 2,
+            }),
+            ..Address::EMPTY
+        };
+        let link_local_ipv6_address = Address {
+            addr: Some(Subnet {
+                addr: IpAddress::Ipv6(Ipv6Address {
+                    addr: [254, 128, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                }),
+                prefix_len: 2,
+            }),
+            ..Address::EMPTY
+        };
+        let ipv4_address = Address {
+            addr: Some(Subnet {
+                addr: IpAddress::Ipv4(Ipv4Address { addr: [0, 1, 2, 3] }),
+                prefix_len: 2,
+            }),
+            ..Address::EMPTY
+        };
+        let link_local_ipv6_addresses = [link_local_ipv6_address.clone()];
+        let all_addresses =
+            [ipv6_address.clone(), link_local_ipv6_address.clone(), ipv4_address.clone()];
+        let (facade, stream_fut) = MockStateTester::new()
+            .expect_get_ipv6_addresses(all_addresses.to_vec())
+            .create_facade_and_serve_state();
+        let facade_fut = async move {
+            let result_address = facade.get_link_local_ipv6_addresses().await.unwrap();
+            assert_eq!(result_address.len(), link_local_ipv6_addresses.len());
+            assert!(result_address
+                .into_iter()
+                .zip(link_local_ipv6_addresses.iter())
                 .all(|a: (AddressDto, &Address)| Into::<Address>::into(a.0) == (*a.1)));
         };
         future::join(facade_fut, stream_fut).await;
