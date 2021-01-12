@@ -17,6 +17,10 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
 )
 
+BT_MOCKED_TOOLS=(
+  "tools/devshell/build"
+)
+
 declare fx
 
 BT_SET_UP() {
@@ -27,13 +31,13 @@ BT_SET_UP() {
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
 
   btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
-  btf::make_hosttools_mock zbi
+  btf::make_hosttools_mock zbi > /dev/null
   fvm="$(btf::make_hosttools_mock fvm)"
 }
 
 # Test that -c arguments are added to the end of the kernel command line.
 TEST_kernel_cmdline_append() {
-  BT_EXPECT ${fx} emu --headless -a off --experiment-arm64 -c foobar
+  BT_EXPECT ${fx} emu --no-build --headless -a off --experiment-arm64 -c foobar
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   # The last arg will contain the kernel command line string.
@@ -46,7 +50,7 @@ TEST_kernel_cmdline_append() {
 
 # Test that -A argument works.
 TEST_arch_arm64() {
-  BT_EXPECT ${fx} emu --headless -a off --experiment-arm64 -A arm64
+  BT_EXPECT ${fx} emu --no-build --headless -a off --experiment-arm64 -A arm64
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   local machine_arg="$(get_machine_arg)"
@@ -55,7 +59,7 @@ TEST_arch_arm64() {
 
 # Test that -A argument works.
 TEST_arch_x64() {
-  BT_EXPECT ${fx} emu --headless -a off -A x64
+  BT_EXPECT ${fx} emu --no-build --headless -a off -A x64
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   local machine_arg="$(get_machine_arg)"
@@ -101,7 +105,7 @@ elif [[ \$2 == "extend" ]]; then
 fi
 EOF
 
-  BT_EXPECT ${fx} emu --headless -a off
+  BT_EXPECT ${fx} emu --no-build --headless -a off
 
   local created_fvm_path=$(cat "${created_fvm_path_file}")
   BT_EXPECT btf::does-mock-args-contain \

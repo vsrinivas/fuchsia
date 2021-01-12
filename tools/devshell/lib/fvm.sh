@@ -69,7 +69,8 @@ function fx-fvm-extend-image {
 #   None
 #
 # Output:
-#   (stdout) path to a source FVM image if one was found, nothing otherwise.
+#   (stdout) path to a source FVM image if one was found, relative to
+#   FUCHSIA_BUILD_DIR. nothing otherwise.
 function fx-fvm-find-raw-source {
   # Look for source FVM formats in this order. Every build that uses an FVM
   # should produce at least one of these.
@@ -81,7 +82,7 @@ function fx-fvm-find-raw-source {
 
   for source_fvm in "${source_fvms[@]}"; do
     if [[ -n "${source_fvm}" && -f "${FUCHSIA_BUILD_DIR}/${source_fvm}" ]]; then
-      echo "${FUCHSIA_BUILD_DIR}/${source_fvm}"
+      echo "${source_fvm}"
       return
     fi
   done
