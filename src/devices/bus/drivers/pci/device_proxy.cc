@@ -115,12 +115,10 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
   }
 
   out_bar->id = resp.bar.id;
+  out_bar->size = resp.bar.size;
   if (!resp.bar.is_mmio) {
     out_bar->type = ZX_PCI_BAR_TYPE_PIO;
-    // TODO(cja): Figure out once and for all what the story is with IO on ARM.
-#if __x86_64__
     out_bar->addr = resp.bar.io_addr;
-    out_bar->size = resp.bar.io_size;
     // x86 PIO space access requires permission in the I/O bitmap. If an IO BAR
     // is used then the handle returned corresponds to a resource with access to
     // this range of IO space.
@@ -135,13 +133,6 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
         return st;
       }
     }
-#else
-    zxlogf(INFO,
-           "%s: PIO bars may not be supported correctly on this arch. "
-           "Please have someone check this!\n",
-           __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
   } else {
     out_bar->type = ZX_PCI_BAR_TYPE_MMIO;
     out_bar->handle = handle;

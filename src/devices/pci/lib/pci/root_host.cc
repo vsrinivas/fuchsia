@@ -36,10 +36,9 @@
 // TODO(fxbug.dev/32978): This more complicated book-keeping will be simplified when we
 // have devhost isolation between the root host and root implemtnations and will
 // be able to use channel endpoints closing for similar notifications.
-zx::status<zx_paddr_t> PciRootHost::AllocateWindow(AllocationType type, uint32_t kind,
-                                                   zx_paddr_t base, size_t size,
-                                                   zx::resource* out_resource,
-                                                   zx::eventpair* out_endpoint) {
+zx::status<zx_paddr_t> PciRootHost::Allocate(AllocationType type, uint32_t kind, zx_paddr_t base,
+                                             size_t size, zx::resource* out_resource,
+                                             zx::eventpair* out_endpoint) {
   fbl::AutoLock lock(&lock_);
   RegionAllocator* allocator = nullptr;
   const char* allocator_name = nullptr;

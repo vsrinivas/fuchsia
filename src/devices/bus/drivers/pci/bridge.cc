@@ -182,7 +182,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   //
   // Bridges support IO, MMIO, and PF-MMIO routing. Non-prefetchable MMIO is
   // limited to 32 bit addresses, whereas PF-MMIO can be in a 64 bit window.
-  // Each bridge receives a set of PciAllocation objects from their upstream
+  // Each bridge receives a set of PciAllocation objects from their upstrea
   // that covers their address space windows for transactions, and then add
   // those ranges to their own allocators. Those are then used to allocate for
   // bridges and device endpoints further downstream.
@@ -192,24 +192,22 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
 
   zx_status_t status;
 
-  // Every window is configured the same butwith different allocators and registers.
+  // Every window is configured the same but with different allocators and registers.
   auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, uint64_t base, size_t limit,
                               auto label) {
     std::unique_ptr<PciAllocation> alloc;
     if (base <= limit) {
       uint64_t size = static_cast<uint64_t>(limit) - base + 1;
-      status = upstream_alloc.AllocateWindow(base, size, &alloc);
-
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "[%s] Failed to allocate bridge %s window [%016lx-%016lx]", cfg_->addr(),
-               label, static_cast<uint64_t>(base), static_cast<uint64_t>(limit));
+      auto result = upstream_alloc.Allocate(base, size);
+      if (!result.is_ok()) {
+        zxlogf(ERROR, "[%s] Failed to allocate bridge %s window [%#lx,%#lx)", cfg_->addr(), label,
+               static_cast<uint64_t>(base), static_cast<uint64_t>(base + limit));
         return status;
       }
 
-      ZX_DEBUG_ASSERT(alloc != nullptr);
-      zxlogf(DEBUG, "[%s] Granting [ %#lx-%#lx ] to %s (%p)", cfg_->addr(), base, base + size,
+      zxlogf(DEBUG, "[%s] Allocating [%#lx, %#lx) to %s (%p)", cfg_->addr(), base, base + size,
              label, &dest_alloc);
-      return dest_alloc.GrantAddressSpace(std::move(alloc));
+      return dest_alloc.SetParentAllocation(std::move(result.value()));
     }
     return ZX_OK;
   };

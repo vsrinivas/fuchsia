@@ -76,23 +76,21 @@ class PciRootHost {
   zx::status<zx_paddr_t> AllocateMmio32Window(zx_paddr_t base, size_t size,
                                               zx::resource* out_resource,
                                               zx::eventpair* out_endpoint) {
-    return AllocateWindow(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource,
-                          out_endpoint);
+    return Allocate(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
   }
 
   zx::status<zx_paddr_t> AllocateMmio64Window(zx_paddr_t base, size_t size,
                                               zx::resource* out_resource,
                                               zx::eventpair* out_endpoint) {
     auto status =
-        AllocateWindow(kMmio64, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
+        Allocate(kMmio64, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
     // If an allocation request is made for Mmio64 but has no specified base we can
     // attempt to allocate a window for it out of the <4GB Mmio32 allocator.
     // This is common for a systems like some Intel NUCs which have devices with
     // 64 bit Base Address Registers but all of the available address space
     // discoverable via ACPI is below 4GB.
     if (!status.is_ok() && base == 0) {
-      return AllocateWindow(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource,
-                            out_endpoint);
+      return Allocate(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
     }
 
     return status;
@@ -100,7 +98,7 @@ class PciRootHost {
 
   zx::status<zx_paddr_t> AllocateIoWindow(zx_paddr_t base, size_t size, zx::resource* out_resource,
                                           zx::eventpair* out_endpoint) {
-    return AllocateWindow(kIo, io_type_, base, size, out_resource, out_endpoint);
+    return Allocate(kIo, io_type_, base, size, out_resource, out_endpoint);
   }
   // Search the MCFG allocations found earlier for an entry matching a given
   // segment a host bridge is a part of. Per the PCI Firmware spec v3 table 4-3
@@ -125,7 +123,7 @@ class PciRootHost {
  private:
   void DumpAllocatorWindowsLocked() __TA_REQUIRES(lock_) {
     auto cb = [](const ralloc_region_t* r) -> bool {
-      zxlogf(INFO, "    %#lx - %#lx", r->base, r->base + r->size);
+      zxlogf(INFO, "    [%#lx, %#lx) [%#zx]", r->base, r->base + r->size, r->size);
       return true;
     };
     zxlogf(INFO, "Mmio32 available:");
@@ -136,9 +134,9 @@ class PciRootHost {
     Io().WalkAvailableRegions(cb);
   }
   void ProcessQueue() __TA_REQUIRES(lock_);
-  zx::status<zx_paddr_t> AllocateWindow(AllocationType type, uint32_t kind, zx_paddr_t base,
-                                        size_t size, zx::resource* out_resource,
-                                        zx::eventpair* out_endpoint) __TA_EXCLUDES(lock_);
+  zx::status<zx_paddr_t> Allocate(AllocationType type, uint32_t kind, zx_paddr_t base, size_t size,
+                                  zx::resource* out_resource, zx::eventpair* out_endpoint)
+      __TA_EXCLUDES(lock_);
   // Creates a backing pair of eventpair endpoints used to store and track if a
   // process dies while holding a window allocation, allowing the worker thread
   // to add the resources back to the allocation pool.

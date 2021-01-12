@@ -20,7 +20,7 @@ struct Bar {
   size_t size = 0;
   zx_paddr_t address = 0;  // Allocated address for the bar
   uint8_t bar_id;          // The bar index in the config space. If the bar is 64 bit
-  bool is_mmio;
+  bool is_mmio;            // then the id represents the lowerindex of the two.
   bool is_64bit;
   bool is_prefetchable;
   // then this corresponds to the first half of the register pair

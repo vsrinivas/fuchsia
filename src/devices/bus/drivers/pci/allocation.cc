@@ -4,8 +4,10 @@
 
 #include <err.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/rights.h>
+#include <zircon/status.h>
 
 #include <cassert>
 #include <cinttypes>
@@ -22,42 +24,43 @@
 namespace pci {
 
 zx_status_t PciAllocation::CreateVmObject(zx::vmo* out_vmo) const {
-  zxlogf(TRACE, "Creating vmo for allocation [base = %#lx, size = %#zx]", base(), size());
   return zx::vmo::create_physical(resource(), base(), size(), out_vmo);
 }
 
-zx_status_t PciRootAllocator::AllocateWindow(zx_paddr_t in_base, size_t size,
-                                             std::unique_ptr<PciAllocation>* out_alloc) {
+zx::status<std::unique_ptr<PciAllocation>> PciRootAllocator::Allocate(
+    std::optional<zx_paddr_t> base, size_t size) {
+  zx_paddr_t in_base = (base) ? *base : 0;
   zx_paddr_t out_base = {};
   zx::resource res = {};
   zx::eventpair ep = {};
   zx_status_t status = pciroot_.GetAddressSpace(in_base, size, type_, low_, &out_base, &res, &ep);
   if (status != ZX_OK) {
+    bool mmio = type_ == PCI_ADDRESS_SPACE_MEMORY;
     // This error may not be fatal, the Device probe/allocation methods will know for sure.
-    zxlogf(DEBUG, "failed to allocate [%#8lx, %#8lx, %s] from root: %d", in_base, size,
-           (type_ == PCI_ADDRESS_SPACE_MEMORY) ? "mmio" : "io", status);
-    return status;
+    zxlogf(DEBUG, "failed to allocate %s %s [%#8lx, %#8lx) from root: %s", (mmio) ? "mmio" : "io",
+           (mmio) ? ((low_) ? "<4GB" : ">4GB") : "", in_base, in_base + size,
+           zx_status_get_string(status));
+    return zx::error(status);
   }
 
-  *out_alloc = std::make_unique<PciRootAllocation>(pciroot_, type_, std::move(res), std::move(ep),
-                                                   out_base, size);
-  return ZX_OK;
+  auto allocation = std::unique_ptr<PciAllocation>(
+      new PciRootAllocation(pciroot_, type_, std::move(res), std::move(ep), out_base, size));
+  return zx::ok(std::move(allocation));
 }
 
-zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
-                                               std::unique_ptr<PciAllocation>* out_alloc) {
-  ZX_DEBUG_ASSERT(backing_alloc_);
-  if (!backing_alloc_) {
-    return ZX_ERR_NO_MEMORY;
+zx::status<std::unique_ptr<PciAllocation>> PciRegionAllocator::Allocate(
+    std::optional<zx_paddr_t> base, size_t size) {
+  if (!parent_alloc_) {
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   RegionAllocator::Region::UPtr region_uptr;
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   // Only use base if it is non-zero. RegionAllocator's interface is overloaded so we have
   // to call it differently.
   if (base) {
     ralloc_region_t request = {
-        .base = base,
+        .base = (base) ? *base : 0,
         .size = size,
     };
     status = allocator_.GetRegion(request, region_uptr);
@@ -66,30 +69,30 @@ zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
   }
 
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  zx::resource out_resource;
+  zx::resource out_resource = {};
   // TODO(fxbug.dev/32978): When the resource subset CL lands, make this a smaller resource.
-  status = backing_alloc_->resource().duplicate(ZX_DEFAULT_RESOURCE_RIGHTS, &out_resource);
+  status = parent_alloc_->resource().duplicate(ZX_DEFAULT_RESOURCE_RIGHTS, &out_resource);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  zxlogf(TRACE, "bridge: assigned [ %#lx-%#lx ] to downstream", region_uptr->base,
+  zxlogf(TRACE, "bridge: assigned [%#lx, %#lx) downstream", region_uptr->base,
          region_uptr->base + size);
 
-  *out_alloc =
-      std::make_unique<PciRegionAllocation>(std::move(out_resource), std::move(region_uptr));
-  return ZX_OK;
+  auto allocation = std::unique_ptr<PciAllocation>(
+      new PciRegionAllocation(std::move(out_resource), std::move(region_uptr)));
+  return zx::ok(std::move(allocation));
 }
 
-zx_status_t PciRegionAllocator::GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) {
-  ZX_DEBUG_ASSERT(!backing_alloc_);
+zx_status_t PciRegionAllocator::SetParentAllocation(std::unique_ptr<PciAllocation> alloc) {
+  ZX_DEBUG_ASSERT(!parent_alloc_);
 
-  backing_alloc_ = std::move(alloc);
-  auto base = backing_alloc_->base();
-  auto size = backing_alloc_->size();
+  parent_alloc_ = std::move(alloc);
+  auto base = parent_alloc_->base();
+  auto size = parent_alloc_->size();
   return allocator_.AddRegion({.base = base, .size = size});
 }
 

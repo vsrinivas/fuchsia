@@ -6,8 +6,11 @@
 
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 #include <ddk/debug.h>
 #include <fbl/macros.h>
@@ -135,19 +138,13 @@ class PciAllocator {
   // Delete Copy and Assignment ctors
   DISALLOW_COPY_ASSIGN_AND_MOVE(PciAllocator);
   // Request a region of address space spanning from |base| to |base| + |size|
-  // for a downstream device or bridge.
-  virtual zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                                     std::unique_ptr<PciAllocation>* out_alloc) = 0;
-  // Request a region of address space of size |size| anywhere in the window for
-  // a downstream device or bridge.
-  zx_status_t AllocateWindow(size_t size, std::unique_ptr<PciAllocation>* out_alloc) {
-    return AllocateWindow(/* base */ 0, size, out_alloc);
-  }
+  // for a downstream device or bridge. If |base| is nullopt then the region can be
+  // allocated from any base.
+  virtual zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+                                                              size_t size) = 0;
   // Provide this allocator with a PciAllocation, granting it ownership of that
-  // range of address space for calls to AllocateWindow. This is not necessary
-  // for a PciRootAllocator since all of its windows are allocated over the
-  // Pciroot Protocol.
-  virtual zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) {
+  // range of address space for calls to Allocate.
+  virtual zx_status_t SetParentAllocation(std::unique_ptr<PciAllocation> alloc) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -162,8 +159,8 @@ class PciRootAllocator : public PciAllocator {
  public:
   PciRootAllocator(ddk::PcirootProtocolClient proto, pci_address_space_t type, bool low)
       : pciroot_(proto), type_(type), low_(low) {}
-  zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                             std::unique_ptr<PciAllocation>* out_alloc) final;
+  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+                                                      size_t size) final;
 
  private:
   // The bus driver outlives allocator objects.
@@ -181,12 +178,12 @@ class PciRootAllocator : public PciAllocator {
 class PciRegionAllocator : public PciAllocator {
  public:
   PciRegionAllocator() = default;
-  zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                             std::unique_ptr<PciAllocation>* out_alloc) final;
-  zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) final;
+  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+                                                      size_t size) final;
+  zx_status_t SetParentAllocation(std::unique_ptr<PciAllocation> alloc) final;
 
  private:
-  std::unique_ptr<PciAllocation> backing_alloc_;
+  std::unique_ptr<PciAllocation> parent_alloc_;
   // Unlike a Root allocator which has bookkeeping handled by Pciroot, a
   // Region allocator has a backing RegionAllocator object to handle that
   // metadata.

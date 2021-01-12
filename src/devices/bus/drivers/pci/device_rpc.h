@@ -35,13 +35,11 @@ struct PciMsgCfg {
   uint32_t value;
 };
 
-// In the event of an MMIO bar all the information here will be available
-// via VMO operations on the handle passed back.
 struct PciMsgBar {
   uint32_t id;
   bool is_mmio;
-  uint16_t io_addr;
-  uint16_t io_size;
+  size_t size;
+  zx_paddr_t io_addr;
 };
 
 // For use with QUERY_IRQ_MODE, SET_IRQ_MODE, and MAP_INTERRUPT

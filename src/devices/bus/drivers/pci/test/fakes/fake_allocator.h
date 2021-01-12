@@ -4,9 +4,11 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
+#include <optional>
 
 #include "../../allocation.h"
 
@@ -18,9 +20,11 @@ namespace pci {
 // will be called anyway.
 class FakeAllocation : public PciAllocation {
  public:
-  FakeAllocation(zx_paddr_t base, size_t size)
-      : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {
-    zxlogf(INFO, "fake allocation created %#lx - %#lx", base, base + size);
+  FakeAllocation(std::optional<zx_paddr_t> base, size_t size)
+      : PciAllocation(zx::resource(ZX_HANDLE_INVALID)),
+        base_((base.has_value()) ? *base : 0),
+        size_(size) {
+    zxlogf(INFO, "fake allocation created [%#lx, %#lx)", base_, base_ + size);
   }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
@@ -35,14 +39,14 @@ class FakeAllocation : public PciAllocation {
 
 class FakeAllocator : public PciAllocator {
  public:
-  zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                             std::unique_ptr<PciAllocation>* out_alloc) final {
-    *out_alloc = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
-    return ZX_OK;
+  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+                                                      size_t size) final {
+    auto allocation = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
+    return zx::ok(std::move(allocation));
   }
 
-  zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) final {
-    alloc.release();
+  zx_status_t SetParentAllocation(std::unique_ptr<PciAllocation> alloc) final {
+    (void)alloc.release();
     return ZX_OK;
   }
 };

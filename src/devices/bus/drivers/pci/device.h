@@ -243,14 +243,12 @@ class Device : public PciDeviceType,
   zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseExtendedCapabilities() __TA_REQUIRES(dev_lock_);
-  // TODO(cja) port zx_status_t ParseExtendedCapabilities() __TA_REQUIRES(dev_lock_);
 
   // Info about the BARs computed and cached during the initial setup/probe,
   // indexed by starting BAR register index.
   std::array<Bar, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
   UpstreamNode* upstream() __TA_REQUIRES(dev_lock_) { return upstream_; }
   BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
-  // An upstream node will outlive its downstream devices
 
  private:
   zx_status_t RpcReply(const zx::unowned_channel& ch, zx_status_t st,
@@ -263,6 +261,12 @@ class Device : public PciDeviceType,
   // reserve the existing address window for it so that devices configured by system
   // firmware can be maintained as much as possible.
   zx_status_t ProbeBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
+  // Allocates address space for a BAR out of any suitable allocators.
+  zx::status<std::unique_ptr<PciAllocation>> AllocateFromUpstream(const Bar& bar,
+                                                                  std::optional<zx_paddr_t> base)
+      __TA_REQUIRES(dev_lock_);
+  zx_status_t WriteBarInformation(const Bar& bar) __TA_REQUIRES(dev_lock_);
+
   // Allocates address space for a BAR if it does not already exist.
   zx_status_t AllocateBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs

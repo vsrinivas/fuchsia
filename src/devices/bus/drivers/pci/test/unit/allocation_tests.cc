@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/zx/status.h>
 #include <zircon/limits.h>
 
 #include <zxtest/zxtest.h>
@@ -18,7 +19,7 @@ FakePciroot* RetrieveFakeFromClient(const ddk::PcirootProtocolClient& client) {
   return static_cast<FakePciroot*>(proto.ctx);
 }
 
-// Tests that GetAddressSpace / FreeAddressSpace are equally alled when
+// Tests that GetAddressSpace / FreeAddressSpace are equally called when
 // allocations using PcirootProtocol are created and freed through
 // PciRootAllocation and PciRegionAllocation dtors.
 TEST(PciAllocationTest, BalancedAllocation) {
@@ -27,10 +28,11 @@ TEST(PciAllocationTest, BalancedAllocation) {
   FakePciroot* fake_impl = RetrieveFakeFromClient(client);
   PciRootAllocator root_alloc(client, PCI_ADDRESS_SPACE_MEMORY, false);
   {
-    std::unique_ptr<PciAllocation> alloc1, alloc2;
-    EXPECT_OK(root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc1));
+    auto alloc1 = root_alloc.Allocate(std::nullopt, ZX_PAGE_SIZE);
+    EXPECT_TRUE(alloc1.is_ok());
     EXPECT_EQ(1, fake_impl->allocation_cnt());
-    EXPECT_OK(root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc2));
+    auto alloc2 = root_alloc.Allocate(1024, ZX_PAGE_SIZE);
+    EXPECT_TRUE(alloc2.is_ok());
     EXPECT_EQ(2, fake_impl->allocation_cnt());
   }
 
@@ -38,7 +40,7 @@ TEST(PciAllocationTest, BalancedAllocation) {
   // EXPECT_EQ(0, fake_impl->allocation_cnt());
 }
 
-// Since text allocations lack a valid resource they should fail when
+// Since test allocations lack a valid resource they should fail when
 // CreateVMObject is called
 TEST(PciAllocationTest, VmoCreationFailure) {
   FakePciroot pciroot;
@@ -47,8 +49,8 @@ TEST(PciAllocationTest, VmoCreationFailure) {
   zx::vmo vmo;
   PciRootAllocator root(client, PCI_ADDRESS_SPACE_MEMORY, false);
   PciAllocator* root_ptr = &root;
-  std::unique_ptr<PciAllocation> alloc;
-  EXPECT_OK(root_ptr->AllocateWindow(ZX_PAGE_SIZE, &alloc));
+  auto alloc = root_ptr->Allocate(std::nullopt, ZX_PAGE_SIZE);
+  EXPECT_TRUE(alloc.is_ok());
   EXPECT_NE(ZX_OK, alloc->CreateVmObject(&vmo));
 }
 
