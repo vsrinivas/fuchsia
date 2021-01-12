@@ -120,12 +120,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
             zx::Status::ok(status)
                 .map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-            let lc = Iface {
-                service,
-                iface_manager: listener.iface_manager.clone(),
-                sme: sme.clone(),
-                iface_id,
-            };
+            let lc = Iface { sme: sme.clone(), iface_id };
             legacy_shim.set_if_empty(lc);
         }
         // The AP service make direct use of the PhyManager to get interfaces.

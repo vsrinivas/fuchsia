@@ -78,15 +78,6 @@ async fn serve_fidl(
     }
 
     fs.dir("svc")
-        .add_fidl_service(|stream| {
-            let fut = legacy::shim::serve_legacy(
-                stream,
-                legacy_client_ref.clone(),
-                saved_networks.clone(),
-            )
-            .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
-            fasync::Task::spawn(fut).detach()
-        })
         .add_fidl_service(move |reqs| {
             fasync::Task::spawn(client::serve_provider_requests(
                 iface_manager.clone(),
