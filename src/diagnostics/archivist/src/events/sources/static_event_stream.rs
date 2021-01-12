@@ -4,8 +4,8 @@
 
 use {
     crate::events::{
-        core::EventStreamServer,
         error::EventError,
+        sources::core::EventStreamServer,
         types::{ComponentEvent, EventSource},
     },
     anyhow::Error,

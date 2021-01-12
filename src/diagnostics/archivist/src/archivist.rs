@@ -11,7 +11,7 @@ use {
         diagnostics,
         events::{
             source_registry::{EventSourceRegistration, EventSourceRegistry},
-            static_event_stream::StaticEventStream,
+            sources::StaticEventStream,
             types::{
                 ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
                 EventSource,

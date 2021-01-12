@@ -120,7 +120,7 @@ impl EventListenerServer {
 mod tests {
     use {
         super::*,
-        crate::{container::ComponentIdentity, events::core::tests::*},
+        crate::{container::ComponentIdentity, events::sources::core::tests::*},
         fidl_fuchsia_io::DirectoryMarker,
         fidl_fuchsia_sys_internal::{
             ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,

@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod core;
 pub(crate) mod error;
-mod legacy;
 pub(crate) mod source_registry;
-pub(crate) mod static_event_stream;
+pub(crate) mod sources;
 pub mod types;
