@@ -483,7 +483,7 @@ zx_status_t SparseContainer::Commit() {
             break;
           }
           format->EmptyBlock();
-        } else if (format->FillBlock(extent.block_offset + k) != ZX_OK) {
+        } else if (format->FillBlock(j, extent.block_offset + k) != ZX_OK) {
           fprintf(stderr, "Failed to read block\n");
           return ZX_ERR_IO;
         }

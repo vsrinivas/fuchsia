@@ -47,7 +47,7 @@ zx::status<std::string> AttachFvm(const std::string& device_path) {
 
 // Create a ram-disk and copy the output directly into the ram-disk, and then see if FVM can read
 // it and minfs Fsck passes.
-TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
+TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   auto base_reader_or = FdReader::Create(sparse_image_path);
   ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
   auto sparse_image_or = OpenSparseImage(base_reader_or.value(), std::nullopt);
@@ -135,14 +135,41 @@ TEST(FvmSparseImageReaderTest, ImageWithMinfsPassesFsck) {
   ASSERT_TRUE(fd);
   fd.reset();
 
-  // And finally run fsck on the volume.
-  fsck_options_t options{
-      .verbose = false,
-      .never_modify = true,
-      .always_modify = false,
-      .force = true,
-  };
-  ASSERT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
+  // Attempt to fsck minfs.
+  {
+    uint8_t minfs_guid[] = GUID_DATA_VALUE;
+    char path[PATH_MAX];
+    fd.reset(open_partition(nullptr, minfs_guid, zx::duration::infinite().get(), path));
+    ASSERT_TRUE(fd);
+    fd.reset();
+
+    // And finally run fsck on the volume.
+    fsck_options_t options{
+        .verbose = false,
+        .never_modify = true,
+        .always_modify = false,
+        .force = true,
+    };
+    ASSERT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
+  }
+
+  // Attempt to fsck blobfs.
+  {
+    uint8_t blobfs_guid[] = GUID_BLOB_VALUE;
+    char path[PATH_MAX];
+    fd.reset(open_partition(nullptr, blobfs_guid, zx::duration::infinite().get(), path));
+    ASSERT_TRUE(fd);
+    fd.reset();
+
+    // And finally run fsck on the volume.
+    fsck_options_t options{
+        .verbose = false,
+        .never_modify = true,
+        .always_modify = false,
+        .force = true,
+    };
+    ASSERT_EQ(fsck(path, DISK_FORMAT_BLOBFS, &options, launch_stdio_sync), 0);
+  }
 }
 
 class NullWriter : public Writer {

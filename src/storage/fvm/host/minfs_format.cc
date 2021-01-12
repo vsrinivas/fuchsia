@@ -225,7 +225,7 @@ zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
   return ZX_OK;
 }
 
-zx_status_t MinfsFormat::FillBlock(size_t block_offset) {
+zx_status_t MinfsFormat::FillBlock(unsigned extent_index, size_t block_offset) {
   CheckFvmReady();
   if (block_offset == 0 || block_offset == info_.integrity_start_block) {
     // If this is the superblock or backup superblock location, write out the fvm info explicitly.

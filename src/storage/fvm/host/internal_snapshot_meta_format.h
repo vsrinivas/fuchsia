@@ -20,7 +20,7 @@ class InternalSnapshotMetaFormat final : public Format {
   }
   zx::status<ExtentInfo> GetExtent(unsigned index) const final;
   zx_status_t GetSliceCount(uint32_t* slices_out) const final;
-  zx_status_t FillBlock(size_t block_offset) final;
+  zx_status_t FillBlock(unsigned extent_index, size_t block_offset) final;
   zx_status_t EmptyBlock() final;
   void* Data() final;
   uint32_t BlockSize() const final;

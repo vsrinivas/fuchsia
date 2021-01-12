@@ -59,7 +59,7 @@ zx_status_t InternalSnapshotMetaFormat::GetSliceCount(uint32_t* slices_out) cons
   return ZX_OK;
 }
 
-zx_status_t InternalSnapshotMetaFormat::FillBlock(size_t block_offset) {
+zx_status_t InternalSnapshotMetaFormat::FillBlock(unsigned extent_index, size_t block_offset) {
   if (block_offset == 0) {
     // We'll read directly from meta_ later.
     reading_from_meta_ = true;

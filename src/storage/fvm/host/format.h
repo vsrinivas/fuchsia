@@ -120,7 +120,7 @@ class Format {
   // Get total number of slices required for this partition
   virtual zx_status_t GetSliceCount(uint32_t* slices_out) const = 0;
   // Fill the in-memory data block with data from the specified block on disk
-  virtual zx_status_t FillBlock(size_t block_offset) = 0;
+  virtual zx_status_t FillBlock(unsigned extent_index, size_t block_offset) = 0;
   // Empty the data block (i.e. fill with all 0's)
   virtual zx_status_t EmptyBlock() = 0;
 

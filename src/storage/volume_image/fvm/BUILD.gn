@@ -67,13 +67,26 @@ source_set("fvm-test") {
 }
 
 test_data_image_path = "$target_out_dir/test_data.blk"
+test_blob_image_path = "$target_out_dir/test_blob.blk"
 
 compiled_action("test_data.blk") {
   testonly = true
+  visibility = [ ":*" ]
   tool = "//zircon/tools/minfs"
   outputs = [ test_data_image_path ]
   args = [
     rebase_path(test_data_image_path, root_build_dir),
+    "create",
+  ]
+}
+
+compiled_action("test_blob.blk") {
+  testonly = true
+  visibility = [ ":*" ]
+  tool = "//zircon/tools/blobfs"
+  outputs = [ test_blob_image_path ]
+  args = [
+    rebase_path(test_blob_image_path, root_build_dir),
     "create",
   ]
 }
@@ -87,12 +100,28 @@ test_fvm_data_partition = {
   maximum_bytes = "218103808"
 }
 
+test_fvm_blob_partition = {
+  type = "blob"
+  dep = ":test_blob.blk"
+  minimum_inodes = blobfs_minimum_inodes
+  minimum_data_bytes = blobfs_minimum_data_bytes
+  maximum_bytes = blobfs_maximum_bytes
+}
+
 generate_fvm("test_fvm.sparse.blk") {
   testonly = true
   output_name = "$target_out_dir/test_fvm.sparse.blk"
-  deps = [ ":test_data.blk" ]
+  deps = [
+    ":test_blob.blk",
+    ":test_data.blk",
+  ]
   args = fvm_sparse_args
-  partitions = [ test_fvm_data_partition ]
+  partitions = [
+    # Place blobfs first, since it is A/B enabled (thus allocates extra slices for B-copies of some
+    # metadata) and bugs are likely to be detected in partitions added after this partition.
+    test_fvm_blob_partition,
+    test_fvm_data_partition,
+  ]
 }
 
 resource("test_fvm.sparse.blk-resource") {

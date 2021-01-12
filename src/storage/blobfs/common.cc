@@ -141,6 +141,16 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
   } else {
     const size_t blocks_per_slice = info->slice_size / info->block_size;
 
+    // Ensure that we have enough room in the first slice for the backup superblock, too.
+    // We could, in theory, support a backup superblock which span past the first slice, but it
+    // would be a lot of work given the tight coupling between FVM/blobfs, and the many places which
+    // assume that the superblocks both fit within a slice.
+    if (blobfs::kBlobfsBlockSize * 2 > info->slice_size) {
+      if (!quiet)
+        FX_LOGS(ERROR) << "Slice size doesn't fit backup superblock" << *info;
+      return ZX_ERR_INVALID_ARGS;
+    }
+
     size_t abm_blocks_needed = BlockMapBlocks(*info);
     size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
     if (abm_blocks_needed > abm_blocks_allocated) {
@@ -186,7 +196,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
 }
 
 uint32_t CalculateVsliceCount(const Superblock& superblock) {
-  // Account for an additional slice for the superblock itself.
   return safemath::checked_cast<uint32_t>(1 + static_cast<uint64_t>(superblock.abm_slices) +
                                           static_cast<uint64_t>(superblock.ino_slices) +
                                           static_cast<uint64_t>(superblock.dat_slices) +

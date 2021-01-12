@@ -300,11 +300,11 @@ TEST(FormatFilesystemTest, FormatFVMDeviceWithTooSmallSliceSize) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, CheckMountability(std::move(device)));
 }
 
-// Blobfs can be formatted on an FVM with a slice slice equal to a block size.
+// Blobfs can be formatted on an FVM with a slice slice equal to two blocks.
 TEST(FormatFilesystemTest, FormatFVMDeviceWithSmallestSliceSize) {
   const uint64_t kBlockCount = 1 << 20;
   const uint32_t kBlockSize = kBlobfsBlockSize;
-  const uint64_t kSliceSize = kBlobfsBlockSize;
+  const uint64_t kSliceSize = kBlobfsBlockSize * 2;
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
@@ -336,7 +336,7 @@ TEST(FormatFilesystemTest, FormatNonFVMDeviceDefaultInodeCount) {
 TEST(FormatFilesystemTest, FormatFvmDeviceDefaultJournalBlocks) {
   const uint64_t kBlockCount = MinimumFilesystemBlocks();
   const uint32_t kBlockSize = kBlobfsBlockSize;
-  const uint64_t kSliceSize = kBlobfsBlockSize;
+  const uint64_t kSliceSize = kBlobfsBlockSize * 2;
   const uint64_t kSliceCount = 1028;
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);

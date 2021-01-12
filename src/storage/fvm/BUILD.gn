@@ -11,6 +11,7 @@ group("tests") {
     ":fvm_unit($host_toolchain)",
     ":test_package",
     "//src/storage/fvm/driver:tests",
+    "//src/storage/fvm/host:tests",
   ]
 }
 

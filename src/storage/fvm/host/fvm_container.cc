@@ -676,7 +676,8 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
         }
         format->EmptyBlock();
       } else {
-        if ((status = format->FillBlock(extent.block_offset + current_block)) != ZX_OK) {
+        if ((status = format->FillBlock(extent_index, extent.block_offset + current_block)) !=
+            ZX_OK) {
           fprintf(stderr, "Failed to read block from filesystem\n");
           return status;
         }

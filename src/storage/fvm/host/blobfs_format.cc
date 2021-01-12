@@ -12,6 +12,7 @@
 
 #include <safemath/checked_math.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/host/fvm_reservation.h"
 
 namespace {
@@ -99,6 +100,14 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
     fprintf(stderr, "MakeFvmReady: Slice size not multiple of minfs block\n");
     return ZX_ERR_INVALID_ARGS;
   }
+  if (blobfs::kBlobfsBlockSize * 2 > fvm_info_.slice_size) {
+    // Ensure that we have enough room in the first slice for the backup superblock, too.
+    // We could, in theory, support a backup superblock which span past the first slice, but it
+    // would be a lot of work given the tight coupling between FVM/blobfs, and the many places which
+    // assume that the superblocks both fit within a slice.
+    fprintf(stderr, "MakeFvmReady: Slice size not large enough for backup superblock\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   uint64_t minimum_data_blocks =
       fbl::round_up(reserve->data().request.value_or(0), BlockSize()) / BlockSize();
@@ -154,7 +163,11 @@ zx::status<ExtentInfo> BlobfsFormat::GetExtent(unsigned extent_index) const {
       info.vslice_start = 0;
       info.vslice_count = 1;
       info.block_offset = 0;
-      info.block_count = ToU32(SuperblockBlocks(info_));
+      // Kludge warning:
+      // There is only one superblock stored in the non-FVM blobfs image, we need to expand that to
+      // two in the FVM-contained blobfs image. |FillBlock| will read out |fvm_info_| for either
+      // block while we fill them, but we have to say that there are two blocks to fill here.
+      info.block_count = 2 * ToU32(SuperblockBlocks(info_));
       info.zero_fill = true;
       return zx::ok(info);
     }
@@ -202,12 +215,14 @@ zx_status_t BlobfsFormat::GetSliceCount(uint32_t* slices_out) const {
   return ZX_OK;
 }
 
-zx_status_t BlobfsFormat::FillBlock(size_t block_offset) {
+zx_status_t BlobfsFormat::FillBlock(unsigned extent_index, size_t block_offset) {
   CheckFvmReady();
   // If we are reading the super block, make sure it is the fvm version and not the original
-  if (block_offset == 0) {
+  if (extent_index == 0) {
     memcpy(datablk, fvm_blk_, BlockSize());
-  } else if (blobfs::ReadBlock(fd_.get(), block_offset, datablk) != ZX_OK) {
+    return ZX_OK;
+  }
+  if (blobfs::ReadBlock(fd_.get(), block_offset, datablk) != ZX_OK) {
     fprintf(stderr, "blobfs: could not read block\n");
     return ZX_ERR_INTERNAL;
   }

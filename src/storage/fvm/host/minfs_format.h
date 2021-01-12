@@ -20,7 +20,7 @@ class MinfsFormat final : public Format {
   zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final;
   zx::status<ExtentInfo> GetExtent(unsigned index) const final;
   zx_status_t GetSliceCount(uint32_t* slices_out) const final;
-  zx_status_t FillBlock(size_t block_offset) final;
+  zx_status_t FillBlock(unsigned extent_index, size_t block_offset) final;
   zx_status_t EmptyBlock() final;
   void* Data() final;
   uint32_t BlockSize() const final;
