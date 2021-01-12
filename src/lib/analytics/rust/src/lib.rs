@@ -35,11 +35,21 @@ pub async fn add_launch_event(
     app_version: Option<&str>,
     args: Option<&str>,
 ) -> anyhow::Result<()> {
+    add_custom_event(app_name, app_version, None, args, args).await
+}
+
+pub async fn add_custom_event(
+    app_name: &str,
+    app_version: Option<&str>,
+    category: Option<&str>,
+    action: Option<&str>,
+    label: Option<&str>,
+) -> anyhow::Result<()> {
     if is_test_env() || !is_opted_in() {
         return Ok(());
     }
 
-    let body = make_body_with_hash(&app_name, app_version, args);
+    let body = make_body_with_hash(&app_name, app_version, category, action, label);
     let client = new_https_client();
     let req = Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body))?;
     let mut res = client.request(req).await;
