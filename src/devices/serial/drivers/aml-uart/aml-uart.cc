@@ -14,7 +14,6 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -27,6 +26,7 @@
 #include <hwreg/mmio.h>
 
 #include "registers.h"
+#include "src/devices/serial/drivers/aml-uart/aml_uart_bind.h"
 
 namespace serial {
 
@@ -459,10 +459,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace serial
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_uart, serial::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_UART),
-ZIRCON_DRIVER_END(aml_uart)
-    // clang-format on
+ZIRCON_DRIVER(aml_uart, serial::driver_ops, "zircon", "0.1");

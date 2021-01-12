@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("aml_uart_bind") {
+  rules = "aml_uart.bind"
+  output = "aml_uart_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.composite",
+  ]
+}
 
 driver_module("aml-uart") {
   configs += [
@@ -14,6 +25,7 @@ driver_module("aml-uart") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-uart.cc" ]
   deps = [
+    ":aml_uart_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -25,9 +37,6 @@ driver_module("aml-uart") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -47,6 +56,7 @@ test("aml-uart-test-bin") {
     "aml-uart.cc",
   ]
   deps = [
+    ":aml_uart_bind",
     "//sdk/banjo/fuchsia.hardware.acpi",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
@@ -61,9 +71,6 @@ test("aml-uart-test-bin") {
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -84,5 +91,8 @@ fuchsia_unittest_package("aml-uart-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-uart-test" ]
+  deps = [
+    ":aml-uart-test",
+    ":aml_uart_bind_test",
+  ]
 }
