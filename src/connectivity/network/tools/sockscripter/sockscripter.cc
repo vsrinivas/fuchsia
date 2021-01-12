@@ -265,7 +265,7 @@ int usage(const char* name) {
 }
 
 int SockScripter::Execute(int argc, char* const argv[]) {
-  optind = 0;
+  optind = 1;
   int opt;
   while ((opt = getopt(argc, argv, "hsp:ca:")) != -1) {
     switch (opt) {
@@ -312,7 +312,7 @@ int SockScripter::Execute(int argc, char* const argv[]) {
       }
     }
     if (!found) {
-      fprintf(stderr, "Error-first parameter needs to be socket type:");
+      fprintf(stderr, "Error-first parameter (%s) needs to be socket type:", argv[optind]);
       print_socket_types();
       return -1;
     }
