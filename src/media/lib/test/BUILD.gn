@@ -78,6 +78,7 @@ source_set("codec_client") {
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/media/lib/test:codec_buffer",
     "//src/media/lib/test:one_shot_event",

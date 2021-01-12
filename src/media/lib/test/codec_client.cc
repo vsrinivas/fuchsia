@@ -12,6 +12,8 @@
 #include <iostream>
 #include <random>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace {
 
 // The client would like there to be at least this many input buffers.  Despite
@@ -54,6 +56,7 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
                     codec_handle = std::move(codec_handle)]() mutable {
     zx_status_t bind_status = sysmem_.Bind(std::move(sysmem), dispatcher_);
     ZX_ASSERT(bind_status == ZX_OK);
+    sysmem_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     codec_ = codec_handle.Bind();
     // We want the error handler set up before any error can possibly be generated
