@@ -102,15 +102,6 @@ void ArchRemoveReservedRanges(memalloc::Allocator* allocator) {
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
-  // Skip tests on systems that don't use ZBI, such as QEMU.
-  //
-  // In future, we will want to use alternative mechanisms to locate
-  // memory in such platforms.
-  if (zbi_ptr == nullptr) {
-    printf("No ZBI found. Skipping test...\n");
-    return 0;
-  }
-
   // Print memory information.
   auto* zbi = reinterpret_cast<const zbi_header_t*>(zbi_ptr);
   zbitl::View<zbitl::ByteView> view{zbitl::StorageFromRawHeader(zbi)};

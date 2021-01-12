@@ -228,7 +228,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  common_test("phys-memory-test") {
+  phys_zbi_test("zbi-memory-test") {
     sources = [ "phys-memory-test.cc" ]
     deps = [
       ":test-main",
@@ -268,9 +268,9 @@ if (current_toolchain != default_toolchain) {
     deps = [
       ":backtrace-test",
       ":hello-world-test",
-      ":phys-memory-test",
       ":phys-unittests",
       ":zbi-decompress-test",
+      ":zbi-memory-test",
     ]
   }
 } else {  # current_toolchain == default_toolchain
@@ -285,7 +285,7 @@ if (current_toolchain != default_toolchain) {
           [
             "zbi-backtrace-test",
             "zbi-hello-world-test",
-            "zbi-phys-memory-test",
+            "zbi-memory-test",
             "zbi-phys-unittests",
             "zbi-decompress-test",
           ]) {
