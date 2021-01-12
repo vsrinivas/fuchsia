@@ -693,6 +693,27 @@ notation:
 
 This is the same as the previous example.
 
+### Should I use `resource`?
+
+The FIDL compiler will enforce that any types that already contain a
+[`resource`][resource-lang] are marked as such.
+
+If a `flexible` type does not contain resources but is likely to in the future,
+the `resource` modifier should be added pre-emptively to avoid a difficult
+transition later on. This situation is rare: experience has shown that most
+messages do not contain resources, and passing resources in protocols requires
+care and upfront planning.
+
+### Should I use `strict` or `flexible`?
+
+Marking a type as [`flexible`][flexible-lang] makes it possible to handle data that is unknown
+to the current FIDL schema, and is recommended for types that may add or
+remove members in the future (e.g. configs, metadata, or errors). It is always
+possible to [soft transition][flexible-transition] between `strict` and
+`flexible` for an existing type.
+
+Using `strict` or `flexible` does not have any significant performance impact.
+
 ## Good Design Patterns
 
 This section describes several good design patterns that recur in many FIDL
@@ -1383,3 +1404,6 @@ protocol.
 [ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
+[resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource
+[flexible-lang]: /docs/reference/fidl/language/language.md#strict-vs-flexible
+[flexible-transition]: /docs/development/languages/fidl/guides/abi-api-compat.md#strict-flexible
