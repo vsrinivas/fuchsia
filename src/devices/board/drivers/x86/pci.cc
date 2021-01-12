@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <inttypes.h>
 #include <lib/pci/pciroot.h>
+#include <lib/pci/pio.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/resource.h>
 #include <stdio.h>

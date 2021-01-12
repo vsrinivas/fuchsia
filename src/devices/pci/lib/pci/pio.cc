@@ -12,9 +12,6 @@
 
 #ifdef __x86_64__
 
-static constexpr uint16_t kPciConfigAddrPort = 0xCF8;
-static constexpr uint16_t kPciConfigDataPort = 0xCFC;
-
 fbl::Mutex pio_port_lock;
 
 struct config_address_t {
@@ -48,7 +45,6 @@ static zx_status_t pci_pio_read(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
 zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
   // Only 32 bit alignment allowed for 32 bit reads.
   if (offset & 0x3) {
-    printf("invalid args read32\n");
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t _val = 0;
@@ -62,7 +58,6 @@ zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
 zx_status_t pci_pio_read16(pci_bdf_t bdf, uint8_t offset, uint16_t* val) {
   // Only 16 bit alignment allowed for 16 bit reads
   if (offset & 0x1) {
-    printf("invalid args read16\n");
     return ZX_ERR_INVALID_ARGS;
   }
 

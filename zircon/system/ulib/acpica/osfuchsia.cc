@@ -14,6 +14,7 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
@@ -199,6 +200,8 @@ void acpica_disable_noncontested_mode() {
 }
 
 static void initialize_port_bitmap();
+static zx_status_t handle_port_permissions(uint16_t address, UINT32 width_bits);
+static ACPI_STATUS zx_status_to_acpi_status(zx_status_t st);
 
 /**
  * @brief Initialize the OSL subsystem.
@@ -226,6 +229,15 @@ ACPI_STATUS AcpiOsInitialize() {
   }
 
   initialize_port_bitmap();
+
+  // For AcpiOsWritePort and AcpiOsReadPort to operate they need access to ioports 0xCF8 and 0xCFC
+  // per the Pci Local Bus specification v3.0. Each address is a 32 bit port.
+  for (const auto addr : {kPciConfigAddrPort, kPciConfigDataPort}) {
+    zx_status_t pio_status = handle_port_permissions(addr, 32);
+    if (pio_status != ZX_OK) {
+      return zx_status_to_acpi_status(pio_status);
+    }
+  }
 
   return AE_OK;
 }
@@ -998,7 +1010,7 @@ static zx_status_t add_port_permissions(uint16_t address, uint8_t width_bytes) {
  * @brief Handle all matters of I/O port permissions with the kernel.
  *
  * @param address The I/O address.
- * @param width_bits The wideness of the access, in bits.
+ * @param width_bits The width of the access, in bits.
  *
  * @return Status code that indicates success or reason for error.
  */

@@ -10,6 +10,10 @@
 #include <zircon/types.h>
 
 #ifdef __x86_64__
+
+inline constexpr uint16_t kPciConfigAddrPort = 0xCF8;
+inline constexpr uint16_t kPciConfigDataPort = 0xCFC;
+
 // Reads from a PCI register at offset |offset| in the config space of the specified device by
 // using the cf8/cfc port io access method.
 zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val);
