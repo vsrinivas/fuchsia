@@ -12,13 +12,14 @@
 
 #include <numeric>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 #include <soc/as370/as370-audio-regs.h>
 #include <soc/as370/as370-clk-regs.h>
 #include <soc/as370/as370-clk.h>
+
+#include "src/devices/clock/drivers/as370-clk/syn_clk_bind.h"
 
 namespace clk {
 
@@ -321,10 +322,4 @@ static constexpr zx_driver_ops_t syn_clk_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(syn_clk, syn_clk_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_CLOCK),
-ZIRCON_DRIVER_END(syn_clk)
-    // clang-format on
+ZIRCON_DRIVER(syn_clk, syn_clk_driver_ops, "zircon", "0.1");
