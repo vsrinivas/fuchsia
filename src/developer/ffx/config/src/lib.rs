@@ -14,25 +14,21 @@ use {
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
     crate::mapping::{
-        config::config, data::data, env_var::env_var, file_check::file_check, home::home,
-        identity::identity,
+        cache::cache, config::config, data::data, env_var::env_var, file_check::file_check,
+        home::home, identity::identity, runtime::runtime,
     },
+    crate::paths::get_default_user_file_path,
     analytics::{is_opted_in, opt_in_status},
     anyhow::{anyhow, bail, Context, Result},
     std::{
         convert::{From, TryFrom, TryInto},
-        env::var,
-        fs::{create_dir_all, File},
+        fs::File,
         io::Write,
-        path::PathBuf,
     },
 };
 
 pub use config_macros::FfxConfigBacked;
 pub use serde_json::Value;
-
-#[cfg(test)]
-use tempfile::NamedTempFile;
 
 pub mod api;
 pub mod constants;
@@ -43,6 +39,7 @@ pub mod sdk;
 mod cache;
 mod file_backed_config;
 mod mapping;
+mod paths;
 mod persistent_config;
 mod priority_config;
 mod runtime;
@@ -94,7 +91,9 @@ where
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let array_env_var_mapper = T::handle_arrays(&data_mapper);
+    let cache_mapper = cache(&data_mapper);
+    let runtime_mapper = runtime(&cache_mapper);
+    let array_env_var_mapper = T::handle_arrays(&runtime_mapper);
     get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
@@ -111,41 +110,10 @@ where
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let array_env_var_mapper = T::handle_arrays(&data_mapper);
+    let cache_mapper = cache(&data_mapper);
+    let runtime_mapper = runtime(&cache_mapper);
+    let array_env_var_mapper = T::handle_arrays(&runtime_mapper);
     get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
-}
-
-pub(crate) fn get_config_base_path() -> Result<PathBuf> {
-    let mut path = match var("XDG_CONFIG_HOME").map(PathBuf::from) {
-        Ok(p) => p,
-        Err(_) => {
-            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-            home.push(".local");
-            home.push("share");
-            home
-        }
-    };
-    path.push("Fuchsia");
-    path.push("ffx");
-    path.push("config");
-    create_dir_all(&path)?;
-    Ok(path)
-}
-
-pub(crate) fn get_data_base_path() -> Result<PathBuf> {
-    let mut path = match var("XDG_DATA_HOME").map(PathBuf::from) {
-        Ok(p) => p,
-        Err(_) => {
-            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-            home.push(".local");
-            home.push("share");
-            home
-        }
-    };
-    path.push("Fuchsia");
-    path.push("ffx");
-    create_dir_all(&path)?;
-    Ok(path)
 }
 
 pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
@@ -253,21 +221,6 @@ pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result
     save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
 }
 
-#[cfg(test)]
-fn get_default_user_file_path() -> PathBuf {
-    lazy_static::lazy_static! {
-        static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
-    }
-    FILE.path().to_path_buf()
-}
-
-#[cfg(not(test))]
-fn get_default_user_file_path() -> PathBuf {
-    let mut default_path = get_config_base_path().expect("cannot get configuration base path");
-    default_path.push(constants::DEFAULT_USER_CONFIG);
-    default_path
-}
-
 pub fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
@@ -321,6 +274,7 @@ mod test {
     // creates a token stream referencing `ffx_config` on the inside.
     use crate as ffx_config;
     use serde_json::json;
+    use std::path::PathBuf;
 
     #[test]
     fn test_check_config_files_fails() {

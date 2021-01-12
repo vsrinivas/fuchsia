@@ -1,12 +1,15 @@
 {
-  "log": {
-    "dir": [
-      "$FFX_LOG_DIR",
-      "$DATA/logs"
-    ],
-    "enabled": "$FFX_LOG_ENABLED"
-  },
-  "proxy": {
-    "timeout_secs": 10.0
-  }
+    "log": {
+        "dir": [
+            "$FFX_LOG_DIR",
+            "$CACHE/logs"
+        ],
+        "enabled": [
+            "$FFX_LOG_ENABLED",
+            true
+        ]
+    },
+    "proxy": {
+        "timeout_secs": 10.0
+    }
 }

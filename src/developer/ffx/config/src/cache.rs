@@ -6,7 +6,7 @@ use {
     crate::constants::{self, CONFIG_CACHE_TIMEOUT},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
-    crate::get_config_base_path,
+    crate::paths::get_config_base_path,
     crate::runtime::populate_runtime_config,
     anyhow::{anyhow, Context, Result},
     async_std::sync::{Arc, RwLock},

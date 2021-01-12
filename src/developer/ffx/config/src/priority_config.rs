@@ -596,7 +596,10 @@ mod test {
     fn test_default() {
         let test = Priority::new(None, None, None, None);
         let default_value = test.get(&"log.enabled".into(), &identity);
-        assert_eq!(default_value.unwrap(), Value::String("$FFX_LOG_ENABLED".to_string()));
+        assert_eq!(
+            default_value.unwrap(),
+            Value::Array(vec![Value::String("$FFX_LOG_ENABLED".to_string()), Value::Bool(true)])
+        );
     }
 
     #[test]

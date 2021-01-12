@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mapping::{postprocess, preprocess, replace},
+    crate::mapping::{postprocess, preprocess, replace_regex as replace},
     lazy_static::lazy_static,
     regex::Regex,
     serde_json::Value,
