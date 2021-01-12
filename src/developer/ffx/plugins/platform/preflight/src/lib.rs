@@ -27,7 +27,9 @@ static SOME_CHECKS_FAILED_RECOVERABLE: &str =
     "Some checks failed :(. Follow the instructions above and try running again.";
 static SOME_CHECKS_FAILED_FATAL: &str = "Some checks failed :(. Sorry!";
 static EVERYTING_CHECKS_OUT: &str =
-    "Everything checks out! Continue at https://fuchsia.dev/fuchsia-src/get-started.";
+    "Everything checks out! Continue at https://fuchsia.dev/fuchsia-src/get-started";
+static EVERYTING_CHECKS_OUT_WITH_WARNINGS: &str =
+    "There were some warnings, but you can still carry on. Continue at https://fuchsia.dev/fuchsia-src/get-started";
 
 #[cfg(target_os = "linux")]
 fn get_operating_system() -> Result<OperatingSystem> {
@@ -76,9 +78,13 @@ async fn run_preflight_checks<W: Write>(
     writeln!(writer)?;
     // Run the checks, and keep track of failures.
     let mut failures = vec![];
+    let mut has_warnings = false;
     for check in checks {
         let result = check.run(&config).await?;
         writeln!(writer, "{}", result)?;
+        if matches!(&result, PreflightCheckResult::Warning(..)) {
+            has_warnings = true;
+        }
         if matches!(result, PreflightCheckResult::Failure(..)) {
             failures.push(result);
         }
@@ -102,6 +108,8 @@ async fn run_preflight_checks<W: Write>(
         } else {
             ffx_bail!("{}", SOME_CHECKS_FAILED_FATAL);
         }
+    } else if has_warnings {
+        writeln!(writer, "{}", EVERYTING_CHECKS_OUT_WITH_WARNINGS)?;
     } else {
         writeln!(writer, "{}", EVERYTING_CHECKS_OUT)?;
     }
