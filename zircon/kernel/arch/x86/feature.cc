@@ -53,6 +53,7 @@ bool g_has_ssbd;
 bool g_ssb_mitigated;
 bool g_has_md_clear;
 bool g_md_clear_on_user_return;
+bool g_has_spec_ctrl;
 bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_ctxt_switch;
@@ -227,16 +228,21 @@ void x86_cpu_feature_init() {
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
-    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::SPEC_CTRL);
-    g_has_enhanced_ibrs = x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
+    g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB) ||
+                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::STIBP) ||
+                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::SSBD);
+    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB);
+    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
   } else if (x86_vendor == X86_VENDOR_AMD) {
     g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
+    g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBRS) ||
+                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP);
     g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
     // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
     // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
     // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
-    g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
+    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_amd_cpu_has_ibrs_always_on(&cpuid);
   }
   g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
@@ -415,6 +421,7 @@ void x86_feature_debug(void) {
   print_property(g_swapgs_bug_mitigated, "swapgs_bug_mitigated");
   print_property(g_x86_feature_pcid_good, "pcid_good");
   print_property(x86_kpti_is_enabled(), "pti_enabled");
+  print_property(g_has_spec_ctrl, "spec_ctrl");
   print_property(g_has_ssb, "ssb");
   print_property(g_has_ssbd, "ssbd");
   print_property(g_ssb_mitigated, "ssb_mitigated");

@@ -235,7 +235,7 @@ class Features {
   static constexpr Feature MD_CLEAR = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 10};
   static constexpr Feature PCONFIG = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 18};
   static constexpr Feature CLFLUSH = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 19};
-  static constexpr Feature SPEC_CTRL = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 26};
+  static constexpr Feature IBRS_IBPB = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 26};
   static constexpr Feature STIBP = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 27};
   static constexpr Feature ARCH_CAPABILITIES = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 29};
   static constexpr Feature SSBD = {.leaf = LEAF7, .reg = Registers::EDX, .bit = 31};
@@ -251,6 +251,7 @@ class Features {
 
   static constexpr Feature CLZERO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 0};
   static constexpr Feature AMD_IBPB = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 12};
+  static constexpr Feature AMD_IBRS = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 14};
   static constexpr Feature AMD_STIBP = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 15};
   static constexpr Feature AMD_IBRS_ALWAYS_ON = {
       .leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
