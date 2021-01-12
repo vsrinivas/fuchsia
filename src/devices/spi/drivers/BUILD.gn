@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "aml-spi:tests",
     "mtk-spi:tests",
     "spi:tests",
   ]

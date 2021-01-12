@@ -11,7 +11,6 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -21,6 +20,7 @@
 #include <hw/reg.h>
 
 #include "registers.h"
+#include "src/devices/spi/drivers/aml-spi/aml_spi_bind.h"
 
 namespace spi {
 
@@ -235,10 +235,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace spi
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_spi, spi::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SPI),
-ZIRCON_DRIVER_END(aml_spi)
+ZIRCON_DRIVER(aml_spi, spi::driver_ops, "zircon", "0.1");
