@@ -217,8 +217,7 @@ zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
   }
   // Insert `new_range` before `it`. If `it == ranges_.end()`, then this
   // simply adds it to the end of list.
-  ranges_.insert(it, new_range);
-  auto new_range_it = ranges_.make_iterator(*new_range);
+  auto new_range_it = ranges_.insert(it, new_range);
 
   // The new range may be touching the previous range. If so, merge them
   // together.
