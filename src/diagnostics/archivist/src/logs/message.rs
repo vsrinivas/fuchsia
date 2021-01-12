@@ -563,6 +563,9 @@ impl TryFrom<fx_log_severity_t> for LegacySeverity {
         } else if raw == 2 {
             // legacy value for ERROR
             Ok(LegacySeverity::Error)
+        } else if raw == 3 {
+            // legacy value for FATAL
+            Ok(LegacySeverity::Fatal)
         } else if raw < LogLevelFilter::Info as i32 && raw > LogLevelFilter::Debug as i32 {
             // Verbosity scale exists as incremental steps between INFO & DEBUG
             Ok(LegacySeverity::Verbose(LogLevelFilter::Info as i8 - raw as i8))
@@ -1180,6 +1183,20 @@ mod tests {
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
         parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         expected_message.metadata.severity = Severity::Warn;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = 2; // legacy severity
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
+        expected_message.metadata.severity = Severity::Error;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = 3; // legacy severity
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
+        expected_message.metadata.severity = Severity::Fatal;
 
         assert_eq!(parsed, expected_message);
     }
