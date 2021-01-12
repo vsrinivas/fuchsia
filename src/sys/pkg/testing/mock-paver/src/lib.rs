@@ -262,10 +262,10 @@ pub mod hooks {
     impl<F> Hook for WriteFirmware<F>
     where
         F: Fn(
-                paver::Configuration,
-                /* firmware_type */ String,
-                /* payload */ Vec<u8>,
-            ) -> paver::WriteFirmwareResult
+            paver::Configuration,
+            /* firmware_type */ String,
+            /* payload */ Vec<u8>,
+        ) -> paver::WriteFirmwareResult
             + Sync,
     {
         async fn data_sink(
@@ -398,8 +398,7 @@ impl MockPaverServiceBuilder {
         }
     }
 
-    /// Adds a Hook. Hooks are called reverse order of insertion. That is, the last Hook added gets
-    /// the first chance to respond to a request.
+    /// Adds a Hook. Hooks are called in order of insertion.
     pub fn insert_hook(mut self, hook: impl Hook + Send + Sync + 'static) -> Self {
         self.hooks.push(Box::new(hook));
         self
@@ -513,8 +512,7 @@ impl MockPaverService {
         'req_stream: while let Some(mut request) = stream.try_next().await? {
             self.push_event(PaverEvent::from_data_sink_request(&request));
 
-            // Run all the hooks in reverse order (last hook added gets first chance to respond).
-            for hook in self.hooks.iter().rev() {
+            for hook in self.hooks.iter() {
                 match hook.data_sink(request).await {
                     Some(r) => request = r,
                     None => continue 'req_stream,
@@ -558,8 +556,7 @@ impl MockPaverService {
         'req_stream: while let Some(mut request) = stream.try_next().await? {
             self.push_event(PaverEvent::from_boot_manager_request(&request));
 
-            // Run all the hooks in reverse order (last hook added gets first chance to respond).
-            for hook in self.hooks.iter().rev() {
+            for hook in self.hooks.iter() {
                 match hook.boot_manager(request).await {
                     Some(r) => request = r,
                     None => continue 'req_stream,

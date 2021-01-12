@@ -373,10 +373,10 @@ async fn test_installation_deferred() {
     let env = TestEnvBuilder::new()
         .paver(
             MockPaverServiceBuilder::new()
+                .insert_hook(throttle_hook)
                 .insert_hook(mphooks::config_status(move |_| {
                     Ok(config_status_response_clone.lock().as_ref().unwrap().clone())
                 }))
-                .insert_hook(throttle_hook)
                 .build(),
         )
         .build();

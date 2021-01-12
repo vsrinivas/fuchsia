@@ -121,8 +121,8 @@ async fn gc_error_pending_commit() {
         .pkgfs(TempDirPkgFs::new())
         .paver_service_builder(
             MockPaverServiceBuilder::new()
-                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
-                .insert_hook(throttle_hook),
+                .insert_hook(throttle_hook)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending))),
         )
         .build()
         .await;

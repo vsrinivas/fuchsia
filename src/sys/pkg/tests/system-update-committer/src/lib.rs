@@ -127,8 +127,8 @@ async fn system_pending_commit() {
     let env = TestEnv::builder()
         .paver_service_builder(
             MockPaverServiceBuilder::new()
-                .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending)))
-                .insert_hook(throttle_hook),
+                .insert_hook(throttle_hook)
+                .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
         )
         .build();
 
