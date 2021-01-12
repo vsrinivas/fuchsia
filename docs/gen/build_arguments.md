@@ -3708,19 +3708,7 @@ From //build/config/BUILDCONFIG.gn:157
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
 given the empty string. Path can be source-absolute or system-absolute.
 
-**Current value for `target_cpu = "arm64"`:** `"/b/s/w/ir/x/w/out/not-default/zircon_gn_trace.json"`
-
-From //out/not-default/args.gn:13
-
-**Overridden from the default:** `""`
-
-From //build/zircon/build_args.gni:30
-
-**Current value for `target_cpu = "x64"`:** `"/b/s/w/ir/x/w/out/not-default/zircon_gn_trace.json"`
-
-From //out/not-default/args.gn:13
-
-**Overridden from the default:** `""`
+**Current value (from the default):** `""`
 
 From //build/zircon/build_args.gni:30
 
