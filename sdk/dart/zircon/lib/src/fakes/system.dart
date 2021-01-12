@@ -206,6 +206,11 @@ class System {
   }
 
   // Time operations.
+  static int clockGetMonotonic() {
+    throw UnimplementedError(
+        'System.clockGetMonotonic() is not implemented on this platform.');
+  }
+
   static int clockGet(int clockId) {
     throw UnimplementedError(
         'System.timeGet() is not implemented on this platform.');
