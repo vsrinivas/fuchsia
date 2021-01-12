@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/dart-inspect-validator-puppet"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

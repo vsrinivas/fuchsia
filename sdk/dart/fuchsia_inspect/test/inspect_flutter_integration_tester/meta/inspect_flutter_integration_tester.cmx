@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.module": {
+            "@version": 2,
+            "intent_filters": [],
+            "suggestion_headline": "Inspect Integration Mod"
+        }
+    },
+    "program": {
+        "data": "data/inspect_flutter_integration_tester"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
