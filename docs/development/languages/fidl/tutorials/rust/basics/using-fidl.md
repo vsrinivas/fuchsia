@@ -35,9 +35,7 @@ rm -r examples/fidl/rust/fidl_crates/*
 1. Add the main function to `examples/fidl/rust/fidl_crates/src/main.rs`:
 
    ```rust
-   fn main() {
-      println!("Hello, world!");
-   }
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="main" adjust_indentation="auto" %}
    ```
 
 1. Define a `rustc_binary` and then create a depencency on the test through the `$host_toolchain`, which will build the binary for the host.
@@ -51,12 +49,15 @@ rm -r examples/fidl/rust/fidl_crates/*
      sources = [ "src/main.rs" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="group" %}
+   group("fidl_crates") {
+      testonly = true
+      deps = [ ":fidl_crates_bin($host_toolchain)" ]
+   }
    ```
 
    Note: `rustc_binary` will look for a `src/main.rs` file by default as the crate root. It is possible
    to place the test code in a different file (e.g. `hello_world.rs`) instead, and then specify the
-   crate root explicity in the `rustc_test` declaration (e.g. `source_root = "hello_world.rs"`).
+   crate root explicity in the `rustc_binary` declaration (e.g. `source_root = "hello_world.rs"`).
 
 1. Include example in the build
 
@@ -88,18 +89,23 @@ For each FIDL library declaration, including the one in [Compiling FIDL][fidl-in
 a FIDL crate containing Rust bindings code for that library is generated under the original target
 name appended with `-rustc`.
 
-Add a dependency on the Rust bindings by referencing this generated crate. The new `rustc_test`
+Add a dependency on the Rust bindings by referencing this generated crate. The new `rustc_binary`
 target should look like:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="test" %}
+rustc_binary("fidl_crates_bin") {
+  edition = "2018"
+  deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
+
+  sources = [ "src/main.rs" ]
+}
 ```
 
 (Optional) To view the newly generated bindings:
 
 1. Rebuild using `fx build`.
 2. Change to the generated files directory:
-   `out/default/fidling/gen/examples/fidl/fuchsia.examples`. The generated code is in
+   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples`. The generated code is in
    `fidl_fuchsia_examples.rs`.
    You may need to change `out/default` if you have set a different build output
    directory. You can check your build output directory with `cat .fx-build-dir`.
@@ -109,23 +115,48 @@ Note: The generated FIDL bindings are part of the build output and are not check
 For more information on how to find generated bindings code, see
 [Viewing generated bindings code][generated-code].
 
-## Import the FIDL Rust crate into your project {#include-rust-bindings}
+## Using the FIDL Rust crate in your project {#include-rust-bindings}
 
-To import the crate, add the following to the top of the `tests` module in
-`examples/fidl/rust/fidl_crates/src/main.rs`. In the Fuchsia tree, FIDL crates are often aliased to
-shorter names for brevity.
+Create a place to play around with the generated FIDL crate by adding a test
+module and placeholder test:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="import" adjust_indentation="auto" %}
+#[cfg(test)]
+mod test {
+   #[test]
+   fn fidl_crates_usage() {
+
+   }
+}
+```
+
+You then need to build with tests by setting the `with_unit_tests` argument:
+
+```gn
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="test" %}
+```
+
+This will generate a `fidl_crates_bin_test` target, which should then be added
+to the build group:
+
+```
+{%includecode gerrict_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="group" %}
+```
+
+To import the crate, add the following to the top of the `tests` module.
+In the Fuchsia tree, FIDL crates are often aliased to shorter names for brevity:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="import" %}
 ```
 
 ## Use the generated bindings code {#inspect-user-generated-bindings}
 
-You can now write some tests by referring to the generated code. For more
+You can now write some code using the generated bindings code. For more
 information on the bindings, see [Rust Bindings Reference][bindings-ref].
 
-To get started, you can also use some example code. You can add this inside the
-`tests` module:
+To get started, you can also use the example code below. You can add this inside the
+`fidl_crates_usage` test:
 
 ```rust
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="bits" adjust_indentation="auto" %}
@@ -142,7 +173,7 @@ To get started, you can also use some example code. You can add this inside the
 To rebuild and rerun the tests, run:
 
 ```
-fx test -vo fidl_crates_test
+fx test -vo fidl_crates_bin_test
 ```
 
 <!-- xrefs -->
