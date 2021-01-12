@@ -5,7 +5,8 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    anyhow::Error,
+    anyhow::{format_err, Error},
+    async_std::io::ErrorKind::TimedOut,
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
         HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
@@ -13,6 +14,7 @@ use {
         ServiceConsumerProxy, ServiceConsumerRequest, ServicePublisherMarker,
         ServicePublisherProxy, ServicePublisherRequest,
     },
+    fuchsia_async::TimeoutExt,
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
     overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext},
@@ -121,7 +123,11 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
-    let uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
+    let uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone())
+        .on_timeout(Duration::from_secs(1), || {
+            Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
+        })
+        .await?;
     let (mut rx, mut tx) = uds.split();
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(

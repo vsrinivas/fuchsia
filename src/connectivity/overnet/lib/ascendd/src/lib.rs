@@ -5,16 +5,18 @@
 mod serial;
 
 use crate::serial::run_serial_link_handlers;
-use anyhow::{bail, Error};
+use anyhow::{bail, format_err, Error};
 use argh::FromArgs;
+use async_std::os::unix::net::{UnixListener, UnixStream};
 use fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy};
 use fuchsia_async::Task;
+use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use hoist::{HostOvernet, OvernetInstance};
 use overnet_core::{Router, RouterOptions};
-use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
 use stream_link::run_stream_link;
 
 #[derive(FromArgs, Default)]
@@ -78,7 +80,7 @@ impl OvernetInstance for Ascendd {
 
 async fn run_stream(
     node: Arc<Router>,
-    stream: Result<async_std::os::unix::net::UnixStream, std::io::Error>,
+    stream: Result<UnixStream, std::io::Error>,
     sockpath: &str,
 ) -> Result<(), Error> {
     let (mut rx, mut tx) = stream?.split();
@@ -109,19 +111,25 @@ async fn run_ascendd(
     log::info!("starting ascendd on {} with node id {:?}", sockpath, node.node_id());
 
     let incoming = loop {
-        match async_std::os::unix::net::UnixListener::bind(sockpath).await {
+        match UnixListener::bind(sockpath).await {
             Ok(listener) => {
                 break listener;
             }
-            Err(_) => {
-                if async_std::os::unix::net::UnixStream::connect(sockpath).await.is_ok() {
+            Err(_) => match UnixStream::connect(sockpath)
+                .on_timeout(Duration::from_secs(1), || {
+                    Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
+                })
+                .await
+            {
+                Ok(_) => {
                     log::error!("another ascendd is already listening at {}", sockpath);
                     bail!("another ascendd is aleady listening!");
-                } else {
+                }
+                Err(_) => {
                     log::info!("cleaning up stale ascendd socket at {}", sockpath);
                     std::fs::remove_file(sockpath)?;
-                };
-            }
+                }
+            },
         }
     };
 
