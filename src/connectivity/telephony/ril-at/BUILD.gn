@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "ril_at"
@@ -32,31 +31,11 @@ rustc_binary("bin") {
   ]
 }
 
-package("ril-at") {
+fuchsia_package_with_single_component("ril-at") {
+  manifest = "meta/ril-at.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "ril_at"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/ril-at.cmx")
-      dest = "ril-at.cmx"
-    },
-  ]
 }
 
-unittest_package("ril-at-tests") {
-  package_name = "ril-at-tests"
-
+fuchsia_unittest_package("ril-at-tests") {
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "ril_at_bin_test"
-      dest = "ril-at-tests"
-    },
-  ]
 }

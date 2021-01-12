@@ -5,7 +5,7 @@
 group("tests") {
   testonly = true
   public_deps = [
-    "test-components:lowpan-integration-tests",
+    "test-components:lowpan-driver-provision-mock",
     "//src/connectivity/openthread/tests/fake-drivers",
   ]
 }

@@ -3,13 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":lowpanctl_integration_test" ]
+  deps = [ ":lowpanctl-integration-test" ]
 }
 
-rustc_test("lowpanctl_integration_test") {
+rustc_test("lowpanctl-integration-test-bin") {
+  name = "lowpanctl_integration_test"
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
@@ -32,4 +34,9 @@ rustc_test("lowpanctl_integration_test") {
     "src/lib.rs",
     "src/lowpanctl.rs",
   ]
+}
+
+fuchsia_unittest_package("lowpanctl-integration-test") {
+  manifest = "meta/lowpanctl-integration-test.cmx"
+  deps = [ ":lowpanctl-integration-test-bin" ]
 }

@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-executable("ppp-tests") {
+executable("ppp-tests-bin") {
   testonly = true
 
   output_name = "ppp-tests"
@@ -15,14 +15,6 @@ executable("ppp-tests") {
   ]
 }
 
-test_package("tests") {
-  package_name = "ppp-tests"
-
-  deps = [ ":ppp-tests" ]
-
-  tests = [
-    {
-      name = "ppp-tests"
-    },
-  ]
+fuchsia_unittest_package("ppp-tests") {
+  deps = [ ":ppp-tests-bin" ]
 }

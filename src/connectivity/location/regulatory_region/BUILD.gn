@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "regulatory_region"
@@ -43,44 +42,16 @@ rustc_library("lib") {
 group("tests") {
   testonly = true
   deps = [
-    ":integration_tests",
-    ":unit_tests",
+    ":regulatory-region-tests",
+    "tests",
   ]
 }
 
-group("unit_tests") {
-  testonly = true
-  deps = [ ":regulatory_region_tests" ]
-}
-
-group("integration_tests") {
-  testonly = true
-  deps = [ "tests:tests" ]
-}
-
-package("regulatory_region") {
+fuchsia_package_with_single_component("regulatory_region") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "regulatory_region"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/regulatory_region.cmx")
-      dest = "regulatory_region.cmx"
-    },
-  ]
+  manifest = "meta/regulatory_region.cmx"
 }
 
-unittest_package("regulatory_region_tests") {
+fuchsia_unittest_package("regulatory-region-tests") {
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "regulatory_region_lib_lib_test"
-    },
-  ]
 }

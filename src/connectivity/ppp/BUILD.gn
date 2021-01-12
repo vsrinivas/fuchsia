@@ -10,7 +10,7 @@ group("tests") {
   testonly = true
   deps = [
     "drivers/serial-ppp:tests",
-    "lib:tests",
+    "lib:ppp-tests",
     "lib/ppp_packet:ppp-packet-tests",
     "lib/ppp_protocol:ppp-protocol-tests",
   ]

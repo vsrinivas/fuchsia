@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/lowpanservice_bin_test"
+        "binary": "bin/lowpan_spinel_driver_bin_test"
     }
 }

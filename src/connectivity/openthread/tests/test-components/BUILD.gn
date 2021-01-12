@@ -3,31 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
-test_package("ot-radio-tests") {
-  package_name = "ot-radio-tests"
-  deps = [
-    ":ot-radio-ncp-ver-query",
-    ":ot-stack-ncp-ver-query",
-    ":ot-stack-soft-reset",
-  ]
-  tests = [
-    {
-      name = "ot_radio_ncp_ver_query"
-    },
-    {
-      name = "ot_stack_ncp_ver_query"
-    },
-    {
-      name = "ot_stack_soft_reset"
-    },
-  ]
-}
-
-rustc_test("ot-radio-ncp-ver-query") {
+rustc_test("ot-radio-ncp-ver-query-bin") {
   name = "ot_radio_ncp_ver_query"
   source_root = "real-device/ot_radio_ncp_ver_query.rs"
   edition = "2018"
@@ -41,7 +19,12 @@ rustc_test("ot-radio-ncp-ver-query") {
   sources = [ "real-device/ot_radio_ncp_ver_query.rs" ]
 }
 
-rustc_test("ot-stack-ncp-ver-query") {
+fuchsia_unittest_component("ot-radio-ncp-ver-query") {
+  manifest = "meta/ot-radio-ncp-ver-query.cmx"
+  deps = [ ":ot-radio-ncp-ver-query-bin" ]
+}
+
+rustc_test("ot-stack-ncp-ver-query-bin") {
   name = "ot_stack_ncp_ver_query"
   source_root = "real-device/ot_stack_ncp_ver_query.rs"
   edition = "2018"
@@ -55,7 +38,12 @@ rustc_test("ot-stack-ncp-ver-query") {
   sources = [ "real-device/ot_stack_ncp_ver_query.rs" ]
 }
 
-rustc_test("ot-stack-soft-reset") {
+fuchsia_unittest_component("ot-stack-ncp-ver-query") {
+  manifest = "meta/ot-stack-ncp-ver-query.cmx"
+  deps = [ ":ot-stack-ncp-ver-query-bin" ]
+}
+
+rustc_test("ot-stack-soft-reset-bin") {
   name = "ot_stack_soft_reset"
   source_root = "real-device/ot_stack_soft_reset.rs"
   edition = "2018"
@@ -68,6 +56,19 @@ rustc_test("ot-stack-soft-reset") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
   sources = [ "real-device/ot_stack_soft_reset.rs" ]
+}
+
+fuchsia_unittest_component("ot-stack-soft-reset") {
+  manifest = "meta/ot-stack-soft-reset.cmx"
+  deps = [ ":ot-stack-soft-reset-bin" ]
+}
+
+fuchsia_test_package("ot-radio-tests") {
+  test_components = [
+    ":ot-radio-ncp-ver-query",
+    ":ot-stack-ncp-ver-query",
+    ":ot-stack-soft-reset",
+  ]
 }
 
 rustc_test("ot-stack-ncp-ver-query-mock") {
@@ -120,7 +121,7 @@ rustc_test("ot-radio-ncp-ver-query-mock") {
 
 fuchsia_component("ot-radio-ncp-ver-query-mock-component") {
   testonly = true
-  manifest = "meta/ot_radio_ncp_ver_query_mock.cmx"
+  manifest = "meta/ot-radio-ncp-ver-query-mock.cmx"
   deps = [
     ":ot-radio-ncp-ver-query-mock",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
@@ -129,7 +130,7 @@ fuchsia_component("ot-radio-ncp-ver-query-mock-component") {
 
 fuchsia_component("ot-stack-ncp-ver-query-mock-component") {
   testonly = true
-  manifest = "meta/ot_stack_ncp_ver_query_mock.cmx"
+  manifest = "meta/ot-stack-ncp-ver-query-mock.cmx"
   deps = [
     ":ot-stack-ncp-ver-query-mock",
     "//src/connectivity/openthread/ot-stack:component",
@@ -139,7 +140,7 @@ fuchsia_component("ot-stack-ncp-ver-query-mock-component") {
 
 fuchsia_component("ot-stack-soft-reset-mock-component") {
   testonly = true
-  manifest = "meta/ot_stack_soft_reset_mock.cmx"
+  manifest = "meta/ot-stack-soft-reset-mock.cmx"
   deps = [
     ":ot-stack-soft-reset-mock",
     "//src/connectivity/openthread/ot-stack:component",

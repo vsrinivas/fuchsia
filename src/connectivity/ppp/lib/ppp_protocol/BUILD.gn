@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # Build the library.
 rustc_library("ppp_protocol") {
@@ -49,13 +49,6 @@ rustc_test("ppp_protocol_test_bin") {
   ]
 }
 
-unittest_package("ppp-protocol-tests") {
+fuchsia_unittest_package("ppp-protocol-tests") {
   deps = [ ":ppp_protocol_test_bin" ]
-
-  tests = [
-    {
-      name = "ppp_protocol_test_bin"
-      dest = "ppp-protocol-tests"
-    },
-  ]
 }

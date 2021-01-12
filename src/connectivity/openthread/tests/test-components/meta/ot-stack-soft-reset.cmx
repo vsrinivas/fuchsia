@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/ot_stack_soft_reset"
+        "binary": "bin/ot_stack_soft_reset"
     },
     "sandbox": {
         "dev": [

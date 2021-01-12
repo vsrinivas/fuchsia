@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/ot_stack_ncp_ver_query"
+        "binary": "bin/ot_radio_ncp_ver_query"
     },
     "sandbox": {
         "dev": [
@@ -13,7 +13,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.lowpan.spinel.Device",
             "fuchsia.sys.Launcher"
         ]
     }

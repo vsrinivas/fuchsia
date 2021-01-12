@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # Build the library.
 rustc_library("ppp_packet") {
@@ -49,16 +49,11 @@ rustc_test("ppp_packet_test_bin") {
   ]
 }
 
-unittest_package("ppp-packet-tests") {
+fuchsia_unittest_package("ppp-packet-tests") {
   deps = [ ":ppp_packet_test_bin" ]
-
-  tests = [
-    {
-      name = "ppp_packet_test_bin"
-      dest = "ppp-packet-tests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

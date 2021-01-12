@@ -2,19 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
-
-group("emergency") {
-  testonly = true
-  deps = [
-    ":pkg",
-    ":tests",
-  ]
-}
 
 group("tests") {
   testonly = true
@@ -85,47 +76,28 @@ rustc_library("lib") {
   ]
 }
 
-package("pkg") {
-  package_name = "emergency"
-
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "emergency"
-      dest = "emergency"
-    },
-  ]
-
-  meta = [
-    # Include the package's CMX manifest.
-    # The resulting component manifest can be referenced through the URL
-    # fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cmx.
-    {
-      path = rebase_path("meta/emergency.cmx")
-      dest = "emergency.cmx"
-    },
-  ]
+# TODO: Remove. This is currently needed by vendor packages.
+group("pkg") {
+  deps = [ ":emergency" ]
 }
 
-# Run with `fx test emergency-tests`.
-unittest_package("emergency-tests") {
-  deps = [
-    ":bin_test",
-    ":lib_test",
-  ]
+fuchsia_package_with_single_component("emergency") {
+  deps = [ ":bin" ]
+  manifest = "meta/emergency.cmx"
+}
 
-  #  deps = [ ":lib_test" ]
+fuchsia_unittest_component("emergency-test") {
+  deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "emergency_bin_test"
-      dest = "emergency_test"
-    },
-    {
-      name = "emergency_lib_lib_test"
-      dest = "emergency_lib_test"
-    },
+fuchsia_unittest_component("emergency-lib-test") {
+  deps = [ ":lib_test" ]
+}
+
+fuchsia_test_package("emergency-tests") {
+  test_components = [
+    ":emergency-test",
+    ":emergency-lib-test",
   ]
 }
 

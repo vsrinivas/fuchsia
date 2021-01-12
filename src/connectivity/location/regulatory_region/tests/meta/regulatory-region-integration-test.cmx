@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/regulatory_region_integration_test"
+        "binary": "bin/regulatory_region_integration_test"
     },
     "sandbox": {
         "services": [

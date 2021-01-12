@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "spinel_spi_driver"
@@ -28,23 +27,17 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("spinel_spi_driver") {
+fuchsia_package_with_single_component("spinel_spi_driver") {
   deps = [ ":bin" ]
+  manifest = "meta/spinel_spi_driver.cmx"
+}
 
-  binaries = [
-    {
-      name = "spinel_spi_driver"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/spinel_spi_driver.cmx")
-      dest = "spinel_spi_driver.cmx"
-    },
-  ]
+fuchsia_unittest_package("spinel-spi-driver-test") {
+  manifest = "meta/spinel-spi-driver-test.cmx"
+  deps = [ ":bin_test" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":bin_test" ]
+  deps = [ ":spinel-spi-driver-test" ]
 }

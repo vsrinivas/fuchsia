@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
@@ -36,20 +35,9 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("telephony") {
+fuchsia_package_with_single_component("telephony") {
+  manifest = "meta/telephony.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "telephony"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/telephony.cmx")
-      dest = "telephony.cmx"
-    },
-  ]
 }
 
 group("tests") {

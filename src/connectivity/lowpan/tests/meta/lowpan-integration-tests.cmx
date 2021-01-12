@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/lowpan_integration_tests"
+        "binary": "bin/lowpan_integration_tests"
     },
     "sandbox": {
         "services": [

@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
-rustc_test("lowpan-driver-provision-mock") {
+rustc_test("lowpan-driver-provision-mock-bin") {
   name = "lowpan_driver_provision_mock"
   source_root = "mock-device/lowpan_driver_provision_mock.rs"
   edition = "2018"
@@ -28,23 +28,17 @@ rustc_test("lowpan-driver-provision-mock") {
   sources = [ "mock-device/lowpan_driver_provision_mock.rs" ]
 }
 
-fuchsia_component("lowpan-driver-provision-mock-component") {
-  testonly = true
-  manifest = "meta/lowpan_driver_provision_mock.cmx"
+fuchsia_unittest_package("lowpan-driver-provision-mock") {
+  manifest = "meta/lowpan-driver-provision-mock.cmx"
   deps = [
-    ":lowpan-driver-provision-mock",
+    ":lowpan-driver-provision-mock-bin",
     "//src/connectivity/lowpan",
     "//src/connectivity/openthread/ot-stack:component",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
   ]
-}
-
-fuchsia_test_package("lowpan-integration-tests") {
-  package_name = "lowpan-integration-tests"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
   }
-  test_components = [ ":lowpan-driver-provision-mock-component" ]
 }
