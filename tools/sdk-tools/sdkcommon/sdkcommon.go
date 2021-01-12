@@ -717,6 +717,7 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 		return deviceConfig, fmt.Errorf("Could not read configuration data : %v", err)
 	}
 	if len(configData) == 0 {
+		sdk.setDeviceDefaults(&deviceConfig)
 		return deviceConfig, nil
 	}
 
@@ -746,37 +747,41 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 	if err != nil {
 		return err
 	}
+	var defaultConfig = DeviceConfig{}
+	sdk.setDeviceDefaults(&defaultConfig)
 
 	dataMap := make(map[string]string)
 	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceNameKey})] = newConfig.DeviceName
+	// if the value changed from the orginal, write it out.
 	if origConfig.Bucket != newConfig.Bucket {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
-	} else {
+	} else if defaultConfig.Bucket == newConfig.Bucket {
+		// if the new value is the default value, then write the empty string.
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = ""
 	}
 	if origConfig.DeviceIP != newConfig.DeviceIP {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = newConfig.DeviceIP
-	} else {
+	} else if defaultConfig.DeviceIP == newConfig.DeviceIP {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = ""
 	}
 	if origConfig.Image != newConfig.Image {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
-	} else {
+	} else if defaultConfig.Image == newConfig.Image {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = ""
 	}
 	if origConfig.PackagePort != newConfig.PackagePort {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = newConfig.PackagePort
-	} else {
+	} else if defaultConfig.PackagePort == newConfig.PackagePort {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = ""
 	}
 	if origConfig.PackageRepo != newConfig.PackageRepo {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
-	} else {
+	} else if defaultConfig.PackageRepo == newConfig.PackageRepo {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = ""
 	}
 	if origConfig.SSHPort != newConfig.SSHPort {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort
-	} else {
+	} else if defaultConfig.SSHPort == newConfig.SSHPort {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = ""
 	}
 	if newConfig.IsDefault {

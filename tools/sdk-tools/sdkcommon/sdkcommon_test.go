@@ -5,6 +5,7 @@
 package sdkcommon
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -351,18 +352,181 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 	ExecCommand = helperCommandForSetTesting
 	defer func() { ExecCommand = exec.Command }()
 
-	newDevice := DeviceConfig{
-		DeviceName:  "new-device-name",
-		DeviceIP:    "1.1.1.1",
-		Image:       "image-name",
-		Bucket:      "buck-name",
-		PackagePort: "8000",
-		PackageRepo: "new/device/repo",
-		SSHPort:     "22",
+	tests := []struct {
+		currentDevice  DeviceConfig
+		newDevice      DeviceConfig
+		expectedValues map[string]string
+	}{
+		{
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "new/device/repo",
+				SSHPort:     "22",
+			},
+			expectedValues: map[string]string{
+				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
+				"DeviceConfiguration.new-device-name.package-port": "8000",
+				"DeviceConfiguration.new-device-name.image":        "image-name",
+				"DeviceConfiguration.new-device-name.bucket":       "buck-name",
+				"DeviceConfiguration.new-device-name.package-repo": "new/device/repo",
+				"DeviceConfiguration.new-device-name.device-ip":    "1.1.1.1",
+				// Since ssh port is the default, it should be cleared.
+				"DeviceConfiguration.new-device-name.ssh-port": "",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "22",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "22",
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
+				// Since ssh port is the default, it should be cleared.
+				"DeviceConfiguration.new-device-name.ssh-port": "",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "22",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "22",
+				IsDefault:   true,
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
+				// Since ssh port is the default, it should be cleared.
+				"DeviceConfiguration.new-device-name.ssh-port": "",
+				"DeviceConfiguration._DEFAULT_DEVICE_":         "new-device-name",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "22",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "8022",
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
+				"DeviceConfiguration.new-device-name.ssh-port":    "8022",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "8022",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "8022",
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+				SSHPort:     "8022",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "",
+				Image:       "custom-image",
+				Bucket:      "",
+				PackagePort: "8000",
+				PackageRepo: "",
+				SSHPort:     "8022",
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
+				"DeviceConfiguration.new-device-name.bucket":       "",
+				"DeviceConfiguration.new-device-name.device-ip":    "",
+				"DeviceConfiguration.new-device-name.image":        "custom-image",
+				"DeviceConfiguration.new-device-name.package-repo": "",
+			},
+		},
 	}
-	err := sdk.SaveDeviceConfiguration(newDevice)
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("TestSaveDeviceConfiguration %v", i), func(t *testing.T) {
+			expectedData, err := json.Marshal(test.expectedValues)
+			if err != nil {
+				t.Fatalf("unexpected err %v", err)
+			}
+			currentData, err := json.Marshal(test.currentDevice)
+			if err != nil {
+				t.Fatalf("unexpected err %v", err)
+			}
+			os.Setenv("TEST_EXPECTED_SET_DATA", string(expectedData))
+			os.Setenv("TEST_CURRENT_DEVICE_DATA", string(currentData))
+			err = sdk.SaveDeviceConfiguration(test.newDevice)
+			if err != nil {
+				t.Fatalf("unexpected err %v", err)
+			}
+		})
 	}
 }
 
@@ -693,6 +857,7 @@ func TestFakeFfx(*testing.T) {
 		}
 		args = args[1:]
 	}
+
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "No command\n")
 		os.Exit(2)
@@ -751,10 +916,29 @@ func handleEnvFake(args []string) {
 }
 
 func handleGetFake(args []string) {
+	var (
+		dataName   string
+		deviceData map[string]interface{}
+	)
+
 	deviceName := os.Getenv("TEST_DEFAULT_DEVICE_NAME")
 	if deviceName == "" {
 		deviceName = "fake-target-device-name"
 	}
+	currentDeviceData := os.Getenv("TEST_CURRENT_DEVICE_DATA")
+	if len(currentDeviceData) > 0 {
+		err := json.Unmarshal([]byte(currentDeviceData), &deviceData)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing current data %v: %s", err, currentDeviceData)
+			os.Exit(1)
+		}
+	} else {
+		deviceData = make(map[string]interface{})
+	}
+	if value, ok := deviceData["device-name"].(string); ok {
+		dataName = value
+	}
+
 	switch args[0] {
 	case "DeviceConfiguration._DEFAULT_DEVICE_":
 		if os.Getenv("NO_DEFAULT_DEVICE") != "1" {
@@ -783,12 +967,30 @@ func handleGetFake(args []string) {
 				"bucket":"","device-ip":"","device-name":"fake-target-device-name","image":"","package-port":"","package-repo":"","ssh-port":""
 			}`)
 	default:
-		fmt.Printf("%v: none\n", args[0])
+		if args[0] == fmt.Sprintf("DeviceConfiguration.%s", dataName) {
+			fmt.Printf("DeviceConfiguration.%s:", dataName)
+			fmt.Println(currentDeviceData)
+
+		} else {
+			fmt.Printf("%v: none\n", args[0])
+		}
 	}
 }
 
 func handleSetFake(args []string) {
 	sdk := SDKProperties{}
+	expectedData := os.Getenv("TEST_EXPECTED_SET_DATA")
+	var data map[string]interface{}
+	if len(expectedData) > 0 {
+		err := json.Unmarshal([]byte(expectedData), &data)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing configuration data %v: %s", err, expectedData)
+			os.Exit(1)
+		}
+	} else {
+		data = make(map[string]interface{})
+	}
+
 	// All sets should be at the global level
 	if args[0] != "--level" || args[1] != "global" {
 		fmt.Fprintf(os.Stderr, "set command should only be used at global level: %v", args)
@@ -820,6 +1022,15 @@ func handleSetFake(args []string) {
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unexpected property being set: %v", parts)
+		os.Exit(1)
+	}
+	if expectedValue, ok := data[args[2]].(string); ok {
+		if expectedValue != args[3] {
+			fmt.Fprintf(os.Stderr, "Unexpected property %v value being set: %v, expected %v", args[2], args[3], expectedValue)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Unexpected property %v value attempted to be set", args[2])
 		os.Exit(1)
 	}
 }
