@@ -27,7 +27,6 @@
 #include <new>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -37,6 +36,7 @@
 #include <safemath/clamped_math.h>
 
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/fvm/driver/fvm_bind.h"
 #include "src/storage/fvm/driver/slice_extent.h"
 #include "src/storage/fvm/driver/vpartition.h"
 #include "src/storage/fvm/format.h"
@@ -844,8 +844,4 @@ zx_driver_ops_t driver_ops = {
 
 }  // namespace fvm
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(fvm, fvm::driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF_AUTOBIND,
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
-ZIRCON_DRIVER_END(fvm)
+ZIRCON_DRIVER(fvm, fvm::driver_ops, "zircon", "0.1");
