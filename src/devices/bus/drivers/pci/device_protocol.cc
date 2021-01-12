@@ -359,7 +359,7 @@ zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) {
     handle = result.value().release();
   }
 
-  zxlogf(INFO, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
+  zxlogf(DEBUG, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
          zx_status_get_string(result.status_value()));
   return RpcReply(ch, result.status_value(), &handle, handle_cnt);
 }

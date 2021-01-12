@@ -197,9 +197,6 @@ class Device : public PciDeviceType,
 
   fbl::Mutex* dev_lock() __TA_RETURN_CAPABILITY(dev_lock_) { return &dev_lock_; }
 
-  // Dump some information about the device
-  virtual void Dump() const __TA_EXCLUDES(dev_lock_);
-
   // These methods handle IRQ configuration and are generally called by the
   // PciProtocol methods, though they may be used to disable IRQs on
   // initialization as well.

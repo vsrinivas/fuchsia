@@ -216,19 +216,11 @@ zx_status_t scan_acpi_tree_for_resources(zx_handle_t root_resource_handle) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (zxlog_level_enabled(TRACE)) {
-    RootHost->DumpAllocatorWindows();
-  }
-
   // Removes resources we believe are in use by other parts of the platform
   ctx.add_pass = false;
   status = AcpiGetDevices(nullptr, walk_devices_callback, &ctx, nullptr);
   if (status != AE_OK) {
     return ZX_ERR_INTERNAL;
-  }
-
-  if (zxlog_level_enabled(TRACE)) {
-    RootHost->DumpAllocatorWindows();
   }
 
   return ZX_OK;

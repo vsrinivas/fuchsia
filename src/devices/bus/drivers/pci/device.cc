@@ -485,46 +485,4 @@ void Device::Unplug() {
   zxlogf(TRACE, "device [%s] unplugged", cfg_->addr());
 }
 
-void Device::Dump() const {
-  fbl::AutoLock dev_lock(&dev_lock_);
-  fbl::StringBuffer<256> log;
-  zxlogf(TRACE, "%s at %s vid:did %04x:%04x", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
-         vendor_id(), device_id());
-  for (size_t i = 0; i < bar_count_; i++) {
-    auto& bar = bars_[i];
-    if (bar.size) {
-      log.AppendPrintf("    bar %zu: %s, %s, addr %#lx, size %#zx [raw: ", i,
-                       (bar.is_mmio) ? ((bar.is_64bit) ? "64bit mmio" : "32bit mmio") : "io",
-                       (bar.is_prefetchable) ? "pf" : "no-pf", bar.address, bar.size);
-      if (bar.is_64bit) {
-        log.AppendPrintf("%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
-      }
-      log.AppendPrintf("%08x ]", cfg_->Read(Config::kBar(bar.bar_id)));
-      zxlogf(TRACE, "%s", log.c_str());
-      log.Clear();
-    }
-  }
-
-  if (!caps_.list.is_empty()) {
-    log.AppendPrintf("    capabilities: ");
-    for (auto& cap : caps_.list) {
-      auto id = static_cast<Capability::Id>(cap.id());
-      bool end = &cap == &caps_.list.back();
-      log.AppendPrintf("%s (%#x)%s", CapabilityIdToName(id), cap.id(), (!end) ? ", " : " ");
-    }
-    zxlogf(TRACE, "%s", log.c_str());
-    log.Clear();
-  }
-
-  if (!caps_.ext_list.is_empty()) {
-    log.AppendPrintf("    extended capabilities: ");
-    for (auto& cap : caps_.ext_list) {
-      auto id = static_cast<ExtCapability::Id>(cap.id());
-      bool end = &cap == &caps_.ext_list.back();
-      log.AppendPrintf("%s (%#x)%s", ExtCapabilityIdToName(id), cap.id(), (!end) ? "," : " ");
-    }
-    zxlogf(TRACE, "%s", log.c_str());
-  }
-}
-
 }  // namespace pci

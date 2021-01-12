@@ -50,7 +50,6 @@ class Bridge : public pci::Device, public UpstreamNode {
   bool supports_32bit_pio() const { return supports_32bit_pio_; }
 
   // Device overrides
-  void Dump() const final;
   void Unplug() final __TA_EXCLUDES(dev_lock_);
 
  protected:

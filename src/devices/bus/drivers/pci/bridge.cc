@@ -149,22 +149,6 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
   return ZX_OK;
 }
 
-void Bridge::Dump() const {
-  pci::Device::Dump();
-
-  zxlogf(INFO, "[%s]  managed bus id: %#02x", cfg_->addr(), managed_bus_id());
-  if (io_limit() > io_base()) {
-    zxlogf(INFO, "[%s]       io window: [%#04x-%#04x]", cfg_->addr(), io_base(), io_limit());
-  }
-  if (mem_limit() > mem_base()) {
-    zxlogf(INFO, "[%s]     mmio window: [%#08x-%#08x]", cfg_->addr(), mem_base(), mem_limit());
-  }
-  if (pf_mem_limit() > pf_mem_base()) {
-    zxlogf(INFO, "[%s]  pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]", cfg_->addr(), pf_mem_base(),
-           pf_mem_limit());
-  }
-}
-
 void Bridge::Unplug() {
   UnplugDownstream();
   pci::Device::Unplug();

@@ -86,9 +86,6 @@ zx::status<zx_paddr_t> PciRootHost::AllocateWindow(AllocationType type, uint32_t
   if (st != ZX_OK) {
     zxlogf(DEBUG, "failed to allocate %s %#lx-%#lx: %s.", allocator_name, base, base + size,
            zx_status_get_string(st));
-    if (zxlog_level_enabled(TRACE)) {
-      DumpAllocatorWindowsLocked();
-    }
     return zx::error(st);
   }
 
