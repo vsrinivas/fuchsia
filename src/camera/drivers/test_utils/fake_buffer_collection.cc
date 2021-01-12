@@ -37,14 +37,6 @@ static void GetFakeBufferSettings(buffer_collection_info_2_t& buffer_collection,
 
 zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format_type,
                            uint32_t width, uint32_t height) {
-  // TODO(b/41294) Determine if this constraint can be removed, as the code became
-  //      more general with the switch to ImageFormat functions.
-  if (pixel_format_type != fuchsia_sysmem_PixelFormatType_NV12 &&
-      pixel_format_type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
-    FX_LOG(ERROR, kTag, "Unsupported pixel format type");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   image_format = {
       .pixel_format =
           {
