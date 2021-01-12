@@ -12,18 +12,23 @@ use {
         events::types::{
             ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
         },
-        events::{stream::EventStream, types::EventSource},
+        events::{source_registry::EventSourceRegistry, types::EventSource},
         logs::{redact::Redactor, socket::LogMessageSocket},
         pipeline::Pipeline,
         repository::DataRepo,
     },
-    anyhow::Error,
+    anyhow::{Context, Error},
     fidl::{endpoints::RequestStream, AsyncChannel},
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
+    fidl_fuchsia_sys2::EventSourceMarker,
+    fidl_fuchsia_sys_internal::ComponentEventProviderMarker,
     fuchsia_async::{self as fasync, Task},
-    fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
+    fuchsia_component::{
+        client::connect_to_service,
+        server::{ServiceFs, ServiceObj, ServiceObjTrait},
+    },
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
@@ -82,7 +87,7 @@ pub struct ArchivistBuilder {
     listen_sender: mpsc::UnboundedSender<Task<()>>,
 
     /// Listes for events coming from v1 and v2.
-    event_stream: EventStream,
+    event_source_registry: EventSourceRegistry,
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
@@ -91,7 +96,7 @@ pub struct ArchivistBuilder {
 impl ArchivistBuilder {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
-    /// Call `install_logger_services`, `add_event_source`.
+    /// Call `install_logger_services`, `install_event_sources`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
@@ -246,7 +251,7 @@ impl ArchivistBuilder {
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
             _pipeline_configs: vec![feedback_config, legacy_config],
-            event_stream: EventStream::new(events_node),
+            event_source_registry: EventSourceRegistry::new(events_node),
             stop_recv: None,
         })
     }
@@ -372,15 +377,29 @@ impl ArchivistBuilder {
         self
     }
 
+    pub async fn install_event_sources(&mut self, enable_v2: bool) -> Result<(), Error> {
+        let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
+            .context("failed to connect to event provider")?;
+        self.add_event_source("v1", Box::new(legacy_event_provider)).await;
+
+        if enable_v2 {
+            let event_source = connect_to_service::<EventSourceMarker>()
+                .context("failed to connect to event source")?;
+            self.add_event_source("v2", Box::new(event_source)).await;
+        }
+
+        Ok(())
+    }
+
     // Sets event provider which is used to collect component events, Panics if called twice.
-    pub fn add_event_source(
+    async fn add_event_source(
         &mut self,
         name: impl Into<String>,
         source: Box<dyn EventSource>,
     ) -> &mut Self {
         let name = name.into();
         debug!("{} event source initialized", &name);
-        self.event_stream.add_source(name, source);
+        self.event_source_registry.add_source(name, source).await;
         self
     }
 
@@ -395,8 +414,11 @@ impl ArchivistBuilder {
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
         // collect events.
-        let run_event_collection =
-            Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
+        let run_event_collection = Self::collect_component_events(
+            self.event_source_registry,
+            self.state,
+            self.pipeline_exists,
+        );
 
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
@@ -432,11 +454,11 @@ impl ArchivistBuilder {
     }
 
     async fn collect_component_events(
-        event_stream: EventStream,
+        mut event_source_registry: EventSourceRegistry,
         state: ArchivistState,
         pipeline_exists: bool,
     ) {
-        let events = event_stream.listen().await;
+        let events = event_source_registry.take_stream().await.expect("Created event stream");
         if !pipeline_exists {
             component::health().set_unhealthy("Pipeline config has an error");
         } else {

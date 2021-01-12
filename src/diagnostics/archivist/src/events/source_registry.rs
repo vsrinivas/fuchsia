@@ -3,17 +3,88 @@
 // found in the LICENSE file.
 
 use {
-    crate::{container::ComponentIdentity, events::types::*},
+    crate::{
+        container::ComponentIdentity,
+        events::{error::EventError, types::*},
+    },
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{channel::mpsc, StreamExt},
 };
 
-pub struct EventStream {
-    sources: Vec<(String, Box<dyn EventSource>)>,
+/// Tracks all event sources and listens to events coming from them pushing them into an MPSC
+/// channel.
+pub struct EventSourceRegistry {
+    /// The registered event sources
+    sources: Vec<Box<dyn EventSource>>,
 
-    // Inspect stats
-    node: inspect::Node,
+    /// The data used to initialiez the event stream. This can be used a single time to create a
+    /// single stream of events with the consumer end of the MPSC channel.
+    event_stream_init_data: Option<EventStreamInitData>,
+
+    /// The sender end of th events MPSC channel. A clone of this is given to every event source
+    /// that is added when starting to listen for events on them.
+    sender: mpsc::Sender<ComponentEvent>,
+
+    /// The root node for events instrumentation.
+    _node: inspect::Node,
+
+    /// Child of `node`. Holds the status of every event source that is added.
+    sources_node: inspect::Node,
+}
+
+struct EventStreamInitData {
+    receiver: mpsc::Receiver<ComponentEvent>,
+    logger: EventStreamLogger,
+}
+
+const RECENT_EVENT_LIMIT: usize = 200;
+
+impl EventSourceRegistry {
+    /// Creates a new event listener.
+    pub fn new(node: inspect::Node) -> Self {
+        let sources_node = node.create_child("sources");
+        let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
+        let logger = EventStreamLogger::new(&node);
+        Self {
+            sources: Vec::new(),
+            event_stream_init_data: Some(EventStreamInitData { receiver, logger }),
+            _node: node,
+            sources_node,
+            sender,
+        }
+    }
+
+    /// Adds an event source and starts listening for events on it.
+    pub async fn add_source(&mut self, name: impl AsRef<str>, source: Box<dyn EventSource>) {
+        let source_node = self.sources_node.create_child(name);
+        match source.listen(self.sender.clone()).await {
+            Ok(()) => {
+                source_node.record_string("status", "ok");
+            }
+            Err(err) => {
+                source_node.record_string("status", format!("error: {:?}", err));
+            }
+        }
+        self.sources.push(source);
+        self.sources_node.record(source_node);
+    }
+
+    /// Takes the single stream where component events are pushed.
+    pub async fn take_stream(&mut self) -> Result<ComponentEventStream, EventError> {
+        match self.event_stream_init_data.take() {
+            None => Err(EventError::EventListenerAlreadyExists),
+            Some(EventStreamInitData { receiver, mut logger }) => {
+                Ok(Box::pin(receiver.boxed().map(move |event| {
+                    logger.log_event(&event);
+                    event
+                })))
+            }
+        }
+    }
+}
+
+struct EventStreamLogger {
     components_started: inspect::UintProperty,
     components_stopped: inspect::UintProperty,
     components_seen_running: inspect::UintProperty,
@@ -21,20 +92,16 @@ pub struct EventStream {
     component_log_node: BoundedListNode,
 }
 
-const RECENT_EVENT_LIMIT: usize = 200;
-
-impl EventStream {
-    /// Creates a new event listener.
-    pub fn new(node: inspect::Node) -> Self {
-        let components_started = node.create_uint("components_started", 0);
-        let components_seen_running = node.create_uint("components_seen_running", 0);
-        let components_stopped = node.create_uint("components_stopped", 0);
-        let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
+impl EventStreamLogger {
+    /// Creates a new event logger. All inspect data will be written as children of `parent`.
+    pub fn new(parent: &inspect::Node) -> Self {
+        let components_started = parent.create_uint("components_started", 0);
+        let components_seen_running = parent.create_uint("components_seen_running", 0);
+        let components_stopped = parent.create_uint("components_stopped", 0);
+        let diagnostics_directories_seen = parent.create_uint("diagnostics_directories_seen", 0);
         let component_log_node =
-            BoundedListNode::new(node.create_child("recent_events"), RECENT_EVENT_LIMIT);
+            BoundedListNode::new(parent.create_child("recent_events"), RECENT_EVENT_LIMIT);
         Self {
-            sources: Vec::new(),
-            node,
             components_started,
             components_stopped,
             components_seen_running,
@@ -43,32 +110,8 @@ impl EventStream {
         }
     }
 
-    /// Adds an event source to listen from.
-    pub fn add_source(&mut self, name: impl Into<String>, source: Box<dyn EventSource>) {
-        self.sources.push((name.into(), source));
-    }
-
-    /// Subscribe to component lifecycle events.
-    /// |node| is the node where stats about events seen will be recorded.
-    pub async fn listen(mut self) -> ComponentEventStream {
-        let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        let sources_node = self.node.create_child("sources");
-        for (name, source) in &self.sources {
-            let source_node = sources_node.create_child(name);
-            match source.listen(sender.clone()).await {
-                Ok(()) => {}
-                Err(err) => source_node.record_string("error", err.to_string()),
-            }
-            sources_node.record(source_node);
-        }
-        self.node.record(sources_node);
-        Box::pin(receiver.boxed().map(move |event| {
-            self.log_event(&event);
-            event
-        }))
-    }
-
-    fn log_event(&mut self, event: &ComponentEvent) {
+    /// Log a new component event to inspect.
+    pub fn log_event(&mut self, event: &ComponentEvent) {
         match event {
             ComponentEvent::Start(start) => {
                 self.components_started.add(1);
@@ -212,11 +255,11 @@ mod tests {
     async fn joint_event_channel() {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("events");
-        let mut stream = EventStream::new(node);
-        stream.add_source("v1", Box::new(FakeLegacyProvider {}));
-        stream.add_source("v2", Box::new(FakeEventSource {}));
-        stream.add_source("v3", Box::new(FakeFutureProvider {}));
-        let mut stream = stream.listen().await;
+        let mut registry = EventSourceRegistry::new(node);
+        registry.add_source("v1", Box::new(FakeLegacyProvider {})).await;
+        registry.add_source("v2", Box::new(FakeEventSource {})).await;
+        registry.add_source("v3", Box::new(FakeFutureProvider {})).await;
+        let mut stream = registry.take_stream().await.expect("take stream succeeds");
 
         validate_events(&mut stream, &LEGACY_IDENTITY).await;
         validate_events(&mut stream, &MONIKER_IDENTITY).await;
@@ -225,11 +268,13 @@ mod tests {
             events: {
                 sources: {
                     v1: {
+                        status: "ok"
                     },
                     v2: {
+                        status: "ok"
                     },
                     v3: {
-                        error: "not implemented yet"
+                        status: "error: not implemented yet"
                     }
                 },
                 components_started: 2u64,

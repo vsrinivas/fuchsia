@@ -13,8 +13,7 @@ use {
     fidl_fuchsia_diagnostics_internal::{
         DetectControllerMarker, LogStatsControllerMarker, SamplerControllerMarker,
     },
-    fidl_fuchsia_sys2::EventSourceMarker,
-    fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
+    fidl_fuchsia_sys_internal::LogConnectorMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
@@ -84,9 +83,6 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new()?;
 
-    let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
-        .context("failed to connect to event provider")?;
-
     diagnostics::init();
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
@@ -100,13 +96,11 @@ fn main() -> Result<(), Error> {
     let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    archivist.install_logger_services().add_event_source("v1", Box::new(legacy_event_provider));
+    archivist.install_logger_services();
 
-    if !opt.disable_event_source {
-        let event_source = connect_to_service::<EventSourceMarker>()
-            .context("failed to connect to event source")?;
-        archivist.add_event_source("v2", Box::new(event_source));
-    }
+    executor
+        .run_singlethreaded(archivist.install_event_sources(!opt.disable_event_source))
+        .context("failed to add event lifecycle event sources")?;
 
     if let Some(socket) = log_server {
         archivist.consume_own_logs(socket);

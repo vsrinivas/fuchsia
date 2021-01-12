@@ -51,4 +51,7 @@ pub enum EventError {
 
     #[error("unknown result type received: {result:?}")]
     UnrecognizedResult { result: EventResult },
+
+    #[error("attempted to install more than two component event listeners")]
+    EventListenerAlreadyExists,
 }

@@ -5,5 +5,5 @@
 mod core;
 pub(crate) mod error;
 mod legacy;
-pub(crate) mod stream;
+pub(crate) mod source_registry;
 pub mod types;
