@@ -6,10 +6,10 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
-rustc_library("lib") {
-  name = "blobfs-stress-test-lib"
+rustc_binary("stressor-bin") {
+  name = "blobfs_stressor"
   edition = "2018"
-  source_root = "lib/mod.rs"
+  source_root = "main.rs"
 
   deps = [
     "//garnet/lib/rust/files_async",
@@ -20,35 +20,12 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/fs_management",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/stress-tests/utils",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",  # for recording messages
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_core",
-  ]
-
-  sources = [
-    "lib/blob.rs",
-    "lib/mod.rs",
-    "lib/operator.rs",
-  ]
-}
-
-rustc_binary("stressor-bin") {
-  name = "blobfs_stressor"
-  edition = "2018"
-  source_root = "main.rs"
-
-  deps = [
-    ":lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
-    "//src/storage/stress-tests/utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -57,5 +34,9 @@ rustc_binary("stressor-bin") {
     "//third_party/rust_crates:rand_core",
   ]
 
-  sources = [ "main.rs" ]
+  sources = [
+    "blob.rs",
+    "main.rs",
+    "operator.rs",
+  ]
 }
