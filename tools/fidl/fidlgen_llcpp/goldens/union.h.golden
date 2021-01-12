@@ -4405,13 +4405,15 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       ::fit::callback<
           void(StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)>
           _cb);
+
   // Asynchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
+  // of |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result StrictXUnionHenceResponseMayBeStackAllocated(
       StrictXUnionHenceResponseMayBeStackAllocatedResponseContext* _context);
+
   // Synchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 88
   // bytes of message buffer on the stack. No heap allocation necessary.
@@ -4434,13 +4436,15 @@ class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       ::fit::callback<void(
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)>
           _cb);
+
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
+  // of |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result FlexibleXUnionHenceResponseMustBeHeapAllocated(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext* _context);
+
   // Synchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
   // 16 bytes of request buffer on the stack. Response is heap-allocated.

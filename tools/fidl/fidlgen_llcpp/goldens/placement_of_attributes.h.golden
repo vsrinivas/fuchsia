@@ -1121,8 +1121,7 @@ class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result Method(::llcpp::exampleusing::Empty arg);
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
                         ::llcpp::exampleusing::Empty arg);
 

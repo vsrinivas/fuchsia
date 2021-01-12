@@ -1557,6 +1557,7 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
   // method comment #1
   //
   // method comment #3
+  //
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method();

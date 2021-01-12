@@ -1192,8 +1192,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
           ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
           request);
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result First(
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<
@@ -1269,8 +1268,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
           ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
           request);
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result First(
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<
@@ -1284,8 +1282,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
           ::llcpp::fidl::test::inheritancewithrecursivedecl::Parent>
           request);
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Second(
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<

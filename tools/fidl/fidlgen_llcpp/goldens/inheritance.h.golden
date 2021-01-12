@@ -1217,21 +1217,26 @@ class super::fooResponseContext : public ::fidl::internal::ResponseContext {
 
 class super::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |super.foo()|. The request and callback are
-  // allocated on the heap.
+  // Asynchronous variant of |super.foo()|.
+  // The request and callback are allocated on the heap.
   ::fidl::Result foo(::fidl::StringView s,
                      ::fit::callback<void(fooResponse* response)> _cb);
-  // Asynchronous variant of |super.foo()|. Caller provides the backing storage
-  // for FIDL message via request buffer. Ownership of _context is given
-  // unsafely to the binding until OnError() or OnReply() are called on it.
+
+  // Asynchronous variant of |super.foo()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                      fooResponseContext* _context);
-  // Synchronous variant of |super.foo()|. Allocates 24 bytes of response buffer
-  // on the stack. Request is heap-allocated.
+
+  // Synchronous variant of |super.foo()|.
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
   ResultOf::foo foo_Sync(::fidl::StringView s);
 
-  // Synchronous variant of |super.foo()|. Caller provides the backing storage
-  // for FIDL message via request and response buffers.
+  // Synchronous variant of |super.foo()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
                                 ::fidl::StringView s,
                                 ::fidl::BufferSpan _response_buffer);
@@ -1306,21 +1311,26 @@ class sub::fooResponseContext : public ::fidl::internal::ResponseContext {
 
 class sub::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |sub.foo()|. The request and callback are allocated
-  // on the heap.
+  // Asynchronous variant of |sub.foo()|.
+  // The request and callback are allocated on the heap.
   ::fidl::Result foo(::fidl::StringView s,
                      ::fit::callback<void(fooResponse* response)> _cb);
-  // Asynchronous variant of |sub.foo()|. Caller provides the backing storage
-  // for FIDL message via request buffer. Ownership of _context is given
-  // unsafely to the binding until OnError() or OnReply() are called on it.
+
+  // Asynchronous variant of |sub.foo()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                      fooResponseContext* _context);
-  // Synchronous variant of |sub.foo()|. Allocates 24 bytes of response buffer
-  // on the stack. Request is heap-allocated.
+
+  // Synchronous variant of |sub.foo()|.
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
   ResultOf::foo foo_Sync(::fidl::StringView s);
 
-  // Synchronous variant of |sub.foo()|. Caller provides the backing storage for
-  // FIDL message via request and response buffers.
+  // Synchronous variant of |sub.foo()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
                                 ::fidl::StringView s,
                                 ::fidl::BufferSpan _response_buffer);

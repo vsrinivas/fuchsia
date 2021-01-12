@@ -1516,56 +1516,60 @@ class Protocol::RequestFlexibleResponseStrictResponseContext
 
 class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. The
-  // request and callback are allocated on the heap.
+  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
+  // The request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
       ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
           _cb);
-  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
-  // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
-  // are called on it.
+
+  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
       RequestStrictResponseFlexibleResponseContext* _context);
-  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Request
-  // is heap-allocated. Response is heap-allocated.
+
+  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
+  // Request is heap-allocated. Response is heap-allocated.
   ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible_Sync(
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s);
 
-  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
+  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::RequestStrictResponseFlexible
   RequestStrictResponseFlexible_Sync(
       ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
       ::fidl::BufferSpan _response_buffer);
 
-  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. The
-  // request and callback are allocated on the heap.
+  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
+  // The request and callback are allocated on the heap.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
           _cb);
-  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
-  // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
-  // are called on it.
+
+  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       RequestFlexibleResponseStrictResponseContext* _context);
-  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Request
-  // is heap-allocated. Response is heap-allocated.
+
+  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
+  // Request is heap-allocated. Response is heap-allocated.
   ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict_Sync(
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s);
 
-  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
+  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::RequestFlexibleResponseStrict
   RequestFlexibleResponseStrict_Sync(
       ::fidl::BufferSpan _request_buffer,

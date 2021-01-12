@@ -8348,22 +8348,27 @@ class Transitional::RequestResponseContext
 
 class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |Transitional.Request()|. Allocates 24 bytes of
-  // request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |Transitional.Request()|.
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result Request(int64_t x,
                          ::fit::callback<void(RequestResponse* response)> _cb);
-  // Asynchronous variant of |Transitional.Request()|. Caller provides the
-  // backing storage for FIDL message via request buffer. Ownership of _context
-  // is given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
+
+  // Asynchronous variant of |Transitional.Request()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result Request(::fidl::BufferSpan _request_buffer, int64_t x,
                          RequestResponseContext* _context);
-  // Synchronous variant of |Transitional.Request()|. Allocates 48 bytes of
-  // message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |Transitional.Request()|.
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::Request Request_Sync(int64_t x);
 
-  // Synchronous variant of |Transitional.Request()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
+  // Synchronous variant of |Transitional.Request()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::Request Request_Sync(::fidl::BufferSpan _request_buffer,
                                         int64_t x,
                                         ::fidl::BufferSpan _response_buffer);
@@ -8372,8 +8377,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result OneWay(int64_t x);
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result OneWay(::fidl::BufferSpan _request_buffer, int64_t x);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
@@ -8493,76 +8497,90 @@ class ChannelProtocol::MutateSocketResponseContext
 
 class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result MethodA(int64_t a, int64_t b);
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::Result MethodA(::fidl::BufferSpan _request_buffer, int64_t a,
-                         int64_t b);
-
-  // Asynchronous variant of |ChannelProtocol.MethodB()|. Allocates 32 bytes of
-  // request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |ChannelProtocol.MethodB()|.
+  // Allocates 32 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result MethodB(int64_t a, int64_t b,
                          ::fit::callback<void(MethodBResponse* response)> _cb);
-  // Asynchronous variant of |ChannelProtocol.MethodB()|. Caller provides the
-  // backing storage for FIDL message via request buffer. Ownership of _context
-  // is given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
+
+  // Asynchronous variant of |ChannelProtocol.MethodB()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result MethodB(::fidl::BufferSpan _request_buffer, int64_t a,
                          int64_t b, MethodBResponseContext* _context);
-  // Synchronous variant of |ChannelProtocol.MethodB()|. Allocates 56 bytes of
-  // message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |ChannelProtocol.MethodB()|.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::MethodB MethodB_Sync(int64_t a, int64_t b);
 
-  // Synchronous variant of |ChannelProtocol.MethodB()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
+  // Synchronous variant of |ChannelProtocol.MethodB()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::MethodB MethodB_Sync(::fidl::BufferSpan _request_buffer,
                                         int64_t a, int64_t b,
                                         ::fidl::BufferSpan _response_buffer);
 
-  // Asynchronous variant of |ChannelProtocol.TakeHandle()|. Allocates 24 bytes
-  // of request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result TakeHandle(
       ::zx::handle h, ::fit::callback<void(TakeHandleResponse* response)> _cb);
-  // Asynchronous variant of |ChannelProtocol.TakeHandle()|. Caller provides the
-  // backing storage for FIDL message via request buffer. Ownership of _context
-  // is given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
+
+  // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle h,
                             TakeHandleResponseContext* _context);
-  // Synchronous variant of |ChannelProtocol.TakeHandle()|. Allocates 40 bytes
-  // of message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |ChannelProtocol.TakeHandle()|.
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::TakeHandle TakeHandle_Sync(::zx::handle h);
 
-  // Synchronous variant of |ChannelProtocol.TakeHandle()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
+  // Synchronous variant of |ChannelProtocol.TakeHandle()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::TakeHandle TakeHandle_Sync(
       ::fidl::BufferSpan _request_buffer, ::zx::handle h,
       ::fidl::BufferSpan _response_buffer);
 
-  // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 24
-  // bytes of request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |ChannelProtocol.MutateSocket()|.
+  // Allocates 24 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result MutateSocket(
       ::zx::socket a,
       ::fit::callback<void(MutateSocketResponse* response)> _cb);
-  // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+
+  // Asynchronous variant of |ChannelProtocol.MutateSocket()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result MutateSocket(::fidl::BufferSpan _request_buffer,
                               ::zx::socket a,
                               MutateSocketResponseContext* _context);
-  // Synchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 48 bytes
-  // of message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |ChannelProtocol.MutateSocket()|.
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::MutateSocket MutateSocket_Sync(::zx::socket a);
 
-  // Synchronous variant of |ChannelProtocol.MutateSocket()|. Caller provides
-  // the backing storage for FIDL message via request and response buffers.
+  // Synchronous variant of |ChannelProtocol.MutateSocket()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::MutateSocket MutateSocket_Sync(
       ::fidl::BufferSpan _request_buffer, ::zx::socket a,
       ::fidl::BufferSpan _response_buffer);
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result MethodA(int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via request buffer.
+  ::fidl::Result MethodA(::fidl::BufferSpan _request_buffer, int64_t a,
+                         int64_t b);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
 
@@ -8703,22 +8721,20 @@ class WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext
 class WithAndWithoutRequestResponse::ClientImpl final
     : private ::fidl::internal::ClientBase {
  public:
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result NoRequestNoResponse();
-
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result NoRequestEmptyResponse(
       ::fit::callback<void(NoRequestEmptyResponseResponse* response)> _cb);
+
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
+  // are called on it.
   ::fidl::Result NoRequestEmptyResponse(
       NoRequestEmptyResponseResponseContext* _context);
+
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 32
   // bytes of message buffer on the stack. No heap allocation necessary.
@@ -8729,13 +8745,15 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result NoRequestWithResponse(
       ::fit::callback<void(NoRequestWithResponseResponse* response)> _cb);
+
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
+  // are called on it.
   ::fidl::Result NoRequestWithResponse(
       NoRequestWithResponseResponseContext* _context);
+
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
   // of request buffer on the stack. Response is heap-allocated.
@@ -8747,28 +8765,22 @@ class WithAndWithoutRequestResponse::ClientImpl final
   UnownedResultOf::NoRequestWithResponse NoRequestWithResponse_Sync(
       ::fidl::BufferSpan _response_buffer);
 
-  // Request is heap-allocated.
-  ::fidl::Result WithRequestNoResponse(::fidl::StringView arg);
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
-                                       ::fidl::StringView arg);
-
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. The request and
   // callback are allocated on the heap.
   ::fidl::Result WithRequestEmptyResponse(
       ::fidl::StringView arg,
       ::fit::callback<void(WithRequestEmptyResponseResponse* response)> _cb);
+
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
+  // are called on it.
   ::fidl::Result WithRequestEmptyResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       WithRequestEmptyResponseResponseContext* _context);
+
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Allocates 16
   // bytes of response buffer on the stack. Request is heap-allocated.
@@ -8788,14 +8800,16 @@ class WithAndWithoutRequestResponse::ClientImpl final
   ::fidl::Result WithRequestWithResponse(
       ::fidl::StringView arg,
       ::fit::callback<void(WithRequestWithResponseResponse* response)> _cb);
+
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
+  // are called on it.
   ::fidl::Result WithRequestWithResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       WithRequestWithResponseResponseContext* _context);
+
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Request is
   // heap-allocated. Response is heap-allocated.
@@ -8808,6 +8822,17 @@ class WithAndWithoutRequestResponse::ClientImpl final
   UnownedResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
       ::fidl::BufferSpan _response_buffer);
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result NoRequestNoResponse();
+
+  // Request is heap-allocated.
+  ::fidl::Result WithRequestNoResponse(::fidl::StringView arg);
+
+  // Caller provides the backing storage for FIDL message via request buffer.
+  ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
+                                       ::fidl::StringView arg);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
 
@@ -8946,59 +8971,72 @@ class WithErrorSyntax::ErrorAsEnumResponseContext
 
 class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Allocates 16
-  // bytes of request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result ResponseAsStruct(
       ::fit::callback<void(ResponseAsStructResponse* response)> _cb);
-  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Caller
-  // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
-  // are called on it.
+
+  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result ResponseAsStruct(ResponseAsStructResponseContext* _context);
-  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Allocates 80
-  // bytes of message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::ResponseAsStruct ResponseAsStruct_Sync();
 
-  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
+  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::ResponseAsStruct ResponseAsStruct_Sync(
       ::fidl::BufferSpan _response_buffer);
 
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 16
-  // bytes of request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result ErrorAsPrimitive(
       ::fit::callback<void(ErrorAsPrimitiveResponse* response)> _cb);
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Caller
-  // provides the backing storage for FIDL message via request buffer. Ownership
-  // of _context is given unsafely to the binding until OnError() or OnReply()
-  // are called on it.
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result ErrorAsPrimitive(ErrorAsPrimitiveResponseContext* _context);
-  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 64
-  // bytes of message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync();
 
-  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers.
+  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync(
       ::fidl::BufferSpan _response_buffer);
 
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 16 bytes
-  // of request buffer on the stack. The callback is stored on the heap.
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
+  // Allocates 16 bytes of request buffer on the stack. The callback is stored
+  // on the heap.
   ::fidl::Result ErrorAsEnum(
       ::fit::callback<void(ErrorAsEnumResponse* response)> _cb);
-  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides
-  // the backing storage for FIDL message via request buffer. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
   ::fidl::Result ErrorAsEnum(ErrorAsEnumResponseContext* _context);
-  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 64 bytes
-  // of message buffer on the stack. No heap allocation necessary.
+
+  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ResultOf::ErrorAsEnum ErrorAsEnum_Sync();
 
-  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
+  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
   UnownedResultOf::ErrorAsEnum ErrorAsEnum_Sync(
       ::fidl::BufferSpan _response_buffer);
 

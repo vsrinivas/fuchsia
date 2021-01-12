@@ -37,36 +37,92 @@ class {{ $outer.Name }}::{{ .Name }}ResponseContext : public ::fidl::internal::R
 
 class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
-  {{- range .ClientMethods -}}
-    {{- if .HasResponse -}}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
-{{ "" }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{ template "AsyncClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. Caller provides the backing storage for FIDL message via request buffer. Ownership of _context is given unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
-    {{- end }}
+  {{- /* Generate both sync and async flavors for two-way methods. */}}
+  {{- range .TwoWayMethods }}
 
+    {{- /* Async managed flavor */}}
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-  // {{- if .HasResponse }} Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{- end }}{{ template "ClientAllocationComment" . }}
-  {{ if .HasResponse }}ResultOf::{{ .Name }}{{ else }}::fidl::Result{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestManagedMethodArguments" . }});
+    {{- if .DocComments }}
+  //
+    {{- end }}
+  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // {{ template "AsyncClientAllocationComment" . }}
+  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
+{{ "" }}
+
+    {{- /* Async caller-allocate flavor */}}
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+    {{- if .DocComments }}
+  //
+    {{- end }}
+  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Caller provides the backing storage for FIDL message via request buffer.
+  // Ownership of |_context| is given unsafely to the binding until |OnError|
+  // or |OnReply| are called on it.
+  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
+{{ "" }}
+
+    {{- /* Sync managed flavor */}}
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+    {{- if .DocComments }}
+  //
+    {{- end }}
+  // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // {{- template "ClientAllocationComment" . }}
+  ResultOf::{{ .Name }} {{ .Name }}_Sync(
+      {{- template "SyncRequestManagedMethodArguments" . }});
+
+    {{- /* Sync caller-allocate flavor */}}
     {{- if or .Request .Response }}
 {{ "" }}
       {{- range .DocComments }}
   //{{ . }}
       {{- end }}
-  // {{- if .HasResponse }} Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{- end }} Caller provides the backing storage for FIDL message via request and response buffers.
-  {{ if .HasResponse }}UnownedResultOf::{{ .Name }}{{ else }}::fidl::Result{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestCallerAllocateMethodArguments" . }});
+      {{- if .DocComments }}
+  //
+      {{- end }}
+  // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  UnownedResultOf::{{ .Name }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
+      {{- template "SyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
 {{ "" }}
   {{- end }}
+
+  {{- /* There is no distinction between sync vs async for one-way methods . */}}
+  {{- range .OneWayMethods }}
+    {{- /* Managed flavor */}}
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+    {{- if .DocComments }}
+  //
+    {{- end }}
+  // {{- template "ClientAllocationComment" . }}
+  ::fidl::Result {{ .Name }}({{- template "SyncRequestManagedMethodArguments" . }});
+
+    {{- /* Caller-allocate flavor */}}
+    {{- if .Request }}
+{{ "" }}
+      {{- range .DocComments }}
+  //{{ . }}
+      {{- end }}
+      {{- if .DocComments }}
+  //
+      {{- end }}
+  // Caller provides the backing storage for FIDL message via request buffer.
+  ::fidl::Result {{ .Name }}({{- template "SyncRequestCallerAllocateMethodArguments" . }});
+    {{- end }}
+{{ "" }}
+  {{- end }}
+
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }
 
  private:
