@@ -32,6 +32,8 @@ type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 pub enum Error {
     #[error("Failed to send response for operation: {0:?}")]
     ResponseSendFail(Cow<'static, str>),
+    #[error("Messenger not present")]
+    MessengerNotFound,
 }
 
 /// `Broker` captures the information necessary to process messages to a broker:
@@ -161,13 +163,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     }
 
     // Derives the underlying MessengerId from a Signature.
-    fn resolve_messenger_id(&self, signature: &Signature<A>) -> MessengerId {
-        match signature {
+    fn resolve_messenger_id(&self, signature: &Signature<A>) -> Result<MessengerId, Error> {
+        Ok(match signature {
             Signature::Anonymous(id) => *id,
             Signature::Address(address) => {
-                *self.addresses.get(&address).expect("signature should be valid")
+                *self.addresses.get(&address).ok_or(Error::MessengerNotFound)?
             }
-        }
+        })
     }
 
     /// Internally routes a message to the next appropriate receiver. New messages
@@ -218,7 +220,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 }
             }
         } else if let Some(beacon) = self.beacons.get(&sender_id) {
-            let author_id = self.resolve_messenger_id(&message.get_author());
+            let author_id = self
+                .resolve_messenger_id(&message.get_author())
+                .expect("messenger should be present");
 
             // If the message is not a reply, determine if the current sender is a broker.
             // In the case of a broker, the message should be forwarded to the next
@@ -429,6 +433,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
             }
+            MessengerAction::CheckPresence(signature, responder) => {
+                responder.send(Ok(self.resolve_messenger_id(&signature).is_ok())).ok();
+            }
             MessengerAction::Delete(messenger) => {
                 self.delete_by_signature(messenger.get_signature())
             }
@@ -437,7 +444,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     }
 
     fn delete_by_signature(&mut self, signature: Signature<A>) {
-        let id = self.resolve_messenger_id(&signature);
+        let id = self.resolve_messenger_id(&signature).expect("messenger should be present");
 
         // Clean up roles
         if let Some(descriptor) = self.messengers.remove(&id) {

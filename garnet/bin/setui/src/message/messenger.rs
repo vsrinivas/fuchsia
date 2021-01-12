@@ -6,7 +6,7 @@ use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
     default, messenger, role, ActionSender, Address, Audience, CreateMessengerResult, Fingerprint,
     Message, MessageAction, MessageError, MessageType, MessengerAction, MessengerActionSender,
-    MessengerId, MessengerType, Payload, Role, Signature,
+    MessengerId, MessengerPresenceResult, MessengerType, Payload, Role, Signature,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
@@ -99,6 +99,16 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFac
         messenger_type: MessengerType<P, A, R>,
     ) -> CreateMessengerResult<P, A, R> {
         self.messenger_builder(messenger_type).build().await
+    }
+
+    /// Checks whether a messenger is present at the given [`Signature`]. Note
+    /// that there is no guarantee that the messenger at the given [`Signature`]
+    /// will not be deleted or created after this function returns.
+    #[allow(dead_code)]
+    pub async fn contains(&self, signature: Signature<A>) -> MessengerPresenceResult<A> {
+        let (tx, rx) = futures::channel::oneshot::channel::<MessengerPresenceResult<A>>();
+        self.messenger_action_tx.unbounded_send(MessengerAction::CheckPresence(signature, tx)).ok();
+        rx.await.unwrap_or(Err(MessageError::Unexpected))
     }
 
     pub fn delete(&self, signature: Signature<A>) {

@@ -108,6 +108,30 @@ async fn test_messenger_creation() {
     assert!(messenger_factory.create(MessengerType::Addressable(address)).await.is_err());
 }
 
+/// Tests whether the client is reported as present after being created.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_messenger_presence() {
+    let messenger_factory = num_test::message::create_hub();
+
+    // Create unbound messenger
+    let (_, receptor) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("messenger should be created");
+
+    // Check for messenger's presence
+    assert!(messenger_factory
+        .contains(receptor.get_signature())
+        .await
+        .expect("check should complete"));
+
+    // Check for an address that shouldn't exist
+    assert!(!messenger_factory
+        .contains(num_test::message::Signature::Address(1))
+        .await
+        .expect("check should complete"));
+}
+
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_deletion() {

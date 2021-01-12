@@ -576,6 +576,10 @@ pub(super) type CreateMessengerResult<P, A, R> =
 /// Callback for handing back a messenger
 pub(super) type MessengerSender<P, A, R> = Sender<CreateMessengerResult<P, A, R>>;
 
+/// Callback for checking on messenger presence
+pub(super) type MessengerPresenceSender<A> = Sender<MessengerPresenceResult<A>>;
+pub(super) type MessengerPresenceResult<A> = Result<bool, MessageError<A>>;
+
 /// Type definition for a sender handed by the MessageHub to spawned components
 /// (messenger factories and messengers) to control messengers.
 pub(super) type MessengerActionSender<P, A, R> = UnboundedSender<MessengerAction<P, A, R>>;
@@ -588,9 +592,11 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static, R: R
         MessengerSender<P, A, R>,
         MessengerActionSender<P, A, R>,
     ),
+    /// Check whether a messenger exists for the given [`Signature`]
+    CheckPresence(Signature<A>, MessengerPresenceSender<A>),
     /// Deletes a given messenger
     Delete(Messenger<P, A, R>),
-    /// Deletes a messenger by its `Signature`
+    /// Deletes a messenger by its [`Signature`]
     DeleteBySignature(Signature<A>),
 }
 
