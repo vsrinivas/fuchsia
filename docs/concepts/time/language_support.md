@@ -33,13 +33,9 @@ contains the number of nanoseconds since the system was powered on. See
   Monotonic time is accessible through [libzircon][c-libzircon].
 
   ```c
-  #include <stdio.h>
-  #include <zircon/syscalls.h>
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/c/main.c" region_tag="common_imports" adjust_indentation="auto" %}
 
-  {
-    zx_time_t mono_nsec = zx_clock_get_monotonic();
-    printf("The monotonic time is %ld ns.\n", mono_nsec);
-  }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/c/main.c" region_tag="monotonic" adjust_indentation="auto" %}
   ```
 
 * {C++}
@@ -47,14 +43,9 @@ contains the number of nanoseconds since the system was powered on. See
   Monotonic time is accessible through [libzx][cpp-libzx].
 
   ```cpp
-    #include <lib/zx/clock.h>
-    #include <lib/zx/time.h>
-    #include <stdio.h>
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/cpp/main.cc" region_tag="common_imports" adjust_indentation="auto" %}
 
-    {
-      zx::time monotonic_time = zx::clock::get_monotonic();
-      printf("The monotonic time is %ld ns.\n", monotonic_time.get());
-    }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/cpp/main.cc" region_tag="monotonic" adjust_indentation="auto" %}
   ```
 
 * {Rust}
@@ -63,12 +54,7 @@ contains the number of nanoseconds since the system was powered on. See
   This crate is only available in-tree.
 
   ```rust
-    use fuchsia_zircon as zx;
-
-    {
-      let monotonic_time = zx::Time::get_monotonic();
-      println!("The monotonic time is {:?} ns.", monotonic_time);
-    }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/rust/src/main.rs" region_tag="monotonic" adjust_indentation="auto" %}
   ```
 
 ### UTC time
@@ -92,49 +78,10 @@ synchronized, before reading it.
   the syscalls exposed in [libzircon][c-libzircon].
 
   ```c
-  #include <zircon/utc.h>
-  #include <zircon/syscalls.h>
-  #include <zircon/syscalls/clock.h>
-  #include <stdio.h>
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/c/main.c" region_tag="common_imports" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/c/main.c" region_tag="utc_imports" adjust_indentation="auto" %}
 
-  int main(int argc, const char** argv) {
-    // This is a borrowed handle. Do not close it, and do not replace it using
-    // zx_utc_reference_swap while using it.
-    zx_handle_t utc_clock = zx_utc_reference_get();
-
-    if (utc_clock != ZX_HANDLE_INVALID) {
-      // Wait for the UTC clock to start.
-      zx_status_t status =
-        zx_object_wait_one(utc_clock, ZX_CLOCK_STARTED, ZX_TIME_INFINITE, NULL);
-      if (status == ZX_OK) {
-        printf("UTC clock is started.\n");
-      } else {
-        printf("zx_object_wait_one syscall failed (status = %d).\n", status);
-      }
-
-      // Read the UTC clock.
-      zx_time_t nsec;
-      status = zx_clock_read(utc_clock, &nsec);
-      if (status == ZX_OK) {
-        printf("It has been %ld nSec since the epoch.\n", nsec);
-      } else {
-        printf("zx_clock_read syscall failed (status = %d).\n", status);
-      }
-
-      // Read UTC clock details.
-      zx_clock_details_v1_t details;
-      status = zx_clock_get_details(utc_clock, ZX_CLOCK_ARGS_VERSION(1), &details);
-      if (status == ZX_OK) {
-        printf("The UTC clock's backstop time is %ld ns since the epoch.\n",
-          details.backstop_time);
-      } else {
-        printf("zx_clock_get_details failed (status = %d).\n", status);
-      }
-
-    } else {
-      printf("Error, our runtime has no clock assigned to it!\n");
-    }
-  }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/c/main.c" region_tag="utc" adjust_indentation="auto" %}
   ```
 
 * {C++}
@@ -143,45 +90,10 @@ synchronized, before reading it.
   the syscall wrappers in [libzx][cpp-libzx].
 
   ```cpp
-  #include <stdio.h>
-  #include <lib/zx/clock.h>
-  #include <lib/zx/time.h>
-  #include <zircon/utc.h>
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/cpp/main.cc" region_tag="common_imports" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/cpp/main.cc" region_tag="utc_imports" adjust_indentation="auto" %}
 
-  int main(int argc, const char** argv) {
-    // This is a borrowed handle. Do not close it, and do not replace it using
-    // zx_utc_reference_swap while using it.
-    zx_handle_t utc_clock_handle = zx_utc_reference_get();
-    zx::unowned_clock utc_clock(utc_clock_handle);
-
-    // Wait for the UTC clock to start.
-    zx_status_t status =
-      utc_clock->wait_one(ZX_CLOCK_STARTED, zx::time::infinite(), NULL);
-    if (status == ZX_OK) {
-      printf("UTC clock is started.\n");
-    } else {
-      printf("Waiting for the UTC clock to start failed (status = %d).\n", status);
-    }
-
-    // Read the UTC clock.
-    zx_time_t utc_time;
-    status = utc_clock->read(&utc_time);
-    if (status == ZX_OK) {
-      printf("The UTC time is %ld ns since the epoch\n", utc_time);
-    } else {
-      printf("Reading the UTC clock failed (status = %d).\n", status);
-    }
-
-    // Read clock details.
-    zx_clock_details_v1_t details;
-    status = utc_clock->get_details(&details);
-    if (status == ZX_OK) {
-      printf("The UTC clock's backstop time is %ld ns since the epoch.\n",
-        details.backstop_time);
-    } else {
-      printf("Reading the UTC clock details failed (status = %d).\n", status);
-    }
-  }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/cpp/main.cc" region_tag="utc" adjust_indentation="auto" %}
   ```
 
 * {Rust}
@@ -193,31 +105,7 @@ synchronized, before reading it.
   crates are only available in-tree.
 
   ```rust
-  use fuchsia_async as fasync;
-  use fuchsia_runtime::duplicate_utc_clock_handle;
-  use fuchsia_zircon as zx;
-
-  #[fasync::run_singlethreaded]
-  async fn main() {
-      // Obtain a UTC handle.
-      let utc_clock = duplicate_utc_clock_handle(zx::Rights::SAME_RIGHTS)
-          .expect("Failed to duplicate UTC clock handle.");
-
-      // Wait for the UTC clock to start.
-      fasync::OnSignals::new(&utc_clock, zx::Signals::CLOCK_STARTED)
-          .await
-          .expect("Failed to wait for ZX_CLOCK_STARTED.");
-      println!("UTC clock is started.");
-
-      // Read the UTC clock.
-      let utc_time = utc_clock.read().expect("Failed to read UTC clock.");
-      println!("The UTC time is {:?} ns since the epoch.", utc_time);
-
-      // Read UTC clock details.
-      let clock_details = utc_clock.get_details().expect("Failed to read UTC clock details.");
-      println!("The UTC clock's backstop time is {:?} ns since the epoch.",  
-        clock_details.backstop);
-  }
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/time/rust/src/main.rs" region_tag="utc" adjust_indentation="auto" %}
   ```
 
 [libc]: /docs/development/languages/c-cpp/libc.md

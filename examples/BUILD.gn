@@ -19,6 +19,7 @@ group("examples") {
     "rolldice",
     "rust",
     "speech",
+    "time",
     "//examples/components/basic:components-basic-example",
     "//examples/components/basic:tests",
     "//examples/components/routing:components-routing-example",

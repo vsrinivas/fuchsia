@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
+
+executable("bin") {
+  output_name = "cpp_time_example"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("cpp-time-example-component") {
+  deps = [ ":bin" ]
+  component_name = "cpp-time-example"
+  manifest = "meta/cpp-time-example.cmx"
+}
+
+fuchsia_package("cpp-time-example") {
+  deps = [ ":cpp-time-example-component" ]
+}
+
+group("cpp") {
+  testonly = true
+  public_deps = [ ":cpp-time-example" ]
+}
