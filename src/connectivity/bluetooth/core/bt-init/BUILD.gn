@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "bt_init"
@@ -38,27 +38,17 @@ rustc_binary("bin") {
   ]
 }
 
-package("bt-init") {
-  deps = [ ":bin" ]
+resource("default-config") {
+  sources = [ "config/default.json" ]
+  outputs = [ "data/default.json" ]
+}
 
-  binaries = [
-    {
-      name = "bt_init"
-    },
+fuchsia_package_with_single_component("bt-init") {
+  deps = [
+    ":bin",
+    ":default-config",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/bt-init.cmx")
-      dest = "bt-init.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("config/default.json")
-      dest = "default.json"
-    },
-  ]
+  manifest = "meta/bt-init.cmx"
 }
 
 config_data("bootstrap_config") {

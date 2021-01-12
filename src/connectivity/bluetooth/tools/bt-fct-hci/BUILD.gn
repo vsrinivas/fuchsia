@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "bt_fct_hci"
@@ -58,15 +58,12 @@ package("bt-fct-hci") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bt-fct-hci-tests"
-
+fuchsia_unittest_package("bt-fci-hci-unittests") {
+  manifest = "meta/bt-fct-hci-unittests.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "bt_fct_hci_bin_test"
-      dest = "bt-fct-hci-unittests"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bt-fci-hci-unittests" ]
 }

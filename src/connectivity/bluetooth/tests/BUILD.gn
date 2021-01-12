@@ -2,23 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test_package("bluetooth-tests") {
-  deps = [
-    "//src/connectivity/bluetooth/core/bt-host:tests",
-    "//src/connectivity/bluetooth/lib/fidl:tests",
-    "//src/lib/syslog/rust:syslog",
-  ]
+fuchsia_unittest_component("bt-host-unittests") {
+  manifest = "meta/bt-host-unittests.cmx"
+  deps = [ "//src/connectivity/bluetooth/core/bt-host:tests" ]
+}
 
-  tests = [
-    {
-      name = "bt-host-unittests"
-    },
-    {
-      name = "bt-lib-fidl-unittests"
-    },
+fuchsia_unittest_component("bt-lib-fidl-unittests") {
+  manifest = "meta/bt-lib-fidl-unittests.cmx"
+  deps = [ "//src/connectivity/bluetooth/lib/fidl:tests" ]
+}
+
+fuchsia_test_package("bluetooth-tests") {
+  test_components = [
+    ":bt-host-unittests",
+    ":bt-lib-fidl-unittests",
   ]
 }
 

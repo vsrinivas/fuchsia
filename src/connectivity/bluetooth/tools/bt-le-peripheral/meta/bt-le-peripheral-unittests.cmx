@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bt-le-peripheral-unittests"
+        "binary": "bin/bt_le_peripheral_bin_test"
     }
 }

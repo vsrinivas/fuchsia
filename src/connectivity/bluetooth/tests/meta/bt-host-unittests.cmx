@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bt-host-unittests"
+        "binary": "bin/bt-host-unittests"
     },
     "sandbox": {
         "services": [

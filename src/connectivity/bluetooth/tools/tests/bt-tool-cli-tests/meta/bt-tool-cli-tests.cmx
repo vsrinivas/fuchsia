@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bt-tool-cli-tests"
+        "binary": "bin/bt_tool_cli_lib_test"
     },
     "sandbox": {
         "dev": [

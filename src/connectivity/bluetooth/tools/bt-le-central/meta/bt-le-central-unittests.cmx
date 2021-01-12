@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bt-le-central-unittests"
+        "binary": "bin/bt_le_central_bin_test"
     }
 }

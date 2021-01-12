@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "bt_cli"
@@ -50,15 +50,12 @@ package("bt-cli") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bt-cli-tests"
-
+fuchsia_unittest_package("bt-cli-unittests") {
+  manifest = "meta/bt-cli-unittests.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "bt_cli_bin_test"
-      dest = "bt-cli-unittests"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bt-cli-unittests" ]
 }

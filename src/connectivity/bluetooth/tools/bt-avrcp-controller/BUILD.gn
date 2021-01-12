@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "bt_avrcp_controller"
@@ -47,15 +47,12 @@ package("bt-avrcp-controller") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bt-avrcp-controller-tests"
-
+fuchsia_unittest_package("bt-avrcp-controller-unittests") {
+  manifest = "meta/bt-avrcp-controller-unittests.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "bt_avrcp_controller_bin_test"
-      dest = "bt-avrcp-controller-unittests"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bt-avrcp-controller-unittests" ]
 }

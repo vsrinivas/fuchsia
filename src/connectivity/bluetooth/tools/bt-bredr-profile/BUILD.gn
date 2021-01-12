@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "bt_bredr_profile"
@@ -50,15 +50,12 @@ package("bt-bredr-profile") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bt-bredr-profile-tests"
-
+fuchsia_unittest_package("bt-bredr-profile-unittests") {
+  manifest = "meta/bt-bredr-profile-unittests.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      name = "bt_bredr_profile_bin_test"
-      dest = "bt-bredr-profile-unittests"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bt-bredr-profile-unittests" ]
 }

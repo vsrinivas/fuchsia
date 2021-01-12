@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "bt_tool_cli"
@@ -22,29 +22,13 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("bt-tool-cli-tests") {
+fuchsia_unittest_package("bt-tool-cli-tests") {
+  manifest = "meta/bt-tool-cli-tests.cmx"
   deps = [
     ":lib_test",
+
+    # include these binaries in our package so we aren't dependent on the /bin ones.
     "//src/connectivity/bluetooth/tools/bt-avrcp-controller:bin",
     "//src/connectivity/bluetooth/tools/bt-snoop-cli:bin",
-  ]
-
-  # include these binaries in our package so we aren't dependent on the /bin ones.
-  binaries = [
-    {
-      name = "bt_avrcp_controller"
-      dest = "bt-avrcp-controller"
-    },
-    {
-      name = "bt_snoop_cli"
-      dest = "bt-snoop-cli"
-    },
-  ]
-
-  tests = [
-    {
-      name = "bt_tool_cli_lib_test"
-      dest = "bt-tool-cli-tests"
-    },
   ]
 }
