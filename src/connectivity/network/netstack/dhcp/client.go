@@ -53,10 +53,12 @@ type Client struct {
 
 	stats Stats
 
+	leaseExpirationTime, renewTime, rebindTime time.Time
+
 	// Stubbable in test.
 	rand           *rand.Rand
 	retransTimeout func(time.Duration) <-chan time.Time
-	acquire        func(ctx context.Context, c *Client, info *Info) (Config, error)
+	acquire        func(context.Context, *Client, *Info) (Config, error)
 	now            func() time.Time
 }
 
@@ -176,7 +178,6 @@ func (c *Client) Run(ctx context.Context) {
 		c.info.Store(info)
 	}()
 
-	var leaseExpirationTime, renewTime, rebindTime time.Time
 	var timer *time.Timer
 
 	for {
@@ -198,14 +199,14 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.RenewAcquire.Increment()
 				// Instead of `time.Until`, use `now` stored on the client so
 				// it can be stubbed out in test for consistency.
-				if tilRebind := rebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
+				if tilRebind := c.rebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
 					acquisitionTimeout = tilRebind
 				}
 			case rebinding:
 				c.stats.RebindAcquire.Increment()
 				// Instead of `time.Until`, use `now` stored on the client so
 				// it can be stubbed out in test for consistency.
-				if tilLeaseExpire := leaseExpirationTime.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
+				if tilLeaseExpire := c.leaseExpirationTime.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
 					acquisitionTimeout = tilLeaseExpire
 				}
 			default:
@@ -223,9 +224,9 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.ReacquireAfterNAK.Increment()
 				c.cleanup(&info)
 				// Reset all the times so the client will re-acquire.
-				leaseExpirationTime = time.Time{}
-				renewTime = time.Time{}
-				rebindTime = time.Time{}
+				c.leaseExpirationTime = time.Time{}
+				c.renewTime = time.Time{}
+				c.rebindTime = time.Time{}
 				return nil
 			}
 
@@ -258,9 +259,9 @@ func (c *Client) Run(ctx context.Context) {
 			}
 
 			now := c.now()
-			leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
-			renewTime = now.Add(cfg.RenewTime.Duration())
-			rebindTime = now.Add(cfg.RebindTime.Duration())
+			c.leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
+			c.renewTime = now.Add(cfg.RenewTime.Duration())
+			c.rebindTime = now.Add(cfg.RebindTime.Duration())
 
 			if fn := c.acquiredFunc; fn != nil {
 				fn(info.OldAddr, info.Addr, cfg)
@@ -287,11 +288,11 @@ func (c *Client) Run(ctx context.Context) {
 		var next dhcpClientState
 		var waitDuration time.Duration
 		switch now := c.now(); {
-		case !now.Before(leaseExpirationTime):
+		case !now.Before(c.leaseExpirationTime):
 			next = initSelecting
-		case !now.Before(rebindTime):
+		case !now.Before(c.rebindTime):
 			next = rebinding
-		case !now.Before(renewTime):
+		case !now.Before(c.renewTime):
 			next = renewing
 		default:
 			switch s := info.State; s {
@@ -300,10 +301,10 @@ func (c *Client) Run(ctx context.Context) {
 				// the timers are correctly set, previous cases should have matched.
 				panic(fmt.Sprintf(
 					"invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s",
-					s, now, leaseExpirationTime, renewTime, rebindTime,
+					s, now, c.leaseExpirationTime, c.renewTime, c.rebindTime,
 				))
 			}
-			waitDuration = renewTime.Sub(now)
+			waitDuration = c.renewTime.Sub(now)
 			next = renewing
 		}
 
@@ -571,8 +572,34 @@ retransmitRequest:
 		}
 		c.stats.SendRequests.Increment()
 
+		// RFC 2131 Section 4.4.5
+		// https://tools.ietf.org/html/rfc2131#section-4.4.5
+		//
+		//   In both RENEWING and REBINDING states, if the client receives no
+		//   response to its DHCPREQUEST message, the client SHOULD wait one-half of
+		//   the remaining time until T2 (in RENEWING state) and one-half of the
+		//   remaining lease time (in REBINDING state), down to a minimum of 60
+		//   seconds, before retransmitting the DHCPREQUEST message.
+		var retransmitAfter time.Duration
+		switch info.State {
+		case initSelecting:
+			retransmitAfter = c.exponentialBackoff(i)
+		case renewing:
+			retransmitAfter = c.rebindTime.Sub(c.now()) / 2
+			if min := 60 * time.Second; retransmitAfter < min {
+				retransmitAfter = min
+			}
+		case rebinding:
+			retransmitAfter = c.leaseExpirationTime.Sub(c.now()) / 2
+			if min := 60 * time.Second; retransmitAfter < min {
+				retransmitAfter = min
+			}
+		default:
+			panic(fmt.Sprintf("invalid client state %s", info.State))
+		}
+
 		// Receive a DHCPACK/DHCPNAK from the server.
-		retransmit := c.retransTimeout(c.exponentialBackoff(i))
+		retransmit := c.retransTimeout(retransmitAfter)
 		for {
 			result, retransmit, err := c.recv(ctx, ep, ch, xid[:], retransmit)
 			if err != nil {

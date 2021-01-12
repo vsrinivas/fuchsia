@@ -514,6 +514,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				0,
 				// Trasition to renew.
 				defaultLeaseLength.Duration() / 2,
+				// Backoff while renewing.
+				0,
 				// Retry after NAK.
 				0,
 				// Calculate renew acquisition timeout.
@@ -537,6 +539,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				0,
 				// Trasition to rebind.
 				defaultLeaseLength.Duration() * 875 / 1000,
+				// Backoff while rebinding.
+				0,
 				// Retry after NAK.
 				0,
 				// Calculate rebind acquisition timeout.
@@ -815,6 +819,125 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			}
 			if got := c.stats.RecvAcks.Value(); got != 1 {
 				t.Errorf("acquire(_, _, _) got RecvAcks count: %d, want: 1", got)
+			}
+		})
+	}
+}
+
+// Test backoff in renew and rebind conforms to RFC 2131 4.4.5. That is, backoff
+// in renew should be half of remaining time to T2, and backoff in rebind should
+// be half of the remaining time to lease expiration.
+//
+// https://tools.ietf.org/html/rfc2131#page-41
+func TestRenewRebindBackoff(t *testing.T) {
+	for i, tc := range []struct {
+		state           dhcpClientState
+		rebindTime      time.Duration
+		leaseExpiration time.Duration
+		wantTimeouts    []time.Duration
+	}{
+		{
+			state:      renewing,
+			rebindTime: 800 * time.Second,
+			wantTimeouts: []time.Duration{
+				400 * time.Second,
+				200 * time.Second,
+				100 * time.Second,
+				60 * time.Second,
+				60 * time.Second,
+			},
+		},
+		{
+			state:      renewing,
+			rebindTime: 1600 * time.Second,
+			wantTimeouts: []time.Duration{
+				800 * time.Second,
+				400 * time.Second,
+				200 * time.Second,
+				100 * time.Second,
+				60 * time.Second,
+				60 * time.Second,
+			},
+		},
+		{
+			state:           rebinding,
+			leaseExpiration: 800 * time.Second,
+			wantTimeouts: []time.Duration{
+				400 * time.Second,
+				200 * time.Second,
+				100 * time.Second,
+				60 * time.Second,
+				60 * time.Second,
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("%d:%s", i, tc.state), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+
+			now := time.Now()
+			c.rebindTime = now.Add(tc.rebindTime)
+			c.leaseExpirationTime = now.Add(tc.leaseExpiration)
+
+			serverEP.onWritePacket = func(*stack.PacketBuffer) *stack.PacketBuffer {
+				// Don't send any response, keep the client renewing / rebinding
+				// to test backoff in these states.
+				return nil
+			}
+
+			// Start from time 0, and then advance time in test based on expected
+			// timeouts. This plus the stubbed out `retransTimeout` below, simulates
+			// time passing in this test.
+			durationsBetweenNows := append(
+				[]time.Duration{0},
+				tc.wantTimeouts[:len(tc.wantTimeouts)-1]...,
+			)
+			c.now = stubTimeNow(ctx, now, durationsBetweenNows, nil)
+
+			timeoutCh := make(chan time.Time)
+			var gotTimeouts []time.Duration
+			c.retransTimeout = func(d time.Duration) <-chan time.Time {
+				gotTimeouts = append(gotTimeouts, d)
+				return timeoutCh
+			}
+
+			errs := make(chan error)
+			go func() {
+				info := c.Info()
+				info.State = tc.state
+				if tc.state == renewing {
+					// Pretend the server's address is broadcast to avoid ARP (which
+					// won't work because we don't have an IP address). This is not
+					// necessary in other states since DHCPDISCOVER is always sent to
+					// broadcast.
+					info.Server = header.IPv4Broadcast
+				} else {
+					info.Server = serverAddr
+				}
+				_, err := acquire(ctx, c, &info)
+				errs <- err
+			}()
+
+			// Block `acquire` after the last `now` is called (happens before timeout
+			// chan is used), so the test is consistent. Otherwise `acquire` in the
+			// goroutine above will continue to retry and extra timeouts will be
+			// appended to `gotTimeouts`.
+			for i := 0; i < len(durationsBetweenNows)-1; i++ {
+				select {
+				case timeoutCh <- time.Time{}:
+				case err := <-errs:
+					t.Fatalf("acquire(_, _, _) failed: %s", err)
+				}
+			}
+			cancel()
+			if err := <-errs; !errors.Is(err, context.Canceled) {
+				t.Fatalf("acquire(_, _, _) failed: %s", err)
+			}
+
+			if diff := cmp.Diff(tc.wantTimeouts, gotTimeouts); diff != "" {
+				t.Errorf("Got retransmission timeouts diff (-want +got):\n%s", diff)
 			}
 		})
 	}
