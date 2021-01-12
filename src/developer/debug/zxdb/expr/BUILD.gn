@@ -100,11 +100,6 @@ static_library("expr") {
     "//third_party/double-conversion",
     "//zircon/public/lib/fit",
   ]
-  configs += [
-    # TODO(fxbug.dev/62511): delete the below and fix UB from signed integer
-    # overflow in eval_operators.cc
-    "//build/config:temporarily_disable_ubsan_do_not_use",
-  ]
 }
 
 source_set("test_support") {
@@ -179,11 +174,6 @@ source_set("tests") {
     "//src/developer/debug/zxdb/symbols:test_support",
     "//src/lib/llvm:LLVMBinaryFormat",
     "//third_party/googletest:gtest",
-  ]
-  configs += [
-    # TODO(fxbug.dev/62511): delete the below and fix UB from signed integer
-    # overflow in eval_operators.cc
-    "//build/config:temporarily_disable_ubsan_do_not_use",
   ]
 }
 

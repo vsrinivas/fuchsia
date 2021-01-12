@@ -799,6 +799,8 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefP
   });
 }
 
+// UBSan complains about the overflow of -INT32_MAX but our tests cover that.
+[[clang::no_sanitize("signed-integer-overflow")]]
 void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token,
                        const ExprValue& value, EvalCallback cb) {
   if (!value.type())
