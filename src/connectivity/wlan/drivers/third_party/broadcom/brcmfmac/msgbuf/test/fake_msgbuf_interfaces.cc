@@ -530,7 +530,7 @@ zx_status_t FakeMsgbufInterfaces::AddCompleteRingEntry(CompleteRing* ring, const
   void* const write_address = reinterpret_cast<void*>(
       GetDmaBufferAddress(ring->ring->dma_address()) + write_index * ring->ring->item_size());
   std::memcpy(write_address, buffer, size);
-  std::atomic_thread_fence(std::memory_order::memory_order_release);
+  std::atomic_thread_fence(std::memory_order_release);
 
   write_index += 1;
   if (write_index == ring->ring->capacity()) {

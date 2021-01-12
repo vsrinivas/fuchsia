@@ -110,13 +110,13 @@ zx_status_t ReadDmaRing::CommitRead(uint16_t item_count) {
     cache_invalidate_index_ = 0;
   }
 
-  read_index_->store(new_read_index, std::memory_order::memory_order_release);
+  read_index_->store(new_read_index, std::memory_order_release);
   return ZX_OK;
 }
 
 uint16_t ReadDmaRing::GetAvailableReads(uint16_t* out_read_index) {
-  const uint16_t read_index = read_index_->load(std::memory_order::memory_order_acquire);
-  const uint16_t write_index = write_index_->load(std::memory_order::memory_order_acquire);
+  const uint16_t read_index = read_index_->load(std::memory_order_acquire);
+  const uint16_t write_index = write_index_->load(std::memory_order_acquire);
   *out_read_index = read_index;
 
   if (read_index <= write_index) {
@@ -206,14 +206,14 @@ zx_status_t WriteDmaRing::CommitWrite(uint16_t item_count) {
     cache_clean_index_ = 0;
   }
 
-  write_index_->store(new_write_index, std::memory_order::memory_order_release);
-  write_signal_->store(1, std::memory_order::memory_order_release);
+  write_index_->store(new_write_index, std::memory_order_release);
+  write_signal_->store(1, std::memory_order_release);
   return ZX_OK;
 }
 
 uint16_t WriteDmaRing::GetAvailableWrites(uint16_t* out_write_index) {
-  const uint16_t read_index = read_index_->load(std::memory_order::memory_order_acquire);
-  const uint16_t write_index = write_index_->load(std::memory_order::memory_order_acquire);
+  const uint16_t read_index = read_index_->load(std::memory_order_acquire);
+  const uint16_t write_index = write_index_->load(std::memory_order_acquire);
   *out_write_index = write_index;
 
   if (write_index < read_index) {

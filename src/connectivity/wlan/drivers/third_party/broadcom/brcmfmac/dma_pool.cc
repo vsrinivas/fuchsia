@@ -67,7 +67,7 @@ zx_status_t DmaPool::Buffer::MapRead(size_t read_size, const void** out_data) {
              read_size - read_size_, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE)) != ZX_OK) {
       return status;
     }
-    std::atomic_thread_fence(std::memory_order::memory_order_acquire);
+    std::atomic_thread_fence(std::memory_order_acquire);
     read_size_ = read_size;
   }
 
@@ -110,7 +110,7 @@ zx_status_t DmaPool::Buffer::Pin(zx_paddr_t* out_dma_address) {
 
   // New data written by the CPU for the device now needs to be flushed from the cache.
   if (write_size_ > 0) {
-    std::atomic_thread_fence(std::memory_order::memory_order_release);
+    std::atomic_thread_fence(std::memory_order_release);
     if ((status = zx_cache_flush(data, write_size_, ZX_CACHE_FLUSH_DATA)) != ZX_OK) {
       return status;
     }
@@ -155,11 +155,11 @@ void swap(DmaPool& lhs, DmaPool& rhs) {
   swap(lhs.dma_allocation_, rhs.dma_allocation_);
   swap(lhs.records_, rhs.records_);
   const DmaPool::ListHead lhs_next_free_record =
-      lhs.next_free_record_.load(std::memory_order::memory_order_relaxed);
+      lhs.next_free_record_.load(std::memory_order_relaxed);
   const DmaPool::ListHead rhs_next_free_record =
-      rhs.next_free_record_.load(std::memory_order::memory_order_relaxed);
-  lhs.next_free_record_.store(rhs_next_free_record, std::memory_order::memory_order_relaxed);
-  rhs.next_free_record_.store(lhs_next_free_record, std::memory_order::memory_order_relaxed);
+      rhs.next_free_record_.load(std::memory_order_relaxed);
+  lhs.next_free_record_.store(rhs_next_free_record, std::memory_order_relaxed);
+  rhs.next_free_record_.store(lhs_next_free_record, std::memory_order_relaxed);
 }
 
 DmaPool::~DmaPool() = default;
@@ -188,11 +188,10 @@ zx_status_t DmaPool::Create(size_t buffer_size, int buffer_count,
   std::vector<DmaPool::Record> records(buffer_count);
   for (size_t i = 0; i < records.size() - 1; ++i) {
     records[i].next_free = &records[i + 1];
-    records[i].state.store(Record::State::kFree, std::memory_order::memory_order_relaxed);
+    records[i].state.store(Record::State::kFree, std::memory_order_relaxed);
   }
   records[records.size() - 1].next_free = nullptr;
-  records[records.size() - 1].state.store(Record::State::kFree,
-                                          std::memory_order::memory_order_relaxed);
+  records[records.size() - 1].state.store(Record::State::kFree, std::memory_order_relaxed);
 
   std::unique_ptr<DmaPool> dma_pool(new DmaPool());
   dma_pool->buffer_size_ = buffer_size;
@@ -202,7 +201,7 @@ zx_status_t DmaPool::Create(size_t buffer_size, int buffer_count,
   ListHead head = {};
   head.record = &dma_pool->records_[0];
   head.aba_state = 0;
-  dma_pool->next_free_record_.store(head, std::memory_order::memory_order_release);
+  dma_pool->next_free_record_.store(head, std::memory_order_release);
   *out_dma_pool = std::move(dma_pool);
   return ZX_OK;
 }
@@ -228,7 +227,7 @@ size_t DmaPool::GetBufferOffset(DmaPool::Buffer* buffer) const {
 zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
   // Find a free buffer on the stack, locklessly.  We avoid the ABA problem using ListHead as a
   // tagged pointer.
-  ListHead head = next_free_record_.load(std::memory_order::memory_order_relaxed);
+  ListHead head = next_free_record_.load(std::memory_order_relaxed);
   while (true) {
     if (head.record == nullptr) {
       return ZX_ERR_NO_RESOURCES;
@@ -236,8 +235,7 @@ zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
     ListHead next = {};
     next.record = head.record->next_free;
     next.aba_state = head.aba_state + 1;
-    if (next_free_record_.compare_exchange_weak(head, next,
-                                                std::memory_order::memory_order_acq_rel)) {
+    if (next_free_record_.compare_exchange_weak(head, next, std::memory_order_acq_rel)) {
       // Success!
       break;
     }
@@ -245,7 +243,7 @@ zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
 
   Record* const record = head.record;
   record->next_free = nullptr;
-  record->state.store(Record::State::kAllocated, std::memory_order::memory_order_release);
+  record->state.store(Record::State::kAllocated, std::memory_order_release);
   const auto index = record - &records_[0];
   if (index < 0 || index > std::numeric_limits<int>::max()) {
     BRCMF_ERR("DmaPool::Buffer cannot be created, invalid index (out of range)");
@@ -264,7 +262,7 @@ zx_status_t DmaPool::Acquire(int index, Buffer* out_buffer) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   Record* const record = &records_[index];
-  if (record->state.load(std::memory_order::memory_order_acquire) != Record::State::kAllocated) {
+  if (record->state.load(std::memory_order_acquire) != Record::State::kAllocated) {
     switch (record->state) {
       case Record::State::kFree:
         return ZX_ERR_NOT_FOUND;
@@ -289,15 +287,14 @@ size_t DmaPool::GetBufferOffset(int index) const { return buffer_size_ * index; 
 
 void DmaPool::ReturnBuffer(int index) {
   Record* const record = &records_[index];
-  record->state.store(Record::State::kFree, std::memory_order::memory_order_release);
-  ListHead head = next_free_record_.load(std::memory_order::memory_order_relaxed);
+  record->state.store(Record::State::kFree, std::memory_order_release);
+  ListHead head = next_free_record_.load(std::memory_order_relaxed);
   while (true) {
     ListHead next = {};
     record->next_free = head.record;
     next.record = record;
     next.aba_state = head.aba_state + 1;
-    if (next_free_record_.compare_exchange_weak(head, next,
-                                                std::memory_order::memory_order_acq_rel)) {
+    if (next_free_record_.compare_exchange_weak(head, next, std::memory_order_acq_rel)) {
       // Success!
       return;
     }

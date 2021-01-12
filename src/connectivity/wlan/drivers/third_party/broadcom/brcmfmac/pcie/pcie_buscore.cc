@@ -41,7 +41,7 @@ struct add_if_volatile {
       ToType>::type;
 };
 
-// Load/store a memory location, or use std::memory_order::memory_order_relaxed if it is volatile.
+// Load/store a memory location, or use std::memory_order_relaxed if it is volatile.
 
 template <typename T>
 T volatile_load(const T* src) {
@@ -50,8 +50,7 @@ T volatile_load(const T* src) {
 
 template <typename T>
 T volatile_load(volatile const T* src) {
-  return reinterpret_cast<volatile const std::atomic<T>*>(src)->load(
-      std::memory_order::memory_order_relaxed);
+  return reinterpret_cast<volatile const std::atomic<T>*>(src)->load(std::memory_order_relaxed);
 }
 
 template <typename T>
@@ -61,8 +60,7 @@ void volatile_store(T* dst, T value) {
 
 template <typename T>
 void volatile_store(volatile T* dst, T value) {
-  reinterpret_cast<volatile std::atomic<T>*>(dst)->store(value,
-                                                         std::memory_order::memory_order_relaxed);
+  reinterpret_cast<volatile std::atomic<T>*>(dst)->store(value, std::memory_order_relaxed);
 }
 
 // Perform a (volatile-aware, and hence volatile-ordered) memcpy of as many bytes as possible using
@@ -141,7 +139,7 @@ zx_status_t PcieBuscore::PcieRegisterWindow::Read(uint32_t offset, uint32_t* val
     return ZX_ERR_OUT_OF_RANGE;
   }
   *value = reinterpret_cast<volatile const std::atomic<uint32_t>*>(base_address_ + offset)
-               ->load(std::memory_order::memory_order_relaxed);
+               ->load(std::memory_order_relaxed);
   return ZX_OK;
 }
 
@@ -151,7 +149,7 @@ zx_status_t PcieBuscore::PcieRegisterWindow::Write(uint32_t offset, uint32_t val
     return ZX_ERR_OUT_OF_RANGE;
   }
   reinterpret_cast<volatile std::atomic<uint32_t>*>(base_address_ + offset)
-      ->store(value, std::memory_order::memory_order_relaxed);
+      ->store(value, std::memory_order_relaxed);
   return ZX_OK;
 }
 
@@ -382,8 +380,8 @@ zx_status_t PcieBuscore::TcmRead<uint64_t>(uint32_t offset, uint64_t* value) {
   }
   const auto address = reinterpret_cast<volatile const std::atomic<uint32_t>*>(
       reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset);
-  const uint32_t value_lo = address[0].load(std::memory_order::memory_order_relaxed);
-  const uint64_t value_hi = address[1].load(std::memory_order::memory_order_relaxed);
+  const uint32_t value_lo = address[0].load(std::memory_order_relaxed);
+  const uint64_t value_hi = address[1].load(std::memory_order_relaxed);
   *value = (value_hi << 32) | value_lo;
   return ZX_OK;
 }
@@ -397,8 +395,8 @@ zx_status_t PcieBuscore::TcmWrite<uint64_t>(uint32_t offset, uint64_t value) {
       reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset);
   const uint32_t value_lo = static_cast<uint32_t>(value & 0xFFFFFFFF);
   const uint32_t value_hi = static_cast<uint32_t>(value >> 32);
-  address[0].store(value_lo, std::memory_order::memory_order_relaxed);
-  address[1].store(value_hi, std::memory_order::memory_order_relaxed);
+  address[0].store(value_lo, std::memory_order_relaxed);
+  address[1].store(value_hi, std::memory_order_relaxed);
   return ZX_OK;
 }
 

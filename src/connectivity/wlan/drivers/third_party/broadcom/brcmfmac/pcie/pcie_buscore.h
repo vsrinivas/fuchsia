@@ -135,7 +135,7 @@ zx_status_t PcieBuscore::TcmRead(uint32_t offset, T* value) {
   }
   *value = reinterpret_cast<const volatile std::atomic<T>*>(
                reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset)
-               ->load(std::memory_order::memory_order_relaxed);
+               ->load(std::memory_order_relaxed);
   return ZX_OK;
 }
 
@@ -145,7 +145,7 @@ zx_status_t PcieBuscore::TcmWrite(uint32_t offset, T value) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   reinterpret_cast<volatile std::atomic<T>*>(reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset)
-      ->store(value, std::memory_order::memory_order_relaxed);
+      ->store(value, std::memory_order_relaxed);
   return ZX_OK;
 }
 
