@@ -2063,61 +2063,35 @@ class IOMethod {
   enum Op Op() const { return op; }
 
   ssize_t executeIO(int fd, char* buf, size_t len) const {
+    struct iovec iov[] = {{
+        .iov_base = buf,
+        .iov_len = len,
+    }};
+    struct msghdr msg = {
+        .msg_iov = iov,
+        .msg_iovlen = std::size(iov),
+    };
     switch (op) {
-      case Op::READ: {
+      case Op::READ:
         return read(fd, buf, len);
-      }
-      case Op::READV: {
-        struct iovec iov = {
-            .iov_base = buf,
-            .iov_len = len,
-        };
-        return readv(fd, &iov, 1);
-      }
-      case Op::RECV: {
+      case Op::READV:
+        return readv(fd, iov, std::size(iov));
+      case Op::RECV:
         return recv(fd, buf, len, 0);
-      }
-      case Op::RECVFROM: {
+      case Op::RECVFROM:
         return recvfrom(fd, buf, len, 0, nullptr, nullptr);
-      }
-      case Op::RECVMSG: {
-        struct iovec iov = {
-            .iov_base = buf,
-            .iov_len = len,
-        };
-        struct msghdr msg = {
-            .msg_iov = &iov,
-            .msg_iovlen = 1,
-        };
+      case Op::RECVMSG:
         return recvmsg(fd, &msg, 0);
-      }
-      case Op::WRITE: {
+      case Op::WRITE:
         return write(fd, buf, len);
-      }
-      case Op::WRITEV: {
-        struct iovec iov = {
-            .iov_base = buf,
-            .iov_len = len,
-        };
-        return writev(fd, &iov, 1);
-      }
-      case Op::SEND: {
+      case Op::WRITEV:
+        return writev(fd, iov, std::size(iov));
+      case Op::SEND:
         return send(fd, buf, len, 0);
-      }
-      case Op::SENDTO: {
+      case Op::SENDTO:
         return sendto(fd, buf, len, 0, nullptr, 0);
-      }
-      case Op::SENDMSG: {
-        struct iovec iov = {
-            .iov_base = buf,
-            .iov_len = len,
-        };
-        struct msghdr msg = {
-            .msg_iov = &iov,
-            .msg_iovlen = 1,
-        };
+      case Op::SENDMSG:
         return sendmsg(fd, &msg, 0);
-      }
     }
   }
 
@@ -2192,11 +2166,157 @@ auto disableSIGPIPE(bool isWrite) {
 }
 #endif
 
-class BeforeConnectTest : public ::testing::TestWithParam<IOMethod> {};
+class IOMethodTest : public ::testing::TestWithParam<IOMethod> {};
+
+// TODO(tamird): do the same test with stream sockets.
+TEST_P(IOMethodTest, NullptrFault) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+
+  auto ioMethod = GetParam();
+
+  {
+    const struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port = 1235,
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+    };
+
+    ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+
+    ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+  }
+
+  // A version of ioMethod::executeIO with special handling for vectorized operations: a 1-byte
+  // buffer is prepended to the argument.
+  auto executeIO = [ioMethod](int fd, char* buf, size_t len) {
+    char buffer[1];
+    struct iovec iov[] = {
+        {
+            .iov_base = buffer,
+            .iov_len = sizeof(buffer),
+        },
+        {
+            .iov_base = buf,
+            .iov_len = len,
+        },
+    };
+    struct msghdr msg = {
+        .msg_iov = iov,
+        .msg_iovlen = std::size(iov),
+    };
+
+    switch (ioMethod.Op()) {
+      case IOMethod::Op::READ:
+      case IOMethod::Op::RECV:
+      case IOMethod::Op::RECVFROM:
+      case IOMethod::Op::WRITE:
+      case IOMethod::Op::SEND:
+      case IOMethod::Op::SENDTO:
+        return ioMethod.executeIO(fd, buf, len);
+      case IOMethod::Op::READV:
+        return readv(fd, iov, std::size(iov));
+      case IOMethod::Op::RECVMSG:
+        return recvmsg(fd, &msg, 0);
+      case IOMethod::Op::WRITEV:
+        return writev(fd, iov, std::size(iov));
+      case IOMethod::Op::SENDMSG:
+        return sendmsg(fd, &msg, 0);
+    }
+  };
+
+  // Receive some data so we can attempt to read it below.
+  if (!ioMethod.isWrite()) {
+    char buffer[] = {0x74, 0x75};
+    ASSERT_EQ(send(fd.get(), buffer, sizeof(buffer), 0), static_cast<ssize_t>(sizeof(buffer)))
+        << strerror(errno);
+
+    // Wait for the packet to arrive since we are nonblocking.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+        .events = POLLIN,
+    };
+
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN);
+  }
+
+  EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
+
+  {
+    char buffer[1];
+    if (ioMethod.isWrite()) {
+      // Nothing was sent. This is not obvious in the vectorized case.
+      EXPECT_EQ(recv(fd.get(), buffer, sizeof(buffer), 0), -1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+    } else {
+      // The message was discarded in spite of the buffer being null.
+      EXPECT_EQ(executeIO(fd.get(), buffer, sizeof(buffer)), -1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+    }
+  }
+
+  // Do it again, but this time write less data so that vector operations can work normally.
+  if (!ioMethod.isWrite()) {
+    char buffer[] = {0x74};
+    ASSERT_EQ(send(fd.get(), buffer, sizeof(buffer), 0), static_cast<ssize_t>(sizeof(buffer)))
+        << strerror(errno);
+
+    // Wait for the packet to arrive since we are nonblocking.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+        .events = POLLIN,
+    };
+
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN);
+  }
+
+  switch (ioMethod.Op()) {
+    case IOMethod::Op::READ:
+    case IOMethod::Op::RECV:
+    case IOMethod::Op::RECVFROM:
+    case IOMethod::Op::WRITE:
+    case IOMethod::Op::SEND:
+    case IOMethod::Op::SENDTO:
+    case IOMethod::Op::WRITEV:
+    case IOMethod::Op::SENDMSG:
+      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
+      EXPECT_EQ(errno, EFAULT) << strerror(errno);
+      break;
+    case IOMethod::Op::READV:
+    case IOMethod::Op::RECVMSG:
+      // These vectorized operations never reach the faulty buffer, so they work normally.
+      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+      break;
+  }
+
+  {
+    char buffer[1];
+    if (ioMethod.isWrite()) {
+      // Nothing was sent. This is not obvious in the vectorized case.
+      EXPECT_EQ(recv(fd.get(), buffer, sizeof(buffer), 0), -1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+    } else {
+      // The message was discarded in spite of the buffer being null.
+      EXPECT_EQ(executeIO(fd.get(), buffer, sizeof(buffer)), -1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+    }
+  }
+}
 
 // BeforeConnect tests the application behavior when we start to
 // read and write from a stream socket that is not yet connected.
-TEST_P(BeforeConnectTest, BeforeConnect) {
+TEST_P(IOMethodTest, BeforeConnect) {
   auto ioMethod = GetParam();
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
@@ -2350,7 +2470,7 @@ TEST_P(BeforeConnectTest, BeforeConnect) {
   ASSERT_EQ(close(test_client.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, BeforeConnectTest,
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, IOMethodTest,
                          ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
                                            IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
                                            IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,

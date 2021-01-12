@@ -785,11 +785,17 @@ static fdio_ops_t fdio_datagram_socket_ops = {
 
             const uint8_t* data = out.begin();
             size_t remaining = out.count();
-            for (int i = 0; i < msg->msg_iovlen; ++i) {
-              size_t actual = std::min(msg->msg_iov[i].iov_len, remaining);
-              memcpy(msg->msg_iov[i].iov_base, data, actual);
-              data += actual;
-              remaining -= actual;
+            for (int i = 0; remaining != 0 && i < msg->msg_iovlen; ++i) {
+              auto const& iov = msg->msg_iov[i];
+              if (iov.iov_base != nullptr) {
+                size_t actual = std::min(iov.iov_len, remaining);
+                memcpy(iov.iov_base, data, actual);
+                data += actual;
+                remaining -= actual;
+              } else if (iov.iov_len != 0) {
+                *out_code = EFAULT;
+                return ZX_OK;
+              }
             }
             if (result.response().truncated != 0) {
               msg->msg_flags |= MSG_TRUNC;
@@ -811,33 +817,6 @@ static fdio_ops_t fdio_datagram_socket_ops = {
         [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
           auto const sio = reinterpret_cast<zxio_datagram_socket_t*>(fdio_get_zxio(io));
 
-          std::vector<uint8_t> data;
-          auto vec = [&msg, &data]() -> fidl::VectorView<uint8_t> {
-            switch (msg->msg_iovlen) {
-              case 0: {
-                return fidl::VectorView<uint8_t>();
-              }
-              case 1: {
-                auto const& iov = msg->msg_iov[0];
-                return fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(iov.iov_base)),
-                                        iov.iov_len);
-              }
-              default: {
-                size_t total = 0;
-                for (int i = 0; i < msg->msg_iovlen; ++i) {
-                  total += msg->msg_iov[i].iov_len;
-                }
-                // TODO(abarth): avoid this copy.
-                data.reserve(total);
-                for (int i = 0; i < msg->msg_iovlen; ++i) {
-                  auto const& iov = msg->msg_iov[i];
-                  std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
-                              std::back_inserter(data));
-                }
-                return fidl::unowned_vec(data);
-              }
-            }
-          };
           SocketAddress addr;
           // Attempt to load socket address if either name or namelen is set.
           // If only one is set, it'll result in INVALID_ARGS.
@@ -848,10 +827,44 @@ static fdio_ops_t fdio_datagram_socket_ops = {
               return status;
             }
           }
+
+          size_t total = 0;
+          for (int i = 0; i < msg->msg_iovlen; ++i) {
+            auto const& iov = msg->msg_iov[i];
+            if (iov.iov_base == nullptr && iov.iov_len != 0) {
+              *out_code = EFAULT;
+              return ZX_OK;
+            }
+            total += iov.iov_len;
+          }
+
+          std::vector<uint8_t> data;
+          auto vec = fidl::VectorView<uint8_t>();
+          switch (msg->msg_iovlen) {
+            case 0: {
+              break;
+            }
+            case 1: {
+              auto const& iov = *msg->msg_iov;
+              vec = fidl::VectorView(fidl::unowned_ptr(static_cast<uint8_t*>(iov.iov_base)),
+                                     iov.iov_len);
+              break;
+            }
+            default: {
+              // TODO(abarth): avoid this copy.
+              data.reserve(total);
+              for (int i = 0; i < msg->msg_iovlen; ++i) {
+                auto const& iov = msg->msg_iov[i];
+                std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
+                            std::back_inserter(data));
+              }
+              vec = fidl::unowned_vec(data);
+            }
+          }
           // TODO(fxbug.dev/21106): Support control messages.
           // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
           // Currently just using a default-initialized union with an invalid tag.
-          auto response = sio->client.SendMsg(std::move(addr.address), vec(),
+          auto response = sio->client.SendMsg(std::move(addr.address), std::move(vec),
                                               fsocket::SendControlData(), to_sendmsg_flags(flags));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
