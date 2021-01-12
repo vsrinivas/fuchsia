@@ -371,12 +371,17 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
   void push_back(const PtrType& ptr) { push_back(PtrType(ptr)); }
   void push_back(PtrType&& ptr) { internal_insert(sentinel(), std::move(ptr)); }
 
-  // insert : Insert an element before iter in the list.
-  void insert(const iterator& iter, const PtrType& ptr) { insert(iter, PtrType(ptr)); }
-  void insert(const iterator& iter, PtrType&& ptr) { internal_insert(iter.node_, std::move(ptr)); }
+  // insert : Insert an element before iter in the list, and return an
+  // element to the newly-inserted element.
+  iterator insert(const iterator& iter, const PtrType& ptr) { return insert(iter, PtrType(ptr)); }
+  iterator insert(const iterator& iter, PtrType&& ptr) {
+    return internal_insert(iter.node_, std::move(ptr));
+  }
 
-  void insert(ValueType& before, const PtrType& ptr) { insert(before, PtrType(ptr)); }
-  void insert(ValueType& before, PtrType&& ptr) { internal_insert(&before, std::move(ptr)); }
+  iterator insert(ValueType& before, const PtrType& ptr) { return insert(before, PtrType(ptr)); }
+  iterator insert(ValueType& before, PtrType&& ptr) {
+    return internal_insert(&before, std::move(ptr));
+  }
 
   // splice : Splice another list before iter in this list.
   void splice(const iterator& iter, DoublyLinkedList& other_list) {
@@ -495,16 +500,19 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
     return ret;
   }
 
-  // insert_after : Insert an element after iter in the list.
+  // insert_after : Insert an element after iter in the list, and return
+  // an element to the newly-inserted element.
   //
   // Note: It is an error to attempt to push a nullptr instance of PtrType, or
   // to attempt to push with iter == end().
-  void insert_after(const iterator& iter, const PtrType& ptr) { insert_after(iter, PtrType(ptr)); }
-  void insert_after(const iterator& iter, PtrType&& ptr) {
+  iterator insert_after(const iterator& iter, const PtrType& ptr) {
+    return insert_after(iter, PtrType(ptr));
+  }
+  iterator insert_after(const iterator& iter, PtrType&& ptr) {
     ZX_DEBUG_ASSERT(iter.IsValid());
 
     auto& ns = NodeTraits::node_state(*iter.node_);
-    internal_insert(ns.next_, std::move(ptr));
+    return internal_insert(ns.next_, std::move(ptr));
   }
 
   // pop_front and pop_back
@@ -810,7 +818,7 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
 
   constexpr RawPtrType sentinel() const { return internal::make_sentinel<RawPtrType>(this); }
 
-  void internal_insert(RawPtrType before, PtrType&& ptr) {
+  iterator internal_insert(RawPtrType before, PtrType&& ptr) {
     ZX_DEBUG_ASSERT(ptr != nullptr);
     ZX_DEBUG_ASSERT(before != nullptr);
     ZX_DEBUG_ASSERT(head_ != nullptr);
@@ -826,11 +834,12 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
       ZX_DEBUG_ASSERT(before == sentinel());
       ZX_DEBUG_ASSERT(before == head_);
 
-      ptr_ns.prev_ = PtrTraits::Leak(ptr);
+      auto* new_item = PtrTraits::Leak(ptr);
+      ptr_ns.prev_ = new_item;
       ptr_ns.next_ = head_;
-      head_ = ptr_ns.prev_;
+      head_ = new_item;
 
-      return;
+      return make_iterator(*new_item);
     }
 
     // If we are being inserted before the sentinel, the we are the new
@@ -852,8 +861,12 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
     ptr_ns.prev_ = tgt_prev;
 
     // Update the pointers which should now point to the inserted node.
-    tgt_next = PtrTraits::GetRaw(ptr);
-    tgt_prev = PtrTraits::Leak(ptr);
+    auto* new_item = PtrTraits::Leak(ptr);
+    tgt_next = new_item;
+    tgt_prev = new_item;
+
+    // Return an iterator to the new element.
+    return make_iterator(*new_item);
   }
 
   PtrType internal_erase(RawPtrType node) {

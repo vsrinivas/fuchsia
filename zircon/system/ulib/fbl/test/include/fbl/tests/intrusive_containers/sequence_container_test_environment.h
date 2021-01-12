@@ -29,6 +29,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
   using ContainerType = typename ContainerTraits::ContainerType;
   using ContainerChecker = typename ContainerType::CheckerType;
   using OtherContainerType = typename ContainerTraits::OtherContainerType;
+  using IteratorType = typename ContainerType::iterator;
   using PtrTraits = typename ContainerType::PtrTraits;
   using RefAction = typename TestEnvironment<TestEnvTraits>::RefAction;
   using TestEnvironment<TestEnvTraits>::TakePtr;
@@ -302,8 +303,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT - 1);
   }
 
-  template <typename IterType>
-  void DoInsertAfter(IterType&& iter, size_t pos) {
+  void DoInsertAfter(IteratorType iter, size_t pos) {
     EXPECT_EQ(ObjType::live_obj_count(), Size(container()));
     EXPECT_TRUE(iter != container().end());
 
@@ -317,17 +317,21 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     ASSERT_NOT_NULL(new_object);
     EXPECT_EQ(new_object->raw_ptr(), objects()[pos]);
 
+    IteratorType new_obj_iter;
     if (pos & 1) {
 #if TEST_WILL_NOT_COMPILE || 0
-      container().insert_after(iter, new_object);
+      new_obj_iter = container().insert_after(iter, new_object);
 #else
-      container().insert_after(iter, TestEnvTraits::Transfer(new_object));
+      new_obj_iter = container().insert_after(iter, TestEnvTraits::Transfer(new_object));
 #endif
       EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object));
     } else {
-      container().insert_after(iter, std::move(new_object));
+      new_obj_iter = container().insert_after(iter, std::move(new_object));
       EXPECT_TRUE(TestEnvTraits::WasMoved(new_object));
     }
+
+    // Ensure the iterator returned by `insert_after` refers to the new item.
+    EXPECT_EQ(&(*new_obj_iter), objects()[pos]);
 
     // List and number of live object should have grown.
     EXPECT_EQ(orig_container_len + 1, ObjType::live_obj_count());
@@ -410,17 +414,21 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     ASSERT_NOT_NULL(new_object);
     EXPECT_EQ(new_object->raw_ptr(), objects()[pos]);
 
+    IteratorType new_obj_iter;
     if (pos & 1) {
 #if TEST_WILL_NOT_COMPILE || 0
-      container().insert(target, new_object);
+      new_obj_iter = container().insert(target, new_object);
 #else
-      container().insert(target, TestEnvTraits::Transfer(new_object));
+      new_obj_iter = container().insert(target, TestEnvTraits::Transfer(new_object));
 #endif
       EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object));
     } else {
-      container().insert(target, std::move(new_object));
+      new_obj_iter = container().insert(target, std::move(new_object));
       EXPECT_TRUE(TestEnvTraits::WasMoved(new_object));
     }
+
+    // Ensure the iterator returned by `insert` refers to the new item.
+    EXPECT_EQ(&(*new_obj_iter), objects()[pos]);
 
     // List and number of live object should have grown.
     EXPECT_EQ(orig_container_len + 1, ObjType::live_obj_count());

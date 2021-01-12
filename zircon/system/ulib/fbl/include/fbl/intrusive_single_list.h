@@ -412,11 +412,13 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
 
   // insert_after
   //
-  // Insert an element after iter in the list.  It is an error to attempt to
-  // push a nullptr instance of PtrType, or to attempt to push with iter ==
-  // end().
-  void insert_after(const iterator& iter, const PtrType& ptr) { insert_after(iter, PtrType(ptr)); }
-  void insert_after(const iterator& iter, PtrType&& ptr) {
+  // Insert an element after iter in the list, returning an iterator to the
+  // newly-created element. It is an error to attempt to push a nullptr
+  // instance of PtrType, or to attempt to push with iter == end().
+  iterator insert_after(const iterator& iter, const PtrType& ptr) {
+    return insert_after(iter, PtrType(ptr));
+  }
+  iterator insert_after(const iterator& iter, PtrType&& ptr) {
     ZX_DEBUG_ASSERT(iter.IsValid());
     ZX_DEBUG_ASSERT(ptr != nullptr);
 
@@ -425,8 +427,12 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
     ZX_DEBUG_ASSERT(!ptr_ns.InContainer());
 
     ptr_ns.next_ = iter_ns.next_;
-    iter_ns.next_ = PtrTraits::Leak(ptr);
+    auto* new_item = PtrTraits::Leak(ptr);
+    iter_ns.next_ = new_item;
     this->IncSizeTracker(1);
+
+    // Return an iterator to the new element.
+    return make_iterator(*new_item);
   }
 
   // pop_front
