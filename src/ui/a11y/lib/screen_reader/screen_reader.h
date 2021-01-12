@@ -71,6 +71,7 @@ class ScreenReader : public SemanticsEventListener {
 
   // Speaks the message represented by |message_id|.
   void SpeakMessage(fuchsia::intl::l10n::MessageIds message_id);
+  void SpeakMessage(const std::string& message);
 
   // Stores information about the Screen Reader state.
   std::unique_ptr<ScreenReaderContext> context_;

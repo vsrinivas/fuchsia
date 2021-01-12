@@ -288,6 +288,24 @@ TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
               ElementsAre(StrEq("Recover A11Y Focus Action")));
 }
 
+TEST_F(ScreenReaderTest, SemanticEventAnnounceCausesScreenReaderToSpeak) {
+  InitializeScreenReader();
+
+  view_manager_->GetSemanticsEventManager()->Register(
+      screen_reader_->GetSemanticsEventListenerWeakPtr());
+  a11y::SemanticsEventInfo event_info;
+  fuchsia::accessibility::semantics::AnnounceEvent announce;
+  announce.set_message("hello world");
+  fuchsia::accessibility::semantics::SemanticEvent semantic_event;
+  semantic_event.set_announce(std::move(announce));
+  event_info.semantic_event = std::move(semantic_event);
+  view_manager_->GetSemanticsEventManager()->OnEvent(std::move(event_info));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_speaker_ptr_->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->messages()[0], "hello world");
+}
+
 TEST_F(ScreenReaderTest, ScreenReaderSilentWhenSpecifiedDuringInit) {
   announce_screen_reader_enabled_ = false;
   InitializeScreenReader();

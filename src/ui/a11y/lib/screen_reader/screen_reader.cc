@@ -340,11 +340,21 @@ void ScreenReader::SpeakMessage(fuchsia::intl::l10n::MessageIds message_id) {
   context_->executor()->schedule_task(std::move(promise));
 }
 
+void ScreenReader::SpeakMessage(const std::string& message) {
+  auto* speaker = context_->speaker();
+  fuchsia::accessibility::tts::Utterance utterance;
+  utterance.set_message(message);
+  auto promise = speaker->SpeakMessagePromise(std::move(utterance),
+                                              {.interrupt = true, .save_utterance = false});
+  context_->executor()->schedule_task(std::move(promise));
+}
+
 fxl::WeakPtr<SemanticsEventListener> ScreenReader::GetSemanticsEventListenerWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
 void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
+  // Process internal semantic events.
   switch (event_info.event_type) {
     case SemanticsEventType::kSemanticTreeUpdated: {
       ScreenReaderAction::ActionData action_data;
@@ -356,6 +366,18 @@ void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
     }
     case SemanticsEventType::kUnknown:
       break;
+  }
+
+  // Process semantic events coming from semantic providers.
+  if (!event_info.semantic_event) {
+    return;
+  }
+
+  if (event_info.semantic_event->is_announce()) {
+    const auto& announce = event_info.semantic_event->announce();
+    if (announce.has_message()) {
+      SpeakMessage(announce.message());
+    }
   }
 }
 
