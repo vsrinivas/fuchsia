@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.video;
+
+extend uint fuchsia.BIND_USB_SUBCLASS {
+  VIDEO_CONTROL = 0x01,
+  VIDEO_STREAMING = 0x02,
+  VIDEO_INTERFACE_COLLECTION = 0x03,
+};
+
+extend uint fuchsia.BIND_USB_PROTOCOL {
+  UNDEFINED = 0x00,
+};
