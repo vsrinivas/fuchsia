@@ -13,9 +13,9 @@ rustc_library("element_management") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",

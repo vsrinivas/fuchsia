@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The `ElementManagement` library provides utilities for Sessions to service
-//! incoming [`fidl_fuchsia_session::ElementManagerRequest`]s.
+//! The `element_management` library provides utilities for sessions to service
+//! incoming [`fidl_fuchsia_element::ManagerRequest`]s.
 //!
 //! Elements are instantiated as dynamic component instances in a component collection of the
 //! calling component.
@@ -12,13 +12,11 @@ use {
     async_trait::async_trait,
     fidl,
     fidl::endpoints::{DiscoverableService, Proxy, UnifiedServiceMarker},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_session::{Annotation, Annotations, ElementSpec, Value},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx, realm_management,
-    std::collections::HashMap,
     std::fmt,
     thiserror::Error,
 };
@@ -41,7 +39,7 @@ pub enum ElementManagerError {
     /// Returned when the element manager fails to create an element that uses a CFv2 component
     /// because the spec provides a ServiceList with additional services.
     ///
-    /// `ElementSpec.additional_services` is only supported for CFv1 components.
+    /// `Spec.additional_services` is only supported for CFv1 components.
     #[error(
         "Element spec for \"{}/{}\" provides additional_services for a CFv2 component",
         name,
@@ -152,7 +150,7 @@ pub trait ElementManager {
     /// particular, it is an error to call [`launch_element`] twice with the same `child_name`.
     async fn launch_element(
         &self,
-        spec: ElementSpec,
+        spec: felement::Spec,
         child_name: &str,
         child_collection: &str,
     ) -> Result<Element, ElementManagerError>;
@@ -186,9 +184,6 @@ pub struct Element {
     /// exposed by the component.
     exposed_capabilities: ExposedCapabilities,
 
-    /// Element annotation key/value pairs.
-    custom_annotations: HashMap<String, Value>,
-
     /// The component URL used to launch the component. Private but printable via "{:?}".
     url: String,
 
@@ -220,7 +215,6 @@ impl Element {
             url: url.to_string(),
             name: "".to_string(),
             collection: "".to_string(),
-            custom_annotations: HashMap::new(),
         }
     }
 
@@ -242,7 +236,6 @@ impl Element {
             url: url.to_string(),
             name: name.to_string(),
             collection: collection.to_string(),
-            custom_annotations: HashMap::new(),
         }
     }
 
@@ -345,40 +338,6 @@ impl Element {
             server_channel,
         )?;
         Ok(())
-    }
-
-    pub fn set_annotations(&mut self, annotations: Annotations) -> Result<(), anyhow::Error> {
-        if let Some(mut custom_annotations) = annotations.custom_annotations {
-            for annotation in custom_annotations.drain(..) {
-                if annotation.value.is_none() {
-                    self.custom_annotations.remove(&annotation.key);
-                } else {
-                    self.custom_annotations
-                        .insert(annotation.key.to_string(), *annotation.value.unwrap());
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn get_annotations(&mut self) -> Result<Annotations, anyhow::Error> {
-        let mut custom_annotations = vec![];
-        for (key, value) in &self.custom_annotations {
-            custom_annotations.push(Annotation {
-                key: key.to_string(),
-                value: Some(Box::new(match &*value {
-                    Value::Text(content) => Value::Text(content.to_string()),
-                    Value::Buffer(content) => {
-                        let mut bytes = Vec::<u8>::with_capacity(content.size as usize);
-                        let vmo = fidl::Vmo::create(content.size).unwrap();
-                        content.vmo.read(&mut bytes[..], 0)?;
-                        vmo.write(&bytes[..], 0)?;
-                        Value::Buffer(fmem::Buffer { vmo, size: content.size })
-                    }
-                })),
-            });
-        }
-        Ok(Annotations { custom_annotations: Some(custom_annotations), ..Annotations::EMPTY })
     }
 }
 
@@ -532,7 +491,7 @@ impl SimpleElementManager {
 impl ElementManager for SimpleElementManager {
     async fn launch_element(
         &self,
-        spec: ElementSpec,
+        spec: felement::Spec,
         child_name: &str,
         child_collection: &str,
     ) -> Result<Element, ElementManagerError> {
@@ -550,7 +509,7 @@ impl ElementManager for SimpleElementManager {
                 _ => Err(ElementManagerError::invalid_service_list(child_name, child_collection)),
             })?;
 
-        let mut element = if is_v2_component(&child_url) {
+        let element = if is_v2_component(&child_url) {
             // `additional_services` is only supported for CFv1 components.
             if additional_services.is_some() {
                 return Err(ElementManagerError::additional_services_not_supported(
@@ -563,11 +522,6 @@ impl ElementManager for SimpleElementManager {
         } else {
             self.launch_v1_element(&child_url, additional_services).await?
         };
-        if spec.annotations.is_some() {
-            element.set_annotations(spec.annotations.unwrap()).map_err(|err: anyhow::Error| {
-                ElementManagerError::not_launched(child_url.clone(), err.to_string())
-            })?;
-        }
 
         Ok(element)
     }
@@ -577,12 +531,10 @@ impl ElementManager for SimpleElementManager {
 mod tests {
     use {
         super::{ElementManager, ElementManagerError, SimpleElementManager},
-        fidl::encoding::Decodable,
         fidl::endpoints::{create_proxy_and_stream, ServerEnd},
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
-        fidl_fuchsia_session::ElementSpec,
-        fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
-        fuchsia_zircon as zx,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+        fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},
         lazy_static::lazy_static,
         test_util::Counter,
@@ -713,9 +665,9 @@ mod tests {
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 child_name,
                 child_collection,
@@ -781,9 +733,9 @@ mod tests {
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
         assert!(element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(a_component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 a_child_name,
                 a_child_collection,
@@ -792,9 +744,9 @@ mod tests {
             .is_ok());
         assert!(element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(b_component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 b_child_name,
                 b_child_collection,
@@ -890,10 +842,10 @@ mod tests {
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
                     additional_services: Some(additional_services),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 child_name,
                 child_collection,
@@ -957,9 +909,9 @@ mod tests {
         let element_manager = SimpleElementManager::new(realm);
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 child_name,
                 child_collection,
@@ -1008,9 +960,9 @@ mod tests {
         let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
         assert!(element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 child_name,
                 child_collection,
@@ -1032,7 +984,7 @@ mod tests {
         let element_manager = SimpleElementManager::new(realm);
 
         let result = element_manager
-            .launch_element(ElementSpec { component_url: None, ..ElementSpec::new_empty() }, "", "")
+            .launch_element(felement::Spec { component_url: None, ..felement::Spec::EMPTY }, "", "")
             .await;
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), ElementManagerError::url_missing("", ""));
@@ -1065,10 +1017,10 @@ mod tests {
 
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
                     additional_services: Some(additional_services),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 "",
                 "",
@@ -1103,10 +1055,10 @@ mod tests {
 
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
                     additional_services: Some(additional_services),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 "",
                 "",
@@ -1139,9 +1091,9 @@ mod tests {
 
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 "",
                 "",
@@ -1174,9 +1126,9 @@ mod tests {
 
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 "",
                 "",
@@ -1217,9 +1169,9 @@ mod tests {
 
         let result = element_manager
             .launch_element(
-                ElementSpec {
+                felement::Spec {
                     component_url: Some(component_url.to_string()),
-                    ..ElementSpec::new_empty()
+                    ..felement::Spec::EMPTY
                 },
                 "",
                 "",
