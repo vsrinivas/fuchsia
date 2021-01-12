@@ -172,6 +172,27 @@ class IntegrationTestFull(IntegrationTest):
             '0 files found in data/corpus',
             '5 files found in pkg/data/examples/fuzzers/cpp/example-corpus')
 
+    def test_minimize(self):
+        corpus_element = os.path.join(self.temp_dir, 'overlong')
+        with self.host.open(corpus_element, 'w') as f:
+            # The crash is minimally triggered by 'HI!', but we have an extra
+            # character here
+            f.write('HI!!')
+
+        cmd = self.parser.parse_args(
+            [
+                'repro', 'example-fuzzers/crash_fuzzer', corpus_element,
+                '-exact_artifact_path=data/minimized', '-minimize_crash=1',
+                '-max_total_time=5'
+            ])
+        fuzzer = self.factory.create_fuzzer(cmd)
+        fuzzer.corpus.reset()
+        cmd.command(cmd, self.factory)
+
+        self.assertOutContains(
+            'INFO: libFuzzer starting', 'Test unit written to data/minimized',
+            'failed to minimize beyond data/minimized (3 bytes)')
+
 
 class IntegrationTestSingle(IntegrationTest):
     """Exercise several basic operations with the given fuzzer."""

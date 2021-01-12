@@ -122,7 +122,7 @@ class Device(object):
             self.buildenv.build_dir, 'ssh-keys', 'ssh_config')
 
         # The ssh private key is the first line of .fx-ssh-path
-        with self.host.open(self.buildenv.abspath('.fx-ssh-path')) as f:
+        with self.host.open(self.buildenv.abspath('//.fx-ssh-path')) as f:
             self.ssh_identity = f.readline().strip('\n')
 
     def ssh_opts(self):
