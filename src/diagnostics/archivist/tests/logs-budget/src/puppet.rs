@@ -19,7 +19,6 @@ async fn main() {
 
     let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
     let mut recv = Some(recv); // so we can send it to LogSink
-    let mut stopped_responder = None;
     while let Some(Ok(next)) = requests.next().await {
         match next {
             SocketPuppetRequest::ConnectToLogSink { responder } => {
@@ -33,11 +32,6 @@ async fn main() {
                 send.write(&packet).unwrap();
                 responder.send().unwrap();
             }
-            SocketPuppetRequest::Stop { responder } => {
-                stopped_responder = Some(responder);
-                break;
-            }
         }
     }
-    stopped_responder.unwrap().send().unwrap();
 }

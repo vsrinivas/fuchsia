@@ -13,5 +13,4 @@ protocol SocketPuppetController {
 protocol SocketPuppet {
     ConnectToLogSink() -> ();
     EmitPacket(bytes:32768 packet) -> ();
-    Stop() -> ();
 };

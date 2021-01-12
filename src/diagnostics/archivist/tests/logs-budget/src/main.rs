@@ -25,12 +25,7 @@ use futures::{
     channel::mpsc::{self, Receiver},
     StreamExt,
 };
-use std::{
-    collections::BTreeMap,
-    ops::Deref,
-    sync::atomic::{AtomicBool, Ordering},
-    time::Duration,
-};
+use std::{collections::BTreeMap, ops::Deref, time::Duration};
 use tracing::{debug, info};
 
 const ARCHIVIST_URL: &str =
@@ -39,8 +34,6 @@ const PUPPET_URL: &str = "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket
 const PUPPET_MONIKER: &str = "socket-puppet.cmx";
 
 const TEST_PACKET_LEN: usize = 49;
-
-static HAVE_REQUESTED_STOP: AtomicBool = AtomicBool::new(false);
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
@@ -57,10 +50,6 @@ async fn main() {
 
     let puppet = env.launch_puppet().await;
     env.validate(&puppet).await;
-
-    info!("stopping puppet");
-    HAVE_REQUESTED_STOP.store(true, Ordering::SeqCst);
-    puppet.stop().await.unwrap();
 }
 
 struct PuppetEnv {
@@ -140,9 +129,7 @@ impl PuppetEnv {
         let mut puppet_events = _app.controller().take_event_stream();
         let _panic_on_exit = Task::spawn(async move {
             if let OnTerminated { .. } = puppet_events.next().await.unwrap().unwrap() {
-                if !HAVE_REQUESTED_STOP.load(Ordering::SeqCst) {
-                    panic!("puppet terminated early");
-                }
+                panic!("puppet terminated early");
             }
         });
 
