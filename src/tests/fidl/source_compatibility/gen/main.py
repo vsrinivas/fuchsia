@@ -11,7 +11,7 @@ import signal
 import sys
 
 import generate_test
-from util import print_err, TEST_FILE
+from util import print_err, TEST_FILE, white
 from types_ import CompatTest
 
 
@@ -53,6 +53,9 @@ def regen(args):
         generate_test.regen_files(test_dir, test)
     if not tests:
         print('No tests found')
+    else:
+        print(
+            white('Done! Run fx-format to get rid of formatting differences.'))
 
 
 parser = argparse.ArgumentParser(
