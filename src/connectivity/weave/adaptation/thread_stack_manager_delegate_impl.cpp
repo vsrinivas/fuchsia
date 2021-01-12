@@ -202,16 +202,19 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
     return status;
   }
 
-  // Check if the provision is a Thread network.
-  if (!identity.has_net_type()) {
-    FX_LOGS(ERROR) << "No net_type provided; cannot confirm Thread network type.";
-    return ZX_ERR_INTERNAL;
-  }
-  if (identity.net_type() != fuchsia::lowpan::NET_TYPE_THREAD_1_X) {
-    FX_LOGS(ERROR) << "Cannot support LoWPAN network type \"" << identity.net_type()
-                   << "\" in ThreadStackManager.";
-    return ZX_ERR_INTERNAL;
-  }
+  // TODO(fxbug.dev/67254): Restore the following block once the LoWPAN service
+  // correctly returns the net_type.
+
+  // // Check if the provision is a Thread network.
+  // if (!identity.has_net_type()) {
+  //   FX_LOGS(ERROR) << "No net_type provided; cannot confirm Thread network type.";
+  //   return ZX_ERR_INTERNAL;
+  // }
+  // if (identity.net_type() != fuchsia::lowpan::NET_TYPE_THREAD_1_X) {
+  //   FX_LOGS(ERROR) << "Cannot support LoWPAN network type \"" << identity.net_type()
+  //                  << "\" in ThreadStackManager.";
+  //   return ZX_ERR_INTERNAL;
+  // }
 
   // Start copying provision info.
   netInfo.Reset();

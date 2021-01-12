@@ -187,6 +187,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    err = ThreadStackMgr().InitThreadStack();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ThreadStackMgr init failed: " << ErrorStr(err);
+      return err;
+    }
+
     return WEAVE_NO_ERROR;
 }
 
