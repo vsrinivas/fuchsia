@@ -53,7 +53,7 @@ async fn main() {
     let mut env = PuppetEnv::create().await;
 
     info!("check that archivist log state is clean");
-    env.until_archivist_state_matches(&[]).await;
+    env.until_archivist_state_matches_expected().await;
 
     let puppet = env.launch_puppet().await;
     env.validate(&puppet).await;
@@ -68,7 +68,8 @@ struct PuppetEnv {
     controllers: Receiver<SocketPuppetControllerRequestStream>,
     archivist: App,
     messages_allowed_in_cache: usize,
-    messages_sent: usize,
+    messages_sent: Vec<MessageReceipt>,
+    launched_monikers: Vec<String>,
     _serve_fs: Task<()>,
 }
 
@@ -117,7 +118,8 @@ impl PuppetEnv {
             controllers,
             archivist,
             messages_allowed_in_cache,
-            messages_sent: 0,
+            messages_sent: vec![],
+            launched_monikers: vec![],
             _serve_fs,
         }
     }
@@ -165,20 +167,33 @@ impl PuppetEnv {
         puppet.connect_to_log_sink().await.unwrap();
 
         info!("observe the puppet appears in archivist's inspect output");
-        self.until_archivist_state_matches(&[LogSource {
-            moniker: &puppet.moniker,
-            messages: Count { total: 0, dropped: 0 },
-        }])
-        .await;
+        self.launched_monikers.push(puppet.moniker.clone());
+        self.until_archivist_state_matches_expected().await;
 
         puppet
     }
 
-    async fn until_archivist_state_matches(&self, expected_sources: &[LogSource<'_>]) {
-        let expected_sources = expected_sources
-            .iter()
-            .map(|source| (source.moniker.to_string(), source.messages))
-            .collect::<BTreeMap<String, Count>>();
+    fn current_expected_sources(&self) -> BTreeMap<String, Count> {
+        // make sure we have an empty entry for each puppet we've launched
+        let mut expected_sources = BTreeMap::new();
+        for source in &self.launched_monikers {
+            expected_sources.insert(source.clone(), Count { total: 0, dropped: 0 });
+        }
+
+        // compute the expected drops for each component based on our list of receipts
+        for (prior_messages, receipt) in self.messages_sent.iter().rev().enumerate() {
+            let mut puppet_count = expected_sources.get_mut(&receipt.moniker).unwrap();
+            puppet_count.total += 1;
+            if prior_messages >= self.messages_allowed_in_cache {
+                puppet_count.dropped += 1;
+            }
+        }
+
+        expected_sources
+    }
+
+    async fn until_archivist_state_matches_expected(&self) {
+        let expected_sources = self.current_expected_sources();
 
         let reader = self.reader();
         loop {
@@ -196,27 +211,14 @@ impl PuppetEnv {
         }
     }
 
-    async fn send_message_and_verify(&mut self, puppet: &Puppet) {
-        let mut packet: fx_log_packet_t = Default::default();
-        packet.metadata.severity = fuchsia_syslog::levels::INFO;
-        packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
-        puppet.emit_packet(packet.as_bytes()).await.unwrap();
-
-        self.messages_sent += 1;
-        let expected_dropped_count =
-            self.messages_sent.saturating_sub(self.messages_allowed_in_cache);
-        self.until_archivist_state_matches(&[LogSource {
-            moniker: &puppet.moniker,
-            messages: Count { total: self.messages_sent, dropped: expected_dropped_count },
-        }])
-        .await;
-    }
-
     async fn validate(mut self, puppet: &Puppet) {
         info!("having the puppet log packets until overflow");
         for _ in 0..self.messages_allowed_in_cache * 10 {
-            self.send_message_and_verify(puppet).await;
+            let receipt = puppet.emit_packet().await;
+            self.messages_sent.push(receipt);
+            self.until_archivist_state_matches_expected().await;
         }
+        info!("test complete!");
     }
 }
 
@@ -227,16 +229,21 @@ struct Puppet {
     _panic_on_exit: Task<()>,
 }
 
+impl Puppet {
+    async fn emit_packet(&self) -> MessageReceipt {
+        let mut packet: fx_log_packet_t = Default::default();
+        packet.metadata.severity = fuchsia_syslog::levels::INFO;
+        packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
+        self.proxy.emit_packet(packet.as_bytes()).await.unwrap();
+        MessageReceipt { moniker: self.moniker.clone() }
+    }
+}
+
 impl Deref for Puppet {
     type Target = SocketPuppetProxy;
     fn deref(&self) -> &Self::Target {
         &self.proxy
     }
-}
-
-struct LogSource<'a> {
-    moniker: &'a str,
-    messages: Count,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -258,4 +265,9 @@ fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Co
     }
 
     counts
+}
+
+/// A value indicating a message was sent by a particular puppet.
+struct MessageReceipt {
+    moniker: String,
 }
