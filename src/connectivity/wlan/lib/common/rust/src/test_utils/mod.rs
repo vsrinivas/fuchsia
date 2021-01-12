@@ -100,7 +100,7 @@ macro_rules! assert_variant {
     ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
         match $test {
             $variant $(| $others)* => $e,
-            _ => panic!($fmt, $($args)*),
+            _ => panic!($fmt, $($args,)*),
         }
     };
     // Use default message when panicing.
@@ -212,5 +212,11 @@ mod tests {
     #[should_panic(expected = "custom error message")]
     fn assert_variant_custom_message_failure() {
         assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message");
+    }
+
+    #[test]
+    #[should_panic(expected = "custom error message token1 token2")]
+    fn assert_variant_custom_message_with_multiple_fmt_tokens_failure() {
+        assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message {} {}", "token1", "token2");
     }
 }
