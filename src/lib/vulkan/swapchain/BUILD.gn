@@ -53,10 +53,7 @@ source_set("display") {
 
 loadable_module("fb") {
   output_name = "VkLayer_image_pipe_swapchain_fb"
-  defines = [
-    "USE_IMAGEPIPE_SURFACE_FB",
-    "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb\"",
-  ]
+  defines = [ "USE_IMAGEPIPE_SURFACE_FB" ]
   sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
@@ -71,12 +68,28 @@ loadable_module("fb_skip_present") {
   output_name = "VkLayer_image_pipe_swapchain_fb_skip_present"
   defines = [
     "USE_IMAGEPIPE_SURFACE_FB",
-    "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present\"",
     "SKIP_PRESENT",
   ]
   sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
+    ":surface_header",
+    "//src/lib/vulkan:micro_layer_common",
+    "//zircon/system/ulib/trace",
+  ]
+  ldflags = [ "-static-libstdc++" ]
+}
+
+loadable_module("copy") {
+  testonly = true  # Not intended for production use
+  output_name = "VkLayer_image_pipe_swapchain_copy"
+  defines = [ "USE_SWAPCHAIN_SURFACE_COPY" ]
+  sources = [
+    "image_pipe_swapchain_layer.cc",
+    "swapchain_copy_surface.cc",
+    "swapchain_copy_surface.h",
+  ]
+  deps = [
     ":surface_header",
     "//src/lib/vulkan:micro_layer_common",
     "//zircon/system/ulib/trace",

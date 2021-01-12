@@ -4,10 +4,36 @@
 
 #define FUCHSIA_LAYER 1
 
-#if USE_IMAGEPIPE_SURFACE_FB
+#if USE_SWAPCHAIN_SURFACE_COPY
+
+#include "swapchain_copy_surface.h"  // nogncheck
+
+#define SWAPCHAIN_SURFACE_NAME "VK_LAYER_FUCHSIA_imagepipe_swapchain_copy"
+
+#elif USE_IMAGEPIPE_SURFACE_FB
+
 #include "image_pipe_surface_display.h"  // nogncheck
+
+#if SKIP_PRESENT
+#define SWAPCHAIN_SURFACE_NAME "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present"
 #else
+#define SWAPCHAIN_SURFACE_NAME "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb"
+#endif
+
+#else
+
 #include "image_pipe_surface_async.h"  // nogncheck
+
+#define SWAPCHAIN_SURFACE_NAME "VK_LAYER_FUCHSIA_imagepipe_swapchain"
+
+#endif
+
+// Useful for testing app performance without external restriction
+// (due to composition, vsync, etc.)
+#if SKIP_PRESENT
+constexpr bool kSkipPresent = true;
+#else
+constexpr bool kSkipPresent = false;
 #endif
 
 #include <assert.h>
@@ -22,8 +48,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <vulkan/vk_layer.h>
-
 #define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION)
 
 static inline uint32_t to_uint32(uint64_t val) {
@@ -32,21 +56,6 @@ static inline uint32_t to_uint32(uint64_t val) {
 }
 
 namespace image_pipe_swapchain {
-
-// Useful for testing app performance without external restriction
-// (due to composition, vsync, etc.)
-#if SKIP_PRESENT
-constexpr bool kSkipPresent = true;
-#else
-constexpr bool kSkipPresent = false;
-#endif
-
-struct LayerData {
-  VkInstance instance;
-  std::unique_ptr<VkLayerDispatchTable> device_dispatch_table;
-  std::unique_ptr<VkLayerInstanceDispatchTable> instance_dispatch_table;
-  std::unordered_map<VkDebugUtilsMessengerEXT, VkDebugUtilsMessengerCreateInfoEXT> debug_callbacks;
-};
 
 // Global because thats how the layer code in the loader works and I dont know
 // how to make it work otherwise
@@ -68,11 +77,7 @@ static const VkExtensionProperties device_extensions[] = {{
 }};
 
 constexpr VkLayerProperties swapchain_layer = {
-#ifdef USE_IMAGEPIPE_LAYER_NAME
-    USE_IMAGEPIPE_LAYER_NAME,
-#else
-    "VK_LAYER_FUCHSIA_imagepipe_swapchain",
-#endif
+    SWAPCHAIN_SURFACE_NAME,
     VK_LAYER_API_VERSION,
     1,
     "Image Pipe Swapchain",
@@ -105,9 +110,9 @@ class ImagePipeSwapchain {
 
   void DebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT severity, const char* message);
 
- private:
   ImagePipeSurface* surface() { return surface_; }
 
+ private:
   ImagePipeSurface* surface_;
   std::vector<ImagePipeImage> images_;
   std::vector<VkDeviceMemory> memories_;
@@ -190,8 +195,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device,
                                                   VkSwapchainKHR* pSwapchain) {
   VkResult ret = VK_ERROR_INITIALIZATION_FAILED;
 
-  auto image_pipe_surface = reinterpret_cast<ImagePipeSurface*>(pCreateInfo->surface);
-  auto swapchain = std::make_unique<ImagePipeSwapchain>(image_pipe_surface);
+  auto surface = reinterpret_cast<ImagePipeSurface*>(pCreateInfo->surface);
+
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+  if (!surface->OnCreateSwapchain(device, layer_data, pCreateInfo, pAllocator)) {
+    fprintf(stderr, "OnCreateSwapchain failed\n");
+    return ret;
+  }
+
+  auto swapchain = std::make_unique<ImagePipeSwapchain>(surface);
 
   ret = swapchain->Initialize(device, pCreateInfo, pAllocator);
   if (ret != VK_SUCCESS) {
@@ -199,7 +212,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device,
     fprintf(stderr, "failed to create swapchain: %d", ret);
     return ret;
   }
+
   *pSwapchain = reinterpret_cast<VkSwapchainKHR>(swapchain.release());
+
   return VK_SUCCESS;
 }
 
@@ -222,6 +237,9 @@ void ImagePipeSwapchain::Cleanup(VkDevice device, const VkAllocationCallbacks* p
 VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
                                                const VkAllocationCallbacks* pAllocator) {
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
+
+  swapchain->surface()->OnDestroySwapchain(device, pAllocator);
+
   swapchain->Cleanup(device, pAllocator);
   delete reinterpret_cast<ImagePipeSwapchain*>(swapchain);
 }
@@ -444,8 +462,8 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
 
     TRACE_DURATION("gfx", "ImagePipeSwapchain::Present", "swapchain_image_index", index, "image_id",
                    images_[index].id);
-    surface()->PresentImage(images_[index].id, std::move(acquire_fences),
-                            std::move(release_fences));
+    surface()->PresentImage(images_[index].id, std::move(acquire_fences), std::move(release_fences),
+                            queue);
   }
 
   return VK_SUCCESS;
@@ -478,24 +496,38 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
 VKAPI_ATTR VkResult VKAPI_CALL CreateImagePipeSurfaceFUCHSIA(
     VkInstance instance, const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
-  auto out_surface =
-#if USE_IMAGEPIPE_SURFACE_FB
-      std::make_unique<ImagePipeSurfaceDisplay>();
+#if USE_SWAPCHAIN_SURFACE_COPY
+  auto out_surface = std::make_unique<SwapchainCopySurface>();
+#elif USE_IMAGEPIPE_SURFACE_FB
+  auto out_surface = std::make_unique<ImagePipeSurfaceDisplay>();
 #else
-      std::make_unique<ImagePipeSurfaceAsync>(pCreateInfo->imagePipeHandle);
+  auto out_surface = std::make_unique<ImagePipeSurfaceAsync>(pCreateInfo->imagePipeHandle);
 #endif
 
   if (!out_surface->Init()) {
     return VK_ERROR_DEVICE_LOST;
   }
 
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
+
+  if (!out_surface->OnCreateSurface(instance, layer_data->instance_dispatch_table.get(),
+                                    pCreateInfo, pAllocator)) {
+    return VK_ERROR_DEVICE_LOST;
+  }
+
   *pSurface = reinterpret_cast<VkSurfaceKHR>(out_surface.release());
+
   return VK_SUCCESS;
 }
 
-VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
+VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR vk_surface,
                                              const VkAllocationCallbacks* pAllocator) {
-  delete reinterpret_cast<ImagePipeSurface*>(surface);
+  auto surface = reinterpret_cast<ImagePipeSurface*>(vk_surface);
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
+
+  surface->OnDestroySurface(instance, layer_data->instance_dispatch_table.get(), pAllocator);
+
+  delete surface;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -553,21 +585,9 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, const VkSurf
 VKAPI_ATTR VkResult VKAPI_CALL
 GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
                                         uint32_t* pCount, VkPresentModeKHR* pPresentModes) {
-  constexpr int present_mode_count = 1;
-  constexpr VkPresentModeKHR present_modes[] = {VK_PRESENT_MODE_FIFO_KHR};
-  if (pPresentModes == nullptr) {
-    *pCount = present_mode_count;
-    return VK_SUCCESS;
-  }
-  VkResult result = VK_SUCCESS;
-  if (*pCount < present_mode_count) {
-    result = VK_INCOMPLETE;
-  } else {
-    *pCount = present_mode_count;
-  }
-
-  memcpy(pPresentModes, present_modes, *pCount * sizeof(VkPresentModeKHR));
-  return result;
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
+  return reinterpret_cast<ImagePipeSurface*>(surface)->GetPresentModes(
+      physicalDevice, layer_data->instance_dispatch_table.get(), pCount, pPresentModes);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreateInfo,
@@ -671,12 +691,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   create_info.enabledExtensionCount = to_uint32(enabled_extensions.size());
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
-  VkLayerDeviceCreateInfo* chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+  VkLayerDeviceCreateInfo* link_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-  assert(chain_info->u.pLayerInfo);
+  assert(link_info->u.pLayerInfo);
   PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
-      chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-  PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+      link_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+  PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = link_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
   PFN_vkCreateDevice fpCreateDevice =
       (PFN_vkCreateDevice)fpGetInstanceProcAddr(gpu_layer_data->instance, "vkCreateDevice");
   if (fpCreateDevice == NULL) {
@@ -684,7 +704,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
 
   // Advance the link info for the next element on the chain
-  chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+  link_info->u.pLayerInfo = link_info->u.pLayerInfo->pNext;
 
   result = fpCreateDevice(gpu, &create_info, pAllocator, pDevice);
   if (result != VK_SUCCESS) {
@@ -699,7 +719,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   layer_init_device_dispatch_table(*pDevice, device_layer_data->device_dispatch_table.get(),
                                    fpGetDeviceProcAddr);
 
-  return result;
+  VkLayerDeviceCreateInfo* callback_info = get_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
+  assert(callback_info->u.pfnSetDeviceLoaderData);
+  device_layer_data->fpSetDeviceLoaderData = callback_info->u.pfnSetDeviceLoaderData;
+
+  return VK_SUCCESS;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator) {

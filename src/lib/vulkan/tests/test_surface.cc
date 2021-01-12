@@ -58,13 +58,59 @@ class TestSurface {
         .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
         .pNext = nullptr,
     };
-    VkSurfaceKHR surface = nullptr;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkResult result =
         f_vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface);
     EXPECT_EQ(VK_SUCCESS, result);
     if (VK_SUCCESS == result) {
       vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
     }
+  }
+
+  void GetPresentModes() {
+    ASSERT_TRUE(init_);
+
+    zx::channel endpoint0, endpoint1;
+    if (!use_framebuffer_) {
+      EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
+    }
+
+    VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
+        .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
+        .pNext = nullptr,
+    };
+
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    ASSERT_EQ(VK_SUCCESS,
+              vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
+
+    uint32_t count;
+    ASSERT_EQ(VK_SUCCESS, vkEnumeratePhysicalDevices(vk_instance_, &count, nullptr));
+    ASSERT_GE(count, 1u);
+
+    std::vector<VkPhysicalDevice> devices(count);
+    EXPECT_EQ(VK_SUCCESS, vkEnumeratePhysicalDevices(vk_instance_, &count, devices.data()));
+
+    EXPECT_EQ(VK_SUCCESS,
+              vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &count, nullptr));
+
+    std::vector<VkPresentModeKHR> present_modes(count);
+    ASSERT_GE(count, 1u);
+
+    EXPECT_EQ(VK_SUCCESS, vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &count,
+                                                                    present_modes.data()));
+
+    bool found_fifo = false;
+    for (auto mode : present_modes) {
+      if (mode == VK_PRESENT_MODE_FIFO_KHR) {
+        found_fifo = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(found_fifo);
+
+    vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
   bool use_framebuffer_ = false;
@@ -80,3 +126,5 @@ TEST(Surface, CreateImagePipeSurfaceDynamicSymbol) { TestSurface(false).CreateSu
 TEST(Surface, DISABLED_CreateFramebufferSurface) { TestSurface(true).CreateSurface(false); }
 
 TEST(Surface, CreateFramebufferSurfaceDynamicSymbol) { TestSurface(true).CreateSurface(true); }
+
+TEST(Surface, GetPresentModes) { TestSurface(true).GetPresentModes(); }

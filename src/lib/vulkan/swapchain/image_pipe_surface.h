@@ -2,17 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef IMAGE_PIPE_SURFACE_H
-#define IMAGE_PIPE_SURFACE_H
+#ifndef SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_H_
+#define SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 
+#include <unordered_map>
 #include <vector>
 
+#include <vulkan/vk_layer.h>
 #include <vulkan/vulkan.h>
 
 struct VkLayerDispatchTable_;
-typedef struct VkLayerDispatchTable_ VkLayerDispatchTable;
+using VkLayerDispatchTable = struct VkLayerDispatchTable_;
+
+struct VkLayerInstanceDispatchTable_;
+using VkLayerInstanceDispatchTable = struct VkLayerInstanceDispatchTable_;
+
+struct LayerData {
+  VkInstance instance = VK_NULL_HANDLE;
+  std::unique_ptr<VkLayerDispatchTable> device_dispatch_table;
+  std::unique_ptr<VkLayerInstanceDispatchTable> instance_dispatch_table;
+  std::unordered_map<VkDebugUtilsMessengerEXT, VkDebugUtilsMessengerCreateInfoEXT> debug_callbacks;
+  PFN_vkSetDeviceLoaderData fpSetDeviceLoaderData = nullptr;
+};
 
 namespace image_pipe_swapchain {
 
@@ -54,9 +67,48 @@ class ImagePipeSurface {
                            std::vector<ImageInfo>* image_info_out) = 0;
   virtual void RemoveImage(uint32_t image_id) = 0;
   virtual void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                            std::vector<zx::event> release_fences) = 0;
+                            std::vector<zx::event> release_fences, VkQueue queue) = 0;
+
+  virtual bool OnCreateSurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
+                               const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
+                               const VkAllocationCallbacks* pAllocator) {
+    return true;
+  }
+
+  virtual void OnDestroySurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
+                                const VkAllocationCallbacks* pAllocator) {}
+
+  virtual bool OnCreateSwapchain(VkDevice device, LayerData* device_layer_data,
+                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                 const VkAllocationCallbacks* pAllocator) {
+    return true;
+  }
+
+  virtual void OnDestroySwapchain(VkDevice device, const VkAllocationCallbacks* pAllocator) {}
 
   virtual SupportedImageProperties& GetSupportedImageProperties() = 0;
+
+  virtual VkResult GetPresentModes(VkPhysicalDevice physicalDevice,
+                                   VkLayerInstanceDispatchTable* dispatch_table, uint32_t* pCount,
+                                   VkPresentModeKHR* pPresentModes) {
+    constexpr int kPresentModeCount = 1;
+    constexpr VkPresentModeKHR kPresentModes[kPresentModeCount] = {VK_PRESENT_MODE_FIFO_KHR};
+
+    if (!pPresentModes) {
+      *pCount = kPresentModeCount;
+      return VK_SUCCESS;
+    }
+
+    VkResult result = VK_SUCCESS;
+    if (*pCount < kPresentModeCount) {
+      result = VK_INCOMPLETE;
+    } else {
+      *pCount = kPresentModeCount;
+    }
+
+    memcpy(pPresentModes, kPresentModes, (*pCount) * sizeof(VkPresentModeKHR));
+    return result;
+  }
 
  protected:
   uint32_t next_image_id() {
@@ -72,4 +124,4 @@ class ImagePipeSurface {
 
 }  // namespace image_pipe_swapchain
 
-#endif  // IMAGE_PIPE_SURFACE_H
+#endif  // SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_H_

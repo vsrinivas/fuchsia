@@ -252,7 +252,7 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
 }
 
 void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                                         std::vector<zx::event> release_fences) {
+                                         std::vector<zx::event> release_fences, VkQueue queue) {
   std::lock_guard<std::mutex> lock(mutex_);
   TRACE_FLOW_BEGIN("gfx", "image_pipe_swapchain_to_present", image_id);
 

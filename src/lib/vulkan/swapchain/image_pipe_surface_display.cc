@@ -465,7 +465,7 @@ void ImagePipeSurfaceDisplay::RemoveImage(uint32_t image_id) {
 }
 
 void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::event> wait_events,
-                                           std::vector<zx::event> signal_events) {
+                                           std::vector<zx::event> signal_events, VkQueue queue) {
   assert(wait_events.size() <= 1);
   assert(signal_events.size() <= 1);
 
