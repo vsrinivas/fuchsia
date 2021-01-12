@@ -65,7 +65,7 @@ class SemanticTree {
       fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback)>;
 
-  using SemanticsEventCallback = fit::function<void(SemanticsEventType event_type)>;
+  using SemanticsEventCallback = fit::function<void(SemanticsEventInfo event_info)>;
 
   static constexpr char kUpdateCountInspectNodeName[] = "tree_update_count";
   static constexpr char kTreeDumpInspectPropertyName[] = "semantic_tree";
@@ -145,6 +145,11 @@ class SemanticTree {
   void PerformHitTesting(
       fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) const;
+
+  // Processes a semantic event that refers to this tree. The semantic event is passed to
+  // |semantic_event_handler| to be processed, which is normally set in this object during
+  // construction time.
+  virtual void OnSemanticsEvent(SemanticsEventInfo event_info);
 
   // Debug aid.
   // - Do not rely on the concrete format for testing or any other purpose.

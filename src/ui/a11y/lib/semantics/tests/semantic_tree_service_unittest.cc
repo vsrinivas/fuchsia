@@ -27,6 +27,7 @@
 
 namespace accessibility_test {
 namespace {
+
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 using ::testing::ElementsAre;
@@ -55,6 +56,8 @@ class MockSemanticTree : public ::a11y::SemanticTree {
     return ::a11y::SemanticTree::Update(std::move(updates));
   }
 
+  void OnSemanticsEvent(a11y::SemanticsEventInfo event_info) override { received_events_ = true; }
+
   void WillReturnFalseOnNextCommit() { reject_commit_ = true; }
 
   void ClearMockStatus() {
@@ -62,6 +65,7 @@ class MockSemanticTree : public ::a11y::SemanticTree {
     deleted_node_ids_.clear();
     updated_nodes_.clear();
     reject_commit_ = false;
+    received_events_ = false;
   }
 
   TreeUpdates& received_updates() { return received_updates_; }
@@ -69,6 +73,8 @@ class MockSemanticTree : public ::a11y::SemanticTree {
   std::vector<uint32_t>& deleted_node_ids() { return deleted_node_ids_; }
 
   std::vector<Node>& updated_nodes() { return updated_nodes_; }
+
+  bool received_events() const { return received_events_; }
 
  private:
   // A copy of the updates sent to this tree.
@@ -79,6 +85,7 @@ class MockSemanticTree : public ::a11y::SemanticTree {
   std::vector<Node> updated_nodes_;
 
   bool reject_commit_ = false;
+  bool received_events_ = false;
 };
 
 const std::string kSemanticTreeSingleNodePath = "/pkg/data/semantic_tree_single_node.json";
@@ -250,5 +257,17 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
 
   EXPECT_EQ(expected_semantic_tree_odd, buffer);
 }
+
+TEST_F(SemanticTreeServiceTest, SemanticEventsAreSentToTheTree) {
+  fuchsia::accessibility::semantics::SemanticEvent event;
+  bool callback_ran = false;
+  semantic_tree_->SendSemanticEvent(std::move(event), [&callback_ran]() { callback_ran = true; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(callback_ran);
+  EXPECT_TRUE(tree_ptr_->received_events());
+}
+
 }  // namespace
 }  // namespace accessibility_test

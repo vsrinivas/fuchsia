@@ -50,7 +50,7 @@ class ViewSemanticsTest : public gtest::TestLoopFixture {
     auto tree_service = semantic_tree_service_factory_->NewService(
         koid_, std::move(semantic_listener_ptr),
         context_provider_.context()->outgoing()->debug_dir(), [](zx_status_t status) {},
-        [](a11y::SemanticsEventType event_type) {});
+        [](a11y::SemanticsEventInfo event_info) {});
     tree_service_ = tree_service.get();
 
     view_semantics_ =

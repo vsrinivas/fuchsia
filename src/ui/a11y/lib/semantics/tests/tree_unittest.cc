@@ -141,9 +141,9 @@ TEST_F(SemanticTreeTest, ClearsTheTree) {
   // event type.
   bool semantics_event_callback_called = false;
   tree_->set_semantics_event_callback(
-      [&semantics_event_callback_called](a11y::SemanticsEventType event_type) {
+      [&semantics_event_callback_called](a11y::SemanticsEventInfo event_info) {
         semantics_event_callback_called = true;
-        EXPECT_EQ(event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
+        EXPECT_EQ(event_info.event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
       });
 
   tree_->Clear();
@@ -156,9 +156,9 @@ TEST_F(SemanticTreeTest, SemanticsEventCallbackInvokedOnSuccessfulUpdate) {
   // event type.
   bool semantics_event_callback_called = false;
   tree_->set_semantics_event_callback(
-      [&semantics_event_callback_called](a11y::SemanticsEventType event_type) {
+      [&semantics_event_callback_called](a11y::SemanticsEventInfo event_info) {
         semantics_event_callback_called = true;
-        EXPECT_EQ(event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
+        EXPECT_EQ(event_info.event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
       });
 
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);

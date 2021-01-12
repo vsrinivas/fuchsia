@@ -168,7 +168,7 @@ SemanticTree::SemanticTree(inspect::Node inspect_node)
       [](fuchsia::math::PointF local_point,
          fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {};
 
-  semantics_event_callback_ = [](SemanticsEventType event) {};
+  semantics_event_callback_ = [](SemanticsEventInfo event_info) {};
 
   // The first argument to |CreateLazyValues| is the name of the lazy node, and
   // will only be displayed if the callback used to generate the node's content
@@ -314,7 +314,8 @@ bool SemanticTree::Update(TreeUpdates updates) {
   }
   ApplyNodeUpdates(visited_nodes);
 
-  semantics_event_callback_(SemanticsEventType::kSemanticTreeUpdated);
+  SemanticsEventInfo event_info = {.event_type = SemanticsEventType::kSemanticTreeUpdated};
+  OnSemanticsEvent(std::move(event_info));
   return true;
 }
 
@@ -377,7 +378,8 @@ void SemanticTree::ApplyNodeUpdates(const std::unordered_set<uint32_t>& visited_
 
 void SemanticTree::Clear() {
   nodes_.clear();
-  semantics_event_callback_(SemanticsEventType::kSemanticTreeUpdated);
+  SemanticsEventInfo event_info = {.event_type = SemanticsEventType::kSemanticTreeUpdated};
+  OnSemanticsEvent(std::move(event_info));
 }
 
 void SemanticTree::PerformAccessibilityAction(
@@ -509,6 +511,10 @@ bool SemanticTree::NodeIsDescribable(const fuchsia::accessibility::semantics::No
          ((node->has_attributes() && node->attributes().has_label() &&
            !node->attributes().label().empty()) ||
           (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON));
+}
+
+void SemanticTree::OnSemanticsEvent(SemanticsEventInfo event_info) {
+  semantics_event_callback_(std::move(event_info));
 }
 
 }  // namespace a11y

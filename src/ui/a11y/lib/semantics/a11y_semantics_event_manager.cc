@@ -39,7 +39,7 @@ void A11ySemanticsEventManager::OnEvent(SemanticsEventInfo event_info) {
       continue;
     }
 
-    (*it)->OnEvent(event_info);
+    (*it)->OnEvent(event_info.Clone());
     valid_listeners.emplace_back(*it);
   }
 

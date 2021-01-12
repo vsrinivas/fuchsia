@@ -38,10 +38,10 @@ TEST_F(A11ySemanticsEventManagerTest, RegisterAndListen) {
   a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
-  a11y_semantics_event_manager_->OnEvent(event);
+  a11y_semantics_event_manager_->OnEvent(std::move(event));
 
   // Verify that listener received event.
-  const auto received_events = listener_->GetReceivedEvents();
+  const auto& received_events = listener_->GetReceivedEvents();
   EXPECT_EQ(received_events.size(), 1u);
   EXPECT_EQ(received_events[0].event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
 }
@@ -60,13 +60,13 @@ TEST_F(A11ySemanticsEventManagerTest, ListenerGoesOutOfScope) {
   a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
-  a11y_semantics_event_manager_->OnEvent(event);
+  a11y_semantics_event_manager_->OnEvent(std::move(event));
 
   // If the semantics event manager failed to unregister the scoped listener,
   // then this test would have crashed on the OnEvent() call.
 
   // Verify that listener_ received event.
-  const auto received_events = listener_->GetReceivedEvents();
+  const auto& received_events = listener_->GetReceivedEvents();
   EXPECT_EQ(received_events.size(), 1u);
   EXPECT_EQ(received_events[0].event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
 }
@@ -81,12 +81,12 @@ TEST_F(A11ySemanticsEventManagerTest, SameListenerRegisteredTwice) {
   a11y::SemanticsEventInfo event = {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated};
 
   // Push event to manager.
-  a11y_semantics_event_manager_->OnEvent(event);
+  a11y_semantics_event_manager_->OnEvent(std::move(event));
 
   // Verify that listener received event.
   // If the re-registration was handled incorrectly, the listener would have
   // received the event twice.
-  const auto received_events = listener_->GetReceivedEvents();
+  const auto& received_events = listener_->GetReceivedEvents();
   EXPECT_EQ(received_events.size(), 1u);
   EXPECT_EQ(received_events[0].event_type, a11y::SemanticsEventType::kSemanticTreeUpdated);
 }

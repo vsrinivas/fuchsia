@@ -60,6 +60,10 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
 
+  // |fuchsia::accessibility::semantics::SemanticsTree|
+  void SendSemanticEvent(fuchsia::accessibility::semantics::SemanticEvent semantic_event,
+                         SendSemanticEventCallback callback) override;
+
   // Whether semantic updates are currently enabled.
   bool UpdatesEnabled() { return semantic_updates_enabled_; }
 

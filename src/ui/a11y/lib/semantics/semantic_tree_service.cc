@@ -164,6 +164,15 @@ const fxl::WeakPtr<::a11y::SemanticTree> SemanticTreeService::Get() const {
   return semantic_tree_factory_->GetWeakPtr();
 }
 
+void SemanticTreeService::SendSemanticEvent(
+    fuchsia::accessibility::semantics::SemanticEvent semantic_event,
+    SendSemanticEventCallback callback) {
+  SemanticsEventInfo event;
+  event.semantic_event = std::move(semantic_event);
+  tree_->OnSemanticsEvent(std::move(event));
+  callback();
+}
+
 std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
     zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,

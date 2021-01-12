@@ -56,12 +56,10 @@ void ViewManager::RegisterViewForSemantics(
     view_wrapper_map_.erase(koid);
   };
 
-  auto semantics_event_callback = [this, koid](SemanticsEventType event_type) {
-    SemanticsEventInfo event;
-    event.event_type = event_type;
-    event.view_ref_koid = koid;
+  auto semantics_event_callback = [this, koid](SemanticsEventInfo event_info) {
+    event_info.view_ref_koid = koid;
     if (semantics_event_manager_) {
-      semantics_event_manager_->OnEvent(event);
+      semantics_event_manager_->OnEvent(std::move(event_info));
     }
   };
 
