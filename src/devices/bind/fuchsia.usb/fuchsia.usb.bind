@@ -66,13 +66,10 @@ extend uint fuchsia.BIND_USB_CLASS {
 };
 
 extend uint fuchsia.BIND_USB_SUBCLASS {
-  MISC_RNDIS = 0x04,
-
   ETHERNET = 0x06,
   VENDOR_SPECIFIC = 0xff,
 };
 
 extend uint fuchsia.BIND_USB_PROTOCOL {
-  MISC_RNDIS_ETHERNET = 0x01,
   TEST_FTDI = 0x01,
 };

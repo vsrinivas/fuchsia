@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 using fuchsia.usb;
+using fuchsia.usb.misc;
 
 fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
 fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.MISC;
-fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.BIND_USB_SUBCLASS.MISC_RNDIS;
-fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.BIND_USB_PROTOCOL.MISC_RNDIS_ETHERNET;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.misc.BIND_USB_SUBCLASS.RNDIS;
+fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.misc.BIND_USB_PROTOCOL.RNDIS_ETHERNET;

@@ -14,7 +14,7 @@ group("tests") {
     "ethertap:tests",
     "realtek-8111:tests",
     "realtek-8211f:tests",
-    "rndis-function:rndis-function-test-package",
+    "rndis-function:tests",
     "usb-cdc-ecm:tests",
     "usb-cdc-function:tests",
     "virtio:tests",

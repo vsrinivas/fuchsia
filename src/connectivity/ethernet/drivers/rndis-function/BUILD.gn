@@ -7,10 +7,14 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-bind_rules("bind") {
+bind_rules("rndis_function_bind") {
   rules = "rndis_function.bind"
   output = "rndis_function_bind.h"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.misc",
+  ]
 }
 
 source_set("rndis-function-lib") {
@@ -20,7 +24,7 @@ source_set("rndis-function-lib") {
     "rndis_function.h",
   ]
   public_deps = [
-    ":bind",
+    ":rndis_function_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
@@ -70,4 +74,12 @@ test("rndis-function-test") {
 fuchsia_unittest_package("rndis-function-test-package") {
   package_name = "rndis-function-test"
   deps = [ ":rndis-function-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":rndis-function-test-package",
+    ":rndis_function_bind_test",
+  ]
 }

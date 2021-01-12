@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.misc;
+
+extend uint fuchsia.BIND_USB_SUBCLASS {
+  SYNC = 0x01,
+  CABLE_BASED_ASSOCIATION_FRAMEWORK = 0x03,
+  RNDIS = 0x04,
+  USB3_VISION = 0x05,
+  STEP = 0x06,
+  COMMAND_INTERFACE = 0x07,
+};
+
+extend uint fuchsia.BIND_USB_PROTOCOL {
+  RNDIS_ETHERNET = 0x01,
+  RNDIS_WIFI = 0x02,
+  RNDIS_WIMAX = 0x03,
+  RNDIS_WWAN = 0x04,
+  RNDIS_RAW_IPV4 = 0x05,
+  RNDIS_RAW_IPV6 = 0x06,
+  RNDIS_GPRS = 0x07,
+};
