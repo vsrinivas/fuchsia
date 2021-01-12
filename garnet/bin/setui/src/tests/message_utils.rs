@@ -18,14 +18,14 @@ pub(crate) async fn verify_payload<
     payload: P,
     receptor: &mut Receptor<P, A, R>,
     client_fn: Option<
-        Box<dyn Fn(&mut MessageClient<P, A, R>) -> BoxFuture<'_, ()> + Send + Sync + 'static>,
+        Box<dyn Fn(MessageClient<P, A, R>) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
     >,
 ) {
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
             assert_eq!(payload, incoming_payload);
             if let Some(func) = client_fn {
-                (func)(&mut client).await;
+                (func)(client).await;
             } else {
                 client.acknowledge().await;
             }

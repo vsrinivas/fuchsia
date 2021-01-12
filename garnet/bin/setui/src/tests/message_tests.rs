@@ -258,7 +258,7 @@ async fn test_observe_addressable() {
     verify_payload(
         ORIGINAL,
         &mut receptor_2,
-        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+        Some(Box::new(move |mut client| -> BoxFuture<'_, ()> {
             let observe_receptor = observe_receptor_clone.clone();
             Box::pin(async move {
                 let mut receptor = observe_receptor.lock().await;
