@@ -5,7 +5,7 @@ use {
     crate::{
         constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
         container::{ComponentDiagnostics, ComponentIdentity},
-        events::types::{ComponentEvent, ComponentIdentifier, LogSinkRequestedEvent},
+        events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
@@ -23,7 +23,6 @@ use {
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
-    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_async::Task,
     fuchsia_inspect as inspect,
@@ -35,10 +34,7 @@ use {
     parking_lot::{Mutex, RwLock},
     selectors,
     std::collections::HashMap,
-    std::{
-        convert::{TryFrom, TryInto},
-        sync::Arc,
-    },
+    std::{convert::TryFrom, sync::Arc},
     tracing::{debug, error, warn},
 };
 
@@ -149,43 +145,6 @@ impl DataRepo {
             Ok(None) => warn!("local realm already gave out LogConnectionListener, skipping logs"),
             Err(e) => error!(%e, "error retrieving LogConnectionListener from LogConnector"),
         }
-    }
-
-    // TODO(fxbug.dev/66950) delete this
-    /// Handle the components v2 EventStream for attributed logs of v2
-    /// components.
-    pub async fn handle_event_stream(
-        self,
-        mut stream: fsys::EventStreamRequestStream,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                fsys::EventStreamRequest::OnEvent { event, .. } => {
-                    if let Err(e) = self.clone().handle_event(event, sender.clone()) {
-                        error!(%e, "Unable to process event");
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO(fxbug.dev/66950) delete this
-    /// Handle the components v2 CapabilityRequested event for attributed logs of
-    /// v2 components.
-    fn handle_event(
-        self,
-        event: fsys::Event,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<(), LogsError> {
-        let LogSinkRequestedEvent { metadata, requests } = match event.try_into()? {
-            ComponentEvent::LogSinkRequested(event) => event,
-            other => unreachable!("should never see {:?} here", other),
-        };
-        let container = self.write().get_log_container(metadata.identity);
-        let task = Task::spawn(container.handle_log_sink(requests, sender.clone()));
-        sender.unbounded_send(task).expect("channel is alive for whole program");
-        Ok(())
     }
 
     /// Spawn a task to handle requests from components reading the shared log.

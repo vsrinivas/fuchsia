@@ -21,7 +21,7 @@ use {
 impl EventSource for ComponentEventProviderProxy {
     /// Subscribe to component lifecycle events.
     /// |node| is the node where stats about events seen will be recorded.
-    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
         let (events_client_end, listener_request_stream) =
             fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
         self.set_listener(events_client_end)?;
@@ -171,7 +171,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn component_event_stream() {
-        let (provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
+        let (mut provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
         let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
         provider_proxy.listen(sender).await.expect("failed to listen");
         let mut event_stream = receiver.boxed();

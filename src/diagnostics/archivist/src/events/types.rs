@@ -25,7 +25,7 @@ use {
 
 #[async_trait]
 pub trait EventSource: Sync + Send {
-    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error>;
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error>;
 }
 
 /// The capacity for bounded channels used by this implementation.

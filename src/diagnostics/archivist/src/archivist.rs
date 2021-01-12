@@ -9,10 +9,14 @@ use {
         constants::INSPECT_LOG_WINDOW_SIZE,
         container::ComponentIdentity,
         diagnostics,
-        events::types::{
-            ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
+        events::{
+            source_registry::{EventSourceRegistration, EventSourceRegistry},
+            static_event_stream::StaticEventStream,
+            types::{
+                ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
+                EventSource,
+            },
         },
-        events::{source_registry::EventSourceRegistry, types::EventSource},
         logs::{redact::Redactor, socket::LogMessageSocket},
         pipeline::Pipeline,
         repository::DataRepo,
@@ -348,10 +352,9 @@ impl ArchivistBuilder {
     pub fn install_logger_services(&mut self) -> &mut Self {
         let data_repo_1 = self.data_repo().clone();
         let data_repo_2 = self.data_repo().clone();
-        let data_repo_3 = self.data_repo().clone();
         let log_sender = self.log_sender.clone();
-        let log_sender2 = self.log_sender.clone();
         let listen_sender = self.listen_sender.clone();
+        let event_source_publisher = self.event_source_registry.get_event_source_publisher();
 
         self.fs
             .dir("svc")
@@ -366,12 +369,20 @@ impl ArchivistBuilder {
                 fasync::Task::spawn(container.handle_log_sink(stream, log_sender.clone())).detach();
             })
             .add_fidl_service(move |stream| {
-                // TODO(fxbug.dev/66950) create a channel and add it to the EventStream as a source
                 debug!("fuchsia.sys.EventStream connection");
-                fasync::Task::spawn(
-                    data_repo_3.clone().handle_event_stream(stream, log_sender2.clone()),
-                )
-                .detach()
+                let mut publisher = event_source_publisher.clone();
+                fasync::Task::spawn(async move {
+                    publisher
+                        .send(EventSourceRegistration {
+                            name: "v2_static_event_stream".to_string(),
+                            source: Box::new(StaticEventStream::new(stream)),
+                        })
+                        .await
+                        .unwrap_or_else(|err| {
+                            error!(?err, "Failed to add static event source");
+                        })
+                })
+                .detach();
             });
         debug!("Log services initialized.");
         self
@@ -416,6 +427,7 @@ impl ArchivistBuilder {
         // collect events.
         let run_event_collection = Self::collect_component_events(
             self.event_source_registry,
+            self.log_sender.clone(),
             self.state,
             self.pipeline_exists,
         );
@@ -455,6 +467,7 @@ impl ArchivistBuilder {
 
     async fn collect_component_events(
         mut event_source_registry: EventSourceRegistry,
+        log_sender: mpsc::UnboundedSender<Task<()>>,
         state: ArchivistState,
         pipeline_exists: bool,
     ) {
@@ -464,7 +477,7 @@ impl ArchivistBuilder {
         } else {
             component::health().set_ok();
         }
-        state.run(events).await
+        state.run(events, log_sender).await
     }
 }
 
@@ -504,8 +517,12 @@ impl ArchivistState {
         })
     }
 
-    pub async fn run(self, mut events: ComponentEventStream) {
-        let archivist = Archivist { state: Arc::new(Mutex::new(self)) };
+    pub async fn run(
+        self,
+        mut events: ComponentEventStream,
+        log_sender: mpsc::UnboundedSender<Task<()>>,
+    ) {
+        let archivist = Archivist { state: Arc::new(Mutex::new(self)), log_sender };
         while let Some(event) = events.next().await {
             archivist.clone().process_event(event).await.unwrap_or_else(|e| {
             let mut state = archivist.lock();
@@ -519,6 +536,7 @@ impl ArchivistState {
 #[derive(Clone)]
 pub struct Archivist {
     state: Arc<Mutex<ArchivistState>>,
+    log_sender: mpsc::UnboundedSender<Task<()>>,
 }
 
 impl std::ops::Deref for Archivist {
@@ -628,9 +646,15 @@ impl Archivist {
                 self.populate_inspect_repo(diagnostics_ready).await;
                 Ok(())
             }
-            ComponentEvent::LogSinkRequested(_request) => {
-                // TODO(fxbug.dev/66950) implement this as the primary path for attributed log intake
-                unreachable!("CapabilityRequested events should not yet flow through here.");
+            ComponentEvent::LogSinkRequested(event) => {
+                let locked_state = self.state.lock();
+                let data_repo = &locked_state.diagnostics_repo;
+                let container = data_repo.write().get_log_container(event.metadata.identity);
+                let task = fasync::Task::spawn(
+                    container.handle_log_sink(event.requests, self.log_sender.clone()),
+                );
+                self.log_sender.unbounded_send(task).expect("channel is alive for whole program");
+                Ok(())
             }
         }
     }

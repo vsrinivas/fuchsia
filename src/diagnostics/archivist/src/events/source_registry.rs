@@ -7,16 +7,19 @@ use {
         container::ComponentIdentity,
         events::{error::EventError, types::*},
     },
+    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{channel::mpsc, StreamExt},
+    parking_lot::Mutex,
+    std::sync::Arc,
 };
 
 /// Tracks all event sources and listens to events coming from them pushing them into an MPSC
 /// channel.
 pub struct EventSourceRegistry {
     /// The registered event sources
-    sources: Vec<Box<dyn EventSource>>,
+    sources: Arc<EventSourceStore>,
 
     /// The data used to initialiez the event stream. This can be used a single time to create a
     /// single stream of events with the consumer end of the MPSC channel.
@@ -24,13 +27,15 @@ pub struct EventSourceRegistry {
 
     /// The sender end of th events MPSC channel. A clone of this is given to every event source
     /// that is added when starting to listen for events on them.
-    sender: mpsc::Sender<ComponentEvent>,
+    event_sender: mpsc::Sender<ComponentEvent>,
 
     /// The root node for events instrumentation.
     _node: inspect::Node,
 
-    /// Child of `node`. Holds the status of every event source that is added.
-    sources_node: inspect::Node,
+    /// Used to dynamically register event sources
+    source_sender: mpsc::Sender<EventSourceRegistration>,
+
+    _source_receiver_task: fasync::Task<()>,
 }
 
 struct EventStreamInitData {
@@ -44,36 +49,44 @@ impl EventSourceRegistry {
     /// Creates a new event listener.
     pub fn new(node: inspect::Node) -> Self {
         let sources_node = node.create_child("sources");
-        let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
+        let (event_sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
+        let (source_sender, source_receiver) = mpsc::channel(CHANNEL_CAPACITY);
         let logger = EventStreamLogger::new(&node);
-        Self {
-            sources: Vec::new(),
+        let sources =
+            Arc::new(EventSourceStore { sources: Mutex::new(Vec::new()), node: sources_node });
+
+        let sources_for_task = sources.clone();
+        let event_sender_for_task = event_sender.clone();
+        let registry = Self {
+            sources,
             event_stream_init_data: Some(EventStreamInitData { receiver, logger }),
             _node: node,
-            sources_node,
-            sender,
-        }
+            event_sender,
+            source_sender,
+            _source_receiver_task: fasync::Task::spawn(async move {
+                let mut stream = Box::pin(source_receiver.boxed());
+                while let Some(registration) = stream.next().await {
+                    sources_for_task.add(registration, event_sender_for_task.clone()).await;
+                }
+            }),
+        };
+        registry
     }
 
     /// Adds an event source and starts listening for events on it.
-    pub async fn add_source(&mut self, name: impl AsRef<str>, source: Box<dyn EventSource>) {
-        let source_node = self.sources_node.create_child(name);
-        match source.listen(self.sender.clone()).await {
-            Ok(()) => {
-                source_node.record_string("status", "ok");
-            }
-            Err(err) => {
-                source_node.record_string("status", format!("error: {:?}", err));
-            }
-        }
-        self.sources.push(source);
-        self.sources_node.record(source_node);
+    pub async fn add_source(&mut self, name: impl ToString, source: Box<dyn EventSource>) {
+        self.sources
+            .add(
+                EventSourceRegistration { name: name.to_string(), source },
+                self.event_sender.clone(),
+            )
+            .await;
     }
 
     /// Takes the single stream where component events are pushed.
     pub async fn take_stream(&mut self) -> Result<ComponentEventStream, EventError> {
         match self.event_stream_init_data.take() {
-            None => Err(EventError::EventListenerAlreadyExists),
+            None => Err(EventError::StreamAlreadyTaken),
             Some(EventStreamInitData { receiver, mut logger }) => {
                 Ok(Box::pin(receiver.boxed().map(move |event| {
                     logger.log_event(&event);
@@ -82,6 +95,42 @@ impl EventSourceRegistry {
             }
         }
     }
+
+    pub fn get_event_source_publisher(&self) -> mpsc::Sender<EventSourceRegistration> {
+        self.source_sender.clone()
+    }
+}
+
+pub struct EventSourceRegistration {
+    pub name: String,
+    pub source: Box<dyn EventSource>,
+}
+
+struct EventSourceStore {
+    sources: Mutex<Vec<Box<dyn EventSource>>>,
+
+    /// Child of `node`. Holds the status of every event source that is added.
+    node: inspect::Node,
+}
+
+impl EventSourceStore {
+    async fn add(
+        &self,
+        mut registration: EventSourceRegistration,
+        event_sender: mpsc::Sender<ComponentEvent>,
+    ) {
+        let source_node = self.node.create_child(registration.name);
+        match registration.source.listen(event_sender).await {
+            Ok(()) => {
+                source_node.record_string("status", "ok");
+            }
+            Err(err) => {
+                source_node.record_string("status", format!("error: {:?}", err));
+            }
+        }
+        self.sources.lock().push(registration.source);
+        self.node.record(source_node);
+    }
 }
 
 struct EventStreamLogger {
@@ -89,6 +138,7 @@ struct EventStreamLogger {
     components_stopped: inspect::UintProperty,
     components_seen_running: inspect::UintProperty,
     diagnostics_directories_seen: inspect::UintProperty,
+    log_sink_requests_seen: inspect::UintProperty,
     component_log_node: BoundedListNode,
 }
 
@@ -99,6 +149,7 @@ impl EventStreamLogger {
         let components_seen_running = parent.create_uint("components_seen_running", 0);
         let components_stopped = parent.create_uint("components_stopped", 0);
         let diagnostics_directories_seen = parent.create_uint("diagnostics_directories_seen", 0);
+        let log_sink_requests_seen = parent.create_uint("log_sink_requests_seen", 0);
         let component_log_node =
             BoundedListNode::new(parent.create_child("recent_events"), RECENT_EVENT_LIMIT);
         Self {
@@ -106,6 +157,7 @@ impl EventStreamLogger {
             components_stopped,
             components_seen_running,
             diagnostics_directories_seen,
+            log_sink_requests_seen,
             component_log_node,
         }
     }
@@ -129,9 +181,9 @@ impl EventStreamLogger {
                 self.diagnostics_directories_seen.add(1);
                 self.log_inspect("DIAGNOSTICS_DIR_READY", &diagnostics_ready.metadata.identity);
             }
-            ComponentEvent::LogSinkRequested(_request) => {
-                // TODO(fxbug.dev/66950) join event_stream and EventSource streams
-                unreachable!("we don't yet receive LogSink over the main event intake");
+            ComponentEvent::LogSinkRequested(log_sink_requested) => {
+                self.log_sink_requests_seen.add(1);
+                self.log_inspect("LOG_SINK_REQUESTED", &log_sink_requested.metadata.identity);
             }
         }
     }
@@ -150,6 +202,7 @@ mod tests {
         super::*,
         anyhow::{format_err, Error},
         async_trait::async_trait,
+        fidl_fuchsia_logger::LogSinkMarker,
         fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
         fuchsia_zircon as zx,
@@ -178,7 +231,7 @@ mod tests {
 
     #[async_trait]
     impl EventSource for FakeEventSource {
-        async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
@@ -199,13 +252,22 @@ mod tests {
                 .send(ComponentEvent::Stop(StopEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send stop");
+            let (_, log_sink_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+            sender
+                .send(ComponentEvent::LogSinkRequested(LogSinkRequestedEvent {
+                    metadata: shared_data.clone(),
+                    requests: log_sink_stream,
+                }))
+                .await
+                .expect("send log sink requested");
             Ok(())
         }
     }
 
     #[async_trait]
     impl EventSource for FakeLegacyProvider {
-        async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             let shared_data = EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
@@ -226,24 +288,34 @@ mod tests {
                 .send(ComponentEvent::Stop(StopEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send stop");
+            let (_, log_sink_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+            sender
+                .send(ComponentEvent::LogSinkRequested(LogSinkRequestedEvent {
+                    metadata: shared_data.clone(),
+                    requests: log_sink_stream,
+                }))
+                .await
+                .expect("send log sink requested");
             Ok(())
         }
     }
 
     #[async_trait]
     impl EventSource for FakeFutureProvider {
-        async fn listen(&self, _sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        async fn listen(&mut self, _sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
             Err(format_err!("not implemented yet"))
         }
     }
 
     async fn validate_events(stream: &mut ComponentEventStream, expected_id: &ComponentIdentity) {
-        for i in 0..3 {
+        for i in 0..4 {
             let event = stream.next().await.expect("received event");
             match (i, &event) {
                 (0, ComponentEvent::Start(StartEvent { metadata, .. }))
                 | (1, ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent { metadata, .. }))
-                | (2, ComponentEvent::Stop(StopEvent { metadata, .. })) => {
+                | (2, ComponentEvent::Stop(StopEvent { metadata, .. }))
+                | (3, ComponentEvent::LogSinkRequested(LogSinkRequestedEvent { metadata, .. })) => {
                     assert_eq!(metadata.identity, *expected_id);
                 }
                 _ => panic!("unexpected event: {:?}", event),
@@ -281,6 +353,7 @@ mod tests {
                 components_stopped: 2u64,
                 components_seen_running: 0u64,
                 diagnostics_directories_seen: 2u64,
+                log_sink_requests_seen: 2u64,
                 recent_events: {
                     "0": {
                         "@time": inspect::testing::AnyProperty,
@@ -299,19 +372,29 @@ mod tests {
                     },
                     "3": {
                         "@time": inspect::testing::AnyProperty,
-                        event: "START",
-                        moniker: "./a:0/b:1"
+                        event: "LOG_SINK_REQUESTED",
+                        moniker: "a/b/foo.cmx:12345"
                     },
                     "4": {
                         "@time": inspect::testing::AnyProperty,
-                        event: "DIAGNOSTICS_DIR_READY",
+                        event: "START",
                         moniker: "./a:0/b:1"
                     },
                     "5": {
                         "@time": inspect::testing::AnyProperty,
+                        event: "DIAGNOSTICS_DIR_READY",
+                        moniker: "./a:0/b:1"
+                    },
+                    "6": {
+                        "@time": inspect::testing::AnyProperty,
                         event: "STOP",
                         moniker: "./a:0/b:1"
-                    }
+                    },
+                    "7": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "LOG_SINK_REQUESTED",
+                        moniker: "./a:0/b:1"
+                    },
                 }
             }
         });

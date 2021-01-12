@@ -4,6 +4,7 @@
 
 use crate::{
     container::ComponentIdentity,
+    events::types::{ComponentEvent, LogSinkRequestedEvent},
     logs::message::{fx_log_packet_t, EMPTY_IDENTITY, MAX_DATAGRAM_LEN},
     repository::DataRepo,
 };
@@ -26,6 +27,7 @@ use futures::channel::mpsc;
 use futures::prelude::*;
 use std::{
     collections::VecDeque,
+    convert::TryInto,
     io::Cursor,
     marker::PhantomData,
     sync::{Arc, Weak},
@@ -311,6 +313,35 @@ impl EventStreamLogReader {
             target_url: target_url.into(),
         })
     }
+
+    async fn handle_event_stream(
+        mut stream: fsys::EventStreamRequestStream,
+        sender: mpsc::UnboundedSender<Task<()>>,
+        log_manager: DataRepo,
+    ) {
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                fsys::EventStreamRequest::OnEvent { event, .. } => {
+                    Self::handle_event(event, sender.clone(), log_manager.clone())
+                }
+            }
+        }
+    }
+
+    fn handle_event(
+        event: fsys::Event,
+        sender: mpsc::UnboundedSender<Task<()>>,
+        log_manager: DataRepo,
+    ) {
+        let LogSinkRequestedEvent { metadata, requests } =
+            match event.try_into().expect("into component event") {
+                ComponentEvent::LogSinkRequested(event) => event,
+                other => unreachable!("should never see {:?} here", other),
+            };
+        let container = log_manager.write().get_log_container(metadata.identity);
+        let task = Task::spawn(container.handle_log_sink(requests, sender.clone()));
+        sender.unbounded_send(task).expect("channel is alive for whole program");
+    }
 }
 
 impl LogReader for EventStreamLogReader {
@@ -326,8 +357,11 @@ impl LogReader for EventStreamLogReader {
                 log_sink_server_end.into_channel(),
             ))
             .unwrap();
-        let log_manager = self.log_manager.clone();
-        let task = Task::spawn(log_manager.handle_event_stream(event_stream, log_sender.clone()));
+        let task = Task::spawn(Self::handle_event_stream(
+            event_stream,
+            log_sender.clone(),
+            self.log_manager.clone(),
+        ));
         log_sender.unbounded_send(task).unwrap();
 
         log_sink_proxy

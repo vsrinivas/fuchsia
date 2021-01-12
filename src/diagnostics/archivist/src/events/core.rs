@@ -16,7 +16,7 @@ use {
 impl EventSource for fsys::EventSourceProxy {
     /// Subscribe to component lifecycle events.
     /// |node| is the node where stats about events seen will be recorded.
-    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
         let (client_end, request_stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
         let mut events = vec![
@@ -49,18 +49,18 @@ impl EventSource for fsys::EventSourceProxy {
     }
 }
 
-struct EventStreamServer {
+pub struct EventStreamServer {
     sender: ComponentEventChannel,
 }
 
 impl EventStreamServer {
-    fn new(sender: ComponentEventChannel) -> Self {
+    pub fn new(sender: ComponentEventChannel) -> Self {
         Self { sender }
     }
 }
 
 impl EventStreamServer {
-    fn spawn(self, stream: fsys::EventStreamRequestStream) {
+    pub fn spawn(self, stream: fsys::EventStreamRequestStream) {
         fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
@@ -108,7 +108,7 @@ pub mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn event_stream() {
-        let (source_proxy, stream_receiver) = spawn_fake_event_source();
+        let (mut source_proxy, stream_receiver) = spawn_fake_event_source();
         let (sender, mut event_stream) = mpsc::channel(CHANNEL_CAPACITY);
         source_proxy.listen(sender).await.expect("failed to listen");
         let stream_server = stream_receiver.await.into_proxy().expect("get stream proxy");

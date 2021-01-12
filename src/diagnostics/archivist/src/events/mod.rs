@@ -6,4 +6,5 @@ mod core;
 pub(crate) mod error;
 mod legacy;
 pub(crate) mod source_registry;
+pub(crate) mod static_event_stream;
 pub mod types;
