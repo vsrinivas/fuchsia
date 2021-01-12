@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("virtio_input_bind") {
+  rules = "virtio_input.bind"
+  output = "virtio_input_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
 
 driver_module("virtio_input") {
   configs += [
@@ -22,6 +30,7 @@ driver_module("virtio_input") {
     "input_touch.cc",
   ]
   deps = [
+    ":virtio_input_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
@@ -74,5 +83,8 @@ unittest_package("virtio-input-test-package") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":virtio-input-test-package" ]
+  deps = [
+    ":virtio-input-test-package",
+    ":virtio_input_bind_test",
+  ]
 }
