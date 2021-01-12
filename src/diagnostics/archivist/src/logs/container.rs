@@ -34,7 +34,7 @@ pub struct LogsArtifactsContainer {
     control_handles: Mutex<Vec<LogSinkControlHandle>>,
 
     /// Inspect instrumentation.
-    stats: LogStreamStats,
+    pub stats: Arc<LogStreamStats>,
 
     /// Buffer for all log messages.
     buffer: Arc<Mutex<AccountedBuffer<Message>>>,
@@ -48,11 +48,11 @@ impl LogsArtifactsContainer {
         buffer: Arc<Mutex<AccountedBuffer<Message>>>,
     ) -> Self {
         let new = Self {
-            identity,
-            stats,
             buffer,
+            identity,
             control_handles: Mutex::new(vec![]),
             interest: Mutex::new(Interest::EMPTY),
+            stats: Arc::new(stats),
         };
 
         // there are no control handles so this won't notify anyone
@@ -79,7 +79,7 @@ impl LogsArtifactsContainer {
 
         macro_rules! handle_socket {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
-                match LogMessageSocket::$ctor($socket, self.identity.clone()) {
+                match LogMessageSocket::$ctor($socket, self.identity.clone(), self.stats.clone()) {
                     Ok(log_stream) => {
                         let task = Task::spawn(self.clone().drain_messages(log_stream));
                         sender.unbounded_send(task).expect("channel alive for whole program");

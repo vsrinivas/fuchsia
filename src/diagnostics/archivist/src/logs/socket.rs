@@ -3,6 +3,7 @@
 
 use super::error::StreamError;
 use super::message::{Message, MAX_DATAGRAM_LEN};
+use super::stats::LogStreamStats;
 use crate::container::ComponentIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -42,6 +43,7 @@ impl Encoding for StructuredEncoding {
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket<E> {
     source: Arc<ComponentIdentity>,
+    stats: Arc<LogStreamStats>,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
     _encoder: PhantomData<E>,
@@ -49,11 +51,16 @@ pub struct LogMessageSocket<E> {
 
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
-    pub fn new(socket: zx::Socket, source: Arc<ComponentIdentity>) -> Result<Self, io::Error> {
+    pub fn new(
+        socket: zx::Socket,
+        source: Arc<ComponentIdentity>,
+        stats: Arc<LogStreamStats>,
+    ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
             source,
+            stats,
             _encoder: PhantomData,
         })
     }
@@ -65,11 +72,13 @@ impl LogMessageSocket<StructuredEncoding> {
     pub fn new_structured(
         socket: zx::Socket,
         source: Arc<ComponentIdentity>,
+        stats: Arc<LogStreamStats>,
     ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
             source,
+            stats,
             _encoder: PhantomData,
         })
     }
@@ -88,7 +97,7 @@ where
 
         let msg_bytes = &self.buffer[..len];
         let message = E::parse_message(&self.source, msg_bytes)?;
-        Ok(message)
+        Ok(message.with_stats(&self.stats))
     }
 }
 
@@ -114,7 +123,8 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let mut ls = LogMessageSocket::new(sout, TEST_IDENTITY.clone()).unwrap();
+        let mut ls =
+            LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let expected_p = Message::new(
             zx::Time::from_nanos(packet.metadata.time),
@@ -177,7 +187,9 @@ mod tests {
             ),
         );
 
-        let mut stream = LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone()).unwrap();
+        let mut stream =
+            LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone(), Default::default())
+                .unwrap();
 
         sin.write(encoded).unwrap();
         let result_message = stream.next().await.unwrap();

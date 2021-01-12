@@ -265,8 +265,9 @@ impl ArchivistBuilder {
     pub fn consume_own_logs(&self, socket: zx::Socket) {
         let container = self.data_repo().write().get_own_log_container();
         fasync::Task::spawn(async move {
-            let log_stream = LogMessageSocket::new(socket, container.identity.clone())
-                .expect("failed to create internal LogMessageSocket");
+            let log_stream =
+                LogMessageSocket::new(socket, container.identity.clone(), container.stats.clone())
+                    .expect("failed to create internal LogMessageSocket");
             container.drain_messages(log_stream).await;
             unreachable!();
         })

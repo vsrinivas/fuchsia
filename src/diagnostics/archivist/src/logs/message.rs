@@ -4,7 +4,7 @@
 use crate::{
     container::ComponentIdentity,
     events::types::{ComponentIdentifier, LegacyIdentifier},
-    logs::{buffer::Accounted, error::StreamError},
+    logs::{buffer::Accounted, error::StreamError, stats::LogStreamStats},
 };
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
@@ -40,10 +40,14 @@ pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 
 /// Our internal representation for a log message.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Message {
     #[serde(skip)]
     pub id: MessageId,
+
+    // a reference to our component's stats node so we can increment dropped on our drop
+    #[serde(skip)]
+    stats: Arc<LogStreamStats>,
 
     #[serde(flatten)]
     data: LogsData,
@@ -52,6 +56,12 @@ pub struct Message {
 impl PartialEq for Message {
     fn eq(&self, rhs: &Self) -> bool {
         self.data.eq(&rhs.data)
+    }
+}
+
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Message").field("id", &self.id).field("data", &self.data).finish()
     }
 }
 
@@ -89,6 +99,7 @@ impl Message {
         }
         Self {
             id: MessageId::next(),
+            stats: Default::default(),
             data: LogsData::for_logs(
                 source.to_string(),
                 Some(payload),
@@ -106,6 +117,7 @@ impl Message {
     pub fn for_dropped(count: u64) -> Self {
         Self {
             id: MessageId::next(),
+            stats: Default::default(),
             data: LogsData::for_logs(
                 EMPTY_IDENTITY.to_string(),
                 Some(LogsHierarchy::new_root()), // payload
@@ -116,6 +128,11 @@ impl Message {
                 vec![LogError::DroppedLogs { count }],
             ),
         }
+    }
+
+    pub(crate) fn with_stats(mut self, stats: &Arc<LogStreamStats>) -> Self {
+        self.stats = stats.clone();
+        self
     }
 
     /// Parse the provided buffer as if it implements the [logger/syslog wire format].
@@ -410,6 +427,12 @@ impl Deref for Message {
 impl DerefMut for Message {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
+    }
+}
+
+impl Drop for Message {
+    fn drop(&mut self) {
+        self.stats.increment_dropped();
     }
 }
 

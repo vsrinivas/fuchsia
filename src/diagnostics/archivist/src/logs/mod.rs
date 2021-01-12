@@ -96,6 +96,7 @@ mod tests {
                         logs: {
                             last_timestamp: AnyProperty,
                             total: 5u64,
+                            dropped: 0u64,
                             trace: 0u64,
                             debug: 0u64,
                             info: 2u64,
@@ -149,6 +150,7 @@ mod tests {
                             logs: {
                                 last_timestamp: AnyProperty,
                                 total: 1u64,
+                                dropped: 0u64,
                                 trace: 0u64,
                                 debug: 0u64,
                                 info: 0u64,
@@ -162,6 +164,7 @@ mod tests {
                             logs: {
                                 last_timestamp: AnyProperty,
                                 total: 1u64,
+                                dropped: 0u64,
                                 trace: 0u64,
                                 debug: 0u64,
                                 info: 0u64,
@@ -562,6 +565,7 @@ mod tests {
                         logs: {
                             last_timestamp: AnyProperty,
                             total: 3u64,
+                            dropped: 0u64,
                             trace: 0u64,
                             debug: 0u64,
                             info: 3u64,

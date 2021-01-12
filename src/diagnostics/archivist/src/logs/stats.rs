@@ -11,17 +11,22 @@ use fuchsia_inspect_derive::Inspect;
 pub struct LogStreamStats {
     last_timestamp: IntProperty,
     total: UintProperty,
-    trace: UintProperty,
-    debug: UintProperty,
-    info: UintProperty,
-    warn: UintProperty,
-    error: UintProperty,
+    dropped: UintProperty,
     fatal: UintProperty,
+    error: UintProperty,
+    warn: UintProperty,
+    info: UintProperty,
+    debug: UintProperty,
+    trace: UintProperty,
 
     inspect_node: Node,
 }
 
 impl LogStreamStats {
+    pub fn increment_dropped(&self) {
+        self.dropped.add(1);
+    }
+
     pub fn ingest_message(&self, msg: &LogsData) {
         self.last_timestamp.set(msg.metadata.timestamp.into());
         self.total.add(1);

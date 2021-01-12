@@ -59,7 +59,7 @@ async fn main() {
         .add_selector("archivist-with-small-caches.cmx:root/sources");
 
     info!("check that archivist log state is clean");
-    until_archivist_state_matches(&reader, DroppedLogs(0), &[]).await;
+    until_archivist_state_matches(&reader, &[]).await;
 
     info!("launching puppet");
     let _puppet_app = launch_puppet(&launcher);
@@ -75,8 +75,7 @@ async fn main() {
     info!("observe the puppet appears in archivist's inspect output");
     until_archivist_state_matches(
         &reader,
-        DroppedLogs(0),
-        &[LogSource { url: PUPPET_URL, messages: 0 }],
+        &[LogSource { url: PUPPET_URL, messages: Count { total: 0, dropped: 0 } }],
     )
     .await;
 
@@ -93,8 +92,10 @@ async fn main() {
         let expected_dropped_count = messages_sent.saturating_sub(messages_allowed_in_cache as u64);
         until_archivist_state_matches(
             &reader,
-            DroppedLogs(expected_dropped_count),
-            &[LogSource { url: PUPPET_URL, messages: messages_sent }],
+            &[LogSource {
+                url: PUPPET_URL,
+                messages: Count { total: messages_sent, dropped: expected_dropped_count },
+            }],
         )
         .await;
     }
@@ -179,58 +180,39 @@ async fn serve_controller(
     }
 }
 
-struct DroppedLogs(u64);
-
 struct LogSource {
     url: &'static str,
-    messages: u64,
+    messages: Count,
 }
 
-async fn until_archivist_state_matches(
-    reader: &ArchiveReader,
-    DroppedLogs(expected_dropped_count): DroppedLogs,
-    expected_sources: &[LogSource],
-) {
+async fn until_archivist_state_matches(reader: &ArchiveReader, expected_sources: &[LogSource]) {
     let expected_sources = expected_sources
         .iter()
         .map(|source| (source.url.to_string(), source.messages))
-        .collect::<BTreeMap<String, u64>>();
+        .collect::<BTreeMap<String, Count>>();
 
     loop {
         // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
         let results = reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
         let payload = results.payload.as_ref().unwrap();
-
-        let observed_dropped_count = get_dropped_logs(&payload);
         let observed_sources = get_log_counts_by_url(&payload);
-
-        if observed_dropped_count == expected_dropped_count && observed_sources == expected_sources
-        {
+        if observed_sources == expected_sources {
             break;
         } else {
             debug!("archivist state did not match expected, sleeping");
-            debug!(
-                "dropped observed={} expected={}",
-                observed_dropped_count, expected_dropped_count
-            );
             debug!("sources observed={:?} expected={:?}", observed_sources, expected_sources);
+            Timer::new(Duration::from_millis(100)).await;
         }
-
-        Timer::new(Duration::from_millis(100)).await;
     }
 }
 
-fn get_dropped_logs(root: &DiagnosticsHierarchy) -> u64 {
-    *root
-        .get_child("logs_buffer")
-        .unwrap()
-        .get_property("rolled_out_entries")
-        .unwrap()
-        .uint()
-        .unwrap()
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Count {
+    total: u64,
+    dropped: u64,
 }
 
-fn get_log_counts_by_url(root: &DiagnosticsHierarchy) -> BTreeMap<String, u64> {
+fn get_log_counts_by_url(root: &DiagnosticsHierarchy) -> BTreeMap<String, Count> {
     let mut counts = BTreeMap::new();
     let sources = root.get_child("sources").unwrap();
 
@@ -238,7 +220,8 @@ fn get_log_counts_by_url(root: &DiagnosticsHierarchy) -> BTreeMap<String, u64> {
         if let Some(logs) = source.get_child("logs") {
             let url = source.get_property("url").unwrap().string().unwrap().to_string();
             let total = *logs.get_property("total").unwrap().uint().unwrap();
-            counts.insert(url, total);
+            let dropped = *logs.get_property("dropped").unwrap().uint().unwrap();
+            counts.insert(url, Count { total, dropped });
         }
     }
 
