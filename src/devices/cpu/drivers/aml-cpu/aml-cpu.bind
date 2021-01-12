@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.composite;
+using fuchsia.google.platform;
+
+// The device must be a composite protocol device.
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+
+// Vendor must be Google.
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+
+// Device ID Must be Google Amlogic CPU.
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOOGLE_AMLOGIC_CPU;
+
+// This driver is applicable for Astro and Luis only.
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
+}
