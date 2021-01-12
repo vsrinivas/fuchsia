@@ -44,7 +44,7 @@ fuchsia_component("component") {
 
 fuchsia_component("archivist-with-small-caches") {
   testonly = true
-  manifest = "meta/archivist-with-small-caches.cmx"
+  manifest = "//src/diagnostics/archivist/meta/archivist-for-embedding.cmx"
   deps = [
     ":small-caches-archivist-config",
     "//src/diagnostics/archivist:bin",
@@ -53,7 +53,7 @@ fuchsia_component("archivist-with-small-caches") {
 
 resource("small-caches-archivist-config") {
   sources = [ "config/small-caches-config.json" ]
-  outputs = "data/{{source_file_part}}"
+  outputs = "data/embedding-config.json"
 }
 
 fidl("fidl") {

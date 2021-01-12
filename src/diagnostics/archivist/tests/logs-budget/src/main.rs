@@ -51,7 +51,7 @@ async fn main() {
 
     info!("starting our archivist");
     let archivist = launch_archivist(&launcher).await;
-    let archivist_config = parse_config("/pkg/data/small-caches-config.json").unwrap();
+    let archivist_config = parse_config("/pkg/data/embedding-config.json").unwrap();
     let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
     let reader = ArchiveReader::new()
         .with_archive(archive)
