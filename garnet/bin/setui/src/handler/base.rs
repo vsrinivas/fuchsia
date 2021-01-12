@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::internal::handler::message;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingRequest, SettingType};
+use crate::switchboard::base::SettingRequest;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::audio::ModifiedCounters;
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
@@ -112,29 +112,6 @@ impl From<ControllerError> for SwitchboardError {
             ControllerError::ExitError => SwitchboardError::IrrecoverableError,
         }
     }
-}
-
-/// The setting types supported by the messaging system. This is used as a key
-/// for listening to change notifications and sending requests.
-/// The types are arranged alphabetically.
-#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
-pub enum SettingType {
-    Unknown,
-    Accessibility,
-    Account,
-    Audio,
-    Device,
-    Display,
-    DoNotDisturb,
-    FactoryReset,
-    Input,
-    Intl,
-    Light,
-    LightSensor,
-    NightMode,
-    Power,
-    Privacy,
-    Setup,
 }
 
 /// Returns all known setting types. New additions to SettingType should also

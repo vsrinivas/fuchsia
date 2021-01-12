@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingType,
     crate::handler::device_storage::testing::*,
     crate::input::common::MediaButtonsEventBuilder,
     crate::input::input_device_configuration::{
@@ -10,7 +11,7 @@ use {
     },
     crate::input::monitor_media_buttons,
     crate::service_context::ServiceContext,
-    crate::switchboard::base::{InputInfoSources, Microphone, SettingType},
+    crate::switchboard::base::{InputInfoSources, Microphone},
     crate::switchboard::input_types::{
         DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputState,
     },

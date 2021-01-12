@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingType;
 use crate::handler::base::{
     Command, Context, Environment, GenerateHandler, SettingHandlerFactory,
     SettingHandlerFactoryError, State,
@@ -9,7 +10,6 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{message, Payload};
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingType;
 use async_trait::async_trait;
 use futures::lock::Mutex;
 use futures::StreamExt;

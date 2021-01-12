@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingType;
 use crate::handler::base::{
     Command, Context, ControllerGenerateResult, Event, SettingHandlerResult, State,
 };
@@ -8,7 +9,7 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{message, reply, Payload};
 use crate::message::base::{Audience, MessageEvent};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest, SettingType};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;

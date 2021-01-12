@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::clock;
 use crate::internal::core;
 use crate::internal::switchboard;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType, SwitchboardError,
+    SettingAction, SettingActionData, SettingEvent, SettingRequest, SwitchboardError,
 };
 
 use anyhow::Error;

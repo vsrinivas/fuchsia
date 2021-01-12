@@ -5,9 +5,10 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
+    crate::base::SettingType,
     crate::config::base::ControllerFlag,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, Theme},
+    crate::switchboard::base::{DisplayInfo, LowLightMode, Theme},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,

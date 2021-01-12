@@ -4,13 +4,13 @@
 
 use crate::agent::base::{AgentError, Authority, BlueprintHandle, Context, Invocation, Lifespan};
 
+use crate::base::SettingType;
 use crate::internal::agent;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingType;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use std::collections::HashSet;

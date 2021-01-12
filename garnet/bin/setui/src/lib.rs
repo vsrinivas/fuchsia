@@ -13,6 +13,7 @@ use {
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::audio::policy::State,
+    crate::base::SettingType,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
@@ -43,7 +44,7 @@ use {
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources,
-        NightModeInfo, PrivacyInfo, SettingType, SetupInfo,
+        NightModeInfo, PrivacyInfo, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,

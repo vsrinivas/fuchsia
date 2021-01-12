@@ -17,13 +17,14 @@ use futures::FutureExt;
 use std::convert::TryInto;
 
 use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
+use crate::base::SettingType;
 use crate::fidl_process_policy;
 use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::internal::policy::{Address, Payload};
 use crate::policy::base as policy;
 use crate::shutdown_responder_with_error;
-use crate::switchboard::base::{FidlResponseErrorLogger, SettingType, SwitchboardError};
+use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_result_sender_for_responder!(

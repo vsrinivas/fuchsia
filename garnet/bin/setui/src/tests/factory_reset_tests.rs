@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
+use crate::base::SettingType;
 use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
-use crate::switchboard::base::{FactoryResetInfo, SettingType};
+use crate::switchboard::base::FactoryResetInfo;
 use crate::tests::fakes::recovery_policy_service::RecoveryPolicy;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;

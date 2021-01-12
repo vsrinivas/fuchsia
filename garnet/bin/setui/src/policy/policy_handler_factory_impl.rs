@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
 use crate::message::base::MessengerType;
 use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError};
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
-use crate::switchboard::base::SettingType;
 use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;

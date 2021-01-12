@@ -20,6 +20,28 @@ use crate::switchboard::base::{
 };
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightInfo;
+use serde::{Deserialize, Serialize};
+
+/// The setting types supported by the service.
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub enum SettingType {
+    Unknown,
+    Accessibility,
+    Account,
+    Audio,
+    Device,
+    Display,
+    DoNotDisturb,
+    FactoryReset,
+    Input,
+    Intl,
+    Light,
+    LightSensor,
+    NightMode,
+    Power,
+    Privacy,
+    Setup,
+}
 
 /// Enumeration over the possible info types available in the service.
 #[derive(PartialEq, Debug, Clone)]

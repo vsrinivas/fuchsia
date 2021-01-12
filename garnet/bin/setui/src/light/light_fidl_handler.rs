@@ -12,13 +12,13 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;
 use crate::light::light_controller::ARG_NAME;
 use crate::shutdown_responder_with_error;
+use crate::switchboard::base::SettingRequest;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
-use crate::switchboard::base::{SettingRequest, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {

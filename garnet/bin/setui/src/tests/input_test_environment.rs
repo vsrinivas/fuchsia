@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::base::BlueprintHandle;
+use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::*;
@@ -11,7 +12,7 @@ use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::input::input_controller::InputController;
 use crate::input::input_device_configuration::InputConfiguration;
-use crate::switchboard::base::{InputInfoSources, SettingType};
+use crate::switchboard::base::InputInfoSources;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 

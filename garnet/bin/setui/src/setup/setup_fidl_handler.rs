@@ -5,11 +5,9 @@
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::settings::RequestContext;
-use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingType, SetupInfo,
-};
+use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingRequest, SetupInfo};
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
 use std::convert::TryFrom;
 

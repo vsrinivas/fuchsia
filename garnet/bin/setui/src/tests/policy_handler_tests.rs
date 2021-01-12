@@ -5,6 +5,7 @@
 #[cfg(test)]
 use crate::audio::policy as audio;
 use crate::audio::policy::PolicyId;
+use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::persist::Storage;
@@ -14,7 +15,7 @@ use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
 use crate::policy::base::Request;
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, Transform};
-use crate::switchboard::base::{PrivacyInfo, SettingRequest, SettingType};
+use crate::switchboard::base::{PrivacyInfo, SettingRequest};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;

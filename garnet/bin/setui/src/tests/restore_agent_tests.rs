@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
+use crate::base::SettingType;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::internal::event::{self as event, message::Receptor, restore, Event};
 use crate::message::base::{MessageEvent, MessengerType};
-use crate::switchboard::base::{SettingRequest, SettingType};
+use crate::switchboard::base::SettingRequest;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::scaffold::event::subscriber::Blueprint;

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingInfo,
+    crate::base::{SettingInfo, SettingType},
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
-    crate::switchboard::base::*,
     fidl_fuchsia_settings::{DeviceMarker, DeviceRequest, DeviceSettings, DeviceWatchResponder},
 };
 

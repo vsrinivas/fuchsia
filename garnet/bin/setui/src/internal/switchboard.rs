@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::message_hub_definition;
-use crate::switchboard::base::{SettingRequest, SettingResponseResult, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingResponseResult};
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {

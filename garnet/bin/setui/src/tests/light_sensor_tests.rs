@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingType,
     crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::SettingType,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     anyhow::format_err,

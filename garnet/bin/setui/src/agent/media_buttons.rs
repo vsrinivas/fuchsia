@@ -5,6 +5,7 @@
 use crate::agent::base::{
     AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
 };
+use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
@@ -13,7 +14,7 @@ use crate::internal::event::{media_buttons, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingRequest, SettingType};
+use crate::switchboard::base::SettingRequest;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};

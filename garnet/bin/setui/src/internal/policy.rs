@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingType;
 use crate::message_hub_definition;
 use crate::policy::base::{response::Response, Request};
-use crate::switchboard::base::SettingType;
 use std::fmt::Debug;
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]

@@ -4,7 +4,7 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
-    crate::base::SettingInfo,
+    crate::base::{SettingInfo, SettingType},
     crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
@@ -18,7 +18,7 @@ use {
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest, SettingType,
+        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
     },
     crate::EnvironmentBuilder,
     async_trait::async_trait,

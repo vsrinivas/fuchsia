@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::audio::policy::{PolicyId, Request, Response};
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::core;
@@ -16,7 +16,7 @@ use crate::policy::policy_handler::{PolicyHandler, Transform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::switchboard::base::{
-    PrivacyInfo, SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
+    PrivacyInfo, SettingAction, SettingActionData, SettingEvent, SettingRequest,
 };
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;

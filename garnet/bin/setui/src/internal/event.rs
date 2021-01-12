@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::agent;
+use crate::base::SettingType;
 use crate::message::base::{Audience, MessengerType};
 use crate::message_hub_definition;
-use crate::switchboard::base::SettingType;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -83,7 +83,7 @@ pub mod media_buttons {
 }
 
 pub mod restore {
-    use crate::switchboard::base::SettingType;
+    use crate::base::SettingType;
 
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum Event {

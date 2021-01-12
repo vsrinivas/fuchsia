@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::{SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -13,7 +13,7 @@ use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::ButtonType;
 use crate::switchboard::base::{
-    ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest, SettingType,
+    ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
 };
 use crate::switchboard::input_types::{
     DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputState,

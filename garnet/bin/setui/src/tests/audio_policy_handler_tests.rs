@@ -8,6 +8,7 @@ use crate::audio::policy::{
     self as audio, PolicyId, PropertyTarget, Response, State, StateBuilder, Transform,
     TransformFlags,
 };
+use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
@@ -17,7 +18,7 @@ use crate::message::base::MessengerType;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::{response::Payload, Request};
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler};
-use crate::switchboard::base::{AudioStreamType, SettingType};
+use crate::switchboard::base::AudioStreamType;
 use futures::lock::Mutex;
 use matches::assert_matches;
 use std::sync::Arc;

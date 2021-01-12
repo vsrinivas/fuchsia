@@ -11,6 +11,7 @@ use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
 use crate::agent::base::BlueprintHandle;
+use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::*;
@@ -20,7 +21,6 @@ use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::input::common::MediaButtonsEventBuilder;
 use crate::light::light_controller::LightController;
 use crate::light::light_hardware_configuration::{DisableConditions, LightGroupConfiguration};
-use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{
     ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,
 };

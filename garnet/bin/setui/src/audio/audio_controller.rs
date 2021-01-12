@@ -4,7 +4,7 @@
 use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,

@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingType,
     crate::call_async,
     crate::handler::base::SettingHandlerResult,
     crate::handler::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::{SettingRequest, SettingType},
+    crate::switchboard::base::SettingRequest,
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingInfo,
+    crate::base::{SettingInfo, SettingType},
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
-    crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError},
+    crate::switchboard::base::{SettingRequest, SwitchboardError},
     anyhow::Error,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,

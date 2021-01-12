@@ -15,7 +15,7 @@ use futures::StreamExt;
 
 use async_trait::async_trait;
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{
     Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerFactoryError,
     SettingHandlerResult, State,
@@ -27,9 +27,7 @@ use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
-};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const SETTING_PROXY_TIMEOUT_MS: i64 = 1;

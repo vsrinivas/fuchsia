@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
-/// The Restore Agent is responsible for signaling to all components to restore
-/// external sources to the last known value. It is invoked during startup.
+use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessageEvent};
-use crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError};
+use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
@@ -18,6 +17,8 @@ use std::collections::HashSet;
 
 blueprint_definition!("restore_agent", crate::agent::restore_agent::RestoreAgent::create);
 
+/// The Restore Agent is responsible for signaling to all components to restore
+/// external sources to the last known value. It is invoked during startup.
 #[derive(Debug)]
 pub struct RestoreAgent {
     switchboard_messenger: switchboard::message::Messenger,

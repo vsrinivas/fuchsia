@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingType,
     crate::call,
     crate::handler::setting_handler::ControllerError,
     crate::internal::event::{Event, Publisher},
     crate::service_context::ExternalServiceProxy,
-    crate::switchboard::base::{AudioStream, SettingType},
+    crate::switchboard::base::AudioStream,
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
     fidl_fuchsia_media_audio::VolumeControlProxy,

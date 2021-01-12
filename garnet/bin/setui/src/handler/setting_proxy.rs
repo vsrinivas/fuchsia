@@ -16,14 +16,12 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::internal::core;
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
-use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
-};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 use fuchsia_zircon::Duration;
 
 #[derive(Clone, Debug)]

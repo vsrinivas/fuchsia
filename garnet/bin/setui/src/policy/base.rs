@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::audio::policy as audio;
+use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
 use crate::policy::policy_handler::PolicyHandler;
-use crate::switchboard::base::SettingType;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;

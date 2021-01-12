@@ -6,15 +6,14 @@ use anyhow::Error;
 use fuchsia_async::Task;
 use futures::StreamExt;
 
+use crate::base::SettingType;
 use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::policy::base::{PolicyHandlerFactory, Request};
 use crate::policy::policy_handler::{PolicyHandler, Transform};
-use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
-};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 use futures::lock::Mutex;
 use std::sync::Arc;
 

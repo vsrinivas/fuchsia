@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 use {
+    crate::base::SettingType,
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::SettingType,
     crate::AgentConfiguration,
     crate::EnabledServicesConfiguration,
     crate::EnvironmentBuilder,

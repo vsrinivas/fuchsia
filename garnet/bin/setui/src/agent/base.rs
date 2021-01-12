@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingType;
 use crate::internal::agent::message::Receptor;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::MessengerType;
 use crate::monitor;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingType;
 use anyhow::Error;
 use async_trait::async_trait;
 use core::fmt::Debug;

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::base::SettingInfo,
+    crate::base::{SettingInfo, SettingType},
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
-        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingType, Theme, ThemeMode,
-        ThemeType,
+        FidlResponseErrorLogger, LowLightMode, SettingRequest, Theme, ThemeMode, ThemeType,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{

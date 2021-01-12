@@ -186,9 +186,9 @@ async fn get_sensor_data(sensor: &Sensor) -> LightData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::SettingType;
     use crate::display::light_sensor::testing;
     use crate::service_context::{ExternalServiceProxy, ServiceContext};
-    use crate::switchboard::base::SettingType;
     use fidl_fuchsia_input_report::{InputReport, InputReportsReaderReadInputReportsResponder};
     use futures::channel::mpsc::UnboundedSender;
     use std::sync::atomic::{AtomicBool, Ordering};

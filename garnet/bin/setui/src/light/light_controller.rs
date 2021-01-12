@@ -5,7 +5,7 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -16,7 +16,7 @@ use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest, SettingType};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest};
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;

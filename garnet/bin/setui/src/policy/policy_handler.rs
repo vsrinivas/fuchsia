@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingType;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core;
 use crate::policy::base::response::{Error as PolicyError, Response};
 use crate::policy::base::{BoxedHandler, Context, GenerateHandlerResult, Request};
-use crate::switchboard::base::{SettingRequest, SettingType};
+use crate::switchboard::base::SettingRequest;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
