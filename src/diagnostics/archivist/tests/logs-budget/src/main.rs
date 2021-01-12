@@ -35,6 +35,7 @@ use tracing::{debug, info};
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/archivist-with-small-caches.cmx";
 const PUPPET_URL: &str = "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet.cmx";
+const PUPPET_MONIKER: &str = "socket-puppet.cmx";
 
 static HAVE_REQUESTED_STOP: AtomicBool = AtomicBool::new(false);
 
@@ -75,7 +76,7 @@ async fn main() {
     info!("observe the puppet appears in archivist's inspect output");
     until_archivist_state_matches(
         &reader,
-        &[LogSource { url: PUPPET_URL, messages: Count { total: 0, dropped: 0 } }],
+        &[LogSource { moniker: PUPPET_MONIKER, messages: Count { total: 0, dropped: 0 } }],
     )
     .await;
 
@@ -93,7 +94,7 @@ async fn main() {
         until_archivist_state_matches(
             &reader,
             &[LogSource {
-                url: PUPPET_URL,
+                moniker: PUPPET_MONIKER,
                 messages: Count { total: messages_sent, dropped: expected_dropped_count },
             }],
         )
@@ -181,21 +182,21 @@ async fn serve_controller(
 }
 
 struct LogSource {
-    url: &'static str,
+    moniker: &'static str,
     messages: Count,
 }
 
 async fn until_archivist_state_matches(reader: &ArchiveReader, expected_sources: &[LogSource]) {
     let expected_sources = expected_sources
         .iter()
-        .map(|source| (source.url.to_string(), source.messages))
+        .map(|source| (source.moniker.to_string(), source.messages))
         .collect::<BTreeMap<String, Count>>();
 
     loop {
         // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
         let results = reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
         let payload = results.payload.as_ref().unwrap();
-        let observed_sources = get_log_counts_by_url(&payload);
+        let observed_sources = get_log_counts_by_moniker(&payload);
         if observed_sources == expected_sources {
             break;
         } else {
@@ -212,16 +213,15 @@ struct Count {
     dropped: u64,
 }
 
-fn get_log_counts_by_url(root: &DiagnosticsHierarchy) -> BTreeMap<String, Count> {
+fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Count> {
     let mut counts = BTreeMap::new();
     let sources = root.get_child("sources").unwrap();
 
-    for (_moniker, source) in sources.get_children() {
+    for (moniker, source) in sources.get_children() {
         if let Some(logs) = source.get_child("logs") {
-            let url = source.get_property("url").unwrap().string().unwrap().to_string();
             let total = *logs.get_property("total").unwrap().uint().unwrap();
             let dropped = *logs.get_property("dropped").unwrap().uint().unwrap();
-            counts.insert(url, Count { total, dropped });
+            counts.insert(moniker.clone(), Count { total, dropped });
         }
     }
 
