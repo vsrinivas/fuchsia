@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::{
         error::Error as BtError,
+        profile::{Attribute, ProtocolDescriptor},
         types::{Channel, PeerId},
     },
     futures::{
@@ -33,12 +34,12 @@ use crate::{
 pub enum ProfileEvent {
     /// A Bluetooth peer has requested a new HFP connection with the specified protocol
     /// descriptor information.
-    ConnectionRequest { id: PeerId, protocol: Vec<bredr::ProtocolDescriptor>, channel: Channel },
+    ConnectionRequest { id: PeerId, protocol: Vec<ProtocolDescriptor>, channel: Channel },
     /// A Bluetooth peer has SDP records that meet the Profile's search for HFP Handsfree devices.
     SearchResult {
         id: PeerId,
-        protocol: Option<Vec<bredr::ProtocolDescriptor>>,
-        attributes: Vec<bredr::Attribute>,
+        protocol: Option<Vec<ProtocolDescriptor>>,
+        attributes: Vec<Attribute>,
     },
 }
 
@@ -112,6 +113,8 @@ impl Profile {
             request;
         let id: PeerId = peer_id.into();
         let channel: Channel = channel.try_into().map_err(Error::profile_connection_receiver)?;
+        let protocol: Vec<ProtocolDescriptor> =
+            protocol.iter().map(ProtocolDescriptor::from).collect();
         trace!("Connection Request from {:?} - protocol {:#?}", peer_id, protocol);
         // TODO (fxbug.dev/66592): Validate protocol
         Ok(ProfileEvent::ConnectionRequest { id, channel, protocol })
@@ -122,6 +125,8 @@ impl Profile {
             request;
         let id: PeerId = peer_id.into();
         responder.send().map_err(Error::profile_search_results)?;
+        let protocol = protocol.map(|p| p.iter().map(ProtocolDescriptor::from).collect());
+        let attributes = attributes.iter().map(Attribute::from).collect();
         trace!("Discovered {:?} - protocol {:#?}, attributes {:#?}", peer_id, protocol, attributes);
         Ok(ProfileEvent::SearchResult { id, protocol, attributes })
     }
@@ -383,7 +388,10 @@ mod tests {
             source,
         })) = event
         {
-            assert!(source.is::<AdvertisementTerminated>(), "unexpected error polling Profile Stream");
+            assert!(
+                source.is::<AdvertisementTerminated>(),
+                "unexpected error polling Profile Stream"
+            );
         } else {
             panic!("unexpected result from Profile stream: {:?}", event);
         }
