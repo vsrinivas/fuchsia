@@ -2,8 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
+bind_rules("aml_i2c_bind") {
+  rules = "aml_i2c.bind"
+  output = "aml_i2c_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":aml_i2c_bind_test" ]
+}
 driver_module("aml-i2c") {
   configs += [
     "//build/config:all_source",
@@ -12,15 +27,13 @@ driver_module("aml-i2c") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-i2c.c" ]
   deps = [
+    ":aml_i2c_bind",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/trace:trace-driver",
   ]

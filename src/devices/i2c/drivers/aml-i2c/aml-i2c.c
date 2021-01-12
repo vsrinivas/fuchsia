@@ -18,13 +18,14 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
 #include <hw/reg.h>
+
+#include "src/devices/i2c/drivers/aml-i2c/aml_i2c_bind.h"
 
 #define I2C_ERROR_SIGNAL ZX_USER_SIGNAL_0
 #define I2C_TXN_COMPLETE_SIGNAL ZX_USER_SIGNAL_1
@@ -511,8 +512,4 @@ static zx_driver_ops_t aml_i2c_driver_ops = {
     .bind = aml_i2c_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(aml_i2c, aml_i2c_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_I2C), ZIRCON_DRIVER_END(aml_i2c)
+ZIRCON_DRIVER(aml_i2c, aml_i2c_driver_ops, "zircon", "0.1");
