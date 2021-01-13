@@ -29,9 +29,15 @@ class SwapchainCopySurface : public ImagePipeSurface {
  public:
   SwapchainCopySurface();
 
+#if defined(VK_USE_PLATFORM_FUCHSIA)
   bool OnCreateSurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
                        const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
                        const VkAllocationCallbacks* pAllocator) override;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  bool OnCreateSurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
+                       const VkWaylandSurfaceCreateInfoKHR* pCreateInfo,
+                       const VkAllocationCallbacks* pAllocator) override;
+#endif
 
   void OnDestroySurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
                         const VkAllocationCallbacks* pAllocator) override;
@@ -57,8 +63,9 @@ class SwapchainCopySurface : public ImagePipeSurface {
 
   void RemoveImage(uint32_t image_id) override;
 
-  void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                    std::vector<zx::event> release_fences, VkQueue queue) override;
+  void PresentImage(uint32_t image_id, std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+                    std::vector<std::unique_ptr<PlatformEvent>> release_fences,
+                    VkQueue queue) override;
 
   SupportedImageProperties& GetSupportedImageProperties() override;
 

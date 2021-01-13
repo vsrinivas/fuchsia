@@ -8,7 +8,7 @@
 #include "vulkan/vk_layer.h"
 
 #define LOG_VERBOSE(msg, ...) \
-  if (false)                  \
+  if (true)                   \
   fprintf(stderr, "%s:%d " msg "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace image_pipe_swapchain {
@@ -36,14 +36,26 @@ VkResult SwapchainCopySurface::GetPresentModes(VkPhysicalDevice physicalDevice,
                                                                  pPresentModes);
 }
 
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 bool SwapchainCopySurface::OnCreateSurface(VkInstance instance,
                                            VkLayerInstanceDispatchTable* dispatch_table,
                                            const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
                                            const VkAllocationCallbacks* pAllocator) {
   VkResult result =
       dispatch_table->CreateImagePipeSurfaceFUCHSIA(instance, pCreateInfo, pAllocator, &surface_);
+
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+bool SwapchainCopySurface::OnCreateSurface(VkInstance instance,
+                                           VkLayerInstanceDispatchTable* dispatch_table,
+                                           const VkWaylandSurfaceCreateInfoKHR* pCreateInfo,
+                                           const VkAllocationCallbacks* pAllocator) {
+  VkResult result =
+      dispatch_table->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, &surface_);
+
+#endif
+
   if (result != VK_SUCCESS) {
-    LOG_VERBOSE("CreateImagePipeSurfaceFUCHSIA failed: %d", result);
+    LOG_VERBOSE("CreateSurface failed: %d", result);
     return false;
   }
 
@@ -309,8 +321,10 @@ void SwapchainCopySurface::RemoveImage(uint32_t image_id) {
   // Empty
 }
 
-void SwapchainCopySurface::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                                        std::vector<zx::event> release_fences, VkQueue queue) {
+void SwapchainCopySurface::PresentImage(uint32_t image_id,
+                                        std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+                                        std::vector<std::unique_ptr<PlatformEvent>> release_fences,
+                                        VkQueue queue) {
   // We submit a command buffer to copy from the rendered image into the backend swapchain
   // image. The command buffer ignores acquire_fences because we're guaranteed ordering on the
   // queue, so we wait only on the backend swapchain acquire semaphore. The command buffer signals
@@ -362,17 +376,10 @@ void SwapchainCopySurface::PresentImage(uint32_t image_id, std::vector<zx::event
     // Import src release semaphore
     assert(release_fences.size() == 1);
 
-    VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .semaphore = src_image.release_semaphore,
-        .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
-        .handle = release_fences[0].release()};
-
-    VkResult result = dispatch_table()->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
+    VkResult result = release_fences[0]->ImportToSemaphore(device_, dispatch_table(),
+                                                           src_image.release_semaphore);
     if (result != VK_SUCCESS) {
-      LOG_VERBOSE("ImportSemaphoreZirconHandleFUCHSIA failed: %d", result);
+      LOG_VERBOSE("ImportToSemaphore failed: %d", result);
       return;
     }
 

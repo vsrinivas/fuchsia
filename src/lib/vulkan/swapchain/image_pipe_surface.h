@@ -13,6 +13,8 @@
 #include <vulkan/vk_layer.h>
 #include <vulkan/vulkan.h>
 
+#include "platform_event.h"
+
 struct VkLayerDispatchTable_;
 using VkLayerDispatchTable = struct VkLayerDispatchTable_;
 
@@ -66,14 +68,24 @@ class ImagePipeSurface {
                            const VkAllocationCallbacks* pAllocator,
                            std::vector<ImageInfo>* image_info_out) = 0;
   virtual void RemoveImage(uint32_t image_id) = 0;
-  virtual void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                            std::vector<zx::event> release_fences, VkQueue queue) = 0;
+  virtual void PresentImage(uint32_t image_id,
+                            std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+                            std::vector<std::unique_ptr<PlatformEvent>> release_fences,
+                            VkQueue queue) = 0;
 
+#if defined(VK_USE_PLATFORM_FUCHSIA)
   virtual bool OnCreateSurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
                                const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
                                const VkAllocationCallbacks* pAllocator) {
     return true;
   }
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  virtual bool OnCreateSurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
+                               const VkWaylandSurfaceCreateInfoKHR* pCreateInfo,
+                               const VkAllocationCallbacks* pAllocator) {
+    return true;
+  }
+#endif
 
   virtual void OnDestroySurface(VkInstance instance, VkLayerInstanceDispatchTable* dispatch_table,
                                 const VkAllocationCallbacks* pAllocator) {}

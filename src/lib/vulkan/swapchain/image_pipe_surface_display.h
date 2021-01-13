@@ -34,8 +34,9 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
 
   void RemoveImage(uint32_t image_id) override;
 
-  void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                    std::vector<zx::event> release_fences, VkQueue queue) override;
+  void PresentImage(uint32_t image_id, std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+                    std::vector<std::unique_ptr<PlatformEvent>> release_fences,
+                    VkQueue queue) override;
 
   SupportedImageProperties& GetSupportedImageProperties() override;
 

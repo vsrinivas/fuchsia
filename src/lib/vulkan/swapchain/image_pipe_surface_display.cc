@@ -464,10 +464,11 @@ void ImagePipeSurfaceDisplay::RemoveImage(uint32_t image_id) {
   }
 }
 
-void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::event> wait_events,
-                                           std::vector<zx::event> signal_events, VkQueue queue) {
-  assert(wait_events.size() <= 1);
-  assert(signal_events.size() <= 1);
+void ImagePipeSurfaceDisplay::PresentImage(
+    uint32_t image_id, std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+    std::vector<std::unique_ptr<PlatformEvent>> release_fences, VkQueue queue) {
+  assert(acquire_fences.size() <= 1);
+  assert(release_fences.size() <= 1);
 
   auto iter = image_id_map.find(image_id);
   if (iter == image_id_map.end()) {
@@ -476,9 +477,10 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
   }
 
   uint64_t wait_event_id = fuchsia::hardware::display::INVALID_DISP_ID;
-  if (wait_events.size()) {
+  if (acquire_fences.size()) {
+    zx::event event = static_cast<FuchsiaEvent*>(acquire_fences[0].get())->Take();
+
     zx_info_handle_basic_t info;
-    zx::event event = std::move(wait_events[0]);
     zx_status_t status =
         event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
@@ -494,9 +496,10 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
   }
 
   uint64_t signal_event_id = fuchsia::hardware::display::INVALID_DISP_ID;
-  if (signal_events.size()) {
+  if (release_fences.size()) {
+    zx::event event = static_cast<FuchsiaEvent*>(release_fences[0].get())->Take();
+
     zx_info_handle_basic_t info;
-    zx::event event = std::move(signal_events[0]);
     zx_status_t status =
         event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {

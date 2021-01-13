@@ -251,19 +251,33 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
   }
 }
 
-void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
-                                         std::vector<zx::event> release_fences, VkQueue queue) {
+void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id,
+                                         std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
+                                         std::vector<std::unique_ptr<PlatformEvent>> release_fences,
+                                         VkQueue queue) {
   std::lock_guard<std::mutex> lock(mutex_);
   TRACE_FLOW_BEGIN("gfx", "image_pipe_swapchain_to_present", image_id);
 
   std::vector<std::unique_ptr<FenceSignaler>> release_fence_signalers;
   release_fence_signalers.reserve(release_fences.size());
+
   for (auto& fence : release_fences) {
-    release_fence_signalers.push_back(std::make_unique<FenceSignaler>(std::move(fence)));
+    zx::event event = static_cast<FuchsiaEvent*>(fence.get())->Take();
+    release_fence_signalers.push_back(std::make_unique<FenceSignaler>(std::move(event)));
   }
+
   if (channel_closed_)
     return;
-  queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fence_signalers)});
+
+  std::vector<zx::event> acquire_events;
+  acquire_events.reserve(acquire_fences.size());
+  for (auto& fence : acquire_fences) {
+    zx::event event = static_cast<FuchsiaEvent*>(fence.get())->Take();
+    acquire_events.push_back(std::move(event));
+  }
+
+  queue_.push_back({image_id, std::move(acquire_events), std::move(release_fence_signalers)});
+
   if (!present_pending_) {
     async::PostTask(loop_.dispatcher(), [this]() {
       std::lock_guard<std::mutex> lock(mutex_);

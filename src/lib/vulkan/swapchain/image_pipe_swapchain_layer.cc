@@ -8,7 +8,13 @@
 
 #include "swapchain_copy_surface.h"  // nogncheck
 
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 #define SWAPCHAIN_SURFACE_NAME "VK_LAYER_FUCHSIA_imagepipe_swapchain_copy"
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#define SWAPCHAIN_SURFACE_NAME "VK_LAYER_wayland_swapchain_copy"
+#else
+#error Unsupported
+#endif
 
 #elif USE_IMAGEPIPE_SURFACE_FB
 
@@ -37,7 +43,10 @@ constexpr bool kSkipPresent = false;
 #endif
 
 #include <assert.h>
+#if defined(__Fuchsia__)
 #include <lib/trace/event.h>
+#endif
+
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
@@ -67,7 +76,11 @@ static const VkExtensionProperties instance_extensions[] = {
         .specVersion = 25,
     },
     {
+#if defined(VK_USE_PLATFOM_FUCHSIA)
         .extensionName = VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#endif
         .specVersion = 1,
     }};
 
@@ -89,7 +102,7 @@ struct ImagePipeImage {
 };
 
 struct PendingImageInfo {
-  zx::event release_fence;
+  std::unique_ptr<PlatformEvent> release_fence;
   uint32_t image_index;
 };
 
@@ -174,14 +187,14 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
     }
     semaphores_.push_back(semaphore);
 
-    zx::event release_fence;
-    zx_status_t status = zx::event::create(0, &release_fence);
-    if (status != ZX_OK) {
-      fprintf(stderr, "zx::event::create failed: %d\n", status);
+    auto release_fence = PlatformEvent::Create(device, pDisp,
+                                               true  // signaled
+    );
+    if (!release_fence) {
+      fprintf(stderr, "PlatformEvent::Create failed\n");
       return VK_ERROR_DEVICE_LOST;
     }
 
-    release_fence.signal(0, ZX_EVENT_SIGNALED);
     pending_images_.push_back({std::move(release_fence), i});
   }
 
@@ -293,59 +306,49 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
 
   bool wait_for_release_fence = false;
 
+  LayerData* layer_data = GetLayerDataPtr(get_dispatch_key(device_), layer_data_map);
+
   if (semaphore == VK_NULL_HANDLE) {
     wait_for_release_fence = true;
   } else {
-    zx_handle_t handle;
+    std::unique_ptr<PlatformEvent> event;
 
     if (surface()->CanPresentPendingImage()) {
-      handle = pending_images_[0].release_fence.release();
+      event = std::move(pending_images_[0].release_fence);
     } else {
-      zx::event signaled_event;
-      zx_status_t status = zx::event::create(0, &signaled_event);
-      if (status != ZX_OK) {
-        fprintf(stderr, "event::create failed");
+      event = PlatformEvent::Create(device_, layer_data->device_dispatch_table.get(),
+                                    true  // signaled
+      );
+      if (!event) {
+        fprintf(stderr, "PlatformEvent::Create failed");
         return VK_SUCCESS;
       }
-      signaled_event.signal(0, ZX_EVENT_SIGNALED);
-      handle = signaled_event.release();
       wait_for_release_fence = true;
     }
 
-    VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .semaphore = semaphore,
-        .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
-        .handle = handle};
-
-    VkLayerDispatchTable* pDisp =
-        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)->device_dispatch_table.get();
-    VkResult result = pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
+    VkResult result =
+        event->ImportToSemaphore(device_, layer_data->device_dispatch_table.get(), semaphore);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "semaphore import failed: %d", result);
+      fprintf(stderr, "ImportToSemaphore failed: %d\n", result);
       return VK_SUCCESS;
     }
   }
 
   if (wait_for_release_fence) {
     // Wait for image to become available.
-    zx_signals_t pending;
-    zx_status_t status = pending_images_[0].release_fence.wait_one(
-        ZX_EVENT_SIGNALED,
-        timeout_ns == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::nsec(timeout_ns)),
-        &pending);
+    PlatformEvent::WaitResult result = pending_images_[0].release_fence->Wait(
+        device_, layer_data->device_dispatch_table.get(), timeout_ns);
+
     if (surface_->IsLost())
       return VK_ERROR_SURFACE_LOST_KHR;
 
-    if (status == ZX_ERR_TIMED_OUT)
+    if (result == PlatformEvent::WaitResult::TimedOut)
       return timeout_ns == 0ul ? VK_NOT_READY : VK_TIMEOUT;
-    if (status != ZX_OK) {
-      fprintf(stderr, "event::wait_one returned %d", status);
+
+    if (result != PlatformEvent::WaitResult::Ok) {
+      fprintf(stderr, "PlatformEvent::WaitResult failed %d\n", result);
       return VK_ERROR_DEVICE_LOST;
     }
-    assert(pending & ZX_EVENT_SIGNALED);
   }
 
   *pImageIndex = pending_images_[0].image_index;
@@ -376,34 +379,21 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table.get();
 
-  zx::event acquire_fence;
-  zx_status_t status = zx::event::create(0, &acquire_fence);
-  if (status != ZX_OK) {
-    fprintf(stderr, "zx::event::create failed: %d\n", status);
+  auto acquire_fence = PlatformEvent::Create(device_, pDisp, false);
+  if (!acquire_fence) {
+    fprintf(stderr, "PlatformEvent::Create failed\n");
     return VK_ERROR_DEVICE_LOST;
   }
 
-  zx::event image_acquire_fence;
-  status = acquire_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_acquire_fence);
-  if (status != ZX_OK) {
-    fprintf(stderr,
-            "failed to duplicate acquire fence, "
-            "zx::event::duplicate() failed with status %d",
-            status);
+  auto image_acquire_fence = acquire_fence->Duplicate(device_, pDisp);
+  if (!image_acquire_fence) {
+    fprintf(stderr, "failed to duplicate acquire fence");
     return VK_ERROR_DEVICE_LOST;
   }
 
-  VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-      .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
-      .pNext = nullptr,
-      .semaphore = semaphores_[index],
-      .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
-      .handle = image_acquire_fence.release()};
-
-  VkResult result = pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
+  VkResult result = image_acquire_fence->ImportToSemaphore(device_, pDisp, semaphores_[index]);
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "semaphore import failed: %d", result);
+    fprintf(stderr, "ImportToSemaphore failed: %d\n", result);
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
@@ -434,34 +424,30 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
   if (kSkipPresent) {
     pending_images_.push_back({std::move(acquire_fence), index});
   } else {
-    zx::event release_fence;
-
-    zx_status_t status = zx::event::create(0, &release_fence);
-    if (status != ZX_OK) {
-      fprintf(stderr, "zx::event::create failed: %d\n", status);
+    auto release_fence = PlatformEvent::Create(device_, pDisp, false);
+    if (!release_fence) {
+      fprintf(stderr, "PlatformEvent::Create failed\n");
       return VK_ERROR_DEVICE_LOST;
     }
 
-    zx::event image_release_fence;
-    status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_release_fence);
-    if (status != ZX_OK) {
-      fprintf(stderr,
-              "failed to duplicate release fence, "
-              "zx::event::duplicate() failed with status %d",
-              status);
+    auto image_release_fence = release_fence->Duplicate(device_, pDisp);
+    if (!image_release_fence) {
+      fprintf(stderr, "failed to duplicate release fence");
       return VK_ERROR_DEVICE_LOST;
     }
 
     pending_images_.push_back({std::move(image_release_fence), index});
 
-    std::vector<zx::event> acquire_fences;
+    std::vector<std::unique_ptr<PlatformEvent>> acquire_fences;
     acquire_fences.push_back(std::move(acquire_fence));
 
-    std::vector<zx::event> release_fences;
+    std::vector<std::unique_ptr<PlatformEvent>> release_fences;
     release_fences.push_back(std::move(release_fence));
 
+#if defined(__Fuchsia__)
     TRACE_DURATION("gfx", "ImagePipeSwapchain::Present", "swapchain_image_index", index, "image_id",
                    images_[index].id);
+#endif
     surface()->PresentImage(images_[index].id, std::move(acquire_fences), std::move(release_fences),
                             queue);
   }
@@ -493,15 +479,25 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
   return VK_SUCCESS;
 }
 
+#if defined(VK_USE_PLATFORM_FUCHSIA)
 VKAPI_ATTR VkResult VKAPI_CALL CreateImagePipeSurfaceFUCHSIA(
     VkInstance instance, const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+VKAPI_ATTR VkResult VKAPI_CALL
+CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo,
+                        const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
+
+#else
+#error Unsupported
+#endif
+
 #if USE_SWAPCHAIN_SURFACE_COPY
   auto out_surface = std::make_unique<SwapchainCopySurface>();
 #elif USE_IMAGEPIPE_SURFACE_FB
   auto out_surface = std::make_unique<ImagePipeSurfaceDisplay>();
 #else
-  auto out_surface = std::make_unique<ImagePipeSurfaceAsync>(pCreateInfo->imagePipeHandle);
+auto out_surface = std::make_unique<ImagePipeSurfaceAsync>(pCreateInfo->imagePipeHandle);
 #endif
 
   if (!out_surface->Init()) {
@@ -638,9 +634,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   void* gpu_key = get_dispatch_key(gpu);
   LayerData* gpu_layer_data = GetLayerDataPtr(gpu_key, layer_data_map);
 
-  bool external_memory_extension_available = false;
   bool external_semaphore_extension_available = false;
+#if defined(VK_USE_PLATFORM_FUCHSIA)
+  bool external_memory_extension_available = false;
   bool fuchsia_buffer_collection_extension_available = false;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  bool external_fence_extension_available = false;
+#endif
   uint32_t device_extension_count;
   VkResult result = gpu_layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
       gpu, nullptr, &device_extension_count, nullptr);
@@ -650,6 +650,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
         gpu, nullptr, &device_extension_count, device_extensions.data());
     if (result == VK_SUCCESS) {
       for (uint32_t i = 0; i < device_extension_count; i++) {
+#if defined(VK_USE_PLATFORM_FUCHSIA)
         if (!strcmp(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
           external_memory_extension_available = true;
@@ -662,16 +663,24 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                     device_extensions[i].extensionName)) {
           fuchsia_buffer_collection_extension_available = true;
         }
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+                    device_extensions[i].extensionName)) {
+          external_semaphore_extension_available = true;
+        }
+        if (!strcmp(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME, device_extensions[i].extensionName)) {
+          external_fence_extension_available = true;
+        }
+#endif
       }
     }
   }
-  if (!external_memory_extension_available) {
-    fprintf(stderr, "Device extension not available: %s\n",
-            VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
-  }
   if (!external_semaphore_extension_available) {
-    fprintf(stderr, "Device extension not available: %s\n",
-            VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+    fprintf(stderr, "External semaphore extension not available\n");
+  }
+#if defined(VK_USE_PLATFORM_FUCHSIA)
+  if (!external_memory_extension_available) {
+    fprintf(stderr, "External memory extension not available\n");
   }
   if (!fuchsia_buffer_collection_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
@@ -679,15 +688,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
   if (!external_memory_extension_available || !external_semaphore_extension_available)
     return VK_ERROR_INITIALIZATION_FAILED;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  if (!external_fence_extension_available) {
+    fprintf(stderr, "External fence extension not available\n");
+  }
+  if (!external_semaphore_extension_available || !external_fence_extension_available)
+    return VK_ERROR_INITIALIZATION_FAILED;
+#endif
 
   VkDeviceCreateInfo create_info = *pCreateInfo;
   std::vector<const char*> enabled_extensions;
   for (uint32_t i = 0; i < create_info.enabledExtensionCount; i++) {
     enabled_extensions.push_back(create_info.ppEnabledExtensionNames[i]);
   }
+#if defined(VK_USE_PLATFORM_FUCHSIA)
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  enabled_extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME);
+#endif
   create_info.enabledExtensionCount = to_uint32(enabled_extensions.size());
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 
@@ -853,8 +874,13 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char* name)
     return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR);
   if (!strcmp("GetPhysicalDeviceSurfacePresentModesKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR);
+#if defined(VK_USE_PLATFORM_FUCHSIA)
   if (!strcmp("CreateImagePipeSurfaceFUCHSIA", name))
     return reinterpret_cast<PFN_vkVoidFunction>(CreateImagePipeSurfaceFUCHSIA);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+  if (!strcmp("CreateWaylandSurfaceKHR", name))
+    return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
+#endif
   if (!strcmp("DestroySurfaceKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR);
   if (!strcmp(name, "CreateDebugUtilsMessengerEXT"))
