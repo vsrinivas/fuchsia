@@ -5686,6 +5686,7 @@ rust_library("proc-macro2-v1_0_24") {
     "--cfg=feature=\"proc-macro\"",
     "--cfg=feature=\"span-locations\"",
     "--cfg=span_locations",
+    "--cfg=lexerror_display",
     "--cfg=hygiene",
     "--cfg=use_proc_macro",
     "--cfg=wrap_proc_macro",
