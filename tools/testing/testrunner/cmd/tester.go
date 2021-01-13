@@ -490,6 +490,11 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 	}, nil
 }
 
+// Exposed for testability.
+var newTestStartedContext = func(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, time.Second)
+}
+
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
 	if err != nil {
@@ -497,8 +502,23 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 	}
 	cmd := asSerialCmd(command)
 	logger.Debugf(ctx, "starting: %v", command)
-	if _, err := io.WriteString(t.socket, cmd); err != nil {
-		return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+
+	startedReader := iomisc.NewMatchingReader(t.socket, [][]byte{[]byte(runtests.StartedSignature + test.Name)})
+	for ctx.Err() == nil {
+		if _, err := io.WriteString(t.socket, cmd); err != nil {
+			return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+		}
+		startedCtx, cancel := newTestStartedContext(ctx)
+		_, err := iomisc.ReadUntilMatch(startedCtx, startedReader)
+		cancel()
+		if err == nil {
+			break
+		}
+		logger.Warningf(ctx, "test not started after timeout, retrying")
+	}
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	success, err := runtests.TestPassed(ctx, t.socket, test.Name)
