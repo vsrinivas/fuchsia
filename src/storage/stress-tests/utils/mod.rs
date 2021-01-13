@@ -91,13 +91,14 @@ pub async fn run_test<I: InstanceUnderTest, E: Environment<I>>(mut env: E) {
     }
 
     let mut actors = env.actors().await;
+
     let target_operations = env.target_operations().unwrap_or(u64::MAX);
     let (mut counter_task, counter_tx) = start_counter(target_operations);
     let mut instance_id: u64 = 0;
-    let timeout_secs = env.timeout_seconds().unwrap_or(u64::MAX);
 
-    // Put a timeout on the test loop
-    async move {
+    let timeout_secs = env.timeout_seconds();
+
+    let test_loop = async move {
         loop {
             debug!("Creating instance-under-test #{}", instance_id);
             let instance = env.new_instance().await;
@@ -137,9 +138,16 @@ pub async fn run_test<I: InstanceUnderTest, E: Environment<I>>(mut env: E) {
             }
             instance_id += 1;
         }
+    };
+
+    if let Some(timeout_secs) = timeout_secs {
+        // Put a timeout on the test loop
+        test_loop
+            .on_timeout(Duration::from_secs(timeout_secs), || {
+                info!("Test completed after {} seconds!", timeout_secs);
+            })
+            .await;
+    } else {
+        test_loop.await;
     }
-    .on_timeout(Duration::from_secs(timeout_secs), || {
-        info!("Test completed after {} seconds!", timeout_secs);
-    })
-    .await;
 }
