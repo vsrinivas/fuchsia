@@ -19,6 +19,28 @@ use {
 use crate::assigned_numbers::{constants::SERVICE_CLASS_UUIDS, AssignedNumber};
 use crate::types::Uuid;
 
+/// The Protocol and Service Multiplexer (PSM) for L2cap connections.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Psm(u16);
+
+impl Psm {
+    /// PSMs commonly used in the codebase.
+    pub const RFCOMM: Self = Self(fidl_bredr::PSM_RFCOMM);
+    pub const AVDTP: Self = Self(fidl_bredr::PSM_AVDTP);
+    pub const AVCTP: Self = Self(fidl_bredr::PSM_AVCTP);
+    pub const AVCTP_BROWSE: Self = Self(fidl_bredr::PSM_AVCTP_BROWSE);
+
+    pub fn new(value: u16) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Psm> for u16 {
+    fn from(src: Psm) -> u16 {
+        src.0
+    }
+}
+
 /// Try to interpret a DataElement as a ProfileDesciptor.
 /// Returns None if the DataElement is not in the correct format to represent a ProfileDescriptor.
 pub fn elem_to_profile_descriptor(elem: &fidl_bredr::DataElement) -> Option<ProfileDescriptor> {
@@ -90,7 +112,7 @@ pub fn profile_descriptor_to_assigned(profile_desc: &ProfileDescriptor) -> Optio
 
 /// Returns the PSM from the provided `protocol`. Returns None if the protocol
 /// is not L2CAP or does not contain a PSM.
-pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<u16> {
+pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<Psm> {
     for descriptor in protocol {
         if descriptor.protocol == fidl_bredr::ProtocolIdentifier::L2Cap {
             if descriptor.params.len() != 1 {
@@ -98,7 +120,7 @@ pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<u16> {
             }
 
             if let DataElement::Uint16(psm) = descriptor.params[0] {
-                return Some(psm);
+                return Some(Psm::new(psm));
             }
             return None;
         }
@@ -390,12 +412,12 @@ pub struct ServiceDefinition {
 
 impl ServiceDefinition {
     /// Returns the primary PSM associated with this ServiceDefinition.
-    pub fn primary_psm(&self) -> Option<u16> {
+    pub fn primary_psm(&self) -> Option<Psm> {
         psm_from_protocol(&self.protocol_descriptor_list)
     }
 
     /// Returns the additional PSMs associated with this ServiceDefinition.
-    pub fn additional_psms(&self) -> HashSet<u16> {
+    pub fn additional_psms(&self) -> HashSet<Psm> {
         self.additional_protocol_descriptor_lists
             .iter()
             .filter_map(|protocol| psm_from_protocol(protocol))
@@ -406,7 +428,7 @@ impl ServiceDefinition {
     ///
     /// It's possible that the definition doesn't provide any PSMs, in which
     /// case the returned set will be empty.
-    pub fn psm_set(&self) -> HashSet<u16> {
+    pub fn psm_set(&self) -> HashSet<Psm> {
         let mut psms = self.additional_psms();
         self.primary_psm().map(|psm| psms.insert(psm));
         psms
@@ -712,10 +734,10 @@ mod tests {
         }];
         assert_eq!(None, psm_from_protocol(&no_psm));
 
-        let psm = 10;
+        let psm = Psm::new(10);
         let valid_psm = vec![ProtocolDescriptor {
             protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(psm)],
+            params: vec![DataElement::Uint16(psm.into())],
         }];
         assert_eq!(Some(psm), psm_from_protocol(&valid_psm));
 
@@ -810,8 +832,8 @@ mod tests {
     #[test]
     fn test_get_psm_from_service_definition() {
         let uuid = Uuid::new32(1234);
-        let psm1 = 10;
-        let psm2 = 12;
+        let psm1 = Psm(10);
+        let psm2 = Psm(12);
         let mut def = ServiceDefinition {
             service_class_uuids: vec![uuid],
             protocol_descriptor_list: vec![],
@@ -827,7 +849,7 @@ mod tests {
 
         def.protocol_descriptor_list = vec![ProtocolDescriptor {
             protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(psm1)],
+            params: vec![DataElement::Uint16(psm1.into())],
         }];
 
         let mut expected_psms = HashSet::new();
@@ -839,7 +861,7 @@ mod tests {
         def.additional_protocol_descriptor_lists = vec![
             vec![ProtocolDescriptor {
                 protocol: fidl_bredr::ProtocolIdentifier::L2Cap,
-                params: vec![DataElement::Uint16(psm2)],
+                params: vec![DataElement::Uint16(psm2.into())],
             }],
             vec![ProtocolDescriptor {
                 protocol: fidl_bredr::ProtocolIdentifier::Avdtp,

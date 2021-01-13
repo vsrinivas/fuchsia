@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::{
-        profile::{psm_from_protocol, ChannelParameters, ServiceDefinition},
+        profile::{psm_from_protocol, ChannelParameters, Psm, ServiceDefinition},
         types::PeerId,
         util::CollectExt,
     },
@@ -116,7 +116,7 @@ impl ProfileRegistrar {
     }
 
     /// Returns true if the requested `new_psms` do not overlap with the currently registered PSMs.
-    fn is_disjoint_psms(&self, new_psms: &HashSet<u16>) -> bool {
+    fn is_disjoint_psms(&self, new_psms: &HashSet<Psm>) -> bool {
         self.registered_services.psms().is_disjoint(new_psms)
     }
 
@@ -159,9 +159,7 @@ impl ProfileRegistrar {
     ) -> Result<(), Error> {
         let local = protocol.iter().map(|p| p.into()).collect();
         match psm_from_protocol(&local).ok_or(format_err!("No PSM provided"))? {
-            bredr::PSM_RFCOMM => {
-                self.rfcomm_server.new_l2cap_connection(peer_id, channel.try_into()?)
-            }
+            Psm::RFCOMM => self.rfcomm_server.new_l2cap_connection(peer_id, channel.try_into()?),
             psm => {
                 match self.registered_services.iter().find(|(_, client)| client.contains_psm(psm)) {
                     Some((_, client)) => client.relay_connected(peer_id.into(), channel, protocol),
@@ -730,7 +728,8 @@ mod tests {
         };
 
         // Client decides to advertise.
-        let services = vec![bredr::ServiceDefinition::try_from(&other_service_definition(1))?];
+        let services =
+            vec![bredr::ServiceDefinition::try_from(&other_service_definition(Psm::new(1)))?];
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
         assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
@@ -801,7 +800,7 @@ mod tests {
         // Client decides to advertise.
         let services = vec![
             bredr::ServiceDefinition::try_from(&rfcomm_service_definition(None))?,
-            bredr::ServiceDefinition::try_from(&other_service_definition(10))?,
+            bredr::ServiceDefinition::try_from(&other_service_definition(Psm::new(10)))?,
             bredr::ServiceDefinition::try_from(&rfcomm_service_definition(None))?,
         ];
         let n = services.len();
@@ -849,7 +848,7 @@ mod tests {
         };
 
         // Client decides to advertise.
-        let psm = 10;
+        let psm = Psm::new(10);
         let services1 = vec![
             bredr::ServiceDefinition::try_from(&other_service_definition(psm))?,
             bredr::ServiceDefinition::try_from(&rfcomm_service_definition(None))?,
@@ -911,7 +910,7 @@ mod tests {
         };
 
         // Client decides to advertise.
-        let psm1 = 10;
+        let psm1 = Psm::new(10);
         let services1 = vec![
             bredr::ServiceDefinition::try_from(&other_service_definition(psm1))?,
             bredr::ServiceDefinition::try_from(&rfcomm_service_definition(None))?,
@@ -939,7 +938,7 @@ mod tests {
             client
         };
         // Client 2 decides to advertise three services.
-        let psm2 = 15;
+        let psm2 = Psm::new(15);
         let n2 = 3;
         let services2 = vec![
             bredr::ServiceDefinition::try_from(&other_service_definition(psm2))?,

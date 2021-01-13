@@ -6,17 +6,13 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::{
-        profile::Attribute,
+        profile::{Attribute, Psm},
         types::{PeerId, Uuid},
     },
     std::{collections::HashSet, convert::TryFrom},
 };
 
 use crate::peer::service::ServiceHandle;
-
-/// The Protocol Service Multiplexer (PSM) for L2cap connections.
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Psm(pub u16);
 
 /// Convenience type for storing the fields of a Profile.ServiceFound response.
 pub struct ServiceFoundResponse {
@@ -181,10 +177,10 @@ impl ServiceRecord {
 
         // 1. Build the (optional) primary Protocol Descriptor List. This is both returned and included
         //    in `attributes`.
-        let prot_list = if let Some(Psm(psm)) = self.primary_psm {
+        let prot_list = if let Some(psm) = self.primary_psm {
             let prot_list = vec![
                 Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
-                Some(Box::new(bredr::DataElement::Uint16(psm))),
+                Some(Box::new(bredr::DataElement::Uint16(psm.into()))),
             ];
             attributes.push(bredr::Attribute {
                 id: bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -195,7 +191,7 @@ impl ServiceRecord {
 
             Some(vec![bredr::ProtocolDescriptor {
                 protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![bredr::DataElement::Uint16(psm)],
+                params: vec![bredr::DataElement::Uint16(psm.into())],
             }])
         } else {
             None
@@ -286,8 +282,8 @@ mod tests {
     /// Tests operations on a ServiceRecord.
     #[test]
     fn test_service_record() {
-        let primary_psm = Psm(20);
-        let additional_psm = Psm(10);
+        let primary_psm = Psm::new(20);
+        let additional_psm = Psm::new(10);
         let mut additional = HashSet::new();
         additional.insert(additional_psm);
         let mut ids = HashSet::new();
@@ -312,8 +308,8 @@ mod tests {
         assert_eq!(expected_psms, service_record.psms());
 
         let mut random_psms = HashSet::new();
-        random_psms.insert(Psm(14));
-        random_psms.insert(Psm(19));
+        random_psms.insert(Psm::new(14));
+        random_psms.insert(Psm::new(19));
         assert!(service_record.is_disjoint(&random_psms));
         random_psms.insert(primary_psm);
         assert!(!service_record.is_disjoint(&random_psms));
@@ -330,7 +326,7 @@ mod tests {
             response.protocol,
             Some(vec![bredr::ProtocolDescriptor {
                 protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![bredr::DataElement::Uint16(primary_psm.0)]
+                params: vec![bredr::DataElement::Uint16(primary_psm.into())]
             }])
         );
         assert_eq!(response.attributes, expected_attributes());

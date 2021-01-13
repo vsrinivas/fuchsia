@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_bluetooth::{
         detachable_map::DetachableMap,
+        profile::Psm,
         types::{Channel, PeerId},
     },
     fuchsia_component::{client, client::App, server::NestedEnvironment},
@@ -30,7 +31,7 @@ pub mod service;
 use self::search::SearchSet;
 use self::service::{RegistrationHandle, ServiceSet};
 use crate::profile::{build_l2cap_descriptor, parse_service_definitions};
-use crate::types::{LaunchInfo, Psm, ServiceRecord};
+use crate::types::{LaunchInfo, ServiceRecord};
 
 /// Default SDU size the peer is capable of accepting. This is chosen as the default
 /// max size of the underlying fuchsia_bluetooth::Channel, as this is sufficient for
@@ -707,11 +708,11 @@ mod tests {
         // An incoming connection request for PSM_AVCTP is invalid because PSM_AVCTP has not
         // been registered as a service.
         let remote_peer = PeerId(987);
-        assert!(mock_peer.new_connection(remote_peer, Psm(bredr::PSM_AVCTP)).is_err());
+        assert!(mock_peer.new_connection(remote_peer, Psm::AVCTP).is_err());
 
         // An incoming connection request for PSM_AVDTP is valid, since it was registered
         // in `a2dp_def`. There should be a new connection request on the stream.
-        assert!(mock_peer.new_connection(remote_peer, Psm(bredr::PSM_AVDTP)).is_ok());
+        assert!(mock_peer.new_connection(remote_peer, Psm::AVDTP).is_ok());
         match exec.run_until_stalled(&mut stream.next()) {
             Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
                 peer_id,
@@ -783,7 +784,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut search3).is_pending());
 
         // Build a fake service as a registered record and notify any A2DP Sink searches.
-        let mut record = build_a2dp_service_record(Psm(19));
+        let mut record = build_a2dp_service_record(Psm::new(19));
         record.register_service_record(RegisteredServiceId::new(PeerId(999), 789)); // random
         let services = vec![record];
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, services);

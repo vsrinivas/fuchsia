@@ -5,7 +5,10 @@
 use {
     anyhow::format_err,
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::{profile, util::CollectExt},
+    fuchsia_bluetooth::{
+        profile::{self, Psm},
+        util::CollectExt,
+    },
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
@@ -13,13 +16,13 @@ use {
     },
 };
 
-use crate::types::{Psm, ServiceRecord};
+use crate::types::ServiceRecord;
 
 /// Builds the L2Cap Protocol Descriptor from the provided `psm`.
 pub fn build_l2cap_descriptor(psm: Psm) -> Vec<bredr::ProtocolDescriptor> {
     vec![bredr::ProtocolDescriptor {
         protocol: bredr::ProtocolIdentifier::L2Cap,
-        params: vec![bredr::DataElement::Uint16(psm.0)],
+        params: vec![bredr::DataElement::Uint16(psm.into())],
     }]
 }
 
@@ -40,11 +43,11 @@ fn parse_service_definition(
         return Err(format_err!("There must be at least one service class UUID"));
     };
 
-    // Convert primary PSM into local Psm type.
-    let primary_psm = definition.primary_psm().map(|psm| Psm(psm));
+    // Save the primary PSM.
+    let primary_psm = definition.primary_psm();
 
-    // Convert (potential) additional PSMs into local Psm type.
-    let additional_psms = definition.additional_psms().iter().map(|psm| Psm(*psm)).collect();
+    // Save any additional PSMs.
+    let additional_psms = definition.additional_psms();
 
     Ok(ServiceRecord::new(
         svc_ids,
@@ -127,7 +130,7 @@ pub(crate) mod tests {
         let mut a2dp_ids = HashSet::new();
         a2dp_ids.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
         let record =
-            ServiceRecord::new(a2dp_ids, Some(Psm(25)), HashSet::new(), prof_descs, vec![]);
+            ServiceRecord::new(a2dp_ids, Some(Psm::new(25)), HashSet::new(), prof_descs, vec![]);
 
         (def, record)
     }
@@ -152,7 +155,7 @@ pub(crate) mod tests {
         avrcp_ids.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControl);
         avrcp_ids.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControlController);
         let mut additional_psms = HashSet::new();
-        additional_psms.insert(Psm(27));
+        additional_psms.insert(Psm::new(27));
 
         let def = bredr::ServiceDefinition {
             service_class_uuids: Some(vec![
@@ -186,7 +189,7 @@ pub(crate) mod tests {
 
         let record = ServiceRecord::new(
             avrcp_ids,
-            Some(Psm(23)),
+            Some(Psm::new(23)),
             additional_psms,
             prof_descs,
             vec![avrcp_attribute],

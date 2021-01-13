@@ -171,12 +171,11 @@ mod tests {
     use super::*;
 
     use crate::peer::service::tests::build_a2dp_service_record;
-    use crate::types::Psm;
 
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_bredr::{SearchResultsMarker, SearchResultsRequest};
     use fuchsia_async as fasync;
-    use fuchsia_bluetooth::types::PeerId;
+    use fuchsia_bluetooth::{profile::Psm, types::PeerId};
     use futures::{pin_mut, stream::StreamExt, task::Poll};
 
     /// Tests the basic case of adding a search and removing the search.
@@ -255,7 +254,7 @@ mod tests {
         pin_mut!(server_fut);
         assert!(exec.run_until_stalled(&mut server_fut).is_pending());
 
-        let mut fake_record = build_a2dp_service_record(Psm(25));
+        let mut fake_record = build_a2dp_service_record(Psm::new(25));
         let handle = RegisteredServiceId::new(PeerId(123), 99);
         fake_record.register_service_record(handle);
 

@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth::PeerId,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::profile::{
-        combine_channel_parameters, ChannelParameters, ServiceDefinition,
+        combine_channel_parameters, ChannelParameters, Psm, ServiceDefinition,
     },
     slab::Slab,
     std::collections::HashSet,
@@ -55,7 +55,7 @@ impl Services {
     }
 
     /// Returns currently registered PSMs.
-    pub fn psms(&self) -> HashSet<u16> {
+    pub fn psms(&self) -> HashSet<Psm> {
         self.iter().map(|(_, data)| data.allocated_psms()).fold(
             HashSet::new(),
             |mut psms, current| {
@@ -110,7 +110,7 @@ pub struct ServiceGroup {
     service_defs: Vec<ServiceDefinition>,
 
     /// The allocated PSMs for this group.
-    allocated_psms: HashSet<u16>,
+    allocated_psms: HashSet<Psm>,
 
     /// The allocated server channels for this group.
     allocated_server_channels: HashSet<ServerChannel>,
@@ -139,7 +139,7 @@ impl ServiceGroup {
         &self.channel_parameters
     }
 
-    pub fn allocated_psms(&self) -> &HashSet<u16> {
+    pub fn allocated_psms(&self) -> &HashSet<Psm> {
         &self.allocated_psms
     }
 
@@ -149,7 +149,7 @@ impl ServiceGroup {
     }
 
     /// Returns true if the `psm` is requested by this service group.s
-    pub fn contains_psm(&self, psm: u16) -> bool {
+    pub fn contains_psm(&self, psm: Psm) -> bool {
         self.allocated_psms.contains(&psm)
     }
 
@@ -232,13 +232,13 @@ pub(crate) mod tests {
     }
 
     /// Defines a sample ServiceDefinition with the provided `psm`.
-    pub fn other_service_definition(psm: u16) -> ServiceDefinition {
+    pub fn other_service_definition(psm: Psm) -> ServiceDefinition {
         ServiceDefinition {
             service_class_uuids: vec![Uuid::new16(0x110A).into()], // A2DP
             protocol_descriptor_list: vec![
                 ProtocolDescriptor {
                     protocol: ProtocolIdentifier::L2Cap,
-                    params: vec![DataElement::Uint16(psm)],
+                    params: vec![DataElement::Uint16(psm.into())],
                 },
                 ProtocolDescriptor {
                     protocol: ProtocolIdentifier::Avdtp,
@@ -292,7 +292,7 @@ pub(crate) mod tests {
         // Build a new ServiceGroup with RFCOMM and non-RFCOMM services and custom
         // SecurityRequirements/ChannelParameters.
         let (mut group2, _server2) = build_service_group();
-        let psm = 6;
+        let psm = Psm::new(6);
         let sc2 = ServerChannel::try_from(1).ok();
         let defs2 = vec![other_service_definition(psm), rfcomm_service_definition(sc2)];
         group2.set_service_defs(defs2.clone());
@@ -306,7 +306,7 @@ pub(crate) mod tests {
 
         // We expect the advertisement parameters to include the stricter security
         // requirements, channel parameters, and both handle1 and handle2 ServiceDefinitions.
-        expected_psms.insert(6);
+        expected_psms.insert(psm);
         expected_defs.extend(defs2);
         expected_adv_params.services = expected_defs.clone();
         expected_adv_params.parameters = new_chan_params;
@@ -334,7 +334,7 @@ pub(crate) mod tests {
         assert_eq!(service_group.allocated_server_channels(), &expected_server_channels);
         assert_eq!(service_group.allocated_psms(), &expected_psms);
 
-        let psm = 20;
+        let psm = Psm::new(20);
         let other_def = other_service_definition(psm);
         service_group.set_service_defs(vec![other_def.clone()]);
         expected_psms.insert(psm);
@@ -357,7 +357,7 @@ pub(crate) mod tests {
         let (mut service_group, mut server) = build_service_group();
 
         let sc = ServerChannel::try_from(1).ok();
-        let defs = vec![other_service_definition(6), rfcomm_service_definition(sc)];
+        let defs = vec![other_service_definition(Psm::new(6)), rfcomm_service_definition(sc)];
         service_group.set_service_defs(defs);
 
         let id = PeerId(123);

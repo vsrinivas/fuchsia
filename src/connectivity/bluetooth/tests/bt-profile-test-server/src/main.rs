@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::EnvironmentOptions,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{profile::Psm, types::PeerId},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt, stream::StreamExt},
@@ -30,7 +30,7 @@ mod profile;
 mod types;
 
 use crate::peer::MockPeer;
-use crate::types::{LaunchInfo, Psm};
+use crate::types::LaunchInfo;
 
 /// The TestProfileServer implements both the bredr.Profile service and the bredr.ProfileTest
 /// service. The server is responsible for routing incoming asynchronous requests from peers in
@@ -401,7 +401,8 @@ impl TestProfileServerInner {
 
         let psm = match connection {
             bredr::ConnectParameters::L2cap(params) => {
-                params.psm.ok_or(format_err!("No PSM provided in connection"))?
+                let psm = params.psm.ok_or(format_err!("No PSM provided in connection"))?;
+                Psm::new(psm)
             }
             bredr::ConnectParameters::Rfcomm(_) => return Err(format_err!("RFCOMM not supported")),
         };
@@ -409,7 +410,7 @@ impl TestProfileServerInner {
         // Attempt to establish a connection between the peers.
         self.peers
             .get(&other)
-            .map(|peer| peer.new_connection(initiator, Psm(psm)))
+            .map(|peer| peer.new_connection(initiator, psm))
             .unwrap_or(Err(format_err!("Peer {} is not registered", other)))
     }
 

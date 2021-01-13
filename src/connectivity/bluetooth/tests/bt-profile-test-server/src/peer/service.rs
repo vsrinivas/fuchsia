@@ -4,13 +4,13 @@
 
 use {
     fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{profile::Psm, types::PeerId},
     log::warn,
     slab::Slab,
     std::collections::{HashMap, HashSet},
 };
 
-use crate::types::{Psm, RegisteredServiceId, ServiceRecord};
+use crate::types::{RegisteredServiceId, ServiceRecord};
 
 /// The unique handle assigned to a group of registered services.
 /// Multiple services that are registered together will be assigned
@@ -206,7 +206,7 @@ pub(crate) mod tests {
         let mut manager = ServiceSet::new(id);
 
         // Single, valid record, is successful.
-        let psm0 = Psm(19);
+        let psm0 = Psm::new(19);
         let single_record = vec![build_a2dp_service_record(psm0)];
         let reg_handle = manager.register_service(single_record);
         assert!(reg_handle.is_some());
@@ -221,8 +221,8 @@ pub(crate) mod tests {
         assert_eq!(expected_ids, service_ids.clone());
 
         // Multiple, valid records, is successful.
-        let psm1 = Psm(20);
-        let psm2 = Psm(21);
+        let psm1 = Psm::new(20);
+        let psm2 = Psm::new(21);
         let records = vec![build_a2dp_service_record(psm1), build_a2dp_service_record(psm2)];
         let reg_handle2 = manager.register_service(records);
         assert!(reg_handle2.is_some());
@@ -230,7 +230,7 @@ pub(crate) mod tests {
         assert_eq!(reg_handle2, manager.psm_registered(psm2));
 
         // Multiple records with overlapping PSMs is successful since they are registered together.
-        let (psm3, psm4) = (Psm(22), Psm(23));
+        let (psm3, psm4) = (Psm::new(22), Psm::new(23));
         let overlapping = vec![
             build_avrcp_service_record(psm3),
             build_avrcp_service_record(psm3),
@@ -271,7 +271,7 @@ pub(crate) mod tests {
         assert!(manager.get_service_records(&HashSet::new()).is_empty());
 
         // Attempting to register the same PSM fails the second time.
-        let psm = Psm(19);
+        let psm = Psm::new(19);
         let single_record = vec![build_a2dp_service_record(psm)];
         assert!(manager.register_service(single_record).is_some());
         let duplicate_record = vec![build_a2dp_service_record(psm)];

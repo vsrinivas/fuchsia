@@ -9,7 +9,7 @@ use {
         ServerChannel,
     },
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::profile::{DataElement, ServiceDefinition},
+    fuchsia_bluetooth::profile::{DataElement, Psm, ServiceDefinition},
     std::{collections::HashSet, convert::TryFrom},
 };
 
@@ -74,7 +74,7 @@ pub fn server_channels_from_service_definitions(
 }
 
 /// Returns a set of PSMs specified by a list of `services`.
-pub fn psms_from_service_definitions(services: &Vec<ServiceDefinition>) -> HashSet<u16> {
+pub fn psms_from_service_definitions(services: &Vec<ServiceDefinition>) -> HashSet<Psm> {
     services.iter().fold(HashSet::new(), |mut psms, service| {
         psms.extend(&service.psm_set());
         psms
