@@ -1,0 +1,310 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.hfp;
+
+using fuchsia.bluetooth as bt;
+using zx;
+
+const uint64 MAX_PICONET_SIZE = 8;
+
+/// Represents the action of redialing the last dialed number.
+struct RedialLast {
+};
+
+/// Represents the action of transferring an active call to the Headset.
+struct TransferActive {
+};
+
+/// Represents the signal strength of a connection between the Audio Gateway and
+/// a network.
+enum SignalStrength : int8 {
+    NONE = 1;
+    VERY_LOW = 2;
+    LOW = 3;
+    MEDIUM = 4;
+    HIGH = 5;
+    VERY_HIGH = 6;
+};
+
+/// Network information for the Audio Gateway. Typically this represents
+/// information regarding the state of connectivity to a telephony network.
+table NetworkInformation {
+    /// Report the status of registration with the network. See HFP v1.8,
+    /// Section 4.4
+    1: bool service_available;
+    /// Report the signal strength of the connection to the network. See
+    /// the HFP v1.8, Section 4.5.
+    2: SignalStrength signal_strength;
+    /// Report the roaming status of the connection to the network. See
+    /// HFP v1.8, Section 4.6
+    3: bool roaming;
+};
+
+/// A command from the HF with a value representing what number to dial.
+strict union CallAction {
+    /// A complete number to be dialed by the call handler service. See HFP v1.8
+    /// Section 4.18.
+    1: Number dial_from_number;
+    /// A phone book memory location from which a number to be dialed should be
+    /// looked up. See HFP v1.8 Section 4.19.
+    2: Memory dial_from_location;
+    /// The call handler service should dial the last used number. See HFP v1.8
+    /// Section 4.20.
+    3: RedialLast redial_last;
+    /// Request to transfer an active call to the headset rather than initiating
+    /// a new outgoing call. A call must already be in progress on the Audio
+    /// Gateway in order for a transfer of audio to the Handsfree device to take
+    /// place. See HFP v1.8 Section 4.16.
+    4: TransferActive transfer_active;
+};
+
+/// Represents a Binary-Coded Decimal (BCD) Number as specified in TS 124.008
+/// 10.5.4.7
+alias Number = string:256;
+
+/// Represents a specific phone book memory location
+alias Memory = string:256;
+
+/// Represents a Bluetooth peer device with HFP support.
+resource table Peer {
+    /// Unique ID assigned to this peer.
+    1: bt.PeerId id;
+    /// Handle to the protocol for this individual peer.
+    2: request<PeerHandler> handle;
+};
+
+[Discoverable]
+protocol Hfp {
+    /// Register as the call manager for this device.
+    ///
+    /// `network` represents the current available network information,
+    /// to be provided to headsets. All fields in `network` must be populated.
+    ///
+    /// There can only be one call manager registered at a time. If one is
+    /// registered at the time a call to `Register` is made, the newer
+    /// CallManager channel will be closed with a `ZX_ERR_ALREADY_BOUND`
+    /// epitaph.
+    Register(request<CallManager> manager);
+};
+
+protocol CallManager {
+    /// Wait for a peer that supports the HFP Hands-Free role to connect to the
+    /// Bluetooth subsystem.
+    ///
+    /// Returns the unique `id` associated with the peer and the `handle` that
+    /// the call manager should use to handle a peer. If the call manager does
+    /// not intend to handle a given peer, it must close the handle with a
+    /// `ZX_ERR_UNAVAILABLE` epitaph.
+    WatchForPeer() -> (bt.PeerId id, request<PeerHandler> handle);
+};
+
+/// The Call Service will serve a call handler protocol for each connected
+/// headset that it chooses to manage calls through.
+///
+/// If the peer handler is closed by either channel endpoint, all protocols
+/// associated with this peer handler are closed. This includes any Call,
+/// and HeadsetGain protocols. Channels closed by a server end will include an
+/// epitaph `ZX_ERR_HANDLE_CLOSED` in this situation.
+protocol PeerHandler {
+    /// Hanging get to provide the Hfp service with an `update` on the
+    /// `NetworkInformation`. Any fields in `update` that are not present will
+    /// be treated as unmodified by the update.
+    ///
+    /// The call service _should_ provide a fully populated `update` when it is
+    /// called for the first time.
+    ///
+    /// The most up-to-date `NetworkInformation` is used during the connection
+    /// initialization process of the peer, and updates are propagated to the
+    /// peer if it supports AG Indicators.
+    WatchNetworkInformation() -> (NetworkInformation update);
+
+    /// Hanging get which returns when a new call is initiated by the call
+    /// service or an ongoing call is transferred to the headset.
+    /// WaitForCall returns a `Call` client end rather than passing in
+    /// a `request<Call>` server end so that `InitiateOutgoingCall` can be
+    /// called before or after `WaitForCall`.
+    /// `remote` is returned to identify the remote party by Number.
+    /// `state` is returned so that the Hands Free device can be notified
+    /// immediately without waiting for another FIDL response.
+    WaitForCall() -> (Call call, Number remote, CallState state);
+
+    /// Used to request an outgoing call be initiated by the call service.
+    /// `InitiateOutgoingCall` will complete after the outgoing call has been
+    /// initiated and the corrisponding `Call` protocol has been provided to the
+    /// client via the `WaitForCall` hanging get.
+    /// An error is returned if the call could not be placed as requested.
+    InitiateOutgoingCall(CallAction action) -> () error zx.status;
+
+    /// Request the name of the network operator for the call service. A null
+    /// value is returned if there is no operator name available.
+    QueryOperator() -> (string:16? operator);
+
+    /// Request subscriber numbers from the call manager. There can be zero
+    /// or more numbers returned. Sending more than 128 numbers is not supported
+    /// at this time.
+    // The length of `numbers` is constrained to keep the message size below
+    // the maximum channel message size of 64KiB.
+    SubscriberNumberInformation() -> (vector<Number>:128 numbers);
+
+    /// Request by the HF to enable or disable the Noise Reduction/Echo Cancellation
+    /// functionality on the AG based on the `enabled` boolean.
+    /// A `ZX_ERR_NOT_SUPPORTED` error is returned if Noice Reduction/Echo
+    /// Cancellation is not supported by the device.
+    SetNrecMode(bool enabled) -> () error zx.status;
+
+    /// Headset battery level from 0 ~ 100
+    /// See https://www.bluetooth.com/specifications/assigned-numbers/hands-free-profile/
+    ReportHeadsetBatteryLevel(uint8 level);
+
+    /// Tear off protocol for Headset Gain.
+    ///
+    /// Only one HeadsetGain protocol can be active for a PeerHandler protocol
+    /// at any given time. Older HeadsetGain protocols are given preference. If
+    /// a HeadsetGain protocol is active when a new GainControl request is made,
+    /// the new HeadsetGain protocol will be closed immediately.
+    GainControl(HeadsetGain control);
+};
+
+/// Control Headset Speaker and Microphone gain and receive reports of current
+/// values as specified in HFP v1.8, Section 4.29. This protocol is served by the
+/// Hfp service.
+///
+/// Gain is represented as an absolute value on a scale from 0 to 15. 0 is the
+/// minimum gain and 15 is the maximum gain. It is related to a particular
+/// (implementation dependent) volume level controlled by the Headset.
+///
+///
+/// Epitaphs:
+///
+/// This channel will be closed with a `ZX_ERR_ALREADY_BOUND` epitaph if there
+/// is already an active `HeadsetGain` channel.
+///
+/// This channel will be closed with a `ZX_ERR_NOT_SUPPORTED` epitaph if the Hfp
+/// service is not configured to support remote volume control or the peer
+/// headset does not support remote volume control. If the channel is closed
+/// with this error, the client should not attempt to reopen it using the
+/// `PeerHandler::GainControl` request on the same PeerHandler connection.
+///
+/// This channel will be closed with a `ZX_ERR_INVALID_ARGUMENT` epitaph if
+/// invalid arguments are passed to requests. See documentation on specific
+/// requests for more details.
+protocol HeadsetGain {
+    /// Make a request to the headset to set the speaker gain to `requested`.
+    ///
+    /// `requested` must be in the range [0-15] inclusive. Any values outside of
+    /// this range will result in the channel closing with a
+    /// `ZX_ERR_INVALID_ARGUMENT` epitaph.
+    SetSpeakerGain(uint8 requested);
+
+    /// Hanging get to watch for updates to the headset speaker gain. Responses
+    /// represent the current gain value that is set.
+    ///
+    /// The returned `gain` value will always be in the range [0-15] inclusive.
+    WatchSpeakerGain() -> (uint8 gain);
+
+    /// Make a request to the Headset to set the microphone gain to `requested`.
+    ///
+    /// `requested` must be in the range [0-15] inclusive. Any values outside of
+    /// this range will result in the channel closing with a
+    /// `ZX_ERR_INVALID_ARGUMENT` epitaph.
+    SetMicrophoneGain(uint8 requested);
+
+    /// Hanging get to watch for updates to the headset microphone gain. Responses
+    /// represent the current gain value that is set.
+    ///
+    /// The returned `gain` value will always be in the range [0-15] inclusive.
+    WatchMicrophoneGain() -> (uint8 gain);
+};
+
+/// Represents the valid states of a call.
+enum CallState {
+    /// There is a callsetup procedure in progress for an outgoing call.
+    /// This state should not be set by the Call protocol client.
+    /// It is the initial state of an unanswered outgoing call.
+    OUTGOING_DIALING = 1;
+    /// There is a callsetup procedure in progress for an outgoing call and the
+    /// remote party has been alerted to the callsetup. This state is an
+    /// optional transition from OUTGOING_DIALING.
+    OUTGOING_ALERTING = 2;
+    /// There is a callsetup procedure in progress for an incoming call.
+    INCOMING_RINGING = 3;
+    /// There is a callsetup procedure in progress for an incoming call.
+    INCOMING_WAITING = 4;
+    /// A call is in progress but another call is active.
+    ONGOING_HELD = 5;
+    /// A call is active.
+    ONGOING_ACTIVE = 6;
+    /// The call has been termianted.
+    TERMINATED = 7;
+    /// The call has been transferred to the AG, after which the HF is no longer
+    /// tracking its state.
+    TRANSFERRED_TO_AG = 8;
+};
+
+/// Dual-tone multi-frequency signaling codes.
+enum DtmfCode : uint32 {
+    /// Represented by ASCII "1" in AT commands.
+    ONE = 1;
+    /// Represented by ASCII "2" in AT commands.
+    TWO = 2;
+    /// Represented by ASCII "3" in AT commands.
+    THREE = 3;
+    /// Represented by ASCII "4" in AT commands.
+    FOUR = 4;
+    /// Represented by ASCII "5" in AT commands.
+    FIVE = 5;
+    /// Represented by ASCII "6" in AT commands.
+    SIX = 6;
+    /// Represented by ASCII "7" in AT commands.
+    SEVEN = 7;
+    /// Represented by ASCII "8" in AT commands.
+    EIGHT = 8;
+    /// Represented by ASCII "9" in AT commands.
+    NINE = 9;
+    /// Represented by ASCII "#" in AT commands.
+    NUMBER_SIGN = 10;
+    /// Represented by ASCII "0" in AT commands.
+    ZERO = 11;
+    /// Represented by ASCII "*" in AT commands.
+    ASTERISK = 12;
+    /// Represented by ASCII "A" in AT commands.
+    A = 13;
+    /// Represented by ASCII "B" in AT commands.
+    B = 14;
+    /// Represented by ASCII "C" in AT commands.
+    C = 15;
+    /// Represented by ASCII "D" in AT commands.
+    D = 16;
+};
+
+/// Controls the lifecycle of a call that has been routed through a headset.
+protocol Call {
+    /// A hanging get method for call state. See the `CallState` documentation
+    /// for information on possible states.
+    WatchState() -> (CallState state);
+
+    /// Request that the Call be set to the ONGOING_HELD CallState
+    RequestHold();
+
+    /// Request that the Call be set to the ONGOING_ACTIVE CallState.
+    /// This has the side effect of placing all other Calls that are routed to
+    /// this peer in the ONGOING_HELD call state if it succeeds.
+    RequestActive();
+
+    /// Request that the Call be TERMINATED.
+    RequestTerminate();
+
+    /// Request that the Call's audio be transfered to the Audio Gateway and
+    /// the call state set to TRANSFERRED_TO_AG.
+    RequestTransferAudio();
+
+    /// Send a code that the call service should transmit to its network
+    /// connection. The request returns after the code has been transmitted to
+    /// the network.
+    ///
+    /// Can return an error if the call service failed to transmit the code to
+    /// the network.
+    SendDtmfCode(DtmfCode code) -> () error zx.status;
+};
