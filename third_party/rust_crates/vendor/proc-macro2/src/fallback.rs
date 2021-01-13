@@ -148,6 +148,12 @@ impl FromStr for TokenStream {
     }
 }
 
+impl Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("cannot parse string into token stream")
+    }
+}
+
 impl Display for TokenStream {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut joint = false;
@@ -157,29 +163,14 @@ impl Display for TokenStream {
             }
             joint = false;
             match tt {
-                TokenTree::Group(tt) => {
-                    let (start, end) = match tt.delimiter() {
-                        Delimiter::Parenthesis => ("(", ")"),
-                        Delimiter::Brace => ("{", "}"),
-                        Delimiter::Bracket => ("[", "]"),
-                        Delimiter::None => ("", ""),
-                    };
-                    if tt.stream().into_iter().next().is_none() {
-                        write!(f, "{} {}", start, end)?
-                    } else {
-                        write!(f, "{} {} {}", start, tt.stream(), end)?
-                    }
-                }
-                TokenTree::Ident(tt) => write!(f, "{}", tt)?,
+                TokenTree::Group(tt) => Display::fmt(tt, f),
+                TokenTree::Ident(tt) => Display::fmt(tt, f),
                 TokenTree::Punct(tt) => {
-                    write!(f, "{}", tt.as_char())?;
-                    match tt.spacing() {
-                        Spacing::Alone => {}
-                        Spacing::Joint => joint = true,
-                    }
+                    joint = tt.spacing() == Spacing::Joint;
+                    Display::fmt(tt, f)
                 }
-                TokenTree::Literal(tt) => write!(f, "{}", tt)?,
-            }
+                TokenTree::Literal(tt) => Display::fmt(tt, f),
+            }?
         }
 
         Ok(())
@@ -588,17 +579,27 @@ impl Group {
 }
 
 impl Display for Group {
+    // We attempt to match libproc_macro's formatting.
+    // Empty parens: ()
+    // Nonempty parens: (...)
+    // Empty brackets: []
+    // Nonempty brackets: [...]
+    // Empty braces: { }
+    // Nonempty braces: { ... }
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let (left, right) = match self.delimiter {
+        let (open, close) = match self.delimiter {
             Delimiter::Parenthesis => ("(", ")"),
-            Delimiter::Brace => ("{", "}"),
+            Delimiter::Brace => ("{ ", "}"),
             Delimiter::Bracket => ("[", "]"),
             Delimiter::None => ("", ""),
         };
 
-        f.write_str(left)?;
+        f.write_str(open)?;
         Display::fmt(&self.stream, f)?;
-        f.write_str(right)?;
+        if self.delimiter == Delimiter::Brace && !self.stream.inner.is_empty() {
+            f.write_str(" ")?;
+        }
+        f.write_str(close)?;
 
         Ok(())
     }

@@ -1,7 +1,8 @@
 [![Crates.io](https://img.shields.io/crates/v/test-case.svg)](https://crates.io/crates/test-case)
 [![Docs.rs](https://docs.rs/test-case/badge.svg)](https://docs.rs/test-case)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rust-lang/docs.rs/master/LICENSE)
-[![Build Status](https://travis-ci.org/frondeus/test-case.svg?branch=master)](https://travis-ci.org/frondeus/test-case)
+[![Build Status](https://github.com/frondeus/test-case/workflows/Test/badge.svg)](https://github.com/frondeus/test-case/actions)
+![Maintenance](https://img.shields.io/badge/maintenance-activly--developed-brightgreen.svg)
 
 # Test Case
 
@@ -16,7 +17,7 @@ First of all you have to add this dependency to your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-test-case = "1.0.0"
+test-case = "1.1.0"
 ```
 
 Additionally, you have to import the procedural macro with `use` statement:
@@ -24,8 +25,6 @@ Additionally, you have to import the procedural macro with `use` statement:
 ```rust
 use test_case::test_case;
 ```
-
-The crate depends on `proc_macro` feature that has been stabilized on rustc 1.29+.
 
 ## Example usage:
 
@@ -41,8 +40,9 @@ mod tests {
     // Not needed for this example, but useful in general
     use super::*;
 
-    #[test_case( 4,  2 ; "when operands are swapped")]
+    #[test_case(4,  2  ; "when operands are swapped")]
     #[test_case(-2, -4 ; "when both operands are negative")]
+    #[test_case(2,  4  ; "when both operands are positive")]
     fn multiplication_tests(x: i8, y: i8) {
         let actual = (x * y).abs();
 
@@ -150,14 +150,17 @@ mod fancy_addition {
 }
 ```
 
-### Inconclusive (ignored) test cases (since 0.2.0)
+## Modifiers
+
+### inconclusive
+
+#### Context ignored test cases (deprecated, will be dropped in 2.0.0)
 
 If test case name (passed using `;` syntax described above) contains a word "inconclusive", generated test will be marked with `#[ignore]`.
 
-#### Keyword inconclusive (since 1.0.0)
+#### Keyword 'inconclusive'
 
 If test expectation is preceded by keyword `inconclusive` the test will be ignored as if it's description would contain word `inconclusive`
-
 
 ```rust
 #[test_case("42")]
@@ -185,8 +188,7 @@ mod parses_input {
     }
 
 ```
-
-### Pattern matched test cases (since 1.0.0)
+### matches
 
 If test expectation is preceded by `matches` keyword, the result will be tested whether it fits within provided pattern.
 
@@ -198,7 +200,7 @@ fn zip_test<'a>(left: &'a str, right: &'a str) -> (&'a str, &'a str) {
 }
 ```
 
-### Panicking test cases (since 1.0.0)
+### panics
 
 If test case expectation is preceded by `panics` keyword and the expectation itself is `&str` **or** expresion that evaluates to `&str` then test case will be expected to panic during execution.
 
@@ -212,6 +214,45 @@ fn test_panicking(input: &str) {
     }
 }
 ```
+
+### is|it (feature = "hamcrest_assertions")
+
+This feature requires addition of hamcrest2 crate to your Cargo.toml:
+
+```toml
+test-case = { version = "1.1.0", features = ["hamcrest_assertions"] }
+hamcrest2 = "0.3.0"
+```
+
+After that you can use test cases with new keywords `is` and `it` which will allow you to use hamcrest2 assertions ([doc](https://docs.rs/hamcrest2/0.3.0/hamcrest2/))
+
+```rust
+
+#[test_case(&[1, 3] => is empty())]
+#[test_case(&[2, 3] => it contains(2))]
+#[test_case(&[2, 3] => it not(contains(3)))]
+#[test_case(&[2, 4] => it contains(vec!(2, 4)))]
+#[test_case(&[2, 3] => is len(1))]
+fn removes_odd_numbers(collection: &[u8]) -> &Vec<u8> {
+    Box::leak(Box::new(collection.into_iter().filter(|x| *x % 2 == 0).copied().collect()))
+}
+```
+
+## async in test cases
+
+Test cases can work with `tokio`, `async-std` and other runtimes, provided `#[test...]` attribute from mentioned libraries is used as a last attribute.
+
+eg.
+
+```rust
+
+#[test_case("Hello, world" => true)]
+#[tokio::test]
+async fn runs_async_task(input: &str) -> bool {
+    some_async_fn(input).await
+}
+```
+
 
 ## License
 

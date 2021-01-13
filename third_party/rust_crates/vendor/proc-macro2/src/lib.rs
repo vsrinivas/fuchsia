@@ -78,7 +78,7 @@
 //! a different thread.
 
 // Proc-macro2 types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/proc-macro2/1.0.19")]
+#![doc(html_root_url = "https://docs.rs/proc-macro2/1.0.24")]
 #![cfg_attr(any(proc_macro_span, super_unstable), feature(proc_macro_span))]
 #![cfg_attr(super_unstable, feature(proc_macro_raw_ident, proc_macro_def_site))]
 #![allow(clippy::needless_doctest_main)]
@@ -86,17 +86,7 @@
 #[cfg(use_proc_macro)]
 extern crate proc_macro;
 
-use std::cmp::Ordering;
-use std::fmt::{self, Debug, Display};
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::marker;
-use std::ops::RangeBounds;
-#[cfg(procmacro2_semver_exempt)]
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::str::FromStr;
-
+mod marker;
 mod parse;
 
 #[cfg(wrap_proc_macro)]
@@ -113,6 +103,17 @@ use crate::fallback as imp;
 #[cfg(wrap_proc_macro)]
 mod imp;
 
+use crate::marker::Marker;
+use std::cmp::Ordering;
+use std::error::Error;
+use std::fmt::{self, Debug, Display};
+use std::hash::{Hash, Hasher};
+use std::iter::FromIterator;
+use std::ops::RangeBounds;
+#[cfg(procmacro2_semver_exempt)]
+use std::path::PathBuf;
+use std::str::FromStr;
+
 /// An abstract stream of tokens, or more concretely a sequence of token trees.
 ///
 /// This type provides interfaces for iterating over token trees and for
@@ -123,27 +124,27 @@ mod imp;
 #[derive(Clone)]
 pub struct TokenStream {
     inner: imp::TokenStream,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 /// Error returned from `TokenStream::from_str`.
 pub struct LexError {
     inner: imp::LexError,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 impl TokenStream {
     fn _new(inner: imp::TokenStream) -> TokenStream {
         TokenStream {
             inner,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
     fn _new_stable(inner: fallback::TokenStream) -> TokenStream {
         TokenStream {
             inner: inner.into(),
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
@@ -180,7 +181,7 @@ impl FromStr for TokenStream {
     fn from_str(src: &str) -> Result<TokenStream, LexError> {
         let e = src.parse().map_err(|e| LexError {
             inner: e,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         })?;
         Ok(TokenStream::_new(e))
     }
@@ -254,6 +255,14 @@ impl Debug for LexError {
     }
 }
 
+impl Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.inner, f)
+    }
+}
+
+impl Error for LexError {}
+
 /// The source file of a given `Span`.
 ///
 /// This type is semver exempt and not exposed by default.
@@ -261,7 +270,7 @@ impl Debug for LexError {
 #[derive(Clone, PartialEq, Eq)]
 pub struct SourceFile {
     inner: imp::SourceFile,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 #[cfg(procmacro2_semver_exempt)]
@@ -269,7 +278,7 @@ impl SourceFile {
     fn _new(inner: imp::SourceFile) -> Self {
         SourceFile {
             inner,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
@@ -338,21 +347,21 @@ impl PartialOrd for LineColumn {
 #[derive(Copy, Clone)]
 pub struct Span {
     inner: imp::Span,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 impl Span {
     fn _new(inner: imp::Span) -> Span {
         Span {
             inner,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
     fn _new_stable(inner: fallback::Span) -> Span {
         Span {
             inner: inner.into(),
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
@@ -696,7 +705,7 @@ impl Debug for Group {
 /// `Punct` with different forms of `Spacing` returned.
 #[derive(Clone)]
 pub struct Punct {
-    op: char,
+    ch: char,
     spacing: Spacing,
     span: Span,
 }
@@ -722,9 +731,9 @@ impl Punct {
     ///
     /// The returned `Punct` will have the default span of `Span::call_site()`
     /// which can be further configured with the `set_span` method below.
-    pub fn new(op: char, spacing: Spacing) -> Punct {
+    pub fn new(ch: char, spacing: Spacing) -> Punct {
         Punct {
-            op,
+            ch,
             spacing,
             span: Span::call_site(),
         }
@@ -732,7 +741,7 @@ impl Punct {
 
     /// Returns the value of this punctuation character as `char`.
     pub fn as_char(&self) -> char {
-        self.op
+        self.ch
     }
 
     /// Returns the spacing of this punctuation character, indicating whether
@@ -759,14 +768,14 @@ impl Punct {
 /// convertible back into the same character.
 impl Display for Punct {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.op, f)
+        Display::fmt(&self.ch, f)
     }
 }
 
 impl Debug for Punct {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut debug = fmt.debug_struct("Punct");
-        debug.field("op", &self.op);
+        debug.field("char", &self.ch);
         debug.field("spacing", &self.spacing);
         imp::debug_span_field_if_nontrivial(&mut debug, self.span.inner);
         debug.finish()
@@ -840,14 +849,14 @@ impl Debug for Punct {
 #[derive(Clone)]
 pub struct Ident {
     inner: imp::Ident,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 impl Ident {
     fn _new(inner: imp::Ident) -> Ident {
         Ident {
             inner,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
@@ -968,7 +977,7 @@ impl Debug for Ident {
 #[derive(Clone)]
 pub struct Literal {
     inner: imp::Literal,
-    _marker: marker::PhantomData<Rc<()>>,
+    _marker: Marker,
 }
 
 macro_rules! suffixed_int_literals {
@@ -1015,14 +1024,14 @@ impl Literal {
     fn _new(inner: imp::Literal) -> Literal {
         Literal {
             inner,
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
     fn _new_stable(inner: fallback::Literal) -> Literal {
         Literal {
             inner: inner.into(),
-            _marker: marker::PhantomData,
+            _marker: Marker,
         }
     }
 
@@ -1181,10 +1190,9 @@ impl Display for Literal {
 
 /// Public implementation details for the `TokenStream` type, such as iterators.
 pub mod token_stream {
+    use crate::marker::Marker;
     use crate::{imp, TokenTree};
     use std::fmt::{self, Debug};
-    use std::marker;
-    use std::rc::Rc;
 
     pub use crate::TokenStream;
 
@@ -1195,7 +1203,7 @@ pub mod token_stream {
     #[derive(Clone)]
     pub struct IntoIter {
         inner: imp::TokenTreeIter,
-        _marker: marker::PhantomData<Rc<()>>,
+        _marker: Marker,
     }
 
     impl Iterator for IntoIter {
@@ -1219,7 +1227,7 @@ pub mod token_stream {
         fn into_iter(self) -> IntoIter {
             IntoIter {
                 inner: self.inner.into_iter(),
-                _marker: marker::PhantomData,
+                _marker: Marker,
             }
         }
     }

@@ -5,12 +5,11 @@
 use std::fmt::{Error, Formatter};
 use {
     proc_macro::TokenStream,
+    proc_macro2::TokenStream as TokenStream2,
     quote::{format_ident, quote, ToTokens},
     std::collections::{HashMap, HashSet},
     syn::{
-        bracketed,
-        export::TokenStream2,
-        parenthesized,
+        bracketed, parenthesized,
         parse::{Parse, ParseBuffer},
         parse_macro_input::parse,
         punctuated::Punctuated,

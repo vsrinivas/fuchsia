@@ -2,8 +2,8 @@ use crate::fallback::{
     is_ident_continue, is_ident_start, Group, LexError, Literal, Span, TokenStream,
 };
 use crate::{Delimiter, Punct, Spacing, TokenTree};
+use std::char;
 use std::str::{Bytes, CharIndices, Chars};
-use unicode_xid::UnicodeXID;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub(crate) struct Cursor<'a> {
@@ -143,7 +143,7 @@ fn is_whitespace(ch: char) -> bool {
 
 fn word_break(input: Cursor) -> Result<Cursor, LexError> {
     match input.chars().next() {
-        Some(ch) if UnicodeXID::is_xid_continue(ch) => Err(LexError),
+        Some(ch) if is_ident_continue(ch) => Err(LexError),
         Some(_) | None => Ok(input),
     }
 }
@@ -228,7 +228,7 @@ fn leaf_token(input: Cursor) -> PResult<TokenTree> {
     if let Ok((input, l)) = literal(input) {
         // must be parsed before ident
         Ok((input, TokenTree::Literal(crate::Literal::_new_stable(l))))
-    } else if let Ok((input, p)) = op(input) {
+    } else if let Ok((input, p)) = punct(input) {
         Ok((input, TokenTree::Punct(p)))
     } else if let Ok((input, i)) = ident(input) {
         Ok((input, TokenTree::Ident(i)))
@@ -238,6 +238,17 @@ fn leaf_token(input: Cursor) -> PResult<TokenTree> {
 }
 
 fn ident(input: Cursor) -> PResult<crate::Ident> {
+    if ["r\"", "r#\"", "r##", "b\"", "b\'", "br\"", "br#"]
+        .iter()
+        .any(|prefix| input.starts_with(prefix))
+    {
+        Err(LexError)
+    } else {
+        ident_any(input)
+    }
+}
+
+fn ident_any(input: Cursor) -> PResult<crate::Ident> {
     let raw = input.starts_with("r#");
     let rest = input.advance((raw as usize) << 1);
 
@@ -329,13 +340,10 @@ fn cooked_string(input: Cursor) -> Result<Cursor, LexError> {
                 let input = input.advance(i + 1);
                 return Ok(literal_suffix(input));
             }
-            '\r' => {
-                if let Some((_, '\n')) = chars.next() {
-                    // ...
-                } else {
-                    break;
-                }
-            }
+            '\r' => match chars.next() {
+                Some((_, '\n')) => {}
+                _ => break,
+            },
             '\\' => match chars.next() {
                 Some((_, 'x')) => {
                     if !backslash_x_char(&mut chars) {
@@ -349,12 +357,18 @@ fn cooked_string(input: Cursor) -> Result<Cursor, LexError> {
                         break;
                     }
                 }
-                Some((_, '\n')) | Some((_, '\r')) => {
-                    while let Some(&(_, ch)) = chars.peek() {
-                        if ch.is_whitespace() {
-                            chars.next();
-                        } else {
-                            break;
+                Some((_, ch @ '\n')) | Some((_, ch @ '\r')) => {
+                    let mut last = ch;
+                    loop {
+                        if last == '\r' && chars.next().map_or(true, |(_, ch)| ch != '\n') {
+                            return Err(LexError);
+                        }
+                        match chars.peek() {
+                            Some((_, ch)) if ch.is_whitespace() => {
+                                last = *ch;
+                                chars.next();
+                            }
+                            _ => break,
                         }
                     }
                 }
@@ -378,19 +392,16 @@ fn byte_string(input: Cursor) -> Result<Cursor, LexError> {
 
 fn cooked_byte_string(mut input: Cursor) -> Result<Cursor, LexError> {
     let mut bytes = input.bytes().enumerate();
-    'outer: while let Some((offset, b)) = bytes.next() {
+    while let Some((offset, b)) = bytes.next() {
         match b {
             b'"' => {
                 let input = input.advance(offset + 1);
                 return Ok(literal_suffix(input));
             }
-            b'\r' => {
-                if let Some((_, b'\n')) = bytes.next() {
-                    // ...
-                } else {
-                    break;
-                }
-            }
+            b'\r' => match bytes.next() {
+                Some((_, b'\n')) => {}
+                _ => break,
+            },
             b'\\' => match bytes.next() {
                 Some((_, b'x')) => {
                     if !backslash_x_byte(&mut bytes) {
@@ -399,16 +410,24 @@ fn cooked_byte_string(mut input: Cursor) -> Result<Cursor, LexError> {
                 }
                 Some((_, b'n')) | Some((_, b'r')) | Some((_, b't')) | Some((_, b'\\'))
                 | Some((_, b'0')) | Some((_, b'\'')) | Some((_, b'"')) => {}
-                Some((newline, b'\n')) | Some((newline, b'\r')) => {
+                Some((newline, b @ b'\n')) | Some((newline, b @ b'\r')) => {
+                    let mut last = b as char;
                     let rest = input.advance(newline + 1);
-                    for (offset, ch) in rest.char_indices() {
-                        if !ch.is_whitespace() {
-                            input = rest.advance(offset);
-                            bytes = input.bytes().enumerate();
-                            continue 'outer;
+                    let mut chars = rest.char_indices();
+                    loop {
+                        if last == '\r' && chars.next().map_or(true, |(_, ch)| ch != '\n') {
+                            return Err(LexError);
+                        }
+                        match chars.next() {
+                            Some((_, ch)) if ch.is_whitespace() => last = ch,
+                            Some((offset, _)) => {
+                                input = rest.advance(offset);
+                                bytes = input.bytes().enumerate();
+                                break;
+                            }
+                            None => return Err(LexError),
                         }
                     }
-                    break;
                 }
                 _ => break,
             },
@@ -432,13 +451,16 @@ fn raw_string(input: Cursor) -> Result<Cursor, LexError> {
             _ => return Err(LexError),
         }
     }
-    for (i, ch) in chars {
+    while let Some((i, ch)) = chars.next() {
         match ch {
             '"' if input.rest[i + 1..].starts_with(&input.rest[..n]) => {
                 let rest = input.advance(i + 1 + n);
                 return Ok(literal_suffix(rest));
             }
-            '\r' => {}
+            '\r' => match chars.next() {
+                Some((_, '\n')) => {}
+                _ => break,
+            },
             _ => {}
         }
     }
@@ -525,13 +547,25 @@ where
     I: Iterator<Item = (usize, char)>,
 {
     next_ch!(chars @ '{');
-    next_ch!(chars @ '0'..='9' | 'a'..='f' | 'A'..='F');
-    loop {
-        let c = next_ch!(chars @ '0'..='9' | 'a'..='f' | 'A'..='F' | '_' | '}');
-        if c == '}' {
-            return true;
+    let mut value = 0;
+    let mut len = 0;
+    while let Some((_, ch)) = chars.next() {
+        let digit = match ch {
+            '0'..='9' => ch as u8 - b'0',
+            'a'..='f' => 10 + ch as u8 - b'a',
+            'A'..='F' => 10 + ch as u8 - b'A',
+            '_' if len > 0 => continue,
+            '}' if len > 0 => return char::from_u32(value).is_some(),
+            _ => return false,
+        };
+        if len == 6 {
+            return false;
         }
+        value *= 0x10;
+        value += u32::from(digit);
+        len += 1;
     }
+    false
 }
 
 fn float(input: Cursor) -> Result<Cursor, LexError> {
@@ -585,12 +619,17 @@ fn float_digits(input: Cursor) -> Result<Cursor, LexError> {
         }
     }
 
-    let rest = input.advance(len);
-    if !(has_dot || has_exp || rest.starts_with("f32") || rest.starts_with("f64")) {
+    if !(has_dot || has_exp) {
         return Err(LexError);
     }
 
     if has_exp {
+        let token_before_exp = if has_dot {
+            Ok(input.advance(len - 1))
+        } else {
+            Err(LexError)
+        };
+        let mut has_sign = false;
         let mut has_exp_value = false;
         while let Some(&ch) = chars.peek() {
             match ch {
@@ -598,8 +637,12 @@ fn float_digits(input: Cursor) -> Result<Cursor, LexError> {
                     if has_exp_value {
                         break;
                     }
+                    if has_sign {
+                        return token_before_exp;
+                    }
                     chars.next();
                     len += 1;
+                    has_sign = true;
                 }
                 '0'..='9' => {
                     chars.next();
@@ -614,7 +657,7 @@ fn float_digits(input: Cursor) -> Result<Cursor, LexError> {
             }
         }
         if !has_exp_value {
-            return Err(LexError);
+            return token_before_exp;
         }
     }
 
@@ -648,10 +691,25 @@ fn digits(mut input: Cursor) -> Result<Cursor, LexError> {
     let mut len = 0;
     let mut empty = true;
     for b in input.bytes() {
-        let digit = match b {
-            b'0'..=b'9' => (b - b'0') as u64,
-            b'a'..=b'f' => 10 + (b - b'a') as u64,
-            b'A'..=b'F' => 10 + (b - b'A') as u64,
+        match b {
+            b'0'..=b'9' => {
+                let digit = (b - b'0') as u64;
+                if digit >= base {
+                    return Err(LexError);
+                }
+            }
+            b'a'..=b'f' => {
+                let digit = 10 + (b - b'a') as u64;
+                if digit >= base {
+                    break;
+                }
+            }
+            b'A'..=b'F' => {
+                let digit = 10 + (b - b'A') as u64;
+                if digit >= base {
+                    break;
+                }
+            }
             b'_' => {
                 if empty && base == 10 {
                     return Err(LexError);
@@ -661,9 +719,6 @@ fn digits(mut input: Cursor) -> Result<Cursor, LexError> {
             }
             _ => break,
         };
-        if digit >= base {
-            return Err(LexError);
-        }
         len += 1;
         empty = false;
     }
@@ -674,14 +729,17 @@ fn digits(mut input: Cursor) -> Result<Cursor, LexError> {
     }
 }
 
-fn op(input: Cursor) -> PResult<Punct> {
-    match op_char(input) {
+fn punct(input: Cursor) -> PResult<Punct> {
+    match punct_char(input) {
         Ok((rest, '\'')) => {
-            ident(rest)?;
-            Ok((rest, Punct::new('\'', Spacing::Joint)))
+            if ident_any(rest)?.0.starts_with("'") {
+                Err(LexError)
+            } else {
+                Ok((rest, Punct::new('\'', Spacing::Joint)))
+            }
         }
         Ok((rest, ch)) => {
-            let kind = match op_char(rest) {
+            let kind = match punct_char(rest) {
                 Ok(_) => Spacing::Joint,
                 Err(LexError) => Spacing::Alone,
             };
@@ -691,9 +749,9 @@ fn op(input: Cursor) -> PResult<Punct> {
     }
 }
 
-fn op_char(input: Cursor) -> PResult<char> {
+fn punct_char(input: Cursor) -> PResult<char> {
     if input.starts_with("//") || input.starts_with("/*") {
-        // Do not accept `/` of a comment as an op.
+        // Do not accept `/` of a comment as a punct.
         return Err(LexError);
     }
 

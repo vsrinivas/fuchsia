@@ -150,9 +150,9 @@ fn into_compiler_token(token: TokenTree) -> proc_macro::TokenTree {
                 Spacing::Joint => proc_macro::Spacing::Joint,
                 Spacing::Alone => proc_macro::Spacing::Alone,
             };
-            let mut op = proc_macro::Punct::new(tt.as_char(), spacing);
-            op.set_span(tt.span().inner.unwrap_nightly());
-            op.into()
+            let mut punct = proc_macro::Punct::new(tt.as_char(), spacing);
+            punct.set_span(tt.span().inner.unwrap_nightly());
+            punct.into()
         }
         TokenTree::Ident(tt) => tt.inner.unwrap_nightly().into(),
         TokenTree::Literal(tt) => tt.inner.unwrap_nightly().into(),
@@ -260,6 +260,18 @@ impl Debug for LexError {
         match self {
             LexError::Compiler(e) => Debug::fmt(e, f),
             LexError::Fallback(e) => Debug::fmt(e, f),
+        }
+    }
+}
+
+impl Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            #[cfg(lexerror_display)]
+            LexError::Compiler(e) => Display::fmt(e, f),
+            #[cfg(not(lexerror_display))]
+            LexError::Compiler(_e) => Display::fmt(&fallback::LexError, f),
+            LexError::Fallback(e) => Display::fmt(e, f),
         }
     }
 }

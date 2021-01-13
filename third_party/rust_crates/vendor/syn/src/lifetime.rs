@@ -16,9 +16,6 @@ use crate::lookahead;
 ///   the XID_Start property.
 /// - All following characters must be Unicode code points with the XID_Continue
 ///   property.
-///
-/// *This type is available only if Syn is built with the `"derive"` or `"full"`
-/// feature.*
 pub struct Lifetime {
     pub apostrophe: Span,
     pub ident: Ident,
@@ -116,6 +113,7 @@ pub mod parsing {
     use super::*;
     use crate::parse::{Parse, ParseStream, Result};
 
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for Lifetime {
         fn parse(input: ParseStream) -> Result<Self> {
             input.step(|cursor| {
@@ -133,6 +131,7 @@ mod printing {
     use proc_macro2::{Punct, Spacing, TokenStream};
     use quote::{ToTokens, TokenStreamExt};
 
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "printing")))]
     impl ToTokens for Lifetime {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             let mut apostrophe = Punct::new('\'', Spacing::Joint);

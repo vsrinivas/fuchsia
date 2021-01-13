@@ -7,10 +7,10 @@ extern crate proc_macro;
 extern crate quote;
 
 use proc_macro2::TokenStream;
+use std::fmt::Formatter;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::num::ParseIntError;
 use std::str::FromStr;
-use syn::export::Formatter;
 
 /// Declares a proc_macro with `name` using `generator` to generate any of `ty`.
 macro_rules! declare_macro {

@@ -121,7 +121,7 @@ static_assertions = "1.1.0"
 structopt = "0.2.14"
 tempfile = "3.1"
 termion = "1.5.3"
-test-case = "1.0.0"
+test-case = "1.1.0"
 textwrap = "0.11.0"
 thiserror = "1.0.9"
 timebomb = "0.1.2"
@@ -353,8 +353,8 @@ rustflags = ["--cfg=underscore_consts", "--cfg=deprecated_proc_macro"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
-[gn.package.proc-macro2."1.0.19"]
-rustflags = ["--cfg=span_locations", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
+[gn.package.proc-macro2."1.0.24"]
+rustflags = ["--cfg=span_locations", "--cfg=lexerror_display", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 [gn.package.rand."0.6.5"]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]
@@ -474,8 +474,8 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.pulldown-cmark."0.6.0"]
 [gn.package.rayon-core."1.7.0"]
 [gn.package.servo-freetype-sys."4.0.5"]
-[gn.package.syn."1.0.41"]
-[gn.package.test-case."1.0.0"]
+[gn.package.syn."1.0.58"]
+[gn.package.test-case."1.1.0"]
 [gn.package.wasm-bindgen."0.2.60"]
 
 
