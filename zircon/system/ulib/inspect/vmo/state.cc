@@ -52,12 +52,12 @@ AutoGenerationIncrement::~AutoGenerationIncrement() { Release(heap_->GetBlock(ta
 
 void AutoGenerationIncrement ::Acquire(Block* block) {
   uint64_t* ptr = &block->payload.u64;
-  __atomic_fetch_add(ptr, 1, std::memory_order_acq_rel);
+  __atomic_fetch_add(ptr, 1, static_cast<int>(std::memory_order_acq_rel));
 }
 
 void AutoGenerationIncrement::Release(Block* block) {
   uint64_t* ptr = &block->payload.u64;
-  __atomic_fetch_add(ptr, 1, std::memory_order_release);
+  __atomic_fetch_add(ptr, 1, static_cast<int>(std::memory_order_release));
 }
 
 }  // namespace
