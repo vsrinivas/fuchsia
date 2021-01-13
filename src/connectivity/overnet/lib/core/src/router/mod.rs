@@ -32,7 +32,7 @@ use self::{
     service_map::{ListablePeer, ServiceMap},
 };
 use crate::{
-    future_help::{log_errors, MutexTicket, Observable, Observer},
+    future_help::{log_errors, Observable, Observer},
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
     link::{new_link, LinkReceiver, LinkRouting, LinkSender},
@@ -43,6 +43,7 @@ use crate::{
     proxy::{IntoProxied, ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
 };
 use anyhow::{bail, format_err, Context as _, Error};
+use async_utils::mutex_ticket::MutexTicket;
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker, ServiceProviderProxyInterface};
 use fidl_fuchsia_overnet_protocol::{

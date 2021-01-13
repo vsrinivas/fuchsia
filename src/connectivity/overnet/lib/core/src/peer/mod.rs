@@ -14,12 +14,13 @@ pub(crate) use self::framed_stream::{
 };
 use crate::{
     coding::{decode_fidl, encode_fidl},
-    future_help::{MutexTicket, Observer},
+    future_help::Observer,
     labels::{ConnectionId, Endpoint, NodeId, TransferKey},
     link::{LinkRouting, OutputQueue, RoutingDestination, RoutingTarget},
     router::{ForwardingTable, FoundTransfer, Router},
 };
 use anyhow::{bail, format_err, Context as _, Error};
+use async_utils::mutex_ticket::MutexTicket;
 use cutex::{CutexGuard, CutexTicket};
 use fidl::{Channel, HandleBased};
 use fidl_fuchsia_overnet::ConnectionInfo;

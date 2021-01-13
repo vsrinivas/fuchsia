@@ -12,6 +12,8 @@ pub mod event;
 pub mod fold;
 pub mod futures;
 pub mod hanging_get;
+/// Helper to poll a mutex.
+pub mod mutex_ticket;
 /// Additional Useful Stream Combinators and Utilities
 pub mod stream;
 pub mod traits;

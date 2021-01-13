@@ -4,9 +4,10 @@
 
 //! Async wrapper around QUIC
 
-use crate::future_help::{LockInner, MutexTicket, PollWeakMutex};
+use crate::future_help::{LockInner, PollWeakMutex};
 use crate::labels::{Endpoint, NodeId};
 use anyhow::{format_err, Context as _, Error};
+use async_utils::mutex_ticket::MutexTicket;
 use fidl_fuchsia_overnet_protocol::StreamId;
 use fuchsia_async::{Task, Timer};
 use futures::{

@@ -30,9 +30,6 @@ pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
 
 pub use test_util::{test_security_context, NodeIdGenerator};
 
-// TODO: move to another library
-pub use future_help::MutexTicket;
-
 #[cfg(not(target_os = "fuchsia"))]
 pub use router::security_context::MemoryBuffers;
 

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};
 use futures::future::{poll_fn, Either};
 use futures::lock::Mutex;
 use futures::ready;
 use overnet_core::{
-    log_errors, ConnectionId, Endpoint, LinkReceiver, LinkSender, MutexTicket, SendFrame,
-    MAX_FRAME_LENGTH,
+    log_errors, ConnectionId, Endpoint, LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH,
 };
 use std::pin::Pin;
 use std::sync::Arc;

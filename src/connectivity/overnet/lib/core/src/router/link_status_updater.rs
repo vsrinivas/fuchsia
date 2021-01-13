@@ -4,10 +4,11 @@
 
 use super::routes::LinkMetrics;
 use crate::{
-    future_help::{MutexTicket, Observable, Observer},
+    future_help::{Observable, Observer},
     labels::{NodeId, NodeLinkId},
 };
 use anyhow::Error;
+use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::Task;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{

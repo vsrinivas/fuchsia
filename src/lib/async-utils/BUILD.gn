@@ -19,7 +19,9 @@ rustc_library("async-utils") {
 
   test_deps = [
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures-test",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
   ]
 
@@ -30,6 +32,7 @@ rustc_library("async-utils") {
     "src/hanging_get/client.rs",
     "src/hanging_get/mod.rs",
     "src/lib.rs",
+    "src/mutex_ticket.rs",
     "src/stream.rs",
     "src/traits.rs",
   ]

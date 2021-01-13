@@ -5,12 +5,12 @@
 //! Handles framing/deframing of stream links
 
 use anyhow::{format_err, Error};
+use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};
 use futures::future::poll_fn;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use futures::ready;
-use overnet_core::MutexTicket;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
