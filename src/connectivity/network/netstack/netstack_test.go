@@ -378,16 +378,16 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 
 	for {
-		select {
-		case <-timeout:
-			var keys []uint64
-			eps.ns.endpoints.Range(func(key uint64, _ tcpip.Endpoint) bool {
-				keys = append(keys, key)
-				return true
-			})
-			t.Errorf("got endpoints map = %d after closure, want *not* %d", keys, eps.endpoint.key)
-		default:
-			if _, ok := eps.ns.endpoints.Load(eps.endpoint.key); ok {
+		if _, ok := eps.ns.endpoints.Load(eps.endpoint.key); ok {
+			select {
+			case <-timeout:
+				var keys []uint64
+				eps.ns.endpoints.Range(func(key uint64, _ tcpip.Endpoint) bool {
+					keys = append(keys, key)
+					return true
+				})
+				t.Errorf("got endpoints map = %d after closure, want *not* %d", keys, eps.endpoint.key)
+			default:
 				continue
 			}
 		}
