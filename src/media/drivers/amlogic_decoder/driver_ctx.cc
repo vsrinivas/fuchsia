@@ -31,7 +31,7 @@ extern zx_status_t amlogic_video_init(void** out_ctx) {
 // ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
   DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
-  auto device = std::make_unique<DeviceCtx>(driver);
+  auto device = std::make_unique<DeviceCtx>(driver, parent);
 
   AmlogicVideo* video = device->video();
 
@@ -47,7 +47,7 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = device->Bind(parent);
+  status = device->Bind();
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to bind device");
     return status;

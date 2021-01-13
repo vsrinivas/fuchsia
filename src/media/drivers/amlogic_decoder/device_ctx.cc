@@ -8,48 +8,16 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/sync/completion.h>
 
+#include <ddktl/fidl.h>
+
 #include "amlogic-video.h"
 #include "macros.h"
 #include "sdk/lib/sys/cpp/service_directory.h"
 
-namespace {
-
-const char* kLogTag = "DeviceCtx";
-
-const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
-    .GetCodecFactory =
-        [](void* ctx, zx_handle_t handle) {
-          zx::channel request(handle);
-          reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(std::move(request));
-          return ZX_OK;
-        },
-    .SetAuxServiceDirectory =
-        [](void* ctx, zx_handle_t aux_service_directory_handle) {
-          zx::channel aux_service_directory_channel(aux_service_directory_handle);
-          fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory(
-              std::move(aux_service_directory_channel));
-          FX_LOGF(INFO, kLogTag, "SetAuxServiceDirectory -- handle value: %u",
-                  aux_service_directory_handle);
-          reinterpret_cast<DeviceCtx*>(ctx)->SetAuxServiceDirectory(
-              std::move(aux_service_directory));
-          return ZX_OK;
-        }};
-
-static zx_status_t amlogic_video_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
-}
-
-static void amlogic_release(void* ctx) { delete static_cast<DeviceCtx*>(ctx); }
-
-static zx_protocol_device_t amlogic_video_device_ops = {
-    DEVICE_OPS_VERSION, .release = amlogic_release, .message = amlogic_video_message,
-    // TODO(jbauman) or TODO(dustingreen): .suspend .resume
-};
-
-}  // namespace
-
-DeviceCtx::DeviceCtx(DriverCtx* driver)
-    : driver_(driver), codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
+DeviceCtx::DeviceCtx(DriverCtx* driver, zx_device_t* parent)
+    : DdkDeviceType(parent),
+      driver_(driver),
+      codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>();
   video_->SetMetrics(&metrics());
   device_fidl_ = std::make_unique<DeviceFidl>(this);
@@ -76,35 +44,21 @@ DeviceCtx::~DeviceCtx() {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-zx_status_t DeviceCtx::Bind(zx_device_t* parent) {
-  device_add_args_t vc_video_args = {};
-  vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
-  vc_video_args.name = "amlogic_video";
-  vc_video_args.ctx = this;
-  vc_video_args.ops = &amlogic_video_device_ops;
+zx_status_t DeviceCtx::Bind() { return DdkAdd("amlogic_video"); }
 
-  // ZX_PROTOCOL_MEDIA_CODEC causes /dev/class/media-codec to get created, and
-  // flags support for MEDIA_CODEC_IOCTL_GET_CODEC_FACTORY_CHANNEL.  The
-  // proto_ops_ is empty but has a non-null address, so we don't break the
-  // invariant that devices with a protocol have non-null proto_ops.
-  vc_video_args.proto_id = ZX_PROTOCOL_MEDIA_CODEC;
-  vc_video_args.proto_ops = &proto_ops_;
-
-  zx_status_t status = device_add(parent, &vc_video_args, &device_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to bind device");
-    return ZX_ERR_NO_MEMORY;
-  }
-  return ZX_OK;
+zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction ddk_transaction(txn);
+  llcpp::fuchsia::hardware::mediacodec::Device::Dispatch(this, msg, &ddk_transaction);
+  return ddk_transaction.Status();
 }
 
-void DeviceCtx::GetCodecFactory(zx::channel request) {
+void DeviceCtx::GetCodecFactory(zx::channel request, GetCodecFactoryCompleter::Sync& completer) {
   device_fidl()->ConnectChannelBoundCodecFactory(std::move(request));
 }
-
-void DeviceCtx::SetAuxServiceDirectory(
-    fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory) {
-  driver_->SetAuxServiceDirectory(std::move(aux_service_directory));
+void DeviceCtx::SetAuxServiceDirectory(fidl::ClientEnd<llcpp::fuchsia::io::Directory> directory,
+                                       SetAuxServiceDirectoryCompleter::Sync& completer) {
+  driver_->SetAuxServiceDirectory(
+      fidl::InterfaceHandle<fuchsia::io::Directory>(directory.TakeChannel()));
 }
 
 CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }
