@@ -15,7 +15,10 @@ group("tests") {
   ]
 }
 
-stdcompat_test_sources = [ "version_test.cc" ]
+stdcompat_test_sources = [
+  "traits_test.cc",
+  "version_test.cc",
+]
 
 group("stdcompat-test-deps") {
   testonly = true

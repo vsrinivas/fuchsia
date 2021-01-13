@@ -18,6 +18,14 @@
 #define __cpp_lib_string_view 201606L
 #endif
 
+#if !defined(__cpp_lib_void_t) && __cplusplus >= 201411L
+#define __cpp_lib_void_t 201411L
+#endif
+
+#if !defined(__cpp_lib_logical_traits) && __cplusplus >= 201510L
+#define __cpp_lib_logical_traits 201510L
+#endif
+
 #endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_VERSION_H_

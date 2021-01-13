@@ -16,11 +16,8 @@ zx_library("stdcompat") {
   static = true
   sdk_publishable = true
   sdk_headers = [
-    "lib/stdcompat/string_view.h",
     "lib/stdcompat/version.h",
+    "lib/stdcompat/type_traits.h",
   ]
-  sources = [
-    "include/lib/stdcompat/string_view.h",
-    "include/lib/stdcompat/version.h",
-  ]
+  friend = [ "test:*" ]
 }

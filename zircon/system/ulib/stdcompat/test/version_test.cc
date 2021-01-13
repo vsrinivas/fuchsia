@@ -4,8 +4,6 @@
 
 #include <lib/stdcompat/version.h>
 
-#include <version>
-
 #include <gtest/gtest.h>
 
 namespace {
@@ -19,6 +17,9 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
 #else
   static_assert(__cpp_lib_string_view == 201606L);
 #endif
+
+  static_assert(__cpp_lib_logical_traits == 201510L);
+  static_assert(__cpp_lib_void_t == 201411L);
 }
 
 #elif __cplusplus > 201402L
@@ -27,13 +28,25 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
 #if __cplusplus >= 201606L
   static_assert(__cpp_lib_string_view == 201606L);
 #endif
+#if __cplusplus >= 201510L
+  static_assert(__cpp_lib_logical_traits == 201510L);
+#endif
+#if __cplusplus >= 201411L
+  static_assert(__cpp_lib_void_t == 201411L);
+#endif
 }
 
 #elif __cplusplus > 201103L
 
 TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #if defined(__cpp_lib_string_view)
-  static_assert(false, "'__cpp_lib_string_view' should not be defined in std14.")
+  static_assert(false, "'__cpp_lib_string_view' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_logical_traits)
+  static_assert(false, "'__cpp_lib_logical_traits' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_void_t)
+  static_assert(false, "'__cpp_lib_void_t' should not be defined in c++14.");
 #endif
 }
 #endif
