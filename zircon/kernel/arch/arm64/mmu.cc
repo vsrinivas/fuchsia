@@ -380,6 +380,7 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
   if (!page) {
     panic("bad page table paddr 0x%lx\n", paddr);
   }
+  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_MMU);
   pmm_free_page(page);
 
   pt_pages_--;

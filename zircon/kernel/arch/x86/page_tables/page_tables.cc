@@ -182,6 +182,7 @@ class X86PageTableBase::ConsistencyManager {
 
   void queue_free(vm_page_t* page) {
     AssertHeld(pt_->lock_);
+    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_MMU);
     list_add_tail(&to_free_, &page->queue_node);
     DEBUG_ASSERT(pt_->pages_ > 0);
     pt_->pages_--;
@@ -219,6 +220,10 @@ X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
   // We free the paging structures here rather than in Finish(), to allow
   // support deferring invoking pmm_free() until after we've left the page
   // table lock.
+  vm_page_t* p;
+  list_for_every_entry(&to_free_, p, vm_page_t, queue_node) {
+    DEBUG_ASSERT(p->state() == VM_PAGE_STATE_MMU);
+  }
   if (!list_is_empty(&to_free_)) {
     pmm_free(&to_free_);
   }
