@@ -899,6 +899,13 @@ Enable all dart analysis
 
 From //build/dart/dart_library.gni:15
 
+### enable_external_fd
+TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
+
+**Current value (from the default):** `false`
+
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/a47e8ef1a6716c34a9ed842aa25cbc6dd17ec031/src/intel/vulkan/BUILD.gn#26)
+
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
 This reduces performance but increases the ability to generate good
