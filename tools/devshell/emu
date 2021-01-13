@@ -387,6 +387,7 @@ OPTIONS=()
 OPTIONS+=("-feature" "$FEATURES")
 OPTIONS+=("-window-size" "$WINDOW_SIZE")
 OPTIONS+=("-gpu" "$GPU")
+OPTIONS+=("-no-location-ui")
 if (( DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
 fi
