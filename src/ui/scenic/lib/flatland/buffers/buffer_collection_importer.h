@@ -28,7 +28,8 @@ struct ImageMetadata {
 
   // A single buffer collection may have several vmos. This tells the importer
   // which vmo in the collection specified by |collection_id| to use as the memory
-  // for this image. This value must be less than BufferCollectionMetadata::vmo_count.
+  // for this image. This value must be less than the total number of vmos of the
+  // buffer collection we are constructing the image from.
   uint32_t vmo_idx;
 
   // The dimensions of the image in pixels.

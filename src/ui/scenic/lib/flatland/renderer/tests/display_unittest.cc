@@ -116,9 +116,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
                                                 std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
-  // Validating should fail, because we've only set the renderer constraints.
-  auto buffer_metadata = renderer.Validate(renderer_collection_id);
-  EXPECT_FALSE(buffer_metadata.has_value());
+  // Importing an image should fail at this point because we've only set the renderer constraints.
+  auto import_result = renderer.ImportImage(
+      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+  EXPECT_FALSE(import_result);
 
   // Set the display constraints on the display controller.
   fuchsia::hardware::display::ImageConfig display_constraints = {
@@ -128,9 +129,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
                                                  std::move(display_token), display_constraints);
   ASSERT_TRUE(res);
 
-  // Validating should fail again, because we've only set 2 out of the three constraints.
-  buffer_metadata = renderer.Validate(renderer_collection_id);
-  EXPECT_FALSE(buffer_metadata.has_value());
+  // Importing should fail again, because we've only set 2 of the 3 constraints.
+  import_result = renderer.ImportImage(
+      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+  EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto client_collection = flatland::CreateClientPointerWithConstraints(
@@ -150,13 +152,11 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
     EXPECT_EQ(allocation_status, ZX_OK);
   }
 
-  // Now that the renderer, client and display have set their contraints, we validate one last
-  // time and this time it should return real data.
-  buffer_metadata = renderer.Validate(renderer_collection_id);
-  EXPECT_TRUE(buffer_metadata.has_value());
-  EXPECT_EQ(buffer_metadata->vmo_count, 1u);
-  EXPECT_EQ(buffer_metadata->image_constraints.required_min_coded_width, kWidth);
-  EXPECT_EQ(buffer_metadata->image_constraints.required_min_coded_height, kHeight);
+  // Now that the renderer, client, and the display have set their constraints, we import one last
+  // time and this time it should return true.
+  import_result = renderer.ImportImage(
+      {.collection_id = renderer_collection_id, .vmo_idx = 0, .width = kWidth, .height = kHeight});
+  EXPECT_TRUE(import_result);
 
   // We should now be able to also import an image to the display controller, using the
   // display-specific buffer collection id. If it returns OK, then we know that the renderer

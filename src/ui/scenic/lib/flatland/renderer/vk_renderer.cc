@@ -71,10 +71,6 @@ void VkRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId c
   auto vk_loader = escher_->device()->dispatch_loader();
   vk_device.destroyBufferCollectionFUCHSIA(vk_itr->second, nullptr, vk_loader);
   vk_collection_map_.erase(collection_id);
-
-  // Erase the metadata. There may not actually be any metadata if the collection was
-  // never validated, but there's no need to check as erasing a non-existent key is valid.
-  collection_metadata_map_.erase(collection_id);
 }
 
 bool VkRenderer::RegisterCollection(
@@ -140,20 +136,29 @@ bool VkRenderer::RegisterCollection(
 }
 
 bool VkRenderer::ImportImage(const ImageMetadata& meta_data) {
-  auto buffer_metadata = Validate(meta_data.collection_id);
-  if (!buffer_metadata.has_value()) {
-    FX_LOGS(ERROR) << "CreateImage failed, collection_id " << meta_data.collection_id
-                   << " has not been allocated yet";
+  std::unique_lock<std::mutex> lock(lock_);
+  const auto& collection_itr = collection_map_.find(meta_data.collection_id);
+  if (collection_itr == collection_map_.end()) {
+    FX_LOGS(ERROR) << "Collection with id " << meta_data.collection_id << " does not exist.";
     return false;
   }
 
-  if (meta_data.vmo_idx >= buffer_metadata->vmo_count) {
+  auto& collection = collection_itr->second;
+  if (!collection.BuffersAreAllocated()) {
+    FX_LOGS(ERROR) << "Buffers for collection " << meta_data.collection_id
+                   << " have not been allocated.";
+    return false;
+  }
+
+  const auto& sysmem_info = collection.GetSysmemInfo();
+  const auto vmo_count = sysmem_info.buffer_count;
+  auto image_constraints = sysmem_info.settings.image_format_constraints;
+
+  if (meta_data.vmo_idx >= vmo_count) {
     FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_idx
-                   << " must be less than vmo_count " << buffer_metadata->vmo_count;
+                   << " must be less than vmo_count " << vmo_count;
     return false;
   }
-
-  const auto& image_constraints = buffer_metadata->image_constraints;
 
   if (meta_data.width < image_constraints.min_coded_width ||
       meta_data.width > image_constraints.max_coded_width) {
@@ -182,43 +187,6 @@ void VkRenderer::ReleaseImage(GlobalImageId image_id) {
   // TODO(46708): Fill out this function once we actually start caching images. Currently
   // we just recreate them every time |RenderFrame| is called, and let them go out
   // of scope afterwards, so there is nothing here to release.
-}
-
-std::optional<BufferCollectionMetadata> VkRenderer::Validate(
-    sysmem_util::GlobalBufferCollectionId collection_id) {
-  // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is trickier than in the
-  // other cases for this class since we are mutating the buffer collection in this call. So we can
-  // only convert this to a lock free structure if the elements in the map are changed to be values
-  // only, or if we can guarantee that mutations on the elements only occur in a single thread.
-  std::unique_lock<std::mutex> lock(lock_);
-  auto collection_itr = collection_map_.find(collection_id);
-
-  // If the collection is not in the map, then it can't be validated.
-  if (collection_itr == collection_map_.end()) {
-    return std::nullopt;
-  }
-
-  // If there is already metadata, we can just return it instead of checking the allocation
-  // status again. Once a buffer is allocated it won't stop being allocated.
-  auto metadata_itr = collection_metadata_map_.find(collection_id);
-  if (metadata_itr != collection_metadata_map_.end()) {
-    return metadata_itr->second;
-  }
-
-  // The collection should be allocated (i.e. all constraints set).
-  auto& collection = collection_itr->second;
-  if (!collection.BuffersAreAllocated()) {
-    return std::nullopt;
-  }
-
-  // If the collection is in the map, and it's allocated, then we can return meta-data regarding
-  // vmos and image constraints to the client.
-  const auto& sysmem_info = collection.GetSysmemInfo();
-  BufferCollectionMetadata result;
-  result.vmo_count = sysmem_info.buffer_count;
-  result.image_constraints = sysmem_info.settings.image_format_constraints;
-  collection_metadata_map_[collection_id] = result;
-  return result;
 }
 
 escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,

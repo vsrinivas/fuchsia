@@ -25,18 +25,6 @@ namespace flatland {
 // Typedef to a flatland type.
 using Rectangle2D = escher::Rectangle2D;
 
-// Contains information regarding the constraints of a particular buffer collection. This
-// should be used by the Flatland instance to check that images it wishes to create are
-// valid. More information may be added to this struct over time.
-struct BufferCollectionMetadata {
-  // The number of vmos available in the buffer collection.
-  uint32_t vmo_count;
-
-  // Various image constraint information, including max width/height and supported
-  // pixel formats. See |constraints.fidl| for more information.
-  fuchsia::sysmem::ImageFormatConstraints image_constraints;
-};
-
 // This is the main renderer interface used by the Flatland System. Since Flatland is
 // agnostic to the implementation of the renderer, it is declared here as a virtual
 // interface, whose concrete implementation is to be injected into Flatland.
@@ -56,39 +44,6 @@ class Renderer : public BufferCollectionImporter {
   // Removes a buffer collection used for render targets from the renderer. Once done, the
   // collection_id can be reused for another buffer collection.
   virtual void DeregisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id) = 0;
-
-  // This function validates if the buffer collection referenced by |collection_id| is ready to
-  // be used in rendering operations and must be called before that buffer collection is used
-  // in |Render|. Specifically, this function checks to make sure that the buffer collection is
-  // fully allocated (which can only happen after all token holders have set constraints and the
-  // client has requested for sysmem to allocate the buffer collection via a call to
-  // WaitForBuffersAllocated() or an equivalent function).
-  //
-  // If the collection has not yet been fully allocated, or if the collection has not been
-  // registered with the renderer via a call to RegisterBufferCollection(), this function will
-  // return std::nullopt. If the collection has been registered and has been fully allocated, then
-  // this function will return a BufferCollectionMetadata struct containing information pertaining
-  // to the number of vmos as well as image constraints, such as maximum width/height (see
-  // BufferCollectionMetadata at the top of this file for more information).
-  //
-  // The BufferCollectionMetadata can then be used by the Flatland instance to verify images it
-  // wishes to create with this buffer collection. Images map N:1 with buffer collections, since a
-  // collection can consist of multiple VMOs, and each VMO in turn can back multiple images. The
-  // intended usage then is for the Flatland instance to store the BufferCollectionMetadata it
-  // receives and use it to compare against any incoming images. For example, if a buffer collection
-  // only has 5 VMOs and an image is referencing vmo index 6, then that would be an error.
-  //
-  // This function needs to be separate from RegisterBufferCollection() since it is too early to
-  // return a |BufferCollectionMetadata| struct at registration time., as the client may have not
-  // yet set their constraints, or duplicated their token. Combining this function with the above
-  // registration function would require us to block on registration, which could go on forever.
-  //
-  // Lastly, this function needs to communicate with sysmem and may take some time. However, it does
-  // not block indefinitely. Additionally, it only needs to be called once per buffer collection if
-  // the call was successful. It is up to the Flatland instance how to proceed in the event of
-  // failure. Calling this function multiple times until it returns true is allowed.
-  virtual std::optional<BufferCollectionMetadata> Validate(
       sysmem_util::GlobalBufferCollectionId collection_id) = 0;
 
   // This function is responsible for rendering a single batch of Flatland rectangles into a

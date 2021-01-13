@@ -45,20 +45,14 @@ class NullRenderer final : public Renderer {
       sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  std::optional<BufferCollectionMetadata> Validate(
-      sysmem_util::GlobalBufferCollectionId collection_id) override;
-
-  // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
               const std::vector<ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {}) override;
 
  private:
-  // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.
+  // This mutex is used to protect access to |collection_map_|.
   std::mutex lock_;
   std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionMetadata>
-      collection_metadata_map_;
 };
 
 }  // namespace flatland
