@@ -369,13 +369,7 @@ type endpointWithSocket struct {
 }
 
 func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
-	var flags uint32
-	if transProto == tcp.ProtocolNumber {
-		flags |= zx.SocketStream
-	} else {
-		flags |= zx.SocketDatagram
-	}
-	localS, peerS, err := zx.NewSocket(flags)
+	localS, peerS, err := zx.NewSocket(zx.SocketStream)
 	if err != nil {
 		return nil, err
 	}
@@ -719,31 +713,16 @@ func (eps *endpointWithSocket) loopWrite() {
 			eps.hardError.mu.Unlock()
 
 			if resCh != nil {
-				if err != tcpip.ErrNoLinkAddress {
-					panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
-				}
-				if eps.transProto == tcp.ProtocolNumber {
-					panic(fmt.Sprintf("TCP link address resolutions happen on connect; saw %d/%d", n, len(v)))
-				}
-				<-resCh
-				continue
+				panic(fmt.Sprintf("TCP link address resolutions happen on connect; saw %d/%d", n, len(v)))
 			}
 			// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 			switch err {
 			case nil:
-				if eps.transProto != tcp.ProtocolNumber {
-					if n < int64(len(v)) {
-						panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
-					}
-				}
 				v = v[n:]
 				if len(v) != 0 {
 					continue
 				}
 			case tcpip.ErrWouldBlock:
-				if eps.transProto != tcp.ProtocolNumber {
-					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
-				}
 				// NB: we can't select on closing here because the client may have
 				// written some data into the buffer and then immediately closed the
 				// socket.
@@ -803,7 +782,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
 	outEntry, outCh := waiter.NewChannelEntry(nil)
-	connected := eps.transProto != tcp.ProtocolNumber
+	connected := false
 	if !connected {
 		eps.wq.EventRegister(&outEntry, waiter.EventOut)
 		defer func() {
