@@ -12,7 +12,6 @@ use {
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
-        util::time_at_monotonic,
     },
     chrono::prelude::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -22,6 +21,7 @@ use {
         fmt::{self, Debug},
         sync::Arc,
     },
+    time_util::time_at_monotonic,
 };
 
 /// One million for PPM calculations

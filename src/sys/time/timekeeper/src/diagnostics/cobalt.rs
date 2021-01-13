@@ -8,7 +8,6 @@ use {
         enums::{
             ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, StartClockSource, Track,
         },
-        util::time_at_monotonic,
         MonitorTrack, PrimaryTrack, TimeSource,
     },
     fuchsia_async as fasync,
@@ -28,6 +27,7 @@ use {
         TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
         TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
     },
+    time_util::time_at_monotonic,
 };
 
 /// The period duration in micros. This field is required for Cobalt 1.0 EVENT_COUNT but not used.

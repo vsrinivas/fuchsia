@@ -30,7 +30,6 @@ Module | Description
 -------|------------
 `main` | Entry point for the component that handles initialization and delegation to the other modules.
 `enums` | A collection of simple enumerations that are used across the other modules and in particular are used to bridge the operational and diagnostics modules.
-`util` | A collection of utility methods that are used across the other modules.
 `rtc` | Abstracts discovery of and interaction with the real time clock driver away from other modules.
 `time_source` | Abstracts the launching and interaction with time sources away from other modules. Produces a stream of time source events.
 `time_source_manager` | Maintains a functional connection to a time source by using `time_source` to launch and relaunch the component as needed. `time_source_manager` validates the time samples received from `time_source` and produces a stream of validated time samples.
