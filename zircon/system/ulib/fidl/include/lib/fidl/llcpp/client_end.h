@@ -124,6 +124,70 @@ class UnownedClientEnd final {
   zx_handle_t channel_;
 };
 
+// Comparison operators between client-end objects.
+// These comparisons have the same semantics as the comparison operators
+// on the wrapped |zx::channel|s.
+
+template <typename T>
+bool operator==(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return a.channel() == b.channel();
+}
+
+template <typename T>
+bool operator!=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return !(a == b);
+}
+
+template <typename T>
+bool operator<(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return a.channel() < b.channel();
+}
+
+template <typename T>
+bool operator>(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return a.channel() > b.channel();
+}
+
+template <typename T>
+bool operator<=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return a.channel() <= b.channel();
+}
+
+template <typename T>
+bool operator>=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+  return a.channel() >= b.channel();
+}
+
+template <typename T>
+bool operator==(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return a.channel() == b.channel();
+}
+
+template <typename T>
+bool operator!=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return !(a == b);
+}
+
+template <typename T>
+bool operator<(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return a.channel() < b.channel();
+}
+
+template <typename T>
+bool operator>(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return a.channel() > b.channel();
+}
+
+template <typename T>
+bool operator<=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return a.channel() <= b.channel();
+}
+
+template <typename T>
+bool operator>=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+  return a.channel() >= b.channel();
+}
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_CLIENT_END_H_

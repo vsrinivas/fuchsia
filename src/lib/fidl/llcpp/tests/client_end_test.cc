@@ -53,6 +53,26 @@ TEST(ClientEnd, Control) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h1.write(0, "a", 1, nullptr, 0));
 }
 
+TEST(ClientEnd, Comparisons) {
+  auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+  fidl::ClientEnd<llcpp_test::Frobinator> client_end = std::move(endpoints->client);
+  const fidl::ClientEnd<llcpp_test::Frobinator>& client_end_reference = client_end;
+  ASSERT_EQ(client_end, client_end);
+  ASSERT_EQ(client_end, client_end_reference);
+
+  fidl::ClientEnd<llcpp_test::Frobinator> invalid1{};
+  fidl::ClientEnd<llcpp_test::Frobinator> invalid2{};
+  ASSERT_EQ(invalid1, invalid2);
+  ASSERT_NE(client_end, invalid1);
+
+  // We assume that an invalid handle always have the value 0, hence smaller
+  // than any valid handle.
+  static_assert(ZX_HANDLE_INVALID == 0);
+  ASSERT_GT(client_end, invalid1);
+  ASSERT_LT(invalid1, client_end);
+}
+
 TEST(UnownedClientEnd, Constructors) {
   auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
   ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
@@ -102,4 +122,18 @@ TEST(UnownedClientEnd, BorrowFromClientEnd) {
   static_assert(std::is_same_v<decltype(unowned_client_end),
                                decltype(fidl::UnownedClientEnd<llcpp_test::Frobinator>(0))>);
   ASSERT_EQ(unowned_client_end.channel(), endpoints->client.channel().get());
+}
+
+TEST(UnownedClientEnd, Comparisons) {
+  // Because unowned client ends do not own their wrapped handles,
+  // we may use placeholder handle values in this unit test.
+  static_assert(std::is_trivially_destructible_v<fidl::UnownedClientEnd<llcpp_test::Frobinator>>);
+  fidl::UnownedClientEnd<llcpp_test::Frobinator> one(1);
+  fidl::UnownedClientEnd<llcpp_test::Frobinator> small(1);
+  fidl::UnownedClientEnd<llcpp_test::Frobinator> large(42);
+  ASSERT_EQ(small, small);
+  ASSERT_EQ(one, small);
+  ASSERT_NE(small, large);
+  ASSERT_GT(large, small);
+  ASSERT_LT(small, large);
 }
