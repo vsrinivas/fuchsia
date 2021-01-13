@@ -105,7 +105,8 @@ int Nelson::Thread() {
   zxlogf(INFO, "Detected board rev 0x%x", info.board_revision);
 
   if ((info.board_revision != BOARD_REV_P1) && (info.board_revision != BOARD_REV_P2) &&
-      (info.board_revision != BOARD_REV_EVT)) {
+      (info.board_revision != BOARD_REV_EVT) && (info.board_revision != BOARD_REV_DVT) &&
+      (info.board_revision != BOARD_REV_DVT2)) {
     zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue", info.board_revision);
     return -1;
   }
