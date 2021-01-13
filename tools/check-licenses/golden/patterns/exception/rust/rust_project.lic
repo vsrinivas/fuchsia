@@ -25,7 +25,7 @@ their own copyright notices and license terms:
 
 (\*) LLVM. Code for this package is found in src\/llvm-project.
 
-    Copyright \(c\) 2003-2013 University of Illinois at
+    Copyright \((?:c|C)\) 2003-2013 University of Illinois at
     Urbana-Champaign.  All rights reserved.
 
     Developed by:
@@ -79,7 +79,7 @@ their own copyright notices and license terms:
 (\*) compiler-rt, in src\/compiler-rt is dual licensed under
   LLVM's license and MIT:
 
-    Copyright \(c\) 2009-2014 by the contributors listed in
+    Copyright \((?:c|C)\) 2009-2014 by the contributors listed in
     CREDITS.TXT
 
     All rights reserved.
@@ -130,7 +130,7 @@ their own copyright notices and license terms:
 
     ========================================================
 
-    Copyright \(c\) 2009-2014 by the contributors listed in
+    Copyright \((?:c|C)\) 2009-2014 by the contributors listed in
     CREDITS.TXT
 
     Permission is hereby granted, free of charge, to any

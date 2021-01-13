@@ -1,4 +1,4 @@
-Copyright \(c\) [\d]{4}, Oracle America, Inc.
+Copyright \((?:c|C)\) [\d]{4}, Oracle America, Inc.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:

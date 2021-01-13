@@ -6,7 +6,7 @@ This file is Copyrighted
 
     This file is covered under the following Copyright:
 
-        Copyright \(C\) 2001,2006 Ross P\. Johnson
+        Copyright \((?:c|C)\) 2001,2006 Ross P\. Johnson
         All rights reserved\.
 
         Everyone is permitted to copy and distribute verbatim copies
@@ -59,8 +59,8 @@ Pthreads-win32 copyrights and exception files
     Copyrights:
 
         Pthreads-win32 - POSIX Threads Library for Win32
-        Copyright\(C\) 1998 John E\. Bossom
-        Copyright\(C\) 1999,2006 Pthreads-win32 contributors
+        Copyright\((?:c|C)\) 1998 John E\. Bossom
+        Copyright\((?:c|C)\) 1999,2006 Pthreads-win32 contributors
 
         The current list of contributors is contained
         in the file CONTRIBUTORS included with the source

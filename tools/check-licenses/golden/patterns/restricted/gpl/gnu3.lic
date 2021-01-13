@@ -1,4 +1,4 @@
-(?i)Copyright \(C\) [\d]{4}-[\d]{4} Free Software Foundation, Inc.
+(?i)Copyright \((?:c|C)\) [\d]{4}-[\d]{4} Free Software Foundation, Inc.
 
 The GNU C Library is free software; you can redistribute it and\/or
 modify it under the terms of the GNU Lesser General Public

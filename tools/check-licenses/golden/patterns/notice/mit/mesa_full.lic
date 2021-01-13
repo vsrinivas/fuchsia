@@ -11,7 +11,7 @@ This allows integration with the XFree86, Xorg and DRI projects\.
 
 The default Mesa license is as follows:
 
-Copyright \(C\) 1999-2007  Brian Paul   All Rights Reserved\.
+Copyright \((?:c|C)\) 1999-2007  Brian Paul   All Rights Reserved\.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files \(the "Software"\),
@@ -56,7 +56,7 @@ In general, consult the source files for license terms\.
 include\/GL\/glext\.h
 include\/GL\/glxext\.h
 
-Copyright \(c\) 2013-2017 The Khronos Group Inc\.
+Copyright \((?:c|C)\) 2013-2017 The Khronos Group Inc\.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and\/or associated documentation files \(the
@@ -97,7 +97,7 @@ src\/glx\/singlepix\.c
 src\/glx\/vertarr\.c
 
 SGI FREE SOFTWARE LICENSE B \(Version 2\.0, Sept\. 18, 2008\)
-Copyright \(C\) 1991-2000 Silicon Graphics, Inc\. All Rights Reserved\.
+Copyright \((?:c|C)\) 1991-2000 Silicon Graphics, Inc\. All Rights Reserved\.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files \(the "Software"\),
@@ -130,7 +130,7 @@ include\/c11\/threads\.h
 include\/c11\/threads_posix\.h
 include\/c11\/threads_win32\.h
 
-\(C\) Copyright yohhoy 2012\.
+\((?:c|C)\) Copyright yohhoy 2012\.
 Distributed under the Boost Software License, Version 1\.0\.
 
 Permission is hereby granted, free of charge, to any person or organization

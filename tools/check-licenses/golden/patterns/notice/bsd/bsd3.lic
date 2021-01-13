@@ -1,4 +1,4 @@
-(?i)(?s).*(Copyright (\(c\))? (.*) All rights reserved\.)*
+(?i)(?s).*(Copyright (\((?:c|C)\))? (.*) All rights reserved\.)*
 
 Redistribution and use in source and binary forms( of the software as well
 as documentation)?, with or without

@@ -1,4 +1,4 @@
-(?s)(?i)(.*)This software is Copyright \(C\) Imagination Technologies Ltd\.
+(?s)(?i)(.*)This software is Copyright \((?:c|C)\) Imagination Technologies Ltd\.
 
 You may use, distribute and copy this software under the terms of the MIT
 license displayed below\.

@@ -249,7 +249,7 @@ Full text of the relevant licenses is included below\.
 University of Illinois\/NCSA
 Open Source License
 
-Copyright \(c\) [\d]{4}-[\d]{4} by the contributors listed in CREDITS\.TXT
+Copyright \((?:c|C)\) [\d]{4}-[\d]{4} by the contributors listed in CREDITS\.TXT
 
 All rights reserved\.
 
@@ -290,7 +290,7 @@ SOFTWARE\.
 
 ==============================================================================
 
-Copyright \(c\) [\d]{4}-[\d]{4} by the contributors listed in CREDITS\.TXT
+Copyright \((?:c|C)\) [\d]{4}-[\d]{4} by the contributors listed in CREDITS\.TXT
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files \(the "Software"\), to deal

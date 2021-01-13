@@ -1,6 +1,6 @@
 (?s)COPYRIGHT AND PERMISSION NOTICE
 
-Copyright \(c\) (.*)
+Copyright \((?:c|C)\) (.*)
 
 All rights reserved\.
 

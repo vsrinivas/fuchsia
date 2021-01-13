@@ -1,4 +1,4 @@
-(?i)\s*(Copyright \(C\) [\d]{4}-[\d]{4} Free Software Foundation, Inc\.)?
+(?i)\s*(Copyright \((?:c|C)\) [\d]{4}-[\d]{4} Free Software Foundation, Inc\.)?
 \s*This file is part of GCC\.
 \s*GCC is free software; you can redistribute it and\/or modify it under
 \s*the terms of the GNU General Public License as published by the Free

@@ -1,4 +1,4 @@
-Copyright \(c\) [\d]{4}-[\d]{4}, Intel Corporation.
+Copyright \((?:c|C)\) [\d]{4}-[\d]{4}, Intel Corporation.
 All rights reserved.
 
 Redistribution.  Redistribution and use in binary form, without

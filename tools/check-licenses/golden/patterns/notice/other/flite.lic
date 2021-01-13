@@ -12,7 +12,7 @@ non-conflicting licence, see below\.
 
                   Language Technologies Institute                      
                      Carnegie Mellon University                        
-                      Copyright \(c\) 1999-2014                          
+                      Copyright \((?:c|C)\) 1999-2014                          
                         All Rights Reserved\.                           
                                                                        
   Permission is hereby granted, free of charge, to use and distribute  
@@ -54,7 +54,7 @@ src/cg/cst_vc\.c
 /\*       Nara Institute of Science and Technology, Nara, Japan       \*/
 /\*                                and                                \*/
 /\*             Carnegie Mellon University, Pittsburgh, PA            \*/
-/\*                      Copyright \(c\) 2003-2004                      \*/
+/\*                      Copyright \((?:c|C)\) 2003-2004                      \*/
 /\*                        All Rights Reserved\.                       \*/
 /\*                                                                   \*/
 /\*  Permission is hereby granted, free of charge, to use and         \*/
@@ -106,7 +106,7 @@ doc/alice
 src/regex/regexp\.c
 src/regex/regsub\.c
 
- \*      Copyright \(c\) 1986 by University of Toronto\.
+ \*      Copyright \((?:c|C)\) 1986 by University of Toronto\.
  \*      Written by Henry Spencer\.  Not derived from licensed software\.
  \*
  \*      Permission is granted to anyone to use this software for any
@@ -125,7 +125,7 @@ src/regex/regsub\.c
 
 src/speech/rateconv\.c
 
- \*      Copyright \(c\) 1992, 1995 by Markus Mummert
+ \*      Copyright \((?:c|C)\) 1992, 1995 by Markus Mummert
  \*
  \*      Redistribution and use of this software, modifcation and inclusion
  \*      into other forms of software are permitted provided that the following
@@ -149,7 +149,7 @@ lang/usenglish/us_f0lr\.c
    a joint copyright CMU/Edinburgh but with the same free licence
 
 configure
-   # Copyright \(C\) 1992, 93, 94, 95, 96 Free Software Foundation, Inc\.
+   # Copyright \((?:c|C)\) 1992, 93, 94, 95, 96 Free Software Foundation, Inc\.
    #
    # This configure script is free software; the Free Software Foundation
    # gives unlimited permission to copy, distribute and modify it\.
