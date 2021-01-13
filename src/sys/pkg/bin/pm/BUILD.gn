@@ -12,9 +12,9 @@ go_library("pm_lib") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/..."
 
   deps = [
-    "//garnet/go/src/far",
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
+    "//src/sys/pkg/lib/far/go:far",
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/flynn/go-tuf",
     "//third_party/golibs:github.com/fsnotify/fsnotify",

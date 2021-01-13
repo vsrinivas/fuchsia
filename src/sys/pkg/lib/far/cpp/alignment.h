@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_ALIGNMENT_H_
-#define GARNET_LIB_FAR_ALIGNMENT_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_CPP_ALIGNMENT_H_
+#define SRC_SYS_PKG_LIB_FAR_CPP_ALIGNMENT_H_
 
 #include <cstdint>
 
@@ -15,4 +15,4 @@ constexpr inline uint64_t AlignTo8ByteBoundary(uint64_t offset) { return (offset
 
 }  // namespace archive
 
-#endif  // GARNET_LIB_FAR_ALIGNMENT_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_CPP_ALIGNMENT_H_

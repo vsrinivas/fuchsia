@@ -55,7 +55,6 @@ group("all") {
     "//garnet/examples/intl/wisdom:tests",
     "//garnet/go/src/benchmarking:go_benchmarking_tests",
     "//garnet/go/src/device_settings:device_settings_gotests",
-    "//garnet/go/src/far:go_far_tests",
     "//garnet/go/src/go-tuf:go_tuf_host_tests($host_toolchain)",
     "//garnet/go/src/go-tuf:go_tuf_tests",
     "//garnet/go/src/inspect:go_inspect_tests",

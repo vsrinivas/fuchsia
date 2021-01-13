@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 func Archive(cfg *Config, outputPath string) error {

@@ -16,9 +16,9 @@ import (
 	"syscall/zx"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 const (

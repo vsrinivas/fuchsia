@@ -13,7 +13,7 @@ executable("bin") {
 
   deps = [
     "//src/lib/fxl",
-    "//src/sys/pkg/lib/far",
+    "//src/sys/pkg/lib/far/cpp:far",
   ]
 }
 

@@ -18,10 +18,10 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 const (

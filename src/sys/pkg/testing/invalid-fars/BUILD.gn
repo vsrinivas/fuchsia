@@ -11,7 +11,7 @@ if (current_toolchain == host_toolchain) {
     name = "generator"
     edition = "2018"
     deps = [
-      "//src/sys/pkg/lib/fuchsia-archive",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
     ]

@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 type FileData []byte

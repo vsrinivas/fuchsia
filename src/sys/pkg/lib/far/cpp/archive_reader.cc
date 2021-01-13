@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/pkg/lib/far/archive_reader.h"
+#include "src/sys/pkg/lib/far/cpp/archive_reader.h"
 
 #include <inttypes.h>
 #include <sys/stat.h>
@@ -16,8 +16,8 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/concatenate.h"
-#include "src/sys/pkg/lib/far/file_operations.h"
-#include "src/sys/pkg/lib/far/format.h"
+#include "src/sys/pkg/lib/far/cpp/file_operations.h"
+#include "src/sys/pkg/lib/far/cpp/format.h"
 
 namespace archive {
 namespace {

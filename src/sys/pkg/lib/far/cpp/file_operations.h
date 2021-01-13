@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_FILE_OPERATIONS_H_
-#define GARNET_LIB_FAR_FILE_OPERATIONS_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_CPP_FILE_OPERATIONS_H_
+#define SRC_SYS_PKG_LIB_FAR_CPP_FILE_OPERATIONS_H_
 
 #include <vector>
 
@@ -49,4 +49,4 @@ bool CopyFileToFile(int src_fd, int dst_fd, uint64_t length);
 
 }  // namespace archive
 
-#endif  // GARNET_LIB_FAR_FILE_OPERATIONS_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_CPP_FILE_OPERATIONS_H_

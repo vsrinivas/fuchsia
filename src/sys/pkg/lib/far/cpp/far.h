@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_FAR_H_
-#define GARNET_LIB_FAR_FAR_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_CPP_FAR_H_
+#define SRC_SYS_PKG_LIB_FAR_CPP_FAR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -44,4 +44,4 @@ bool far_reader_get_content(far_reader_t reader, uint64_t index, uint64_t* offse
 }
 #endif
 
-#endif  // GARNET_LIB_FAR_FAR_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_CPP_FAR_H_

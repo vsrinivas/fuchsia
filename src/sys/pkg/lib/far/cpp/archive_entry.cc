@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/pkg/lib/far/archive_entry.h"
+#include "src/sys/pkg/lib/far/cpp/archive_entry.h"
 
 #include <utility>
 

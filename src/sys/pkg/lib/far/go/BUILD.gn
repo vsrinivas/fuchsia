@@ -15,7 +15,7 @@ go_library("far") {
 }
 
 go_test("go_far_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/far" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go" ]
   deps = [ ":far" ]
 }
 
@@ -30,4 +30,9 @@ fuchsia_component("test-component") {
 fuchsia_test_package("go_far_tests") {
   test_components = [ ":test-component" ]
   deps = [ "//src/sys/pkg/testing/invalid-fars:resource" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":go_far_tests" ]
 }

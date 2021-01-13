@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/pkg/lib/far/archive_writer.h"
+#include "src/sys/pkg/lib/far/cpp/archive_writer.h"
 
 #include <fcntl.h>
 #include <stdint.h>
@@ -21,9 +21,9 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/files/file_descriptor.h"
-#include "src/sys/pkg/lib/far/alignment.h"
-#include "src/sys/pkg/lib/far/file_operations.h"
-#include "src/sys/pkg/lib/far/format.h"
+#include "src/sys/pkg/lib/far/cpp/alignment.h"
+#include "src/sys/pkg/lib/far/cpp/file_operations.h"
+#include "src/sys/pkg/lib/far/cpp/format.h"
 
 namespace archive {
 

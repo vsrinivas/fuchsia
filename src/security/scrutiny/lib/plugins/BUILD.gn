@@ -19,7 +19,7 @@ if (is_host) {
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_rust",
-      "//src/sys/pkg/lib/fuchsia-archive",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:base64",

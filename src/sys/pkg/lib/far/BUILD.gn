@@ -1,61 +1,22 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# found in the LICENSE file
 
-import("//src/sys/build/components.gni")
-
-source_set("far") {
-  sources = [
-    "alignment.h",
-    "archive_entry.cc",
-    "archive_entry.h",
-    "archive_reader.cc",
-    "archive_reader.h",
-    "archive_writer.cc",
-    "archive_writer.h",
-    "far.cc",
-    "far.h",
-    "file_operations.cc",
-    "file_operations.h",
-    "format.h",
-    "manifest.cc",
-    "manifest.h",
-  ]
-
-  deps = [
-    "//src/lib/files",
-    "//src/lib/fxl",
-  ]
-  public_deps = [ "//third_party/googletest:gtest_prod" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
-}
-
-executable("validate-fars") {
-  sources = [ "archive_reader_test.cc" ]
-  output_name = "validate-fars"
-  include_dirs = [ "." ]
-  deps = [
-    ":far",
-    "//src/lib/files:files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
-  ]
+group("lib") {
   testonly = true
-}
 
-fuchsia_unittest_package("cpp-fars-tests") {
-  manifest = "meta/validate-fars.cml"
   deps = [
-    ":validate-fars",
-    "//src/sys/pkg/testing/invalid-fars:resource",
+    "go:far",
+    "rust:fuchsia-archive",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":cpp-fars-tests" ]
+
+  deps = [
+    "cpp:tests",
+    "go:tests",
+    "rust:tests",
+  ]
 }

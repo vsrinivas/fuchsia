@@ -12,9 +12,9 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/sys/pkg/lib/far/archive_reader.h"
-#include "src/sys/pkg/lib/far/archive_writer.h"
-#include "src/sys/pkg/lib/far/manifest.h"
+#include "src/sys/pkg/lib/far/cpp/archive_reader.h"
+#include "src/sys/pkg/lib/far/cpp/archive_writer.h"
+#include "src/sys/pkg/lib/far/cpp/manifest.h"
 
 namespace archive {
 

@@ -8,7 +8,7 @@
 
     Wrapper over zircon-fdio library
 
-* [fuchsia-archive/](/src/sys/pkg/lib/fuchsia-archive/)
+* [fuchsia-archive/](/src/sys/pkg/lib/far/rust/)
 
     Work with Fuchsia Archives (FARs)
 

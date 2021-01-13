@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"sync"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 // PackageManifest is the json structure representation of a full package

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_
-#define SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_CPP_ARCHIVE_READER_H_
+#define SRC_SYS_PKG_LIB_FAR_CPP_ARCHIVE_READER_H_
 
 #include <string_view>
 #include <vector>
@@ -11,7 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest_prod.h>
 
-#include "src/sys/pkg/lib/far/format.h"
+#include "src/sys/pkg/lib/far/cpp/format.h"
 
 namespace archive {
 
@@ -70,4 +70,4 @@ class ArchiveReader {
 
 }  // namespace archive
 
-#endif  // SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_CPP_ARCHIVE_READER_H_

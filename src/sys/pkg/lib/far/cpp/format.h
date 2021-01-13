@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_PKG_LIB_FAR_FORMAT_H_
-#define SRC_SYS_PKG_LIB_FAR_FORMAT_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_CPP_FORMAT_H_
+#define SRC_SYS_PKG_LIB_FAR_CPP_FORMAT_H_
 
 #include <stdint.h>
 
@@ -40,4 +40,4 @@ struct DirectoryTableEntry {
 
 }  // namespace archive
 
-#endif  // SRC_SYS_PKG_LIB_FAR_FORMAT_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_CPP_FORMAT_H_
