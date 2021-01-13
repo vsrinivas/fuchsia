@@ -82,6 +82,7 @@ mod night_mode;
 mod policy;
 mod power;
 mod privacy;
+mod service;
 mod setup;
 pub mod task;
 
@@ -322,6 +323,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir = fs.root_dir();
         }
 
+        // Define top level MessageHub for service communication.
+        let messenger_factory = service::message::create_hub();
+
         let (agent_types, settings, flags) = match self.configuration {
             Some(configuration) => {
                 (configuration.agent_types, configuration.services, configuration.controller_flags)
@@ -370,6 +374,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         create_environment(
             service_dir,
+            messenger_factory,
             settings,
             agent_blueprints,
             self.resource_monitors,
@@ -526,6 +531,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// to support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
+    _messenger_factory: service::message::Factory,
     components: HashSet<SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
