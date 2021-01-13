@@ -88,6 +88,15 @@ static const struct {
     {FRAME_RATE_LUT_44_1K, std::size(FRAME_RATE_LUT_44_1K), ASF_RANGE_FLAG_FPS_44100_FAMILY},
 };
 
+static const struct {
+  uint32_t ihda_flag;
+  uint8_t sad_bitrate;
+} FORMAT_SAD_LUT[] = {
+    {IHDA_PCM_SIZE_24BITS, edid::ShortAudioDescriptor::kLpcm_24},
+    {IHDA_PCM_SIZE_20BITS, edid::ShortAudioDescriptor::kLpcm_20},
+    {IHDA_PCM_SIZE_16BITS, edid::ShortAudioDescriptor::kLpcm_16},
+};
+
 zx_obj_type_t GetHandleType(const zx::handle& handle) {
   zx_info_handle_basic_t basic_info;
 
@@ -210,6 +219,61 @@ zx_status_t MakeFormatRangeList(const SampleCaps& sample_caps, uint32_t max_chan
     }
   }
 
+  return ZX_OK;
+}
+
+zx_status_t MakeNewSampleCaps(const SampleCaps& old_sample_caps,
+                              const edid::ShortAudioDescriptor sad_list[], const size_t sad_count,
+                              SampleCaps& new_sample_caps) {
+  static constexpr struct {
+    uint32_t flag;
+    uint32_t rate;
+  } kSadRates[7] = {
+      {edid::ShortAudioDescriptor::kHz32, 32000},   {edid::ShortAudioDescriptor::kHz44, 44100},
+      {edid::ShortAudioDescriptor::kHz48, 48000},   {edid::ShortAudioDescriptor::kHz88, 88200},
+      {edid::ShortAudioDescriptor::kHz96, 96000},   {edid::ShortAudioDescriptor::kHz176, 176400},
+      {edid::ShortAudioDescriptor::kHz192, 192000},
+  };
+  static constexpr struct {
+    uint32_t flag;
+    uint32_t rate;
+  } kSampleCapsRates[] = {
+      {IHDA_PCM_RATE_8000, 8000},     {IHDA_PCM_RATE_16000, 16000}, {IHDA_PCM_RATE_32000, 32000},
+      {IHDA_PCM_RATE_48000, 48000},   {IHDA_PCM_RATE_96000, 96000}, {IHDA_PCM_RATE_192000, 192000},
+      {IHDA_PCM_RATE_384000, 384000}, {IHDA_PCM_RATE_11025, 11025}, {IHDA_PCM_RATE_22050, 22050},
+      {IHDA_PCM_RATE_44100, 44100},   {IHDA_PCM_RATE_88200, 88200}, {IHDA_PCM_RATE_176400, 176400},
+  };
+
+  if (!(old_sample_caps.pcm_formats_ & IHDA_PCM_FORMAT_PCM)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  new_sample_caps.pcm_formats_ |= IHDA_PCM_FORMAT_PCM;
+
+  for (uint8_t i = 0; i < sad_count; ++i) {
+    for (size_t j = 0; j < std::size(FORMAT_SAD_LUT); ++j) {
+      if (!(sad_list[i].bitrate & FORMAT_SAD_LUT[j].sad_bitrate)) {
+        continue;
+      }
+      if (old_sample_caps.pcm_size_rate_ & FORMAT_SAD_LUT[j].ihda_flag) {
+        new_sample_caps.pcm_size_rate_ |= FORMAT_SAD_LUT[j].ihda_flag;
+      }
+    }
+    for (size_t j = 0; j < std::size(kSadRates); ++j) {
+      if (!(sad_list[i].sampling_frequencies & kSadRates[j].flag)) {
+        continue;
+      }
+      for (size_t k = 0; k < std::size(kSampleCapsRates); ++k) {
+        if (kSadRates[j].rate == kSampleCapsRates[k].rate &&
+            (old_sample_caps.pcm_size_rate_ & kSampleCapsRates[k].flag)) {
+          new_sample_caps.pcm_size_rate_ |= kSampleCapsRates[k].flag;
+          break;
+        }
+      }
+    }
+  }
+  if (new_sample_caps.pcm_size_rate_ == 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
   return ZX_OK;
 }
 

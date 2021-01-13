@@ -113,9 +113,9 @@ static inline constexpr CodecVerb SP_VERB(uint8_t payload) {
 }
 
 template <uint32_t ID>
-static inline constexpr CodecVerb SP_GET_VERB() {
+static inline constexpr CodecVerb SP_GET_VERB(uint8_t payload = 0) {
   static_assert((ID & ~0xFFu) == 0u, "Illegal ID for short payload codec GET verb!");
-  return CodecVerb(SP_VERB<0xF00u | ID>(0u));
+  return CodecVerb(SP_VERB<0xF00u | ID>(payload));
 }
 
 template <uint32_t ID>
@@ -181,6 +181,21 @@ static inline constexpr CodecVerb GET_CONNECTION_LIST_ENTRY(uint8_t offset) {
 static inline constexpr CodecVerb GET_AMPLIFIER_GAIN_MUTE(bool input, bool right, uint8_t ndx = 0) {
   return LP_GET_VERB<0x03>(
       static_cast<uint16_t>((!input ? (1u << 15) : 0) | (!right ? (1u << 13) : 0) | (ndx & 0xF)));
+}
+
+// Section 7.3.3.34
+static inline constexpr CodecVerb GET_EDID_LIKE_DATA(uint8_t offset) {
+  return SP_GET_VERB<0x2F>(offset);
+}
+
+// Section 7.3.3.36
+static inline constexpr CodecVerb GET_DIP_SIZE_INFO(uint8_t payload) {
+  return SP_GET_VERB<0x2E>(payload);
+}
+
+// Section 7.3.3.38
+static inline constexpr CodecVerb GET_DIP_DATA(uint8_t payload) {
+  return SP_GET_VERB<0x31>(payload);
 }
 
 static inline constexpr CodecVerb SET_AMPLIFIER_GAIN_MUTE(bool mute, uint8_t gain_steps,
@@ -270,11 +285,9 @@ constexpr CodecVerb GET_VOLUME_KNOB               = SP_GET_VERB<0x0f>(); // Sect
 constexpr CodecVerb GET_IMPLEMENTATION_ID         = SP_GET_VERB<0x20>(); // Section 7.3.3.30
 constexpr CodecVerb GET_CONFIG_DEFAULT            = SP_GET_VERB<0x1c>(); // Section 7.3.3.31
 constexpr CodecVerb GET_STRIPE_CONTROL            = SP_GET_VERB<0x24>(); // Section 7.3.3.32
-constexpr CodecVerb GET_EDID_LIKE_DATA            = SP_GET_VERB<0x2F>(); // Section 7.3.3.34
 constexpr CodecVerb GET_CONV_CHANNEL_COUNT        = SP_GET_VERB<0x2d>(); // Section 7.3.3.35
 constexpr CodecVerb GET_DIP_SIZE                  = SP_GET_VERB<0x2e>(); // Section 7.3.3.36
 constexpr CodecVerb GET_DIP_INDEX                 = SP_GET_VERB<0x30>(); // Section 7.3.3.37
-constexpr CodecVerb GET_DIP_DATA                  = SP_GET_VERB<0x31>(); // Section 7.3.3.38
 constexpr CodecVerb GET_DIP_XMIT_CTRL             = SP_GET_VERB<0x32>(); // Section 7.3.3.39
 constexpr CodecVerb GET_CP_CONTROL                = SP_GET_VERB<0x33>(); // Section 7.3.3.40
 constexpr CodecVerb GET_ASP_CHAN_MAPPING          = SP_GET_VERB<0x34>(); // Section 7.3.3.41

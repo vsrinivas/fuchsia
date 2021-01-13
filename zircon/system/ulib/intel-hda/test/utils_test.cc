@@ -87,5 +87,85 @@ TEST(WaitCondition, LongRunningCondition) {
   EXPECT_EQ(num_polls, 2);
 }
 
+TEST(SampleCapabilities, MakeNewFromShortAudioDescriptorNoMatchFound) {
+  SampleCaps old_sample_caps = {};
+  old_sample_caps.pcm_size_rate_ = IHDA_PCM_SIZE_16BITS | IHDA_PCM_RATE_11025 |
+                                   IHDA_PCM_RATE_16000 | IHDA_PCM_RATE_22050 | IHDA_PCM_RATE_32000;
+  old_sample_caps.pcm_formats_ = IHDA_PCM_FORMAT_PCM;
+  SampleCaps new_sample_caps = {};
+  edid::ShortAudioDescriptor sad_list[1];
+  uint8_t num_channels_minus_1 = 1;
+  sad_list[0].format_and_channels = (edid::ShortAudioDescriptor::kLPcm << 3) | num_channels_minus_1;
+  sad_list[0].sampling_frequencies = edid::ShortAudioDescriptor::kHz48;
+  sad_list[0].bitrate = edid::ShortAudioDescriptor::kLpcm_20 | edid::ShortAudioDescriptor::kLpcm_24;
+  ASSERT_EQ(MakeNewSampleCaps(old_sample_caps, sad_list, countof(sad_list), new_sample_caps),
+            ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(new_sample_caps.pcm_size_rate_, 0);
+}
+
+TEST(SampleCapabilities, MakeNewFromShortAudioDescriptorBadPcmFormat) {
+  SampleCaps old_sample_caps = {};
+  old_sample_caps.pcm_size_rate_ = IHDA_PCM_SIZE_16BITS | IHDA_PCM_RATE_48000;
+  old_sample_caps.pcm_formats_ =
+      IHDA_PCM_FORMAT_AC3 | IHDA_PCM_FORMAT_FLOAT32;  // No PCM, error below.
+  SampleCaps new_sample_caps = {};
+  edid::ShortAudioDescriptor sad_list[1];
+  uint8_t num_channels_minus_1 = 1;
+  sad_list[0].format_and_channels = (edid::ShortAudioDescriptor::kLPcm << 3) | num_channels_minus_1;
+  sad_list[0].sampling_frequencies = edid::ShortAudioDescriptor::kHz48;
+  sad_list[0].bitrate = edid::ShortAudioDescriptor::kLpcm_20 | edid::ShortAudioDescriptor::kLpcm_24;
+  ASSERT_EQ(MakeNewSampleCaps(old_sample_caps, sad_list, countof(sad_list), new_sample_caps),
+            ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(new_sample_caps.pcm_size_rate_, 0);
+}
+
+TEST(SampleCapabilities, MakeNewFromShortAudioDescriptorFindSingle) {
+  SampleCaps old_sample_caps = {};
+  old_sample_caps.pcm_size_rate_ = IHDA_PCM_SIZE_16BITS | IHDA_PCM_RATE_11025 |
+                                   IHDA_PCM_RATE_16000 | IHDA_PCM_RATE_22050 | IHDA_PCM_RATE_32000;
+  old_sample_caps.pcm_formats_ = IHDA_PCM_FORMAT_PCM;
+  SampleCaps new_sample_caps = {};
+  edid::ShortAudioDescriptor sad_list[1];
+  sad_list[0].format_and_channels = 0x09;  // format = 1, num channels minus 1 = 1.
+  sad_list[0].sampling_frequencies = edid::ShortAudioDescriptor::kHz32 |
+                                     edid::ShortAudioDescriptor::kHz44 |
+                                     edid::ShortAudioDescriptor::kHz48;
+  sad_list[0].bitrate = edid::ShortAudioDescriptor::kLpcm_16 |
+                        edid::ShortAudioDescriptor::kLpcm_20 | edid::ShortAudioDescriptor::kLpcm_24;
+  ASSERT_OK(MakeNewSampleCaps(old_sample_caps, sad_list, countof(sad_list), new_sample_caps));
+  EXPECT_EQ(new_sample_caps.pcm_size_rate_, IHDA_PCM_SIZE_16BITS | IHDA_PCM_RATE_32000);
+}
+
+TEST(SampleCapabilities, MakeNewFromShortAudioDescriptorFindMultiple1) {
+  SampleCaps old_sample_caps = {};
+  old_sample_caps.pcm_size_rate_ = IHDA_PCM_SIZE_16BITS | IHDA_PCM_SIZE_20BITS |
+                                   IHDA_PCM_SIZE_24BITS | IHDA_PCM_RATE_32000 | IHDA_PCM_RATE_48000;
+  old_sample_caps.pcm_formats_ = IHDA_PCM_FORMAT_PCM;
+  SampleCaps new_sample_caps = {};
+  edid::ShortAudioDescriptor sad_list[1];
+  sad_list[0].format_and_channels = 0x09;  // format = 1, num channels minus 1 = 1.
+  sad_list[0].sampling_frequencies = edid::ShortAudioDescriptor::kHz32 |
+                                     edid::ShortAudioDescriptor::kHz44 |
+                                     edid::ShortAudioDescriptor::kHz48;
+  sad_list[0].bitrate = edid::ShortAudioDescriptor::kLpcm_20;
+  ASSERT_OK(MakeNewSampleCaps(old_sample_caps, sad_list, countof(sad_list), new_sample_caps));
+  EXPECT_EQ(new_sample_caps.pcm_size_rate_,
+            IHDA_PCM_SIZE_20BITS | IHDA_PCM_RATE_32000 | IHDA_PCM_RATE_48000);
+}
+
+TEST(SampleCapabilities, MakeNewFromShortAudioDescriptorFindMultiple2) {
+  SampleCaps old_sample_caps = {};
+  old_sample_caps.pcm_size_rate_ = IHDA_PCM_SIZE_16BITS | IHDA_PCM_SIZE_20BITS |
+                                   IHDA_PCM_SIZE_24BITS | IHDA_PCM_RATE_32000 | IHDA_PCM_RATE_48000;
+  old_sample_caps.pcm_formats_ = IHDA_PCM_FORMAT_PCM;
+  SampleCaps new_sample_caps = {};
+  edid::ShortAudioDescriptor sad_list[1];
+  sad_list[0].format_and_channels = 0x09;  // format = 1, num channels minus 1 = 1.
+  sad_list[0].sampling_frequencies = edid::ShortAudioDescriptor::kHz48;
+  sad_list[0].bitrate = edid::ShortAudioDescriptor::kLpcm_20 | edid::ShortAudioDescriptor::kLpcm_24;
+  ASSERT_OK(MakeNewSampleCaps(old_sample_caps, sad_list, countof(sad_list), new_sample_caps));
+  EXPECT_EQ(new_sample_caps.pcm_size_rate_,
+            IHDA_PCM_SIZE_20BITS | IHDA_PCM_SIZE_24BITS | IHDA_PCM_RATE_48000);
+}
 }  // namespace
 }  // namespace audio::intel_hda

@@ -22,13 +22,17 @@ driver_module("hdmi-audio-codec") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "hdmi-codec.cc" ]
+  sources = [
+    "hdmi-codec.cc",
+    "hdmi-stream.cc",
+  ]
   deps = [
     ":ihda_codecs_hdmi_bind",
     "//sdk/banjo/fuchsia.hardware.intelhda.codec",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/lib/eld",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",

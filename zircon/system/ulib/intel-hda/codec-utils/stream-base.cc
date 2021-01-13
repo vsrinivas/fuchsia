@@ -45,6 +45,10 @@ void IntelHDAStreamBase::PrintDebugPrefix() const { printf("[%s] ", dev_name_); 
 
 void IntelHDAStreamBase::SetPersistentUniqueId(const audio_stream_unique_id_t& id) {
   fbl::AutoLock obj_lock(&obj_lock_);
+  SetPersistentUniqueIdLocked(id);
+}
+
+void IntelHDAStreamBase::SetPersistentUniqueIdLocked(const audio_stream_unique_id_t& id) {
   persistent_unique_id_ = id;
 }
 

@@ -9,6 +9,8 @@
 #include <fbl/ref_ptr.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
 
+#include "utils.h"
+
 namespace audio {
 namespace intel_hda {
 namespace codecs {
@@ -19,15 +21,19 @@ class HdmiCodec : public IntelHDACodecDriverBase {
 
   zx_status_t Init(zx_device_t* codec_dev);
   zx_status_t Start() override;
+  zx_status_t ProcessSolicitedResponse(const CodecResponse& resp) override;
 
  protected:
-  void PrintDebugPrefix() const override;
+  zx_status_t Setup();
+  zx_status_t RunCommandList(const CommandListEntry* cmds, size_t cmd_count);
+  zx_status_t CreateAndStartStreams(const StreamProperties* streams, size_t stream_cnt);
 
  private:
   friend class fbl::RefPtr<HdmiCodec>;
-  friend class fbl::internal::MakeRefCountedHelper<HdmiCodec>;
   HdmiCodec() {}
   virtual ~HdmiCodec() {}
+
+  bool waiting_for_impl_id_ = false;
 };
 
 }  // namespace codecs

@@ -5,6 +5,7 @@
 #ifndef INTEL_HDA_UTILS_UTILS_H_
 #define INTEL_HDA_UTILS_UTILS_H_
 
+#include <lib/edid/edid.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -71,6 +72,12 @@ zx_status_t ConvertHandle(zx::handle* abstract_handle, T* concrete_handle) {
 // capabilities and max channels.
 zx_status_t MakeFormatRangeList(const SampleCaps& sample_caps, uint32_t max_channels,
                                 fbl::Vector<audio_stream_format_range_t>* ranges);
+
+// Generates new SampleCaps by performing a logical "and" based on an exisiting SampleCaps and
+// and ranges.
+zx_status_t MakeNewSampleCaps(const SampleCaps& old_sample_caps,
+                              const edid::ShortAudioDescriptor sad_list[], const size_t sad_count,
+                              SampleCaps& new_sample_caps);
 
 }  // namespace intel_hda
 }  // namespace audio

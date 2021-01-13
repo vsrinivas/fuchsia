@@ -64,6 +64,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   virtual ~IntelHDAStreamBase();
 
   void SetPersistentUniqueId(const audio_stream_unique_id_t& id) __TA_EXCLUDES(obj_lock_);
+  void SetPersistentUniqueIdLocked(const audio_stream_unique_id_t& id) __TA_REQUIRES(obj_lock_);
 
   // Properties available to subclasses.
   uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) { return dma_stream_tag_; }

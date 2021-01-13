@@ -214,6 +214,9 @@ struct ShortAudioDescriptor {
   static constexpr uint8_t kHz44 = (1 << 1);
   static constexpr uint8_t kHz32 = (1 << 0);
   uint8_t bitrate;
+  static constexpr uint8_t kLpcm_24 = (1 << 2);
+  static constexpr uint8_t kLpcm_20 = (1 << 1);
+  static constexpr uint8_t kLpcm_16 = (1 << 0);
   DEF_SUBBIT(bitrate, 2, lpcm_24);
   DEF_SUBBIT(bitrate, 1, lpcm_20);
   DEF_SUBBIT(bitrate, 0, lpcm_16);
