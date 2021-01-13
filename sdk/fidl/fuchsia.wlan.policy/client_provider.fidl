@@ -40,19 +40,22 @@ protocol ClientListener {
 /// Individual calls provided by the API are triggered after registering with
 /// the wlan ClientProvider via the OpenControlChannel call.
 protocol ClientController {
-    /// Enables wlan to initiate connections to networks (either autoconnect to
-    /// saved networks or act on incoming calls triggering connections).  Depending
-    /// on the underlying capabilities of the device, this call may impact other
-    /// device operation (for example, acting as an access point).
+    /// Enables wlan to initiate connections to networks (either by autoconnecting
+    /// to saved networks or acting on incoming calls triggering connections).
+    /// Depending on the underlying capabilities of the device, this call may impact
+    /// other device operation (for example, acting as an access point).
     StartClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
 
-    /// Disables connections to wlan networks and tears down any existing connections.
+    /// Tears down any existing connections to wlan networks and disables initiation of
+    /// new connections.
     StopClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
 
     /// Triggers a network scan.  Note, even in normal operation, some scan requests
     /// may be rejected due to timing with connection establishment or other critical
     /// connection maintenance.  If the scan is cancelled or errors, the caller is
     /// notified via a status update in the ScanResultIterator.
+    /// In the current implementation, client connections must be started for a scan
+    /// to be performed.
     ScanForNetworks(request<ScanResultIterator> iterator);
 
     /// Saves a network and any credential information needed to connect.  Multiple
@@ -100,7 +103,6 @@ enum ScanErrorCode {
     /// higher priority operations or conflicting requests.
     CANCELLED = 2;
 };
-
 
 /// Information from an observed wlan network.  This includes the
 /// network name, security type, detected access point information and network
