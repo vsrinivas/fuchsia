@@ -7,8 +7,8 @@ use {
         ie::{self, IeType},
         mac,
         test_utils::fake_frames::{
-            fake_eap_rsne, fake_wpa1_ie, fake_wpa2_enterprise_rsne, fake_wpa2_mixed_rsne,
-            fake_wpa2_rsne, fake_wpa2_tkip_only_rsne, fake_wpa2_wpa3_rsne,
+            fake_eap_rsne, fake_wpa1_ie, fake_wpa2_enterprise_rsne, fake_wpa2_rsne,
+            fake_wpa2_tkip_ccmp_rsne, fake_wpa2_tkip_only_rsne, fake_wpa2_wpa3_rsne,
             fake_wpa3_enterprise_192_bit_rsne, fake_wpa3_rsne, fake_wpa3_transition_rsne,
         },
     },
@@ -167,7 +167,7 @@ pub enum FakeProtectionCfg {
     Wpa1Wpa2TkipOnly,
     Wpa2TkipOnly,
     Wpa1Wpa2,
-    Wpa2Mixed,
+    Wpa2TkipCcmp,
     Wpa2Enterprise,
     Wpa2,
     Wpa2Wpa3,
@@ -210,7 +210,7 @@ fn derive_rsne(protection_cfg: FakeProtectionCfg) -> Option<Vec<u8>> {
         FakeProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
         FakeProtectionCfg::Wpa3Transition => Some(fake_wpa3_transition_rsne()),
         FakeProtectionCfg::Wpa2Wpa3 => Some(fake_wpa2_wpa3_rsne()),
-        FakeProtectionCfg::Wpa2Mixed => Some(fake_wpa2_mixed_rsne()),
+        FakeProtectionCfg::Wpa2TkipCcmp => Some(fake_wpa2_tkip_ccmp_rsne()),
         FakeProtectionCfg::Wpa1Wpa2TkipOnly | FakeProtectionCfg::Wpa2TkipOnly => {
             Some(fake_wpa2_tkip_only_rsne())
         }

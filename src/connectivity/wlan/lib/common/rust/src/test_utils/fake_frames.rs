@@ -276,7 +276,7 @@ pub fn fake_wpa2_tkip_only_rsne() -> Vec<u8> {
     ])
 }
 
-pub fn fake_wpa2_mixed_rsne() -> Vec<u8> {
+pub fn fake_wpa2_tkip_ccmp_rsne() -> Vec<u8> {
     attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP

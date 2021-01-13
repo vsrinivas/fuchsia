@@ -539,7 +539,7 @@ mod tests {
         assert_eq!(Protection::Wpa1Wpa2PersonalTkipOnly, fake_bss!(Wpa1Wpa2TkipOnly).protection());
         assert_eq!(Protection::Wpa2PersonalTkipOnly, fake_bss!(Wpa2TkipOnly).protection());
         assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).protection());
-        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2Mixed).protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2TkipCcmp).protection());
         assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).protection());
         assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).protection());
         assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).protection());
