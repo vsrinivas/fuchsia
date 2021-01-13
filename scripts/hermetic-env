@@ -1,0 +1,72 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All Rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This script is a replacement for /usr/bin/env that adds Fuchsia-specific
+# information and provides access to prebuilt tools in the source tree.
+#
+# This is not a subcommand of `fx` because multiple pieces of project
+# infrastructure run outside of the build and need access to in-tree prebuilts.
+
+set -e
+
+# Filter out invalid FUCHSIA_DIR settings.
+if [[ -n "${FUCHSIA_DIR}" ]]; then
+  if [[ ! -d "${FUCHSIA_DIR}" ]]; then
+    unset FUCHSIA_DIR
+  elif [[ "${FUCHSIA_DIR#/}" == "${FUCHSIA_DIR}" ]]; then
+    unset FUCHSIA_DIR
+  else
+    PWD="$(pwd)"
+    if [[ "${PWD#${FUCHSIA_DIR}}" = "${PWD}" ]]; then
+      # FUCHSIA_DIR does not contain the current directory
+      unset FUCHSIA_DIR
+    fi
+  fi
+fi
+
+# Mimic `fx` behavior to set up a consistent root and get prebuilt paths.
+fuchsia_dir="${FUCHSIA_DIR}"
+if [[ -z "${fuchsia_dir}" ]]; then
+  # We walk the parent directories looking for .jiri_root rather than using
+  # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
+  # directory instead of the one containing this file in case the user has
+  # multiple source trees and is picking up this file from another one.
+  fuchsia_dir="$(pwd)"
+  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
+    fuchsia_dir="$(dirname "${fuchsia_dir}")"
+    if [[ "${fuchsia_dir}" == "/" ]]; then
+      echo "Cannot find Platform Source Tree containing $(pwd)"
+      exit 1
+    fi
+  done
+fi
+
+export FUCHSIA_DIR="${fuchsia_dir}"
+declare -r prebuilt_sh="${fuchsia_dir}/tools/devshell/lib/prebuilt.sh"
+source "${prebuilt_sh}" || exit $?
+
+if [[ "${PATH#${PREBUILT_ALL_PATHS}" == "${PATH}" ]]; then
+  # Prebuilts have not been added to the path
+  if [[ x"${FUCHSIA_HERMETIC_TOOLS}" == xy ]]; then
+    readonly newpath="${PREBUILT_ALL_PATHS}:${FUCHSIA_DIR}/tools/system"
+  else
+    readonly newpath="${PREBUILT_ALL_PATHS}:${PATH}"
+  fi
+else
+  readonly newpath="${PATH}"
+fi
+
+export PATH="${newpath}"
+
+# Forward the args to the system `env`.
+exec /usr/bin/env -S -i \
+  "FUCHSIA_DIR=${fuchsia_dir}" \
+  "TERM=${TERM}" \
+  "PATH=${newpath}" \
+  "FUCHSIA_HERMETIC_TOOLS=${FUCHSIA_HERMETIC_TOOLS}" \
+  ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
+  ${GOMA_DISABLED+"GOMA_DISABLED=${GOMA_DISABLED}"} \
+  ${TMPDIR+"TMPDIR=${TMPDIR}"} \
+  "$@"
