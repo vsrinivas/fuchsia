@@ -35,6 +35,10 @@ lazy_static! {
 /// accepting new information).
 const MIN_COVARIANCE: f64 = 1e12;
 
+/// The factor to apply to standard deviations when producing an error bound. The current setting of
+/// two sigma approximately corresponds to a 95% confidence interval.
+const ERROR_BOUND_FACTOR: u64 = 2;
+
 /// Converts a zx::Duration to a floating point number of nanoseconds.
 fn duration_to_f64(duration: zx::Duration) -> f64 {
     duration.into_nanos() as f64
@@ -163,17 +167,24 @@ impl<D: Diagnostics> Estimator<D> {
         utc_at_last_update + (monotonic - self.monotonic)
     }
 
-    /// Returns a ~95% confidence bound on the estimate error at the specified monotonic time,
+    /// Returns a confidence bound on the estimate error at the specified monotonic time,
     /// in nanoseconds.
     pub fn error_bound(&self, monotonic: zx::Time) -> u64 {
-        // Assuming the error tends to follow a normal distribution with a standard deviation
-        // (aka sigma) of sqrt(covariance) after many independent inputs, a 95% confidence bound
-        // is 2*sigma at the time of the last update.
-        let bound_at_update = 2 * self.covariance_00.sqrt() as u64;
-        // The error bound will grow the further we get from this last update time.
-        let nanos_since_update = cmp::max(0, (monotonic - self.monotonic).into_nanos()) as u64;
-        bound_at_update + 2 * (nanos_since_update * OSCILLATOR_ERROR_STD_DEV_PPM) / MILLION
+        // From central limit theorem assume the error tends to follow a normal distribution
+        // with a standard deviation of sqrt(covariance) after many independent inputs. Error bound
+        // at the time of the last update is therefore proportional to sqrt(covariance).
+        // ERROR_BOUND_FACTOR defines the confidence bound we intend to deliver, with
+        // ERROR_BOUND_FACTOR=2 mapping to 95% confidence.
+        let bound_at_update = ERROR_BOUND_FACTOR * self.covariance_00.sqrt() as u64;
+        // The error bound will grow the further we get from this time of last update.
+        let time_since_update = cmp::max(zx::Duration::from_nanos(0), monotonic - self.monotonic);
+        bound_at_update + error_bound_increase(time_since_update)
     }
+}
+
+/// Returns the increase in estimate error over a given duration, in nanoseconds.
+pub fn error_bound_increase(duration: zx::Duration) -> u64 {
+    ERROR_BOUND_FACTOR * (duration.into_nanos() as u64 * OSCILLATOR_ERROR_STD_DEV_PPM) / MILLION
 }
 
 #[cfg(test)]
@@ -316,5 +327,11 @@ mod test {
         assert_near!(estimator.estimate_0, 0.0, 1.0);
         // Ignored event should not be logged.
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
+    }
+
+    #[test]
+    fn error_bound_increase_fn() {
+        assert_eq!(error_bound_increase(1.minute()), 1800000);
+        assert_eq!(error_bound_increase(1.hour()), 108000000);
     }
 }

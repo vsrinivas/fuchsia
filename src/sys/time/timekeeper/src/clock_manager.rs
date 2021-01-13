@@ -8,7 +8,7 @@ use {
         enums::{
             ClockCorrectionStrategy, ClockUpdateReason, StartClockSource, Track, WriteRtcOutcome,
         },
-        estimator::Estimator,
+        estimator::{error_bound_increase, Estimator},
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
@@ -48,8 +48,12 @@ const NOMINAL_RATE_MAX_ERROR: zx::Duration = zx::Duration::from_nanos(
     (MAX_SLEW_DURATION.into_nanos() * NOMINAL_RATE_CORRECTION_PPM) / MILLION,
 );
 
-/// The minimum change in value that causes reported error bound to be updated.
+/// The change in error bound that requires an update to the reported value. In some conditions
+/// error bound may be updated even when it has changed by less than this value.
 const ERROR_BOUND_UPDATE: u64 = 100_000_000; // 100ms
+
+/// The interval at which the error bound will be refreshed while no other events are in progress.
+const ERROR_REFRESH_INTERVAL: zx::Duration = zx::Duration::from_minutes(6);
 
 /// Describes how a clock will be slewed in order to correct time.
 #[derive(PartialEq)]
@@ -99,7 +103,8 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     diagnostics: Arc<D>,
     /// The track of the estimate being managed.
     track: Track,
-    /// A task used to complete any deferred clock updates, such as finishing a slew.
+    /// A task used to complete any delayed clock updates, such as finishing a slew or increasing
+    /// error bound in the absence of corrections.
     delayed_updates: Option<fasync::Task<()>>,
 }
 
@@ -208,6 +213,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             source: StartClockSource::External(self.time_source_manager.role()),
         });
         info!("started {:?} clock from external source at {}", self.track, utc_chrono);
+        self.set_delayed_update_task(vec![]);
     }
 
     /// Applies a correction to the clock to reach the requested offset between utc and monotonic
@@ -235,19 +241,11 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                 let (_, update, reason) = updates.remove(0);
                 self.update_clock(update);
                 self.record_clock_update(reason);
-                info!("started {:?} {:?} with {} deferred updates", track, slew, updates.len());
+                info!("started {:?} {:?} with {} scheduled updates", track, slew, updates.len());
 
-                // Create a task to asynchronously apply all the remaining updates.
-                let clock_clone = Arc::clone(&self.clock);
-                let diagnostics_clone = Arc::clone(&self.diagnostics);
-                self.delayed_updates = Some(fasync::Task::spawn(async move {
-                    for (update_time, update, reason) in updates.drain(..) {
-                        fasync::Timer::new(update_time).await;
-                        info!("deferred {:?} clock update: {:?}, {:?}", track, reason, update);
-                        update_clock(&clock_clone, &track, update);
-                        diagnostics_clone.record(Event::UpdateClock { track, reason });
-                    }
-                }));
+                // Create a task to asynchronously apply all the remaining updates and then increase
+                // error bound over time.
+                self.set_delayed_update_task(updates);
             }
             ClockCorrectionStrategy::Step => {
                 // Any pending clock updates should be superseded by this time step.
@@ -264,16 +262,58 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                 self.record_clock_update(ClockUpdateReason::TimeStep);
                 let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
                 info!("stepped {:?} clock to {}", self.track, utc_chrono);
+                self.set_delayed_update_task(vec![]);
             }
         }
     }
 
-    /// Applies an update to the clock and records the reason with diagnostics.
+    /// Sets a task that asynchronously applies the supplied scheduled clock updates and then
+    /// periodically applies an increase in the error bound indefinitely.
+    fn set_delayed_update_task(
+        &mut self,
+        scheduled_updates: Vec<(fasync::Time, zx::ClockUpdate, ClockUpdateReason)>,
+    ) {
+        let clock = Arc::clone(&self.clock);
+        let diagnostics = Arc::clone(&self.diagnostics);
+        let track = self.track;
+
+        let async_now = fasync::Time::now();
+        // The first periodic step in error bound occurs a fixed duration after the last
+        // scheduled update or after current time if no scheduled updates were supplied.
+        let mut step_async_time =
+            scheduled_updates.last().map(|tup| tup.0).unwrap_or(async_now) + ERROR_REFRESH_INTERVAL;
+        // Updates are supplied in fuchsia_async time for ease of scheduling and unit testing, but
+        // we need to calculate a corresponding monotonic time to read the absolute error bound.
+        let step_mono_time = zx::Time::get_monotonic() + (step_async_time - async_now);
+        let mut step_error_bound =
+            self.estimator.as_ref().expect("Estimator not initialized").error_bound(step_mono_time);
+
+        self.delayed_updates = Some(fasync::Task::spawn(async move {
+            for (update_time, update, reason) in scheduled_updates.into_iter() {
+                fasync::Timer::new(update_time).await;
+                info!("executing scheduled {:?} clock update: {:?}, {:?}", track, reason, update);
+                update_clock(&clock, &track, update);
+                diagnostics.record(Event::UpdateClock { track, reason });
+            }
+
+            loop {
+                fasync::Timer::new(step_async_time).await;
+                info!("increasing {:?} error bound to {:?}ns", track, step_error_bound);
+                update_clock(&clock, &track, zx::ClockUpdate::new().error_bounds(step_error_bound));
+                diagnostics
+                    .record(Event::UpdateClock { track, reason: ClockUpdateReason::IncreaseError });
+                step_async_time += ERROR_REFRESH_INTERVAL;
+                step_error_bound += error_bound_increase(ERROR_REFRESH_INTERVAL);
+            }
+        }));
+    }
+
+    /// Applies an update to the clock.
     fn update_clock(&mut self, update: zx::ClockUpdate) {
         update_clock(&self.clock, &self.track, update);
     }
 
-    /// Records a clock Applies an update to the clock and records the reason with diagnostics.
+    /// Records the reason for a clock update with diagnostics.
     fn record_clock_update(&self, reason: ClockUpdateReason) {
         self.diagnostics.record(Event::UpdateClock { track: self.track, reason });
     }
@@ -398,7 +438,7 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
-        test_util::{assert_geq, assert_leq, assert_lt},
+        test_util::{assert_geq, assert_gt, assert_leq, assert_lt},
         zx::DurationNum,
     };
 
@@ -638,11 +678,26 @@ mod tests {
         assert_geq!(updated_utc, monotonic_before + OFFSET);
         assert_leq!(updated_utc, monotonic_after + OFFSET);
 
+        // If we keep waiting the error bound should increase in the absence of updates.
+        let details1 = clock.get_details().unwrap();
+        assert!(executor.wake_next_timer().is_some());
+        let _ = executor.run_until_stalled(&mut fut);
+        let details2 = clock.get_details().unwrap();
+        assert_eq!(details2.mono_to_synthetic, details1.mono_to_synthetic);
+        assert_gt!(details2.error_bounds, details1.error_bounds);
+        assert!(executor.wake_next_timer().is_some());
+        let _ = executor.run_until_stalled(&mut fut);
+        let details3 = clock.get_details().unwrap();
+        assert_eq!(details3.mono_to_synthetic, details1.mono_to_synthetic);
+        assert_gt!(details3.error_bounds, details2.error_bounds);
+
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
             Event::EstimateUpdated { track: *TEST_TRACK, offset: OFFSET, sqrt_covariance: STD_DEV },
             Event::StartClock { track: *TEST_TRACK, source: *START_CLOCK_SOURCE },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
         ]);
     }
 
@@ -751,8 +806,8 @@ mod tests {
         assert_eq!(details.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_geq!(details.last_rate_adjust_update_ticks, details.last_value_update_ticks);
 
-        // After waiting for the timer, the clock should still be still at the modified rate with a
-        // smaller error bound.
+        // After waiting for the first deferred update the clock should still be still at the
+        // modified rate with a smaller error bound.
         assert!(executor.wake_next_timer().is_some());
         let _ = executor.run_until_stalled(&mut fut);
         let details2 = clock.get_details().unwrap();
@@ -760,14 +815,26 @@ mod tests {
         assert_eq!(details2.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_lt!(details2.error_bounds, details.error_bounds);
 
-        // After waiting for the next timer, the clock should be back to the original rate with an
-        // even smaller error bound.
+        // After waiting for the next deferred update the clock should be back to the original rate
+        // with an even smaller error bound.
         assert!(executor.wake_next_timer().is_some());
         let _ = executor.run_until_stalled(&mut fut);
         let details3 = clock.get_details().unwrap();
         assert_eq!(details3.mono_to_synthetic.rate.synthetic_ticks, 1000000);
         assert_eq!(details3.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_lt!(details3.error_bounds, details2.error_bounds);
+
+        // If we keep on waiting the error bound should keep increasing in the absence of updates.
+        assert!(executor.wake_next_timer().is_some());
+        let _ = executor.run_until_stalled(&mut fut);
+        let details4 = clock.get_details().unwrap();
+        assert_eq!(details4.mono_to_synthetic, details3.mono_to_synthetic);
+        assert_gt!(details4.error_bounds, details3.error_bounds);
+        assert!(executor.wake_next_timer().is_some());
+        let _ = executor.run_until_stalled(&mut fut);
+        let details5 = clock.get_details().unwrap();
+        assert_eq!(details5.mono_to_synthetic, details3.mono_to_synthetic);
+        assert_gt!(details5.error_bounds, details4.error_bounds);
 
         // Check that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
@@ -788,6 +855,8 @@ mod tests {
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Network },
             Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::ReduceError },
             Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::EndSlew },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
+            Event::UpdateClock { track: *TEST_TRACK, reason: ClockUpdateReason::IncreaseError },
         ]);
     }
 }

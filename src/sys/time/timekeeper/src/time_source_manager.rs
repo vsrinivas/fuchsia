@@ -122,7 +122,6 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
     /// Note: This method is viable while the `TimeSourceManager` is managing a single time source.
     ///       Once fallback and gating sources are added role will be moved to a property of each
     ///       time sample and this method will be removed.
-    #[allow(unused)]
     pub fn role(&self) -> Role {
         self.role
     }
