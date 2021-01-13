@@ -12,6 +12,7 @@
 
 #include <iostream>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/yuv/yuv.h"
 
 namespace yuv_to_image_pipe {
@@ -86,6 +87,7 @@ YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::sysmem::PixelForm
 
   zx_status_t status = component_context()->svc()->Connect(sysmem_allocator_.NewRequest());
   FX_CHECK(status == ZX_OK);
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 }
 
 uint32_t YuvBaseView::AddImage() {
@@ -152,9 +154,8 @@ uint32_t YuvBaseView::AddImage() {
   const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   FX_CHECK(image_vmo_bytes > 0);
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                      0, image_vmo, 0, image_vmo_bytes,
-                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
 
   image_vmos_.emplace(std::piecewise_construct, std::forward_as_tuple(next_image_id_),
