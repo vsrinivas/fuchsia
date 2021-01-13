@@ -99,7 +99,10 @@ const PREFERRED_BITRATE_AAC: u32 = 128000;
 // Duration for A2DP to wait before assuming role of the initiator.
 // If a signaling channel has not been established by this time, A2DP will
 // create the signaling channel, configure, open and start the stream.
-const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
+//
+// NOTE: This must be low enough to prevent peers from timing out while waiting for initiation.
+// The true delay from the peer's perspective is experimentally 100-500ms larger than the value here.
+const INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);
 
 fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapability> {
     endpoint.capabilities().iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
