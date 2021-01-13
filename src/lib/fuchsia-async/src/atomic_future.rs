@@ -6,7 +6,7 @@ use futures::future::FutureObj;
 use futures::FutureExt;
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::{AcqRel, Relaxed};
+use std::sync::atomic::Ordering::{AcqRel, Acquire, Relaxed};
 use std::task::{Context, Poll};
 
 /// A lock-free thread-safe future.
@@ -97,9 +97,8 @@ impl AtomicFuture {
         // be observable by the reading thread.
         loop {
             // Attempt to acquire sole responsibility for polling the future
-            #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
-            match self.state.compare_and_swap(INACTIVE, ACTIVE, AcqRel) {
-                INACTIVE => {
+            match self.state.compare_exchange(INACTIVE, ACTIVE, AcqRel, Acquire) {
+                Ok(INACTIVE) => {
                     // we are now the (only) active worker. proceed to poll!
                     loop {
                         let poll_res = {
@@ -132,19 +131,18 @@ impl AtomicFuture {
                             }
                         }
 
-                        #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
-                        match self.state.compare_and_swap(ACTIVE, INACTIVE, AcqRel) {
-                            ACTIVE => {
+                        match self.state.compare_exchange(ACTIVE, INACTIVE, AcqRel, Acquire) {
+                            Ok(ACTIVE) => {
                                 return AttemptPollResult::Pending;
                             }
-                            NOTIFIED => {
+                            Err(NOTIFIED) => {
                                 // We were notified to poll again while we were busy.
                                 // We are still the sole owner of the memory in `future`,
                                 // so we don't need any specific memory ordering guarantees.
                                 self.state.store(ACTIVE, Relaxed);
                                 continue;
                             }
-                            INACTIVE | DONE => {
+                            Err(INACTIVE) | Err(DONE) => {
                                 panic!("Invalid data contention in AtomicFuture");
                             }
                             _ => {
@@ -153,20 +151,19 @@ impl AtomicFuture {
                         }
                     }
                 }
-                ACTIVE => {
+                Err(ACTIVE) => {
                     // Someone else was already working on this.
                     // notify them to make sure they poll at least one more time
                     //
                     // We're not acquiring access to memory or releasing any writes,
                     // so we can use `Relaxed` memory ordering.
-                    #[allow(deprecated)] // TODO(fxbug.dev/67113) migrate to compare_exchange
-                    match self.state.compare_and_swap(ACTIVE, NOTIFIED, Relaxed) {
-                        INACTIVE => {
+                    match self.state.compare_exchange(ACTIVE, NOTIFIED, Relaxed, Relaxed) {
+                        Err(INACTIVE) => {
                             // Ooh, the worker finished before we could notify.
                             // Let's start over and try and become the new worker.
                             continue;
                         }
-                        ACTIVE | NOTIFIED => {
+                        Ok(ACTIVE) | Err(NOTIFIED) => {
                             // Either we CAS'd to NOTIFIED or someone else did.
                             //
                             // Since this is a relaxed read, you might wonder how we know
@@ -189,7 +186,7 @@ impl AtomicFuture {
                             // after the initial EVENT.
                             return AttemptPollResult::Busy;
                         }
-                        DONE => {
+                        Err(DONE) => {
                             // The worker completed this future already
                             return AttemptPollResult::SomeoneElseFinished;
                         }
@@ -198,11 +195,11 @@ impl AtomicFuture {
                         }
                     }
                 }
-                NOTIFIED => {
+                Err(NOTIFIED) => {
                     // The worker is already going to poll at least one more time.
                     return AttemptPollResult::Busy;
                 }
-                DONE => {
+                Err(DONE) => {
                     // Someone else completed this future already
                     return AttemptPollResult::SomeoneElseFinished;
                 }
