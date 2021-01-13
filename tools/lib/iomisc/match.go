@@ -11,7 +11,6 @@ import (
 	"io"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 )
 
 // MatchingReader is an io.Reader implementation that wraps another such
@@ -76,41 +75,22 @@ type byteTracker interface {
 	Bytes() []byte
 }
 
-// ReadUntilMatch reads from a MatchingReader until a match has been read,
-// and ultimately tries to return those matches.
-func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([]byte, error) {
-	matchWindowSize := 0
-	for _, tm := range m.toMatch {
-		if len(tm) > matchWindowSize {
-			matchWindowSize = len(tm)
+// ReadUntilMatch reads from a MatchingReader until a match has been read
+// and returns the match.
+// Checks ctx for cancellation only between calls to m.Read(), so cancellation
+// will not be noticed if m.Read() blocks.
+// See https://github.com/golang/go/issues/20280 for discussion of similar issues.
+func ReadUntilMatch(ctx context.Context, m *MatchingReader) ([]byte, error) {
+	// buf size considerations: smaller => more responsive to ctx cancellation,
+	// larger => less CPU overhead.
+	buf := make([]byte, 1024)
+	lastReadSize := 0
+	for ctx.Err() == nil {
+		var err error
+		lastReadSize, err = m.Read(buf)
+		if err == nil {
+			continue
 		}
-	}
-
-	if output == nil {
-		output = ring.NewBuffer(matchWindowSize)
-	}
-
-	errs := make(chan error)
-	go func() {
-		if _, err := io.Copy(output, m); err != nil {
-			errs <- err
-		}
-		errs <- io.EOF
-	}()
-
-	select {
-	case <-ctx.Done():
-		// If we time out, it is helpful to see what the last bytes processed
-		// were: dump these bytes if we can.
-		if bt, ok := output.(byteTracker); ok {
-			lastBytes := bt.Bytes()
-			numBytes := min(len(lastBytes), matchWindowSize)
-			lastBytes = lastBytes[len(lastBytes)-numBytes:]
-			logger.Debugf(ctx, "ReadUntilMatch: last %d bytes read before cancellation: %q", numBytes, lastBytes)
-		}
-		// TODO(garymm): We should really interrupt the io.Copy() goroutine here.
-		return nil, ctx.Err()
-	case err := <-errs:
 		if errors.Is(err, io.EOF) {
 			if match := m.Match(); match != nil {
 				return match, nil
@@ -118,6 +98,11 @@ func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([
 		}
 		return nil, err
 	}
+
+	// If we time out, it is helpful to see the last bytes processed.
+	logger.Debugf(ctx, "ReadUntilMatch: last %d bytes read before cancellation: %q", lastReadSize, buf[:lastReadSize])
+
+	return nil, ctx.Err()
 }
 
 func min(a, b int) int {

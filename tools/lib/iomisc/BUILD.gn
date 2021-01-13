@@ -14,10 +14,7 @@ go_library("iomisc") {
     "reader.go",
     "reader_test.go",
   ]
-  deps = [
-    "//tools/lib/logger",
-    "//tools/lib/ring",
-  ]
+  deps = [ "//tools/lib/logger" ]
 }
 
 go_test("tests") {

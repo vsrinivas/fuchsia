@@ -53,11 +53,13 @@ func execute(ctx context.Context, socketPath string, stdout io.Writer) error {
 	}
 	defer socket.Close()
 
-	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(successString)})
+	socketTee := io.TeeReader(socket, stdout)
+
+	m := iomisc.NewMatchingReader(socketTee, [][]byte{[]byte(successString)})
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	if _, err := iomisc.ReadUntilMatch(ctx, m, stdout); err != nil {
+	if _, err := iomisc.ReadUntilMatch(ctx, m); err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("timed out before success string %q was read from serial", successString)
 		}

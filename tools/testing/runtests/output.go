@@ -26,7 +26,7 @@ func TestPassed(ctx context.Context, testOutput io.Reader, name string) (bool, e
 	success := []byte(fmt.Sprintf("%s %s", SuccessSignature, name))
 	failure := []byte(fmt.Sprintf("%s %s", FailureSignature, name))
 	m := iomisc.NewMatchingReader(testOutput, [][]byte{success, failure})
-	match, err := iomisc.ReadUntilMatch(ctx, m, nil)
+	match, err := iomisc.ReadUntilMatch(ctx, m)
 	if err != nil {
 		return false, fmt.Errorf("unable to derive test result from runtests output: %w", err)
 	}

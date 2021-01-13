@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"testing"
+	"time"
 )
 
 func TestMatchingReader(t *testing.T) {
@@ -132,7 +133,7 @@ func TestReadUntilMatch(t *testing.T) {
 			w.Write([]byte("EFGH"))
 		}()
 
-		match, err := ReadUntilMatch(context.Background(), m, nil)
+		match, err := ReadUntilMatch(context.Background(), m)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -153,10 +154,32 @@ func TestReadUntilMatch(t *testing.T) {
 			w.Close()
 		}()
 
-		_, err := ReadUntilMatch(context.Background(), m, nil)
+		_, err := ReadUntilMatch(context.Background(), m)
 
 		if !errors.Is(err, io.EOF) {
-			t.Errorf("ReadUntilMatch() returned %v, expected io.EOF", err)
+			t.Errorf("ReadUntilMatch() returned %v, want io.EOF", err)
+		}
+	})
+
+	t.Run("cancellation", func(t *testing.T) {
+		r, w := io.Pipe()
+		defer r.Close()
+		defer w.Close()
+
+		m := NewMatchingReader(r, [][]byte{[]byte("A")})
+
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Millisecond))
+		defer cancel()
+
+		go func() {
+			b := []byte("B")
+			for {
+				w.Write(b)
+			}
+		}()
+
+		if _, err := ReadUntilMatch(ctx, m); err == nil || !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("ReadUntilMatch() returned %v, want DeadlineExceeded ", err)
 		}
 	})
 }

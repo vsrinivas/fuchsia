@@ -52,7 +52,6 @@ go_library("target") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
-    "//tools/lib/ring",
     "//tools/net/netutil",
     "//tools/net/sshutil",
     "//tools/qemu",
