@@ -25,16 +25,17 @@ pub enum Protection {
     Open = 1,
     Wep = 2,
     Wpa1 = 3,
-    Wpa2Legacy = 4,
-    Wpa1Wpa2Personal = 5,
-    Wpa2Personal = 6,
-    Wpa2Wpa3Personal = 7,
-    Wpa3Personal = 8,
-    Wpa2Enterprise = 9,
+    Wpa1Wpa2PersonalTkipOnly = 4,
+    Wpa2PersonalTkipOnly = 5,
+    Wpa1Wpa2Personal = 6,
+    Wpa2Personal = 7,
+    Wpa2Wpa3Personal = 8,
+    Wpa3Personal = 9,
+    Wpa2Enterprise = 10,
     /// WPA3 Enterprise 192-bit mode. WPA3 spec specifies an optional 192-bit mode but says nothing
     /// about a non 192-bit version. Thus, colloquially, it's likely that the term WPA3 Enterprise
     /// will be used to refer to WPA3 Enterprise 192-bit mode.
-    Wpa3Enterprise = 10,
+    Wpa3Enterprise = 11,
 }
 
 impl From<Protection> for fidl_sme::Protection {
@@ -44,7 +45,8 @@ impl From<Protection> for fidl_sme::Protection {
             Protection::Open => fidl_sme::Protection::Open,
             Protection::Wep => fidl_sme::Protection::Wep,
             Protection::Wpa1 => fidl_sme::Protection::Wpa1,
-            Protection::Wpa2Legacy => fidl_sme::Protection::Wpa2Legacy,
+            Protection::Wpa1Wpa2PersonalTkipOnly => fidl_sme::Protection::Wpa1Wpa2PersonalTkipOnly,
+            Protection::Wpa2PersonalTkipOnly => fidl_sme::Protection::Wpa2PersonalTkipOnly,
             Protection::Wpa1Wpa2Personal => fidl_sme::Protection::Wpa1Wpa2Personal,
             Protection::Wpa2Personal => fidl_sme::Protection::Wpa2Personal,
             Protection::Wpa2Wpa3Personal => fidl_sme::Protection::Wpa2Wpa3Personal,
@@ -62,7 +64,8 @@ impl fmt::Display for Protection {
             Protection::Open => write!(f, "{}", "Open"),
             Protection::Wep => write!(f, "{}", "Wep"),
             Protection::Wpa1 => write!(f, "{}", "Wpa1"),
-            Protection::Wpa2Legacy => write!(f, "{}", "Wpa2Legacy"),
+            Protection::Wpa1Wpa2PersonalTkipOnly => write!(f, "{}", "Wpa1Wpa2PersonalTkipOnly"),
+            Protection::Wpa2PersonalTkipOnly => write!(f, "{}", "Wpa2PersonalTkipOnly"),
             Protection::Wpa1Wpa2Personal => write!(f, "{}", "Wpa1Wpa2Personal"),
             Protection::Wpa2Personal => write!(f, "{}", "Wpa2Personal"),
             Protection::Wpa2Wpa3Personal => write!(f, "{}", "Wpa2Wpa3Personal"),
@@ -261,15 +264,19 @@ impl BssDescription {
                 return Protection::Wpa3Personal;
             }
         } else if suite_filter::WPA2_PERSONAL.is_satisfied(&rsne) {
-            if supports_wpa_1 || suite_filter::WPA2_LEGACY.is_satisfied(&rsne) {
+            if supports_wpa_1 {
                 return Protection::Wpa1Wpa2Personal;
             } else {
                 return Protection::Wpa2Personal;
             }
+        } else if suite_filter::WPA2_PERSONAL_TKIP_ONLY.is_satisfied(&rsne) {
+            if supports_wpa_1 {
+                return Protection::Wpa1Wpa2PersonalTkipOnly;
+            } else {
+                return Protection::Wpa2PersonalTkipOnly;
+            }
         } else if supports_wpa_1 {
             return Protection::Wpa1;
-        } else if suite_filter::WPA2_LEGACY.is_satisfied(&rsne) {
-            return Protection::Wpa2Legacy;
         } else if suite_filter::WPA3_ENTERPRISE_192_BIT.is_satisfied(&rsne) {
             if mfp_cap && mfp_req {
                 return Protection::Wpa3Enterprise;
@@ -529,9 +536,10 @@ mod tests {
         assert_eq!(Protection::Wep, fake_bss!(Wep).protection());
         assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).protection());
         assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).protection());
-        assert_eq!(Protection::Wpa2Legacy, fake_bss!(Wpa2Legacy).protection());
+        assert_eq!(Protection::Wpa1Wpa2PersonalTkipOnly, fake_bss!(Wpa1Wpa2TkipOnly).protection());
+        assert_eq!(Protection::Wpa2PersonalTkipOnly, fake_bss!(Wpa2TkipOnly).protection());
         assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa2Mixed).protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2Mixed).protection());
         assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).protection());
         assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).protection());
         assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).protection());

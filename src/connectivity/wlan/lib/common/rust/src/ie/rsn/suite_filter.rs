@@ -77,7 +77,7 @@ pub const WPA1_PERSONAL: SuiteFilter = SuiteFilter {
     required_group_mgmt_cipher: None,
 };
 
-pub const WPA2_LEGACY: SuiteFilter = SuiteFilter {
+pub const WPA2_PERSONAL_TKIP_ONLY: SuiteFilter = SuiteFilter {
     known_group_data_ciphers: &[cipher::TKIP],
     known_akms: &[akm::PSK],
     known_pairwise_ciphers: &[cipher::TKIP],
