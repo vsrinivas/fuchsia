@@ -89,6 +89,8 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
     printf("[SCAN]: Found %lu user-paged backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);
   }
+  printf("[SCAN]: Found %lu user-paged backed pages in inactive queue\n",
+         queue_counts.pager_backed_inactive);
   printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
   printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.unswappable_zero_fork);
 }

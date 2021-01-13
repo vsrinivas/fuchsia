@@ -1003,9 +1003,33 @@ static bool vmo_move_inactive_pages_test() {
   // Destroy the clone, making the VMO inactive.
   clone.reset();
 
-  // The page should now have moved to the last queue.
+  // The page should now have moved to the inactive queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
+
+  // Create a clone and access the page again. This should move the page to the first page queue.
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0, PAGE_SIZE,
+                            true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+  clone->set_user_id(0xfc);
+  status = clone->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+
+  // Verify that the page was moved to the first page queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedInactive(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
-  EXPECT_EQ(PageQueues::kNumPagerBacked - 1, queue);
+  EXPECT_EQ(0u, queue);
+
+  // Verify that the page can be rotated as normal.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+
+  // Touching the page should move it back to the first queue.
+  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
 
   END_TEST;
 }

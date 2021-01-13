@@ -2195,8 +2195,8 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
   const uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
   page_list_.ForEveryPageInRange(
       [](const auto* p, uint64_t) {
-        if (p->IsPage()) {
-          pmm_page_queues()->MoveToEndOfPagerBacked(p->Page());
+        if (p->IsPage() && p->Page()->object.pin_count == 0) {
+          pmm_page_queues()->MoveToPagerBackedInactive(p->Page());
         }
         return ZX_ERR_NEXT;
       },

@@ -59,10 +59,11 @@ class PageQueues {
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the back of the pager backed queue (in
-  // contrast MoveToPagerBacked moves to the front of the queue). Same rules on keeping the back
-  // reference up to date as given in SetPagerBacked apply.
-  void MoveToEndOfPagerBacked(vm_page_t* page);
+  // Moves page from whichever queue it is currently in, to the inactive pager backed queue. The
+  // object back reference information must have already been set by a previous call to
+  // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
+  // given in SetPagerBacked apply.
+  void MoveToPagerBackedInactive(vm_page_t* page);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
   void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
@@ -132,13 +133,16 @@ class PageQueues {
   // Helper struct to group queue length counts returned by DebugQueueCounts.
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
+    size_t pager_backed_inactive = 0;
     size_t unswappable = 0;
     size_t wired = 0;
     size_t unswappable_zero_fork = 0;
 
     bool operator==(const Counts& other) const {
-      return pager_backed == other.pager_backed && unswappable == other.unswappable &&
-             wired == other.wired && unswappable_zero_fork == other.unswappable_zero_fork;
+      return pager_backed == other.pager_backed &&
+             pager_backed_inactive == other.pager_backed_inactive &&
+             unswappable == other.unswappable && wired == other.wired &&
+             unswappable_zero_fork == other.unswappable_zero_fork;
     }
     bool operator!=(const Counts& other) const { return !(*this == other); }
   };
@@ -150,6 +154,7 @@ class PageQueues {
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
+  bool DebugPageIsPagerBackedInactive(const vm_page_t* page) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
   bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
   bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
@@ -160,6 +165,11 @@ class PageQueues {
   // pager_backed_ denotes pages that both have a user level pager associated with them, and could
   // be evicted such that the pager could re-create the page.
   list_node_t pager_backed_[kNumPagerBacked] TA_GUARDED(lock_) = {LIST_INITIAL_CLEARED_VALUE};
+  // tracks pager backed pages that are inactive, kept separate from pager_backed_ to opt out of
+  // page queue rotations. Pages are moved into this queue explicitly when they need to be marked
+  // inactive, and moved out to pager_backed_[0] on a subsequent access, or evicted under memory
+  // pressure before the last pager_backed_ queue.
+  list_node_t pager_backed_inactive_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
   // unswappable_ pages have no user level mechanism to swap/evict them, but are modifiable by the
   // kernel and could have compression etc applied to them.
   list_node_t unswappable_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;

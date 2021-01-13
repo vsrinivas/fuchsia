@@ -12,6 +12,7 @@ PageQueues::PageQueues() {
   for (list_node& pager_backed : pager_backed_) {
     list_initialize(&pager_backed);
   }
+  list_initialize(&pager_backed_inactive_);
   list_initialize(&unswappable_);
   list_initialize(&wired_);
   list_initialize(&unswappable_zero_fork_);
@@ -21,6 +22,7 @@ PageQueues::~PageQueues() {
   for (list_node& pager_backed : pager_backed_) {
     DEBUG_ASSERT(list_is_empty(&pager_backed));
   }
+  DEBUG_ASSERT(list_is_empty(&pager_backed_inactive_));
   DEBUG_ASSERT(list_is_empty(&unswappable_));
   DEBUG_ASSERT(list_is_empty(&wired_));
   DEBUG_ASSERT(list_is_empty(&unswappable_zero_fork_));
@@ -106,14 +108,15 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t
   list_add_head(&pager_backed_[0], &page->queue_node);
 }
 
-void PageQueues::MoveToEndOfPagerBacked(vm_page_t* page) {
+void PageQueues::MoveToPagerBackedInactive(vm_page_t* page) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
+  DEBUG_ASSERT(page->object.get_object());
   Guard<SpinLock, IrqSave> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   list_delete(&page->queue_node);
-  list_add_tail(&pager_backed_[kNumPagerBacked - 1], &page->queue_node);
+  list_add_head(&pager_backed_inactive_, &page->queue_node);
 }
 
 void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -171,6 +174,9 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
     counts.total += list_length(&pager_backed_[i]);
   }
   counts.oldest = list_length(&pager_backed_[kNumPagerBacked - 1]);
+  // Account the inactive queue length under |oldest|, since (inactive + oldest LRU) pages are
+  // eligible for reclamation first. |oldest| is meant to track pages eligible for eviction first.
+  counts.oldest += list_length(&pager_backed_inactive_);
   counts.total += counts.oldest;
   return counts;
 }
@@ -181,6 +187,7 @@ PageQueues::Counts PageQueues::DebugQueueCounts() const {
   for (size_t i = 0; i < kNumPagerBacked; i++) {
     counts.pager_backed[i] = list_length(&pager_backed_[i]);
   }
+  counts.pager_backed_inactive = list_length(&pager_backed_inactive_);
   counts.unswappable = list_length(&unswappable_);
   counts.wired = list_length(&wired_);
   counts.unswappable_zero_fork = list_length(&unswappable_zero_fork_);
@@ -213,6 +220,10 @@ bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) co
     }
   }
   return false;
+}
+
+bool PageQueues::DebugPageIsPagerBackedInactive(const vm_page_t* page) const {
+  return DebugPageInList(&pager_backed_inactive_, page);
 }
 
 bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {
@@ -260,12 +271,11 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) const {
   Guard<SpinLock, IrqSave> guard{&lock_};
-  vm_page_t* page = nullptr;
-  for (size_t i = kNumPagerBacked; i > lowest_queue; i--) {
+  // Peek the tail of the inactive queue first.
+  vm_page_t* page = list_peek_tail_type(&pager_backed_inactive_, vm_page_t, queue_node);
+  // If a page is not found in the inactive queue, move on to the last LRU queue.
+  for (size_t i = kNumPagerBacked; i > lowest_queue && !page; i--) {
     page = list_peek_tail_type(&pager_backed_[i - 1], vm_page_t, queue_node);
-    if (page) {
-      break;
-    }
   }
   if (!page) {
     return ktl::nullopt;
