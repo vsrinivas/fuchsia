@@ -9,7 +9,10 @@ bind_rules("usb_cdc_bind") {
   rules = "usb_cdc.bind"
   output = "usb_cdc-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.comm",
+  ]
 }
 
 driver_module("usb-cdc-function") {

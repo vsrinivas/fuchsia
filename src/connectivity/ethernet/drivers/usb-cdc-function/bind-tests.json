@@ -5,7 +5,7 @@
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
-            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.comm.BIND_USB_SUBCLASS.ETHERNET",
             "fuchsia.BIND_USB_PROTOCOL": "0"
         }
     },
@@ -14,7 +14,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
-            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.comm.BIND_USB_SUBCLASS.ETHERNET",
             "fuchsia.BIND_USB_PROTOCOL": "0"
         }
     },
@@ -23,7 +23,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
-            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.comm.BIND_USB_SUBCLASS.ETHERNET",
             "fuchsia.BIND_USB_PROTOCOL": "0"
         }
     },
@@ -42,7 +42,7 @@
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
-            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET"
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.comm.BIND_USB_SUBCLASS.ETHERNET"
         }
     }
 ]

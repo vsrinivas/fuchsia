@@ -13,7 +13,10 @@ bind_rules("ethernet_usb_cdc_ecm_bind") {
   rules = "ethernet_usb_cdc_ecm.bind"
   output = "ethernet_usb_cdc_ecm-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.comm",
+  ]
 }
 
 driver_module("usb-cdc-ecm") {

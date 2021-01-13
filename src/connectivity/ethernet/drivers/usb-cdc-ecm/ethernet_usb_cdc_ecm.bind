@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 using fuchsia.usb;
+using fuchsia.usb.comm;
 
 fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
 fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.COMM;
-fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.comm.BIND_USB_SUBCLASS.ETHERNET;
 fuchsia.BIND_USB_PROTOCOL == 0;

@@ -19,7 +19,10 @@ bind_rules("fake_usb_ax88179_bind") {
   rules = "fake_usb_ax88179.bind"
   output = "fake_usb_ax88179-bind.h"
   tests = "fake_usb_ax88179-bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.comm",
+  ]
 }
 
 driver_module("asix-88179") {
