@@ -70,7 +70,7 @@ class BufferCollectionToken : public llcpp::fuchsia::sysmem::BufferCollectionTok
   BufferCollectionToken(Device* parent_device, fbl::RefPtr<LogicalBufferCollection> parent,
                         uint32_t rights_attenuation_mask);
 
-  void FailAsync(zx_status_t status, const char* format, ...);
+  void FailAsync(Location location, zx_status_t status, const char* format, ...);
 
   Device* parent_device_ = nullptr;
   fbl::RefPtr<LogicalBufferCollection> parent_;

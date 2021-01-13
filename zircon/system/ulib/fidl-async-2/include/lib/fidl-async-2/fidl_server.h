@@ -39,7 +39,8 @@ class FidlServer {
         // We call FailAsync() just for its logging output (including the
         // "fail" text).  At this point !error_handler, so nothing actually
         // happens async due to this call.
-        stub->FailAsync(status, "FidlServer::error_handler_() - status: %d", status);
+        stub->FailAsync(status, __FILE__, __LINE__, "FidlServer::error_handler_() - status: %d",
+                        status);
       }
 
       // Now delete stub.
@@ -119,7 +120,7 @@ class FidlServer {
   //
   // A sub-class can make FailAsync() public instead of protected, as
   // appropriate.
-  void FailAsync(zx_status_t status, const char* format, ...) {
+  void FailAsync(zx_status_t status, const char* file, int line, const char* format, ...) {
     if (is_failing_) {
       // Fail() is intentionally idempotent.  We only really care about
       // the first failure.
@@ -129,7 +130,7 @@ class FidlServer {
 
     va_list args;
     va_start(args, format);
-    vLogger(true, logging_prefix_, "fail", format, args);
+    vLogger(true, file, line, logging_prefix_, "fail", format, args);
     va_end(args);
 
     // TODO(dustingreen): Send string in buffer via epitaph, when possible.
@@ -151,16 +152,16 @@ class FidlServer {
 
   // Logging that prefixes logging_prefix + " " + "info"/"error", and doesn't
   // need a trailing '\n' passed in.
-  void LogInfo(const char* format, ...) {
+  void LogInfo(const char* file, int line, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    vLogger(false, logging_prefix_, "info", format, args);
+    vLogger(false, file, line, logging_prefix_, "info", format, args);
     va_end(args);
   }
-  void LogError(const char* format, ...) {
+  void LogError(const char* file, int line, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    vLogger(true, logging_prefix_, "error", format, args);
+    vLogger(true, file, line, logging_prefix_, "error", format, args);
     va_end(args);
   }
 

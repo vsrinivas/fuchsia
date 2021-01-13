@@ -14,30 +14,11 @@
 
 namespace sysmem_driver {
 
-void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
-          va_list args) {
-  // Let's not have a buffer on the stack, not because it couldn't be done
-  // safely, but because we'd potentially run into stack size vs. message
-  // length tradeoffs, stack expansion granularity fun, or whatever else.
-
-  va_list args2;
-  va_copy(args2, args);
-
-  size_t buffer_bytes = vsnprintf(nullptr, 0, format, args) + 1;
-
-  std::unique_ptr<char[]> buffer(new char[buffer_bytes]);
-
-  size_t buffer_bytes_2 = vsnprintf(buffer.get(), buffer_bytes, format, args2) + 1;
-  (void)buffer_bytes_2;
-  // sanity check; should match so go ahead and assert that it does.
-  ZX_DEBUG_ASSERT(buffer_bytes == buffer_bytes_2);
-  va_end(args2);
-
-  if (is_error) {
-    zxlogf(ERROR, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  } else {
-    zxlogf(DEBUG, "[%s %s] %s", prefix1, prefix2, buffer.get());
-  }
+void vLog(bool is_error, const char* file, int line, const char* prefix1, const char* prefix2,
+          const char* format, va_list args) {
+  fbl::String new_format = fbl::StringPrintf("[%s %s] %s", prefix1, prefix2, format);
+  const fx_log_severity_t severity = is_error ? DDK_LOG_ERROR : DDK_LOG_DEBUG;
+  zxlogvf_etc(severity, file, line, new_format.c_str(), args);
 }
 
 static std::atomic_uint64_t name_counter;

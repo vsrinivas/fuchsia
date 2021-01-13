@@ -61,11 +61,12 @@ void BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
                                       zx::channel buffer_collection_token_request,
                                       DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this, "parent", parent_.get());
-  LogInfo("BufferCollectionToken::Duplicate()");
+  LogInfo(FROM_HERE, "BufferCollectionToken::Duplicate()");
   if (is_done_) {
     // Probably a Close() followed by Duplicate(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
-    FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::Duplicate() attempted when is_done_");
+    FailAsync(FROM_HERE, ZX_ERR_BAD_STATE,
+              "BufferCollectionToken::Duplicate() attempted when is_done_");
     return;
   }
   auto duplicate_rights_attenuation_mask = rights_attenuation_mask_;
@@ -82,7 +83,7 @@ void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
   if (is_done_) {
     // Probably a Close() followed by Sync(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
-    FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::Sync() attempted when is_done_");
+    FailAsync(FROM_HERE, ZX_ERR_BAD_STATE, "BufferCollectionToken::Sync() attempted when is_done_");
     return;
   }
   completer.Reply();
@@ -91,7 +92,7 @@ void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
 // Clean token close without causing LogicalBufferCollection failure.
 void BufferCollectionToken::Close(CloseCompleter::Sync&) {
   if (is_done_ || buffer_collection_request_) {
-    FailAsync(ZX_ERR_BAD_STATE,
+    FailAsync(FROM_HERE, ZX_ERR_BAD_STATE,
               "BufferCollectionToken::Close() when already is_done_ || "
               "buffer_collection_request_");
     // We're failing async - no need to try to fail sync.
@@ -126,7 +127,7 @@ bool BufferCollectionToken::is_done() { return is_done_; }
 
 void BufferCollectionToken::SetBufferCollectionRequest(zx::channel buffer_collection_request) {
   if (is_done_ || buffer_collection_request_) {
-    FailAsync(ZX_ERR_BAD_STATE,
+    FailAsync(FROM_HERE, ZX_ERR_BAD_STATE,
               "BufferCollectionToken::SetBufferCollectionRequest() attempted "
               "when already is_done_ || buffer_collection_request_");
     return;
@@ -158,7 +159,7 @@ void BufferCollectionToken::SetDebugClientInfo(std::string name, uint64_t id) {
     // Output the debug info now that we have it, since we previously said bad things about this
     // token's server_koid not being found when it should have been, but at that time we didn't have
     // the debug info.
-    parent_->LogClientError(&debug_info_, "Got debug info for token %ld", server_koid_);
+    parent_->LogClientError(FROM_HERE, &debug_info_, "Got debug info for token %ld", server_koid_);
   }
 }
 
@@ -181,13 +182,14 @@ BufferCollectionToken::BufferCollectionToken(Device* parent_device,
   node_ = parent_->node().CreateChild(CreateUniqueName("token-"));
 }
 
-void BufferCollectionToken::FailAsync(zx_status_t status, const char* format, ...) {
+void BufferCollectionToken::FailAsync(Location location, zx_status_t status, const char* format,
+                                      ...) {
   // Idempotent, so only close once.
   if (!server_binding_)
     return;
   va_list args;
   va_start(args, format);
-  vLog(true, logging_prefix(), "fail", format, args);
+  vLog(true, location.file(), location.line(), logging_prefix(), "fail", format, args);
   va_end(args);
 
   server_binding_->Close(status);

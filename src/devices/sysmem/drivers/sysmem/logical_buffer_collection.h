@@ -22,6 +22,7 @@
 
 #include "binding_handle.h"
 #include "device.h"
+#include "logging.h"
 
 namespace sysmem_driver {
 
@@ -95,8 +96,10 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void SetName(uint32_t priority, std::string name);
   void SetDebugTimeoutLogDeadline(int64_t deadline);
 
-  void LogClientError(const ClientInfo* client_info, const char* format, ...) __PRINTFLIKE(3, 4);
-  void VLogClientError(const ClientInfo* client_info, const char* format, va_list args);
+  void LogClientError(Location location, const ClientInfo* client_info, const char* format, ...)
+      __PRINTFLIKE(4, 5);
+  void VLogClientError(Location location, const ClientInfo* client_info, const char* format,
+                       va_list args);
 
   struct AllocationResult {
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo* buffer_collection_info = nullptr;
@@ -140,17 +143,19 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   LogicalBufferCollection(Device* parent_device);
 
-  // If |format| is nonnull, will log an error. This also cleans out a lot of
+  // Will log an error. This also cleans out a lot of
   // state that's unnecessary after a failure.
-  void Fail(const char* format, ...);
+  void LogAndFail(Location location, const char* format, ...) __PRINTFLIKE(3, 4);
 
-  static void LogInfo(const char* format, ...);
-  static void LogErrorStatic(const ClientInfo* client_info, const char* format, ...)
-      __PRINTFLIKE(2, 3);
+  void Fail();
+
+  static void LogInfo(Location location, const char* format, ...);
+  static void LogErrorStatic(Location location, const ClientInfo* client_info, const char* format,
+                             ...) __PRINTFLIKE(3, 4);
 
   // Uses the implicit |current_client_info_| to identify which client has an error.
-  void LogError(const char* format, ...) __PRINTFLIKE(2, 3);
-  void VLogError(const char* format, va_list args);
+  void LogError(Location location, const char* format, ...) __PRINTFLIKE(3, 4);
+  void VLogError(Location location, const char* format, va_list args);
 
   void MaybeAllocate();
 

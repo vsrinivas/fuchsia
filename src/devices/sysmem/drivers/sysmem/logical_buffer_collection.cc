@@ -208,7 +208,7 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
       fbl::AdoptRef<LogicalBufferCollection>(new LogicalBufferCollection(parent_device));
   // The existence of a channel-owned BufferCollectionToken adds a
   // fbl::RefPtr<> ref to LogicalBufferCollection.
-  LogInfo("LogicalBufferCollection::Create()");
+  LogInfo(FROM_HERE, "LogicalBufferCollection::Create()");
   logical_buffer_collection->CreateBufferCollectionToken(
       logical_buffer_collection, std::numeric_limits<uint32_t>::max(),
       std::move(buffer_collection_token_request), nullptr);
@@ -245,7 +245,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   zx_status_t status =
       get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
   if (status != ZX_OK) {
-    LogErrorStatic(client_info, "Failed to get channel koids");
+    LogErrorStatic(FROM_HERE, client_info, "Failed to get channel koids");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -255,7 +255,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   if (!token) {
     // The most likely scenario for why the token was not found is that Sync() was not called on
     // either the BufferCollectionToken or the BufferCollection.
-    LogErrorStatic(client_info,
+    LogErrorStatic(FROM_HERE, client_info,
                    "BindSharedCollection could not find token from server channel koid %ld; "
                    "perhaps BufferCollectionToken.Sync() was not called",
                    token_server_koid);
@@ -304,7 +304,7 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
 
     // The dispatcher shut down before we were able to Bind(...)
     if (status == ZX_ERR_BAD_STATE) {
-      Fail("sysmem dispatcher shutting down - status: %d", status);
+      LogAndFail(FROM_HERE, "sysmem dispatcher shutting down - status: %d", status);
       return;
     }
 
@@ -332,7 +332,8 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
       //
       // If a participant for some reason finds itself with an extra token it doesn't need, the
       // participant should use Close() to avoid triggering this failure.
-      Fail("Token failure causing LogicalBufferCollection failure - status: %d", status);
+      LogAndFail(FROM_HERE, "Token failure causing LogicalBufferCollection failure - status: %d",
+                 status);
       return;
     }
 
@@ -371,12 +372,12 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
   zx_status_t status =
       get_channel_koids(buffer_collection_token_request, &server_koid, &client_koid);
   if (status != ZX_OK) {
-    Fail("get_channel_koids() failed - status: %d", status);
+    LogAndFail(FROM_HERE, "get_channel_koids() failed - status: %d", status);
     return;
   }
   token_ptr->SetServerKoid(server_koid);
   if (token_ptr->was_unfound_token()) {
-    LogClientError(client_info,
+    LogClientError(FROM_HERE, client_info,
                    "BufferCollectionToken.Duplicate() received for creating token with server koid"
                    "%ld after BindSharedCollection() previously received attempting to use same"
                    "token.  Client sequence should be Duplicate(), Sync(), BindSharedCollection()."
@@ -384,7 +385,7 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
                    server_koid);
   }
 
-  LogInfo("CreateBufferCollectionToken() - server_koid: %lu", token_ptr->server_koid());
+  LogInfo(FROM_HERE, "CreateBufferCollectionToken() - server_koid: %lu", token_ptr->server_koid());
   token_ptr->Bind(std::move(buffer_collection_token_request));
 }
 
@@ -425,7 +426,7 @@ LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_re
 LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
     : parent_device_(parent_device) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
-  LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
+  LogInfo(FROM_HERE, "LogicalBufferCollection::LogicalBufferCollection()");
   parent_device_->AddLogicalBufferCollection(this);
   node_ = parent_device_->collections_node().CreateChild(CreateUniqueName("logical-collection-"));
 
@@ -436,7 +437,7 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
 
 LogicalBufferCollection::~LogicalBufferCollection() {
   TRACE_DURATION("gfx", "LogicalBufferCollection::~LogicalBufferCollection", "this", this);
-  LogInfo("~LogicalBufferCollection");
+  LogInfo(FROM_HERE, "~LogicalBufferCollection");
   // Every entry in these collections keeps a
   // fbl::RefPtr<LogicalBufferCollection>, so these should both already be
   // empty.
@@ -457,14 +458,16 @@ LogicalBufferCollection::~LogicalBufferCollection() {
   //    allocator_.inner_allocator().debug_needed_buffer_size());
 }
 
-void LogicalBufferCollection::Fail(const char* format, ...) {
-  if (format) {
-    va_list args;
-    va_start(args, format);
-    vLog(true, "LogicalBufferCollection", "fail", format, args);
-    va_end(args);
-  }
+void LogicalBufferCollection::LogAndFail(Location location, const char* format, ...) {
+  ZX_DEBUG_ASSERT(format);
+  va_list args;
+  va_start(args, format);
+  vLog(true, location.file(), location.line(), "LogicalBufferCollection", "fail", format, args);
+  va_end(args);
+  Fail();
+}
 
+void LogicalBufferCollection::Fail() {
   // Close all the associated channels.  We do this by swapping into local
   // collections and clearing those, since deleting the items in the
   // collections will delete |this|.
@@ -508,15 +511,27 @@ void LogicalBufferCollection::Fail(const char* format, ...) {
   local_collection_views.clear();
 }
 
-void LogicalBufferCollection::LogInfo(const char* format, ...) {
+namespace {
+// This function just adds a bit of indirection to allow us to construct a va_list with one entry.
+// Format should always be "%s".
+void LogErrorInternal(Location location, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  vLog(false, "LogicalBufferCollection", "info", format, args);
+
+  zxlogvf(ERROR, location.file(), location.line(), format, args);
+  va_end(args);
+}
+}  // namespace
+
+void LogicalBufferCollection::LogInfo(Location location, const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  zxlogvf(DEBUG, location.file(), location.line(), format, args);
   va_end(args);
 }
 
-void LogicalBufferCollection::LogErrorStatic(const ClientInfo* client_info, const char* format,
-                                             ...) {
+void LogicalBufferCollection::LogErrorStatic(Location location, const ClientInfo* client_info,
+                                             const char* format, ...) {
   va_list args;
   va_start(args, format);
   fbl::String formatted = fbl::StringVPrintf(format, args);
@@ -526,12 +541,12 @@ void LogicalBufferCollection::LogErrorStatic(const ClientInfo* client_info, cons
 
     formatted = fbl::String::Concat({formatted, client_name});
   }
-  zxlogf(ERROR, "[LogicalBufferCollection error] %s", formatted.c_str());
+  LogErrorInternal(location, "%s", formatted.c_str());
   va_end(args);
 }
 
-void LogicalBufferCollection::VLogClientError(const ClientInfo* client_info, const char* format,
-                                              va_list args) {
+void LogicalBufferCollection::VLogClientError(Location location, const ClientInfo* client_info,
+                                              const char* format, va_list args) {
   const char* collection_name = name_ ? name_->name.c_str() : "Unknown";
   fbl::String formatted = fbl::StringVPrintf(format, args);
   if (client_info && !client_info->name.empty()) {
@@ -545,27 +560,27 @@ void LogicalBufferCollection::VLogClientError(const ClientInfo* client_info, con
 
     formatted = fbl::String::Concat({formatted, client_name});
   }
-  zxlogf(ERROR, "[LogicalBufferCollection error] %s", formatted.c_str());
+  LogErrorInternal(location, "%s", formatted.c_str());
   va_end(args);
 }
 
-void LogicalBufferCollection::LogClientError(const ClientInfo* client_info, const char* format,
-                                             ...) {
+void LogicalBufferCollection::LogClientError(Location location, const ClientInfo* client_info,
+                                             const char* format, ...) {
   va_list args;
   va_start(args, format);
-  VLogClientError(client_info, format, args);
+  VLogClientError(location, client_info, format, args);
   va_end(args);
 }
 
-void LogicalBufferCollection::LogError(const char* format, ...) {
+void LogicalBufferCollection::LogError(Location location, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  VLogError(format, args);
+  VLogError(location, format, args);
   va_end(args);
 }
 
-void LogicalBufferCollection::VLogError(const char* format, va_list args) {
-  VLogClientError(current_client_info_, format, args);
+void LogicalBufferCollection::VLogError(Location location, const char* format, va_list args) {
+  VLogClientError(location, current_client_info_, format, args);
 }
 
 void LogicalBufferCollection::InitializeConstraintSnapshots(
@@ -611,10 +626,12 @@ void LogicalBufferCollection::MaybeAllocate() {
     // getting here if all of the clients did a clean Close().
     if (is_allocate_attempted_) {
       // Only log as info because this is a normal way to destroy the buffer collection.
-      LogInfo("All clients called Close(), but now zero clients remain (after allocation).");
-      Fail(nullptr);
+      LogInfo(FROM_HERE,
+              "All clients called Close(), but now zero clients remain (after allocation).");
+      Fail();
     } else {
-      Fail("All clients called Close(), but now zero clients remain (before allocation).");
+      LogAndFail(FROM_HERE,
+                 "All clients called Close(), but now zero clients remain (before allocation).");
     }
     return;
   }
@@ -725,9 +742,9 @@ void LogicalBufferCollection::SendAllocationResult() {
   }
 
   if (allocation_result_status_ != ZX_OK) {
-    Fail(
-        "LogicalBufferCollection::SendAllocationResult() done sending "
-        "allocation failure - now auto-failing self.");
+    LogAndFail(FROM_HERE,
+               "LogicalBufferCollection::SendAllocationResult() done sending "
+               "allocation failure - now auto-failing self.");
     return;
   }
 }
@@ -747,7 +764,7 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
 
     // The dispatcher shut down before we were able to Bind(...)
     if (status == ZX_ERR_BAD_STATE) {
-      Fail("sysmem dispatcher shutting down - status: %d", status);
+      LogAndFail(FROM_HERE, "sysmem dispatcher shutting down - status: %d", status);
       return;
     }
 
@@ -792,7 +809,7 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       //
       // TODO(fxbug.dev/45878): Provide a way to distinguish between BufferCollection clean/unclean
       // close so that we print an error if participant closes before initiator
-      Fail(nullptr);
+      Fail();
       return;
     }
 
@@ -883,9 +900,9 @@ bool LogicalBufferCollection::CombineConstraints() {
     // bounds from any participant.  At least one particpant must provide
     // some form of size bounds (in terms of buffer size bounds or in terms
     // of image size bounds).
-    LogError(
-        "At least one participant must specify buffer_memory_constraints or "
-        "image_format_constraints that implies non-zero min buffer size.");
+    LogError(FROM_HERE,
+             "At least one participant must specify buffer_memory_constraints or "
+             "image_format_constraints that implies non-zero min buffer size.");
     return false;
   }
 
@@ -973,13 +990,14 @@ bool LogicalBufferCollection::CheckSanitizeBufferUsage(
       // didn't forget to set usage.
       if (buffer_usage->none() == 0 && buffer_usage->cpu() == 0 && buffer_usage->vulkan() == 0 &&
           buffer_usage->display() == 0 && buffer_usage->video() == 0) {
-        LogError("At least one usage bit must be set by a participant.");
+        LogError(FROM_HERE, "At least one usage bit must be set by a participant.");
         return false;
       }
       if (buffer_usage->none() != 0) {
         if (buffer_usage->cpu() != 0 || buffer_usage->vulkan() != 0 ||
             buffer_usage->display() != 0 || buffer_usage->video() != 0) {
-          LogError("A participant indicating 'none' usage can't specify any other usage.");
+          LogError(FROM_HERE,
+                   "A participant indicating 'none' usage can't specify any other usage.");
           return false;
         }
       }
@@ -987,7 +1005,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferUsage(
     case CheckSanitizeStage::kAggregated:
       if (buffer_usage->cpu() == 0 && buffer_usage->vulkan() == 0 && buffer_usage->display() == 0 &&
           buffer_usage->video() == 0) {
-        LogError("At least one non-'none' usage bit must be set across all participants.");
+        LogError(FROM_HERE,
+                 "At least one non-'none' usage bit must be set across all participants.");
         return false;
       }
       break;
@@ -1030,15 +1049,15 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   FIELD_DEFAULT(constraints, allow_clear_aux_buffers_for_secure,
                 !IsWriteUsage(constraints->usage()));
   if (!CheckSanitizeBufferUsage(stage, &constraints->get_builder_usage())) {
-    LogError("CheckSanitizeBufferUsage() failed");
+    LogError(FROM_HERE, "CheckSanitizeBufferUsage() failed");
     return false;
   }
   if (constraints->max_buffer_count() == 0) {
-    LogError("max_buffer_count == 0");
+    LogError(FROM_HERE, "max_buffer_count == 0");
     return false;
   }
   if (constraints->min_buffer_count() > constraints->max_buffer_count()) {
-    LogError("min_buffer_count > max_buffer_count");
+    LogError(FROM_HERE, "min_buffer_count > max_buffer_count");
     return false;
   }
   if (!CheckSanitizeBufferMemoryConstraints(
@@ -1048,13 +1067,13 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   if (stage != CheckSanitizeStage::kAggregated) {
     if (IsCpuUsage(constraints->usage())) {
       if (!IsCpuAccessSupported(constraints->buffer_memory_constraints())) {
-        LogError("IsCpuUsage() && !IsCpuAccessSupported()");
+        LogError(FROM_HERE, "IsCpuUsage() && !IsCpuAccessSupported()");
         return false;
       }
       // From a single participant, reject secure_required in combination with CPU usage, since CPU
       // usage isn't possible given secure memory.
       if (constraints->buffer_memory_constraints().secure_required()) {
-        LogError("IsCpuUsage() && secure_required");
+        LogError(FROM_HERE, "IsCpuUsage() && secure_required");
         return false;
       }
       // It's fine if a participant sets CPU usage but also permits inaccessible domain and possibly
@@ -1065,7 +1084,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     if (constraints->buffer_memory_constraints().secure_required() &&
         IsCpuAccessSupported(constraints->buffer_memory_constraints())) {
       // This is a little picky, but easier to be less picky later than more picky later.
-      LogError("secure_required && IsCpuAccessSupported()");
+      LogError(FROM_HERE, "secure_required && IsCpuAccessSupported()");
       return false;
     }
   }
@@ -1083,7 +1102,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
         if (ImageFormatIsPixelFormatEqual(
                 constraints->image_format_constraints()[i].pixel_format(),
                 constraints->image_format_constraints()[j].pixel_format())) {
-          LogError("image format constraints %d and %d have identical formats", i, j);
+          LogError(FROM_HERE, "image format constraints %d and %d have identical formats", i, j);
           return false;
         }
       }
@@ -1107,7 +1126,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
   FIELD_DEFAULT(constraints, inaccessible_domain_supported, !buffer_usage.cpu());
   if (stage != CheckSanitizeStage::kAggregated) {
     if (constraints->has_heap_permitted() && !constraints->heap_permitted().count()) {
-      LogError("constraints->has_heap_permitted() && !constraints->heap_permitted().count()");
+      LogError(FROM_HERE,
+               "constraints->has_heap_permitted() && !constraints->heap_permitted().count()");
       return false;
     }
   }
@@ -1117,11 +1137,11 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
   ZX_DEBUG_ASSERT(stage != CheckSanitizeStage::kInitial ||
                   constraints->heap_permitted().count() == 0);
   if (constraints->min_size_bytes() > constraints->max_size_bytes()) {
-    LogError("min_size_bytes > max_size_bytes");
+    LogError(FROM_HERE, "min_size_bytes > max_size_bytes");
     return false;
   }
   if (constraints->secure_required() && !IsSecurePermitted(*constraints)) {
-    LogError("secure memory required but not permitted");
+    LogError(FROM_HERE, "secure memory required but not permitted");
     return false;
   }
   return true;
@@ -1162,11 +1182,11 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
   FIELD_DEFAULT_ZERO(constraints, required_max_bytes_per_row);
 
   if (constraints->pixel_format().type() == llcpp::fuchsia::sysmem2::PixelFormatType::INVALID) {
-    LogError("PixelFormatType INVALID not allowed");
+    LogError(FROM_HERE, "PixelFormatType INVALID not allowed");
     return false;
   }
   if (!ImageFormatIsSupported(constraints->pixel_format())) {
-    LogError("Unsupported pixel format");
+    LogError(FROM_HERE, "Unsupported pixel format");
     return false;
   }
 
@@ -1177,56 +1197,56 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
       std::max(constraints->min_bytes_per_row(), min_bytes_per_row_given_min_width);
 
   if (!constraints->color_spaces().count()) {
-    LogError("color_spaces.count() == 0 not allowed");
+    LogError(FROM_HERE, "color_spaces.count() == 0 not allowed");
     return false;
   }
 
   if (constraints->min_coded_width() > constraints->max_coded_width()) {
-    LogError("min_coded_width > max_coded_width");
+    LogError(FROM_HERE, "min_coded_width > max_coded_width");
     return false;
   }
   if (constraints->min_coded_height() > constraints->max_coded_height()) {
-    LogError("min_coded_height > max_coded_height");
+    LogError(FROM_HERE, "min_coded_height > max_coded_height");
     return false;
   }
   if (constraints->min_bytes_per_row() > constraints->max_bytes_per_row()) {
-    LogError("min_bytes_per_row > max_bytes_per_row");
+    LogError(FROM_HERE, "min_bytes_per_row > max_bytes_per_row");
     return false;
   }
   if (constraints->min_coded_width() * constraints->min_coded_height() >
       constraints->max_coded_width_times_coded_height()) {
-    LogError(
-        "min_coded_width * min_coded_height > "
-        "max_coded_width_times_coded_height");
+    LogError(FROM_HERE,
+             "min_coded_width * min_coded_height > "
+             "max_coded_width_times_coded_height");
     return false;
   }
 
   if (!IsNonZeroPowerOf2(constraints->coded_width_divisor())) {
-    LogError("non-power-of-2 coded_width_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 coded_width_divisor not supported");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints->coded_height_divisor())) {
-    LogError("non-power-of-2 coded_width_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 coded_width_divisor not supported");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints->bytes_per_row_divisor())) {
-    LogError("non-power-of-2 bytes_per_row_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 bytes_per_row_divisor not supported");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints->start_offset_divisor())) {
-    LogError("non-power-of-2 start_offset_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 start_offset_divisor not supported");
     return false;
   }
   if (constraints->start_offset_divisor() > PAGE_SIZE) {
-    LogError("support for start_offset_divisor > PAGE_SIZE not yet implemented");
+    LogError(FROM_HERE, "support for start_offset_divisor > PAGE_SIZE not yet implemented");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints->display_width_divisor())) {
-    LogError("non-power-of-2 display_width_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 display_width_divisor not supported");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints->display_height_divisor())) {
-    LogError("non-power-of-2 display_height_divisor not supported");
+    LogError(FROM_HERE, "non-power-of-2 display_height_divisor not supported");
     return false;
   }
 
@@ -1236,52 +1256,52 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
       auto colorspace_type = constraints->color_spaces()[i].has_type()
                                  ? constraints->color_spaces()[i].type()
                                  : llcpp::fuchsia::sysmem2::ColorSpaceType::INVALID;
-      LogError(
-          "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
-          "color_space.type: %u "
-          "pixel_format.type: %u",
-          colorspace_type, constraints->pixel_format().type());
+      LogError(FROM_HERE,
+               "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
+               "color_space.type: %u "
+               "pixel_format.type: %u",
+               colorspace_type, constraints->pixel_format().type());
       return false;
     }
   }
 
   if (constraints->required_min_coded_width() == 0) {
-    LogError("required_min_coded_width == 0");
+    LogError(FROM_HERE, "required_min_coded_width == 0");
     return false;
   }
   ZX_DEBUG_ASSERT(constraints->required_min_coded_width() != 0);
   if (constraints->required_min_coded_width() < constraints->min_coded_width()) {
-    LogError("required_min_coded_width < min_coded_width");
+    LogError(FROM_HERE, "required_min_coded_width < min_coded_width");
     return false;
   }
   if (constraints->required_max_coded_width() > constraints->max_coded_width()) {
-    LogError("required_max_coded_width > max_coded_width");
+    LogError(FROM_HERE, "required_max_coded_width > max_coded_width");
     return false;
   }
   if (constraints->required_min_coded_height() == 0) {
-    LogError("required_min_coded_height == 0");
+    LogError(FROM_HERE, "required_min_coded_height == 0");
     return false;
   }
   ZX_DEBUG_ASSERT(constraints->required_min_coded_height() != 0);
   if (constraints->required_min_coded_height() < constraints->min_coded_height()) {
-    LogError("required_min_coded_height < min_coded_height");
+    LogError(FROM_HERE, "required_min_coded_height < min_coded_height");
     return false;
   }
   if (constraints->required_max_coded_height() > constraints->max_coded_height()) {
-    LogError("required_max_coded_height > max_coded_height");
+    LogError(FROM_HERE, "required_max_coded_height > max_coded_height");
     return false;
   }
   if (constraints->required_min_bytes_per_row() == 0) {
-    LogError("required_min_bytes_per_row == 0");
+    LogError(FROM_HERE, "required_min_bytes_per_row == 0");
     return false;
   }
   ZX_DEBUG_ASSERT(constraints->required_min_bytes_per_row() != 0);
   if (constraints->required_min_bytes_per_row() < constraints->min_bytes_per_row()) {
-    LogError("required_min_bytes_per_row < min_bytes_per_row");
+    LogError(FROM_HERE, "required_min_bytes_per_row < min_bytes_per_row");
     return false;
   }
   if (constraints->required_max_bytes_per_row() > constraints->max_bytes_per_row()) {
-    LogError("required_max_bytes_per_row > max_bytes_per_row");
+    LogError(FROM_HERE, "required_max_bytes_per_row > max_bytes_per_row");
     return false;
   }
 
@@ -1407,7 +1427,7 @@ bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
   }
 
   if (!acc->count()) {
-    LogError("Zero heap permitted overlap");
+    LogError(FROM_HERE, "Zero heap permitted overlap");
     return false;
   }
 
@@ -1504,7 +1524,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
     // It's only when the count becomes non-zero then drops back to zero
     // (checked here), or if we end up with no image format constraints and
     // no buffer constraints (checked in ::Allocate()), that we care.
-    LogError("all pixel_format(s) eliminated");
+    LogError(FROM_HERE, "all pixel_format(s) eliminated");
     return false;
   }
 
@@ -1620,7 +1640,7 @@ bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
     // It's ok for this check to be under Accumulate* because it's also
     // under CheckSanitize().  It's fine to provide a slightly more helpful
     // error message here and early out here.
-    LogError("Zero color_space overlap");
+    LogError(FROM_HERE, "Zero color_space overlap");
     return false;
   }
 
@@ -1723,14 +1743,15 @@ LogicalBufferCollection::Allocate() {
   min_buffer_count = std::max(min_buffer_count, constraints_->min_buffer_count());
   uint32_t max_buffer_count = constraints_->max_buffer_count();
   if (min_buffer_count > max_buffer_count) {
-    LogError(
-        "aggregate min_buffer_count > aggregate max_buffer_count - "
-        "min: %u max: %u",
-        min_buffer_count, max_buffer_count);
+    LogError(FROM_HERE,
+             "aggregate min_buffer_count > aggregate max_buffer_count - "
+             "min: %u max: %u",
+             min_buffer_count, max_buffer_count);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
   if (min_buffer_count > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
-    LogError("aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
+    LogError(FROM_HERE,
+             "aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
              min_buffer_count, llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -1763,6 +1784,7 @@ LogicalBufferCollection::Allocate() {
     if (constraints_->need_clear_aux_buffers_for_secure() &&
         !constraints_->allow_clear_aux_buffers_for_secure()) {
       LogError(
+          FROM_HERE,
           "is_secure && need_clear_aux_buffers_for_secure && !allow_clear_aux_buffers_for_secure");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
@@ -1770,7 +1792,7 @@ LogicalBufferCollection::Allocate() {
 
   auto result_get_heap = GetHeap(buffer_constraints, parent_device_);
   if (!result_get_heap.is_ok()) {
-    LogError("Can not find a heap permitted by buffer constraints, error %d",
+    LogError(FROM_HERE, "Can not find a heap permitted by buffer constraints, error %d",
              result_get_heap.error());
     return fit::error(result_get_heap.error());
   }
@@ -1784,13 +1806,13 @@ LogicalBufferCollection::Allocate() {
   // Get memory allocator for settings.
   MemoryAllocator* allocator = parent_device_->GetAllocator(buffer_settings);
   if (!allocator) {
-    LogError("No memory allocator for buffer settings");
+    LogError(FROM_HERE, "No memory allocator for buffer settings");
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   auto coherency_domain_result = GetCoherencyDomain(*constraints_, allocator);
   if (!coherency_domain_result.is_ok()) {
-    LogError("No coherency domain found for buffer constraints");
+    LogError(FROM_HERE, "No coherency domain found for buffer constraints");
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
   buffer_settings.set_coherency_domain(
@@ -1824,7 +1846,7 @@ LogicalBufferCollection::Allocate() {
     }
     if (best_index == UINT32_MAX) {
       ZX_DEBUG_ASSERT(found_unsupported_when_protected);
-      LogError("No formats were compatible with protected memory.");
+      LogError(FROM_HERE, "No formats were compatible with protected memory.");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     // move from constraints_ to settings.
@@ -1849,7 +1871,7 @@ LogicalBufferCollection::Allocate() {
                                       image_format_constraints.required_max_coded_width()),
                              image_format_constraints.coded_width_divisor())));
     if (min_image.coded_width() > image_format_constraints.max_coded_width()) {
-      LogError("coded_width_divisor caused coded_width > max_coded_width");
+      LogError(FROM_HERE, "coded_width_divisor caused coded_width > max_coded_width");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     // We use required_max_coded_height because that's the max height that the producer (or
@@ -1859,7 +1881,7 @@ LogicalBufferCollection::Allocate() {
                                       image_format_constraints.required_max_coded_height()),
                              image_format_constraints.coded_height_divisor())));
     if (min_image.coded_height() > image_format_constraints.max_coded_height()) {
-      LogError("coded_height_divisor caused coded_height > max_coded_height");
+      LogError(FROM_HERE, "coded_height_divisor caused coded_height > max_coded_height");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     min_image.set_bytes_per_row(sysmem::MakeTracking(
@@ -1869,17 +1891,17 @@ LogicalBufferCollection::Allocate() {
                                           min_image.coded_width()),
                              image_format_constraints.bytes_per_row_divisor())));
     if (min_image.bytes_per_row() > image_format_constraints.max_bytes_per_row()) {
-      LogError(
-          "bytes_per_row_divisor caused bytes_per_row > "
-          "max_bytes_per_row");
+      LogError(FROM_HERE,
+               "bytes_per_row_divisor caused bytes_per_row > "
+               "max_bytes_per_row");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
 
     if (min_image.coded_width() * min_image.coded_height() >
         image_format_constraints.max_coded_width_times_coded_height()) {
-      LogError(
-          "coded_width * coded_height > "
-          "max_coded_width_times_coded_height");
+      LogError(FROM_HERE,
+               "coded_width * coded_height > "
+               "max_coded_width_times_coded_height");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
 
@@ -1901,7 +1923,7 @@ LogicalBufferCollection::Allocate() {
 
     if (image_min_size_bytes > min_size_bytes) {
       if (image_min_size_bytes > max_size_bytes) {
-        LogError("image_min_size_bytes > max_size_bytes");
+        LogError(FROM_HERE, "image_min_size_bytes > max_size_bytes");
         return fit::error(ZX_ERR_NOT_SUPPORTED);
       }
       min_size_bytes = image_min_size_bytes;
@@ -1911,7 +1933,7 @@ LogicalBufferCollection::Allocate() {
 
   // Currently redundant with earlier checks, but just in case...
   if (min_size_bytes == 0) {
-    LogError("min_size_bytes == 0");
+    LogError(FROM_HERE, "min_size_bytes == 0");
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
   ZX_DEBUG_ASSERT(min_size_bytes != 0);
@@ -1921,12 +1943,12 @@ LogicalBufferCollection::Allocate() {
 
   uint64_t total_size_bytes = min_size_bytes * result.buffers().count();
   if (total_size_bytes > kMaxTotalSizeBytesPerCollection) {
-    LogError("total_size_bytes > kMaxTotalSizeBytesPerCollection");
+    LogError(FROM_HERE, "total_size_bytes > kMaxTotalSizeBytesPerCollection");
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   if (min_size_bytes > kMaxSizeBytesPerBuffer) {
-    LogError("min_size_bytes > kMaxSizeBytesPerBuffer");
+    LogError(FROM_HERE, "min_size_bytes > kMaxSizeBytesPerBuffer");
     return fit::error(ZX_ERR_NO_MEMORY);
   }
   ZX_DEBUG_ASSERT(min_size_bytes <= std::numeric_limits<uint32_t>::max());
@@ -1996,7 +2018,7 @@ LogicalBufferCollection::Allocate() {
     // max_allocation_size isn't part of the constraints.  The latter is used for simulating OOM or
     // preventing unpredictable memory pressure caused by a fuzzer or similar source of
     // unpredictability in tests.
-    LogError("AllocateVmo() failed because size %u > max_allocation_size %ld",
+    LogError(FROM_HERE, "AllocateVmo() failed because size %u > max_allocation_size %ld",
              buffer_settings.size_bytes(), parent_device_->settings().max_allocation_size);
     return fit::error(ZX_ERR_NO_MEMORY);
   }
@@ -2004,7 +2026,7 @@ LogicalBufferCollection::Allocate() {
   for (uint32_t i = 0; i < result.buffers().count(); ++i) {
     auto allocate_result = AllocateVmo(allocator, settings, i);
     if (!allocate_result.is_ok()) {
-      LogError("AllocateVmo() failed");
+      LogError(FROM_HERE, "AllocateVmo() failed");
       return fit::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
@@ -2015,7 +2037,7 @@ LogicalBufferCollection::Allocate() {
       ZX_DEBUG_ASSERT(maybe_aux_settings);
       auto aux_allocate_result = AllocateVmo(maybe_aux_allocator, maybe_aux_settings.value(), i);
       if (!aux_allocate_result.is_ok()) {
-        LogError("AllocateVmo() failed (aux)");
+        LogError(FROM_HERE, "AllocateVmo() failed (aux)");
         return fit::error(ZX_ERR_NO_MEMORY);
       }
       zx::vmo aux_vmo = aux_allocate_result.take_value();
@@ -2030,7 +2052,7 @@ LogicalBufferCollection::Allocate() {
 
   // Register failure handler with memory allocator.
   allocator->AddDestroyCallback(reinterpret_cast<intptr_t>(this), [this]() {
-    Fail("LogicalBufferCollection memory allocator gone - now auto-failing self.");
+    LogAndFail(FROM_HERE, "LogicalBufferCollection memory allocator gone - now auto-failing self.");
   });
   memory_allocator_ = allocator;
 
@@ -2047,7 +2069,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // so we should also round up when allocating.
   size_t rounded_size_bytes = fbl::round_up(settings.buffer_settings().size_bytes(), ZX_PAGE_SIZE);
   if (rounded_size_bytes < settings.buffer_settings().size_bytes()) {
-    LogError("size_bytes overflows when rounding to multiple of page_size");
+    LogError(FROM_HERE, "size_bytes overflows when rounding to multiple of page_size");
     return fit::error();
   }
 
@@ -2064,17 +2086,17 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   }
   zx_status_t status = allocator->Allocate(rounded_size_bytes, name, &raw_parent_vmo);
   if (status != ZX_OK) {
-    LogError(
-        "allocator->Allocate failed - size_bytes: %zu "
-        "status: %d",
-        rounded_size_bytes, status);
+    LogError(FROM_HERE,
+             "allocator->Allocate failed - size_bytes: %zu "
+             "status: %d",
+             rounded_size_bytes, status);
     return fit::error();
   }
 
   zx_info_vmo_t info;
   status = raw_parent_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    LogError("raw_parent_vmo.get_info(ZX_INFO_VMO) failed - status %d", status);
+    LogError(FROM_HERE, "raw_parent_vmo.get_info(ZX_INFO_VMO) failed - status %d", status);
     return fit::error();
   }
 
@@ -2105,7 +2127,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       // TODO(fxbug.dev/59796): Use ZX_VMO_OP_ZERO instead.
       status = raw_parent_vmo.write(kZeroes, offset, bytes_to_write);
       if (status != ZX_OK) {
-        LogError("raw_parent_vmo.write() failed - status: %d", status);
+        LogError(FROM_HERE, "raw_parent_vmo.write() failed - status: %d", status);
         return fit::error();
       }
       offset += bytes_to_write;
@@ -2113,7 +2135,8 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     // Flush out the zeroes.
     status = raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, info.size_bytes, nullptr, 0);
     if (status != ZX_OK) {
-      LogError("raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d", status);
+      LogError(FROM_HERE, "raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d",
+               status);
       return fit::error();
     }
   }
@@ -2146,7 +2169,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx::vmo cooked_parent_vmo;
   status = tracked_parent_vmo->vmo().duplicate(kSysmemVmoRights, &cooked_parent_vmo);
   if (status != ZX_OK) {
-    LogError("zx::object::duplicate() failed - status: %d", status);
+    LogError(FROM_HERE, "zx::object::duplicate() failed - status: %d", status);
     return fit::error();
   }
 
@@ -2154,7 +2177,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   status =
       cooked_parent_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, rounded_size_bytes, &local_child_vmo);
   if (status != ZX_OK) {
-    LogError("zx::vmo::create_child() failed - status: %d", status);
+    LogError(FROM_HERE, "zx::vmo::create_child() failed - status: %d", status);
     return fit::error();
   }
 
@@ -2168,7 +2191,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // called.
   status = tracked_parent_vmo->StartWait(parent_device_->dispatcher());
   if (status != ZX_OK) {
-    LogError("tracked_parent->StartWait() failed - status: %d", status);
+    LogError(FROM_HERE, "tracked_parent->StartWait() failed - status: %d", status);
     // ~tracked_parent_vmo calls allocator->Delete().
     return fit::error();
   }
@@ -2182,7 +2205,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       parent_vmo_ref.vmo(), local_child_vmo,
       sysmem::V2CloneSingleBufferSettingsBuilder(&allocator_, settings).build());
   if (status != ZX_OK) {
-    LogError("allocator->SetupChildVmo() failed - status: %d", status);
+    LogError(FROM_HERE, "allocator->SetupChildVmo() failed - status: %d", status);
     // In this path, the ~local_child_vmo will async trigger parent_vmo_ref::OnZeroChildren()
     // which will call allocator->Delete() via above do_delete lambda passed to
     // ParentVmo::ParentVmo().
@@ -2204,22 +2227,24 @@ void LogicalBufferCollection::CreationTimedOut(async_dispatcher_t* dispatcher,
 
   std::string name = name_ ? name_->name : "Unknown";
 
-  LogError("Allocation of %s timed out. Waiting for tokens: ", name.c_str());
+  LogError(FROM_HERE, "Allocation of %s timed out. Waiting for tokens: ", name.c_str());
   for (auto& token : token_views_) {
     if (token.second->debug_name() != "") {
-      LogError("Name %s id %ld", token.second->debug_name().c_str(), token.second->debug_id());
+      LogError(FROM_HERE, "Name %s id %ld", token.second->debug_name().c_str(),
+               token.second->debug_id());
     } else {
-      LogError("Unknown token");
+      LogError(FROM_HERE, "Unknown token");
     }
   }
-  LogError("Collections:");
+  LogError(FROM_HERE, "Collections:");
   for (auto& collection : collection_views_) {
     const char* constraints_state = collection.second->has_constraints() ? "set" : "unset";
     if (collection.second->debug_name() != "") {
-      LogError("Name \"%s\" id %ld (constraints %s)", collection.second->debug_name().c_str(),
-               collection.second->debug_id(), constraints_state);
+      LogError(FROM_HERE, "Name \"%s\" id %ld (constraints %s)",
+               collection.second->debug_name().c_str(), collection.second->debug_id(),
+               constraints_state);
     } else {
-      LogError("Name unknown (constraints %s)", constraints_state);
+      LogError(FROM_HERE, "Name unknown (constraints %s)", constraints_state);
     }
   }
 }
@@ -2311,12 +2336,12 @@ LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
 }
 
 zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatcher_t* dispatcher) {
-  LogInfo("LogicalBufferCollection::TrackedParentVmo::StartWait()");
+  LogInfo(FROM_HERE, "LogicalBufferCollection::TrackedParentVmo::StartWait()");
   // The current thread is the dispatcher thread.
   ZX_DEBUG_ASSERT(!waiting_);
   zx_status_t status = zero_children_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
-    LogErrorStatic(nullptr, "zero_children_wait_.Begin() failed - status: %d", status);
+    LogErrorStatic(FROM_HERE, nullptr, "zero_children_wait_.Begin() failed - status: %d", status);
     return status;
   }
   waiting_ = true;
@@ -2345,7 +2370,7 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
                                                                const zx_packet_signal_t* signal) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren",
                  "buffer_collection", buffer_collection_.get(), "child_koid", child_koid_);
-  LogInfo("LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
+  LogInfo(FROM_HERE, "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
   ZX_DEBUG_ASSERT(waiting_);
   waiting_ = false;
   if (status == ZX_ERR_CANCELED) {

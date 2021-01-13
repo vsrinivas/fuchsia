@@ -20,7 +20,7 @@ Allocator::Allocator(Device* parent_device)
   // nothing else to do here
 }
 
-Allocator::~Allocator() { LogInfo("~Allocator"); }
+Allocator::~Allocator() { LogInfo(FROM_HERE, "~Allocator"); }
 
 // static
 void Allocator::CreateChannelOwned(zx::channel request, Device* device) {
@@ -52,10 +52,10 @@ void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_reques
   zx::channel token_server;
   zx_status_t status = zx::channel::create(0, &token_client, &token_server);
   if (status != ZX_OK) {
-    LogError(
-        "Allocator::AllocateCollection() zx::channel::create() failed "
-        "- status: %d",
-        status);
+    LogError(FROM_HERE,
+             "Allocator::AllocateCollection() zx::channel::create() failed "
+             "- status: %d",
+             status);
     // ~buffer_collection_request
     //
     // Returning an error here causes the sysmem connection to drop also,
