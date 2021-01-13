@@ -24,7 +24,7 @@ use crate::{
 };
 
 /// Path to the node config JSON file.
-const NODE_CONFIG_PATH: &'static str = "/pkg/config/power_manager/node_config.json";
+const NODE_CONFIG_PATH: &'static str = "/config/data/node_config.json";
 
 pub struct PowerManager {
     nodes: HashMap<String, Rc<dyn Node>>,
@@ -218,10 +218,7 @@ mod tests {
     /// contains a string config key called "driver_path").
     #[test]
     fn test_config_files_driver_manager_handler_ordering() {
-        let config_files = get_node_config_files().collect::<Vec<_>>();
-        assert!(config_files.len() > 0, "No config files found");
-
-        for (file_path, config_file) in config_files {
+        for (file_path, config_file) in get_node_config_files() {
             let driver_manager_handler_index =
                 config_file.iter().position(|config| config["type"] == "DriverManagerHandler");
             let first_node_using_drivers_index =

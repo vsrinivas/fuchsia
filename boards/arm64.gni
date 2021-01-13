@@ -12,7 +12,6 @@ _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",
   "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/usb/drivers/xhci-rewrite:xhci",
-  "//src/power/power-manager:base_config",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
@@ -28,6 +27,8 @@ board_system_image_deps = [
 ]
 
 board_package_labels = [
+  "//src/power/power-manager",
+  "//src/power/power-manager:base_config",
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/packages/prod:drivers-support",

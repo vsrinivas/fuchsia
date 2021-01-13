@@ -77,7 +77,8 @@
         },
         {
             name: "power_manager",
-            url: "fuchsia-boot:///#meta/power-manager.cm",
+            url: "fuchsia-pkg://fuchsia.com/power-manager#meta/power-manager.cm",
+            environment: "#power-manager-env",
         },
         {
             name: "virtual_console",
@@ -446,6 +447,15 @@
             protocol: [ "fuchsia.logger.Log" ],
             from: "#archivist",
             to: [ "#console" ],
+        },
+
+        // Offer power_manager's config data to it, so it can read its config
+        {
+            directory: "config-data",
+            from: "#fshost",
+            to: [ "#power_manager" ],
+            subdir: "power-manager",
+            dependency: "weak_for_migration",
         },
 
         // Offer the kernel serial console to the console-launcher
@@ -822,6 +832,20 @@
             extends: "realm",
 
             // 1 minute
+            __stop_timeout_ms: 60000,
+        },
+
+        // TODO(fxbug.dev/64587): Remove once power_manager is in the ZBI.
+        {
+            name: "power-manager-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#base_resolver",
+                },
+            ],
             __stop_timeout_ms: 60000,
         },
     ],
