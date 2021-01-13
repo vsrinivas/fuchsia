@@ -747,7 +747,7 @@ mod tests {
         // show that a rate change is in progress.
         assert_geq!(updated_utc, monotonic_before + OFFSET);
         assert_leq!(updated_utc, monotonic_after + OFFSET + filtered_delta_offset);
-        assert_eq!(details.mono_to_synthetic.rate.synthetic_ticks, 1000056);
+        assert_geq!(details.mono_to_synthetic.rate.synthetic_ticks, 1000050);
         assert_eq!(details.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_geq!(details.last_rate_adjust_update_ticks, details.last_value_update_ticks);
 
@@ -756,7 +756,7 @@ mod tests {
         assert!(executor.wake_next_timer().is_some());
         let _ = executor.run_until_stalled(&mut fut);
         let details2 = clock.get_details().unwrap();
-        assert_eq!(details2.mono_to_synthetic.rate.synthetic_ticks, 1000056);
+        assert_geq!(details2.mono_to_synthetic.rate.synthetic_ticks, 1000050);
         assert_eq!(details2.mono_to_synthetic.rate.reference_ticks, 1000000);
         assert_lt!(details2.error_bounds, details.error_bounds);
 
