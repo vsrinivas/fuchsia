@@ -41,9 +41,8 @@ type subprocessRunner interface {
 }
 
 type SetCommand struct {
-	staticSpecPath     string
-	contextSpecPath    string
-	failureSummaryPath string
+	staticSpecPath  string
+	contextSpecPath string
 }
 
 func (*SetCommand) Name() string { return "set" }
@@ -66,15 +65,6 @@ func (c *SetCommand) SetFlags(f *flag.FlagSet) {
 		("path to a Context .textproto file. If unset, the " +
 			fuchsiaDirEnvVar +
 			" will be used to locate the checkout."),
-	)
-	// TODO(fxbug.dev/65899): Delete this flag after recipes retrieve failure
-	// summary via set artifacts instead.
-	f.StringVar(
-		&c.failureSummaryPath,
-		"failure-summary",
-		"",
-		("if set, brief plain text logs that are useful for debugging in case of failures will " +
-			"be written to this file ."),
 	)
 }
 
@@ -129,17 +119,6 @@ func (c *SetCommand) run(ctx context.Context) error {
 
 	runner := &runner.SubprocessRunner{}
 	artifacts, runErr := runSteps(ctx, runner, staticSpec, contextSpec, platform)
-
-	if c.failureSummaryPath != "" {
-		f, err := osmisc.CreateFile(c.failureSummaryPath)
-		if err != nil {
-			return fmt.Errorf("failed to create failure summary file: %w", err)
-		}
-		defer f.Close()
-		if _, err := f.WriteString(artifacts.FailureSummary); err != nil {
-			return fmt.Errorf("failed to write failure summary: %w", err)
-		}
-	}
 
 	if contextSpec.ArtifactDir != "" {
 		f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
