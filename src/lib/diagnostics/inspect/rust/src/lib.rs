@@ -138,8 +138,8 @@ pub mod testing {
     pub use diagnostics_hierarchy::{
         assert_data_tree as assert_inspect_tree,
         testing::{
-            AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, PropertyAssertion,
-            TreeAssertion,
+            AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, NonZeroUintProperty,
+            PropertyAssertion, TreeAssertion,
         },
         tree_assertion,
     };

@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::Context as _;
 use diagnostics_hierarchy::Property;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
@@ -177,7 +177,7 @@ async fn inspect_nic() -> Result {
         .context("get_inspect_data failed")?;
     // Debug print the tree to make debugging easier in case of failures.
     println!("Got inspect data: {:#?}", data);
-    use fuchsia_inspect::testing::AnyProperty;
+    use fuchsia_inspect::testing::{AnyProperty, NonZeroUintProperty};
     fuchsia_inspect::assert_inspect_tree!(data, NICs: {
         loopback_props.id.to_string() => {
             Name: loopback_props.name,
@@ -316,23 +316,6 @@ async fn inspect_nic() -> Result {
     let () = netdev_addrs.check().context("netdev addresses match failed")?;
 
     Ok(())
-}
-
-/// A NonZeroUintProperty passes for non-zero, unsigned integers.
-pub struct NonZeroUintProperty;
-
-impl<K> fuchsia_inspect::testing::PropertyAssertion<K> for NonZeroUintProperty {
-    fn run(&self, actual: &Property<K>) -> core::result::Result<(), Error> {
-        match actual {
-            Property::Uint(_, v) if *v != 0 => Ok(()),
-            Property::Uint(_, v) if *v == 0 => {
-                Err(format_err!("expected non-zero integer, found 0"))
-            }
-            _ => {
-                Err(format_err!("expected non-zero integer, found {}", actual.discriminant_name()))
-            }
-        }
-    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

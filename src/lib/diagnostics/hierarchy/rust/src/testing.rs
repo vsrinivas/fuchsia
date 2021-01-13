@@ -504,6 +504,25 @@ impl<K> PropertyAssertion<K> for AnyProperty {
     }
 }
 
+/// A PropertyAssertion that passes for non-zero, unsigned integers.
+///
+/// TODO(fxbug.dev/62447): generalize this to use the >= operator.
+pub struct NonZeroUintProperty;
+
+impl<K> PropertyAssertion<K> for NonZeroUintProperty {
+    fn run(&self, actual: &Property<K>) -> Result<(), Error> {
+        match actual {
+            Property::Uint(_, v) if *v != 0 => Ok(()),
+            Property::Uint(_, v) if *v == 0 => {
+                Err(format_err!("expected non-zero integer, found 0"))
+            }
+            _ => {
+                Err(format_err!("expected non-zero integer, found {}", actual.discriminant_name()))
+            }
+        }
+    }
+}
+
 /// An assertion for a histogram property.
 pub struct HistogramAssertion<T> {
     format: ArrayFormat,
@@ -931,6 +950,41 @@ mod tests {
             child: {
                 prop: 20i64,
             },
+        });
+    }
+
+    #[test]
+    fn test_nonzero_uint_property_passes() {
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
+            "key",
+            vec![
+                Property::Uint("value1".to_string(), 10u64),
+                Property::Uint("value2".to_string(), 20u64),
+            ],
+            vec![],
+        );
+        assert_data_tree!(diagnostics_hierarchy, key: {
+            value1: NonZeroUintProperty,
+            value2: NonZeroUintProperty,
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_nonzero_uint_property_fails() {
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
+            "key",
+            vec![
+                Property::Int("value1".to_string(), 10i64),
+                Property::Uint("value2".to_string(), 0u64),
+                Property::String("value3".to_string(), "string_value".to_string()),
+            ],
+            vec![],
+        );
+        assert_data_tree!(diagnostics_hierarchy, key: {
+            value1: NonZeroUintProperty,
+            value2: NonZeroUintProperty,
+            value3: NonZeroUintProperty,
         });
     }
 
