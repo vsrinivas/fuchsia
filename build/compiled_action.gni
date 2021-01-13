@@ -102,6 +102,7 @@ template("_compiled_action_target") {
       inputs = []
     }
 
+    hermetic_deps = false
     script = "//build/gn_run_binary.sh"
 
     # Construct the host toolchain version of the tool.

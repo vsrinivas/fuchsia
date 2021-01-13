@@ -114,6 +114,7 @@ template("zbi") {
                              "visibility",
                            ])
 
+    hermetic_deps = false
     script = "//build/zbi/run_zbi.py"
 
     deps = [

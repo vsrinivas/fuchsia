@@ -152,6 +152,7 @@ template("fidl_c_header") {
           fidlc_path += ".exe"
         }
 
+        hermetic_deps = false
         script = "$zx/public/gn/create_fidl_header.py"
         outputs = [ header_file ]
         deps = [

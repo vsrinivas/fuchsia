@@ -33,6 +33,7 @@ action_foreach("magma_ordinal_error_tests") {
     "magma_ordinal-overflow.json",
   ]
   inputs = [ "//src/graphics/lib/magma/include/virtio/virtio_magma.h.gen.py" ]
+  hermetic_deps = false
   script = "call_expect_error.sh"
   args = [
     rebase_path("$target_gen_dir/{{source_name_part}}-exitcode",

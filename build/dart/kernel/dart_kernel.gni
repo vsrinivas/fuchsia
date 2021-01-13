@@ -216,6 +216,7 @@ template("dart_kernel2") {
     # relative to the sources.
     _rebased_packages_path = rebase_path(invoker.packages_path, "//")
 
+    hermetic_deps = false
     script = _gen_kernel_path
     args += [
       "--enable-experiment=non-nullable",

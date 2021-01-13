@@ -222,6 +222,7 @@ action("kazoo-syscall-golden-test") {
   assert(kazoo == [ kazoo[0] ])
   kazoo = kazoo[0]
 
+  hermetic_deps = false
   script = "golden-test"
   sources = [
     "golden.txt",

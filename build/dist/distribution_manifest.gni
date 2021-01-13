@@ -97,6 +97,7 @@ template("distribution_manifest") {
                              "visibility",
                            ])
 
+    hermetic_deps = false
     script = "//build/dist/expand_and_find_conflicting_dist_entries.py"
 
     inputs = [ intermediate_file ]

@@ -43,6 +43,7 @@ template("generate_symbols") {
     inputs = [ invoker.library_path ]
     outputs = [ invoker.output ]
 
+    hermetic_deps = false
     script = "generate_debug.sh"
 
     args = [

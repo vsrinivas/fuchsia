@@ -149,6 +149,7 @@ template("toolchain_utils_action") {
   }
 
   target(target_type, target_name) {
+    hermetic_deps = false
     forward_variables_from(extra_params, "*")
     forward_variables_from(invoker,
                            "*",

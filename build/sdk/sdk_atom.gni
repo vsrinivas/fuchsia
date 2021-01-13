@@ -269,6 +269,7 @@ template("sdk_atom") {
     manifest = "$target_gen_dir/$target_name.sdk"
     depfile = "$manifest.d"
 
+    hermetic_deps = false
     script = "//build/sdk/create_atom_manifest.py"
 
     public_deps = gn_deps + [ ":$meta_target_name" ]

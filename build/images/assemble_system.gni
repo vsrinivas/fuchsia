@@ -166,6 +166,7 @@ template("assemble_system") {
     inputs = [ meta_far_merkle_index ]
     outputs = [ "$target_out_dir/${target_name}" ]
     deps = [ ":${image_name}_meta_far_merkle_index" ]
+    hermetic_deps = false
     script = "//build/images/manifest_content_expand.sh"
     args = rebase_path(inputs, root_build_dir) +
            rebase_path(outputs, root_build_dir)
@@ -307,6 +308,7 @@ template("assemble_system") {
   action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
     testonly = true
+    hermetic_deps = false
     script = "//build/images/manifest.py"
     outputs = [ "$target_out_dir/$target_name" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]

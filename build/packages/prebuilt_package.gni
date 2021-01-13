@@ -100,6 +100,7 @@ template("prebuilt_package") {
       visibility += [ ":$manifest_target_name" ]
     }
 
+    hermetic_deps = false
     script = "//build/packages/prebuilt_package.py"
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"

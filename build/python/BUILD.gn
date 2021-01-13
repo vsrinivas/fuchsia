@@ -10,6 +10,7 @@ import("//build/testing/host_test_data.gni")
 
 # A regular copy() doesn't work properly with directories.
 action("copy_lib") {
+  hermetic_deps = false
   script = "//build/copy_tree.py"
   args = [
     rebase_path("//prebuilt/third_party/python3/${host_platform}/lib",

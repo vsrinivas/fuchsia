@@ -126,6 +126,7 @@ template("dart_test") {
       "$_dart_target_gen_dir/${_dart_library_target_name}_package_config.json"
 
   action(_snapshot_target_name) {
+    hermetic_deps = false
     depfile = "${_snapshot}.d"
 
     outputs = [ _snapshot ]

@@ -39,7 +39,7 @@ template("vboot") {
                              "testonly",
                              "visibility",
                            ])
-
+    hermetic_deps = false
     script = "//prebuilt/tools/futility/${host_platform}/futility"
     outputs = [ output_file ]
 

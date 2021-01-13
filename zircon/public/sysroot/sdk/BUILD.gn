@@ -115,6 +115,7 @@ generated_file("sysroot-meta-json") {
 
 action("sysroot-meta") {
   visibility = [ ":*" ]
+  hermetic_deps = false
   script = "//build/zircon/sdk_build_id.py"
   sources = [ sysroot_meta_json_file ]
   outputs = [

@@ -132,6 +132,7 @@ template("shell_command") {
                              "testonly",
                              "visibility",
                            ])
+    hermetic_deps = false
     script = "//build/images/shell_commands.py"
     outputs = [ output ]
     args = [

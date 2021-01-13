@@ -192,6 +192,7 @@ if (current_toolchain != sysroot_toolchain) {
     #    and then needs to be rebuilt!!
     #
     action("${prefix}_headers") {
+      hermetic_deps = false
       script = "copy_directory.py"
       args = [
         "--dst=" + rebase_path(_sysroot_dir, root_build_dir) + "/include",
@@ -410,6 +411,7 @@ if (current_toolchain != sysroot_toolchain) {
   action("headers") {
     inputs = [ sysroot_entries_json_file ]
     outputs = sysroot_headers
+    hermetic_deps = false
     script = "populate_sysroot_headers.py"
     depfile = "$root_out_dir/headers.d"
     args = [

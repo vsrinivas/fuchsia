@@ -112,6 +112,7 @@ template("vbmeta") {
   }
 
   action("${target_name}__vb_desc") {
+    hermetic_deps = false
     script = "//third_party/android/platform/external/avb/avbtool.py"
 
     forward_variables_from(invoker,

@@ -46,6 +46,7 @@ if (current_toolchain == default_toolchain) {
         ":*",
         "$zx/kernel:*",
       ]
+      hermetic_deps = false
       script = "git-version-string.sh"
       outputs = [ kernel_version_string_file ]
       sources = [ "$kernel_version_git_checkout/.git/HEAD" ]

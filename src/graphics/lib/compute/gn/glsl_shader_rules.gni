@@ -72,6 +72,7 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
                              "public_deps",
                              "sources",
                            ])
+    hermetic_deps = false
     script =
         "${graphics_compute_dir}/scripts/preprocess_and_format_glsl_shader.py"
     args = [

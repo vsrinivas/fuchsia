@@ -180,6 +180,7 @@ action("pkgsvr_index") {
   deps = [ ":monolith_meta_far_merkle_index" ]
   inputs = [ monolith_meta_far_merkle_index ]
 
+  hermetic_deps = false
   script = "//build/images/manifest_content_expand.sh"
   args = [
     rebase_path(monolith_meta_far_merkle_index, root_build_dir),
@@ -212,6 +213,7 @@ action("cache_index") {
   deps = [ ":preinstall_meta_far_merkle_index" ]
   inputs = [ preinstall_meta_far_merkle_index ]
 
+  hermetic_deps = false
   script = "//build/images/manifest_content_expand.sh"
   args = [
     rebase_path(preinstall_meta_far_merkle_index, root_build_dir),
@@ -279,6 +281,7 @@ system_manifest_outputs = get_target_outputs(":system_image.manifest")
 action("system_image_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
+  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/$target_name" ]
 
@@ -424,7 +427,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta__zbi_props",
   ]
   testonly = true
-
+  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/devmgr_config.txt" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
@@ -499,7 +502,7 @@ action("devmgr_config_prime.txt") {
     ":fuchsia_prime.vbmeta__zbi_props",
   ]
   testonly = true
-
+  hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/devmgr_config_prime.txt" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
@@ -677,6 +680,7 @@ zx_host_tool_action("extract_bootfs") {
 
 action("elf_sizes.json") {
   testonly = true
+  hermetic_deps = false
   script = "elfinfo.py"
   deps = [
     ":blob.blk",
@@ -1539,6 +1543,7 @@ default_image_deps += [ ":board_tools" ]
 
 action("filesystem_sizes.json") {
   testonly = true
+  hermetic_deps = false
   script = "format_filesystem_sizes.py"
   deps = filesystem_sizes_deps + [ ":fuchsia" ]
   if (recovery_is_zedboot) {
@@ -1937,6 +1942,7 @@ foreach(target, paver_targets) {
     testonly = true
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
+    hermetic_deps = false
     script = "pack-images.py"
     args = [
       "--depfile=" + rebase_path(depfile, root_build_dir),
@@ -2007,7 +2013,7 @@ action("update_packages.manifest") {
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":update_meta_far_merkle_index" ]
   inputs = [ update_meta_far_merkle_index ]
-
+  hermetic_deps = false
   script = "manifest_content_expand.sh"
   args = [
     rebase_path(update_meta_far_merkle_index, root_build_dir),
@@ -2023,6 +2029,7 @@ action("update_packages.manifest.json") {
   deps = [ ":update_meta_far_merkle_index" ]
   inputs = [ update_meta_far_merkle_index ]
 
+  hermetic_deps = false
   script = "generate_packages_json.py"
   args = [
     rebase_path(update_meta_far_merkle_index, root_build_dir),
@@ -2060,7 +2067,7 @@ action("update.manifest") {
       sources = [ board_name_file ]
     },
   ]
-
+  hermetic_deps = false
   script = "manifest.py"
 
   outputs = [ "$target_out_dir/$target_name" ]
@@ -2145,7 +2152,7 @@ action("update_prime_packages.manifest") {
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":update_prime_meta_far_merkle_index" ]
   inputs = [ update_prime_meta_far_merkle_index ]
-
+  hermetic_deps = false
   script = "manifest_content_expand.sh"
   args = [
     rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
@@ -2161,6 +2168,7 @@ action("update_prime_packages.manifest.json") {
   deps = [ ":update_prime_meta_far_merkle_index" ]
   inputs = [ update_prime_meta_far_merkle_index ]
 
+  hermetic_deps = false
   script = "generate_packages_json.py"
   args = [
     rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
@@ -2171,7 +2179,7 @@ action("update_prime_packages.manifest.json") {
 action("update_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
-
+  hermetic_deps = false
   script = "manifest.py"
 
   outputs = [ "$target_out_dir/$target_name" ]
@@ -2349,6 +2357,7 @@ action("system_index") {
   visibility = [ ":system_snapshot" ]
   testonly = true
 
+  hermetic_deps = false
   script = "//build/cat.sh"
   outputs = [ "$target_out_dir/$target_name" ]
   args = [ rebase_path(outputs[0], root_build_dir) ]

@@ -126,6 +126,7 @@ action("json_for_test") {
     "//sdk/lib/fidl/cpp/test:frobinator",
   ]
   outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
+  hermetic_deps = false
   script = "generate_test_includes.sh"
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/library_loader_test_data.h",
@@ -147,6 +148,7 @@ action("list_for_test") {
   testonly = true
   deps = [ "//sdk:core_fidl_json" ]
   outputs = [ "$target_gen_dir/list_test_data.h" ]
+  hermetic_deps = false
   script = "generate_test_includes.sh"
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/list_test_data.h",

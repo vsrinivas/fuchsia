@@ -77,6 +77,7 @@ template("dart_package_config") {
                              "visibility",
                            ])
 
+    hermetic_deps = false
     script = "//build/dart/gen_dart_package_config.py"
 
     inputs = [ intermediate_file ]

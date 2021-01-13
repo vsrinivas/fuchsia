@@ -47,6 +47,7 @@ template("_flutter_asset_manifest") {
     _asset_manifest =
         "$target_gen_dir/build/${invoker.component_name}_pkgassets"
 
+    hermetic_deps = false
     script = "//build/flutter/internal/gen_asset_manifest.py"
 
     args = [

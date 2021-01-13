@@ -10,6 +10,7 @@ import("//build/test/test_package.gni")
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK (and any other FIDL files we might want).
 action("generate_fidl_json") {
+  hermetic_deps = false
   script = "generate_fidl_json.py"
   generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
   outputs = [ "$generated_output" ]

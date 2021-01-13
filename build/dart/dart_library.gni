@@ -359,6 +359,7 @@ if (current_toolchain == dart_toolchain) {
       action(analysis_target_name) {
         forward_variables_from(concurrent_jobs.local, "*")
 
+        hermetic_deps = false
         script = "//build/dart/run_analysis.py"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
@@ -441,6 +442,7 @@ if (current_toolchain == dart_toolchain) {
         "${invoker.target_gen_dir}/${invoker.target_name}_strict_deps.report"
 
     action("${invoker.target_name}_strict_deps") {
+      hermetic_deps = false
       deps = [
         ":$_dart_package_config_target_name",
         ":${invoker.target_name}_dart_build_info",
