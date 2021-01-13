@@ -25,11 +25,15 @@ group("tests") {
     "lib:tests",
     "minfs:tests",
     "stress-tests",
+    "tools/blobfs-compression/test:tests",
     "volume_image:tests",
   ]
 }
 
 # a set of storage tools useful for development and debugging
 group("tools") {
-  deps = [ "factory/export_ffs:export-ffs" ]
+  deps = [
+    "factory/export_ffs:export-ffs",
+    "tools/blobfs-compression:blobfs-compression",
+  ]
 }

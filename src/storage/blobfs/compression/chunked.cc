@@ -25,6 +25,7 @@ using chunked_compression::CompressionParams;
 using chunked_compression::Status;
 using chunked_compression::ToZxStatus;
 
+// TODO (fxbug.dev/66779): Unify this blobfs compression level with sdk compression tool.
 constexpr int kDefaultLevel = 14;
 constexpr int kTargetFrameSize = 32 * 1024;
 
