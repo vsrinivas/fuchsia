@@ -5,6 +5,7 @@
 pub use self::display_fidl_handler::fidl_io;
 pub use self::light_sensor_controller::LIGHT_SENSOR_SERVICE_NAME;
 
+pub mod display_configuration;
 pub mod display_controller;
 mod display_fidl_handler;
 mod light_sensor;

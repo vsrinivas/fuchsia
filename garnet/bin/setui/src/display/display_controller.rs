@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
+use crate::config::default_settings::DefaultSetting;
+use crate::display::display_configuration::{
+    ConfigurationThemeMode, ConfigurationThemeType, DisplayConfiguration,
+};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -20,18 +24,57 @@ use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,
 };
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    /// Default display used if no configuration is available.
+    pub static ref DEFAULT_DISPLAY_INFO: DisplayInfo = DisplayInfo::new(
+        false,                 /*auto_brightness_enabled*/
+        0.5,                   /*brightness_value*/
+        true,                  /*screen_enabled*/
+        LowLightMode::Disable, /*low_light_mode*/
+        None,                  /*theme*/
+    );
+}
+
+lazy_static! {
+    /// Reference to a display configuation.
+    pub static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
+        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json",));
+}
+
+/// Returns a default display [`DisplayInfo`] that is derived from
+/// [`DEFAULT_DISPLAY_INFO`] with any fields specified in the
+/// display configuration set.
+pub fn default_display_info() -> DisplayInfo {
+    let mut default_display_info = DEFAULT_DISPLAY_INFO.clone();
+
+    if let Some(display_configuration) = DISPLAY_CONFIGURATION.lock().unwrap().get_default_value() {
+        default_display_info.theme = Some(Theme {
+            theme_type: Some(match display_configuration.theme.theme_type {
+                ConfigurationThemeType::Light => ThemeType::Light,
+            }),
+            theme_mode: if display_configuration
+                .theme
+                .theme_mode
+                .contains(&ConfigurationThemeMode::Auto)
+            {
+                ThemeMode::AUTO
+            } else {
+                ThemeMode::empty()
+            },
+        });
+    }
+
+    default_display_info
+}
 
 impl DeviceStorageCompatible for DisplayInfo {
     const KEY: &'static str = "display_info";
 
     fn default_value() -> Self {
-        DisplayInfo::new(
-            false,                 /*auto_brightness_enabled*/
-            0.5,                   /*brightness_value*/
-            true,                  /*screen_enabled*/
-            LowLightMode::Disable, /*low_light_mode*/
-            None,
-        )
+        default_display_info()
     }
 
     fn deserialize_from(value: &String) -> Self {

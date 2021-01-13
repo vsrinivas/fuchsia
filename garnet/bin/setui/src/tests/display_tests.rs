@@ -255,20 +255,23 @@ async fn test_theme_type_light_theme_mode_empty() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_no_theme_set() {
+    let expected_theme = Some(FidlTheme {
+        theme_type: Some(FidlThemeType::Light),
+        theme_mode: Some(FidlThemeMode::Auto),
+        ..FidlTheme::EMPTY
+    });
     let display_proxy = setup_display_env().await;
 
     let settings = display_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.theme, Some(FidlTheme::EMPTY));
+    assert_eq!(settings.theme, expected_theme);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_theme_mode_auto() {
     let incoming_theme =
         Some(FidlTheme { theme_mode: Some(FidlThemeMode::Auto), ..FidlTheme::EMPTY });
-    // TODO(fxb/64775): Once we remove ThemeType.AUTO, the incoming and expected
-    // values should be the same.
     let expected_theme = Some(FidlTheme {
-        theme_type: Some(FidlThemeType::Auto),
+        theme_type: Some(FidlThemeType::Light),
         ..incoming_theme.clone().unwrap()
     });
 
