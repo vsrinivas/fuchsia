@@ -160,6 +160,9 @@ class Device : public PciDeviceType,
   // TODO(cja): port void SetQuirksDone() __TA_REQUIRES(dev_lock_) { quirks_done_ = true; }
   const std::unique_ptr<Config>& config() const { return cfg_; }
 
+  fbl::Mutex* dev_lock() __TA_RETURN_CAPABILITY(dev_lock_) { return &dev_lock_; }
+  UpstreamNode* upstream() { return upstream_; }
+
   bool plugged_in() const __TA_REQUIRES(dev_lock_) { return plugged_in_; }
   bool disabled() const __TA_REQUIRES(dev_lock_) { return disabled_; }
   bool quirks_done() const __TA_REQUIRES(dev_lock_) { return quirks_done_; }
@@ -194,8 +197,6 @@ class Device : public PciDeviceType,
     auto bdf = cfg_->bdf();
     return static_cast<uint32_t>((bdf.bus_id << 8) | (bdf.device_id << 3) | bdf.function_id);
   }
-
-  fbl::Mutex* dev_lock() __TA_RETURN_CAPABILITY(dev_lock_) { return &dev_lock_; }
 
   // These methods handle IRQ configuration and are generally called by the
   // PciProtocol methods, though they may be used to disable IRQs on
@@ -247,7 +248,6 @@ class Device : public PciDeviceType,
   // Info about the BARs computed and cached during the initial setup/probe,
   // indexed by starting BAR register index.
   std::array<Bar, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
-  UpstreamNode* upstream() __TA_REQUIRES(dev_lock_) { return upstream_; }
   BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
 
  private:
@@ -290,7 +290,7 @@ class Device : public PciDeviceType,
   mutable fbl::Mutex dev_lock_;
   mutable fbl::Mutex cmd_reg_lock_;    // Protection for access to the command register.
   const std::unique_ptr<Config> cfg_;  // Pointer to the device's config interface.
-  UpstreamNode* upstream_ __TA_GUARDED(dev_lock_);  // The upstream node in the device graph.
+  UpstreamNode* upstream_;             // The upstream node in the device graph.
   BusDeviceInterface* bdi_ __TA_GUARDED(dev_lock_);
   std::array<Bar, PCI_MAX_BAR_REGS> bars_ __TA_GUARDED(dev_lock_) = {};
   const uint32_t bar_count_;

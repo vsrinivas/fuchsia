@@ -11,6 +11,7 @@
 
 #include <list>
 #include <memory>
+#include <unordered_map>
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -74,8 +75,8 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
 
   // All methods related to the fuchsia.hardware.pci service.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  virtual void GetDevices(GetDevicesCompleter::Sync& completer) final;
-  virtual void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
+  void GetDevices(GetDevicesCompleter::Sync& completer) final;
+  void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
 
  private:
   // Our constructor exists to fulfill the mixin constructors
@@ -85,15 +86,17 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
         pciroot_(proto) {}
 
   // Utility methods for the bus driver
-  zx_status_t Initialize(void) __TA_EXCLUDES(devices_lock_);
+  zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
   // Map an ecam VMO for Bus and Config use.
-  zx_status_t MapEcam(void);
+  zx_status_t MapEcam();
   // Scan all buses downstream from the root within the start and end
   // bus values given to the Bus driver through Pciroot.
-  zx_status_t ScanDownstream(void);
-  ddk::PcirootProtocolClient& pciroot(void) { return pciroot_; }
+  zx_status_t ScanDownstream();
+  ddk::PcirootProtocolClient& pciroot() { return pciroot_; }
   // Scan a specific bus
   void ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list);
+  // Creates interrupts corresponding to legacy IRQ vectors and configures devices accordingly.
+  zx_status_t ConfigureLegacyIrqs();
   // Creates a Config object for accessing the config space of the device at |bdf|.
   zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
 
@@ -103,6 +106,8 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   std::optional<ddk::MmioBuffer> ecam_;
   std::unique_ptr<PciRoot> root_;
   fbl::Mutex devices_lock_;
+  // A port all legacy IRQs are bound to.
+  zx::port legacy_irq_port_;
 
   // All devices downstream of this bus are held here. Devices are keyed by
   // BDF so they will not experience any collisions.

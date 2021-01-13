@@ -81,6 +81,10 @@ zx_status_t Bus::Initialize() {
 
   // Begin our bus scan starting at our root
   ScanDownstream();
+  if ((status = ConfigureLegacyIrqs()) != ZX_OK) {
+    zxlogf(ERROR, "error configuring legacy IRQs, they will be unavailable: %s",
+           zx_status_get_string(status));
+  }
   root_->ConfigureDownstreamDevices();
 
   zxlogf(DEBUG, "%s init done.", info_.name);
@@ -225,6 +229,87 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
     // scan we'll be able to scan the full 8 functions of a given device.
     _func_id = 0;
   }
+}
+
+zx_status_t Bus::ConfigureLegacyIrqs() {
+  zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &legacy_irq_port_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to create IRQ port: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // most cases they'll be using MSI / MSI-X anyway so a warning is sufficient.
+  fbl::Array<const pci_legacy_irq> irqs(info_.legacy_irqs_list, info_.legacy_irqs_count);
+  for (auto& irq : irqs) {
+    zx::unowned_interrupt interrupt(irq.interrupt);
+    status = interrupt->bind(legacy_irq_port_, irq.vector, ZX_INTERRUPT_BIND);
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "failed to bind irq %#x to port: %s", irq.vector,
+             zx_status_get_string(status));
+    }
+  }
+
+  // Scan all the devices found and figure out their interrupt pin based on the
+  // routing table provided by the platform. While we hold the devices_lock no
+  // changes can be made to the Bus topology, ensuring the lifetimes of the
+  // upstream paths and config accesses.
+  fbl::Array<const pci_irq_routing_entry_t> routing_entries(info_.irq_routing_list,
+                                                            info_.irq_routing_count);
+  fbl::AutoLock devices_lock(&devices_lock_);
+  for (auto& device : devices_) {
+    uint8_t pin = device.config()->Read(Config::kInterruptPin);
+    // If a device has no pin configured in the InterruptPin register then it
+    // has no legacy interrupt. PCI Local Bus Spec v3 Section 2.2.6.
+    if (pin == 0) {
+      continue;
+    }
+
+    // To avoid devices all ending up on the same pin the PCI bridge spec
+    // defines a transformation per pin based on the device id of a given function
+    // and pin. This transformation is applied at every transition from a
+    // secondary bus to a primary bus up to the root. In effect, we swizzle the
+    // pin every time we find a bridge working our way back up to the root. At
+    // the same time, we also want to record the bridge closest to the root in
+    // case it is a root port so that we can check the correct irq routing table
+    // entries.
+    //
+    // Pci Bridge to Bridge spec r1.2 Table 9-1
+    // PCI Express Base Specification r4.0 Table 2-19
+    UpstreamNode* upstream = device.upstream();
+    std::optional<pci_bdf_t> port;
+    while (upstream && upstream->type() == UpstreamNode::Type::BRIDGE) {
+      pin = (pin + device.dev_id()) % PCI_MAX_LEGACY_IRQ_PINS;
+      auto bridge = static_cast<pci::Bridge*>(upstream);
+      port = bridge->config()->bdf();
+      upstream = bridge->upstream();
+    }
+    ZX_DEBUG_ASSERT(upstream);
+    ZX_DEBUG_ASSERT(upstream->type() == UpstreamNode::Type::ROOT);
+
+    // If we didn't find a parent then the device must be a root complex endpoint.
+    if (!port) {
+      port = {.device_id = PCI_IRQ_ROUTING_NO_PARENT, .function_id = PCI_IRQ_ROUTING_NO_PARENT};
+    }
+
+    // There must be a routing entry for a given device / root port combination
+    // in order for a device's legacy IRQ to work. Attempt to find it and use
+    // the newly swizzled pin value to find the hardware vector.
+    auto find_fn = [&device, port](auto& entry) -> bool {
+      return entry.port_device_id == port->device_id &&
+             entry.port_function_id == port->function_id && entry.device_id == device.dev_id();
+    };
+
+    auto found = std::find_if(routing_entries.begin(), routing_entries.end(), find_fn);
+    if (found != std::end(routing_entries)) {
+      uint8_t vector = found->pins[pin - 1];
+      device.config()->Write(Config::kInterruptLine, vector);
+      zxlogf(DEBUG, "[%s] pin %u mapped to %#x", device.config()->addr(), pin, vector);
+    } else {
+      zxlogf(WARNING, "[%s] no legacy routing entry found for device", device.config()->addr());
+    }
+  }
+
+  return ZX_OK;
 }
 
 void Bus::DdkRelease() { delete this; }

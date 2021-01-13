@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -273,16 +274,33 @@ zx_status_t pci_init_interrupts(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx
   fbl::Array<pci_legacy_irq> irq_list(new pci_legacy_irq[dev_ctx->irqs.size()]{},
                                       dev_ctx->irqs.size());
   size_t irq_cnt = 0;
+  fbl::StringBuffer<ZX_MAX_NAME_LEN> name = {};
+  name.Append(dev_ctx->name, sizeof(dev_ctx->name));
+  name.Append(" legacy");
+
   for (const auto& e : dev_ctx->irqs) {
     const uint32_t& vector = e.first;
     const acpi_legacy_irq& irq_cfg = e.second;
-    zx_status_t status = zx_interrupt_create(get_root_resource(), vector, irq_cfg.options,
-                                             &irq_list[irq_cnt].interrupt);
+    zx::resource resource;
+    zx_status_t status = zx::resource::create(*zx::unowned_resource(get_root_resource()),
+                                              ZX_RSRC_KIND_IRQ | ZX_RSRC_FLAG_EXCLUSIVE, vector, 1,
+                                              name.data(), name.size(), &resource);
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Couldn't create resource for legacy vector %#x: %s, skipping it", vector,
+             zx_status_get_string(status));
+      continue;
+    }
+
+    status =
+        zx_interrupt_create(resource.get(), vector, irq_cfg.options, &irq_list[irq_cnt].interrupt);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Couldn't create irq for legacy vector %#x: %s, skipping it", vector,
              zx_status_get_string(status));
       continue;
     }
+
+    dev_ctx->irq_resources.push_back(std::move(resource));
     irq_list[irq_cnt].vector = vector;
     irq_cnt++;
   }
@@ -431,7 +449,7 @@ zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE obj
   char name[ZX_DEVICE_NAME_MAX] = {0};
   memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
 
-  status = x64Pciroot::Create(&*RootHost, dev_ctx, parent, name);
+  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {

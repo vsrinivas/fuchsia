@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/pci/pciroot.h>
+#include <lib/zx/resource.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
 
@@ -54,6 +55,7 @@ class x64Pciroot : public PcirootBase {
     ACPI_DEVICE_INFO acpi_device_info;
     zx_device_t* platform_bus;
     std::unordered_map<uint32_t, acpi_legacy_irq> irqs;
+    std::vector<zx::resource> irq_resources;
     std::vector<pci_irq_routing_entry_t> routing;
     struct pci_platform_info info;
   };
