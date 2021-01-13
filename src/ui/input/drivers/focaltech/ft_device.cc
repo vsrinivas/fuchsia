@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -33,6 +32,8 @@
 #include <fbl/ref_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+
+#include "src/ui/input/drivers/focaltech/focaltech_touch_bind.h"
 
 namespace ft {
 
@@ -311,10 +312,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace ft
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(focaltech_touch, ft::driver_ops, "focaltech-touch", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_FOCALTOUCH),
-ZIRCON_DRIVER_END(focaltech_touch)
-    // clang-format on
+ZIRCON_DRIVER(focaltech_touch, ft::driver_ops, "focaltech-touch", "0.1");

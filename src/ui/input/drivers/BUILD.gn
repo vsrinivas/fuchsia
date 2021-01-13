@@ -26,6 +26,7 @@ group("tests") {
   deps = [
     "bma253:tests",
     "cypress:tests",
+    "focaltech:tests",
     "ft8201:tests",
     "goodix:tests",
     "gt6853:tests",

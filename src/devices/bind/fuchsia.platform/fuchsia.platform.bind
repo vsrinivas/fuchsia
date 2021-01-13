@@ -24,6 +24,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   ETH_MAC = 0x10,
   HID_BUTTONS = 0x13,
   FAKE_DISPLAY = 0x16,
+  FOCALTOUCH = 0x17,
   GPIO_LIGHT = 0x1C,
   CPU_TRACE = 0x1D,
   SSD1306 = 0x20,
