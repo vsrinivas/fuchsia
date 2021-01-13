@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #ifdef __Fuchsia__
+#include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
 #endif
@@ -2097,10 +2098,135 @@ TEST(TrackingPtr, encode_string_view_tracking_ptr_heap_allocate) {
     EXPECT_EQ(written_data[i], input[i]);
 }
 
+struct BoolStruct {
+  bool v;
+};
+
+TEST(FidlEncodeIovec, inline_object_with_padding) {
+  BoolStruct obj{true};
+  zx_channel_iovec_t out_iovec[2];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_subs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status =
+      fidl_encode_iovec(&fidl_test_coding_BoolStructTable, &obj, out_iovec, 2, nullptr, 0, nullptr,
+                        0, &out_actual_iovecs, &out_actual_subs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(out_error, nullptr);
+  ASSERT_EQ(out_actual_iovecs, 2);
+  ASSERT_EQ(out_actual_subs, 0);
+  EXPECT_EQ(out_actual_handles, 0);
+  EXPECT_EQ(out_iovec[0].buffer, reinterpret_cast<const char*>(&obj));
+  EXPECT_EQ(out_iovec[0].capacity, 1);
+  EXPECT_EQ(*reinterpret_cast<const uint64_t*>(out_iovec[1].buffer), 0ull);
+  EXPECT_EQ(out_iovec[1].capacity, 7);
+}
+
+struct OptionalBoolStruct {
+  BoolStruct* inner;
+};
+
+TEST(FidlEncodeIovec, optional_with_padding) {
+  BoolStruct inner{true};
+  OptionalBoolStruct outer{&inner};
+  zx_channel_iovec_t out_iovec[3];
+  fidl_iovec_substitution_t out_subs[1];
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_subs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = fidl_encode_iovec(&fidl_test_coding_OptionalBoolStructTable, &outer,
+                                         out_iovec, 3, out_subs, 1, nullptr, 0, &out_actual_iovecs,
+                                         &out_actual_subs, &out_actual_handles, &out_error);
+  EXPECT_EQ(out_error, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(out_error, nullptr);
+  EXPECT_EQ(out_actual_handles, 0);
+  ASSERT_EQ(out_actual_iovecs, 3);
+  ASSERT_EQ(out_actual_subs, 1);
+  EXPECT_EQ(out_iovec[0].buffer, reinterpret_cast<const char*>(&outer));
+  EXPECT_EQ(out_iovec[0].capacity, 8);
+  EXPECT_EQ(out_iovec[1].buffer, reinterpret_cast<const char*>(&inner));
+  EXPECT_EQ(out_iovec[1].capacity, 1);
+  EXPECT_EQ(*reinterpret_cast<const uint64_t*>(out_iovec[2].buffer), 0);
+  EXPECT_EQ(out_iovec[2].capacity, 7);
+  EXPECT_EQ(out_subs[0].ptr, reinterpret_cast<void**>(&outer.inner));
+  EXPECT_EQ(*out_subs[0].ptr, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT));
+  EXPECT_EQ(out_subs[0].value, &inner);
+}
+
+TEST(FidlEncodeIovec, null_output_parameters) {
+  BoolStruct obj{true};
+  zx_channel_iovec_t out_iovec[2];
+  zx_status_t status =
+      fidl_encode_iovec(&fidl_test_coding_BoolStructTable, &obj, out_iovec, 2, nullptr, 0, nullptr,
+                        0, nullptr, nullptr, nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(out_iovec->buffer, reinterpret_cast<const char*>(&obj));
+  EXPECT_EQ(out_iovec->capacity, 1);  // Note: not aligned up to 8.
+}
+
+#ifdef __Fuchsia__
+
+struct StructWithHandle {
+  zx::handle h;
+  int32_t foo;
+};
+
+TEST(FidlEncodeIovec, handle) {
+  StructWithHandle obj{};
+  zx_channel_iovec_t out_iovec[1];
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+  obj.h = std::move(event);
+  zx_handle_t out_handles[1] = {};
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_subs;
+  uint32_t out_actual_handles;
+  const char* out_error;
+  zx_status_t status = fidl_encode_iovec(
+      &fidl_test_coding_fuchsia_StructWithHandleTable, &obj, out_iovec, 1, nullptr, 0, out_handles,
+      1, &out_actual_iovecs, &out_actual_subs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(out_actual_iovecs, 1);
+  ASSERT_EQ(out_actual_subs, 0);
+  EXPECT_EQ(out_actual_handles, 1);
+  EXPECT_EQ(out_iovec->buffer, reinterpret_cast<const char*>(&obj));
+  EXPECT_EQ(out_iovec->capacity, 8);
+  EXPECT_NE(out_handles[0], ZX_HANDLE_INVALID);
+}
+
+TEST(FidlEncodeIovecEtc, handle) {
+  StructWithHandle obj{};
+  zx_channel_iovec_t out_iovec[1];
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+  obj.h = std::move(event);
+  zx_handle_disposition_t out_handles[1] = {};
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_subs;
+  uint32_t out_actual_handles;
+  const char* out_error;
+  zx_status_t status = fidl_encode_iovec_etc(
+      &fidl_test_coding_fuchsia_StructWithHandleTable, &obj, out_iovec, 1, nullptr, 0, out_handles,
+      1, &out_actual_iovecs, &out_actual_subs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(out_actual_iovecs, 1);
+  ASSERT_EQ(out_actual_subs, 0);
+  EXPECT_EQ(out_actual_handles, 1);
+  EXPECT_EQ(out_iovec->buffer, reinterpret_cast<const char*>(&obj));
+  EXPECT_EQ(out_iovec->capacity, 8);
+  EXPECT_EQ(out_handles[0].operation, ZX_HANDLE_OP_MOVE);
+  EXPECT_NE(out_handles[0].handle, ZX_HANDLE_INVALID);
+  EXPECT_EQ(out_handles[0].type, ZX_OBJ_TYPE_NONE);
+  EXPECT_EQ(out_handles[0].rights, ZX_RIGHT_SAME_RIGHTS);
+  EXPECT_EQ(out_handles[0].result, ZX_OK);
+}
+
 // Most fidl_linearize_and_encode_etc code paths are covered by the fidl_linearize_and_encode tests.
 // These tests cover additional paths.
 
-#ifdef __Fuchsia__
 TEST(FidlLinearizeAndEncodeEtc, linearize_and_encode_single_present_handle_disposition) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = dummy_handle_0;

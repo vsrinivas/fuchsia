@@ -459,6 +459,14 @@ enum {
   kFidlOrdinalEpitaph = 0xFFFFFFFFFFFFFFFF,
 };
 
+// fidl_iovec_substition represents a pointer-width value substitution.
+// The operation *ptr = value can be performed to overwrite the current value
+// at a location with the original value.
+typedef struct fidl_iovec_substitution {
+  void** ptr;
+  void* value;
+} fidl_iovec_substitution_t;
+
 // Assumptions.
 
 // Ensure that FIDL_ALIGNMENT is sufficient.

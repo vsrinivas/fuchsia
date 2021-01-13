@@ -206,3 +206,7 @@ table RecursiveTable {
 struct BoolStruct {
     bool val;
 };
+
+struct OptionalBoolStruct {
+    BoolStruct? inner;
+};

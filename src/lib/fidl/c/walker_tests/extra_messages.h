@@ -61,6 +61,7 @@ extern const FidlCodedStruct fidl_test_coding_StringStructTable;
 extern const FidlCodedStruct fidl_test_coding_RecursiveOptionalTable;
 extern const FidlCodedStruct fidl_test_coding_RecursiveTableTable;
 extern const FidlCodedStruct fidl_test_coding_BoolStructTable;
+extern const FidlCodedStruct fidl_test_coding_OptionalBoolStructTable;
 #if defined(__cplusplus)
 }
 #endif

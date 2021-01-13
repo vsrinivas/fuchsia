@@ -5,7 +5,10 @@
 #ifndef SRC_LIB_FIDL_C_WALKER_TESTS_CONFORMANCE_TEST_UTILS_H_
 #define SRC_LIB_FIDL_C_WALKER_TESTS_CONFORMANCE_TEST_UTILS_H_
 
+#include <lib/fidl/coding.h>
+#include <zircon/fidl.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -76,6 +79,71 @@ inline bool LinearizeAndEncodeFailure(const fidl_type* type, void* value,
   zx_status_t status = fidl_linearize_and_encode(type, value, bytes, ZX_CHANNEL_MAX_MSG_BYTES,
                                                  handles, ZX_CHANNEL_MAX_MSG_HANDLES, &actual_bytes,
                                                  &actual_handles, &error_msg);
+  if (status == ZX_OK) {
+    std::cout << "Encoding unexpectedly succeeded" << std::endl;
+    return false;
+  }
+  if (status != expected_error_code) {
+    std::cout << "Encoding failed with error code " << zx_status_get_string(status) << " ("
+              << error_msg << "), but expected error code "
+              << zx_status_get_string(expected_error_code) << std::endl;
+    return false;
+  }
+  return true;
+}
+
+// Verifies that |value| encodes to an array of |zx_channel_iovec_t| by flattening
+// the output into a byte array.
+// Note: This is destructive to |value| - a new value must be created with each call.
+inline bool EncodeIovecSuccess(const fidl_type* type, void* value,
+                               const std::vector<uint8_t>& expected_bytes,
+                               const std::vector<zx_handle_t>& expected_handles) {
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto subs = std::make_unique<fidl_iovec_substitution_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  uint32_t actual_iovecs, actual_subs, actual_handles;
+  const char* error_msg = nullptr;
+  zx_status_t status =
+      fidl_encode_iovec(type, value, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, subs.get(),
+                        ZX_CHANNEL_MAX_MSG_IOVECS, handles.get(), ZX_CHANNEL_MAX_MSG_HANDLES,
+                        &actual_iovecs, &actual_subs, &actual_handles, &error_msg);
+  if (status != ZX_OK || error_msg != nullptr) {
+    std::cout << "Encoding failed (" << zx_status_get_string(status) << "): " << error_msg
+              << std::endl;
+    return false;
+  }
+
+  uint8_t buffer[ZX_CHANNEL_MAX_MSG_BYTES];
+  uint32_t len = 0;
+  for (uint32_t i = 0; i < actual_iovecs; i++) {
+    memcpy(&buffer[len], iovecs[i].buffer, iovecs[i].capacity);
+    len += iovecs[i].capacity;
+  }
+
+  bool bytes_match = ComparePayload(buffer, len, expected_bytes.data(), expected_bytes.size());
+  bool handles_match = ComparePayload(handles.get(), actual_handles, expected_handles.data(),
+                                      expected_handles.size());
+
+  for (uint32_t i = 0; i < actual_subs; i++) {
+    *subs[i].ptr = subs[i].value;
+  }
+
+  return bytes_match && handles_match;
+}
+
+// Verifies that |value| fails to encode and results in |expected_error_code|.
+// Note: This is destructive to |value| - a new value must be created with each call.
+inline bool EncodeIovecFailure(const fidl_type* type, void* value,
+                               zx_status_t expected_error_code) {
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto subs = std::make_unique<fidl_iovec_substitution_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  uint32_t actual_iovecs, actual_subs, actual_handles;
+  const char* error_msg = nullptr;
+  zx_status_t status =
+      fidl_encode_iovec(type, value, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, subs.get(),
+                        ZX_CHANNEL_MAX_MSG_IOVECS, handles.get(), ZX_CHANNEL_MAX_MSG_HANDLES,
+                        &actual_iovecs, &actual_subs, &actual_handles, &error_msg);
   if (status == ZX_OK) {
     std::cout << "Encoding unexpectedly succeeded" << std::endl;
     return false;
