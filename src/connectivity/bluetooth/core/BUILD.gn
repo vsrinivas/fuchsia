@@ -11,3 +11,8 @@ group("core") {
     "bt-init",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "bt-host:bt-host-tests" ]
+}
