@@ -13,7 +13,7 @@ in Topaz or Experiences requires either a
 For example, `D` might be Fuchsia, and `P` might be Topaz or Experiences.
 *  *integration* - The internal integration repository.
 
-## Soft transitions {:#soft-transitions}
+## Soft transitions {#soft-transitions}
 
 The preferred way to make changes that span multiple projects is to use a
 *soft transition*. In a soft transition, you make a change to `D` in such a
@@ -30,7 +30,7 @@ Use the following steps to land a soft transition:
 1. Wait for the new revision of `P` to roll into the integration repository.
 1. Land a cleanup change in `D` to remove the old interface.
 
-## Hard transitions {:#hard-transitions}
+## Hard transitions {#hard-transitions}
 
 For some changes, creating a soft transition can be difficult or impossible. For
 those changes, you can make a *hard transition*. In a hard transition, you make

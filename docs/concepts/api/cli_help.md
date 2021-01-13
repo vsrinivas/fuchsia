@@ -94,7 +94,7 @@ prose.
   command name and usage text will only contain portable ASCII characters
   (without Unicode).
 
-### Usage {:#usage}
+### Usage {#usage}
 
 Usage is required and includes the "`Usage:`" header.
 

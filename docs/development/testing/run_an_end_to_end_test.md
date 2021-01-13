@@ -129,7 +129,7 @@ Saw a screen that is not black; waiting for 0:00:59.924543 now.
 01:46 +1: All tests passed!
 ```
 
-## General instructions {:#general-instructions}
+## General instructions {#general-instructions}
 
 ### Run any end-to-end test {#run-any-end-to-end-test}
 

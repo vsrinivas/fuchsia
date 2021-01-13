@@ -24,7 +24,7 @@ need to write automated tests for that change.
 
 Below is a diagram of the `bt-host` driver's main logical components:
 
-![drawing](images/simplified-arch-diagram.png) {:#architecture-diagram}
+![drawing](images/simplified-arch-diagram.png) {#architecture-diagram}
 
 Every abstraction layer in the graph roughly corresponds to an entire protocol.
 

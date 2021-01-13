@@ -33,7 +33,7 @@ tricky. This is because
     available on Fuchsia, than to ask maintainers of product targets and
     individual components to manage their own copies.
 
-## Common infrastructure and metadata {:#common-infra}
+## Common infrastructure and metadata {#common-infra}
 
 The first layer establishes the catalogs of assets and metadata that are
 available for use in Fuchsia product builds.
@@ -93,7 +93,7 @@ TODO: Add fuchsia/fontdata to validProjects
 *   `remotebranch`: Branch name in remote repo
 *   `revision`: Git commit hash at which to pin the checkout
 
-#### `contents.json` {:#contents-json}
+#### `contents.json` {#contents-json}
 
 These are instructions for Fuchsia's infrastructure to copy files from the
 _checkout directory_ into the _staging directory_. Each entry of `{destination,
@@ -117,7 +117,7 @@ TODO: Add fuchsia/fontdata to validProjects.
 }
 ```
 
-#### `${catalog_name}.font_catalog.json` {:#font-catalog-json}
+#### `${catalog_name}.font_catalog.json` {#font-catalog-json}
 
 The font catalog file is a human-written bundle of metadata for all of the font
 families, assets, and typefaces in this font data repo.
@@ -128,7 +128,7 @@ at
 The canonical schema is
 [defined in Rust](/src/fonts/tools/manifest_generator/src/font_catalog.rs).
 
-#### `packing_script.py` {:#packing-script}
+#### `packing_script.py` {#packing-script}
 
 Fuchsia's infrastructure invokes this script after populating the _staging
 directory_.
@@ -142,7 +142,7 @@ The script:
 
 The script generally does not need to be modified.
 
-### Infrastructure recipe {:#recipe}
+### Infrastructure recipe {#recipe}
 
 As described above, an infrastructure recipe is automatically triggered whenever
 the `fontdata` is modified. This recipe:
@@ -153,7 +153,7 @@ the `fontdata` is modified. This recipe:
     directory.
 1.  Uploads the contents of the output directory to [CIPD](#cipd-package).
 
-### CIPD package {:#cipd-package}
+### CIPD package {#cipd-package}
 
 The bundle of open-source fonts is uploaded to the
 [`fuchsia/third_party/fonts` CIPD package](https://chrome-infra-packages.appspot.com/p/fuchsia/third_party/fonts/+/).
@@ -193,7 +193,7 @@ several font-related build arguments. The two most important ones are
 *   `font_pkgs_paths`: The locations of all [`.font_pkgs.json`](#font-pkgs-json)
     files.
 
-#### `*.font_pkgs.json` files {:#font-pkgs-json}
+#### `*.font_pkgs.json` files {#font-pkgs-json}
 
 These files are designed to be parseable by GN's simple JSON parser,
 [`read_file`](https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_read_file).
@@ -219,7 +219,7 @@ In [`//src/fonts/build/fonts.gni`](/src/fonts/build/fonts.gni), the contents of
 the `.font_pkgs.json` files are merged into a single GN scope that can be used
 as a lookup table.
 
-### Font packages {:#font-packages}
+### Font packages {#font-packages}
 
 In addition to providing font assets directly to Font Provider's namespace,
 there is also the option of creating single-font Fuchsia packages. This is
@@ -244,14 +244,14 @@ All possible font packages are predeclared in
     `fuchsia-pkg://fuchsia.com/<package-name>`, e.g.
     `fuchsia-pkg://fuchsia.com/font-package-roboto-regular-ttf`.
 
-## Reusable font bundles and groups {:#reusable}
+## Reusable font bundles and groups {#reusable}
 
 The second layer is optional; it is mainly intended to save some repetition.
 Instead of having to refer to font assets and packages individually, reusable
 groups are declared in
 [`//src/fonts/groups/BUILD.gn`](/src/fonts/groups/BUILD.gn).
 
-### `local_font_bundle` {:#local_font_bundle}
+### `local_font_bundle` {#local_font_bundle}
 
 _Defined in [fonts.gni](/src/fonts/build/fonts.gni)_
 
@@ -269,7 +269,7 @@ Example:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/fonts/collections/BUILD.gn" indented_block="local_font_bundle\(\"open-fonts-local\"\)" adjust_indentation="auto" %}
 ```
 
-### `font_package_group` {:#font_package_group}
+### `font_package_group` {#font_package_group}
 
 _Defined in [fonts.gni](/src/fonts/build/fonts.gni)_
 
@@ -285,14 +285,14 @@ the names of the assets, as in this example in
 The target `//src/fonts/groups:roboto-slab` contains a `group` of all of the
 `package`s corresponding to the listed asset names.
 
-## Product-specific font configurations {:#product-specific}
+## Product-specific font configurations {#product-specific}
 
 Finally, every
 [product target](/docs/concepts/build_system/boards_and_products.md#products)
 that uses fonts needs to be configured with the specific font assets and
 metadata that it will include.
 
-### Font product config files {:#product-config}
+### Font product config files {#product-config}
 
 A `.fontcfg.json` (or `.fontcfg.json5`) file contains a human-written set of
 product-specific font settings. There is a
@@ -332,7 +332,7 @@ The fallback chain is defined manually. Some guidelines to follow:
 -   When there is overlapping coverage, put smaller font files higher in the
     list. This reduces UI jank when loading fallback fonts.
 
-### `font_collection` {:#font_collection}
+### `font_collection` {#font_collection}
 
 _Defined in [fonts.gni](/src/fonts/build/fonts.gni)_
 
@@ -340,7 +340,7 @@ After any needed `local_font_bundle`s, font `packages`, and/or
 `font_package_group`s have been declared, they are assembled into a
 `font_collection`.
 
-#### Inputs {:#font_collection-inputs}
+#### Inputs {#font_collection-inputs}
 
 (See fonts.gni for complete documentation.)
 

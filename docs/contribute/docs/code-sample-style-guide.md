@@ -1,4 +1,4 @@
-# Code sample style guidelines {:#overview}
+# Code sample style guidelines {#overview}
 
 This document describes how to incorportate code samples in documentation,
 and specific style guidelines for code samples. This includes:
@@ -13,7 +13,7 @@ For specific guidance on word choice, style, and structure, see the
 [Fuchsia documentation style guide][style-guide].
 
 
-## Code sample best practices {:#code-sample-best-practices}
+## Code sample best practices {#code-sample-best-practices}
 
 When creating a code sample for a part of Fuchsia that you are deeply familiar with,
 consider how a new user would read the sample and try to anticipate their needs.
@@ -37,7 +37,7 @@ specify what the user's code should look like and how the user can confirm that 
 have completed running your sample successfully.
 
 
-## Code sample checklist {:#code-sample-checklist}
+## Code sample checklist {#code-sample-checklist}
 
 If you are including a code sample in your documentation, review the following
 list before submitting your contribution, to ensure code sample clarity:
@@ -74,12 +74,12 @@ list before submitting your contribution, to ensure code sample clarity:
 *   **Describe the steps needed to test the process** and show what successful
     terminal output looks like.
 
-## Code sample style guide {:#code-sample-guide}
+## Code sample style guide {#code-sample-guide}
 
 The following are actionable best practices for creating easily understandable
 code samples in documentation.
 
-### Avoid vague placeholders {:#avoid-vague-placeholders}
+### Avoid vague placeholders {#avoid-vague-placeholders}
 
 Code sample placeholder names and values should represent their purposes within
 the code, avoiding abstract placeholders like `foo` and `bar`.
@@ -127,7 +127,7 @@ other components.
 </article>
 </section>
 
-### Specify placement {:#specify-placement}
+### Specify placement {#specify-placement}
 
 Code samples should be specify where that code should be
 located within a given file.
@@ -174,7 +174,7 @@ case is, <code>main.rs</code>:
   </article>
 </section>
 
-### Confirm success {:#confirm-success}
+### Confirm success {#confirm-success}
 
 As a user, when you’re unfamiliar with a new process, it’s difficult to know if
 you have completed that process _correctly_, even if you've

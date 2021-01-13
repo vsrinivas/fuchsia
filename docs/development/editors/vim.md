@@ -23,7 +23,7 @@ The steps are:
 1.  [Restart Vim to configure YouCompleteMe](#restart-vim-to-configure-ycm).
 1.  [Build a compilation database](#build-a-compilation-database).
 
-### Update your login script {:#update-your-login-script}
+### Update your login script {#update-your-login-script}
 
 Add the following line to your startup script (typically `~/.bashrc`):
 
@@ -31,7 +31,7 @@ Add the following line to your startup script (typically `~/.bashrc`):
 export FUCHSIA_DIR=<your_fuchsia_source_directory>
 ```
 
-### Run the fx set command {:#run-the-fx-set-command}
+### Run the fx set command {#run-the-fx-set-command}
 
 This command uses the format `fx set [PRODUCT].[BOARD]`. For example:
 
@@ -39,7 +39,7 @@ This command uses the format `fx set [PRODUCT].[BOARD]`. For example:
 fx set core.x64
 ```
 
-### Update your Vim startup file {:#update-your-vim-startup-file}
+### Update your Vim startup file {#update-your-vim-startup-file}
 
 If the following line exists in your `~/.vimrc` file, remove it:
 
@@ -56,7 +56,7 @@ endif
 filetype plugin indent on
 ```
 
-### Restart Vim to configure YouCompleteMe {:#restart-vim-to-configure-ycm}
+### Restart Vim to configure YouCompleteMe {#restart-vim-to-configure-ycm}
 
 Note: If you haven't installed YouCompleteMe, see
 [this installation guide](https://github.com/ycm-core/YouCompleteMe#installation){:.external}
@@ -73,7 +73,7 @@ To verify that your YCM works, place the cursor on an identifier in a `.cc` or
 `.h` file in Vim, then hit `Ctrl+]` to navigate to the definition of the
 identifier.
 
-### Build a compilation database {:#build-a-compilation-database}
+### Build a compilation database {#build-a-compilation-database}
 
 YCM uses the
 [compilation database](https://github.com/ycm-core/YouCompleteMe#option-1-use-a-compilation-database){:.external},
