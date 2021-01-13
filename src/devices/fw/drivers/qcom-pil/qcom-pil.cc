@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <limits>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -20,6 +19,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
 #include <qcom/smc.h>
+
+#include "src/devices/fw/drivers/qcom-pil/qcom_pil_bind.h"
 
 namespace qcom_pil {
 
@@ -304,9 +305,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace qcom_pil
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(qcom_pil, qcom_pil::driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_PIL),
-ZIRCON_DRIVER_END(qcom_pil)
+ZIRCON_DRIVER(qcom_pil, qcom_pil::driver_ops, "zircon", "0.1");

@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_DID.PIL",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Vendor"
+    }
+]

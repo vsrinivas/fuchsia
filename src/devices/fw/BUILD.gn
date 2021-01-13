@@ -4,5 +4,8 @@
 
 group("drivers") {
   testonly = true
-  deps = [ "drivers/qcom-pil" ]
+  deps = [
+    "drivers/qcom-pil",
+    "drivers/qcom-pil:tests",
+  ]
 }
