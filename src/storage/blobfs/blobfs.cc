@@ -871,6 +871,7 @@ zx_status_t Blobfs::InitializeVnodes() {
     if (validation_status != ZX_OK) {
       // Whatever the more differentiated error is here, the real root issue is
       // the integrity of the data that was just mirrored from the disk.
+      FX_LOGS(ERROR) << "failed to validate node @ index " << node_index;
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 

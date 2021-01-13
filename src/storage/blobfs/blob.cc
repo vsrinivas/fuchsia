@@ -619,6 +619,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 zx_status_t Blob::Commit() {
   if (MerkleRoot() != write_info_->digest) {
     // Downloaded blob did not match provided digest.
+    FX_LOGS(ERROR) << "downloaded blob did not match provided digest " << MerkleRoot().ToString();
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 

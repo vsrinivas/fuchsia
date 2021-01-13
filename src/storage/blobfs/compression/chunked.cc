@@ -205,6 +205,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
     // the header checksum, which is verified during header parsing.)
     // Note that this condition is also checked by the underlying compression library during
     // parsing, but we defensively check it here as well to prevent underflow.
+    FX_LOGS(ERROR) << "Seek table may be corrupted when checking underflow";
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
@@ -224,6 +225,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
     // max_decompressed_len. So by definition first_entry.decompressed_offset + max_decompressed_len
     // cannot result in an overflow, as we know that decompressed_end is valid. This likely
     // indicates some kind of corruption in the seek table.
+    FX_LOGS(ERROR) << "Seek table may be corrupted when checking overflow";
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
@@ -233,6 +235,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
       seek_table_.EntryForDecompressedOffset(max_decompressed_end - 1);
   if (!max_idx) {
     // This again cannot happen for similar reasons as the overflow check above.
+    FX_LOGS(ERROR) << "Seek table may be corrupted when finding compression offset";
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   unsigned idx = *max_idx;
