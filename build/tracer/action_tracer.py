@@ -9,13 +9,6 @@ import subprocess
 import sys
 
 
-def error(msg):
-    print(msg, file=sys.stderr)
-    print(
-        "See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions",
-        file=sys.stderr)
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Traces a GN action and enforces strict inputs/outputs",
@@ -82,78 +75,90 @@ def main():
             return 0
 
     # Paths that the action is allowed to access
-    allowed_write = [os.path.abspath(path) for path in args.outputs]
+    allowed_write = {os.path.abspath(path) for path in args.outputs}
 
     depfile_deps = []
     if args.depfile:
-        allowed_write.append(os.path.abspath(args.depfile))
+        allowed_write.insert(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
             depfile_deps += [
                 line.partition(":")[0]
                 for line in f.read().strip().splitlines()
             ]
 
-    allowed_read = [
+    allowed_read = {
         os.path.abspath(path)
         for path in [args.script] + args.inputs + args.sources + depfile_deps
-    ] + allowed_write
+    } | allowed_write
     if args.response_file_name:
-        allowed_read.append(os.path.abspath(response_file_name))
+        allowed_read.insert(os.path.abspath(response_file_name))
 
     # Paths that are ignored
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))
-    ignored_prefix = [
+    ignored_prefix = {
         # Allow actions to access prebuilts that are not declared as inputs
         # (until we fix all instances of this)
         os.path.join(src_root, "prebuilt"),
-    ]
-    ignored_postfix = [
+    }
+    ignored_postfix = {
         # Allow actions to access Python code such as via imports
         ".py",
         # Allow actions to access Python compiled bytecode
         ".pyc",
         # TODO(shayba): remove hack below for response files
         #".rsp",
-    ]
+    }
+
+    raw_trace = ""
+    with open(args.trace_output, "r") as trace:
+        raw_trace = trace.read()
 
     # Verify the filesystem access trace of the inner action
     # See: https://github.com/jacereda/fsatrace#output-format
-    with open(args.trace_output, "r") as trace:
-        for line in trace.read().splitlines():
-            if not line[1] == "|":
-                # Not a trace line, ignore
-                continue
-            path = line[2:]
-            if not path.startswith(src_root):
-                # Outside of root, ignore
-                continue
-            if any(path.startswith(ignored) for ignored in ignored_prefix):
-                continue
-            if any(path.endswith(ignored) for ignored in ignored_postfix):
-                continue
-            op = line[0]
-            if op == "r":
-                if not path in allowed_read:
-                    error(
-                        f"ERROR: {args.label} read {path} but it is not a specified input!"
-                    )
-                    return 1
-            elif op in ("w", "d", "t"):
-                if not path in allowed_write:
-                    error(
-                        f"ERROR: {args.label} wrote {path} but it is not a specified output!"
-                    )
-                    return 1
-            elif op == "m":
-                for path in path.split("|"):
-                    if not path in allowed_write:
-                        error(
-                            f"ERROR: {args.label} wrote {path} but it is not a specified output!"
-                        )
-                        return 1
+    unexpected_accesses = []
+    for line in raw_trace.splitlines():
+        if not line[1] == "|":
+            # Not a trace line, ignore
+            continue
+        path = line[2:]
+        if not path.startswith(src_root):
+            # Outside of root, ignore
+            continue
+        if any(path.startswith(ignored) for ignored in ignored_prefix):
+            continue
+        if any(path.endswith(ignored) for ignored in ignored_postfix):
+            continue
+        op = line[0]
+        if op == "r":
+            if path not in allowed_read:
+                unexpected_accesses.append(("read", path))
+        elif op in {"w", "d", "t"}:
+            if path not in allowed_write:
+                unexpected_accesses.append(("write", path))
+        elif op == "m":
+            unexpected_accesses.extend(
+                ("write", path)
+                for path in path.split("|")
+                if path not in allowed_write)
 
-    # All good!
-    return 0
+    if not unexpected_accesses:
+        return 0
+
+    accesses = "\n".join(f"{op} {path}" for (op, path) in unexpected_accesses)
+    print(
+        f"""
+Unexpected file accesses building {args.label}, following the order they are accessed:
+{accesses}
+
+Full access trace:
+{raw_trace}
+
+See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
+
+""",
+        file=sys.stderr,
+    )
+    return 1
 
 
 if __name__ == "__main__":

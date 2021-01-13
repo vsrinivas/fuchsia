@@ -24,11 +24,13 @@ action("tracer_test") {
   outputs = [
     "$target_out_dir/tracer_test_output_1.txt",
     "$target_out_dir/tracer_test_output_2.txt",
+    "$target_out_dir/tracer_test_output_3.txt",
   ]
 
   args = [
     rebase_path("tracer_test_input.txt", root_build_dir),
     rebase_path("$target_out_dir/tracer_test_output_1.txt", root_build_dir),
     rebase_path("$target_out_dir/tracer_test_output_2.txt", root_build_dir),
+    rebase_path("$target_out_dir/tracer_test_output_3.txt", root_build_dir),
   ]
 }
