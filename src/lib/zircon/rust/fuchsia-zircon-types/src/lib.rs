@@ -391,20 +391,20 @@ multiconst!(u64, [
 ]);
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_create_args_v1_t {
     pub backstop_time: zx_time_t,
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_rate_t {
     pub synthetic_ticks: u32,
     pub reference_ticks: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_transformation_t {
     pub reference_offset: i64,
     pub synthetic_offset: i64,
@@ -412,7 +412,7 @@ pub struct zx_clock_transformation_t {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_details_v1_t {
     pub options: u64,
     pub backstop_time: zx_time_t,
@@ -428,7 +428,7 @@ pub struct zx_clock_details_v1_t {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_update_args_v1_t {
     pub rate_adjust: i32,
     pub padding1: [u8; 4],

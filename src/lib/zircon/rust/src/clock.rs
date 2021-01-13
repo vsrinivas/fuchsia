@@ -45,7 +45,7 @@ bitflags! {
 
 /// Fine grained details of a [`Clock`] object.
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClockDetails {
     /// The minimum time the clock can ever be set to.
     pub backstop: Time,
@@ -99,7 +99,7 @@ impl From<sys::zx_clock_details_v1_t> for ClockDetails {
 /// clock timeline. See [clock transformations].
 ///
 /// [clock transformations]: https://fuchsia.dev/fuchsia-src/concepts/kernel/clock_transformations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ClockTransformation {
     /// The offset on the reference timeline, measured in reference clock ticks.
     pub reference_offset: i64,
