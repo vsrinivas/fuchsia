@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.HARRIET",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.GOOGLE"
+        },
+        "expected": "match",
+        "name": "Vendor"
+    }
+]
