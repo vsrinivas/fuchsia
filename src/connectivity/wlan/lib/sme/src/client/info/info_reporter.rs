@@ -75,8 +75,8 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_candidate_network(&mut self, desc: BssDescription) {
-        warn_if_err!(self.stats_collector.report_candidate_network(desc));
+    pub fn report_candidate_network(&mut self, candidate_network: CandidateNetwork) {
+        warn_if_err!(self.stats_collector.report_candidate_network(candidate_network));
     }
 
     pub fn report_auth_started(&mut self) {

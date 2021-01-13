@@ -349,7 +349,10 @@ impl ClientSme {
             };
 
             self.context.info.report_connect_started(ssid);
-            self.context.info.report_candidate_network(bss_desc);
+            self.context.info.report_candidate_network(info::CandidateNetwork {
+                bss: bss_desc,
+                multiple_bss_candidates: req.multiple_bss_candidates,
+            });
             self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
             return receiver;
         }
@@ -541,7 +544,11 @@ impl super::Station for ClientSme {
                                     info!("Attempting to connect to:");
                                     info!("  {}", best_bss.to_string(&self.context.inspect.hasher));
 
-                                    self.context.info.report_candidate_network(best_bss.clone());
+                                    let candidate_network = info::CandidateNetwork {
+                                        bss: best_bss.clone(),
+                                        multiple_bss_candidates: bss_list.len() > 1,
+                                    };
+                                    self.context.info.report_candidate_network(candidate_network);
                                     let cmd = ConnectCommand {
                                         bss: Box::new(best_bss.clone()),
                                         responder: Some(token.responder),
@@ -1469,6 +1476,36 @@ mod tests {
     #[test]
     fn test_info_event_complete_connect() {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"bssname".to_vec());
+        let bssid = bss_desc.bssid;
+        let mut req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        req.multiple_bss_candidates = false;
+        let _connect_fut = sme.on_connect_command(req);
+
+        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCodes::Success));
+        sme.on_mlme_event(create_auth_conf(bssid, fidl_mlme::AuthenticateResultCodes::Success));
+        sme.on_mlme_event(create_assoc_conf(fidl_mlme::AssociateResultCodes::Success));
+
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert!(stats.auth_time().is_some());
+            assert!(stats.assoc_time().is_some());
+            assert!(stats.rsna_time().is_none());
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_eq!(stats.result, ConnectResult::Success);
+            assert_variant!(stats.candidate_network, Some(candidate_network) => {
+                assert!(!candidate_network.multiple_bss_candidates);
+            });
+            assert!(stats.previous_disconnect_info.is_none());
+        });
+    }
+
+    #[test]
+    fn test_info_event_complete_connect_with_old_join_scan() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
@@ -1579,6 +1616,25 @@ mod tests {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"bssname".to_vec());
+        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let _connect_fut = sme.on_connect_command(req);
+
+        // Stop connecting attempt early since we just want to get ConnectStats
+        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCodes::JoinFailureTimeout));
+
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert_variant!(stats.candidate_network, Some(candidate_network) => {
+                assert!(candidate_network.multiple_bss_candidates);
+            });
+        });
+    }
+
+    #[test]
+    fn test_info_event_candidate_network_multiple_bss_old_join_scan_path() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
 
         let mut bss = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
@@ -1605,7 +1661,9 @@ mod tests {
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
             assert_eq!(stats.join_scan_stats().expect("no scan stats").bss_count, 2);
-            assert!(stats.candidate_network.is_some());
+            assert_variant!(stats.candidate_network, Some(candidate_network) => {
+                assert!(candidate_network.multiple_bss_candidates);
+            });
         });
     }
 

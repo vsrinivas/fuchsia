@@ -97,8 +97,11 @@ impl StatsCollector {
         }
     }
 
-    pub fn report_candidate_network(&mut self, desc: BssDescription) -> Result<(), StatsError> {
-        self.connect_stats()?.candidate_network.replace(desc);
+    pub fn report_candidate_network(
+        &mut self,
+        candidate_network: CandidateNetwork,
+    ) -> Result<(), StatsError> {
+        self.connect_stats()?.candidate_network.replace(candidate_network);
         Ok(())
     }
 
@@ -340,7 +343,7 @@ pub(crate) struct PendingConnectStats {
     assoc_end_at: Option<zx::Time>,
     rsna_start_at: Option<zx::Time>,
     rsna_end_at: Option<zx::Time>,
-    candidate_network: Option<BssDescription>,
+    candidate_network: Option<CandidateNetwork>,
     supplicant_error: Option<anyhow::Error>,
     supplicant_progress: Option<SupplicantProgress>,
     num_rsna_key_frame_exchange_timeout: u32,
@@ -418,8 +421,9 @@ mod tests {
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
             assert_eq!(stats.result, ConnectResult::Success);
-            let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
-            assert_eq!(stats.candidate_network, Some(bss_desc));
+            let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+            let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
+            assert_eq!(stats.candidate_network, Some(candidate_network));
         });
     }
 
@@ -431,8 +435,9 @@ mod tests {
         let scan_req = fake_scan_request();
         assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
-        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
-        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
+        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
+        assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
             fidl_mlme::AuthenticateResultCodes::Refused,
@@ -623,9 +628,10 @@ mod tests {
             StatsCollector::default().report_join_scan_ended(ScanResult::Success, 1),
             Err(StatsError::NoPendingConnect)
         );
-        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert_variant!(
-            StatsCollector::default().report_candidate_network(bss_desc),
+            StatsCollector::default().report_candidate_network(candidate_network),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
@@ -661,8 +667,9 @@ mod tests {
         let scan_req = fake_scan_request();
         assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
-        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
-        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
+        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
+        assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         assert!(stats_collector.report_assoc_started().is_ok());
         assert!(stats_collector.report_assoc_success().is_ok());

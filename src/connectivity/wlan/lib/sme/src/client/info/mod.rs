@@ -66,6 +66,8 @@ pub struct ConnectStats {
     pub connect_start_at: zx::Time,
     pub connect_end_at: zx::Time,
 
+    // Deprecated fields for when join scan is still in SME (and is part of connect)
+    // TODO(fxrev.dev/67559): Remove these scan stats fields.
     pub scan_start_stats: Option<ScanStartStats>,
     pub scan_end_stats: Option<ScanEndStats>,
 
@@ -79,7 +81,7 @@ pub struct ConnectStats {
     pub rsna_end_at: Option<zx::Time>,
 
     pub result: ConnectResult,
-    pub candidate_network: Option<BssDescription>,
+    pub candidate_network: Option<CandidateNetwork>,
 
     /// Possible detailed error from supplicant. May be downcast to wlan_rsn::Error.
     #[derivative(PartialEq(compare_with = "cmp_supplicant_error"))]
@@ -107,6 +109,12 @@ pub struct ConnectStats {
     /// Intended to be used for client to compute time it takes from when user last
     /// disconnects to when client is reconnected.
     pub previous_disconnect_info: Option<PreviousDisconnectInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CandidateNetwork {
+    pub bss: BssDescription,
+    pub multiple_bss_candidates: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

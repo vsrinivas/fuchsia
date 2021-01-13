@@ -295,6 +295,7 @@ pub fn log_connect_stats(
     inspect_tree: Arc<inspect::WlanstackTree>,
     connect_stats: &ConnectStats,
 ) {
+    // TODO(fxrev.dev/67559): Remove join scan stats
     if let Some(scan_stats) = connect_stats.join_scan_stats() {
         log_scan_stats(sender, inspect_tree.clone(), &scan_stats, true);
     }
@@ -322,12 +323,8 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
         ConnectResult::Success => (),
         _ => return,
     }
-    let is_multi_bss = match &connect_stats.scan_end_stats {
-        Some(stats) => stats.bss_count > 1,
-        None => return,
-    };
-    let bss = match &connect_stats.candidate_network {
-        Some(bss) => bss,
+    let (bss, is_multi_bss) = match &connect_stats.candidate_network {
+        Some(network) => (&network.bss, network.multiple_bss_candidates),
         None => return,
     };
 
@@ -368,7 +365,10 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
 }
 
 fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
-    let oui = connect_stats.candidate_network.as_ref().map(|bss| bss.bssid.to_oui_uppercase(""));
+    let oui = connect_stats
+        .candidate_network
+        .as_ref()
+        .map(|network| network.bss.bssid.to_oui_uppercase(""));
     let result_dim = convert_connection_result(&connect_stats.result);
     sender.with_component().log_event_count::<_, String, _>(
         metrics::CONNECTION_RESULT_METRIC_ID,
@@ -402,13 +402,9 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
         }
     }
 
-    // For the remaining metrics, we expect scan result and candidate network to have been found
-    let is_multi_bss = match &connect_stats.scan_end_stats {
-        Some(stats) => stats.bss_count > 1,
-        None => return,
-    };
-    let bss = match &connect_stats.candidate_network {
-        Some(bss) => bss,
+    // For the remaining metrics, we expect the candidate network to have been found
+    let (bss, is_multi_bss) = match &connect_stats.candidate_network {
+        Some(network) => (&network.bss, network.multiple_bss_candidates),
         None => return,
     };
     let oui = bss.bssid.to_oui_uppercase("");
@@ -521,7 +517,8 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
 
 fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
     let connect_result_dim = convert_connection_result(&connect_stats.result);
-    let rssi_dim = connect_stats.candidate_network.as_ref().map(|bss| convert_rssi(bss.rssi_dbm));
+    let rssi_dim =
+        connect_stats.candidate_network.as_ref().map(|network| convert_rssi(network.bss.rssi_dbm));
 
     let connect_time = connect_stats.connect_time().into_micros();
     sender.log_elapsed_time(metrics::CONNECTION_SETUP_TIME_METRIC_ID, (), connect_time);
@@ -530,6 +527,8 @@ fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectS
         connect_result_dim as u32,
         connect_time,
     );
+
+    // TODO(fxrev.dev/67559): Remove CONNECTION_SETUP_TIME_WITHOUT_SCAN* metrics
     if let Some(connect_time_without_scan) = connect_stats.connect_time_without_scan() {
         sender.log_elapsed_time(
             metrics::CONNECTION_SETUP_TIME_WITHOUT_SCAN_METRIC_ID,
@@ -550,6 +549,7 @@ fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectS
         }
     }
 
+    // TODO(fxrev.dev/67559): Remove CONNECTION_QUEUED_TIME metric
     if let Some(time) = connect_stats.connect_queued_time() {
         sender.log_elapsed_time(metrics::CONNECTION_QUEUED_TIME_METRIC_ID, (), time.into_micros());
     }
@@ -607,7 +607,7 @@ fn log_connection_gap_time_stats(
     }
 
     let ssid = match &connect_stats.candidate_network {
-        Some(bss) => bss.ssid(),
+        Some(network) => network.bss.ssid(),
         None => {
             warn!("No candidate_network in successful connect stats");
             return None;
@@ -785,8 +785,9 @@ mod tests {
         },
         wlan_sme::client::{
             info::{
-                ConnectStats, DisconnectInfo, DisconnectSource, PreviousDisconnectInfo,
-                ScanEndStats, ScanResult, ScanStartStats, SupplicantProgress,
+                CandidateNetwork, ConnectStats, DisconnectInfo, DisconnectSource,
+                PreviousDisconnectInfo, ScanEndStats, ScanResult, ScanStartStats,
+                SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
             SelectNetworkFailure,
@@ -858,10 +859,76 @@ mod tests {
     }
 
     #[test]
+    fn test_log_scan_stats() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let now = now();
+        let scan_stats = ScanStats {
+            scan_start_at: now - 3.seconds(),
+            scan_end_at: now,
+            scan_type: fidl_mlme::ScanTypes::Active,
+            scan_start_while_connected: true,
+            result: ScanResult::Success,
+            bss_count: 5,
+        };
+        log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
+
+        let mut expected_metrics = hashset! {
+            metrics::SCAN_RESULT_METRIC_ID,
+            metrics::SCAN_TIME_METRIC_ID,
+            metrics::SCAN_TIME_PER_RESULT_METRIC_ID,
+            metrics::SCAN_TIME_PER_SCAN_TYPE_METRIC_ID,
+            metrics::SCAN_TIME_PER_JOIN_OR_DISCOVERY_METRIC_ID,
+            metrics::SCAN_TIME_PER_CLIENT_STATE_METRIC_ID,
+        };
+        while let Ok(Some(event)) = cobalt_receiver.try_next() {
+            assert!(expected_metrics.contains(&event.metric_id), "unexpected event: {:?}", event);
+            expected_metrics.remove(&event.metric_id);
+        }
+        assert!(expected_metrics.is_empty(), "some metrics not logged: {:?}", expected_metrics);
+    }
+
+    #[test]
     fn test_log_connect_stats_success() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
         log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), &fake_connect_stats());
+
+        let mut expected_metrics = hashset! {
+            metrics::CONNECTION_ATTEMPTS_METRIC_ID,
+            metrics::CONNECTION_SUCCESS_WITH_ATTEMPTS_BREAKDOWN_METRIC_ID,
+            metrics::CONNECTION_RESULT_METRIC_ID,
+            metrics::CONNECTION_RESULT_POST_NETWORK_SELECTION_METRIC_ID,
+            metrics::CONNECTION_RESULT_PER_RSSI_METRIC_ID,
+            metrics::CONNECTION_RESULT_PER_SNR_METRIC_ID,
+            metrics::CONNECTION_SETUP_TIME_METRIC_ID,
+            metrics::CONNECTION_SETUP_TIME_PER_RESULT_METRIC_ID,
+            metrics::AUTHENTICATION_TIME_METRIC_ID,
+            metrics::AUTHENTICATION_TIME_PER_RSSI_METRIC_ID,
+            metrics::ASSOCIATION_TIME_METRIC_ID,
+            metrics::ASSOCIATION_TIME_PER_RSSI_METRIC_ID,
+            metrics::ESTABLISH_RSNA_TIME_METRIC_ID,
+            metrics::ESTABLISH_RSNA_TIME_PER_RSSI_METRIC_ID,
+            metrics::CONNECTION_GAP_TIME_METRIC_ID,
+            metrics::CONNECTION_GAP_TIME_BREAKDOWN_METRIC_ID,
+        };
+        while let Ok(Some(event)) = cobalt_receiver.try_next() {
+            assert!(expected_metrics.contains(&event.metric_id), "unexpected event: {:?}", event);
+            expected_metrics.remove(&event.metric_id);
+        }
+        assert!(expected_metrics.is_empty(), "some metrics not logged: {:?}", expected_metrics);
+    }
+
+    #[test]
+    fn test_log_connect_stats_success_old_code_path_with_join_scan() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+        log_connect_stats(
+            &mut cobalt_sender,
+            inspect_tree.clone(),
+            &fake_connect_stats_old_code_path_with_join_scan(),
+        );
 
         let mut expected_metrics = hashset! {
             metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -899,7 +966,7 @@ mod tests {
     }
 
     #[test]
-    fn test_log_connect_stats_scan_failure() {
+    fn test_log_connect_stats_scan_failure_old_code_path_with_join_scan() {
         // Note: This mock is not completely correct (e.g. we would not expect time stats for
         //       later steps to be filled out if connect fails at scan), but for our testing
         //       purpose, it's sufficient. The same applies for other connect stats failure
@@ -911,7 +978,7 @@ mod tests {
                 result: ScanResult::Failed(fidl_mlme::ScanResultCodes::InvalidArgs),
                 bss_count: 1,
             }),
-            ..fake_connect_stats()
+            ..fake_connect_stats_old_code_path_with_join_scan()
         };
 
         let expected_metrics_subset = hashset! {
@@ -1321,6 +1388,44 @@ mod tests {
         ConnectStats {
             connect_start_at: now,
             connect_end_at: now,
+            scan_start_stats: None,
+            scan_end_stats: None,
+            auth_start_at: Some(now),
+            auth_end_at: Some(now),
+            assoc_start_at: Some(now),
+            assoc_end_at: Some(now),
+            rsna_start_at: Some(now),
+            rsna_end_at: Some(now),
+            supplicant_error: None,
+            supplicant_progress: Some(SupplicantProgress {
+                pmksa_established: true,
+                ptksa_established: true,
+                gtksa_established: true,
+                esssa_established: true,
+            }),
+            num_rsna_key_frame_exchange_timeout: 0,
+            result: ConnectResult::Success,
+            candidate_network: Some(CandidateNetwork {
+                bss: fake_bss!(Open),
+                multiple_bss_candidates: true,
+            }),
+            attempts: 1,
+            last_ten_failures: vec![],
+            previous_disconnect_info: Some(PreviousDisconnectInfo {
+                ssid: fake_bss!(Open).ssid().to_vec(),
+                disconnect_source: DisconnectSource::User(
+                    fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+                ),
+                disconnect_at: now - DURATION_SINCE_LAST_DISCONNECT,
+            }),
+        }
+    }
+
+    fn fake_connect_stats_old_code_path_with_join_scan() -> ConnectStats {
+        let now = now();
+        ConnectStats {
+            connect_start_at: now,
+            connect_end_at: now,
             scan_start_stats: Some(ScanStartStats {
                 scan_start_at: now,
                 scan_type: fidl_mlme::ScanTypes::Passive,
@@ -1346,7 +1451,10 @@ mod tests {
             }),
             num_rsna_key_frame_exchange_timeout: 0,
             result: ConnectResult::Success,
-            candidate_network: Some(fake_bss!(Open)),
+            candidate_network: Some(CandidateNetwork {
+                bss: fake_bss!(Open),
+                multiple_bss_candidates: true,
+            }),
             attempts: 1,
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
