@@ -4,7 +4,6 @@
 
 use {
     crate::{container::ComponentIdentity, events::error::EventError},
-    anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_inspect::TreeProxy,
@@ -25,7 +24,7 @@ use {
 
 #[async_trait]
 pub trait EventSource: Sync + Send {
-    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error>;
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError>;
 }
 
 /// The capacity for bounded channels used by this implementation.

@@ -200,7 +200,6 @@ impl EventStreamLogger {
 mod tests {
     use {
         super::*,
-        anyhow::{format_err, Error},
         async_trait::async_trait,
         fidl_fuchsia_logger::LogSinkMarker,
         fuchsia_async as fasync,
@@ -231,7 +230,10 @@ mod tests {
 
     #[async_trait]
     impl EventSource for FakeEventSource {
-        async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        async fn listen(
+            &mut self,
+            mut sender: mpsc::Sender<ComponentEvent>,
+        ) -> Result<(), EventError> {
             let shared_data = EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
@@ -267,7 +269,10 @@ mod tests {
 
     #[async_trait]
     impl EventSource for FakeLegacyProvider {
-        async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        async fn listen(
+            &mut self,
+            mut sender: mpsc::Sender<ComponentEvent>,
+        ) -> Result<(), EventError> {
             let shared_data = EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
@@ -303,8 +308,11 @@ mod tests {
 
     #[async_trait]
     impl EventSource for FakeFutureProvider {
-        async fn listen(&mut self, _sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
-            Err(format_err!("not implemented yet"))
+        async fn listen(
+            &mut self,
+            _sender: mpsc::Sender<ComponentEvent>,
+        ) -> Result<(), EventError> {
+            Err(EventError::StreamAlreadyTaken)
         }
     }
 
@@ -346,7 +354,7 @@ mod tests {
                         status: "ok"
                     },
                     v3: {
-                        status: "error: not implemented yet"
+                        status: "error: StreamAlreadyTaken"
                     }
                 },
                 components_started: 2u64,

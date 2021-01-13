@@ -57,4 +57,10 @@ pub enum EventError {
 
     #[error("failed to retrieve log connection")]
     RetrieveLogConnection(#[source] fidl::Error),
+
+    #[error("FIDL error ({0}): {1:?}")]
+    Fidl(&'static str, #[source] fidl::Error),
+
+    #[error("FIDL Component error: {0}")]
+    FidlComponent(String),
 }

@@ -7,7 +7,6 @@ use {
         container::ComponentIdentity,
         events::{error::EventError, types::*},
     },
-    anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_sys_internal::{
         LogConnection, LogConnectionListenerMarker, LogConnectionListenerRequest, LogConnectorProxy,
@@ -30,15 +29,15 @@ impl LogConnectorEventSource {
 
 #[async_trait]
 impl EventSource for LogConnectorEventSource {
-    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
         match self.connector.take() {
-            None => Err(EventError::StreamAlreadyTaken.into()),
+            None => Err(EventError::StreamAlreadyTaken),
             Some(connector) => match connector.take_log_connection_listener().await {
                 Ok(None) => {
                     warn!("local realm already gave out LogConnectionListener, skipping logs");
                     Ok(())
                 }
-                Err(e) => Err(EventError::RetrieveLogConnection(e).into()),
+                Err(e) => Err(EventError::RetrieveLogConnection(e)),
                 Ok(Some(connection)) => {
                     fasync::Task::spawn(listen_for_log_connections(connection, sender)).detach();
                     Ok(())

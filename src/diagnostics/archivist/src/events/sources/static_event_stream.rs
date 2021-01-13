@@ -8,7 +8,6 @@ use {
         sources::core::EventStreamServer,
         types::{ComponentEvent, EventSource},
     },
-    anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     futures::channel::mpsc,
@@ -26,9 +25,9 @@ impl StaticEventStream {
 
 #[async_trait]
 impl EventSource for StaticEventStream {
-    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
         match self.stream.take() {
-            None => Err(EventError::StreamAlreadyTaken.into()),
+            None => Err(EventError::StreamAlreadyTaken),
             Some(stream) => {
                 EventStreamServer::new(sender).spawn(stream);
                 Ok(())

@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::types::*,
-    anyhow::{Context as _, Error},
+    crate::events::{error::EventError, types::*},
     async_trait::async_trait,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys_internal::{
@@ -21,10 +20,11 @@ use {
 impl EventSource for ComponentEventProviderProxy {
     /// Subscribe to component lifecycle events.
     /// |node| is the node where stats about events seen will be recorded.
-    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
         let (events_client_end, listener_request_stream) =
             fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
-        self.set_listener(events_client_end)?;
+        self.set_listener(events_client_end)
+            .map_err(|e| EventError::Fidl("set component event provider listener", e))?;
         EventListenerServer::new(sender).spawn(listener_request_stream);
         Ok(())
     }
@@ -43,7 +43,7 @@ impl EventListenerServer {
         fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
-                .unwrap_or_else(|e: Error| error!(?e, "failed to run v1 events processing server"));
+                .unwrap_or_else(|e| error!(?e, "failed to run v1 events processing server"));
         })
         .detach();
     }
@@ -51,9 +51,11 @@ impl EventListenerServer {
     async fn handle_request_stream(
         mut self,
         mut stream: ComponentEventListenerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) =
-            stream.try_next().await.context("Error running component event listener server")?
+    ) -> Result<(), EventError> {
+        while let Some(request) = stream
+            .try_next()
+            .await
+            .map_err(|e| EventError::Fidl("ComponentEventListener stream", e))?
         {
             match request {
                 ComponentEventListenerRequest::OnStart { component, .. } => {
@@ -74,7 +76,7 @@ impl EventListenerServer {
         Ok(())
     }
 
-    async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
+    async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), EventError> {
         let metadata: EventMetadata = component.try_into()?;
 
         let start_event = StartEvent { metadata };
@@ -84,7 +86,7 @@ impl EventListenerServer {
         Ok(())
     }
 
-    async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), Error> {
+    async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), EventError> {
         let metadata: EventMetadata = component.try_into()?;
 
         let stop_event = StopEvent { metadata };
@@ -97,7 +99,7 @@ impl EventListenerServer {
         &mut self,
         component: SourceIdentity,
         directory: fidl::endpoints::ClientEnd<DirectoryMarker>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), EventError> {
         let metadata: EventMetadata = component.try_into()?;
 
         let diagnostics_ready_event_data =
