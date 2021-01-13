@@ -177,6 +177,14 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // executed.
   fit::function<void()> terminate_done_;
 
+  struct UIHandlers {
+    fuchsia::modular::SessionShellPtr session_shell;
+    fuchsia::element::GraphicalPresenterPtr graphical_presenter;
+  };
+
+  // Contains connections to view presentation protocols.
+  UIHandlers ui_handlers_;
+
   OperationQueue operation_queue_;
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag

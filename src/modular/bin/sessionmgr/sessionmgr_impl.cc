@@ -140,35 +140,34 @@ void SessionmgrImpl::Initialize(
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
-  struct UIHandlers {
-    fuchsia::modular::SessionShellPtr session_shell;
-    fuchsia::element::GraphicalPresenterPtr graphical_presenter;
-  };
-
-  auto ui_handlers = std::make_shared<UIHandlers>();
-
   // If connecting to the SessionShell errors out, use the GraphicalPresenter
-  ui_handlers->session_shell.set_error_handler([weak_this = weak_ptr_factory_.GetWeakPtr(),
-                                                ui_handlers](zx_status_t status) mutable {
-    FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
-    if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->graphical_presenter) {
-      weak_this->story_provider_impl_.get()->SetPresentationProtocol(
-          PresentationProtocolPtr{std::move(ui_handlers->graphical_presenter)});
-    }
-  });
-
-  // If connecting to the GraphicalPresenter errors out, use the SessionShell
-  ui_handlers->graphical_presenter.set_error_handler(
-      [weak_this = weak_ptr_factory_.GetWeakPtr(), ui_handlers](zx_status_t status) mutable {
-        FX_PLOGS(INFO, status) << "Failed to connect to GraphicalPresenter, using SessionShell";
-        if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->session_shell) {
+  ui_handlers_.session_shell.set_error_handler(
+      [weak_this = weak_ptr_factory_.GetWeakPtr()](zx_status_t status) mutable {
+        if (!weak_this) {
+          return;
+        }
+        FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
+        if (weak_this->story_provider_impl_.get() && weak_this->ui_handlers_.graphical_presenter) {
           weak_this->story_provider_impl_.get()->SetPresentationProtocol(
-              PresentationProtocolPtr{std::move(ui_handlers->session_shell)});
+              PresentationProtocolPtr{std::move(weak_this->ui_handlers_.graphical_presenter)});
         }
       });
 
-  ConnectToSessionShellService(ui_handlers->session_shell.NewRequest());
-  ConnectToSessionShellService(ui_handlers->graphical_presenter.NewRequest());
+  // If connecting to the GraphicalPresenter errors out, use the SessionShell
+  ui_handlers_.graphical_presenter.set_error_handler(
+      [weak_this = weak_ptr_factory_.GetWeakPtr()](zx_status_t status) mutable {
+        if (!weak_this) {
+          return;
+        }
+        FX_PLOGS(INFO, status) << "Failed to connect to GraphicalPresenter, using SessionShell";
+        if (weak_this->story_provider_impl_.get() && weak_this->ui_handlers_.session_shell) {
+          weak_this->story_provider_impl_.get()->SetPresentationProtocol(
+              PresentationProtocolPtr{std::move(weak_this->ui_handlers_.session_shell)});
+        }
+      });
+
+  ConnectToSessionShellService(ui_handlers_.session_shell.NewRequest());
+  ConnectToSessionShellService(ui_handlers_.graphical_presenter.NewRequest());
 }
 
 // Create an environment in which to launch story shells and mods. Note that agents cannot be
