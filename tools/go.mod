@@ -3,7 +3,8 @@ module go.fuchsia.dev/fuchsia/tools
 go 1.15
 
 require (
-	cloud.google.com/go v0.65.0
+	cloud.google.com/go v0.65.0 // indirect
+	cloud.google.com/go/storage v1.8.0
 	github.com/creack/pty v1.1.11
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -28,11 +29,10 @@ require (
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200828081204-131dc92a58d5
 	golang.org/x/text v0.3.3 // indirect
-	golang.org/x/tools v0.0.0-20200821151209-74543c403428 // indirect
 	google.golang.org/api v0.30.0 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.1 // indirect
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
 

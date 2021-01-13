@@ -3,16 +3,18 @@ module go.fuchsia.dev/fuchsia/garnet
 go 1.15
 
 require (
+	github.com/bazelbuild/rules_go v0.25.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-cmp v0.5.3-0.20201020212313-ab46b8bd0abd
+	github.com/google/go-cmp v0.5.3-0.20201020212313-ab46b8bd0abd // indirect
 	github.com/google/subcommands v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.12.0
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
+	go.fuchsia.dev/fuchsia/tools v0.0.0-20210112150134-09b1fab9b7e1
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	gvisor.dev/gvisor v0.0.0-20200828123349-7bc9f9b47f61 // indirect
+	gvisor.dev/gvisor v0.0.0-20210112063336-a20da708291e // indirect
 )
 
 replace (
