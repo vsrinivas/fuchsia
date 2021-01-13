@@ -54,4 +54,7 @@ pub enum EventError {
 
     #[error("attempted to take a stream that has already been taken")]
     StreamAlreadyTaken,
+
+    #[error("failed to retrieve log connection")]
+    RetrieveLogConnection(#[source] fidl::Error),
 }

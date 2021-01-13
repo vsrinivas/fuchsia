@@ -23,7 +23,6 @@ use {
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
-    fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_async::Task,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::WithInspect,
@@ -34,7 +33,7 @@ use {
     parking_lot::{Mutex, RwLock},
     selectors,
     std::collections::HashMap,
-    std::{convert::TryFrom, sync::Arc},
+    std::sync::Arc,
     tracing::{debug, error, warn},
 };
 
@@ -99,51 +98,6 @@ impl DataRepo {
             .await;
         if let Err(e) = res {
             error!(%e, "failed to drain kernel log, important logs may be missing");
-        }
-    }
-
-    // TODO(fxbug.dev/66950) this should be a small shim to convert this into v2 events
-    /// Handle `LogConnectionListener` for the parent realm, eventually passing
-    /// `LogSink` connections into the manager.
-    pub async fn handle_log_connector(
-        self,
-        connector: LogConnectorProxy,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        debug!("Handling LogSink connections from appmgr.");
-        match connector.take_log_connection_listener().await {
-            Ok(Some(listener)) => {
-                let mut connections =
-                    listener.into_stream().expect("getting request stream from server end");
-                while let Ok(Some(connection)) = connections.try_next().await {
-                    match connection {
-                        LogConnectionListenerRequest::OnNewConnection {
-                            connection: LogConnection { log_request, source_identity },
-                            control_handle: _,
-                        } => {
-                            let identity = match ComponentIdentity::try_from(source_identity) {
-                                Ok(i) => i,
-                                Err(e) => {
-                                    error!(%e, "error consuming SourceIdentity");
-                                    continue;
-                                }
-                            };
-                            let container = self.write().get_log_container(identity);
-
-                            let stream = log_request
-                                .into_stream()
-                                .expect("getting LogSinkRequestStream from serverend");
-                            let task =
-                                Task::spawn(container.handle_log_sink(stream, sender.clone()));
-                            sender
-                                .unbounded_send(task)
-                                .expect("channel is held by archivist, lasts for whole program");
-                        }
-                    };
-                }
-            }
-            Ok(None) => warn!("local realm already gave out LogConnectionListener, skipping logs"),
-            Err(e) => error!(%e, "error retrieving LogConnectionListener from LogConnector"),
         }
     }
 

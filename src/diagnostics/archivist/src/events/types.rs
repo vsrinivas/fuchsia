@@ -209,6 +209,12 @@ pub struct EventMetadata {
     pub timestamp: zx::Time,
 }
 
+impl EventMetadata {
+    pub fn new(identity: ComponentIdentity) -> Self {
+        Self { identity, timestamp: zx::Time::get_monotonic() }
+    }
+}
+
 /// Represents the diagnostics data associated
 /// with a component being observed starting.
 #[derive(Debug, PartialEq)]

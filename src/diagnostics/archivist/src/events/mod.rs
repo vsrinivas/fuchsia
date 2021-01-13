@@ -4,5 +4,5 @@
 
 pub(crate) mod error;
 pub(crate) mod source_registry;
-pub(crate) mod sources;
+pub mod sources;
 pub mod types;

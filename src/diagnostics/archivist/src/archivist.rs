@@ -403,7 +403,7 @@ impl ArchivistBuilder {
     }
 
     // Sets event provider which is used to collect component events, Panics if called twice.
-    async fn add_event_source(
+    pub async fn add_event_source(
         &mut self,
         name: impl Into<String>,
         source: Box<dyn EventSource>,

@@ -8,7 +8,9 @@
 
 use {
     anyhow::{Context, Error},
-    archivist_lib::{archivist, configs, diagnostics, logs},
+    archivist_lib::{
+        archivist, configs, diagnostics, events::sources::LogConnectorEventSource, logs,
+    },
     argh::FromArgs,
     fidl_fuchsia_diagnostics_internal::{
         DetectControllerMarker, LogStatsControllerMarker, SamplerControllerMarker,
@@ -119,12 +121,14 @@ fn main() -> Result<(), Error> {
         archivist.install_lifecycle_listener();
     }
 
-    // TODO(fxbug.dev/66950) add to ArchivistBuilder's EventStream as a source
     if !opt.disable_log_connector {
         let connector = connect_to_service::<LogConnectorMarker>()?;
-        let sender = archivist.log_sender().clone();
-        fasync::Task::spawn(archivist.data_repo().clone().handle_log_connector(connector, sender))
-            .detach();
+        executor.run_singlethreaded(
+            archivist.add_event_source(
+                "log_connector",
+                Box::new(LogConnectorEventSource::new(connector)),
+            ),
+        );
     }
 
     if !opt.disable_klog {
