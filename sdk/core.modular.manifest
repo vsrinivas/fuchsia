@@ -16,6 +16,7 @@ sdk://fidl/fuchsia.bluetooth.control
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.le
 sdk://fidl/fuchsia.bluetooth.sys
+sdk://fidl/fuchsia.buildinfo
 sdk://fidl/fuchsia.camera
 sdk://fidl/fuchsia.camera2
 sdk://fidl/fuchsia.camera2.hal
@@ -39,7 +40,6 @@ sdk://fidl/fuchsia.factory.wlan
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.hardware.audio
-sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hardware.light
 sdk://fidl/fuchsia.hardware.network
@@ -74,13 +74,11 @@ sdk://fidl/fuchsia.metrics
 sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.net
-sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
 sdk://fidl/fuchsia.net.interfaces
 sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.oldhttp
 sdk://fidl/fuchsia.net.routes
-sdk://fidl/fuchsia.netstack
 sdk://fidl/fuchsia.posix
 sdk://fidl/fuchsia.posix.socket
 sdk://fidl/fuchsia.process
@@ -93,6 +91,7 @@ sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sys.test
 sdk://fidl/fuchsia.sysinfo
 sdk://fidl/fuchsia.sysmem
+sdk://fidl/fuchsia.thread
 sdk://fidl/fuchsia.tracing.provider
 sdk://fidl/fuchsia.ui.activity
 sdk://fidl/fuchsia.ui.activity.control
@@ -116,6 +115,7 @@ sdk://fidl/fuchsia.weave
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.policy
+sdk://fidl/fuchsia.wlan.product.deprecatedclient
 sdk://fidl/fuchsia.wlan.product.deprecatedconfiguration
 sdk://fidl/fuchsia.wlan.stats
 sdk://fidl/zx
