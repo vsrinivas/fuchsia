@@ -9,7 +9,7 @@ group("tests") {
 }
 
 # 1. Turn on trace_action:
-# $ fx set ... --args=trace_action=true
+# $ fx set ... --args=build_should_trace_actions=true
 # 2. Delete the output files to ensure that this action will run:
 # $ rm -rf out/default/obj/build/tracer
 # 3. Comment out either the `inputs`, or the second line of `outputs` below.
