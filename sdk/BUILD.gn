@@ -100,7 +100,7 @@ sdk("e2e_testing") {
 
   category = "partner"
 
-  api = "e2e_testing.manifest"
+  api = "manifests/e2e_testing.manifest"
 
   deps = [
     ":e2e_testing_tools",
@@ -337,7 +337,7 @@ sdk("core") {
 
   category = "partner"
 
-  api = "core.manifest"
+  api = "manifests/core.manifest"
 
   testonly = true
 
@@ -352,7 +352,7 @@ sdk("core.modular") {
 
   category = "partner"
 
-  api = "core.modular.manifest"
+  api = "manifests/core.modular.manifest"
 
   testonly = true
 
@@ -378,7 +378,7 @@ if (is_host) {
     testonly = true
     id = sdk_id
     category = "partner"
-    api = "host_tools_${current_os}_${current_cpu}.manifest"
+    api = "manifests/host_tools_${current_os}_${current_cpu}.manifest"
 
     deps = [
       "tools:symbolize_sdk",
@@ -415,7 +415,7 @@ sdk("bootstrap") {
 
   category = "partner"
 
-  api = "bootstrap.manifest"
+  api = "manifests/bootstrap.manifest"
 
   testonly = true
 
@@ -445,7 +445,7 @@ sdk("modular_testing") {
 
   id = sdk_id
 
-  api = "modular_testing.manifest"
+  api = "manifests/modular_testing.manifest"
 
   category = "partner"
 
@@ -462,7 +462,7 @@ sdk("modular_testing") {
 sdk("firmware") {
   category = "experimental"
 
-  api = "firmware.manifest"
+  api = "manifests/firmware.manifest"
 
   deps = [
     "//sdk/docs:firmware",
@@ -479,7 +479,7 @@ sdk("fuchsia_dart") {
 
   id = sdk_id
 
-  api = "fuchsia_dart.manifest"
+  api = "manifests/fuchsia_dart.manifest"
 
   deps = [
     "//sdk/dart:gen_snapshot_sdk($dart_toolchain)",
