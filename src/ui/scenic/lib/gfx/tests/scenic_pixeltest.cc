@@ -59,6 +59,16 @@ constexpr uint32_t kYuvSize = 64;
 
 const float kPi = glm::pi<float>();
 
+fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocator() {
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  if (status != ZX_OK)
+    return nullptr;
+  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
+  return sysmem_allocator;
+}
+
 struct SysmemTokens {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
@@ -1263,10 +1273,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
 
   const uint32_t kShapeWidth = 32;
   const uint32_t kShapeHeight = 32;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  EXPECT_EQ(status, ZX_OK);
+  auto sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
@@ -1274,8 +1282,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
 
   fuchsia::sysmem::BufferCollectionPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest(dispatcher()));
+  zx_status_t status = sysmem_allocator->BindSharedCollection(
+      std::move(local_token), buffer_collection.NewRequest(dispatcher()));
   EXPECT_EQ(status, ZX_OK);
 
   buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });
@@ -1432,9 +1440,8 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   session->Enqueue(scenic::NewAddChildCmd(test_session->scene.id(), kShapeNodeId));
   Present(session);
 
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
@@ -1445,8 +1452,8 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   RunLoopUntilIdle();
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.has_buffer_memory_constraints = true;
@@ -1513,17 +1520,16 @@ TEST_F(ScenicPixelTest, DISABLED_LinearImagePipe) {
   session->Enqueue(scenic::NewAddChildCmd(test_session->scene.id(), kShapeNodeId));
   Present(session);
 
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
   const uint32_t kBufferId = 1;
   image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.has_buffer_memory_constraints = true;
@@ -1936,10 +1942,8 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   const auto [display_width, display_height] = test_session->display_dimensions;
   test_session->SetUpCamera().SetProjection(0);
 
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
@@ -1951,8 +1955,8 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   const uint32_t kShapeWidth = 32;
   const uint32_t kShapeHeight = 32;
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest());
+  zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                              buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::BufferCollectionConstraints constraints;
 
@@ -2058,10 +2062,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   const auto [display_width, display_height] = test_session->display_dimensions;
   test_session->SetUpCamera().SetProjection(0);
 
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(sysmem_allocator);
 
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
@@ -2073,8 +2075,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   const uint32_t kShapeWidth = 32;
   const uint32_t kShapeHeight = 32;
   fuchsia::sysmem::BufferCollectionPtr buffer_collection;
-  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
-                                                  buffer_collection.NewRequest(dispatcher()));
+  zx_status_t status = sysmem_allocator->BindSharedCollection(
+      std::move(local_token), buffer_collection.NewRequest(dispatcher()));
   EXPECT_EQ(status, ZX_OK);
 
   buffer_collection.set_error_handler([](zx_status_t status) { EXPECT_NE(status, ZX_OK); });

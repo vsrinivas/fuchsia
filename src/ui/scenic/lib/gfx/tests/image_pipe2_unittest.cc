@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -134,6 +135,8 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
   }
   ~ImagePipe2ThatCreatesFakeImages() { CloseConnectionAndCleanUp(); }
 
