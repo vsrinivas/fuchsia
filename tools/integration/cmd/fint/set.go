@@ -28,9 +28,6 @@ import (
 const (
 	fuchsiaDirEnvVar = "FUCHSIA_DIR"
 
-	// Locations of GN trace files in the build directory.
-	fuchsiaGNTrace = "gn_trace.json"
-
 	// Name of the file (in `contextSpec.ArtifactsDir`) that will expose
 	// manifest files and other metadata produced by this command to the caller.
 	artifactsManifest = "set_artifacts.textproto"
@@ -159,7 +156,10 @@ func runSteps(
 	if err != nil {
 		return nil, err
 	}
-	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs)
+	// TODO(olivernewman): Write the GN trace to `contextSpec.ArtifactDir` after
+	// recipes no longer assume that it's written to the build directory.
+	artifacts.GnTracePath = filepath.Join(contextSpec.BuildDir, "gn_trace.json")
+	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
 	if err != nil {
 		artifacts.FailureSummary = genStdout
 	}
@@ -172,6 +172,7 @@ func runGen(
 	staticSpec *fintpb.Static,
 	contextSpec *fintpb.Context,
 	platform string,
+	gnTracePath string,
 	args []string,
 ) (genStdout string, err error) {
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
@@ -179,7 +180,7 @@ func runGen(
 		gnPath, "gen",
 		contextSpec.BuildDir,
 		"--check=system",
-		fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
+		fmt.Sprintf("--tracelog=%s", gnTracePath),
 		"--fail-on-unused-args",
 	}
 

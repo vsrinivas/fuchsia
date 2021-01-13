@@ -62,6 +62,20 @@ func TestRunSteps(t *testing.T) {
 		}
 	})
 
+	t.Run("populates the artifacts gn_trace_path field", func(t *testing.T) {
+		runner := &fakeSubprocessRunner{
+			mockStdout: []byte("some stdout"),
+		}
+		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		if err != nil {
+			t.Fatalf("Unexpected error from runSteps: %s", err)
+		}
+		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.BuildDir) {
+			t.Errorf("Expected runSteps to set a gn_trace_path in the build dir (%q) but got: %q",
+				contextSpec.BuildDir, artifacts.GnTracePath)
+		}
+	})
+
 	t.Run("leaves failure summary empty in case of success", func(t *testing.T) {
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
@@ -78,6 +92,7 @@ func TestRunSteps(t *testing.T) {
 
 func TestRunGen(t *testing.T) {
 	ctx := context.Background()
+	const gnTracePath = "/tmp/gn_trace.json"
 
 	contextSpec := fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
@@ -92,7 +107,7 @@ func TestRunGen(t *testing.T) {
 		{
 			name: "default",
 			expectedOptions: []string{
-				fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
+				fmt.Sprintf("--tracelog=%s", gnTracePath),
 			},
 		},
 		{
@@ -125,7 +140,7 @@ func TestRunGen(t *testing.T) {
 			}
 
 			platform := "mac-x64"
-			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"})
+			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, gnTracePath, []string{"arg1", "arg2"})
 			if err != nil {
 				t.Fatalf("Unexpected error from runGen: %v", err)
 			}
