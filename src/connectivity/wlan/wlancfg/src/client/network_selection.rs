@@ -248,7 +248,9 @@ async fn load_saved_networks(
     saved_network_manager: Arc<SavedNetworksManager>,
 ) -> HashMap<types::NetworkIdentifier, InternalSavedNetworkData> {
     let mut networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData> = HashMap::new();
+    info!("Saved networks:");
     for saved_network in saved_network_manager.get_networks().await.into_iter() {
+        info!("  {:02x?}", saved_network);
         let recent_failure_count = saved_network
             .perf_stats
             .failure_list

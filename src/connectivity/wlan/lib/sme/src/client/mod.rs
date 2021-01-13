@@ -330,6 +330,7 @@ impl ClientSme {
                     "Received ConnectRequest for {}",
                     bss_desc.to_string(&self.context.inspect.hasher)
                 );
+                info!("  with credential {:02x?}", req.credential);
 
                 // We can connect directly now.
                 let viable_bss = match get_protection(
