@@ -123,6 +123,10 @@ pub struct StartCommand {
     /// To view availabe image names run `gsutil ls -l gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`.
     #[argh(option)]
     pub image_name: Option<String>,
+
+    /// file path to store emulator log. Default is a temp file that is deleted after fvdl exits.
+    #[argh(option, short = 'l')]
+    pub emulator_log: Option<String>,
 }
 
 fn default_window_height() -> usize {

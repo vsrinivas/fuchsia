@@ -134,17 +134,38 @@ impl VDLFiles {
             Some(proto) => PathBuf::from(proto),
             None => self.generate_fvd(&start_command.window_width, &start_command.window_height)?,
         };
+        // Notes for usage in SDK (ex: `fvdl --sdk ...`)
+        // If `--aemu-path` is specified, use that.
+        // Else If `--aemu-version` is specified, download aemu with that version label from cipd.
+        // Else If `<sdk_root>/bin/aemu.version` is present, download aemu using that version from cipd.
+        // Else download aemu using version `integration` from cipd.
+        //
+        // Notes for usage in-tree (ex: `fx vdl start ...`)
+        // If `--aemu-path` is specified, use that.
+        // Else If `--aemu-version` is specified, download aemu with that version label from cipd.
+        // Else If env_var ${PREBUILT_AEMU_DIR} is set (in-tree default), use that.
+        // Else download aemu using version `integration` from cipd.
+        //
+        // Same logic applies to grpcwebproxy and device_launcher
         let aemu = match &start_command.aemu_path {
             Some(aemu_path) => PathBuf::from(aemu_path),
             None => {
-                if self.host_tools.aemu.as_os_str().is_empty() {
+                let aemu_cipd_version = match &start_command.aemu_version {
+                    Some(version) => version.clone(),
+                    None => {
+                        if self.host_tools.aemu.as_os_str().is_empty() {
+                            self.host_tools
+                                .read_prebuild_version("aemu.version")
+                                .unwrap_or(String::from("integration"))
+                        } else {
+                            String::from("")
+                        }
+                    }
+                };
+                if aemu_cipd_version != "" {
                     self.host_tools
                         .download_and_extract(
-                            start_command
-                                .aemu_version
-                                .as_ref()
-                                .unwrap_or(&String::from("integration"))
-                                .to_string(),
+                            aemu_cipd_version.to_string(),
                             "third_party/aemu".to_string(),
                         )?
                         .join("emulator")
@@ -153,17 +174,29 @@ impl VDLFiles {
                 }
             }
         };
+        if !aemu.exists() || !aemu.is_file() {
+            return Err(format_err!("Invalid 'emulator' binary at path {}", aemu.display()));
+        }
+
         let grpcwebproxy = match &start_command.grpcwebproxy_path {
             Some(grpcwebproxy_path) => PathBuf::from(grpcwebproxy_path),
             None => {
-                if vdl_args.enable_grpcwebproxy && self.host_tools.aemu.as_os_str().is_empty() {
+                let grpcwebproxy_cipd_version = match &start_command.grpcwebproxy_version {
+                    Some(version) => version.clone(),
+                    None => {
+                        if self.host_tools.grpcwebproxy.as_os_str().is_empty() {
+                            self.host_tools
+                                .read_prebuild_version("grpcwebproxy.version")
+                                .unwrap_or(String::from("latest"))
+                        } else {
+                            String::from("")
+                        }
+                    }
+                };
+                if vdl_args.enable_grpcwebproxy && grpcwebproxy_cipd_version != "" {
                     self.host_tools
                         .download_and_extract(
-                            start_command
-                                .grpcwebproxy_version
-                                .as_ref()
-                                .unwrap_or(&String::from("latest"))
-                                .to_string(),
+                            grpcwebproxy_cipd_version.to_string(),
                             "third_party/grpcwebproxy".to_string(),
                         )?
                         .join("grpcwebproxy")
@@ -172,24 +205,44 @@ impl VDLFiles {
                 }
             }
         };
+        if vdl_args.enable_grpcwebproxy && (!grpcwebproxy.exists() || !grpcwebproxy.is_file()) {
+            return Err(format_err!(
+                "grpcwebproxy binary cannot be found at {}",
+                grpcwebproxy.display()
+            ));
+        }
+
         let vdl = match &start_command.vdl_path {
             Some(vdl_path) => PathBuf::from(vdl_path),
             None => {
-                if !self.host_tools.vdl.exists() {
+                let vdl_cipd_version = match &start_command.vdl_version {
+                    Some(version) => version.clone(),
+                    None => {
+                        if self.host_tools.vdl.as_os_str().is_empty() {
+                            self.host_tools
+                                .read_prebuild_version("device_launcher.version")
+                                .unwrap_or(String::from("latest"))
+                        } else {
+                            String::from("")
+                        }
+                    }
+                };
+                if vdl_cipd_version != "" {
                     self.host_tools
-                        .download_and_extract(
-                            start_command
-                                .vdl_version
-                                .as_ref()
-                                .unwrap_or(&String::from("latest"))
-                                .to_string(),
-                            "vdl".to_string(),
-                        )?
+                        .download_and_extract(vdl_cipd_version.to_string(), "vdl".to_string())?
                         .join("device_launcher")
                 } else {
                     self.host_tools.vdl.clone()
                 }
             }
+        };
+        if !vdl.exists() || !vdl.is_file() {
+            return Err(format_err!("device_launcher binary cannot be found at {}", vdl.display()));
+        }
+
+        let emu_log = match &start_command.emulator_log {
+            Some(log_location) => PathBuf::from(log_location),
+            None => self.emulator_log.clone(),
         };
 
         let ssh_port = pick_unused_port().unwrap();
@@ -224,7 +277,7 @@ impl VDLFiles {
             .arg("--output_launched_device_proto")
             .arg(&self.output_proto)
             .arg("--emu_log")
-            .arg(&self.emulator_log)
+            .arg(&emu_log)
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg("--audio=true")

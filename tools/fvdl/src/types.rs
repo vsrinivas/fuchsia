@@ -4,19 +4,43 @@
 
 use crate::args::StartCommand;
 use crate::cipd;
+use ansi_term::Colour::*;
 use anyhow::{anyhow, format_err, Result};
 use fuchsia_async::Executor;
 use home::home_dir;
 use hyper::{StatusCode, Uri};
 use std::convert::From;
 use std::env;
-use std::fs::{create_dir, create_dir_all, File};
+use std::fs::{create_dir, create_dir_all, read_to_string, remove_dir_all, remove_file, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var).map(PathBuf::from).ok_or(anyhow!("{} contained invalid Unicode", var))
+}
+
+/// Returns GN SDK tools directory. This assumes that fvdl is located in
+/// <sdk_root>/tools/[x64|arm64]/fvdl, and will return path to <sdk_root>/tools/[x64|arm64]
+pub fn get_fuchsia_sdk_tools_dir() -> Result<PathBuf> {
+    Ok(env::args_os()
+        .nth(0)
+        .map(PathBuf::from)
+        .ok_or(anyhow!("Cannot get invoking binary path (location of fvdl)."))?
+        .parent()
+        .ok_or(anyhow!("Cannot get parent path to 'fvdl'."))?
+        .to_path_buf())
+}
+
+/// Returns GN SDK tools directory. This assumes that fvdl is located in
+/// <sdk_root>/tools/[x64|arm64]/fvdl, and will return path to <sdk_root>
+pub fn get_fuchsia_sdk_dir() -> Result<PathBuf> {
+    Ok(get_fuchsia_sdk_tools_dir()? // ex: <sdk_root>/tools/x64/
+        .parent() // ex: <sdk_root>/tools/
+        .ok_or(anyhow!("Cannot get parent path to 'tools' directory."))?
+        .parent() // ex: <sdk_root>
+        .ok_or(anyhow!("Cannot get path to sdk root."))?
+        .to_path_buf())
 }
 
 /// Returns either the path specified in the environment variable FUCHSIA_SDK_DATA_DIR or
@@ -44,25 +68,37 @@ pub struct HostTools {
     pub pm: PathBuf,
     pub vdl: PathBuf,
     pub zbi: PathBuf,
+    pub is_sdk: bool,
 }
 
 impl HostTools {
     /// Initialize host tools for in-tree usage.
     ///
-    /// Requires the environment variable HOST_OUT_DIR,
-    /// PREBUILT_AEMU_DIR, PREBUILT_GRPCWEBPROXY_DIR, PREBUILT_VDL_DIR to be specified.
+    /// Requires the environment variable HOST_OUT_DIR to be specified
+    /// PREBUILT_AEMU_DIR, PREBUILT_GRPCWEBPROXY_DIR, PREBUILT_VDL_DIR are optional.
     /// See: //tools/devshell/vdl
     pub fn from_tree_env() -> Result<HostTools> {
         let host_out_dir = read_env_path("HOST_OUT_DIR")?;
         Ok(HostTools {
-            aemu: read_env_path("PREBUILT_AEMU_DIR")?.join("emulator"),
+            // prebuilt binaries that can be optionally fetched from cipd.
+            aemu: match read_env_path("PREBUILT_AEMU_DIR") {
+                Ok(val) => val.join("emulator"),
+                _ => PathBuf::new(),
+            },
+            grpcwebproxy: match read_env_path("PREBUILT_GRPCWEBPROXY_DIR") {
+                Ok(val) => val.join("grpcwebproxy"),
+                _ => PathBuf::new(),
+            },
+            vdl: match read_env_path("PREBUILT_VDL_DIR") {
+                Ok(val) => val.join("device_launcher"),
+                _ => PathBuf::new(),
+            },
             device_finder: host_out_dir.join("device-finder"),
             far: host_out_dir.join("far"),
             fvm: host_out_dir.join("fvm"),
-            grpcwebproxy: read_env_path("PREBUILT_GRPCWEBPROXY_DIR")?.join("grpcwebproxy"),
             pm: host_out_dir.join("pm"),
-            vdl: read_env_path("PREBUILT_VDL_DIR")?.join("device_launcher"),
             zbi: host_out_dir.join("zbi"),
+            is_sdk: false,
         })
     }
 
@@ -73,13 +109,7 @@ impl HostTools {
     pub fn from_sdk_env() -> Result<HostTools> {
         let sdk_tool_dir = match read_env_path("TOOL_DIR") {
             Ok(dir) => dir,
-            _ => env::args_os()
-                .nth(0)
-                .map(PathBuf::from)
-                .ok_or(anyhow!("Cannot get containing directory path."))?
-                .parent()
-                .ok_or(anyhow!("Cannot get parent path."))?
-                .to_path_buf(),
+            _ => get_fuchsia_sdk_tools_dir()?,
         };
 
         Ok(HostTools {
@@ -93,7 +123,42 @@ impl HostTools {
             fvm: sdk_tool_dir.join("fvm"),
             pm: sdk_tool_dir.join("pm"),
             zbi: sdk_tool_dir.join("zbi"),
+            is_sdk: true,
         })
+    }
+
+    /// Reads the <prebuild>.version file stored in <sdk_root>/bin/<prebuild>.version
+    ///
+    /// # Arguments
+    ///
+    /// * `file_name` - <prebuild>.version file name.
+    ///     ex: 'aemu.version', this file is expected to be found under <sdk_root>/bin
+    pub fn read_prebuild_version(&self, file_name: &str) -> Result<String> {
+        if self.is_sdk {
+            let version_file = get_fuchsia_sdk_dir()?.join("bin").join(file_name);
+            if version_file.exists() {
+                println!(
+                    "{}",
+                    Yellow.paint(format!(
+                        "[fvdl] reading prebuild version file from: {}",
+                        version_file.display()
+                    ))
+                );
+                return Ok(read_to_string(version_file)?);
+            };
+            println!(
+                "{}",
+                Red.paint(format!(
+                    "[fvdl] prebuild version file: {} does not exist.",
+                    version_file.display()
+                ))
+            );
+            return Err(format_err!(
+                "reading prebuilt version errored: file {:?} does not exist.",
+                version_file
+            ));
+        }
+        return Err(format_err!("reading prebuild version file is only support with --sdk flag."));
     }
 
     /// Downloads & extract aemu.zip from CIPD, and returns the path containing the emulator executable.
@@ -128,11 +193,27 @@ impl HostTools {
                 .split('/')
                 .last()
                 .ok_or(anyhow!("Cannot identify filename from {}", cipd_pkg))?;
-            let cipd_zip = root_path.join(format!("{}.zip", name));
-            let unzipped_root = root_path.join(name);
-            if unzipped_root.exists() {
-                return Ok(unzipped_root);
-            }
+            let cipd_zip = root_path.join(format!("{}-{}.zip", name, label.replace(":", "-")));
+            let unzipped_root = root_path.join(format!("{}-{}", name, label.replace(":", "-")));
+
+            match label.as_str() {
+                // "latest" and "integration" labels always point to the newest release.
+                // We cannot assume that the binary is the same as last fetched. Therefore
+                // we will always re-download and unzip when used.
+                "latest" | "integration" => {
+                    if cipd_zip.exists() {
+                        remove_file(&cipd_zip)?;
+                    }
+                    if unzipped_root.exists() {
+                        remove_dir_all(&unzipped_root)?;
+                    }
+                }
+                _ => {
+                    if unzipped_root.exists() {
+                        return Ok(unzipped_root);
+                    }
+                }
+            };
             let status = cipd::download(url.clone(), &cipd_zip).await?;
             if status == StatusCode::OK {
                 cipd::extract_zip(&cipd_zip, &unzipped_root)?;
@@ -333,6 +414,7 @@ impl From<&StartCommand> for VDLArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs::read_dir;
     use std::io::Write;
     use tempfile::TempDir;
@@ -362,6 +444,7 @@ mod tests {
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
             vdl_version: None,
+            emulator_log: None,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
@@ -374,6 +457,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_host_tools() -> Result<()> {
         env::set_var("HOST_OUT_DIR", "/host/out");
         env::set_var("PREBUILT_AEMU_DIR", "/host/out/aemu");
@@ -383,6 +467,26 @@ mod tests {
         let host_tools = HostTools::from_tree_env()?;
         assert_eq!(host_tools.aemu.to_str().unwrap(), "/host/out/aemu/emulator");
         assert_eq!(host_tools.vdl.to_str().unwrap(), "/host/out/vdl/device_launcher");
+        assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
+        assert_eq!(host_tools.fvm.to_str().unwrap(), "/host/out/fvm");
+        assert_eq!(host_tools.pm.to_str().unwrap(), "/host/out/pm");
+        assert_eq!(host_tools.device_finder.to_str().unwrap(), "/host/out/device-finder");
+        assert_eq!(host_tools.zbi.to_str().unwrap(), "/host/out/zbi");
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_host_tools_no_env_var() -> Result<()> {
+        env::set_var("HOST_OUT_DIR", "/host/out");
+        env::remove_var("PREBUILT_AEMU_DIR");
+        env::remove_var("PREBUILT_VDL_DIR");
+        env::remove_var("PREBUILT_GRPCWEBPROXY_DIR");
+
+        let host_tools = HostTools::from_tree_env()?;
+        assert!(host_tools.aemu.as_os_str().is_empty());
+        assert!(host_tools.vdl.as_os_str().is_empty());
+        assert!(host_tools.grpcwebproxy.as_os_str().is_empty());
         assert_eq!(host_tools.far.to_str().unwrap(), "/host/out/far");
         assert_eq!(host_tools.fvm.to_str().unwrap(), "/host/out/fvm");
         assert_eq!(host_tools.pm.to_str().unwrap(), "/host/out/pm");
@@ -452,10 +556,23 @@ mod tests {
         let tmp_dir = TempDir::new()?.into_path();
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.to_str().unwrap());
         let host_tools = HostTools::from_sdk_env()?;
-        let unzipped_root =
+        let mut unzipped_root =
             host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
 
         let mut has_extract = false;
+        for path in read_dir(&unzipped_root)? {
+            let entry = path?;
+            let p = entry.path();
+            println!("Found path {}", p.display());
+            if p.ends_with("device_launcher") {
+                has_extract = true;
+            }
+        }
+        assert!(has_extract);
+
+        // Download "latest" again should trigger a cleanup and re-download
+        unzipped_root = host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
+        has_extract = false;
         for path in read_dir(&unzipped_root)? {
             let entry = path?;
             let p = entry.path();
