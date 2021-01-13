@@ -100,10 +100,10 @@ int LoadGeneratorThread::Run() {
         zx_ticks_get() + static_cast<zx_ticks_t>(work_delay * ticks_per_msec);
 
     while (!quit_ && (zx_ticks_get() < work_deadline_ticks)) {
-      accumulator_ += MakeRandomDouble(kMinNum, kMaxNum);
-      accumulator_ *= MakeRandomDouble(kMinNum, kMaxNum);
-      accumulator_ -= MakeRandomDouble(kMinNum, kMaxNum);
-      accumulator_ /= MakeRandomDouble(kMinNum, kMaxNum);
+      accumulator_ = accumulator_ + MakeRandomDouble(kMinNum, kMaxNum);
+      accumulator_ = accumulator_ * MakeRandomDouble(kMinNum, kMaxNum);
+      accumulator_ = accumulator_ - MakeRandomDouble(kMinNum, kMaxNum);
+      accumulator_ = accumulator_ / MakeRandomDouble(kMinNum, kMaxNum);
 
       double tmp = accumulator_;
       accumulator_ = std::clamp<double>(tmp, 0.0, kMaxNum);
