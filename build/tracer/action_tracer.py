@@ -117,6 +117,7 @@ def main():
     ]
 
     # Verify the filesystem access trace of the inner action
+    # See: https://github.com/jacereda/fsatrace#output-format
     with open(args.trace_output, "r") as trace:
         for line in trace.read().splitlines():
             if not line[1] == "|":
