@@ -10,11 +10,11 @@
 namespace {
 
 TEST(RemoteFile, ApiTest) {
-  zx::channel server, client;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
+  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
 
-  zx_handle_t client_handle = client.get();
-  auto file = fbl::AdoptRef<fs::RemoteFile>(new fs::RemoteFile(std::move(client)));
+  auto unowned_client = endpoints->client.borrow();
+  auto file = fbl::AdoptRef<fs::RemoteFile>(new fs::RemoteFile(std::move(endpoints->client)));
 
   // get attributes
   fs::VnodeAttributes attr;
@@ -24,7 +24,7 @@ TEST(RemoteFile, ApiTest) {
 
   // get remote properties
   EXPECT_TRUE(file->IsRemote());
-  EXPECT_EQ(client_handle, file->GetRemote());
+  EXPECT_EQ(unowned_client, file->GetRemote());
 
   // detaching the remote mount isn't allowed
   EXPECT_TRUE(!file->DetachRemote());

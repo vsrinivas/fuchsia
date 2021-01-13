@@ -54,13 +54,13 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
       [this, name = std::move(name), root = std::move(root)] {
         inspect::Inspector insp;
         zx::channel root_chan;
-        zx_status_t status =
-            devmgr::OpenNode(zx::unowned_channel(root->GetRemote()), "/", S_IFDIR, &root_chan);
+        zx_status_t status = devmgr::OpenNode(zx::unowned_channel(root->GetRemote().channel()), "/",
+                                              S_IFDIR, &root_chan);
         if (status != ZX_OK) {
           return fit::make_result_promise(fit::ok(std::move(insp)));
         }
         FillFileTreeSizes(std::move(root_chan), insp.GetRoot().CreateChild(name), &insp);
-        FillStats(zx::unowned_channel(root->GetRemote()), &insp);
+        FillStats(zx::unowned_channel(root->GetRemote().channel()), &insp);
         return fit::make_result_promise(fit::ok(std::move(insp)));
       },
       &inspector_);

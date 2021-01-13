@@ -5,6 +5,8 @@
 #ifndef FS_REMOTE_DIR_H_
 #define FS_REMOTE_DIR_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
+
 #include <fbl/macros.h>
 
 #include "vnode.h"
@@ -26,7 +28,7 @@ class RemoteDir : public Vnode {
  public:
   // Binds to a remotely hosted directory using the specified FIDL client
   // channel endpoint.  The channel must be valid.
-  explicit RemoteDir(zx::channel remote_dir_client);
+  explicit RemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_dir_client);
 
   // Releases the remotely hosted directory.
   ~RemoteDir() override;
@@ -35,12 +37,12 @@ class RemoteDir : public Vnode {
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(VnodeAttributes* a) final;
   bool IsRemote() const final;
-  zx_handle_t GetRemote() const final;
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 
  private:
-  zx::channel const remote_dir_client_;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> const remote_dir_client_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RemoteDir);
 };

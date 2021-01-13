@@ -16,8 +16,9 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
-zx_status_t Vfs::UnmountHandle(zx::channel handle, zx::time deadline) {
-  fio::DirectoryAdmin::ResultOf::Unmount result(handle.borrow(), deadline.get());
+zx_status_t Vfs::UnmountHandle(fidl::ClientEnd<llcpp::fuchsia::io::DirectoryAdmin> handle,
+                               zx::time deadline) {
+  fio::DirectoryAdmin::ResultOf::Unmount result(handle, deadline.get());
   if (!result.ok()) {
     return result.status();
   }

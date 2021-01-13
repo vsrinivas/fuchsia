@@ -13,7 +13,8 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
-RemoteFile::RemoteFile(zx::channel remote_client) : remote_client_(std::move(remote_client)) {
+RemoteFile::RemoteFile(fidl::ClientEnd<fio::Directory> remote_client)
+    : remote_client_(std::move(remote_client)) {
   ZX_DEBUG_ASSERT(remote_client_);
 }
 
@@ -31,7 +32,9 @@ zx_status_t RemoteFile::GetAttributes(VnodeAttributes* attr) {
 
 bool RemoteFile::IsRemote() const { return true; }
 
-zx_handle_t RemoteFile::GetRemote() const { return remote_client_.get(); }
+fidl::UnownedClientEnd<fio::Directory> RemoteFile::GetRemote() const {
+  return remote_client_.borrow();
+}
 
 zx_status_t RemoteFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
                                                [[maybe_unused]] Rights rights,

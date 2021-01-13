@@ -36,7 +36,7 @@ NodeConnection::NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, Vnode
                                VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::Node>(this)) {}
 
-void NodeConnection::Clone(uint32_t clone_flags, zx::channel object,
+void NodeConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
                            CloneCompleter::Sync& completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }

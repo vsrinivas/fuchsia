@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_MOUNT_CHANNEL_H_
+#define FS_MOUNT_CHANNEL_H_
 
-#include <zircon/types.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -21,16 +23,20 @@ namespace fs {
 class MountChannel {
  public:
   constexpr MountChannel() = default;
-  explicit MountChannel(zx_handle_t handle) : channel_(handle) {}
-  explicit MountChannel(zx::channel channel) : channel_(std::move(channel)) {}
-  MountChannel(MountChannel&& other) : channel_(std::move(other.channel_)) {}
+
+  explicit MountChannel(fidl::ClientEnd<llcpp::fuchsia::io::Directory> channel)
+      : client_end_(std::move(channel)) {}
+
+  MountChannel(MountChannel&& other) : client_end_(std::move(other.client_end_)) {}
 
   ~MountChannel();
 
-  zx::channel TakeChannel() { return std::move(channel_); }
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory>& client_end() { return client_end_; }
 
  private:
-  zx::channel channel_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> client_end_;
 };
 
 }  // namespace fs
+
+#endif  // FS_MOUNT_CHANNEL_H_

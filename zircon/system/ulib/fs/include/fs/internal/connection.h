@@ -110,11 +110,12 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     // |Protocol| should be an LLCPP generated class e.g. |llcpp::fuchsia::io::File|.
     // |protocol_impl| should be the |this| pointer when used from a subclass.
     template <typename Protocol>
-    static FidlProtocol Create(typename Protocol::Interface* protocol_impl) {
+    static FidlProtocol Create(typename Protocol::TypedChannelInterface* protocol_impl) {
       return FidlProtocol(static_cast<void*>(protocol_impl),
                           [](void* impl, fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
                             return Protocol::TryDispatch(
-                                static_cast<typename Protocol::Interface*>(impl), msg, txn);
+                                static_cast<typename Protocol::TypedChannelInterface*>(impl), msg,
+                                txn);
                           });
     }
 
@@ -210,7 +211,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // because return values must recursively own any child objects and handles to
   // avoid a dangling reference.
 
-  void NodeClone(uint32_t flags, zx::channel channel);
+  void NodeClone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> channel);
   Result<> NodeClose();
   Result<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);

@@ -68,7 +68,7 @@ TEST(VnodeTestCase, AddFilesystem) {
   ASSERT_OK(fshost_vn->AddFilesystem(std::move(client)));
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
-  EXPECT_EQ(node->GetRemote(), client_value);
+  EXPECT_EQ(node->GetRemote().channel(), client_value);
 }
 
 TEST(VnodeTestCase, AddFilesystemThroughFidl) {
@@ -101,7 +101,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
   zx_info_handle_basic_t vfs_remote_info;
-  zx_handle_t remote = node->GetRemote();
+  zx_handle_t remote = node->GetRemote().channel();
   ASSERT_OK(zx_object_get_info(remote, ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
                                sizeof(vfs_remote_info), nullptr, nullptr));
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);

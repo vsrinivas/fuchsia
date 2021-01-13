@@ -446,7 +446,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
   return ZX_OK;
 }
 
-zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<llcpp::fuchsia::io::Node> channel,
                        VnodeConnectionOptions options) {
   auto result = vnode->ValidateOptions(options);
   if (result.is_error()) {
@@ -455,7 +455,8 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
   return Serve(std::move(vnode), std::move(channel), result.value());
 }
 
-zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode,
+                       fidl::ServerEnd<llcpp::fuchsia::io::Node> server_end,
                        Vnode::ValidatedOptions options) {
   // |ValidateOptions| was called, hence at least one protocol must be supported.
   auto candidate_protocols = options->protocols() & vnode->GetProtocols();
@@ -473,22 +474,23 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     fit::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fio::Node::EventSender(std::move(channel)).OnOpen(result.error(), fio::NodeInfo());
+      fio::Node::EventSender(std::move(server_end)).OnOpen(result.error(), fio::NodeInfo());
       return result.error();
     }
     ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol,
       // after sending the event, in the case of |VnodeProtocol::kConnector|.
-      fio::Node::EventSender event_sender{std::move(channel)};
+      fio::Node::EventSender event_sender{std::move(server_end)};
       event_sender.OnOpen(ZX_OK, std::move(info));
-      channel = std::move(event_sender.channel());
+      server_end = std::move(event_sender.server_end());
     });
   }
 
   // If |node_reference| is specified, serve |fuchsia.io/Node| even for
-  // |VnodeProtocol::kConnector| nodes.
+  // |VnodeProtocol::kConnector| nodes. Otherwise, connect the raw channel
+  // to the custom service.
   if (!options->flags.node_reference && protocol == VnodeProtocol::kConnector) {
-    return vnode->ConnectService(std::move(channel));
+    return vnode->ConnectService(server_end.TakeChannel());
   }
 
   std::unique_ptr<internal::Connection> connection;
@@ -540,7 +542,7 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     return status;
   }
 
-  return RegisterConnection(std::move(connection), std::move(channel));
+  return RegisterConnection(std::move(connection), server_end.TakeChannel());
 }
 
 void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {

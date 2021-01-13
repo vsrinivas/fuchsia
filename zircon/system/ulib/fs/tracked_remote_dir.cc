@@ -10,9 +10,9 @@
 
 namespace fs {
 
-TrackedRemoteDir::TrackedRemoteDir(zx::channel remote)
+TrackedRemoteDir::TrackedRemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote)
     : RemoteDir(std::move(remote)),
-      tracker_(this, GetRemote(), ZX_CHANNEL_PEER_CLOSED),
+      tracker_(this, GetRemote().channel(), ZX_CHANNEL_PEER_CLOSED),
       container_(nullptr) {
   ZX_DEBUG_ASSERT(!IsTracked());
 }

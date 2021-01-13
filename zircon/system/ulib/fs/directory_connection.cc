@@ -34,8 +34,9 @@ namespace fs {
 namespace {
 
 // Performs a path walk and opens a connection to another node.
-void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl::StringPiece path,
-            VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
+void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Node> channel,
+            fbl::StringPiece path, VnodeConnectionOptions options, Rights parent_rights,
+            uint32_t mode) {
   bool describe = options.flags.describe;
   vfs->Open(parent, path, options, parent_rights, mode).visit([&](auto&& result) {
     using ResultT = std::decay_t<decltype(result)>;
@@ -67,7 +68,7 @@ DirectoryConnection::DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vn
     : Connection(vfs, std::move(vnode), protocol, options,
                  FidlProtocol::Create<fio::DirectoryAdmin>(this)) {}
 
-void DirectoryConnection::Clone(uint32_t clone_flags, zx::channel object,
+void DirectoryConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> object,
                                 CloneCompleter::Sync& completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }
@@ -135,9 +136,9 @@ void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sy
 }
 
 void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringView path,
-                               zx::channel channel, OpenCompleter::Sync& completer) {
+                               fidl::ServerEnd<fio::Node> channel, OpenCompleter::Sync& completer) {
   auto open_options = VnodeConnectionOptions::FromIoV1Flags(open_flags);
-  auto write_error = [describe = open_options.flags.describe](zx::channel channel,
+  auto write_error = [describe = open_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                               zx_status_t error) {
     if (describe) {
       fio::Node::EventSender(std::move(channel)).OnOpen(error, fio::NodeInfo());
@@ -296,11 +297,15 @@ void DirectoryConnection::Watch(uint32_t mask, uint32_t watch_options, zx::chann
   completer.Reply(status);
 }
 
-void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync& completer) {
+void DirectoryConnection::Mount(fidl::ClientEnd<fio::Directory> remote,
+                                MountCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
 
   if (!options().rights.admin) {
-    Vfs::UnmountHandle(std::move(remote), zx::time::infinite());
+    // Note: this is best-effort, and would fail if the remote endpoint
+    // does not speak the |fuchsia.io/DirectoryAdmin| protocol.
+    fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(remote.TakeChannel());
+    Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
@@ -309,12 +314,16 @@ void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync& comple
   completer.Reply(status);
 }
 
-void DirectoryConnection::MountAndCreate(zx::channel remote, fidl::StringView name, uint32_t flags,
+void DirectoryConnection::MountAndCreate(fidl::ClientEnd<fio::Directory> remote,
+                                         fidl::StringView name, uint32_t flags,
                                          MountAndCreateCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
 
   if (!options().rights.admin) {
-    Vfs::UnmountHandle(std::move(remote), zx::time::infinite());
+    // Note: this is best-effort, and would fail if the remote endpoint
+    // does not speak the |fuchsia.io/DirectoryAdmin| protocol.
+    fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(remote.TakeChannel());
+    Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
@@ -343,7 +352,7 @@ void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_ACCESS_DENIED, zx::channel());
     return;
   }
-  zx::channel c;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> c;
   zx_status_t status = vfs()->UninstallRemote(vnode(), &c);
   completer.Reply(status, std::move(c));
 }

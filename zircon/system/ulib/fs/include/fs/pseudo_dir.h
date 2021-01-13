@@ -5,6 +5,8 @@
 #ifndef FS_PSEUDO_DIR_H_
 #define FS_PSEUDO_DIR_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
+
 #include <memory>
 
 #include <fbl/intrusive_wavl_tree.h>

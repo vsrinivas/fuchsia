@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/remote_dir.h>
-
 #include <fuchsia/io/llcpp/fidl.h>
-#include <fs/vfs_types.h>
 
 #include <utility>
+
+#include <fs/remote_dir.h>
+#include <fs/vfs_types.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
-RemoteDir::RemoteDir(zx::channel remote_dir_client)
+RemoteDir::RemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote_dir_client)
     : remote_dir_client_(std::move(remote_dir_client)) {
   ZX_DEBUG_ASSERT(remote_dir_client_);
 }
@@ -32,7 +32,9 @@ zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
 
 bool RemoteDir::IsRemote() const { return true; }
 
-zx_handle_t RemoteDir::GetRemote() const { return remote_dir_client_.get(); }
+fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> RemoteDir::GetRemote() const {
+  return remote_dir_client_.borrow();
+}
 
 zx_status_t RemoteDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
                                               [[maybe_unused]] Rights rights,

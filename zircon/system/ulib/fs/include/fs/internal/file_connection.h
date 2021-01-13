@@ -20,7 +20,7 @@ namespace fs {
 
 namespace internal {
 
-class FileConnection : public Connection, public llcpp::fuchsia::io::File::Interface {
+class FileConnection : public Connection, public llcpp::fuchsia::io::File::TypedChannelInterface {
  public:
   // Refer to documentation for |Connection::Connection|.
   FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -33,7 +33,8 @@ class FileConnection : public Connection, public llcpp::fuchsia::io::File::Inter
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) final;
+  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+             CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;

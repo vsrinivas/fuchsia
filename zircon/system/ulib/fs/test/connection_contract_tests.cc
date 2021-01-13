@@ -71,10 +71,10 @@ class NoOpVfsBad : public NoOpVfs {
 template <typename Vfs>
 void RunTest(async::Loop* loop, Vfs&& vfs) {
   auto root = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::io::Node>();
+  ASSERT_OK(endpoints.status_value());
 
-  ASSERT_OK(vfs.Serve(root, std::move(server_end), fs::VnodeConnectionOptions::ReadOnly()));
+  ASSERT_OK(vfs.Serve(root, std::move(endpoints->server), fs::VnodeConnectionOptions::ReadOnly()));
   loop->RunUntilIdle();
 }
 

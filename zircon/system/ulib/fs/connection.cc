@@ -288,9 +288,9 @@ zx_status_t Connection::EnsureVnodeClosed() {
   return vnode_->Close();
 }
 
-void Connection::NodeClone(uint32_t clone_flags, zx::channel channel) {
+void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> channel) {
   auto clone_options = VnodeConnectionOptions::FromIoV1Flags(clone_flags);
-  auto write_error = [describe = clone_options.flags.describe](zx::channel channel,
+  auto write_error = [describe = clone_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                                zx_status_t error) {
     if (describe) {
       fio::Node::EventSender(std::move(channel)).OnOpen(error, fio::NodeInfo());

@@ -21,7 +21,7 @@ namespace fs {
 namespace internal {
 
 class DirectoryConnection final : public Connection,
-                                  public llcpp::fuchsia::io::DirectoryAdmin::Interface {
+                                  public llcpp::fuchsia::io::DirectoryAdmin::TypedChannelInterface {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
@@ -34,7 +34,8 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) final;
+  void Clone(uint32_t flags, fidl::ServerEnd<llcpp::fuchsia::io::Node> object,
+             CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
@@ -48,8 +49,8 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/Directory| operations.
   //
 
-  void Open(uint32_t flags, uint32_t mode, fidl::StringView path, zx::channel object,
-            OpenCompleter::Sync& completer) final;
+  void Open(uint32_t flags, uint32_t mode, fidl::StringView path,
+            fidl::ServerEnd<llcpp::fuchsia::io::Node> object, OpenCompleter::Sync& completer) final;
   void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) final;
   void ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) final;
   void Rewind(RewindCompleter::Sync& completer) final;
@@ -65,9 +66,10 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/DirectoryAdmin| operations.
   //
 
-  void Mount(zx::channel remote, MountCompleter::Sync& completer) final;
-  void MountAndCreate(zx::channel remote, fidl::StringView name, uint32_t flags,
-                      MountAndCreateCompleter::Sync& completer) final;
+  void Mount(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote,
+             MountCompleter::Sync& completer) final;
+  void MountAndCreate(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote, fidl::StringView name,
+                      uint32_t flags, MountAndCreateCompleter::Sync& completer) final;
   void Unmount(UnmountCompleter::Sync& completer) final;
   void UnmountNode(UnmountNodeCompleter::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;

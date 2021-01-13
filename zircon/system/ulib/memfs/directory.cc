@@ -77,9 +77,18 @@ zx_status_t VnodeDir::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 }
 
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
-zx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(); }
-zx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeDir::SetRemote(zx::channel remote) { return remoter_.SetRemote(std::move(remote)); }
+
+fidl::ClientEnd<llcpp::fuchsia::io::Directory> VnodeDir::DetachRemote() {
+  return remoter_.DetachRemote();
+}
+
+fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> VnodeDir::GetRemote() const {
+  return remoter_.GetRemote();
+}
+
+void VnodeDir::SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) {
+  return remoter_.SetRemote(std::move(remote));
+}
 
 zx_status_t VnodeDir::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out) {
   if (!IsDirectory()) {

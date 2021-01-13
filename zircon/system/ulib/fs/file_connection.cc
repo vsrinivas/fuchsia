@@ -36,7 +36,7 @@ FileConnection::FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, Vnode
                                VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::File>(this)) {}
 
-void FileConnection::Clone(uint32_t clone_flags, zx::channel object,
+void FileConnection::Clone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> object,
                            CloneCompleter::Sync& completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }

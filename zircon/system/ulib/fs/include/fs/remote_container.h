@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_REMOTE_CONTAINER_H_
+#define FS_REMOTE_CONTAINER_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
 #endif
 
-#include <fs/vfs.h>
 #include <lib/zx/channel.h>
+
+#include <fs/vfs.h>
 
 namespace fs {
 
@@ -18,12 +20,14 @@ class RemoteContainer {
  public:
   constexpr RemoteContainer() = default;
   bool IsRemote() const;
-  zx::channel DetachRemote();
-  zx_handle_t GetRemote() const;
-  void SetRemote(zx::channel remote);
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> DetachRemote();
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const;
+  void SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote);
 
  private:
-  zx::channel remote_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote_;
 };
 
 }  // namespace fs
+
+#endif  // FS_REMOTE_CONTAINER_H_

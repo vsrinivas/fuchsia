@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TRACKED_REMOTE_DIR_H_
+#define FS_TRACKED_REMOTE_DIR_H_
+
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fs/pseudo_dir.h>
 #include <fs/remote_dir.h>
-#include <lib/async/cpp/wait.h>
 
 #include "pseudo_dir.h"
 #include "vnode.h"
@@ -22,7 +25,7 @@ namespace fs {
 class TrackedRemoteDir : public RemoteDir {
  public:
   // Create a directory which is accessed remotely through |remote|.
-  explicit TrackedRemoteDir(zx::channel remote);
+  explicit TrackedRemoteDir(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> remote);
 
   // Adds |this| as an entry to |container| with the label |name|.
   //
@@ -46,3 +49,5 @@ class TrackedRemoteDir : public RemoteDir {
 };
 
 }  // namespace fs
+
+#endif  // FS_TRACKED_REMOTE_DIR_H_

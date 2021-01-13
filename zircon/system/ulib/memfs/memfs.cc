@@ -144,7 +144,7 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
   } else if (IsRemote()) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  SetRemote(h.TakeChannel());
+  SetRemote(std::move(h.client_end()));
   return ZX_OK;
 }
 

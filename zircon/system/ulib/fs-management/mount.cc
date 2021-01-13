@@ -378,7 +378,14 @@ zx_status_t fumount(int mount_fd) {
   if (resp.value().s != ZX_OK) {
     return resp.value().s;
   }
-  return fs::Vfs::UnmountHandle(std::move(resp.value().remote.channel()), zx::time::infinite());
+  // Note: we are unsafely converting from a client end of the
+  // |fuchsia.io/Directory| protocol into a client end of the
+  // |fuchsia.io/DirectoryAdmin| protocol.
+  // This method will only work if |mount_fd| is backed by a connection
+  // that actually speaks the |DirectoryAdmin| protocol.
+  fidl::ClientEnd<fio::DirectoryAdmin> directory_admin_client(
+      std::move(resp.value().remote.channel()));
+  return fs::Vfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
 }
 
 __EXPORT

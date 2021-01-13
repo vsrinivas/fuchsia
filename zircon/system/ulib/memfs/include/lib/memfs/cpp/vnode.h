@@ -5,6 +5,7 @@
 #ifndef LIB_MEMFS_CPP_VNODE_H_
 #define LIB_MEMFS_CPP_VNODE_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/stream.h>
@@ -133,9 +134,9 @@ class VnodeDir final : public VnodeMemfs {
   //
   // The vnode is acting as a mount point for a remote filesystem or device.
   bool IsRemote() const final;
-  zx::channel DetachRemote() final;
-  zx_handle_t GetRemote() const final;
-  void SetRemote(zx::channel remote) final;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> DetachRemote() final;
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> GetRemote() const final;
+  void SetRemote(fidl::ClientEnd<llcpp::fuchsia::io::Directory> remote) final;
 
  private:
   zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;

@@ -10,11 +10,12 @@
 namespace {
 
 TEST(RemoteDir, ApiTest) {
-  zx::channel server, client;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
+  auto dir_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_EQ(ZX_OK, dir_endpoints.status_value());
 
-  zx_handle_t client_handle = client.get();
-  auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(client)));
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> unowned_client =
+      dir_endpoints->client.channel().borrow();
+  auto dir = fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(dir_endpoints->client)));
 
   // get attributes
   fs::VnodeAttributes attr;
@@ -24,7 +25,7 @@ TEST(RemoteDir, ApiTest) {
 
   // get remote properties
   EXPECT_TRUE(dir->IsRemote());
-  EXPECT_EQ(client_handle, dir->GetRemote());
+  EXPECT_EQ(unowned_client, dir->GetRemote());
 
   // detaching the remote mount isn't allowed
   EXPECT_TRUE(!dir->DetachRemote());
