@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("gt92xx_bind") {
+  rules = "gt92xx.bind"
+  output = "gt92xx_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.google.platform",
+  ]
+}
 
 driver_module("goodix") {
   configs += [
@@ -14,6 +25,7 @@ driver_module("goodix") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gt92xx.cc" ]
   deps = [
+    ":gt92xx_bind",
     "//sdk/banjo/fuchsia.hardware.clock",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
@@ -25,9 +37,6 @@ driver_module("goodix") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -52,6 +61,7 @@ test("gt92xx-test") {
     "gt92xx.cc",
   ]
   deps = [
+    ":gt92xx_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
@@ -61,9 +71,6 @@ test("gt92xx-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/fbl",
@@ -90,5 +97,8 @@ unittest_package("gt92xx-test-package") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":gt92xx-test-package" ]
+  deps = [
+    ":gt92xx-test-package",
+    ":gt92xx_bind_test",
+  ]
 }

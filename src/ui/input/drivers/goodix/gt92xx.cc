@@ -15,7 +15,6 @@
 #include <iterator>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
@@ -23,6 +22,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
+
+#include "src/ui/input/drivers/goodix/gt92xx_bind.h"
 
 namespace goodix {
 // clang-format off
@@ -378,11 +379,4 @@ static constexpr zx_driver_ops_t gt92xx_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(gt92xx, gt92xx_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ASTRO_GOODIXTOUCH),
-ZIRCON_DRIVER_END(gt92xx)
-    // clang-format on
+ZIRCON_DRIVER(gt92xx, gt92xx_driver_ops, "zircon", "0.1");
