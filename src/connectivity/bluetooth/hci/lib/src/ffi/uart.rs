@@ -217,7 +217,9 @@ pub extern "C" fn serial_write_complete(arc_event_ptr: *const zx::Event, status:
     } else if status != zx::Status::OK {
         bt_log_warn!("Async write error {}", status);
     }
-    let _ = event.signal_handle(zx::Signals::NONE, status_to_signal(status));
+    if let Err(status) = event.signal_handle(zx::Signals::NONE, status_to_signal(status)) {
+        bt_log_warn!("Could not signal handle: {}", status);
+    };
 }
 
 #[cfg(test)]
@@ -247,10 +249,12 @@ mod tests {
     fn serial_write_complete_succeeds() {
         let event = Arc::new(zx::Event::create().unwrap());
         let event_ = event.clone();
-        std::thread::spawn(move || serial_write_complete(Arc::as_ptr(&event_), zx::sys::ZX_OK));
+        std::thread::spawn(move || serial_write_complete(Arc::into_raw(event_), zx::sys::ZX_OK));
         // wait_handle call will be terminated if signal is not set for 5s.
-        let res = event.wait_handle(IO_COMPLETE | IO_ERROR, zx::Time::after(5.seconds()));
-        assert_eq!(res.unwrap(), IO_COMPLETE);
+        let res = event
+            .wait_handle(IO_COMPLETE | IO_ERROR, zx::Time::after(5.seconds()))
+            .expect("waiting on a valid event handle");
+        assert_eq!(res, IO_COMPLETE);
     }
 
     #[test]
