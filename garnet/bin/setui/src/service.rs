@@ -20,6 +20,7 @@
 //! message hubs located in the internal mod. Communication from these hubs
 //! should migrate here over time.
 
+use crate::base::SettingType;
 use crate::message_hub_definition;
 
 message_hub_definition!(Payload, Address, Role);
@@ -30,7 +31,9 @@ message_hub_definition!(Payload, Address, Role);
 /// Most communication can be instead facilitated with a messenger's signature,
 /// which is available at messenger creation time.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum Address {}
+pub enum Address {
+    Handler(SettingType),
+}
 
 /// The types of data that can be sent through the service [`MessageHub`]. This
 /// enumeration is meant to provide a top level definition. Further definitions

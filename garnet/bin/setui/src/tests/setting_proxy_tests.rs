@@ -27,6 +27,7 @@ use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::service;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
@@ -223,7 +224,8 @@ impl TestEnvironmentBuilder {
     }
 
     pub async fn build(self) -> TestEnvironment {
-        let messenger_factory = create_hub();
+        let messenger_factory = service::message::create_hub();
+        let core_messenger_factory = create_hub();
         let handler_messenger_factory = handler::message::create_hub();
         let event_messenger_factory = event::message::create_hub();
 
@@ -234,6 +236,7 @@ impl TestEnvironmentBuilder {
             self.setting_type,
             handler_factory.clone(),
             messenger_factory.clone(),
+            core_messenger_factory.clone(),
             handler_messenger_factory,
             event_messenger_factory.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
@@ -242,7 +245,7 @@ impl TestEnvironmentBuilder {
         )
         .await
         .expect("proxy creation should succeed");
-        let (messenger_client, _) = messenger_factory
+        let (messenger_client, _) = core_messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
@@ -268,6 +271,7 @@ impl TestEnvironmentBuilder {
             setting_handler: handler,
             event_factory: event_messenger_factory,
             setting_type: self.setting_type,
+            messenger_factory,
         }
     }
 }
@@ -281,6 +285,7 @@ pub struct TestEnvironment {
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
     event_factory: event::message::Factory,
+    pub messenger_factory: service::message::Factory,
 }
 
 impl TestEnvironment {
@@ -299,6 +304,19 @@ impl TestEnvironment {
 
         self.setting_handler_rx = state_rx;
     }
+}
+
+/// Ensures setting proxy registers with the MessageHub.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_message_hub_presence() {
+    let setting_type = SettingType::Unknown;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    assert!(environment
+        .messenger_factory
+        .contains(service::message::Signature::Address(service::Address::Handler(setting_type)))
+        .await
+        .expect("should have result"));
 }
 
 #[fuchsia_async::run_until_stalled(test)]

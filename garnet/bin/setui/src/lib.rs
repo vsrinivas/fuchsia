@@ -531,7 +531,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// to support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
-    _messenger_factory: service::message::Factory,
+    messenger_factory: service::message::Factory,
     components: HashSet<SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
@@ -585,6 +585,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             SettingProxy::create(
                 *setting_type,
                 handler_factory.clone(),
+                messenger_factory.clone(),
                 core_messenger_factory.clone(),
                 setting_handler_messenger_factory.clone(),
                 event_messenger_factory.clone(),

@@ -21,6 +21,7 @@ use crate::internal::core;
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
+use crate::service;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 use fuchsia_zircon::Duration;
 
@@ -62,7 +63,7 @@ enum ListenEvent {
 pub struct SettingProxy {
     setting_type: SettingType,
 
-    messenger_client: core::message::Messenger,
+    core_messenger_client: core::message::Messenger,
 
     client_signature: Option<handler::message::Signature>,
     active_requests: VecDeque<ActiveRequest>,
@@ -99,28 +100,31 @@ impl SettingProxy {
     pub async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-        messenger_factory: core::message::Factory,
+        messenger_factory: service::message::Factory,
+        core_messenger_factory: core::message::Factory,
         controller_messenger_factory: handler::message::Factory,
         event_messenger_factory: event::message::Factory,
         max_attempts: u64,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
     ) -> Result<(core::message::Signature, handler::message::Signature), Error> {
-        let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
-        if let Err(error) = messenger_result {
-            return Err(Error::new(error));
-        }
-        let (core_client, mut core_receptor) = messenger_result.unwrap();
+        let (_, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
+            .await
+            .map_err(Error::new)?;
+
+        // TODO(fxbug.dev/67536): Remove receptors below as their logic is
+        // migrated to the MessageHub defined above.
+
+        let (core_client, mut core_receptor) =
+            core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
         let signature = core_receptor.get_signature();
 
-        let controller_messenger_result =
-            controller_messenger_factory.create(MessengerType::Unbound).await;
-        if let Err(error) = controller_messenger_result {
-            return Err(Error::new(error));
-        }
-        let (controller_messenger_client, mut controller_receptor) =
-            controller_messenger_result.unwrap();
+        let (controller_messenger_client, mut controller_receptor) = controller_messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .map_err(Error::new)?;
 
         let event_publisher = event::Publisher::create(
             &event_messenger_factory,
@@ -141,7 +145,7 @@ impl SettingProxy {
             client_signature: None,
             active_requests: VecDeque::new(),
             has_active_listener: false,
-            messenger_client: core_client,
+            core_messenger_client: core_client,
             controller_messenger_signature: handler_signature.clone(),
             controller_messenger_client,
             controller_messenger_factory,
@@ -155,11 +159,16 @@ impl SettingProxy {
         // Main task loop for receiving and processing incoming messages.
         fasync::Task::spawn(async move {
             loop {
+                let receptor_fuse = receptor.next().fuse();
                 let controller_fuse = controller_receptor.next().fuse();
                 let core_fuse = core_receptor.next().fuse();
-                futures::pin_mut!(controller_fuse, core_fuse);
+                futures::pin_mut!(controller_fuse, core_fuse, receptor_fuse);
 
                 futures::select! {
+                    event = receptor_fuse => {
+                        // TODO(fxbug.dev/67536): Add logic here as more
+                        // messages are moved to the main MessageHub.
+                    }
                     // Handle top level message from controllers.
                     controller_event = controller_fuse => {
                         if let Some(
@@ -282,7 +291,7 @@ impl SettingProxy {
             return;
         }
 
-        self.messenger_client
+        self.core_messenger_client
             .message(
                 core::Payload::Event(SettingEvent::Changed(setting_info)),
                 Audience::Address(core::Address::Switchboard),
