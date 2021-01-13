@@ -14,7 +14,8 @@ namespace {
 
 TEST(VersionTest, FeatureTestMacrosForCpp20) {
 #if __cplusplus >= 201803L
-  static_assert(__cpp_lib_string_view == 201803L);
+  // TODO(fxb/67616): This is not necessarily true with the state of C++20 implementations now.
+  // static_assert(__cpp_lib_string_view == 201803L);
 #else
   static_assert(__cpp_lib_string_view == 201606L);
 #endif
