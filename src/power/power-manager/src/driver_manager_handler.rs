@@ -770,12 +770,44 @@ mod tests {
     /// passed through the channel.
     #[fasync::run_singlethreaded(test)]
     async fn test_connect_proxy() {
-        let (dir_proxy, mut dir_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
+        use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
+
+        // Set up a fake directory structure that contains a fake driver at class/fake.
+        //
+        // This fake driver was chosen to implement fuchsia.device.manager.SystemStateTransition and
+        // responds to SetTerminationSystemState requests. This protocol was chosen simply because
+        // the code already has a dependency on it and it can be easily used to verify the FIDL
+        // channel is set up properly.
+        let fake_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "fake" => vfs::service::host(move |mut stream: fdevicemgr::SystemStateTransitionRequestStream| {
+                    async move {
+                        match stream.try_next().await.unwrap() {
+                            Some(fdevicemgr::SystemStateTransitionRequest::SetTerminationSystemState {
+                                state: _, responder
+                            }) => {
+                                let _ = responder.send(&mut Ok(()));
+                            }
+                            e => panic!("Unexpected request: {:?}", e),
+                        }
+                    }
+                })
+            }
+        };
+
+        // Connect a directory channel to the pseudo directory
+        let (devfs_proxy, devfs_server) = fidl::endpoints::create_proxy().unwrap();
+        fake_devfs.open(
+            vfs::execution_scope::ExecutionScope::new(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::empty(),
+            devfs_server,
+        );
 
         let registration = DriverManagerRegistration {
             termination_state_proxy: setup_fake_termination_state_service(|_| Ok(())),
-            dir: dir_proxy,
+            dir: fio::DirectoryProxy::from_channel(devfs_proxy.into_channel().unwrap()),
         };
 
         let _node = DriverManagerHandlerBuilder::new()
@@ -784,24 +816,23 @@ mod tests {
             .await
             .unwrap();
 
-        // Connect to the fake driver
-        let proxy = connect_proxy::<fio::DirectoryMarker>(&"/dev/class/fake".to_string())
-            .unwrap()
-            .into_channel()
+        // We need to run the connect_proxy and associated FIDL calls in a separate thread because
+        // the underlying fdio calls block the calling thread. Since the Directory and fake driver
+        // are set up on the initial thread, this would otherwise result in a deadlock.
+        fasync::Task::blocking(async {
+            // Connect to the fake driver
+            let proxy = connect_proxy::<fdevicemgr::SystemStateTransitionMarker>(
+                &"/dev/class/fake".to_string(),
+            )
             .unwrap();
 
-        // Verify the fake directory received the Open request, and capture the server end that is
-        // meant to be bound to the driver
-        let fake_driver = match dir_stream.try_next().await.unwrap() {
-            Some(fio::DirectoryRequest::Open { object, .. }) => object.into_channel(),
-            e => panic!("Unexpected request: {:?}", e),
-        };
-
-        // Write a message into the client end and verify the fake driver receives it
-        let mut buf = zx::MessageBuf::new();
-        assert!(proxy.write(b"Foo", &mut vec![]).is_ok());
-        assert!(fake_driver.read(&mut buf).is_ok());
-        assert_eq!(buf.bytes(), b"Foo");
+            // Verify we can make a FIDL call to the fake driver and get a successful response
+            assert!(proxy
+                .set_termination_system_state(fpowerstatecontrol::SystemPowerState::Reboot)
+                .await
+                .is_ok());
+        })
+        .await;
     }
 
     /// Tests that the DriverManagerHandler correctly processes the SetTerminationState message by
