@@ -618,13 +618,14 @@ class Node final {
     list->emplace(CreateLazyValues(name, std::move(callback)));
   }
 
-  // Create a new |LazyNode| whose children and properties are added to this node on demand.
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() { return state_ != nullptr; }
 
   // Create a unique name for children of this node.
   //
-  // The returned strings are guaranteed to be at least unique within the context of this Node.
+  // The returned strings are guaranteed to be at least unique within the context of this Node,
+  // except in the case that this is a default no-op node, in which case this always returns the
+  // empty string.
   std::string UniqueName(const std::string& prefix);
 
  private:

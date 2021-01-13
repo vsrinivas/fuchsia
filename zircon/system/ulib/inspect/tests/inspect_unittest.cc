@@ -245,4 +245,10 @@ TEST(Inspect, UniqueName) {
   EXPECT_EQ("root0x0", inspector2.GetRoot().UniqueName("root"));
 }
 
+TEST(Inspect, UniqueNameNoop) {
+  inspect::Node noop;
+  EXPECT_EQ("", noop.UniqueName("root"));
+  EXPECT_EQ("", noop.UniqueName("test"));
+}
+
 }  // namespace

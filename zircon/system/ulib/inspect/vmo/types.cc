@@ -443,7 +443,12 @@ ExponentialDoubleHistogram Node::CreateExponentialDoubleHistogram(const std::str
   return ExponentialDoubleHistogram();
 }
 
-std::string Node::UniqueName(const std::string& prefix) { return state_->UniqueName(prefix); }
+std::string Node::UniqueName(const std::string& prefix) {
+  if (state_) {
+    return state_->UniqueName(prefix);
+  }
+  return "";
+}
 
 LazyNode Node::CreateLazyNode(const std::string& name, LazyNodeCallbackFn callback) {
   if (state_) {
