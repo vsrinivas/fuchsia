@@ -9,6 +9,7 @@ use super::codegen_test;
 mod c {
     use super::*;
 
+    codegen_test!(alias, CBackend, ["banjo/alias.test.banjo"], "c/alias.h");
     codegen_test!(alignment, CBackend, ["banjo/alignment.test.banjo"], "c/alignment.h");
     codegen_test!(attributes, CBackend, ["banjo/attributes.test.banjo"], "c/attributes.h");
     codegen_test!(empty, CBackend, ["banjo/empty.test.banjo"], "c/empty.h");

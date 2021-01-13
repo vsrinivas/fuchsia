@@ -1,0 +1,70 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.alias",
+    namespaces: {
+        "banjo.examples.alias": [
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "banjo.examples.alias",
+                    ),
+                    name: "FirstPrimitive",
+                },
+                Ident {
+                    namespace: Some(
+                        "banjo.examples.alias",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.alias",
+                    ),
+                    name: "SomeStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "one",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "two",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "banjo.examples.alias",
+                    ),
+                    name: "SecondStruct",
+                },
+                Ident {
+                    namespace: Some(
+                        "banjo.examples.alias",
+                    ),
+                    name: "SomeStruct",
+                },
+            ),
+        ],
+    },
+}

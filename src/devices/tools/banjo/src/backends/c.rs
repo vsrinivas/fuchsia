@@ -81,6 +81,10 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     }
 }
 
+fn ident_to_c_str(ast: &ast::BanjoAst, ident: &Ident) -> Result<String, Error> {
+    ty_to_c_str(ast, &ast::Ty::Identifier { id: ident.clone(), reference: false })
+}
+
 pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
     if let ast::Ty::Array { ref ty, size, .. } = ty {
         return if let Some(bounds) = array_bounds(ast, ty) {
@@ -827,6 +831,24 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         })
     }
 
+    fn codegen_alias_decl(
+        &self,
+        to: &Ident,
+        from: &Ident,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        if to.is_base_type() {
+            // Not generating anything for base types that for now are sourced from the sysroot.
+            Ok("".to_string())
+        } else {
+            Ok(format!(
+                "typedef {from} {to}_t;",
+                to = to_c_name(to.name()),
+                from = ident_to_c_str(ast, from)?
+            ))
+        }
+    }
+
     fn codegen_includes(&self, ast: &BanjoAst) -> Result<String, Error> {
         Ok(ast
             .namespaces
@@ -874,7 +896,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Protocol { attributes, name, methods } => {
                     Some(self.codegen_protocol_decl(attributes, name, methods, &ast))
                 }
-                Decl::Alias(_to, _from) => None,
+                Decl::Alias(to, from) => Some(self.codegen_alias_decl(to, from, &ast)),
                 Decl::Resource { .. } => None,
             })
             .collect::<Result<Vec<_>, Error>>()?

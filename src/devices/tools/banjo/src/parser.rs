@@ -20,7 +20,7 @@ using = { "using" ~ compound_ident ~ ("as" ~ ident)? ~ ";" }
 
 declaration_list = _{ ( declaration ~ ";" )* }
 
-declaration = _{ resource_declaration | const_declaration | enum_declaration | union_declaration | struct_declaration | protocol_declaration }
+declaration = _{ resource_declaration | const_declaration | enum_declaration | union_declaration | struct_declaration | protocol_declaration | alias_declaration }
 
 resource_declaration = { attributes ~ "resource" ~ (handle_type | identifier_type) ~ (":" ~ constant ~ ("," ~ constant)*)? }
 
@@ -52,6 +52,8 @@ super_protocol_list = { compound_ident | compound_ident ~ "," ~ super_protocol_l
 
 protocol_declaration = { attributes ~ "protocol" ~ ident ~ ( ":" ~ super_protocol_list )?
                           ~ "{" ~ ( protocol_method ~ ";" )*  ~ "}" }
+
+alias_declaration = { attributes ~ "alias" ~ ident ~ "=" ~ ident }
 
 type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | identifier_type }
 

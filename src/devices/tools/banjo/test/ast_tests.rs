@@ -6,6 +6,7 @@
 
 use super::codegen_test;
 
+codegen_test!(alias, AstBackend, ["banjo/alias.test.banjo"], "ast/alias.test.ast");
 codegen_test!(alignment, AstBackend, ["banjo/alignment.test.banjo"], "ast/alignment.test.ast");
 codegen_test!(attributes, AstBackend, ["banjo/attributes.test.banjo"], "ast/attributes.test.ast");
 codegen_test!(empty, AstBackend, ["banjo/empty.test.banjo"], "ast/empty.test.ast");
@@ -43,7 +44,7 @@ codegen_test!(
 codegen_test!(
     protocol_base,
     AstBackend,
-    ["banjo/protocol-base.test.banjo"],
+    ["../zx.banjo", "banjo/protocol-base.test.banjo"],
     "ast/protocol-base.test.ast"
 );
 codegen_test!(

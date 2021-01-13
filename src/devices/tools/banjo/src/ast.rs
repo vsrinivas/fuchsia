@@ -844,6 +844,28 @@ impl BanjoAst {
                 }
                 Ok(Decl::Resource { attributes, ty, values })
             }
+            Rule::using_decl => {
+                let contents: Vec<&str> = pair.clone().into_inner().map(|p| p.as_str()).collect();
+                Ok(Decl::Alias(Ident::new(ns, contents[0]), Ident::new(ns, contents[1])))
+            }
+            Rule::alias_declaration => {
+                let mut to = String::default();
+                let mut from = String::default();
+                for inner_pair in pair.into_inner() {
+                    match inner_pair.as_rule() {
+                        Rule::ident => {
+                            if to.is_empty() {
+                                to = String::from(inner_pair.as_str());
+                            } else {
+                                from = String::from(inner_pair.as_str());
+                            }
+                        }
+                        Rule::attributes => {}
+                        e => return Err(ParseError::UnexpectedToken(e)),
+                    }
+                }
+                Ok(Decl::Alias(Ident::new(ns, to.as_str()), Ident::new(ns, from.as_str())))
+            }
             e => Err(ParseError::UnexpectedToken(e)),
         }
     }
@@ -1156,14 +1178,6 @@ impl BanjoAst {
                                 }
                             }
                         }
-                        Rule::using_decl => {
-                            let contents: Vec<&str> =
-                                inner_pair.clone().into_inner().map(|p| p.as_str()).collect();
-                            namespace.push(Decl::Alias(
-                                Ident::new_raw(contents[0]),
-                                Ident::new_raw(contents[1]),
-                            ));
-                        }
                         Rule::using => {
                             for (cnt, pair) in inner_pair.into_inner().enumerate() {
                                 if cnt == 0 {
@@ -1185,7 +1199,9 @@ impl BanjoAst {
                         | Rule::enum_declaration
                         | Rule::protocol_declaration
                         | Rule::const_declaration
-                        | Rule::resource_declaration => {
+                        | Rule::resource_declaration
+                        | Rule::using_decl
+                        | Rule::alias_declaration => {
                             let decl =
                                 Self::parse_decl(inner_pair, &current_namespace, &namespaces)?;
                             namespace.push(decl)

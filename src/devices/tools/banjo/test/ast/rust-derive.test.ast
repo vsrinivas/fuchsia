@@ -1,0 +1,623 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.rust.derive",
+    namespaces: {
+        "banjo.examples.rust.derive": [
+            Constant {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "SMALL_ARRAY_SIZE",
+                },
+                ty: USize,
+                value: Constant(
+                    "8",
+                ),
+            },
+            Constant {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "LARGE_ARRAY_SIZE",
+                },
+                ty: USize,
+                value: Constant(
+                    "2048",
+                ),
+            },
+            Union {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "SomeUnion",
+                },
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "8",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bytes1",
+                        },
+                    },
+                    UnionField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "16",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bytes2",
+                        },
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "UnionParentStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "SomeUnion",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_union",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "UnionGrandParentStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "UnionParentStruct",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "field",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Enum {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "SomeEnum",
+                },
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "v1",
+                        value: Constant(
+                            "1",
+                        ),
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "v2",
+                        value: Constant(
+                            "2",
+                        ),
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "EnumParentStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "SomeEnum",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_enum",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "EnumGrandParentStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "EnumParentStruct",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "field",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "SmallArrayStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "SMALL_ARRAY_SIZE",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "small_array",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "BigArrayStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "BIG_ARRAY_SIZE",
+                            ),
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "big_array",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Foo",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Bar",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Bar",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Foo",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Baz",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Baz",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Foo",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Bar",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Baz",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Foo2",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Bar2",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Bar2",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Foo2",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Baz2",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.rust.derive",
+                    ),
+                    name: "Baz2",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Foo2",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Bar2",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "Baz2",
+                            },
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.rust.derive",
+                                ),
+                                name: "SomeUnion",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_union",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
+}

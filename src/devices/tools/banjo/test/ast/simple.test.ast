@@ -288,131 +288,183 @@ BanjoAst {
         "zx": [
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "status",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "int32",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "time",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "int64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "duration",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "int64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "clock",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint32",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "koid",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "vaddr",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "paddr",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "paddr32",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint32",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "gpaddr",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "off",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint64",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "rights",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint32",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "signals",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint32",
                 },
             ),
             Alias(
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "vm_option",
                 },
                 Ident {
-                    namespace: None,
+                    namespace: Some(
+                        "zx",
+                    ),
                     name: "uint32",
                 },
             ),
