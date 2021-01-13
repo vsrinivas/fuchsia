@@ -4,7 +4,6 @@
 
 #include "message-group.h"
 
-#include <zircon/device/block.h>
 #include <zircon/status.h>
 
 #include <ddk/debug.h>

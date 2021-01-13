@@ -4,7 +4,7 @@
 
 #include "message.h"
 
-#include <zircon/device/block.h>
+#include <fuchsia/hardware/block/c/banjo.h>
 
 #include "server.h"
 

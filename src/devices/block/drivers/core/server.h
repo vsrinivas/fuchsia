@@ -13,7 +13,6 @@
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <atomic>

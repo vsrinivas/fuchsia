@@ -118,7 +118,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   ASSERT_OK(server_->AttachVmo(std::move(vmo), &vmoid));
 
   block_fifo_request_t request = {
-      .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM,
+      .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM,
       .reqid = 100,
       .group = 5,
       .vmoid = vmoid,
@@ -134,7 +134,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   ASSERT_EQ(actual_count, 1);
 
   request = {
-      .opcode = BLOCKIO_READ,
+      .opcode = BLOCK_OP_READ,
       .reqid = 101,
       .vmoid = vmoid,
   };
@@ -150,7 +150,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   EXPECT_EQ(response.reqid, 101);
 
   request = {
-      .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST,
+      .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
       .reqid = 102,
       .group = 5,
       .vmoid = vmoid,
@@ -172,7 +172,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
 
   block_fifo_request_t requests[] = {
       {
-          .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM,
+          .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM,
           .reqid = 103,
           .group = 5,
           .vmoid = vmoid,
@@ -181,7 +181,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
           .dev_offset = 0,
       },
       {
-          .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST,
+          .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
           .reqid = 104,
           .group = 5,
           .vmoid = vmoid,

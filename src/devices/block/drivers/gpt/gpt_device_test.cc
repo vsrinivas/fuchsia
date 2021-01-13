@@ -9,7 +9,6 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 

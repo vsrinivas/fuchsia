@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
-#include <zircon/device/block.h>
 
 #include <cstdint>
 #include <cstdlib>

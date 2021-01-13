@@ -16,7 +16,6 @@
 #include <lib/zx/vmo.h>
 #include <threads.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <memory>

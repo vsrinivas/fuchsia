@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -28,6 +27,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "message-group.h"
+#include "src/devices/lib/block/block.h"
 
 namespace {
 
@@ -44,13 +44,6 @@ void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
 }
 
 uint32_t OpcodeToCommand(uint32_t opcode) {
-  // TODO(fxbug.dev/31695): Unify block protocol and block device interface
-  static_assert(BLOCK_OP_READ == BLOCKIO_READ, "");
-  static_assert(BLOCK_OP_WRITE == BLOCKIO_WRITE, "");
-  static_assert(BLOCK_OP_FLUSH == BLOCKIO_FLUSH, "");
-  static_assert(BLOCK_OP_TRIM == BLOCKIO_TRIM, "");
-  static_assert(BLOCK_FL_BARRIER_BEFORE == BLOCKIO_BARRIER_BEFORE, "");
-  static_assert(BLOCK_FL_BARRIER_AFTER == BLOCKIO_BARRIER_AFTER, "");
   const uint32_t shared = BLOCK_OP_MASK | BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER;
   return opcode & shared;
 }
@@ -378,29 +371,29 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
 }
 
 void Server::ProcessRequest(block_fifo_request_t* request) {
-  if (request->opcode & (BLOCKIO_BARRIER_BEFORE | BLOCKIO_BARRIER_AFTER)) {
+  if (request->opcode & (BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER)) {
     zxlogf(WARNING, "Barriers not supported");
     FinishTransaction(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
     return;
   }
-  switch (request->opcode & BLOCKIO_OP_MASK) {
-    case BLOCKIO_READ:
-    case BLOCKIO_WRITE:
+  switch (request->opcode & BLOCK_OP_MASK) {
+    case BLOCK_OP_READ:
+    case BLOCK_OP_WRITE:
       if (zx_status_t status = ProcessReadWriteRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
-    case BLOCKIO_FLUSH:
+    case BLOCK_OP_FLUSH:
       if (zx_status_t status = ProcessFlushRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
-    case BLOCKIO_TRIM:
+    case BLOCK_OP_TRIM:
       if (zx_status_t status = ProcessTrimRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
-    case BLOCKIO_CLOSE_VMO:
+    case BLOCK_OP_CLOSE_VMO:
       FinishTransaction(ProcessCloseVmoRequest(request), request->reqid, request->group);
       break;
     default:
@@ -419,8 +412,8 @@ zx_status_t Server::Serve() {
     }
 
     for (size_t i = 0; i < count; i++) {
-      bool wants_reply = requests[i].opcode & BLOCKIO_GROUP_LAST;
-      bool use_group = requests[i].opcode & BLOCKIO_GROUP_ITEM;
+      bool wants_reply = requests[i].opcode & BLOCK_GROUP_LAST;
+      bool use_group = requests[i].opcode & BLOCK_GROUP_ITEM;
 
       reqid_t reqid = requests[i].reqid;
 

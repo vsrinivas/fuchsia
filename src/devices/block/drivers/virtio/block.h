@@ -12,7 +12,6 @@
 #include <lib/virtio/ring.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 
 #include <atomic>
 #include <memory>

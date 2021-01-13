@@ -12,7 +12,6 @@
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/status.h>

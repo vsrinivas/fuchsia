@@ -5,7 +5,6 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/block.h>
 
 #include <zxtest/zxtest.h>
 
@@ -52,7 +51,7 @@ TEST(ManagerTest, CloseVMO) {
 
   // Request close VMO.
   block_fifo_request_t req = {
-      .opcode = BLOCKIO_CLOSE_VMO,
+      .opcode = BLOCK_OP_CLOSE_VMO,
       .reqid = 0x100,
       .group = 0,
       .vmoid = vmoid,
@@ -113,7 +112,7 @@ TEST(ManagerTest, ReadSingleTest) {
 
   // Request close VMO.
   block_fifo_request_t req = {
-      .opcode = BLOCKIO_READ,
+      .opcode = BLOCK_OP_READ,
       .reqid = 0x100,
       .group = 0,
       .vmoid = vmoid,
@@ -162,7 +161,7 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
 
   block_fifo_request_t reqs[2] = {
       {
-          .opcode = BLOCKIO_READ,
+          .opcode = BLOCK_OP_READ,
           .reqid = 0x100,
           .group = 0,
           .vmoid = vmoid,
@@ -171,7 +170,7 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
           .dev_offset = 0,
       },
       {
-          .opcode = BLOCKIO_READ,
+          .opcode = BLOCK_OP_READ,
           .reqid = 0x101,
           .group = 0,
           .vmoid = vmoid,
@@ -230,7 +229,7 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
 
   block_fifo_request_t reqs[2] = {
       {
-          .opcode = BLOCKIO_READ | BLOCKIO_GROUP_ITEM,
+          .opcode = BLOCK_OP_READ | BLOCK_GROUP_ITEM,
           .reqid = 0x101,
           .group = 0,
           .vmoid = vmoid,
@@ -239,7 +238,7 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
           .dev_offset = 0,
       },
       {
-          .opcode = BLOCKIO_READ | BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST,
+          .opcode = BLOCK_OP_READ | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
           .reqid = 0x101,
           .group = 0,
           .vmoid = vmoid,

@@ -6,5 +6,4 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.block.volume") {
   sources = [ "volume.banjo" ]
-  deps = [ "//sdk/banjo/zircon.device.block" ]
 }

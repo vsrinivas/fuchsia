@@ -14,7 +14,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -192,7 +191,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
     block_op_t* bop =
         reinterpret_cast<block_op_t*>(buffer.data() + (block_op_size_ * num_data_txns));
     memset(bop, 0, sizeof(*bop));
-    bop->command = BLOCKIO_FLUSH;
+    bop->command = BLOCK_OP_FLUSH;
     Queue(bop, IoCallback, &cookie);
   }
 

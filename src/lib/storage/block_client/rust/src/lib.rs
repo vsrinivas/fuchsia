@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// !!! IMPORTANT !!!
+// Most of the definitions in this file need to be kept in sync with:
+// - //sdk/banjo/fuchsia.hardware.block/block.banjo;
+// - //zircon/public/system/public/zircon/device/block.h.
+
 use {
     anyhow::{ensure, Error},
     fidl_fuchsia_hardware_block as block,

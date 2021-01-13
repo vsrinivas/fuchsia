@@ -4,7 +4,6 @@
 
 library fuchsia.hardware.block.volume;
 
-using zircon.device.block;
 using zx;
 
 /// Information about the parent device of the current volume.

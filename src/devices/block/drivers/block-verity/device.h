@@ -6,7 +6,6 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_DEVICE_H_
 
 #include <fuchsia/hardware/block/cpp/banjo.h>
-#include <zircon/device/block.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_IOBUFFER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_IOBUFFER_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/block.h>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
@@ -36,4 +36,4 @@ class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,
   const vmoid_t vmoid_;
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_IOBUFFER_H_

@@ -17,7 +17,6 @@
 #include <sys/param.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>

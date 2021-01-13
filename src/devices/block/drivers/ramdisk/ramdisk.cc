@@ -10,7 +10,6 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <atomic>

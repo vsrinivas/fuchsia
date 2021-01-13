@@ -93,6 +93,7 @@ test("block-verifier-test") {
 
 source_set("config") {
   sources = [ "config.cc" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.block" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/lib/ddk",

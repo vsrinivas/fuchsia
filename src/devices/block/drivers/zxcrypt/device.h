@@ -13,7 +13,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 

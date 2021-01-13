@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_CONFIG_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_CONFIG_H_
 
+#include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
-#include <zircon/device/block.h>
 #include <zircon/errors.h>
 
 namespace block_verity {

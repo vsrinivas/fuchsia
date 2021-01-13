@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/block.h>
 #include <zircon/listnode.h>
 
 #include <memory>

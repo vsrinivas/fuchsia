@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/device/block.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

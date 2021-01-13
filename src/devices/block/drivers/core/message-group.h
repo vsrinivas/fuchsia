@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_GROUP_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_GROUP_H_
 
+#include <fuchsia/hardware/block/c/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <cstring>

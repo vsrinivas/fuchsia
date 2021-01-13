@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZXCRYPT_VOLUME_H_
-#define ZXCRYPT_VOLUME_H_
+#ifndef SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_
+#define SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_
+
+#include <lib/zx/time.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/types.h>
 
 #include <crypto/aead.h>
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <crypto/digest.h>
 #include <crypto/secret.h>
-#include <lib/zx/time.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <zircon/device/block.h>
-#include <zircon/types.h>
 
 // |zxcrypt::Volume| manages the interactions of both driver and library code with the metadata
 // used to format and operate zxcrypt devices.  The superblock is saved multiple times on disk to
@@ -35,7 +35,7 @@ class TestDevice;
 }
 
 const uint8_t zxcrypt_magic[16] = {
-  0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
+    0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
 };
 
 using key_slot_t = zx_off_t;
@@ -184,4 +184,4 @@ class __EXPORT Volume {
 
 }  // namespace zxcrypt
 
-#endif  // ZXCRYPT_VOLUME_H_
+#endif  // SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_

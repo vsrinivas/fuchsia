@@ -5,6 +5,11 @@
 #ifndef SYSROOT_ZIRCON_DEVICE_BLOCK_H_
 #define SYSROOT_ZIRCON_DEVICE_BLOCK_H_
 
+// !!! IMPORTANT !!!
+// Most of the definitions in this file need to be kept in sync with:
+// - //sdk/banjo/fuchsia.hardware.block/block.banjo;
+// - //src/lib/storage/block_client/rust/src/lib.rs.
+
 #include <assert.h>
 #include <limits.h>
 #include <zircon/types.h>
