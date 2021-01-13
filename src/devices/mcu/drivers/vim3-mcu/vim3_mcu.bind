@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using khadas.platform;
+using fuchsia.i2c;
+
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS;
+fuchsia.BIND_PLATFORM_DEV_PID == khadas.platform.BIND_PLATFORM_DEV_PID.VIM3;
+fuchsia.BIND_PLATFORM_DEV_DID == khadas.platform.BIND_PLATFORM_DEV_DID.VIM3_MCU;

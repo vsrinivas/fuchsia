@@ -1,0 +1,19 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "khadas.platform.BIND_PLATFORM_DEV_DID.VIM3_MCU",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Vendor"
+    }
+]

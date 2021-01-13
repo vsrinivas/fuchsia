@@ -12,7 +12,6 @@
 
 #include <iterator>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,6 +21,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/mcu/drivers/vim3-mcu/vim3_mcu_bind.h"
 
 namespace stm {
 zx_status_t StmMcu::Create(void* ctx, zx_device_t* parent) {
@@ -79,11 +80,5 @@ static constexpr zx_driver_ops_t stm_driver_ops = []() {
 }();
 
 }  // namespace stm
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vim3_mcu, stm::stm_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM3),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM3_MCU), 
-    ZIRCON_DRIVER_END(vim3_mcu)
-    // clang-format on
+
+ZIRCON_DRIVER(vim3_mcu, stm::stm_driver_ops, "zircon", "0.1");
