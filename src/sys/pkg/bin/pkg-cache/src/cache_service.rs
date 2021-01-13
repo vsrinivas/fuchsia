@@ -210,6 +210,9 @@ enum ServeNeededBlobsError {
 
     #[error("the blob {0} is not needed")]
     BlobNotNeeded(Hash),
+
+    #[error("the operation was aborted by the caller")]
+    Aborted,
 }
 
 #[derive(Debug)]
@@ -289,6 +292,9 @@ async fn handle_open_meta_blob(
         let (file, responder) =
             match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
                 Some(NeededBlobsRequest::OpenMetaBlob { file, responder }) => Ok((file, responder)),
+                Some(NeededBlobsRequest::Abort { responder: _ }) => {
+                    Err(ServeNeededBlobsError::Aborted)
+                }
                 Some(other) => Err(ServeNeededBlobsError::UnexpectedRequest {
                     received: other.method_name(),
                     expected: "open_meta_blob",
@@ -326,6 +332,7 @@ async fn handle_get_missing_blobs(
 ) -> Result<(Task<()>, HashSet<Hash>), ServeNeededBlobsError> {
     let iterator = match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
         Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }) => Ok(iterator),
+        Some(NeededBlobsRequest::Abort { responder: _ }) => Err(ServeNeededBlobsError::Aborted),
         Some(other) => Err(ServeNeededBlobsError::UnexpectedRequest {
             received: other.method_name(),
             expected: "get_missing_blobs",
@@ -413,6 +420,10 @@ async fn handle_open_blobs(
                     open_write_blob(file_stream, responder, pkgfs_install, blob_id, BlobKind::Data);
                 running.push(async move { (blob_id, task.await) });
                 continue;
+            }
+            Event::Request(Some(NeededBlobsRequest::Abort { responder })) => {
+                drop(responder);
+                return Err(ServeNeededBlobsError::Aborted);
             }
             Event::Request(Some(other)) => {
                 return Err(ServeNeededBlobsError::UnexpectedRequest {
@@ -1890,6 +1901,66 @@ mod serve_needed_blobs_tests {
 
         // That was the only data blob, so the operation is now done.
         assert_matches!(task.await, Ok(()));
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn abort_aborts_while_waiting_for_open_meta_blob() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        let abort_fut = proxy.abort();
+
+        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(
+            abort_fut.await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn abort_aborts_while_waiting_for_get_missing_blobs() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        let abort_fut = proxy.abort();
+
+        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(
+            abort_fut.await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn abort_aborts_while_waiting_for_open_blobs() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        enumerate_missing_blobs(
+            &proxy,
+            &mut pkgfs_needs,
+            meta_blob_info.blob_id,
+            vec![[2; 32].into()].into_iter(),
+        )
+        .await;
+
+        let abort_fut = proxy.abort();
+
+        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(
+            abort_fut.await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
     }
