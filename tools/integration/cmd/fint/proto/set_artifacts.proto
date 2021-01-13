@@ -14,4 +14,7 @@ message SetArtifacts {
     // A brief error log populated in case of a recognized failure mode (e.g.
     // `gn gen` failure due to a broken build graph).
     string failure_summary = 1;
+
+    // The path to the `gn gen` tracelog.
+    string gn_trace_path = 2;
 }
