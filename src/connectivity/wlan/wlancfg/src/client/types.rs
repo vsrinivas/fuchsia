@@ -124,6 +124,7 @@ pub struct ConnectionCandidate {
     /// performed in the Policy layer right now. TODO(53899) Remove the optionality once all scans
     /// are done at the Policy layer.
     pub observed_in_passive_scan: Option<bool>,
+    pub multiple_bss_candidates: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

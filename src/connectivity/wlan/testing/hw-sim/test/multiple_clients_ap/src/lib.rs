@@ -106,6 +106,7 @@ async fn multiple_clients_ap() {
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
+        multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };
     let client1_connect_fut = connect(&client1_sme, &mut client1_connect_req);
     pin_mut!(client1_connect_fut);
@@ -140,6 +141,7 @@ async fn multiple_clients_ap() {
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
+        multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };
     let client2_connect_fut = connect(&client2_sme, &mut client2_connect_req);
     pin_mut!(client2_connect_fut);

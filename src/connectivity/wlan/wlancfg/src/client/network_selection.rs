@@ -60,6 +60,7 @@ struct InternalBss<'a> {
     network_id: types::NetworkIdentifier,
     network_info: InternalSavedNetworkData,
     bss_info: &'a types::Bss,
+    multiple_bss_candidates: bool,
 }
 
 impl InternalBss<'_> {
@@ -224,9 +225,11 @@ async fn merge_saved_networks_and_scan_data<'a>(
     let mut merged_networks = vec![];
     for scan_result in scan_results {
         if let Some(saved_network_info) = saved_networks.get(&scan_result.id) {
+            let multiple_bss_candidates = scan_result.entries.len() > 1;
             for bss in &scan_result.entries {
                 merged_networks.push(InternalBss {
                     bss_info: bss,
+                    multiple_bss_candidates,
                     network_id: scan_result.id.clone(),
                     network_info: saved_network_info.clone(),
                 });
@@ -357,6 +360,7 @@ fn select_best_connection_candidate<'a>(
                     credential: bss.network_info.credential,
                     observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
                     bss: bss.bss_info.bss_desc.clone(),
+                    multiple_bss_candidates: Some(bss.multiple_bss_candidates),
                 },
                 bss.bss_info.channel,
                 bss.bss_info.bssid,
@@ -826,6 +830,7 @@ mod tests {
                     recent_failure_count: 0,
                 },
                 bss_info: &mock_scan_results[0].entries[0],
+                multiple_bss_candidates: true,
             },
             InternalBss {
                 network_id: test_id_1.clone(),
@@ -835,6 +840,7 @@ mod tests {
                     recent_failure_count: 0,
                 },
                 bss_info: &mock_scan_results[0].entries[1],
+                multiple_bss_candidates: true,
             },
             InternalBss {
                 network_id: test_id_1.clone(),
@@ -844,6 +850,7 @@ mod tests {
                     recent_failure_count: 0,
                 },
                 bss_info: &mock_scan_results[0].entries[2],
+                multiple_bss_candidates: true,
             },
             InternalBss {
                 network_id: test_id_2.clone(),
@@ -853,6 +860,7 @@ mod tests {
                     recent_failure_count: 0,
                 },
                 bss_info: &mock_scan_results[1].entries[0],
+                multiple_bss_candidates: false,
             },
         ];
 
@@ -893,6 +901,7 @@ mod tests {
                 recent_failure_count: rng.gen_range(0, 20),
             },
             bss_info: &bss,
+            multiple_bss_candidates: false,
         };
 
         assert_eq!(internal_bss.score(), expected_score)
@@ -928,6 +937,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info1,
+            multiple_bss_candidates: true,
         });
 
         let bss_info2 = types::Bss {
@@ -944,6 +954,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info2,
+            multiple_bss_candidates: true,
         });
 
         let bss_info3 = types::Bss {
@@ -960,6 +971,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info3,
+            multiple_bss_candidates: false,
         });
 
         // there's a network on 5G, it should get a boost and be selected
@@ -971,6 +983,7 @@ mod tests {
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(true),
                 },
                 bss_info1.channel,
                 bss_info1.bssid
@@ -993,6 +1006,7 @@ mod tests {
                     credential: credential_2.clone(),
                     bss: networks[2].bss_info.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 networks[2].bss_info.channel,
                 networks[2].bss_info.bssid
@@ -1025,6 +1039,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info1,
+            multiple_bss_candidates: false,
         });
 
         let bss_info2 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
@@ -1036,6 +1051,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info2,
+            multiple_bss_candidates: false,
         });
 
         // stronger network returned
@@ -1046,7 +1062,8 @@ mod tests {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
-                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info1.channel,
                 bss_info1.bssid
@@ -1066,7 +1083,8 @@ mod tests {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
                     bss: bss_info2.bss_desc.clone(),
-                    observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan)
+                    observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info2.channel,
                 bss_info2.bssid
@@ -1086,7 +1104,8 @@ mod tests {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
-                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info1.channel,
                 bss_info1.bssid
@@ -1124,6 +1143,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info1,
+            multiple_bss_candidates: true,
         });
 
         let bss_info2 = types::Bss {
@@ -1140,6 +1160,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info2,
+            multiple_bss_candidates: true,
         });
 
         let bss_info3 = types::Bss {
@@ -1156,6 +1177,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info3,
+            multiple_bss_candidates: false,
         });
 
         // stronger network returned
@@ -1167,6 +1189,7 @@ mod tests {
                     credential: credential_2.clone(),
                     bss: bss_info3.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info3.channel,
                 bss_info3.bssid
@@ -1189,6 +1212,7 @@ mod tests {
                     credential: credential_1.clone(),
                     bss: networks[0].bss_info.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(true),
                 },
                 networks[0].bss_info.channel,
                 networks[0].bss_info.bssid
@@ -1221,6 +1245,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info1,
+            multiple_bss_candidates: false,
         });
 
         let bss_info2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
@@ -1232,6 +1257,7 @@ mod tests {
                 recent_failure_count: 0,
             },
             bss_info: &bss_info2,
+            multiple_bss_candidates: false,
         });
 
         // stronger network returned
@@ -1243,6 +1269,7 @@ mod tests {
                     credential: credential_2.clone(),
                     bss: bss_info2.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info2.channel,
                 bss_info2.bssid
@@ -1258,6 +1285,7 @@ mod tests {
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
                     observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                    multiple_bss_candidates: Some(false),
                 },
                 bss_info1.channel,
                 bss_info1.bssid
@@ -1370,6 +1398,7 @@ mod tests {
             credential: credential_1.clone(),
             bss: bss_info1.bss_desc.clone(),
             observed_in_passive_scan: Some(false), // was actively scanned
+            multiple_bss_candidates: Some(false),
         };
 
         let fut = augment_bss_with_active_scan(
@@ -1407,6 +1436,7 @@ mod tests {
             credential: credential_1.clone(),
             bss: bss_info1.bss_desc.clone(),
             observed_in_passive_scan: Some(true), // was passively scanned
+            multiple_bss_candidates: Some(true),
         };
 
         let fut = augment_bss_with_active_scan(
@@ -1471,6 +1501,9 @@ mod tests {
                 // observed_in_passive_scan should still be true, since the network was found in a
                 // passive scan prior to the directed active scan augmentation.
                 observed_in_passive_scan: Some(true),
+                // multiple_bss_candidates should still be true, even if only one bss was found in
+                // the active scan, because we had found multiple BSSs prior to the active scan.
+                multiple_bss_candidates: Some(true),
                 ..connect_req
             }
         );
@@ -1639,7 +1672,8 @@ mod tests {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
                 bss: bss_desc1_active.clone(),
-                observed_in_passive_scan: Some(true)
+                observed_in_passive_scan: Some(true),
+                multiple_bss_candidates: Some(false)
             })
         );
 
@@ -1683,7 +1717,8 @@ mod tests {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
                 bss: bss_desc2_active.clone(),
-                observed_in_passive_scan: Some(true)
+                observed_in_passive_scan: Some(true),
+                multiple_bss_candidates: Some(false)
             })
         );
     }
@@ -1762,6 +1797,7 @@ mod tests {
                 observed_in_passive_scan: Some(
                     mixed_scan_results[0].entries[0].observed_in_passive_scan
                 ),
+                multiple_bss_candidates: Some(false),
             })
         );
         assert_eq!(
@@ -1858,6 +1894,7 @@ mod tests {
                 // This code path can't know if the network would have been observed in a passive
                 // scan, since it never performs a passive scan.
                 observed_in_passive_scan: None,
+                multiple_bss_candidates: Some(false),
             })
         );
     }

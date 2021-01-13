@@ -66,6 +66,7 @@ pub async fn connect(
             primary_chan: 0,
         },
         deprecated_scan_type: fidl_common::ScanType::Passive,
+        multiple_bss_candidates: false, // only used for metrics, select an arbitrary value
     };
 
     let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;

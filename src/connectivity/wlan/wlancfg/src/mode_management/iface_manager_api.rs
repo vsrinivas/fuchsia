@@ -425,6 +425,7 @@ mod tests {
                 credential: Credential::None,
                 bss: None,
                 observed_in_passive_scan: None,
+                multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
@@ -468,6 +469,7 @@ mod tests {
                 credential: Credential::None,
                 bss: None,
                 observed_in_passive_scan: None,
+                multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };

@@ -265,6 +265,7 @@ async fn handle_client_request_connect(
             credential: network_config.credential.clone(),
             bss: None,
             observed_in_passive_scan: None,
+            multiple_bss_candidates: None,
         },
         reason: client_types::ConnectReason::FidlConnectRequest,
     };
@@ -340,6 +341,7 @@ async fn handle_client_request_save_network(
             credential: credential,
             bss: None,
             observed_in_passive_scan: None,
+            multiple_bss_candidates: None,
         },
         reason: client_types::ConnectReason::NewSavedNetworkAutoconnect,
     };
@@ -557,6 +559,7 @@ mod tests {
                     primary_chan: 0,
                 },
                 deprecated_scan_type: fidl_common::ScanType::Passive,
+                multiple_bss_candidates: false,
             };
             self.sme_proxy.connect(&mut req, None)?;
 
@@ -736,7 +739,7 @@ mod tests {
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
         );
         process_stash_flush(&mut exec, &mut stash_server);
     }
@@ -748,7 +751,7 @@ mod tests {
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix{..})))
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix { .. })))
         );
         process_stash_flush(&mut exec, &mut stash_server);
     }
@@ -1841,7 +1844,10 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Err(fidl::Error::ClientChannelClosed {status: zx::Status::ALREADY_BOUND, .. }))
+            Poll::Ready(Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::ALREADY_BOUND,
+                ..
+            }))
         );
 
         // Drop first controller. A new controller can now take control.

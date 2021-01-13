@@ -286,9 +286,10 @@ struct ConnectingOptions {
     attempt_counter: u8,
 }
 
+type MultipleBssCandidates = bool;
 enum SmeOperation {
     ConnectResult(Result<fidl_sme::ConnectResultCode, anyhow::Error>),
-    ScanResult(Option<Box<fidl_internal::BssDescription>>),
+    ScanResult(Option<(Box<fidl_internal::BssDescription>, MultipleBssCandidates)>),
 }
 
 fn handle_connecting_error_and_retry(
@@ -380,7 +381,17 @@ async fn connecting_state(
     let network_selector = common_options.network_selector.clone();
     let scan_future = match options.connect_request.target.bss {
         Some(ref bss_desc) => {
-            future::ready(SmeOperation::ScanResult(Some(bss_desc.clone()))).boxed()
+            let multiple_bss_candidates =
+                options.connect_request.target.multiple_bss_candidates.unwrap_or_else(|| {
+                    // Where target.bss.is_some(), multiple_bss_candidates will always be Some as well.
+                    error!("multiple_bss_candidates is expected to always be set");
+                    true
+                });
+            future::ready(SmeOperation::ScanResult(Some((
+                bss_desc.clone(),
+                multiple_bss_candidates,
+            ))))
+            .boxed()
         }
         None => {
             info!("Connection requested, scanning to find a BSS for the network");
@@ -392,7 +403,15 @@ async fn connecting_state(
                 .map(|find_result| {
                     SmeOperation::ScanResult(
                         find_result
-                            .map(|types::ConnectionCandidate { bss, .. }| bss)
+                            .map(
+                                |types::ConnectionCandidate {
+                                     bss,
+                                     multiple_bss_candidates,
+                                     ..
+                                 }| {
+                                    bss.map(|bss| (bss, multiple_bss_candidates.unwrap_or(true)))
+                                },
+                            )
                             .unwrap_or(None),
                     )
                 })
@@ -406,17 +425,21 @@ async fn connecting_state(
         select! {
             // Monitor the SME operations
             completed_future = internal_futures.select_next_some() => match completed_future {
-                SmeOperation::ScanResult(bss_desc) => {
-                    if bss_desc.is_none() {
-                        info!("Failed to find a BSS to connect to.");
-                        return handle_connecting_error_and_retry(common_options, options);
-                    }
+                SmeOperation::ScanResult(bss_info) => {
+                    let bss_info = match bss_info {
+                        Some(bss_info) => bss_info,
+                        None => {
+                            info!("Failed to find a BSS to connect to.");
+                            return handle_connecting_error_and_retry(common_options, options);
+                        }
+                    };
                     // Send a connect request to the SME
                     let (connect_txn, remote) = create_proxy()
                         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
                     let mut sme_connect_request = fidl_sme::ConnectRequest {
                         ssid: options.connect_request.target.network.ssid.clone(),
-                        bss_desc: bss_desc,
+                        bss_desc: Some(bss_info.0),
+                        multiple_bss_candidates: bss_info.1,
                         credential: sme_credential_from_policy(&options.connect_request.target.credential),
                         radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
                         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
@@ -790,6 +813,7 @@ mod tests {
                 credential: Credential::Password("five0".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -843,7 +867,8 @@ mod tests {
                 assert_eq!(req.bss_desc, bss_desc);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-                 // Send connection response.
+                assert_eq!(req.multiple_bss_candidates, true);
+                // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
                 ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
@@ -952,6 +977,7 @@ mod tests {
                 credential: Credential::Password("12345".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
                 bss: None,
+                multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1027,6 +1053,7 @@ mod tests {
                 assert_eq!(req.bss_desc, bss_desc);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, false);
                 // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1116,6 +1143,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1188,6 +1216,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1276,6 +1305,7 @@ mod tests {
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
                 bss: None,
+                multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1406,6 +1436,7 @@ mod tests {
                 assert_eq!(req.bss_desc, bss_desc);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1492,6 +1523,7 @@ mod tests {
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1522,6 +1554,7 @@ mod tests {
                 assert_eq!(req.bss_desc, bss_desc.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1628,6 +1661,7 @@ mod tests {
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -1658,6 +1692,7 @@ mod tests {
                 assert_eq!(req.bss_desc, bss_desc.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1719,6 +1754,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1788,6 +1824,7 @@ mod tests {
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1852,6 +1889,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1904,6 +1942,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc2.clone(),
+                multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1956,6 +1995,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.bss_desc, bss_desc2.clone());
+                assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2048,6 +2088,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2165,6 +2206,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: None,
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2204,6 +2246,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2304,6 +2347,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2375,6 +2419,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
@@ -2424,6 +2469,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: second_bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -2569,6 +2615,7 @@ mod tests {
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2684,6 +2731,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, network_ssid.as_bytes().to_vec());
                 assert_eq!(req.bss_desc, new_bss_desc.clone());
+                assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2783,6 +2831,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -2854,6 +2903,7 @@ mod tests {
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2921,6 +2971,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: None,
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
@@ -2987,6 +3038,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: None,
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -3044,6 +3096,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -3169,6 +3222,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss: None,
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };

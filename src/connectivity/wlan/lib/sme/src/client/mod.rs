@@ -1735,6 +1735,7 @@ mod tests {
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,
+            multiple_bss_candidates: true,
         }
     }
 
@@ -1749,6 +1750,7 @@ mod tests {
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,
+            multiple_bss_candidates: true,
         }
     }
 

@@ -1009,6 +1009,7 @@ mod tests {
                 credential,
                 observed_in_passive_scan: Some(true),
                 bss: generate_random_bss_desc(),
+                multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         }
