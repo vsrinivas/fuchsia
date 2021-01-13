@@ -13,3 +13,8 @@ TEST(EdidTest, CaeValidationDtdOverflow) {
 
   ASSERT_FALSE(cea.validate());
 }
+
+TEST(EdidTest, EisaVidLookup) {
+  EXPECT_TRUE(!strcmp(edid::GetEisaVendorName(0x1e6d), "GOLDSTAR COMPANY LTD"));
+  EXPECT_TRUE(!strcmp(edid::GetEisaVendorName(0x5a63), "VIEWSONIC CORPORATION"));
+}

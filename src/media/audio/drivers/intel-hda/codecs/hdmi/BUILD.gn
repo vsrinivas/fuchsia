@@ -38,6 +38,7 @@ driver_module("hdmi-audio-codec") {
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/dispatcher-pool",
+    "//zircon/system/ulib/edid",
     "//zircon/system/ulib/intel-hda",
   ]
 }

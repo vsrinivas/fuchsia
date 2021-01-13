@@ -293,6 +293,10 @@ static constexpr uint8_t kDdcSegmentI2cAddress = 0x30;
 // The I2C address for writing the DDC data offset/reading DDC data
 static constexpr uint8_t kDdcDataI2cAddress = 0x50;
 
+// Returns an EISA vendor name based on its 2 bytes manufacturer name code.
+// Returned string is a statically allocated constant. Returns NULL if no match is found.
+const char* GetEisaVendorName(uint16_t manufacturer_name_code);
+
 class timing_iterator;
 class audio_data_block_iterator;
 

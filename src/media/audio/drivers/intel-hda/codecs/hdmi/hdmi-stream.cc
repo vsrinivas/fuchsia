@@ -4,6 +4,7 @@
 
 #include "hdmi-stream.h"
 
+#include <lib/edid/edid.h>
 #include <lib/zx/clock.h>
 
 #include <algorithm>
@@ -761,8 +762,7 @@ zx_status_t HdmiStream::ProcessEld(const Command& cmd, const CodecResponse& resp
     memcpy(props_.product_name, part2, part1->mnl());
     props_.product_name[part1->mnl()] = '\0';
 
-    // TODO(andresoportus): Export manufacturer name lookup in the EDID library to print it here.
-    props_.mfr_name = "-";
+    props_.mfr_name = edid::GetEisaVendorName(part1->manufacturer_name);
 
     // Check ELD for supported rates and formats common to the HDA controller and the HDMI HW.
     merged_sample_caps_ = {};

@@ -42,6 +42,15 @@ uint32_t round_div(double num, double div) { return (uint32_t)((num / div) + .5)
 
 namespace edid {
 
+const char* GetEisaVendorName(uint16_t manufacturer_name_code) {
+  uint8_t c1 = static_cast<uint8_t>((((manufacturer_name_code >> 8) & 0x7c) >> 2) + 'A' - 1);
+  uint8_t c2 = static_cast<uint8_t>(
+      ((((manufacturer_name_code >> 8) & 0x03) << 3) | (manufacturer_name_code & 0xe0) >> 5) + 'A' -
+      1);
+  uint8_t c3 = static_cast<uint8_t>(((manufacturer_name_code & 0x1f)) + 'A' - 1);
+  return lookup_eisa_vid(EISA_ID(c1, c2, c3));
+}
+
 bool BaseEdid::validate() const {
   static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
   return base_validate<BaseEdid>(this) && memcmp(header, kEdidHeader, sizeof(kEdidHeader)) == 0;
