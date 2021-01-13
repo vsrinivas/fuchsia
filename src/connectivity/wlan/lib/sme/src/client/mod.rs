@@ -315,82 +315,91 @@ impl ClientSme {
 
         let ssid = req.ssid;
 
-        if let Some(bss_desc) = req.bss_desc {
-            let bss_desc = match BssDescription::from_fidl(*bss_desc) {
-                Ok(bss_desc) => bss_desc,
-                Err(e) => {
-                    error!("Failed converting FIDL BssDescription: {:?}", e);
-                    responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                    return receiver;
-                }
-            };
+        match req.bss_desc {
+            Some(bss_desc) => {
+                let bss_desc = match BssDescription::from_fidl(*bss_desc) {
+                    Ok(bss_desc) => bss_desc,
+                    Err(e) => {
+                        error!("Failed converting FIDL BssDescription in ConnectRequest: {:?}", e);
+                        responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                        return receiver;
+                    }
+                };
 
-            // We can connect directly now.
-            let viable_bss = match get_protection(
-                &self.context.device_info,
-                &self.cfg,
-                &req.credential,
-                &bss_desc,
-                &self.context.inspect.hasher,
-            ) {
-                Err(e) => {
-                    warn!("{:?}", e);
-                    responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                    return receiver;
-                }
-                Ok(protection) => ViableBss { bss: &bss_desc, protection },
-            };
-            let protection = viable_bss.protection;
-            let cmd = ConnectCommand {
-                bss: Box::new(bss_desc.clone()),
-                responder: Some(responder),
-                protection,
-                radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
-            };
+                info!(
+                    "Received ConnectRequest for {}",
+                    bss_desc.to_string(&self.context.inspect.hasher)
+                );
 
-            self.context.info.report_connect_started(ssid);
-            self.context.info.report_candidate_network(info::CandidateNetwork {
-                bss: bss_desc,
-                multiple_bss_candidates: req.multiple_bss_candidates,
-            });
-            self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
-            return receiver;
+                // We can connect directly now.
+                let viable_bss = match get_protection(
+                    &self.context.device_info,
+                    &self.cfg,
+                    &req.credential,
+                    &bss_desc,
+                    &self.context.inspect.hasher,
+                ) {
+                    Err(e) => {
+                        warn!("{:?}", e);
+                        responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                        return receiver;
+                    }
+                    Ok(protection) => ViableBss { bss: &bss_desc, protection },
+                };
+                let protection = viable_bss.protection;
+                let cmd = ConnectCommand {
+                    bss: Box::new(bss_desc.clone()),
+                    responder: Some(responder),
+                    protection,
+                    radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
+                };
+
+                self.context.info.report_connect_started(ssid);
+                self.context.info.report_candidate_network(info::CandidateNetwork {
+                    bss: bss_desc,
+                    multiple_bss_candidates: req.multiple_bss_candidates,
+                });
+                self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
+            }
+            None => {
+                info!("Received ConnectRequest without BSS description. Initiating scan for targeted SSID");
+
+                // We want to default to Active scan so that for routers that support WSC, we can retrieve
+                // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
+                // because we do not have a proper active scan implementation for DFS channels.
+                let scan_request = if self.context.is_softmac
+                    && req.deprecated_scan_type == fidl_common::ScanType::Passive
+                {
+                    fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {})
+                } else {
+                    fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                        ssids: vec![],
+                        channels: vec![],
+                    })
+                };
+                let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
+                    ssid: ssid.clone(),
+                    token: ConnectConfig {
+                        responder,
+                        credential: req.credential,
+                        radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
+                    },
+                    scan_request,
+                });
+                // If the new scan replaced an existing pending JoinScan, notify the existing transaction
+                if let Some(token) = canceled_token {
+                    report_connect_finished(
+                        Some(token.responder),
+                        &mut self.context,
+                        ConnectResult::Canceled,
+                    );
+                }
+
+                self.context.info.report_connect_started(ssid);
+                self.send_scan_request(req);
+            }
         }
 
-        // We want to default to Active scan so that for routers that support WSC, we can retrieve
-        // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
-        // because we do not have a proper active scan implementation for DFS channels.
-        let scan_request = if self.context.is_softmac
-            && req.deprecated_scan_type == fidl_common::ScanType::Passive
-        {
-            fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {})
-        } else {
-            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                ssids: vec![],
-                channels: vec![],
-            })
-        };
-        info!("SME received a connect command. Initiating a join scan with targeted SSID");
-        let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
-            ssid: ssid.clone(),
-            token: ConnectConfig {
-                responder,
-                credential: req.credential,
-                radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
-            },
-            scan_request,
-        });
-        // If the new scan replaced an existing pending JoinScan, notify the existing transaction
-        if let Some(token) = canceled_token {
-            report_connect_finished(
-                Some(token.responder),
-                &mut self.context,
-                ConnectResult::Canceled,
-            );
-        }
-
-        self.context.info.report_connect_started(ssid);
-        self.send_scan_request(req);
         receiver
     }
 

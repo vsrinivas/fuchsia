@@ -327,12 +327,12 @@ fn select_best_connection_candidate<'a>(
         .filter(|bss| {
             // Filter out incompatible BSSs
             if !bss.bss_info.compatible {
-                trace!("BSS is incompatible, filtering");
+                trace!("BSS is incompatible, filtering: {:?}", bss);
                 return false;
             };
             // Filter out networks we've been told to ignore
             if ignore_list.contains(&bss.network_id) {
-                trace!("Network is ignored, filtering");
+                trace!("Network is ignored, filtering: {:?}", bss);
                 return false;
             }
             true
