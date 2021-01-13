@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -18,9 +17,6 @@ using ::testing::AllOf;
 using ::testing::UnorderedElementsAre;
 
 class ReverserTest : public gtest::RealLoopFixture {
- public:
-  ReverserTest() : executor_(dispatcher()) {}
-
  protected:
   // Creates a Reverser and return a client Ptr for it.
   fuchsia::examples::inspect::ReverserPtr OpenReverser(ReverserStats stats) {
@@ -31,20 +27,12 @@ class ReverserTest : public gtest::RealLoopFixture {
     return ptr;
   }
 
-  // Run a promise to completion on the default async executor.
-  void RunPromiseToCompletion(fit::promise<> promise) {
-    bool done = false;
-    executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
-    RunLoopUntil([&] { return done; });
-  }
-
   // Get the number of active connections.
   //
   // This allows us to wait until a connection closes.
   size_t connection_count() const { return binding_set_.size(); }
 
  private:
-  async::Executor executor_;
   fidl::BindingSet<fuchsia::examples::inspect::Reverser, std::unique_ptr<Reverser>> binding_set_;
 };
 
@@ -95,9 +83,7 @@ TEST_F(ReverserTest, ReversePart4) {
 
   {
     // [START get_hierarchy]
-    fit::result<inspect::Hierarchy> hierarchy;
-    RunPromiseToCompletion(inspect::ReadFromInspector(inspector).then(
-        [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+    fit::result<inspect::Hierarchy> hierarchy = RunPromise(inspect::ReadFromInspector(inspector));
     ASSERT_TRUE(hierarchy.is_ok());
     // [END get_hierarchy]
 
@@ -128,9 +114,7 @@ TEST_F(ReverserTest, ReversePart4) {
   RunLoopUntil([&] { return connection_count() == 1; });
 
   {
-    fit::result<inspect::Hierarchy> hierarchy;
-    RunPromiseToCompletion(inspect::ReadFromInspector(inspector).then(
-        [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+    fit::result<inspect::Hierarchy> hierarchy = RunPromise(inspect::ReadFromInspector(inspector));
     ASSERT_TRUE(hierarchy.is_ok());
 
     auto* connection_0 = hierarchy.value().GetByPath({"connection_0x0"});
