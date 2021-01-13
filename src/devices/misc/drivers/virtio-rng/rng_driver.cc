@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 
 #include "rng.h"
+#include "src/devices/misc/drivers/virtio-rng/virtio_rng_bind.h"
 
 static const zx_driver_ops_t virtio_rng_driver_ops = []() {
   zx_driver_ops_t ops = {};
@@ -16,8 +17,4 @@ static const zx_driver_ops_t virtio_rng_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(virtio_rng, virtio_rng_driver_ops, "zircon", "0.1", 6)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY), ZIRCON_DRIVER_END(virtio_rng)
+ZIRCON_DRIVER(virtio_rng, virtio_rng_driver_ops, "zircon", "0.1");
