@@ -133,7 +133,7 @@ class ParseState {
     report_ids_.push_back(empty_report_id, &ac);
     if (!ac.check())
       return false;
-    table_.report_id = &report_ids_[0];
+    table_.report_ids_index = 0;
 
     return true;
   }
@@ -337,7 +337,8 @@ class ParseState {
 
       auto curr_col = &coll_[coll_.size() - 1];
 
-      ReportField field{table_.report_id->report_id, attributes, type, flags, curr_col};
+      ReportField field{report_ids_[table_.report_ids_index].report_id, attributes, type, flags,
+                        curr_col};
 
       // If physical min/max are zero they should be set to logical values.
       if (field.attr.phys_mm.min == 0 && field.attr.phys_mm.max == 0) {
@@ -352,13 +353,13 @@ class ParseState {
 
       switch (type) {
         case kInput:
-          table_.report_id->input_count++;
+          report_ids_[table_.report_ids_index].input_count++;
           break;
         case kOutput:
-          table_.report_id->output_count++;
+          report_ids_[table_.report_ids_index].output_count++;
           break;
         case kFeature:
-          table_.report_id->feature_count++;
+          report_ids_[table_.report_ids_index].feature_count++;
           break;
       }
     }
@@ -466,7 +467,7 @@ class ParseState {
     ReportID* report_ids = report_ids_.data();
     for (size_t i = 0; i < report_ids_.size(); i++) {
       if (report_ids[i].report_id == id) {
-        table_.report_id = &report_ids[i];
+        table_.report_ids_index = i;
         return kParseOk;
       }
     }
@@ -477,7 +478,7 @@ class ParseState {
     report_ids_.push_back(new_report_id, &ac);
     if (!ac.check())
       return kParseNoMemory;
-    table_.report_id = &report_ids_[report_ids_.size() - 1];
+    table_.report_ids_index = report_ids_.size() - 1;
 
     return kParseOk;
   }
@@ -516,7 +517,8 @@ class ParseState {
   struct StateTable {
     Attributes attributes;
     uint32_t report_count;
-    ReportID* report_id;
+    // The index into the report_ids_ vector for the current ReportId object.
+    size_t report_ids_index;
   };
 
   // Helper class that encapsulates the logic of assigning usages
