@@ -49,7 +49,6 @@ class BuildEnvTest(TestCaseWithFactory):
         build_id_dirs = [
             os.path.join(clang_dir, 'lib', 'debug', '.build-id'),
             os.path.join(build_dir, '.build-id'),
-            os.path.join(build_dir + '.zircon', '.build-id'),
         ]
         for build_id_dir in build_id_dirs:
             srcpath = buildenv.srcpath(build_id_dir)
@@ -87,7 +86,6 @@ class BuildEnvTest(TestCaseWithFactory):
             buildenv.build_id_dirs, [
                 buildenv.abspath(clang_dir + '/lib/debug/.build-id'),
                 buildenv.abspath(build_dir + '/.build-id'),
-                buildenv.abspath(build_dir + '.zircon/.build-id'),
             ])
 
     # Unit tests

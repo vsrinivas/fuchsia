@@ -58,7 +58,6 @@ class FakeFactory(Factory):
             '{}/prebuilt/third_party/clang/{}/bin/llvm-profdata'.format(
                 fuchsia_dir, self.host.platform))
         self.host.mkdir(build_dir + '/.build-id')
-        self.host.mkdir(build_dir + '.zircon/.build-id')
         self.host.touch(build_dir + '/ssh-keys/ssh_config')
         buildenv.configure(build_dir)
         golden = 'data/v2.fuzzers.json'

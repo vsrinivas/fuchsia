@@ -158,7 +158,6 @@ class BuildEnv(object):
         self.build_id_dirs = [
             clang_dir + '/lib/debug/.build-id',
             build_dir + '/.build-id',
-            build_dir + '.zircon/.build-id',
         ]
         self.llvm_cov = clang_dir + '/bin/llvm-cov'
         self.llvm_profdata = clang_dir + '/bin/llvm-profdata'
