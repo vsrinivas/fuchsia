@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 using fuchsia.usb;
+using fuchsia.usb.vendor_specific;
 
 fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
 fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.VENDOR_SPECIFIC;
-fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.BIND_USB_SUBCLASS.VENDOR_SPECIFIC;
-fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.BIND_USB_PROTOCOL.TEST_FTDI;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.vendor_specific.BIND_USB_SUBCLASS.VENDOR_SPECIFIC;
+fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.vendor_specific.BIND_USB_PROTOCOL.TEST_FTDI;

@@ -48,7 +48,10 @@ bind_rules("ftdi_function_bind") {
   rules = "ftdi_function.bind"
   output = "ftdi_function_bind.h"
   tests = "ftdi_function_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.vendor_specific",
+  ]
 }
 
 driver_module("ftdi-fake-usb") {
