@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("tcs3400_light_bind") {
+  rules = "tcs3400_light.bind"
+  output = "tcs3400_light_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.ams.platform",
+    "//src/devices/bind/fuchsia.composite",
+  ]
+}
 
 driver_module("ams-light") {
   configs += [
@@ -16,6 +27,7 @@ driver_module("ams-light") {
   }
   sources = [ "tcs3400.cc" ]
   deps = [
+    ":tcs3400_light_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
@@ -32,9 +44,6 @@ driver_module("ams-light") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hid",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -52,6 +61,7 @@ test("ams-light-test-bin") {
     "tcs3400.cc",
   ]
   deps = [
+    ":tcs3400_light_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.hidbus",
@@ -71,9 +81,6 @@ test("ams-light-test-bin") {
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -86,5 +93,8 @@ fuchsia_unittest_package("ams-light-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":ams-light-test" ]
+  deps = [
+    ":ams-light-test",
+    ":tcs3400_light_bind_test",
+  ]
 }

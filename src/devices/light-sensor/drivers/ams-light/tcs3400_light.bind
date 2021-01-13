@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.ams.platform;
+using fuchsia.composite;
+
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ams.platform.BIND_PLATFORM_DEV_VID.AMS;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.ams.platform.BIND_PLATFORM_DEV_PID.TCS3400;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ams.platform.BIND_PLATFORM_DEV_DID.LIGHT;

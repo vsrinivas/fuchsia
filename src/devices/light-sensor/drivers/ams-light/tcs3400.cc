@@ -15,7 +15,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -25,6 +24,7 @@
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>
 
+#include "src/devices/light-sensor/drivers/ams-light/tcs3400_light_bind.h"
 #include "tcs3400-regs.h"
 
 namespace {
@@ -534,11 +534,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace tcs
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(tcs3400_light, tcs::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMS_TCS3400),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMS_LIGHT),
-ZIRCON_DRIVER_END(tcs3400_light)
-    // clang-format on
+ZIRCON_DRIVER(tcs3400_light, tcs::driver_ops, "zircon", "0.1");
