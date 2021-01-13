@@ -19,5 +19,6 @@ zx_library("stdcompat") {
     "lib/stdcompat/version.h",
     "lib/stdcompat/type_traits.h",
   ]
+  sources = [ "include/lib/stdcompat/internal/utility.h" ]
   friend = [ "test:*" ]
 }

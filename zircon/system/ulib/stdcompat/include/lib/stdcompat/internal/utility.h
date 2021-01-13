@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_UTILITY_INTERNAL_H_
-#define LIB_FIT_UTILITY_INTERNAL_H_
+#ifndef LIB_STDCOMPAT_INTERNAL_UTILITY_H_
+#define LIB_STDCOMPAT_INTERNAL_UTILITY_H_
 
 #include <type_traits>
 #include <utility>
 
-#include "traits.h"
+#include "../type_traits.h"
 
-namespace fit {
+namespace cpp17 {
 namespace internal {
 
 // Utility to return the first type in a parameter pack.
@@ -96,7 +96,7 @@ constexpr bool is_complete_or_unbounded_array(Identity) {
                      is_unbounded_array<T>>::value;
 }
 
-// Using swap for ADL. This directive is contained within the fit::internal
+// Using swap for ADL. This directive is contained within the cpp17::internal
 // namespace, which prevents leaking std::swap into user namespaces. Doing this
 // at namespace scope is necessary to lookup swap via ADL while preserving the
 // noexcept() specification of the resulting lookup.
@@ -129,6 +129,6 @@ struct is_nothrow_swappable<T, void_t<decltype(swap(std::declval<T&>(), std::dec
 };
 
 }  // namespace internal
-}  // namespace fit
+}  // namespace cpp17
 
-#endif  //  LIB_FIT_UTILITY_INTERNAL_H_
+#endif  // LIB_STDCOMPAT_INTERNAL_UTILITY_H_
