@@ -22,7 +22,7 @@ pub fn fake_wpa2_s_rsne() -> Rsne {
 }
 
 pub fn fake_wpa3_a_rsne() -> Rsne {
-    Rsne::wpa3_ccmp_rsne()
+    Rsne::wpa3_rsne()
 }
 
 pub fn fake_wpa3_s_rsne() -> Rsne {

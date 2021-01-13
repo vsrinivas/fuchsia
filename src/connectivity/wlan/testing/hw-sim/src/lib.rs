@@ -261,7 +261,7 @@ pub fn send_association_response(
 }
 
 fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
-    rsne::Rsne::wpa2_psk_ccmp_rsne()
+    rsne::Rsne::wpa2_rsne()
 }
 
 fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {

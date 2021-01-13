@@ -1271,7 +1271,7 @@ mod tests {
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1578,7 +1578,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1637,7 +1637,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1690,7 +1690,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1735,7 +1735,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 

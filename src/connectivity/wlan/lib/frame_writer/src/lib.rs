@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn write_rsne() {
-        let rsne = rsne::Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = rsne::Rsne::wpa2_rsne();
 
         let buffer_provider = BufferProvider;
         let (buf, bytes_written) = write_frame!(buffer_provider, {

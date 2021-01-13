@@ -2771,7 +2771,7 @@ mod tests {
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let bss = fake_bss!(Wpa2, ssid: b"wpa2".to_vec());
-        let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
             responder: Some(responder),
@@ -2790,7 +2790,7 @@ mod tests {
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let bss = fake_bss!(Wpa3, ssid: b"wpa3".to_vec());
-        let rsne = Rsne::wpa3_ccmp_rsne();
+        let rsne = Rsne::wpa3_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
             responder: Some(responder),
@@ -2910,7 +2910,7 @@ mod tests {
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
         let bss = fake_bss!(Wpa2, bssid: bssid, ssid: b"foo".to_vec());
-        let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
                 .expect("invalid NegotiatedProtection"),

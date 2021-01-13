@@ -734,7 +734,7 @@ fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, StartR
 
         // Note: TKIP is legacy and considered insecure. Only allow CCMP usage
         // for group and pairwise ciphers.
-        Ok(Some(RsnCfg { psk, rsne: Rsne::wpa2_psk_ccmp_rsne() }))
+        Ok(Some(RsnCfg { psk, rsne: Rsne::wpa2_rsne() }))
     }
 }
 

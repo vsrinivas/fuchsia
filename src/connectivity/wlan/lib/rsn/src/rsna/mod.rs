@@ -531,7 +531,7 @@ mod tests {
         };
         NegotiatedProtection::from_rsne(&rsne).expect("error, could not create negotiated RSNE");
 
-        let rsne = Rsne::wpa3_ccmp_rsne();
+        let rsne = Rsne::wpa3_rsne();
         NegotiatedProtection::from_rsne(&rsne).expect("error, could not create negotiated RSNE");
 
         let rsne = Rsne {
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn test_to_rsne() {
-        let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_rsne();
         let negotiated_protection = NegotiatedProtection::from_rsne(&rsne)
             .expect("error, could not create negotiated RSNE")
             .to_full_protection();
@@ -633,21 +633,21 @@ mod tests {
     #[test]
     fn test_igtk_support() {
         // Standard WPA3 RSNE requires MFP.
-        let rsne = Rsne::wpa3_ccmp_rsne();
+        let rsne = Rsne::wpa3_rsne();
         let negotiated_protection =
             NegotiatedProtection::from_rsne(&rsne).expect("Could not create negotiated RSNE");
         assert_variant!(negotiated_protection.igtk_support(), IgtkSupport::Required);
         assert_eq!(negotiated_protection.group_mgmt_cipher(), CIPHER_BIP_CMAC_128);
 
         // Mixed mode RSNE is compatible with MFP.
-        let mut rsne = Rsne::wpa3_ccmp_rsne();
+        let mut rsne = Rsne::wpa3_rsne();
         rsne.rsn_capabilities.replace(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
         let negotiated_protection =
             NegotiatedProtection::from_rsne(&rsne).expect("Could not create negotiated RSNE");
         assert_variant!(negotiated_protection.igtk_support(), IgtkSupport::Capable);
 
         // WPA2 RSNE doesn't support MFP.
-        let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_rsne();
         let negotiated_protection =
             NegotiatedProtection::from_rsne(&rsne).expect("Could not create negotiated RSNE");
         assert_variant!(negotiated_protection.igtk_support(), IgtkSupport::Unsupported);
@@ -655,7 +655,7 @@ mod tests {
 
     #[test]
     fn test_default_igtk_cipher() {
-        let mut rsne = Rsne::wpa3_ccmp_rsne();
+        let mut rsne = Rsne::wpa3_rsne();
         rsne.group_mgmt_cipher_suite.take(); // Default to BIP_CMAC_128.
         let negotiated_protection =
             NegotiatedProtection::from_rsne(&rsne).expect("Could not create negotiated RSNE");

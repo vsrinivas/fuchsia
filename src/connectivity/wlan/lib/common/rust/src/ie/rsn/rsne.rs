@@ -140,7 +140,7 @@ enum FinalField {
 }
 
 impl Rsne {
-    pub fn wpa2_psk_ccmp_rsne() -> Self {
+    pub fn wpa2_rsne() -> Self {
         Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
@@ -149,11 +149,11 @@ impl Rsne {
         }
     }
 
-    pub fn wpa2_psk_ccmp_rsne_with_caps(rsn_capabilities: RsnCapabilities) -> Self {
-        Self::wpa2_psk_ccmp_rsne().with_caps(rsn_capabilities)
+    pub fn wpa2_rsne_with_caps(rsn_capabilities: RsnCapabilities) -> Self {
+        Self::wpa2_rsne().with_caps(rsn_capabilities)
     }
 
-    pub fn wpa3_mixed_psk_ccmp_rsne() -> Self {
+    pub fn wpa2_wpa3_rsne() -> Self {
         Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
@@ -168,15 +168,15 @@ impl Rsne {
         }
     }
 
-    pub fn wpa3_mixed_psk_ccmp_rsne_with_extra_caps(rsn_capabilities: RsnCapabilities) -> Self {
-        let rsne = Self::wpa3_mixed_psk_ccmp_rsne();
+    pub fn wpa2_wpa3_rsne_with_extra_caps(rsn_capabilities: RsnCapabilities) -> Self {
+        let rsne = Self::wpa2_wpa3_rsne();
         let wpa3_mixed_minimum_rsn_capabilities = rsne.rsn_capabilities.as_ref().unwrap().clone();
         rsne.with_caps(RsnCapabilities(
             wpa3_mixed_minimum_rsn_capabilities.raw() | rsn_capabilities.raw(),
         ))
     }
 
-    pub fn wpa3_ccmp_rsne() -> Self {
+    pub fn wpa3_rsne() -> Self {
         Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
@@ -195,8 +195,8 @@ impl Rsne {
         }
     }
 
-    pub fn wpa3_ccmp_rsne_with_extra_caps(rsn_capabilities: RsnCapabilities) -> Self {
-        let rsne = Self::wpa3_ccmp_rsne();
+    pub fn wpa3_rsne_with_extra_caps(rsn_capabilities: RsnCapabilities) -> Self {
+        let rsne = Self::wpa3_rsne();
         let wpa3_minimum_rsn_capabilities = rsne.rsn_capabilities.as_ref().unwrap().clone();
         rsne.with_caps(RsnCapabilities(
             wpa3_minimum_rsn_capabilities.raw() | rsn_capabilities.raw(),
@@ -740,21 +740,20 @@ mod tests {
 
     #[test]
     fn test_with_caps() {
-        assert!(Rsne::wpa2_psk_ccmp_rsne().rsn_capabilities.is_none());
+        assert!(Rsne::wpa2_rsne().rsn_capabilities.is_none());
         let rsne_with_caps =
-            Rsne::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0).with_peerkey_enabled(true));
+            Rsne::wpa2_rsne_with_caps(RsnCapabilities(0).with_peerkey_enabled(true));
         assert!(rsne_with_caps.rsn_capabilities.as_ref().unwrap().peerkey_enabled());
 
-        assert!(!Rsne::wpa3_mixed_psk_ccmp_rsne().rsn_capabilities.unwrap().peerkey_enabled());
-        let rsne_with_caps = Rsne::wpa3_mixed_psk_ccmp_rsne_with_extra_caps(
-            RsnCapabilities(0).with_peerkey_enabled(true),
-        );
+        assert!(!Rsne::wpa2_wpa3_rsne().rsn_capabilities.unwrap().peerkey_enabled());
+        let rsne_with_caps =
+            Rsne::wpa2_wpa3_rsne_with_extra_caps(RsnCapabilities(0).with_peerkey_enabled(true));
         assert!(rsne_with_caps.rsn_capabilities.as_ref().unwrap().peerkey_enabled());
         assert!(rsne_with_caps.rsn_capabilities.as_ref().unwrap().mgmt_frame_protection_cap());
 
-        assert!(!Rsne::wpa3_ccmp_rsne().rsn_capabilities.unwrap().peerkey_enabled());
+        assert!(!Rsne::wpa3_rsne().rsn_capabilities.unwrap().peerkey_enabled());
         let rsne_with_caps =
-            Rsne::wpa3_ccmp_rsne_with_extra_caps(RsnCapabilities(0).with_peerkey_enabled(true));
+            Rsne::wpa3_rsne_with_extra_caps(RsnCapabilities(0).with_peerkey_enabled(true));
         assert!(rsne_with_caps.rsn_capabilities.as_ref().unwrap().peerkey_enabled());
         assert!(
             rsne_with_caps.rsn_capabilities.as_ref().unwrap().mgmt_frame_protection_cap()
@@ -792,8 +791,8 @@ mod tests {
 
     #[test]
     fn test_rsne_unsupported_group_data_cipher() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
-        let mut a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
+        let mut a_rsne = Rsne::wpa2_rsne();
         a_rsne.group_data_cipher_suite = Some(CIPHER_GCMP_256);
         assert!(!s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
     }
@@ -967,8 +966,8 @@ mod tests {
 
     #[test]
     fn test_rsne_unsupported_pairwise_cipher() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
-        let mut a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
+        let mut a_rsne = Rsne::wpa2_rsne();
         a_rsne.pairwise_cipher_suites = vec![CIPHER_BIP_CMAC_256];
         assert!(!s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
     }
@@ -1014,49 +1013,49 @@ mod tests {
 
     #[test]
     fn test_rsne_unsupported_akm() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
-        let mut a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
+        let mut a_rsne = Rsne::wpa2_rsne();
         a_rsne.akm_suites = vec![AKM_EAP];
         assert!(!s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_ensure_valid_s_rsne() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_ok());
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.group_data_cipher_suite = None;
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::NoGroupDataCipherSuite);
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.pairwise_cipher_suites = vec![];
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::NoPairwiseCipherSuite);
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.pairwise_cipher_suites.push(CIPHER_GCMP_256);
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::TooManyPairwiseCipherSuites);
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.akm_suites = vec![];
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::NoAkmSuite);
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.akm_suites.push(AKM_EAP);
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::TooManyAkmSuites);
 
-        let mut s_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let mut s_rsne = Rsne::wpa2_rsne();
         s_rsne.akm_suites = vec![akm::Akm::new_dot11(200)];
         let result = s_rsne.ensure_valid_s_rsne();
         assert!(result.is_err());
@@ -1065,20 +1064,20 @@ mod tests {
 
     #[test]
     fn test_compatible_wpa2_rsne() {
-        let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_rsne();
         assert!(rsne.is_wpa2_rsn_compatible());
     }
 
     #[test]
     fn test_compatible_wpa3_mixed_rsne() {
-        let rsne = Rsne::wpa3_mixed_psk_ccmp_rsne();
+        let rsne = Rsne::wpa2_wpa3_rsne();
         assert!(rsne.is_wpa2_rsn_compatible());
         assert!(rsne.is_wpa3_rsn_compatible());
     }
 
     #[test]
     fn test_compatible_wpa3_rsne() {
-        let rsne = Rsne::wpa3_ccmp_rsne();
+        let rsne = Rsne::wpa3_rsne();
         assert!(rsne.is_wpa3_rsn_compatible());
     }
 
@@ -1100,8 +1099,8 @@ mod tests {
 
     #[test]
     fn test_valid_rsne() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
-        let a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let s_rsne = Rsne::wpa2_rsne();
+        let a_rsne = Rsne::wpa2_rsne();
         assert!(s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
     }
 
@@ -1123,7 +1122,7 @@ mod tests {
 
     #[test]
     fn test_ccmp128_group_data_pairwise_cipher_sae() {
-        let a_rsne = Rsne::wpa3_ccmp_rsne();
+        let a_rsne = Rsne::wpa3_rsne();
         assert_eq!(a_rsne.is_wpa3_rsn_compatible(), true);
 
         let s_rsne = a_rsne.derive_wpa3_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
@@ -1134,7 +1133,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_transition_mode() {
-        let a_rsne = Rsne::wpa3_mixed_psk_ccmp_rsne();
+        let a_rsne = Rsne::wpa2_wpa3_rsne();
         assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
         assert_eq!(a_rsne.is_wpa3_rsn_compatible(), true);
 
@@ -1156,7 +1155,7 @@ mod tests {
             0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
             0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00,
         ];
-        let rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsne = Rsne::wpa2_rsne_with_caps(RsnCapabilities(0));
         let mut actual = Vec::with_capacity(rsne.len());
         rsne.write_into(&mut actual).expect("error writing RSNE");
 
@@ -1165,8 +1164,8 @@ mod tests {
 
     #[test]
     fn test_supplicant_missing_required_mpfc() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
-        let a_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
+        let s_rsne = Rsne::wpa2_rsne();
+        let a_rsne = Rsne::wpa2_rsne_with_caps(
             RsnCapabilities(0)
                 .with_mgmt_frame_protection_req(true)
                 .with_mgmt_frame_protection_cap(true),
@@ -1176,26 +1175,25 @@ mod tests {
 
     #[test]
     fn test_authenticator_missing_required_mpfc() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
+        let s_rsne = Rsne::wpa2_rsne_with_caps(
             RsnCapabilities(0)
                 .with_mgmt_frame_protection_req(true)
                 .with_mgmt_frame_protection_cap(true),
         );
-        let a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let a_rsne = Rsne::wpa2_rsne();
         assert!(!s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
     }
 
     #[test]
     fn test_supplicant_has_invalid_mgmt_frame_protection_fields() {
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
+        let s_rsne = Rsne::wpa2_rsne_with_caps(
             RsnCapabilities(0)
                 .with_mgmt_frame_protection_req(true)
                 .with_mgmt_frame_protection_cap(false),
         );
         // AP only cares about client's invalid setting if AP is mgmt frame protection capable
-        let a_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
-            RsnCapabilities(0).with_mgmt_frame_protection_cap(true),
-        );
+        let a_rsne =
+            Rsne::wpa2_rsne_with_caps(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
 
         let result = s_rsne.is_valid_subset_of(&a_rsne);
         assert!(result.is_err());
@@ -1205,10 +1203,9 @@ mod tests {
     #[test]
     fn test_authenticator_has_invalid_mgmt_frame_protection_fields() {
         // client only cares about AP's invalid setting if client is mgmt frame protection capable
-        let s_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
-            RsnCapabilities(0).with_mgmt_frame_protection_cap(true),
-        );
-        let a_rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(
+        let s_rsne =
+            Rsne::wpa2_rsne_with_caps(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
+        let a_rsne = Rsne::wpa2_rsne_with_caps(
             RsnCapabilities(0)
                 .with_mgmt_frame_protection_req(true)
                 .with_mgmt_frame_protection_cap(false),

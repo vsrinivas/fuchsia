@@ -46,7 +46,7 @@ impl MockAuthenticator {
         initiate_mock: Arc<Mutex<UpdateSink>>,
         on_eapol_frame_mock: Arc<Mutex<UpdateSink>>,
     ) -> Self {
-        let rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsne = Rsne::wpa2_rsne_with_caps(RsnCapabilities(0));
         MockAuthenticator {
             initiate: initiate_mock,
             on_eapol_frame: on_eapol_frame_mock,
