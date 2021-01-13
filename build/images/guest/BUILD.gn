@@ -6,15 +6,11 @@ import("//build/images/assemble_system.gni")
 
 assemble_system("guest") {
   base_packages = [
-    "//src/power/power-manager",
-    "//src/power/power-manager:base_config",
     "//garnet/bin/run",
     "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
     "//garnet/bin/vsock_service:vsock_service",
     "//src/diagnostics/log-stats:package",
-    "//src/power/power-manager:base_config",
-    "//src/power/power-manager",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr",
@@ -26,6 +22,7 @@ assemble_system("guest") {
 
   bootfs_labels = [
     "//build/info:bootfs",
+    "//src/power/power-manager:base_config",
     "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/console:bootfs",

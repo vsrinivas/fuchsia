@@ -12,12 +12,45 @@ macro_rules! log_if_err {
     };
 }
 
-/// Create and connect a FIDL proxy to the service at `path`
+/// Waits for a file at the given path to exist using fdio Watcher APIs. The provided `path` is
+/// split into a directory path and a file name, then a watcher is set up on the directory path. If
+/// the directory path itself does not exist, then this function is called recursively to wait for
+/// it to be created as well.
+fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
+    use {anyhow::format_err, fuchsia_zircon as zx};
+
+    let svc_dir = path.parent().ok_or(format_err!("Invalid service path"))?;
+    let svc_name = path.file_name().ok_or(format_err!("Invalid service name"))?;
+    match fdio::watch_directory(
+        &std::fs::File::open(&svc_dir)
+            .map_err(|e| anyhow::format_err!("Failed to open service path: {}", e))?,
+        zx::sys::ZX_TIME_INFINITE,
+        |_event, found| if found == svc_name { Err(zx::Status::STOP) } else { Ok(()) },
+    ) {
+        zx::Status::STOP => Ok(()),
+        zx::Status::PEER_CLOSED => wait_for_path(svc_dir),
+        e => Err(format_err!(
+            "Failed to find {:?} at path {} (watch_directory result = {})",
+            svc_name,
+            svc_dir.display(),
+            e
+        )),
+    }
+}
+
+/// Create and connect a FIDL proxy to the service at `path`. Calls `wait_for_path` to ensure the
+/// path exists before attempting a connection.
 pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
     let (proxy, server) = fidl::endpoints::create_proxy::<T>()
         .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
+
+    // Verify the path exists before attempting to connect to it. We do this because when connecting
+    // to drivers, a connection to a missing driver path would succeed but calls to it would fail.
+    // So instead of requiring us to implement logic at a higher layer to poll repeatedly until a
+    // driver is present, just verify the path exists here using the appropriate watcher APIs.
+    wait_for_path(&std::path::Path::new(path))?;
 
     fdio::service_connect(path, server.into_channel())
         .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;

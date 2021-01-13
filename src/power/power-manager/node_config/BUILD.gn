@@ -6,12 +6,6 @@ import("//build/config.gni")
 import("//build/json/validate_json.gni")
 
 template("node_config") {
-  config_data("${target_name}_config_data") {
-    for_pkg = "power-manager"
-    sources = [ "${invoker.source}" ]
-    outputs = [ "node_config.json" ]
-  }
-
   resource("${target_name}_resource") {
     sources = [ "${invoker.source}" ]
     outputs = [ "config/power_manager/node_config.json" ]
@@ -24,7 +18,6 @@ template("node_config") {
 
   group(target_name) {
     deps = [
-      ":${target_name}_config_data",
       ":${target_name}_resource",
       ":${target_name}_validate_json",
     ]

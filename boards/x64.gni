@@ -39,6 +39,7 @@ _common_bootfs_deps = [
   "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
   "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
   "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+  "//src/power/power-manager:base_config",
   "//src/ui/input/drivers/i2c-hid",
   "//src/ui/input/drivers/pc-ps2",
   "//zircon/third_party/dev/ethernet/e1000",
@@ -59,8 +60,6 @@ board_system_image_deps = [
 ]
 
 board_package_labels = [
-  "//src/power/power-manager",
-  "//src/power/power-manager:base_config",
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/packages/prod:drivers-support",
