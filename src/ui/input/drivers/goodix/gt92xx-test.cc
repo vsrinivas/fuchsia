@@ -87,7 +87,10 @@ TEST(GoodixTest, Init) {
       .ExpectReadStop({GT_FIRMWARE_MAGIC})
       .ExpectWriteStop(Gt92xxDevice::GetConfData())
       .ExpectWriteStop({static_cast<uint8_t>(GT_REG_TOUCH_STATUS >> 8),
-                        static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00});
+                        static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00})
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
+                    static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
+      .ExpectReadStop({0x00});
 
   EXPECT_OK(device.Init());
   ASSERT_NO_FATAL_FAILURES(reset_mock.VerifyAndClear());

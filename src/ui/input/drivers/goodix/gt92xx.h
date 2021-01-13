@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -109,6 +110,10 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   thrd_t thread_;
   fbl::Mutex client_lock_;
   ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
+
+  inspect::Inspector inspector_;
+  inspect::Node node_;
+  inspect::ValueList values_;
 };
 }  // namespace goodix
 

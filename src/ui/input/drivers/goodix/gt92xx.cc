@@ -191,7 +191,8 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
     }
   }
 
-  status = goodix_dev->DdkAdd("gt92xx HidDevice");
+  status = goodix_dev->DdkAdd(ddk::DeviceAddArgs("gt92xx HidDevice")
+                                  .set_inspect_vmo(goodix_dev->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "gt92xx: Could not create hid device: %d", status);
     return status;
@@ -244,8 +245,23 @@ zx_status_t Gt92xxDevice::Init() {
   // Note: Our configuration inverts polarity of interrupt
   // (datasheet implies it is active high)
   status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  return status;
+  node_ = inspector_.GetRoot().CreateChild("Chip info");
+
+  uint8_t config_version;
+  status = Read(GT_REG_CONFIG_DATA, &config_version, sizeof(config_version));
+  if (status == ZX_OK) {
+    node_.CreateByteVector("CONFIG_VERSION", {config_version}, &values_);
+    zxlogf(INFO, "  CONFIG_VERSION: 0x%02x", config_version);
+  } else {
+    node_.CreateString("CONFIG_VERSION", "error", &values_);
+    zxlogf(ERROR, "  CONFIG_VERSION: error %d", status);
+  }
+
+  return ZX_OK;
 }
 
 void Gt92xxDevice::HWReset() {
