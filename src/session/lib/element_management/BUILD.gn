@@ -30,6 +30,7 @@ rustc_library("element_management") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
 

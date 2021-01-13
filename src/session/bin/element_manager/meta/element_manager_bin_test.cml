@@ -1,0 +1,24 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/element_manager_bin_test",
+    },
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.session.ElementManager" },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}

@@ -1,0 +1,37 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/element_manager",
+    },
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#elements" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "self",
+        },
+    ],
+}

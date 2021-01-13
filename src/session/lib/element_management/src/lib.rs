@@ -15,8 +15,12 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component,
+    fuchsia_syslog::fx_log_err,
     fuchsia_syslog::fx_log_info,
-    fuchsia_zircon as zx, realm_management,
+    fuchsia_zircon as zx,
+    futures::TryStreamExt,
+    rand::{distributions::Alphanumeric, thread_rng, Rng},
+    realm_management,
     std::fmt,
     thiserror::Error,
 };
@@ -140,8 +144,6 @@ pub trait ElementManager {
     /// - `spec`: The description of the element to add as a child.
     /// - `child_name`: The name of the element, must be unique within a session. The name must be
     ///                 non-empty, of the form [a-z0-9-_.].
-    /// - `child_collection`: The collection to add the element in, must match a collection in the
-    ///                       calling component's CML file.
     ///
     /// On success, the [`Element`] is returned back to the session.
     ///
@@ -152,8 +154,20 @@ pub trait ElementManager {
         &self,
         spec: felement::Spec,
         child_name: &str,
-        child_collection: &str,
     ) -> Result<Element, ElementManagerError>;
+
+    /// Handles requests to the [`Manager`] protocol.
+    ///
+    /// # Parameters
+    /// `stream`: The stream that receives [`Manager`] requests.
+    ///
+    /// # Returns
+    /// `Ok` if the request stream has been successfully handled once the client closes
+    /// its connection. `Error` if a FIDL IO error was encountered.
+    async fn handle_requests(
+        &mut self,
+        mut stream: felement::ManagerRequestStream,
+    ) -> Result<(), fidl::Error>;
 }
 
 enum ExposedCapabilities {
@@ -361,18 +375,36 @@ pub struct SimpleElementManager {
     /// The realm which this element manager uses to create components.
     realm: fsys2::RealmProxy,
 
-    /// The ElementManager uses a fuchsia::sys::Launcher to create a component without a "*.cm" file
-    /// (including *.cmx and other URLs with supported schemes, such as "https"). If a launcher is
-    /// not provided during intialization, it is requested from the environment.
+    /// The collection in which elements will be launched.
+    ///
+    /// This is only used for elements that have a CFv2 (*.cm) component URL, and has no meaning
+    /// for CFv1 elementes.
+    ///
+    /// The component that is running the `SimpleElementManager` must have a collection
+    /// with the same name in its CML file.
+    collection: String,
+
+    /// A proxy to the `fuchsia::sys::Launcher` protocol used to create CFv1 components, or an error
+    /// that represents a failure to connect to the protocol.
+    ///
+    /// If a launcher is not provided during intialization, it is requested from the environment.
     sys_launcher: Result<fsys::LauncherProxy, anyhow::Error>,
+
+    /// Elements that were launched with no `Controller` provided by the client.
+    ///
+    /// Elements are added to this list to ensure they stay running when the
+    /// client disconnects from `Manager`.
+    uncontrolled_elements: Vec<Element>,
 }
 
 /// An element manager that launches v1 and v2 components, returning them to the caller.
 impl SimpleElementManager {
-    pub fn new(realm: fsys2::RealmProxy) -> SimpleElementManager {
+    pub fn new(realm: fsys2::RealmProxy, collection: &str) -> SimpleElementManager {
         SimpleElementManager {
             realm,
+            collection: collection.to_string(),
             sys_launcher: fuchsia_component::client::connect_to_service::<fsys::LauncherMarker>(),
+            uncontrolled_elements: vec![],
         }
     }
 
@@ -380,9 +412,15 @@ impl SimpleElementManager {
     /// launcher.
     pub fn new_with_sys_launcher(
         realm: fsys2::RealmProxy,
+        collection: &str,
         sys_launcher: fsys::LauncherProxy,
     ) -> Self {
-        SimpleElementManager { realm, sys_launcher: Ok(sys_launcher) }
+        SimpleElementManager {
+            realm,
+            collection: collection.to_string(),
+            sys_launcher: Ok(sys_launcher),
+            uncontrolled_elements: vec![],
+        }
     }
 
     /// Launches a CFv1 component as an element.
@@ -436,9 +474,6 @@ impl SimpleElementManager {
     /// - `child_name`: The name of the element, must be unique within a session. The name must be
     ///                 non-empty, of the form [a-z0-9-_.].
     /// - `child_url`: The component url of the child added to the session.
-    /// - `child_collection`: The collection to add the element in, must match a collection in the
-    ///                       calling component's CML file.
-    /// - `realm`: The `Realm` to which the child will be added.
     ///
     /// # Returns
     /// An Element backed by the CFv2 component.
@@ -446,44 +481,76 @@ impl SimpleElementManager {
         &self,
         child_name: &str,
         child_url: &str,
-        child_collection: &str,
-        realm: &fsys2::RealmProxy,
     ) -> Result<Element, ElementManagerError> {
         fx_log_info!(
             "launch_v2_element(name={}, url={}, collection={})",
             child_name,
             child_url,
-            child_collection
+            self.collection
         );
-        realm_management::create_child_component(&child_name, &child_url, child_collection, &realm)
-            .await
-            .map_err(|err: fcomponent::Error| {
-                ElementManagerError::not_created(child_name, child_collection, child_url, err)
-            })?;
-
-        let directory_channel = match realm_management::bind_child_component(
-            child_name,
-            child_collection,
-            &realm,
+        realm_management::create_child_component(
+            &child_name,
+            &child_url,
+            &self.collection,
+            &self.realm,
         )
         .await
-        {
-            Ok(channel) => channel,
-            Err(err) => {
-                return Err(ElementManagerError::not_bound(
-                    child_name,
-                    child_collection,
-                    child_url,
-                    err,
-                ))
-            }
-        };
+        .map_err(|err: fcomponent::Error| {
+            ElementManagerError::not_created(child_name, &self.collection, child_url, err)
+        })?;
+
+        let directory_channel =
+            match realm_management::bind_child_component(child_name, &self.collection, &self.realm)
+                .await
+            {
+                Ok(channel) => channel,
+                Err(err) => {
+                    return Err(ElementManagerError::not_bound(
+                        child_name,
+                        self.collection.clone(),
+                        child_url,
+                        err,
+                    ))
+                }
+            };
         Ok(Element::from_directory_channel(
             directory_channel,
             child_name,
             child_url,
-            child_collection,
+            &self.collection,
         ))
+    }
+}
+
+/// Handles Controller protocol requests.
+///
+/// # Parameters
+/// - `stream`: the input channel that receives [`Controller`] requests.
+/// - `element`: the [`Element`] that is being controlled.
+///
+/// # Returns
+/// () when there are no more valid requests.
+async fn handle_controller_requests(
+    mut stream: felement::ControllerRequestStream,
+    _element: Element,
+) {
+    while let Ok(Some(request)) = stream.try_next().await {
+        match request {
+            felement::ControllerRequest::UpdateAnnotations {
+                annotations_to_set: _,
+                annotations_to_delete: _,
+                responder,
+            } => {
+                fx_log_err!(
+                    "TODO(fxbug.dev/65759): Controller.UpdateAnnotations is not implemented",
+                );
+                responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
+            }
+            felement::ControllerRequest::GetAnnotations { responder } => {
+                fx_log_err!("TODO(fxbug.dev/65759): Controller.GetAnnotations is not implemented");
+                responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
+            }
+        }
     }
 }
 
@@ -493,11 +560,10 @@ impl ElementManager for SimpleElementManager {
         &self,
         spec: felement::Spec,
         child_name: &str,
-        child_collection: &str,
     ) -> Result<Element, ElementManagerError> {
         let child_url = spec
             .component_url
-            .ok_or_else(|| ElementManagerError::url_missing(child_name, child_collection))?;
+            .ok_or_else(|| ElementManagerError::url_missing(child_name, &self.collection))?;
 
         let additional_services =
             spec.additional_services.map_or(Ok(None), |services| match services {
@@ -506,7 +572,7 @@ impl ElementManager for SimpleElementManager {
                     host_directory: Some(service_host_directory),
                     provider: None,
                 } => Ok(Some(AdditionalServices { names, host_directory: service_host_directory })),
-                _ => Err(ElementManagerError::invalid_service_list(child_name, child_collection)),
+                _ => Err(ElementManagerError::invalid_service_list(child_name, &self.collection)),
             })?;
 
         let element = if is_v2_component(&child_url) {
@@ -514,16 +580,79 @@ impl ElementManager for SimpleElementManager {
             if additional_services.is_some() {
                 return Err(ElementManagerError::additional_services_not_supported(
                     child_name,
-                    child_collection,
+                    &self.collection,
                 ));
             }
 
-            self.launch_v2_element(&child_name, &child_url, child_collection, &self.realm).await?
+            self.launch_v2_element(&child_name, &child_url).await?
         } else {
             self.launch_v1_element(&child_url, additional_services).await?
         };
 
         Ok(element)
+    }
+
+    async fn handle_requests(
+        &mut self,
+        mut stream: felement::ManagerRequestStream,
+    ) -> Result<(), fidl::Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                felement::ManagerRequest::ProposeElement { spec, controller, responder } => {
+                    let mut child_name: String =
+                        thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+                    child_name.make_ascii_lowercase();
+
+                    let mut result = match self.launch_element(spec, &child_name).await {
+                        Ok(element) => {
+                            match controller {
+                                Some(controller) => match controller.into_stream() {
+                                    Ok(stream) => {
+                                        fasync::Task::spawn(handle_controller_requests(
+                                            stream, element,
+                                        ))
+                                        .detach();
+                                        Ok(())
+                                    }
+                                    Err(err) => {
+                                        fx_log_err!(
+                                            "Failed to convert Controller request to stream: {:?}",
+                                            err
+                                        );
+                                        Err(felement::ProposeElementError::InvalidArgs)
+                                    }
+                                },
+                                // If the element proposer did not provide a controller, add the
+                                // element to a vector to keep it alive:
+                                None => {
+                                    self.uncontrolled_elements.push(element);
+                                    Ok(())
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            fx_log_err!("Failed to launch element: {:?}", err);
+
+                            match err {
+                                ElementManagerError::UrlMissing { .. } => {
+                                    Err(felement::ProposeElementError::NotFound)
+                                }
+                                ElementManagerError::InvalidServiceList { .. }
+                                | ElementManagerError::AdditionalServicesNotSupported { .. }
+                                | ElementManagerError::NotCreated { .. }
+                                | ElementManagerError::NotBound { .. }
+                                | ElementManagerError::NotLaunched { .. } => {
+                                    Err(felement::ProposeElementError::InvalidArgs)
+                                }
+                            }
+                        }
+                    };
+
+                    let _ = responder.send(&mut result);
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -662,7 +791,8 @@ mod tests {
             }
         });
 
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
+        let element_manager =
+            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
         let result = element_manager
             .launch_element(
                 felement::Spec {
@@ -670,7 +800,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 child_name,
-                child_collection,
             )
             .await;
         let element = result.unwrap();
@@ -704,11 +833,11 @@ mod tests {
 
         let a_component_url = "a_url.cmx";
         let a_child_name = "a_child";
-        let a_child_collection = "elements";
 
         let b_component_url = "https://google.com";
         let b_child_name = "b_child";
-        let b_child_collection = "elements";
+
+        let child_collection = "elements";
 
         let realm = spawn_realm_server(move |realm_request| match realm_request {
             _ => {
@@ -730,7 +859,8 @@ mod tests {
             }
         });
 
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
+        let element_manager =
+            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
         assert!(element_manager
             .launch_element(
                 felement::Spec {
@@ -738,7 +868,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 a_child_name,
-                a_child_collection,
             )
             .await
             .is_ok());
@@ -749,7 +878,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 b_child_name,
-                b_child_collection,
             )
             .await
             .is_ok());
@@ -839,7 +967,8 @@ mod tests {
             }
         });
 
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
+        let element_manager =
+            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
         let result = element_manager
             .launch_element(
                 felement::Spec {
@@ -848,7 +977,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 child_name,
-                child_collection,
             )
             .await;
         let element = result.unwrap();
@@ -906,7 +1034,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, child_collection);
         let result = element_manager
             .launch_element(
                 felement::Spec {
@@ -914,7 +1042,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 child_name,
-                child_collection,
             )
             .await;
         let element = result.unwrap();
@@ -957,7 +1084,8 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new_with_sys_launcher(realm, launcher);
+        let element_manager =
+            SimpleElementManager::new_with_sys_launcher(realm, child_collection, launcher);
         assert!(element_manager
             .launch_element(
                 felement::Spec {
@@ -965,7 +1093,6 @@ mod tests {
                     ..felement::Spec::EMPTY
                 },
                 child_name,
-                child_collection,
             )
             .await
             .is_ok());
@@ -981,10 +1108,10 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
-            .launch_element(felement::Spec { component_url: None, ..felement::Spec::EMPTY }, "", "")
+            .launch_element(felement::Spec { component_url: None, ..felement::Spec::EMPTY }, "")
             .await;
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), ElementManagerError::url_missing("", ""));
@@ -1013,7 +1140,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
             .launch_element(
@@ -1022,7 +1149,6 @@ mod tests {
                     additional_services: Some(additional_services),
                     ..felement::Spec::EMPTY
                 },
-                "",
                 "",
             )
             .await;
@@ -1051,7 +1177,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
             .launch_element(
@@ -1060,7 +1186,6 @@ mod tests {
                     additional_services: Some(additional_services),
                     ..felement::Spec::EMPTY
                 },
-                "",
                 "",
             )
             .await;
@@ -1087,7 +1212,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
             .launch_element(
@@ -1095,7 +1220,6 @@ mod tests {
                     component_url: Some(component_url.to_string()),
                     ..felement::Spec::EMPTY
                 },
-                "",
                 "",
             )
             .await;
@@ -1122,7 +1246,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
             .launch_element(
@@ -1130,7 +1254,6 @@ mod tests {
                     component_url: Some(component_url.to_string()),
                     ..felement::Spec::EMPTY
                 },
-                "",
                 "",
             )
             .await;
@@ -1165,7 +1288,7 @@ mod tests {
                 assert!(false);
             }
         });
-        let element_manager = SimpleElementManager::new(realm);
+        let element_manager = SimpleElementManager::new(realm, "");
 
         let result = element_manager
             .launch_element(
@@ -1173,7 +1296,6 @@ mod tests {
                     component_url: Some(component_url.to_string()),
                     ..felement::Spec::EMPTY
                 },
-                "",
                 "",
             )
             .await;

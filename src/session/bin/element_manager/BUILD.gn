@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("element_manager_bin") {
+  name = "element_manager"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/session/lib/element_management",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:lazy_static",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("element_manager_component") {
+  component_name = "element_manager"
+  deps = [ ":element_manager_bin" ]
+  manifest = "meta/element_manager.cml"
+}
+
+fuchsia_package("element_manager") {
+  deps = [ ":element_manager_component" ]
+}
+
+fuchsia_component("element_manager_bin_test_component") {
+  testonly = true
+  deps = [ ":element_manager_bin_test" ]
+  manifest = "meta/element_manager_bin_test.cml"
+}
+
+fuchsia_test_package("element_manager_tests") {
+  test_components = [ ":element_manager_bin_test_component" ]
+}
