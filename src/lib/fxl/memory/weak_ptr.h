@@ -146,7 +146,7 @@ class WeakPtrFactory {
   explicit WeakPtrFactory(T* ptr) : ptr_(ptr) { FX_DCHECK(ptr_); }
   ~WeakPtrFactory() {
     InvalidateWeakPtrs();
-    FX_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) = kPoisonedPointer);
+    FX_DCHECK(Poison());
   }
 
   // Gets a new weak pointer, which will be valid until either
@@ -173,6 +173,11 @@ class WeakPtrFactory {
   bool HasWeakPtrs() const { return flag_ && !flag_->HasOneRef(); }
 
  private:
+  bool Poison() {
+    *reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) = kPoisonedPointer;
+    return kPoisonedPointer;
+  }
+
   // Value to poison |ptr_| with in debug mode to ensure that weak pointer are
   // not generated once this class has been destroyed.
   // Value must be different from 0, and invalid as a real pointer address.
