@@ -26,6 +26,9 @@ executable("appmgr-lifecycle-tests-bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # TODO(67360): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("test-lifecycle-component-bin") {
