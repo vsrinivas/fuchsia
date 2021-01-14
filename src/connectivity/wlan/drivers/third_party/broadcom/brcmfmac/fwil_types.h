@@ -17,6 +17,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_
 
+#include <netinet/if_ether.h>
+
 #include <wlan/common/mac_frame.h>
 
 #include "linuxisms.h"

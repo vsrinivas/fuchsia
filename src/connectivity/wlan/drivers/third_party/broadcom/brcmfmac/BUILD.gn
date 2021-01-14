@@ -106,19 +106,17 @@ source_set("dmabuf") {
 
 # Sources for the BCDC firmware protocol.
 source_set("bcdc") {
-  sources = [
-    "bcdc.cc",
-    "fwsignal.cc",
-    "fwsignal.h",
-  ]
+  sources = [ "bcdc.cc" ]
   public = [ "bcdc.h" ]
   deps = [
     ":bus",
     ":core",
     ":debug",
-    ":linuxisms",
-    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/public",
+  ]
+  public_deps = [
+    ":core",
+    ":linuxisms",
   ]
 }
 
@@ -187,7 +185,6 @@ source_set("core") {
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
-    "fwsignal.h",
     "proto.h",
     "regs.h",
     "soc.h",
@@ -210,6 +207,7 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
     "//src/lib/ddktl",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",

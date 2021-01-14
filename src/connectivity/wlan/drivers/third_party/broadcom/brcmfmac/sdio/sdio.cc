@@ -1993,7 +1993,6 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   /* Deflow-control stack if needed */
   if ((bus->sdiodev->state == BRCMF_SDIOD_DATA) && bus->txoff && (pktq_len(&bus->txq) < TXLOW)) {
     bus->txoff = false;
-    brcmf_proto_bcdc_txflowblock(bus->sdiodev->drvr, false);
   }
 
   // TODO(fxbug.dev/42151): Remove once bug resolved
@@ -2406,8 +2405,6 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   /* Priority based enq */
   // spin_lock_bh(&bus->txq_lock);
   sdiodev->drvr->irq_callback_lock.lock();
-  /* reset bus_flags in packet workspace */
-  *(uint16_t*)(pkt->workspace) = 0;
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
     BRCMF_ERR("out of bus->txq !!!");
@@ -2433,7 +2430,6 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
 
   if (pktq_len(&bus->txq) >= TXHI) {
     bus->txoff = true;
-    brcmf_proto_bcdc_txflowblock(sdiodev->drvr, true);
   }
   // spin_unlock_bh(&bus->txq_lock);
   sdiodev->drvr->irq_callback_lock.unlock();

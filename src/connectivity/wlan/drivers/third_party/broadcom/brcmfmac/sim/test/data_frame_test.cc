@@ -117,11 +117,7 @@ class DataFrameTest : public SimTest {
                       const std::vector<uint8_t>& eapol);
 
   // Send a data frame to the ap
-  void ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr, std::vector<uint8_t>& ethFrame,
-                size_t num_pkts);
-  void EnableRssiErrInj();
-
-  void SendStatsQuery();
+  void ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr, std::vector<uint8_t>& ethFrame);
 
  protected:
   struct AssocContext {
@@ -182,8 +178,6 @@ class DataFrameTest : public SimTest {
 
   DataContext data_context_;
 
-  // number of status query responses received
-  size_t status_query_rsp_count_ = 0;
   bool assoc_check_for_eapol_rx_ = false;
 
  private:
@@ -203,7 +197,6 @@ class DataFrameTest : public SimTest {
   void OnEapolConf(const wlanif_eapol_confirm_t* resp);
   void OnEapolInd(const wlanif_eapol_indication_t* ind);
   void OnDataRecv(const void* data_buffer, size_t data_size);
-  void OnStatsQueryResp(const wlanif_stats_query_response_t* resp);
   static void TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf);
 };
 
@@ -252,10 +245,6 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
     .eapol_ind =
         [](void* cookie, const wlanif_eapol_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnEapolInd(ind);
-        },
-    .stats_query_resp =
-        [](void* cookie, const wlanif_stats_query_response_t* response) {
-          static_cast<DataFrameTest*>(cookie)->OnStatsQueryResp(response);
         },
     .data_recv =
         [](void* cookie, const void* data_buffer, size_t data_size, uint32_t flags) {
@@ -351,15 +340,6 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   non_eapol_data_count++;
 }
 
-void DataFrameTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {
-  status_query_rsp_count_++;
-  ASSERT_NE(resp->stats.mlme_stats_list, nullptr);
-  ASSERT_EQ(resp->stats.mlme_stats_list->stats.client_mlme_stats.assoc_data_rssi.hist_count, 0U);
-}
-
-void DataFrameTest::SendStatsQuery() {
-  client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
-}
 
 void DataFrameTest::StartAssoc() {
   // Send join request
@@ -411,19 +391,11 @@ void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcA
   client_ifc_.if_impl_ops_->eapol_req(client_ifc_.if_impl_ctx_, &eapol_req);
 }
 
-void DataFrameTest::EnableRssiErrInj() {
-  brcmf_simdev* sim = device_->GetSim();
-  // Enable error injection in SIM FW - set RSSI to 0 in signal
-  sim->sim_fw->err_inj_.SetSignalErrInj(true);
-}
-
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
-                             std::vector<uint8_t>& ethFrame, size_t num_pkts) {
+                             std::vector<uint8_t>& ethFrame) {
   BRCMF_DBG(SIM, "ClientTx: @ %lu\n", env_->GetTime().get());
-  for (size_t i = 0; i < num_pkts; i++) {
-    simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
-    env_->Tx(dataFrame, kDefaultTxInfo, this);
-  }
+  simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
+  env_->Tx(dataFrame, kDefaultTxInfo, this);
 }
 
 void DataFrameTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
@@ -566,10 +538,9 @@ TEST_F(DataFrameTest, RxDataFrame) {
   // Ensure the data packet is sent after the client has associated
   delay += kSsidEventDelay + zx::msec(100);
   SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
-                data_context_.expected_received_data.back(), 1);
+                data_context_.expected_received_data.back());
 
   delay += kSsidEventDelay + zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::SendStatsQuery, this);
   // Run
   env_->Run();
 
@@ -578,48 +549,6 @@ TEST_F(DataFrameTest, RxDataFrame) {
   EXPECT_EQ(non_eapol_data_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
-  // Confirm that the driver received a status query response
-  EXPECT_EQ(status_query_rsp_count_, 1U);
-}
-
-// Test driver does not report 0 rssi readings in query response
-TEST_F(DataFrameTest, CheckRssiInStatsQueryResp) {
-  // Create our device instance
-  Init();
-
-  // Start a fake AP
-  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
-  aps_.push_back(&ap);
-
-  zx::duration delay = zx::msec(1);
-  // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
-
-  // Want to send some packets from test to driver
-  data_context_.expected_received_data.push_back(
-      CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
-  // Ensure the data packet is sent after the client has associated
-  delay += kSsidEventDelay + zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
-                data_context_.expected_received_data.back(), 10);
-
-  delay += zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::EnableRssiErrInj, this);
-  delay += zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
-                data_context_.expected_received_data.back(), 10);
-  delay += zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::SendStatsQuery, this);
-  // Run
-  env_->Run();
-
-  // Confirm that the driver received that packet
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
-  EXPECT_EQ(non_eapol_data_count, 20U);
-  // Confirm that the driver received a status query response
-  EXPECT_EQ(status_query_rsp_count_, 1U);
 }
 
 // Test driver can receive data frames
@@ -640,8 +569,7 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
 
   // Want to send packet from test to driver
-  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, ethFrame,
-                1);
+  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, ethFrame);
 
   // Run
   env_->Run();
@@ -669,7 +597,7 @@ TEST_F(DataFrameTest, RxEapolFrame) {
   data_context_.expected_received_data.push_back(kSampleEapol);
   auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_PAE), kSampleEapol);
 
-  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
+  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
 
   // Run
   env_->Run();
@@ -702,7 +630,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Send the packet before the SSID event is sent from SIM FW
   delay = delay + kSsidEventDelay / 2;
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
   assoc_check_for_eapol_rx_ = true;
   // Run
   env_->Run();
@@ -735,7 +663,7 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Send the packet before the Link event is sent by SIM FW.
   delay = delay + kLinkEventDelay / 2;
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame, 1);
+  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
   // Run
   env_->Run();
 

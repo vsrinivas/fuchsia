@@ -5885,8 +5885,7 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   err = brcmf_pno_attach(cfg);
   if (err != ZX_OK) {
     BRCMF_ERR("PNO initialisation failed (%d)", err);
-    brcmf_btcoex_detach(cfg);
-    goto unreg_out;
+    goto btcoex_out;
   }
 
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
@@ -5894,6 +5893,7 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     if (err != ZX_OK) {
       BRCMF_DBG(INFO, "TDLS not enabled: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
+      goto pno_out;
     } else {
       brcmf_fweh_register(cfg->pub, BRCMF_E_TDLS_PEER_EVENT, brcmf_notify_tdls_peer_event);
     }
@@ -5902,6 +5902,10 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   BRCMF_DBG(TEMP, "Exit");
   return ZX_OK;
 
+pno_out:
+  brcmf_pno_detach(cfg);
+btcoex_out:
+  brcmf_btcoex_detach(cfg);
 unreg_out:
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
 cfg_out:

@@ -33,8 +33,6 @@
 #include "core.h"
 #include "debug.h"
 #include "fwil.h"
-#include "fwsignal.h"
-#include "linuxisms.h"
 #include "netbuf.h"
 #include "proto.h"
 
@@ -45,12 +43,6 @@
 #define BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES 12
 
 #define RETRIES 2 /* # of retries to retrieve matching dcmd response */
-
-struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr) {
-  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
-
-  return bcdc->fws;
-}
 
 static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
                                         uint buflen, bool set) {
@@ -268,8 +260,8 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
   BCDC_SET_IF_IDX(h, static_cast<uint8_t>(ifidx));
 }
 
-static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
-                                            struct brcmf_netbuf* pktbuf, struct brcmf_if** ifp) {
+static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* pktbuf,
+                                            struct brcmf_if** ifp) {
   struct brcmf_proto_bcdc_header* h;
   struct brcmf_if* tmp_if;
 
@@ -301,13 +293,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
   pktbuf->priority = h->priority & BCDC_PRIORITY_MASK;
 
   brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
-  if (do_fws) {
-    const auto new_data_offset = h->data_offset << 2;
-    ZX_DEBUG_ASSERT(new_data_offset <= std::numeric_limits<uint16_t>::max());
-    brcmf_fws_hdrpull(tmp_if, static_cast<uint16_t>(new_data_offset), pktbuf);
-  } else {
-    brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
-  }
+  brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
 
   if (pktbuf->len == 0) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -322,7 +308,6 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
                                                   std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
   zx_status_t ret = ZX_OK;
-  struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
   struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
   // Copy the Netbuf's data in to a brcmf_netbuf, since that's what the rest of this stack
@@ -341,12 +326,7 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
     brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
     memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
     b_netbuf->priority = netbuf->priority();
-
-    if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
-      ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
-    } else {
-      ret = brcmf_fws_process_netbuf(ifp, b_netbuf);
-    }
+    ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
   }
 
   if (ret != ZX_OK) {
@@ -363,28 +343,22 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
   return brcmf_bus_txdata(drvr->bus_if, pktbuf);
 }
 
-void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state) {
-  BRCMF_DBG(TRACE, "Enter");
-  brcmf_fws_bus_blocked(drvr, state);
-}
-
 void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, struct brcmf_netbuf* txp, bool success) {
   struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
   struct brcmf_if* ifp;
 
-  /* await txstatus signal for firmware if active */
-  if (brcmf_fws_fc_active(bcdc->fws)) {
-    if (!success) {
-      brcmf_fws_bustxfail(bcdc->fws, txp);
-    }
-  } else {
-    if (!brcmf_proto_bcdc_hdrpull(drvr, false, txp, &ifp)) {
-      struct ethhdr* eh = reinterpret_cast<struct ethhdr*>(txp->data);
-      brcmf_txfinalize(ifp, eh, success);
-    }
-    brcmu_pkt_buf_free_netbuf(txp);
+  if (!brcmf_proto_bcdc_hdrpull(drvr, txp, &ifp)) {
+    struct ethhdr* eh = reinterpret_cast<struct ethhdr*>(txp->data);
+    brcmf_txfinalize(ifp, eh, success);
   }
+  brcmu_pkt_buf_free_netbuf(txp);
 }
+
+static void brcmf_proto_bcdc_add_iface(struct brcmf_pub* drvr, int ifidx) {}
+
+static void brcmf_proto_bcdc_del_iface(struct brcmf_pub* drvr, int ifidx) {}
+
+static void brcmf_proto_bcdc_reset_iface(struct brcmf_pub* drvr, int ifidx) {}
 
 static void brcmf_proto_bcdc_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
                                                  enum proto_addr_mode addr_mode) {}
@@ -394,31 +368,6 @@ static void brcmf_proto_bcdc_delete_peer(struct brcmf_pub* drvr, int ifidx,
 
 static void brcmf_proto_bcdc_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                            uint8_t peer[ETH_ALEN]) {}
-
-static void brcmf_proto_bcdc_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-  brcmf_fws_rxreorder(ifp, netbuf);
-}
-
-static void brcmf_proto_bcdc_add_if(struct brcmf_if* ifp) { brcmf_fws_add_interface(ifp); }
-
-static void brcmf_proto_bcdc_del_if(struct brcmf_if* ifp) { brcmf_fws_del_interface(ifp); }
-
-static void brcmf_proto_bcdc_reset_if(struct brcmf_if* ifp) { brcmf_fws_reset_interface(ifp); }
-
-static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
-  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
-  struct brcmf_fws_info* fws;
-  zx_status_t err;
-
-  err = brcmf_fws_attach(drvr, &fws);
-  if (err != ZX_OK) {
-    bcdc->fws = nullptr;
-    return err;
-  }
-
-  bcdc->fws = fws;
-  return ZX_OK;
-}
 
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
   struct brcmf_proto* proto = nullptr;
@@ -440,22 +389,21 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
     goto fail;
   }
 
-  drvr->proto = proto;
-  drvr->proto->hdrpull = brcmf_proto_bcdc_hdrpull;
-  drvr->proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
-  drvr->proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
-  drvr->proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
-  drvr->proto->txdata = brcmf_proto_bcdc_txdata;
-  drvr->proto->configure_addr_mode = brcmf_proto_bcdc_configure_addr_mode;
-  drvr->proto->delete_peer = brcmf_proto_bcdc_delete_peer;
-  drvr->proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;
-  drvr->proto->rxreorder = brcmf_proto_bcdc_rxreorder;
-  drvr->proto->add_if = brcmf_proto_bcdc_add_if;
-  drvr->proto->del_if = brcmf_proto_bcdc_del_if;
-  drvr->proto->reset_if = brcmf_proto_bcdc_reset_if;
-  drvr->proto->init_done = brcmf_proto_bcdc_init_done;
-  drvr->proto->pd = bcdc;
+  proto->add_iface = brcmf_proto_bcdc_add_iface;
+  proto->del_iface = brcmf_proto_bcdc_del_iface;
+  proto->reset_iface = brcmf_proto_bcdc_reset_iface;
+  proto->configure_addr_mode = brcmf_proto_bcdc_configure_addr_mode;
+  proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
+  proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
+  proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
+  proto->pd = bcdc;
 
+  proto->hdrpull = brcmf_proto_bcdc_hdrpull;
+  proto->txdata = brcmf_proto_bcdc_txdata;
+  proto->delete_peer = brcmf_proto_bcdc_delete_peer;
+  proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;
+
+  drvr->proto = proto;
   drvr->hdrlen += BCDC_HEADER_LEN + BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES;
   drvr->bus_if->maxctl = BRCMF_DCMD_MAXLEN + sizeof(struct brcmf_proto_bcdc_dcmd);
   return ZX_OK;
@@ -472,7 +420,6 @@ void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
   }
 
   struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
-  brcmf_fws_detach(bcdc->fws);
 
   drvr->proto->pd = nullptr;
   free(bcdc);

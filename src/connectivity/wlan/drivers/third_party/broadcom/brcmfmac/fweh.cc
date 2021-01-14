@@ -217,7 +217,7 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
     if (err != ZX_OK) {
       return;
     }
-    brcmf_proto_add_if(drvr, ifp);
+    brcmf_proto_add_iface(drvr, ifp->ifidx);
 
     if (!drvr->fweh.evt_handler[BRCMF_E_IF])
       if (brcmf_net_attach(ifp, false) != ZX_OK) {
@@ -226,7 +226,7 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
   }
 
   if (ifp && ifevent->action == BRCMF_E_IF_CHANGE) {
-    brcmf_proto_reset_if(drvr, ifp);
+    brcmf_proto_reset_iface(drvr, ifp->ifidx);
   }
 
   err = brcmf_fweh_call_event_handler(ifp, static_cast<brcmf_fweh_event_code>(emsg->event_code),

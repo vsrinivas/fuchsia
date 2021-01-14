@@ -334,7 +334,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
   zx_status_t ret;
 
   /* process and remove protocol-specific header */
-  ret = brcmf_proto_hdrpull(drvr, true, netbuf, ifp);
+  ret = brcmf_proto_hdrpull(drvr, netbuf, ifp);
 
   if (ret != ZX_OK || !(*ifp) || !(*ifp)->ndev) {
     if (ret != ZX_ERR_BUFFER_TOO_SMALL && *ifp) {
@@ -357,18 +357,13 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
     return;
   }
 
-  if (brcmf_proto_is_reorder_netbuf(netbuf)) {
-    brcmf_proto_rxreorder(ifp, netbuf);
-  } else {
-    /* Process special event packets */
-    if (handle_event) {
-      brcmf_fweh_process_event(ifp->drvr, reinterpret_cast<brcmf_event*>(netbuf->data),
-                               netbuf->len);
-    }
-
-    brcmf_netif_rx(ifp, netbuf->data, netbuf->len);
-    brcmu_pkt_buf_free_netbuf(netbuf);
+  /* Process special event packets */
+  if (handle_event) {
+    brcmf_fweh_process_event(ifp->drvr, reinterpret_cast<brcmf_event*>(netbuf->data), netbuf->len);
   }
+
+  brcmf_netif_rx(ifp, netbuf->data, netbuf->len);
+  brcmu_pkt_buf_free_netbuf(netbuf);
 }
 
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
@@ -588,7 +583,7 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
     return;
   }
   BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d", ifp->bsscfgidx, ifp->ifidx);
-  brcmf_proto_del_if(ifp->drvr, ifp);
+  brcmf_proto_del_iface(ifp->drvr, ifp->ifidx);
   brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
@@ -635,12 +630,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   }
   brcmf_feat_attach(drvr);
 
-  ret = brcmf_proto_init_done(drvr);
-  if (ret != ZX_OK) {
-    goto fail;
-  }
-
-  brcmf_proto_add_if(drvr, ifp);
+  brcmf_proto_add_iface(drvr, ifp->ifidx);
 
   ret = brcmf_cfg80211_attach(drvr);
   if (ret != ZX_OK) {

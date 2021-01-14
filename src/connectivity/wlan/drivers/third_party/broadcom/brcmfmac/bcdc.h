@@ -62,7 +62,6 @@ struct brcmf_bcdc {
   struct brcmf_proto_bcdc_dcmd msg;
   // buf must be packed right after msg; see brcmf_proto_bcdc_msg
   unsigned char buf[BRCMF_DCMD_MAXLEN];
-  struct brcmf_fws_info* fws;
 };
 
 // clang-format off
@@ -100,6 +99,5 @@ zx_status_t brcmf_proto_bcdc_attach(brcmf_pub* drvr);
 void brcmf_proto_bcdc_detach(brcmf_pub* drvr);
 void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state);
 void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, brcmf_netbuf* txp, bool success);
-struct brcmf_fws_info* drvr_to_fws(brcmf_pub* drvr);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_

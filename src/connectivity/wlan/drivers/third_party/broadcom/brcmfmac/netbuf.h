@@ -129,7 +129,6 @@ class AllocatedNetbuf : public Netbuf {
  * len - The length of data stored
  * data - Pointer to the start of data - may be moved by shrink_head/grow_head
  * listnode - Used to maintain queues of brcmf_netbuf
- * workspace - Reserved for use by the driver (a holdover from Linux-style architecture)
  * ip_summed - Unclear - TODO: maybe delete after FIDL interfaces is finalized
  * allocated_buffer - Pointer to the allocated buffer
  * allocated_size - Size of the allocated buffer
@@ -139,11 +138,6 @@ struct brcmf_netbuf {
   uint32_t len;
   uint8_t* data;
   list_node_t listnode;  // Do not access listnode fields directly.
-  // Workspace is a small area for use by the driver, on which a driver-specific struct can
-  // be superimposed. For example, see fwsignal.c for brcmf_netbuf_workspace.
-  // The driver uses it to associate state / information with the packet.
-  // Code above and below the driver, and the netbuf library, should not modify this area.
-  uint8_t workspace[48];
   uint32_t ip_summed;
   uint8_t* allocated_buffer;
   uint32_t allocated_size;

@@ -41,7 +41,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwsignal.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
@@ -88,12 +87,11 @@ zx_status_t SimFirmware::BusPreinit() {
 
 void SimFirmware::BusStop() { BRCMF_ERR("%s unimplemented", __FUNCTION__); }
 
-// Returns a bufer that can be used for BCDC-formatted communications, with the requested
+// Returns a buffer that can be used for BCDC-formatted communications, with the requested
 // payload size and an initialized BCDC header. "data_offset" represents any signalling offset
 // (in words) and "offset_out" represents the offset of the payload within the returned buffer.
 std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(int16_t ifidx,
                                                                     size_t requested_size,
-                                                                    size_t data_offset,
                                                                     size_t* offset_out) {
   size_t header_size = sizeof(brcmf_proto_bcdc_header);
   size_t total_size = header_size + requested_size;
@@ -106,7 +104,8 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(int16_t ifid
   header->flags2 = 0;
   BCDC_SET_IF_IDX(header, ifidx);
 
-  header->data_offset = data_offset;
+  // Data immediately follows the header
+  header->data_offset = 0;
 
   *offset_out = header_size;
   return buf;
@@ -2793,7 +2792,7 @@ std::shared_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
 
   // Note: events always encode the interface index into the event header and 0 into the BCDC
   // header.
-  auto buf = CreateBcdcBuffer(0, total_size, 0, &event_data_offset);
+  auto buf = CreateBcdcBuffer(0, total_size, &event_data_offset);
 
   uint8_t* buffer_data = buf->data();
   auto event = reinterpret_cast<brcmf_event*>(&buffer_data[event_data_offset]);
@@ -2876,45 +2875,14 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
                                     const std::vector<uint8_t>& buffer_in,
                                     std::shared_ptr<const simulation::WlanRxInfo> info) {
   size_t header_offset;
-  size_t signal_size_bytes = 0;
-  size_t signal_filler_bytes = 0;
-
-  BRCMF_DBG(SIM, "Send Frame to driver, ifidx: %u size: %zu", ifidx, payload_size);
-  // If signalling is enabled (for now only RSSI) ensure space is reserved for it
-  if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
-    signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
-    signal_filler_bytes = sizeof(uint32_t) - (signal_size_bytes % sizeof(uint32_t));
-    signal_size_bytes += signal_filler_bytes;
-  }
-  auto signal_size_words = signal_size_bytes >> 2;
-  auto buf =
-      CreateBcdcBuffer(ifidx, payload_size + signal_size_bytes, signal_size_words, &header_offset);
+  auto buf = CreateBcdcBuffer(ifidx, payload_size, &header_offset);
 
   if (payload_size != 0) {
     ZX_ASSERT(!buffer_in.empty());
     uint8_t* buf_data = buf->data();
-    if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
-      // TLV type
-      buf_data[header_offset + FWS_TLV_TYPE_OFFSET] = BRCMF_FWS_TYPE_RSSI;
-      // TLV Length
-      buf_data[header_offset + FWS_TLV_LEN_OFFSET] = FWS_RSSI_DATA_LEN;
-      // TLV value
-      buf_data[header_offset + FWS_TLV_DATA_OFFSET] = info->signal_strength;
-
-      header_offset += FWS_TLV_DATA_OFFSET + FWS_RSSI_DATA_LEN;
-      // since RSSI signal is only 3 bytes, pad it with the end of signal type.
-      if (signal_filler_bytes) {
-        for (uint8_t i = 0; i < signal_filler_bytes; i++) {
-          buf_data[header_offset + i] = BRCMF_FWS_TYPE_FILLER;
-        }
-        header_offset += signal_filler_bytes;
-      }
-    }
     memcpy(&buf_data[header_offset], buffer_in.data(), payload_size);
   }
 
-  // Handle any Rx frame related error injection (if enabled).
-  err_inj_.HandleRxFrameErrorInjection(buf->data());
   brcmf_sim_rx_frame(simdev_, std::move(buf));
 }
 

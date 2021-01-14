@@ -24,10 +24,6 @@
 
 enum proto_addr_mode { ADDR_INDIRECT = 0, ADDR_DIRECT };
 
-struct brcmf_netbuf_reorder_data {
-  uint8_t* reorder;
-};
-
 struct brcmf_proto {
   void (*add_iface)(struct brcmf_pub* drvr, int ifidx);
   void (*del_iface)(struct brcmf_pub* drvr, int ifidx);
@@ -42,22 +38,43 @@ struct brcmf_proto {
   void* pd;
 
   // Deprecated entry points.
-  zx_status_t (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* netbuf,
+  zx_status_t (*hdrpull)(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
                          struct brcmf_if** ifp);
   int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct brcmf_netbuf* netbuf);
-  void (*rxreorder)(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
-  void (*add_if)(struct brcmf_if* ifp);
-  void (*del_if)(struct brcmf_if* ifp);
-  void (*reset_if)(struct brcmf_if* ifp);
-  zx_status_t (*init_done)(struct brcmf_pub* drvr);
 
   // Unimplemented entry points.
   void (*delete_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
   void (*add_tdls_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
 };
 
-static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
-                                      struct brcmf_netbuf* netbuf, struct brcmf_if** ifp) {
+static inline void brcmf_proto_add_iface(struct brcmf_pub* drvr, int ifidx) {
+  drvr->proto->add_iface(drvr, ifidx);
+}
+static inline void brcmf_proto_del_iface(struct brcmf_pub* drvr, int ifidx) {
+  drvr->proto->del_iface(drvr, ifidx);
+}
+static inline void brcmf_proto_reset_iface(struct brcmf_pub* drvr, int ifidx) {
+  drvr->proto->reset_iface(drvr, ifidx);
+}
+static inline void brcmf_proto_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
+                                                   enum proto_addr_mode addr_mode) {
+  drvr->proto->configure_addr_mode(drvr, ifidx, addr_mode);
+}
+static inline zx_status_t brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
+                                                 void* buf, uint len, bcme_status_t* fwerr) {
+  return drvr->proto->query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
+}
+static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
+                                               void* buf, uint len, bcme_status_t* fwerr) {
+  return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
+}
+static inline zx_status_t brcmf_proto_tx_queue_data(
+    struct brcmf_pub* drvr, int ifidx, std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
+  return drvr->proto->tx_queue_data(drvr, ifidx, std::move(netbuf));
+}
+
+static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
+                                      struct brcmf_if** ifp) {
   struct brcmf_if* tmp = NULL;
 
   /* assure protocol is always called with
@@ -68,30 +85,13 @@ static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
   } else {
     ifp = &tmp;
   }
-  return drvr->proto->hdrpull(drvr, do_fws, netbuf, ifp);
+  return drvr->proto->hdrpull(drvr, netbuf, ifp);
 }
-static inline zx_status_t brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                                 void* buf, uint len, bcme_status_t* fwerr) {
-  return drvr->proto->query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
-}
-static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                               void* buf, uint len, bcme_status_t* fwerr) {
-  return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
-}
-
-static inline zx_status_t brcmf_proto_tx_queue_data(
-    struct brcmf_pub* drvr, int ifidx, std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
-  return drvr->proto->tx_queue_data(drvr, ifidx, std::move(netbuf));
-}
-
 static inline zx_status_t brcmf_proto_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                              struct brcmf_netbuf* netbuf) {
   return drvr->proto->txdata(drvr, ifidx, offset, netbuf);
 }
-static inline void brcmf_proto_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
-                                                   enum proto_addr_mode addr_mode) {
-  drvr->proto->configure_addr_mode(drvr, ifidx, addr_mode);
-}
+
 static inline void brcmf_proto_delete_peer(struct brcmf_pub* drvr, int ifidx,
                                            uint8_t peer[ETH_ALEN]) {
   drvr->proto->delete_peer(drvr, ifidx, peer);
@@ -99,53 +99,6 @@ static inline void brcmf_proto_delete_peer(struct brcmf_pub* drvr, int ifidx,
 static inline void brcmf_proto_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                              uint8_t peer[ETH_ALEN]) {
   drvr->proto->add_tdls_peer(drvr, ifidx, peer);
-}
-static inline bool brcmf_proto_is_reorder_netbuf(struct brcmf_netbuf* netbuf) {
-  struct brcmf_netbuf_reorder_data* rd;
-
-  rd = (struct brcmf_netbuf_reorder_data*)netbuf->workspace;
-  return !!rd->reorder;
-}
-
-static inline void brcmf_proto_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-  ifp->drvr->proto->rxreorder(ifp, netbuf);
-}
-
-static inline void brcmf_proto_add_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-  if (drvr->proto->add_iface) {
-    return drvr->proto->add_iface(drvr, ifp->ifidx);
-  }
-  if (!drvr->proto->add_if) {
-    return;
-  }
-  drvr->proto->add_if(ifp);
-}
-
-static inline void brcmf_proto_del_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-  if (drvr->proto->del_iface) {
-    return drvr->proto->del_iface(drvr, ifp->ifidx);
-  }
-  if (!drvr->proto->del_if) {
-    return;
-  }
-  drvr->proto->del_if(ifp);
-}
-
-static inline void brcmf_proto_reset_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-  if (drvr->proto->reset_iface) {
-    return drvr->proto->reset_iface(drvr, ifp->ifidx);
-  }
-  if (!drvr->proto->reset_if) {
-    return;
-  }
-  drvr->proto->reset_if(ifp);
-}
-
-static inline zx_status_t brcmf_proto_init_done(struct brcmf_pub* drvr) {
-  if (!drvr->proto->init_done) {
-    return ZX_OK;
-  }
-  return drvr->proto->init_done(drvr);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_

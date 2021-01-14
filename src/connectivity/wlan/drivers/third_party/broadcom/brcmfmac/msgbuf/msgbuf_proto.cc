@@ -32,8 +32,8 @@ constexpr int kTxBufferCount = 2048;
 std::unique_ptr<brcmf_proto> CreateProto(MsgbufProto* msgbuf) {
   auto proto = std::make_unique<brcmf_proto>();
 
-  proto->hdrpull = [](brcmf_pub* drvr, bool do_fws, brcmf_netbuf* netbuf, brcmf_if** ifp) {
-    return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->HdrPull(do_fws, netbuf, ifp);
+  proto->hdrpull = [](brcmf_pub* drvr, brcmf_netbuf* netbuf, brcmf_if** ifp) {
+    return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->HdrPull(netbuf, ifp);
   };
   proto->query_dcmd = [](brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
                          bcme_status_t* fwerr) {
@@ -54,9 +54,6 @@ std::unique_ptr<brcmf_proto> CreateProto(MsgbufProto* msgbuf) {
   };
   proto->add_tdls_peer = [](brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]) {
     return reinterpret_cast<MsgbufProto*>(drvr->proto->pd)->AddTdlsPeer(ifidx, peer);
-  };
-  proto->rxreorder = [](brcmf_if* ifp, brcmf_netbuf* netbuf) {
-    return reinterpret_cast<MsgbufProto*>(ifp->drvr->proto->pd)->RxReorder(netbuf);
   };
 
   proto->pd = msgbuf;
@@ -178,7 +175,7 @@ zx_status_t MsgbufProto::Create(Device* device, DmaBufferProviderInterface* dma_
   return ZX_OK;
 }
 
-zx_status_t MsgbufProto::HdrPull(bool do_fws, brcmf_netbuf* netbuf, brcmf_if** ifp) {
+zx_status_t MsgbufProto::HdrPull(brcmf_netbuf* netbuf, brcmf_if** ifp) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -239,8 +236,6 @@ void MsgbufProto::DeletePeer(int ifidx, uint8_t peer[ETH_ALEN]) {
 void MsgbufProto::AddTdlsPeer(int ifidx, uint8_t peer[ETH_ALEN]) {
   BRCMF_ERR("MsgbufProto::AddTdlsPeer unimplemented");
 }
-
-void MsgbufProto::RxReorder(brcmf_netbuf* netbuf) {}
 
 brcmf_proto* MsgbufProto::GetProto() { return proto_.get(); }
 

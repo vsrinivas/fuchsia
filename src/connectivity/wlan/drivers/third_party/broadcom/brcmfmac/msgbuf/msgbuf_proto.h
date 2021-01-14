@@ -34,14 +34,13 @@ class MsgbufProto {
                             std::unique_ptr<MsgbufProto>* out_msgbuf);
 
   // Proto interface implementation.
-  zx_status_t HdrPull(bool do_fws, brcmf_netbuf* netbuf, brcmf_if** ifp);
+  zx_status_t HdrPull(brcmf_netbuf* netbuf, brcmf_if** ifp);
   zx_status_t QueryDcmd(int ifidx, uint cmd, void* buf, uint len, bcme_status_t* fwerr);
   zx_status_t SetDcmd(int ifidx, uint cmd, void* buf, uint len, bcme_status_t* fwerr);
   zx_status_t TxQueueData(int ifidx, std::unique_ptr<Netbuf> netbuf);
   void ConfigureAddrMode(int ifidx, proto_addr_mode addr_mode);
   void DeletePeer(int ifidx, uint8_t peer[ETH_ALEN]);
   void AddTdlsPeer(int ifidx, uint8_t peer[ETH_ALEN]);
-  void RxReorder(brcmf_netbuf* netbuf);
 
   // Get the brcmf_proto C interface for this MSGBUF protocol instance.
   brcmf_proto* GetProto();

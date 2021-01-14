@@ -66,6 +66,9 @@ void brcmf_pno_detach(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_pno_info* pi;
 
   BRCMF_DBG(TRACE, "enter");
+  if (!cfg->pno) {
+    return;
+  }
   pi = cfg->pno;
   cfg->pno = NULL;
 
