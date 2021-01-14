@@ -22,6 +22,10 @@
 #define __cpp_lib_string_view 201606L
 #endif
 
+#if __has_include(<variant>) && !defined(__cpp_lib_variant) && __cplusplus >= 201606L
+#define __cpp_lib_variant 201606L
+#endif
+
 #if !defined(__cpp_lib_void_t) && __cplusplus >= 201411L
 #define __cpp_lib_void_t 201411L
 #endif

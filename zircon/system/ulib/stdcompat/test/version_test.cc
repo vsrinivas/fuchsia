@@ -39,6 +39,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
 #if __cplusplus >= 201606L
   static_assert(__cpp_lib_optional == 201606L,
                 "'__cpp_lib_optional' should be using draft 201606L in std17.");
+  static_assert(__cpp_lib_variant == 201606L,
+                "'__cpp_lib_variant' should be using draft 201606L in std17.");
 #endif
 }
 
@@ -56,6 +58,9 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #endif
 #if defined(__cpp_lib_optional)
   static_assert(false, "'__cpp_lib_optional' should not be defined in std14.")
+#endif
+#if defined(__cpp_lib_variant)
+      static_assert(false, "'__cpp_lib_variant' should not be defined in std14.")
 #endif
 }
 #endif
