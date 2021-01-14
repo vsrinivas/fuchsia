@@ -198,6 +198,11 @@ third_party_go_library("golang.org/x/text") {
 golib("golang.org/x/xerrors") {
 }
 
+third_party_go_library("gonum.org/v1/gonum") {
+  name = "gonum.org/v1/gonum/..."
+  source_dir = "//third_party/golibs/github.com/gonum/gonum"
+}
+
 ### google.golang.org/*
 third_party_go_library(
     "google.golang.org/genproto/googleapis/api/annotations") {
