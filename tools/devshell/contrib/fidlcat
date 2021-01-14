@@ -23,7 +23,7 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [(--port|-p) <PORT>] [--with-symbol-server] [--debug-mode]
+## Usage: fx fidlcat [--port=<port>] [--with-symbol-server] [--debug-mode]
 ##                   [--symbol-path=<path>] [--fidl-ir-path=<path>] [--gdb]
 ##                   [--from=<source>] [--to=<path>] [--format=<output>]
 ##                   [--with-process-info] [--stack=<value>]
@@ -201,113 +201,93 @@ arguments=("--symbol-server=gs://fuchsia-artifacts-release/debug")
 
 use_gdb=0
 
+equal_argument() {
+  if [[ $1 != "$2"* ]]; then
+    return 1
+  fi
+  if [[ $1 != "$2="* ]]; then
+    echo "Flag $2 must be followed by an equal sign: $2=$3"
+    exit 1
+  fi
+  return 0
+}
+
 # Options for the zxdb client.
 agent_out="/dev/null"
 debug_mode=
 
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --help|-h)
+  if [[ $1 == "--help" || $1 == "-h" ]]; then
       fx-command-help
       exit 0
-      ;;
-    --port|-p)
-      shift
-      port="$1"
-      ;;
-    --with-symbol-server)
-      echo "--with-symbol-server option is now implicit. You don't need it anymore."
-      ;;
-    --debug-mode)
+  elif equal_argument $1 "--port" "<port>"; then
+    port=$(echo $1 | cut -c 8-)
+    echo $port
+  elif [[ $1 == "--with-symbol-server" ]]; then
+    echo "--with-symbol-server option is now implicit. You don't need it anymore."
+  elif [[ $1 == "--debug-mode" ]]; then
       agent_out="/dev/stdout"
       debug_mode="--debug-mode"
-      ;;
-    --symbol-path=*)
-      arguments+=("$1")
-      ;;
-    --fidl-ir-path=*)
-      arguments+=("$1")
-      ;;
-    --gdb)
+  elif equal_argument $1 "--symbol-path" "<path>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--fidl-ir-path" "<path>"; then
+    arguments+=("$1")
+  elif [[ $1 == "--gdb" ]]; then
       use_gdb=1
-      ;;
-    --from=device)
+  elif [[ $1 == "--from=device" ]]; then
       arguments+=("$1")
-      ;;
-    --from=*)
-      arguments+=("$1")
-      launch_agent=0
-      ;;
-    --to=*)
-      arguments+=("$1")
-      ;;
-    --format=)
-      arguments+=("--format=none")
-      ;;
-    --format=*)
-      arguments+=("$1")
-      ;;
-    --with=*)
-      arguments+=("$1")
-      ;;
-    --with-process-info)
-      arguments+=("--with-process-info")
-      ;;
-    --stack=*)
-      arguments+=("$1")
-      ;;
-    --syscalls=*)
-      arguments+=("$1")
-      ;;
-    --exclude-syscalls=*)
-      arguments+=("$1")
-      ;;
-    --messages=*)
-      arguments+=("$1")
-      ;;
-    --exclude-messages=*)
-      arguments+=("$1")
-      ;;
-    --trigger=*)
-      arguments+=("$1")
-      ;;
-    --dump-messages)
-      arguments+=("--dump-messages")
-      ;;
-    --verbose=*)
-      arguments+=("$1")
-      ;;
-    --quiet=*)
-      arguments+=("$1")
-      ;;
-    --log-file=*)
-      arguments+=("$1")
-      ;;
-    --stay-alive)
-      arguments+=("--stay-alive")
-      ;;
-    --remote-pid=*)
-      arguments+=("$1")
-      ;;
-    --remote-name=*)
-      arguments+=("$1")
-      ;;
-    --extra-name=*)
-      arguments+=("$1")
-      ;;
-    run)
-      action="$1"
-      shift
-      break # Remaining flags are passed to fidlcat, with processing below
-      ;;
-    --)
-      shift
-      break # Remaining flags are passed to fidlcat
-      ;;
-    *)
-      echo "Invalid flag $1"
-      exit 1
-  esac
+  elif equal_argument $1 "--from" "<source>"; then
+    arguments+=("$1")
+    launch_agent=0
+  elif equal_argument $1 "--to" "<path>"; then
+    arguments+=("$1")
+  elif [[ $1 == "--format=" ]]; then
+    arguments+=("--format=none")
+  elif equal_argument $1 "--format" "<output>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--with" "<option>"; then
+    arguments+=("$1")
+  elif [[ $1 == "--with-process-info" ]]; then
+    arguments+=("$1")
+  elif equal_argument $1 "--stack" "<value>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--syscalls" "<regexp>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--exclude-syscalls" "<regexp>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--messages" "<regexp>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--exclude-messages" "<regexp>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--trigger" "<regexp>"; then
+    arguments+=("$1")
+  elif [[ $1 == "--dump-messages" ]]; then
+    arguments+=("$1")
+  elif equal_argument $1 "--verbose" "<value>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--quiet" "<value>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--log-file" "<path>"; then
+    arguments+=("$1")
+  elif [[ $1 == "--stay-alive" ]]; then
+    arguments+=("$1")
+  elif equal_argument $1 "--remote-pid" "<pid>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--remote-name" "<name>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--extra-name" "<name>"; then
+    arguments+=("$1")
+  elif [[ $1 == "run" ]]; then
+    action="$1"
+    shift
+    break # Remaining flags are passed to fidlcat, with processing below
+  elif [[ $1 == "--" ]]; then
+    shift
+    break # Remaining flags are passed to fidlcat
+  else
+    echo "Invalid flag $1"
+    exit 1
+  fi
   shift
 done
 
