@@ -203,7 +203,7 @@ std::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
   }
 
   if (operation_size) {
-    fuchsia_hardware_nand_Info info;
+    nand_info_t info;
     device->NandQuery(&info, operation_size);
   }
 
@@ -251,7 +251,7 @@ TEST(RamNandTest, Query) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 8);  // 6 bits of ECC, 8 OOB bytes.
   NandDevice device(params);
 
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   size_t operation_size;
   device.NandQuery(&info, &operation_size);
   ASSERT_BYTES_EQ(&info, &params, sizeof(info));

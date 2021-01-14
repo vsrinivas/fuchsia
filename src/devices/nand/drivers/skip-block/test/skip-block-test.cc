@@ -23,7 +23,7 @@ constexpr uint32_t kBlockSize = kPageSize * kNumPages;
 constexpr uint32_t kNumBlocks = 10;
 constexpr uint32_t kEccBits = 10;
 
-fuchsia_hardware_nand_Info kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, kOobSize, 0, {}};
+nand_info_t kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, kOobSize, 0, {}};
 
 // We inject a special context as parent so that we can store the device.
 struct Context {
@@ -83,7 +83,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   void set_result(zx_status_t result) { result_.push_back(result); }
 
   // Nand protocol:
-  void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+  void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {
     *info_out = nand_info_;
     *nand_op_size_out = sizeof(nand_operation_t);
   }
@@ -176,7 +176,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
  private:
   size_t call_ = 0;
   nand_protocol_t proto_;
-  fuchsia_hardware_nand_Info nand_info_ = kInfo;
+  nand_info_t nand_info_ = kInfo;
   fbl::Vector<zx_status_t> result_;
   size_t num_nand_pages_ = kNumPages * kNumBlocks;
 

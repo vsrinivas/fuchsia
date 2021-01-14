@@ -94,7 +94,7 @@ class SkipBlockDevice : public DeviceType,
   ddk::BadBlockProtocolClient bad_block_ __TA_GUARDED(lock_);
   LogicalToPhysicalMap block_map_ __TA_GUARDED(lock_);
   fbl::Mutex lock_;
-  fuchsia_hardware_nand_Info nand_info_;
+  nand_info_t nand_info_;
   size_t parent_op_size_;
 
   std::optional<NandOperation> nand_op_ __TA_GUARDED(lock_);

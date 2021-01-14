@@ -44,7 +44,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   void DdkRelease();
 
   // Nand protocol implementation.
-  void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
+  void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out);
   void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie);
   zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
                                          size_t* num_bad_blocks);
@@ -72,7 +72,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   ddk::RawNandProtocolClient raw_nand_;
 
-  fuchsia_hardware_nand_Info nand_info_;
+  nand_info_t nand_info_;
   uint32_t num_nand_pages_;
 
   thrd_t worker_thread_;

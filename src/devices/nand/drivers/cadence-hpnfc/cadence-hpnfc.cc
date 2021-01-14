@@ -334,7 +334,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoJedec() {
       nand_info_.num_blocks = kJedecIdMap[i].num_blocks;
       nand_info_.ecc_bits = kJedecIdMap[i].ecc_bits;
       nand_info_.oob_size = std::min(kJedecIdMap[i].oob_size, kMaxOobSize);
-      nand_info_.nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+      nand_info_.nand_class = NAND_CLASS_PARTMAP;
       memset(nand_info_.partition_guid, 0, sizeof(nand_info_.partition_guid));
 
       const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
@@ -382,7 +382,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoOnfi() {
   nand_info_.ecc_bits = parameter_page[kEccBitsCorrectabilityOffset];
   nand_info_.oob_size =
       std::min<uint32_t>(ReadParameterPage16(parameter_page, kOobSizeOffset), kMaxOobSize);
-  nand_info_.nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+  nand_info_.nand_class = NAND_CLASS_PARTMAP;
   memset(nand_info_.partition_guid, 0, sizeof(nand_info_.partition_guid));
 
   ZX_DEBUG_ASSERT(nand_info_.page_size % sizeof(uint32_t) == 0);

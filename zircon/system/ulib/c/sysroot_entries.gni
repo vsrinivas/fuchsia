@@ -137,7 +137,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/device/bt-hci.h",
         "zircon/device/ethernet.h",
         "zircon/device/intel-hda.h",
-        "zircon/device/nand.h",
         "zircon/device/network.h",
         "zircon/device/sysmem.h",
         "zircon/device/usb-peripheral.h",

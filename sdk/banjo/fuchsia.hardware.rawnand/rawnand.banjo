@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.rawnand;
 
-using zircon.device.nand;
+using fuchsia.hardware.nandinfo;
 using zx;
 
 [Layout = "ddk-protocol"]
@@ -23,5 +23,5 @@ protocol RawNand {
     /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     EraseBlock(uint32 nandpage) -> (zx.status s);
 
-    GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
+    GetNandInfo() -> (zx.status s, fuchsia.hardware.nandinfo.NandInfo info);
 };

@@ -20,7 +20,7 @@ class OobDoubler {
   ~OobDoubler() {}
 
   // Nand protocol interface.
-  void Query(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
+  void Query(nand_info_t* info_out, size_t* nand_op_size_out);
   void Queue(nand_operation_t* operation, nand_queue_callback completion_cb, void* cookie);
 
  private:

@@ -29,7 +29,7 @@ constexpr uint32_t kNumOobSize = 8;
 constexpr uint8_t kMagic = 'd';
 constexpr uint8_t kOobMagic = 'o';
 
-fuchsia_hardware_nand_Info kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, kNumOobSize, 0, {}};
+nand_info_t kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, kNumOobSize, 0, {}};
 
 enum class OperationType {
   kRead,
@@ -53,7 +53,7 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
   void set_ecc_bits(uint32_t ecc_bits) { ecc_bits_ = ecc_bits; }
 
   // Raw nand protocol:
-  zx_status_t RawNandGetNandInfo(fuchsia_hardware_nand_Info* out_info) {
+  zx_status_t RawNandGetNandInfo(nand_info_t* out_info) {
     *out_info = info_;
     return result_;
   }
@@ -112,7 +112,7 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
 
  private:
   raw_nand_protocol_t proto_;
-  fuchsia_hardware_nand_Info info_ = kInfo;
+  nand_info_t info_ = kInfo;
   zx_status_t result_ = ZX_OK;
   uint32_t ecc_bits_ = 0;
 
@@ -165,7 +165,7 @@ TEST_F(NandTest, Query) {
   nand::NandDevice device(fake_ddk::kFakeParent);
   ASSERT_OK(device.Init());
 
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   size_t operation_size;
   device.NandQuery(&info, &operation_size);
 
@@ -305,7 +305,7 @@ NandDeviceTest::NandDeviceTest() {
   device_ = std::make_unique<nand::NandDevice>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(device_.get());
 
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   device_->NandQuery(&info, &op_size_);
 
   if (device_->Init() != ZX_OK) {

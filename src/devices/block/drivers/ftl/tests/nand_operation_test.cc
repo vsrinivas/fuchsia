@@ -55,7 +55,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
     result_provider_ = std::move(result_provider);
   }
 
-  void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
+  void NandQuery(nand_info_t* out_info, size_t* out_nand_op_size) {
     *out_info = {};
     *out_nand_op_size = 0;
   }

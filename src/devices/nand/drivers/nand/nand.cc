@@ -215,7 +215,7 @@ zx_status_t NandDevice::WorkerThread() {
   return ZX_OK;
 }
 
-void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+void NandDevice::NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {
   memcpy(info_out, &nand_info_, sizeof(*info_out));
   *nand_op_size_out = Transaction::OperationSize(sizeof(nand_operation_t));
 }
@@ -365,7 +365,7 @@ zx_status_t NandDevice::Init() {
 zx_status_t NandDevice::Bind() {
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
-      {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
+      {BIND_NAND_CLASS, 0, NAND_CLASS_PARTMAP},
   };
 
   return DdkAdd(ddk::DeviceAddArgs("nand").set_props(props));

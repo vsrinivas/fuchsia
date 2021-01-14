@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
-#define SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
+#define SRC_DEVICES_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmar.h>
@@ -58,8 +58,7 @@ class AmlBadBlock : public BadBlock {
   };
 
   AmlBadBlock(zx::vmo data_vmo, zx::vmo oob_vmo, fbl::Array<uint8_t> nand_op, Config config,
-              fuchsia_hardware_nand_Info nand_info, BlockStatus* table, uint32_t table_len,
-              OobMetadata* oob)
+              nand_info_t nand_info, BlockStatus* table, uint32_t table_len, OobMetadata* oob)
       : BadBlock(std::move(data_vmo), std::move(oob_vmo), std::move(nand_op)),
         config_(config.bad_block_config),
         nand_proto_(config.nand_proto),
@@ -102,7 +101,7 @@ class AmlBadBlock : public BadBlock {
   // Parent nand protocol implementation.
   nand_protocol_t nand_proto_;
   ddk::NandProtocolClient nand_;
-  const fuchsia_hardware_nand_Info nand_info_;
+  const nand_info_t nand_info_;
   // Information about blocks which store BBT entries.
   BlockListEntry block_list_[kBlockListMax];
   // Block with most recent valid BBT entry.
@@ -122,4 +121,4 @@ class AmlBadBlock : public BadBlock {
 };
 }  // namespace nand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_

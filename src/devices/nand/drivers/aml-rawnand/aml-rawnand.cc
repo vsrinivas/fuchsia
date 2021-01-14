@@ -749,7 +749,7 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   return ZX_OK;
 }
 
-zx_status_t AmlRawNand::RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info) {
+zx_status_t AmlRawNand::RawNandGetNandInfo(nand_info_t* nand_info) {
   uint64_t capacity;
   zx_status_t status = ZX_OK;
 
@@ -760,7 +760,7 @@ zx_status_t AmlRawNand::RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info
   nand_info->num_blocks = static_cast<uint32_t>(capacity);
   nand_info->ecc_bits = controller_params_.ecc_strength;
 
-  nand_info->nand_class = fuchsia_hardware_nand_Class_PARTMAP;
+  nand_info->nand_class = NAND_CLASS_PARTMAP;
   memset(&nand_info->partition_guid, 0, sizeof(nand_info->partition_guid));
 
   if (controller_params_.user_mode == 2)

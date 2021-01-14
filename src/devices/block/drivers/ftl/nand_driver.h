@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/badblock/c/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
 #include <lib/ftl/ndm-driver.h>
 #include <zircon/compiler.h>
@@ -38,7 +37,7 @@ class NandDriver : public ftl::NdmBaseDriver {
                                                         const bad_block_protocol_t* bad_block,
                                                         OperationCounters* counters);
 
-  virtual const fuchsia_hardware_nand_Info& info() const = 0;
+  virtual const nand_info_t& info() const = 0;
 
   // Cleans all non bad blocks in a given block range. Erase failures are logged amd deemed non
   // fatal.

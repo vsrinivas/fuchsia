@@ -25,21 +25,21 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-// Wrapper for fuchsia_hardware_nand_Info. It simplifies initialization of NandDevice.
-struct NandParams : public fuchsia_hardware_nand_Info {
+// Wrapper for nand_info_t. It simplifies initialization of NandDevice.
+struct NandParams : public nand_info_t {
   NandParams() : NandParams(0, 0, 0, 0, 0) {}
 
   NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
              uint32_t oob_size)
-      : NandParams(fuchsia_hardware_nand_Info{page_size,
-                                              pages_per_block,
-                                              num_blocks,
-                                              ecc_bits,
-                                              oob_size,
-                                              fuchsia_hardware_nand_Class_FTL,
-                                              {}}) {}
+      : NandParams(nand_info_t{page_size,
+                               pages_per_block,
+                               num_blocks,
+                               ecc_bits,
+                               oob_size,
+                               fuchsia_hardware_nand_Class_FTL,
+                               {}}) {}
 
-  NandParams(const fuchsia_hardware_nand_Info& base) {
+  NandParams(const nand_info_t& base) {
     // NandParams has no data members.
     *this = *reinterpret_cast<const NandParams*>(&base);
   }
@@ -77,7 +77,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   zx_status_t Unlink();
 
   // NAND protocol implementation.
-  void NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out);
+  void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out);
   void NandQueue(nand_operation_t* operation, nand_queue_callback completion_cb, void* cookie);
   zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
                                          size_t* num_bad_blocks);

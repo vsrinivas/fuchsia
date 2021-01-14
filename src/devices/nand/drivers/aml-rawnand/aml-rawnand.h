@@ -106,7 +106,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   zx_status_t RawNandWritePageHwecc(const void* data, size_t data_size, const void* oob,
                                     size_t oob_size, uint32_t nand_page);
   zx_status_t RawNandEraseBlock(uint32_t nand_page);
-  zx_status_t RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info);
+  zx_status_t RawNandGetNandInfo(nand_info_t* nand_info);
 
  protected:
   // These functions require complicated hardware interaction so need to be

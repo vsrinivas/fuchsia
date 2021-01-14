@@ -34,7 +34,7 @@ namespace nand {
 namespace {
 struct BlockOperationContext {
   ReadWriteOperation op;
-  fuchsia_hardware_nand_Info* nand_info;
+  nand_info_t* nand_info;
   LogicalToPhysicalMap* block_map;
   ddk::NandProtocolClient* nand;
   uint32_t copy;

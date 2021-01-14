@@ -29,7 +29,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
   nand_protocol_t* proto() { return &proto_; }
   nand_operation_t* operation() { return &operation_; }
 
-  void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
+  void NandQuery(nand_info_t* out_info, size_t* out_nand_op_size) {
     *out_info = info_;
     *out_nand_op_size = kOpSize;
   }
@@ -45,7 +45,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
 
  private:
   nand_protocol_t proto_;
-  fuchsia_hardware_nand_Info info_ = {};
+  nand_info_t info_ = {};
   nand_operation_t operation_ = {};
 };
 
@@ -58,7 +58,7 @@ TEST(OobDoublerTest, QueryDisabled) {
   NandTester tester(ftl::OobDoubler::kThreshold);
   ftl::OobDoubler doubler(tester.proto());
 
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   size_t op_size;
   doubler.Query(&info, &op_size);
   EXPECT_EQ(kPageSize, info.page_size);
@@ -73,7 +73,7 @@ TEST(OobDoublerTest, QueryEnabled) {
   NandTester tester(kOobSize);
   ftl::OobDoubler doubler(tester.proto());
 
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   size_t op_size;
   doubler.Query(&info, &op_size);
   EXPECT_EQ(kPageSize * 2, info.page_size);
@@ -109,7 +109,7 @@ TEST(OobDoublerTest, QueueEnabled) {
   ftl::OobDoubler doubler(tester.proto());
 
   // Query() is needed to enable the doubler.
-  fuchsia_hardware_nand_Info info;
+  nand_info_t info;
   size_t op_size;
   doubler.Query(&info, &op_size);
 

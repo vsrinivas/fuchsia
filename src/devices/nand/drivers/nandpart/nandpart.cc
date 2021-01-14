@@ -70,8 +70,8 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Query parent to get its fuchsia_hardware_nand_Info and size for nand_operation_t.
-  fuchsia_hardware_nand_Info nand_info;
+  // Query parent to get its nand_info_t and size for nand_operation_t.
+  nand_info_t nand_info;
   size_t parent_op_size;
   nand_proto.ops->query(nand_proto.ctx, &nand_info, &parent_op_size);
   // Make sure parent_op_size is aligned, so we can safely add our data at the end.
@@ -141,11 +141,11 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     memcpy(&nand_info.partition_guid, &part->type_guid, sizeof(nand_info.partition_guid));
     // We only use FTL for the FVM partition.
     if (memcmp(part->type_guid, fvm_guid, sizeof(fvm_guid)) == 0) {
-      nand_info.nand_class = fuchsia_hardware_nand_Class_FTL;
+      nand_info.nand_class = NAND_CLASS_FTL;
     } else if (memcmp(part->type_guid, test_guid, sizeof(test_guid)) == 0) {
-      nand_info.nand_class = fuchsia_hardware_nand_Class_TEST;
+      nand_info.nand_class = NAND_CLASS_TEST;
     } else {
-      nand_info.nand_class = fuchsia_hardware_nand_Class_BBS;
+      nand_info.nand_class = NAND_CLASS_BBS;
     }
 
     fbl::AllocChecker ac;
@@ -202,7 +202,7 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
   return DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
 }
 
-void NandPartDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+void NandPartDevice::NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {
   memcpy(info_out, &nand_info_, sizeof(*info_out));
   // Add size of extra context.
   *nand_op_size_out = NandPartOp::OperationSize(parent_op_size_);

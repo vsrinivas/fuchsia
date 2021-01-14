@@ -46,7 +46,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   nand_protocol_t* proto() { return &proto_; }
 
   // Nand protocol:
-  void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
+  void NandQuery(nand_info_t* out_info, size_t* out_nand_op_size) {
     *out_info = {};
     out_info->oob_size = 8;
     memcpy(out_info->partition_guid, kGuid, sizeof(kGuid));

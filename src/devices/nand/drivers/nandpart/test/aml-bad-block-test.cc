@@ -28,13 +28,13 @@ constexpr uint32_t kPageSize = ZX_PAGE_SIZE;
 constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kNumBlocks = 100;
 constexpr uint32_t kOobSize = 8;
-constexpr fuchsia_hardware_nand_Info kNandInfo = {
+constexpr nand_info_t kNandInfo = {
     .page_size = kPageSize,
     .pages_per_block = kPagesPerBlock,
     .num_blocks = kNumBlocks,
     .ecc_bits = 2,
     .oob_size = kOobSize,
-    .nand_class = fuchsia_hardware_nand_Class_BBS,
+    .nand_class = NAND_CLASS_BBS,
     .partition_guid = {},
 };
 
@@ -78,7 +78,7 @@ struct Context {
   TableEntries& table_entries;
 };
 
-void MockQuery(void* ctx, fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+void MockQuery(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
   memcpy(info_out, &kNandInfo, sizeof(kNandInfo));
   *nand_op_size_out = sizeof(nand_operation_t);
 }

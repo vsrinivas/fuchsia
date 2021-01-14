@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.rawnand") {
   sources = [ "rawnand.banjo" ]
-  deps = [ "//sdk/banjo/zircon.device.nand" ]
+  deps = [ "//sdk/banjo/fuchsia.hardware.nandinfo" ]
 }

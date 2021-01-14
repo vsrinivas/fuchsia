@@ -18,6 +18,7 @@
 #include <fbl/macros.h>
 
 #include "ram-nand.h"
+#include "src/devices/lib/nand/nand.h"
 
 namespace {
 
@@ -55,7 +56,9 @@ zx_status_t RamNandCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info,
                                      const char** name) {
-  const auto& params = static_cast<const NandParams>(info->nand_info);
+  nand_info_t temp_info;
+  nand::nand_banjo_from_fidl(info->nand_info, &temp_info);
+  const auto& params = static_cast<const NandParams>(temp_info);
   fbl::AllocChecker checker;
   std::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
   if (!checker.check()) {

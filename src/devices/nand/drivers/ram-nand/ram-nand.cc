@@ -226,7 +226,7 @@ zx_status_t NandDevice::Unlink() {
   return ZX_OK;
 }
 
-void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+void NandDevice::NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {
   *info_out = params_;
   *nand_op_size_out = sizeof(RamNandOp);
 }

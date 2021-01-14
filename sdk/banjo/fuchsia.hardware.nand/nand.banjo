@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.nand;
 
-using zircon.device.nand;
+using fuchsia.hardware.nandinfo;
 using zx;
 
 /// NandOperation's are submitted for processing via the queue() method of the
@@ -111,7 +111,7 @@ protocol Nand {
     /// size of |NandOperation|. The |NandOperation| submitted via Queue() must have
     /// `nand_op_size - sizeof(NandOperation)` bytes available at the end of the
     /// structure for the use of the driver.
-    Query() -> (zircon.device.nand.NandInfo info, usize nand_op_size);
+    Query() -> (fuchsia.hardware.nandinfo.NandInfo info, usize nand_op_size);
 
     /// Submits an IO request for processing. Success or failure will be reported
     /// via the callback. The callback may be called before the Queue() method returns.

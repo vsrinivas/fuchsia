@@ -84,7 +84,7 @@ class NandDriverImpl final : public ftl::NandDriver {
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
   void TryEraseRange(uint32_t start_block, uint32_t end_block) final;
-  const fuchsia_hardware_nand_Info& info() const final { return info_; }
+  const nand_info_t& info() const final { return info_; }
 
  private:
   // Returns true if initialization was performed with an alternate configuration.
@@ -95,7 +95,7 @@ class NandDriverImpl final : public ftl::NandDriver {
 
   ftl::OobDoubler parent_;
   size_t op_size_ = 0;
-  fuchsia_hardware_nand_Info info_ = {};
+  nand_info_t info_ = {};
   const bad_block_protocol_t* bad_block_protocol_;
   fbl::Array<uint32_t> bad_blocks_;
   ftl::OperationCounters* counters_ = nullptr;

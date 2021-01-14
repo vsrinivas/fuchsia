@@ -17,6 +17,7 @@
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/lib/nand/nand.h"
 #include "src/devices/nand/drivers/broker/nand-broker-bind.h"
 
 namespace {
@@ -152,7 +153,9 @@ zx_status_t Broker::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t Broker::Query(fuchsia_hardware_nand_Info* info) {
-  nand_.Query(info, &op_size_);
+  nand_info_t temp_info;
+  nand_.Query(&temp_info, &op_size_);
+  nand::nand_fidl_from_banjo(temp_info, info);
   return ZX_OK;
 }
 
