@@ -6,10 +6,45 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <zircon/types.h>
+
+#include <src/ui/bin/root_presenter/constants.h>
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
 namespace root_presenter {
+namespace {
+
+void ChattyReportLog(const fuchsia::ui::input::InputReport& report) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "RP-MediaReport[" << chatty << "/" << ChattyMax() << "]: " << report;
+  }
+}
+
+void ChattyEventLog(const fuchsia::ui::input::MediaButtonsEvent& event,
+                    fuchsia::ui::policy::MediaButtonsListenerPtr& listener) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    zx_koid_t koid = ZX_KOID_INVALID;
+
+    {
+      zx_info_handle_basic_t info{};
+      size_t actual_count = 0;
+      size_t avail_count = 0;
+      zx_status_t status = listener.channel().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                                       &actual_count, &avail_count);
+      if (status == ZX_OK) {
+        koid = info.koid;
+      }
+    }
+    FX_LOGS(INFO) << "RP-MediaEvent[" << chatty << "/" << ChattyMax() << "]: dest=" << koid << ", "
+                  << event;
+  }
+}
+
+}  // namespace
 
 bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
   if (!input_device->descriptor()->media_buttons) {
@@ -34,6 +69,8 @@ bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device)
 
 bool MediaButtonsHandler::OnReport(uint32_t device_id,
                                    fuchsia::ui::input::InputReport input_report) {
+  ChattyReportLog(input_report);
+
   if (device_states_by_id_.count(device_id) == 0) {
     FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
     return false;
@@ -80,7 +117,9 @@ fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
 void MediaButtonsHandler::OnEvent(fuchsia::ui::input::InputReport report) {
   FX_CHECK(report.media_buttons);
   for (auto& listener : media_buttons_listeners_) {
-    listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(report));
+    fuchsia::ui::input::MediaButtonsEvent event = CreateMediaButtonsEvent(report);
+    ChattyEventLog(event, listener);
+    listener->OnMediaButtonsEvent(std::move(event));
   }
 }
 

@@ -8,13 +8,25 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/ui/bin/root_presenter/constants.h"
 
 namespace root_presenter {
+namespace {
+
+void ChattyLog(const fuchsia::ui::input::MediaButtonsReport& report) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "RP-FDR[" << chatty << "/" << ChattyMax() << "]: " << report;
+  }
+}
+
+}  // namespace
 
 using fuchsia::media::AudioRenderUsage;
 using fuchsia::media::sounds::Player_AddSoundFromFile_Result;
@@ -78,23 +90,32 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
 
 bool FactoryResetManager::OnMediaButtonReport(
     const fuchsia::ui::input::MediaButtonsReport& report) {
+  bool consumed = false;
   switch (factory_reset_state_) {
     case FactoryResetState::ALLOWED: {
-      return HandleReportOnAllowedState(report);
+      consumed = HandleReportOnAllowedState(report);
+      break;
     }
     case FactoryResetState::DISALLOWED: {
-      return HandleReportOnDisallowedState(report);
+      consumed = HandleReportOnDisallowedState(report);
+      break;
     }
     case FactoryResetState::BUTTON_COUNTDOWN: {
-      return HandleReportOnButtonCountdown(report);
+      consumed = HandleReportOnButtonCountdown(report);
+      break;
     }
     case FactoryResetState::RESET_COUNTDOWN: {
-      return HandleReportOnResetCountdown(report);
+      consumed = HandleReportOnResetCountdown(report);
+      break;
     }
     default: {
       return false;
     }
   }
+  if (consumed) {
+    ChattyLog(report);
+  }
+  return consumed;
 }
 
 void FactoryResetManager::PlayCompleteSoundThenReset() {

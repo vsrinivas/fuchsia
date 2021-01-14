@@ -6,6 +6,8 @@ source_set("input") {
   sources = [
     "a11y_legacy_contender.cc",
     "a11y_legacy_contender.h",
+    "constants.cc",
+    "constants.h",
     "gesture_arena.cc",
     "gesture_arena.h",
     "gesture_contender.h",
@@ -26,9 +28,12 @@ source_set("input") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input.accessibility",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/files",
     "//src/lib/fxl",
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/scenic/lib/gfx",

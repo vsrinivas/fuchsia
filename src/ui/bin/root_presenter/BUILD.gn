@@ -97,9 +97,12 @@ source_set("lib") {
 
   deps = [
     ":color_transform",
+    ":constants",
     ":displays",
     ":media_buttons_handler",
     ":safe_presenter",
+    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -147,6 +150,9 @@ source_set("media_buttons_handler") {
     "//sdk/fidl/fuchsia.ui.policy",
   ]
   deps = [
+    ":constants",
+    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/lib/sys/cpp",
     "//src/lib/ui/input",
   ]
@@ -170,6 +176,9 @@ source_set("factory_reset_manager") {
   ]
 
   deps = [
+    ":constants",
+    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -210,4 +219,12 @@ source_set("safe_presenter") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
   ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.cc",
+    "constants.h",
+  ]
+  deps = [ "//src/lib/files" ]
 }

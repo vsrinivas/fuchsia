@@ -29,6 +29,20 @@ namespace {
 // TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
 constexpr float kDefaultRootViewDepth = 1000;
 
+void ChattyReportLog(const fuchsia::ui::input::InputReport& report) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "RP-PtrReport[" << chatty << "/" << ChattyMax() << "]: " << report;
+  }
+}
+
+void ChattyEventLog(const fuchsia::ui::input::InputEvent& event) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "RP-PtrEvent[" << chatty << "/" << ChattyMax() << "]: " << event;
+  }
+}
+
 }  // namespace
 
 Presentation::Presentation(
@@ -401,7 +415,7 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
 
   FX_VLOGS(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id) << ", report=" << input_report;
-
+  ChattyReportLog(input_report);
   input_report_inspector_.OnInputReport(input_report);
 
   if (device_states_by_id_.count(device_id) == 0) {
@@ -445,6 +459,7 @@ void Presentation::ResetClipSpaceTransform() {
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   FX_VLOGS(1) << "OnEvent " << event;
+  ChattyEventLog(event);
   input_event_inspector_.OnInputEvent(event);
   injector_->OnEvent(event);
 }

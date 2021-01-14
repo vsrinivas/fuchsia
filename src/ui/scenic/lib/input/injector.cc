@@ -4,9 +4,11 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 
+#include <lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include "src/ui/scenic/lib/input/constants.h"
 
 namespace scenic_impl {
 namespace input {
@@ -83,6 +85,13 @@ zx_status_t IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewpo
   }
 
   return ZX_OK;
+}
+
+void ChattyLog(const fuchsia::ui::pointerinjector::Event& event) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "Injector[" << chatty << "/" << ChattyMax() << "]: " << event;
+  }
 }
 
 }  // namespace
@@ -204,6 +213,8 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
         TRACE_FLOW_END("input", "dispatch_event_to_scenic", event.trace_flow_id());
       }
 
+      ChattyLog(event);  // Scenic accepts the event, put it on chatty log.
+
       // Translate events to internal representation and inject.
       std::vector<InternalPointerEvent> internal_events =
           PointerInjectorEventToInternalPointerEvent(event, settings_.device_id, viewport_,
@@ -254,13 +265,13 @@ StreamId Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
   if (double_add) {
     FX_LOGS(ERROR) << "Inject() called with invalid event stream: double-add, ptr-id: "
                    << pointer_id << ", stream-event-count: " << ongoing_streams_.count(pointer_id)
-                   << ", phase: " << (int) phase;
+                   << ", phase: " << (int)phase;
     return kInvalidStreamId;
   }
   if (invalid_start) {
     FX_LOGS(ERROR) << "Inject() called with invalid event stream: invalid-start, ptr-id: "
                    << pointer_id << ", stream-event-count: " << ongoing_streams_.count(pointer_id)
-                   << ", phase: " << (int) phase;
+                   << ", phase: " << (int)phase;
     return kInvalidStreamId;
   }
 

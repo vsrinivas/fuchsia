@@ -20,6 +20,7 @@
 
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
+#include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 #include "src/ui/bin/root_presenter/injector.h"

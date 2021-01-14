@@ -6,13 +6,16 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/accessibility/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
+#include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
@@ -142,6 +145,27 @@ glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& internal_event) {
   };
 }
 
+void ChattyGfxLog(const fuchsia::ui::input::InputEvent& event) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "Ptr-GFX[" << chatty << "/" << ChattyMax() << "]: " << event;
+  }
+}
+
+void ChattyCaptureLog(const fuchsia::ui::input::PointerEvent& event) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "Ptr-Capture[" << chatty << "/" << ChattyMax() << "]: " << event;
+  }
+}
+
+void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "Ptr-A11y[" << chatty << "/" << ChattyMax() << "]: " << event;
+  }
+}
+
 }  // namespace
 
 const char* InputSystem::kName = "InputSystem";
@@ -165,6 +189,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
             },
             /* ReportAccessibilityEventFunction */
             [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
+              ChattyA11yLog(pointer);
               accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
             });
         FX_LOGS(INFO) << "PointerEventBuffer created";
@@ -775,6 +800,8 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPoint
       event, view_from_context_transform.value(), fuchsia::ui::input::PointerEventType::TOUCH,
       /*trace_id*/ 0);
 
+  ChattyCaptureLog(gfx_event);
+
   // TODO(fxbug.dev/42145): Implement flow control.
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
@@ -799,6 +826,7 @@ void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
   input_event.set_pointer(InternalPointerEventToGfxPointerEvent(
       event, view_from_context_transform.value(), type, trace_id));
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
+  ChattyGfxLog(input_event);
   event_reporter->EnqueueEvent(std::move(input_event));
 }
 

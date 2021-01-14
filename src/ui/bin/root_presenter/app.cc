@@ -24,6 +24,15 @@
 
 namespace root_presenter {
 
+namespace {
+void ChattyLog(const fuchsia::ui::input::InputReport& report) {
+  static uint32_t chatty = 0;
+  if (chatty++ < ChattyMax()) {
+    FX_LOGS(INFO) << "Rp-App[" << chatty << "/" << ChattyMax() << "]: " << report;
+  }
+}
+}  // namespace
+
 App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher)
     : component_context_(component_context),
       inspector_(component_context_),
@@ -155,6 +164,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);
 
   FX_VLOGS(3) << "OnReport from " << input_device->id() << " " << report;
+  ChattyLog(report);
   input_report_inspector_.OnInputReport(report);
 
   if (devices_by_id_.count(input_device->id()) == 0) {
