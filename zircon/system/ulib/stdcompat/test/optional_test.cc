@@ -2,20 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-// So that we get our implementation of fit::optional, not std::optional even on C++17
-#define FORCE_FIT_OPTIONAL
-#include <lib/fit/optional.h>
-
-#include <zxtest/zxtest.h>
-
-#include "unittest_utils.h"
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -34,8 +28,8 @@ struct slot : base<define_assignment_operators> {
   slot(slot&& other) : value(other.value) { balance++; }
 
   ~slot() {
-    ASSERT_CRITICAL(balance > 0);
-    ASSERT_CRITICAL(value != -1);
+    EXPECT_GT(balance, 0);
+    EXPECT_NE(value, -1);
     value = -1;  // sentinel to catch double-delete
     balance--;
   }
@@ -69,12 +63,12 @@ void swap(slot<assignment>& a, slot<assignment>& b) {
 }
 
 // Test optional::value_type.
-static_assert(std::is_same<int, fit::optional<int>::value_type>::value, "");
+static_assert(std::is_same<int, cpp17::optional<int>::value_type>::value, "");
 
 // Test basic constexpr context.
-static_assert(fit::optional<int>{}.has_value() == false, "");
-static_assert(fit::optional<int>{10}.has_value() == true, "");
-static_assert(fit::optional<int>{10U}.has_value() == true, "");
+static_assert(cpp17::optional<int>{}.has_value() == false, "");
+static_assert(cpp17::optional<int>{10}.has_value() == true, "");
+static_assert(cpp17::optional<int>{10U}.has_value() == true, "");
 
 // Test comparisons.
 namespace comparison_tests {
@@ -110,103 +104,109 @@ constexpr bool operator<(less, greater) { return true; }
 constexpr bool operator>(less, greater) { return false; }
 
 // Note these definitions match the empty-to-other, other-to-empty, and
-// empty-to-empty comparison behavior of fit::optional for convenience in
+// empty-to-empty comparison behavior of cpp17::optional for convenience in
 // exhaustive testing.
-constexpr bool operator==(fit::nullopt_t, greater) { return false; }
-constexpr bool operator<=(fit::nullopt_t, greater) { return true; }
-constexpr bool operator>=(fit::nullopt_t, greater) { return false; }
-constexpr bool operator!=(fit::nullopt_t, greater) { return true; }
-constexpr bool operator<(fit::nullopt_t, greater) { return true; }
-constexpr bool operator>(fit::nullopt_t, greater) { return false; }
+constexpr bool operator==(cpp17::nullopt_t, greater) { return false; }
+constexpr bool operator<=(cpp17::nullopt_t, greater) { return true; }
+constexpr bool operator>=(cpp17::nullopt_t, greater) { return false; }
+constexpr bool operator!=(cpp17::nullopt_t, greater) { return true; }
+constexpr bool operator<(cpp17::nullopt_t, greater) { return true; }
+constexpr bool operator>(cpp17::nullopt_t, greater) { return false; }
 
-constexpr bool operator==(greater, fit::nullopt_t) { return false; }
-constexpr bool operator<=(greater, fit::nullopt_t) { return false; }
-constexpr bool operator>=(greater, fit::nullopt_t) { return true; }
-constexpr bool operator!=(greater, fit::nullopt_t) { return true; }
-constexpr bool operator<(greater, fit::nullopt_t) { return false; }
-constexpr bool operator>(greater, fit::nullopt_t) { return true; }
+constexpr bool operator==(greater, cpp17::nullopt_t) { return false; }
+constexpr bool operator<=(greater, cpp17::nullopt_t) { return false; }
+constexpr bool operator>=(greater, cpp17::nullopt_t) { return true; }
+constexpr bool operator!=(greater, cpp17::nullopt_t) { return true; }
+constexpr bool operator<(greater, cpp17::nullopt_t) { return false; }
+constexpr bool operator>(greater, cpp17::nullopt_t) { return true; }
 
-constexpr bool operator==(fit::nullopt_t, less) { return false; }
-constexpr bool operator<=(fit::nullopt_t, less) { return true; }
-constexpr bool operator>=(fit::nullopt_t, less) { return false; }
-constexpr bool operator!=(fit::nullopt_t, less) { return true; }
-constexpr bool operator<(fit::nullopt_t, less) { return true; }
-constexpr bool operator>(fit::nullopt_t, less) { return false; }
+constexpr bool operator==(cpp17::nullopt_t, less) { return false; }
+constexpr bool operator<=(cpp17::nullopt_t, less) { return true; }
+constexpr bool operator>=(cpp17::nullopt_t, less) { return false; }
+constexpr bool operator!=(cpp17::nullopt_t, less) { return true; }
+constexpr bool operator<(cpp17::nullopt_t, less) { return true; }
+constexpr bool operator>(cpp17::nullopt_t, less) { return false; }
 
-constexpr bool operator==(less, fit::nullopt_t) { return false; }
-constexpr bool operator<=(less, fit::nullopt_t) { return false; }
-constexpr bool operator>=(less, fit::nullopt_t) { return true; }
-constexpr bool operator!=(less, fit::nullopt_t) { return true; }
-constexpr bool operator<(less, fit::nullopt_t) { return false; }
-constexpr bool operator>(less, fit::nullopt_t) { return true; }
+constexpr bool operator==(less, cpp17::nullopt_t) { return false; }
+constexpr bool operator<=(less, cpp17::nullopt_t) { return false; }
+constexpr bool operator>=(less, cpp17::nullopt_t) { return true; }
+constexpr bool operator!=(less, cpp17::nullopt_t) { return true; }
+constexpr bool operator<(less, cpp17::nullopt_t) { return false; }
+constexpr bool operator>(less, cpp17::nullopt_t) { return true; }
 
-constexpr bool operator==(fit::nullopt_t, fit::nullopt_t) { return true; }
-constexpr bool operator<=(fit::nullopt_t, fit::nullopt_t) { return true; }
-constexpr bool operator>=(fit::nullopt_t, fit::nullopt_t) { return true; }
-constexpr bool operator!=(fit::nullopt_t, fit::nullopt_t) { return false; }
-constexpr bool operator<(fit::nullopt_t, fit::nullopt_t) { return false; }
-constexpr bool operator>(fit::nullopt_t, fit::nullopt_t) { return false; }
+constexpr bool operator==(cpp17::nullopt_t, cpp17::nullopt_t) { return true; }
+constexpr bool operator<=(cpp17::nullopt_t, cpp17::nullopt_t) { return true; }
+constexpr bool operator>=(cpp17::nullopt_t, cpp17::nullopt_t) { return true; }
+constexpr bool operator!=(cpp17::nullopt_t, cpp17::nullopt_t) { return false; }
+constexpr bool operator<(cpp17::nullopt_t, cpp17::nullopt_t) { return false; }
+constexpr bool operator>(cpp17::nullopt_t, cpp17::nullopt_t) { return false; }
 
 template <typename T, typename U>
 constexpr bool match_comparisons(T lhs, U rhs) {
   // Both optional operands.
-  static_assert((fit::optional<T>{lhs} == fit::optional<U>{rhs}) == (lhs == rhs), "");
-  static_assert((fit::optional<T>{lhs} != fit::optional<U>{rhs}) == (lhs != rhs), "");
-  static_assert((fit::optional<T>{lhs} <= fit::optional<U>{rhs}) == (lhs <= rhs), "");
-  static_assert((fit::optional<T>{lhs} >= fit::optional<U>{rhs}) == (lhs >= rhs), "");
-  static_assert((fit::optional<T>{lhs} < fit::optional<U>{rhs}) == (lhs < rhs), "");
-  static_assert((fit::optional<T>{lhs} > fit::optional<U>{rhs}) == (lhs > rhs), "");
+  static_assert((cpp17::optional<T>{lhs} == cpp17::optional<U>{rhs}) == (lhs == rhs), "");
+  static_assert((cpp17::optional<T>{lhs} != cpp17::optional<U>{rhs}) == (lhs != rhs), "");
+  static_assert((cpp17::optional<T>{lhs} <= cpp17::optional<U>{rhs}) == (lhs <= rhs), "");
+  static_assert((cpp17::optional<T>{lhs} >= cpp17::optional<U>{rhs}) == (lhs >= rhs), "");
+  static_assert((cpp17::optional<T>{lhs} < cpp17::optional<U>{rhs}) == (lhs < rhs), "");
+  static_assert((cpp17::optional<T>{lhs} > cpp17::optional<U>{rhs}) == (lhs > rhs), "");
 
-  static_assert((fit::optional<T>{} == fit::optional<U>{rhs}) == (fit::nullopt == rhs), "");
-  static_assert((fit::optional<T>{} != fit::optional<U>{rhs}) == (fit::nullopt != rhs), "");
-  static_assert((fit::optional<T>{} <= fit::optional<U>{rhs}) == (fit::nullopt <= rhs), "");
-  static_assert((fit::optional<T>{} >= fit::optional<U>{rhs}) == (fit::nullopt >= rhs), "");
-  static_assert((fit::optional<T>{} < fit::optional<U>{rhs}) == (fit::nullopt < rhs), "");
-  static_assert((fit::optional<T>{} > fit::optional<U>{rhs}) == (fit::nullopt > rhs), "");
+  static_assert((cpp17::optional<T>{} == cpp17::optional<U>{rhs}) == (cpp17::nullopt == rhs), "");
+  static_assert((cpp17::optional<T>{} != cpp17::optional<U>{rhs}) == (cpp17::nullopt != rhs), "");
+  static_assert((cpp17::optional<T>{} <= cpp17::optional<U>{rhs}) == (cpp17::nullopt <= rhs), "");
+  static_assert((cpp17::optional<T>{} >= cpp17::optional<U>{rhs}) == (cpp17::nullopt >= rhs), "");
+  static_assert((cpp17::optional<T>{} < cpp17::optional<U>{rhs}) == (cpp17::nullopt < rhs), "");
+  static_assert((cpp17::optional<T>{} > cpp17::optional<U>{rhs}) == (cpp17::nullopt > rhs), "");
 
-  static_assert((fit::optional<T>{lhs} == fit::optional<U>{}) == (lhs == fit::nullopt), "");
-  static_assert((fit::optional<T>{lhs} != fit::optional<U>{}) == (lhs != fit::nullopt), "");
-  static_assert((fit::optional<T>{lhs} <= fit::optional<U>{}) == (lhs <= fit::nullopt), "");
-  static_assert((fit::optional<T>{lhs} >= fit::optional<U>{}) == (lhs >= fit::nullopt), "");
-  static_assert((fit::optional<T>{lhs} < fit::optional<U>{}) == (lhs < fit::nullopt), "");
-  static_assert((fit::optional<T>{lhs} > fit::optional<U>{}) == (lhs > fit::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} == cpp17::optional<U>{}) == (lhs == cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} != cpp17::optional<U>{}) == (lhs != cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} <= cpp17::optional<U>{}) == (lhs <= cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} >= cpp17::optional<U>{}) == (lhs >= cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} < cpp17::optional<U>{}) == (lhs < cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{lhs} > cpp17::optional<U>{}) == (lhs > cpp17::nullopt), "");
 
-  static_assert((fit::optional<T>{} == fit::optional<U>{}) == (fit::nullopt == fit::nullopt), "");
-  static_assert((fit::optional<T>{} != fit::optional<U>{}) == (fit::nullopt != fit::nullopt), "");
-  static_assert((fit::optional<T>{} <= fit::optional<U>{}) == (fit::nullopt <= fit::nullopt), "");
-  static_assert((fit::optional<T>{} >= fit::optional<U>{}) == (fit::nullopt >= fit::nullopt), "");
-  static_assert((fit::optional<T>{} < fit::optional<U>{}) == (fit::nullopt < fit::nullopt), "");
-  static_assert((fit::optional<T>{} > fit::optional<U>{}) == (fit::nullopt > fit::nullopt), "");
+  static_assert(
+      (cpp17::optional<T>{} == cpp17::optional<U>{}) == (cpp17::nullopt == cpp17::nullopt), "");
+  static_assert(
+      (cpp17::optional<T>{} != cpp17::optional<U>{}) == (cpp17::nullopt != cpp17::nullopt), "");
+  static_assert(
+      (cpp17::optional<T>{} <= cpp17::optional<U>{}) == (cpp17::nullopt <= cpp17::nullopt), "");
+  static_assert(
+      (cpp17::optional<T>{} >= cpp17::optional<U>{}) == (cpp17::nullopt >= cpp17::nullopt), "");
+  static_assert((cpp17::optional<T>{} < cpp17::optional<U>{}) == (cpp17::nullopt < cpp17::nullopt),
+                "");
+  static_assert((cpp17::optional<T>{} > cpp17::optional<U>{}) == (cpp17::nullopt > cpp17::nullopt),
+                "");
 
   // Right hand optional only.
-  static_assert((lhs == fit::optional<U>{rhs}) == (lhs == rhs), "");
-  static_assert((lhs != fit::optional<U>{rhs}) == (lhs != rhs), "");
-  static_assert((lhs <= fit::optional<U>{rhs}) == (lhs <= rhs), "");
-  static_assert((lhs >= fit::optional<U>{rhs}) == (lhs >= rhs), "");
-  static_assert((lhs < fit::optional<U>{rhs}) == (lhs < rhs), "");
-  static_assert((lhs > fit::optional<U>{rhs}) == (lhs > rhs), "");
+  static_assert((lhs == cpp17::optional<U>{rhs}) == (lhs == rhs), "");
+  static_assert((lhs != cpp17::optional<U>{rhs}) == (lhs != rhs), "");
+  static_assert((lhs <= cpp17::optional<U>{rhs}) == (lhs <= rhs), "");
+  static_assert((lhs >= cpp17::optional<U>{rhs}) == (lhs >= rhs), "");
+  static_assert((lhs < cpp17::optional<U>{rhs}) == (lhs < rhs), "");
+  static_assert((lhs > cpp17::optional<U>{rhs}) == (lhs > rhs), "");
 
-  static_assert((lhs == fit::optional<U>{}) == (lhs == fit::nullopt), "");
-  static_assert((lhs != fit::optional<U>{}) == (lhs != fit::nullopt), "");
-  static_assert((lhs <= fit::optional<U>{}) == (lhs <= fit::nullopt), "");
-  static_assert((lhs >= fit::optional<U>{}) == (lhs >= fit::nullopt), "");
-  static_assert((lhs < fit::optional<U>{}) == (lhs < fit::nullopt), "");
-  static_assert((lhs > fit::optional<U>{}) == (lhs > fit::nullopt), "");
+  static_assert((lhs == cpp17::optional<U>{}) == (lhs == cpp17::nullopt), "");
+  static_assert((lhs != cpp17::optional<U>{}) == (lhs != cpp17::nullopt), "");
+  static_assert((lhs <= cpp17::optional<U>{}) == (lhs <= cpp17::nullopt), "");
+  static_assert((lhs >= cpp17::optional<U>{}) == (lhs >= cpp17::nullopt), "");
+  static_assert((lhs < cpp17::optional<U>{}) == (lhs < cpp17::nullopt), "");
+  static_assert((lhs > cpp17::optional<U>{}) == (lhs > cpp17::nullopt), "");
 
   // Left hand optional only.
-  static_assert((fit::optional<T>{lhs} == rhs) == (lhs == rhs), "");
-  static_assert((fit::optional<T>{lhs} != rhs) == (lhs != rhs), "");
-  static_assert((fit::optional<T>{lhs} <= rhs) == (lhs <= rhs), "");
-  static_assert((fit::optional<T>{lhs} >= rhs) == (lhs >= rhs), "");
-  static_assert((fit::optional<T>{lhs} < rhs) == (lhs < rhs), "");
-  static_assert((fit::optional<T>{lhs} > rhs) == (lhs > rhs), "");
+  static_assert((cpp17::optional<T>{lhs} == rhs) == (lhs == rhs), "");
+  static_assert((cpp17::optional<T>{lhs} != rhs) == (lhs != rhs), "");
+  static_assert((cpp17::optional<T>{lhs} <= rhs) == (lhs <= rhs), "");
+  static_assert((cpp17::optional<T>{lhs} >= rhs) == (lhs >= rhs), "");
+  static_assert((cpp17::optional<T>{lhs} < rhs) == (lhs < rhs), "");
+  static_assert((cpp17::optional<T>{lhs} > rhs) == (lhs > rhs), "");
 
-  static_assert((fit::optional<T>{} == rhs) == (fit::nullopt == rhs), "");
-  static_assert((fit::optional<T>{} != rhs) == (fit::nullopt != rhs), "");
-  static_assert((fit::optional<T>{} <= rhs) == (fit::nullopt <= rhs), "");
-  static_assert((fit::optional<T>{} >= rhs) == (fit::nullopt >= rhs), "");
-  static_assert((fit::optional<T>{} < rhs) == (fit::nullopt < rhs), "");
-  static_assert((fit::optional<T>{} > rhs) == (fit::nullopt > rhs), "");
+  static_assert((cpp17::optional<T>{} == rhs) == (cpp17::nullopt == rhs), "");
+  static_assert((cpp17::optional<T>{} != rhs) == (cpp17::nullopt != rhs), "");
+  static_assert((cpp17::optional<T>{} <= rhs) == (cpp17::nullopt <= rhs), "");
+  static_assert((cpp17::optional<T>{} >= rhs) == (cpp17::nullopt >= rhs), "");
+  static_assert((cpp17::optional<T>{} < rhs) == (cpp17::nullopt < rhs), "");
+  static_assert((cpp17::optional<T>{} > rhs) == (cpp17::nullopt > rhs), "");
 
   return true;
 }
@@ -234,13 +234,14 @@ static_assert(std::is_trivially_copy_assignable<trivially_move_only>::value == f
 static_assert(std::is_trivially_move_constructible<trivially_move_only>::value == true);
 static_assert(std::is_trivially_move_assignable<trivially_move_only>::value == true);
 
-static_assert(std::is_trivially_copy_constructible<fit::optional<trivially_move_only>>::value ==
+static_assert(std::is_trivially_copy_constructible<cpp17::optional<trivially_move_only>>::value ==
               false);
-static_assert(std::is_trivially_copy_assignable<fit::optional<trivially_move_only>>::value ==
+static_assert(std::is_trivially_copy_assignable<cpp17::optional<trivially_move_only>>::value ==
               false);
-static_assert(std::is_trivially_move_constructible<fit::optional<trivially_move_only>>::value ==
+static_assert(std::is_trivially_move_constructible<cpp17::optional<trivially_move_only>>::value ==
               true);
-static_assert(std::is_trivially_move_assignable<fit::optional<trivially_move_only>>::value == true);
+static_assert(std::is_trivially_move_assignable<cpp17::optional<trivially_move_only>>::value ==
+              true);
 
 struct trivially_copyable {
   constexpr trivially_copyable(const trivially_copyable&) = default;
@@ -254,18 +255,20 @@ static_assert(std::is_trivially_copy_assignable<trivially_copyable>::value == tr
 static_assert(std::is_trivially_move_constructible<trivially_copyable>::value == true);
 static_assert(std::is_trivially_move_assignable<trivially_copyable>::value == true);
 
-static_assert(std::is_trivially_copy_constructible<fit::optional<trivially_copyable>>::value ==
+static_assert(std::is_trivially_copy_constructible<cpp17::optional<trivially_copyable>>::value ==
               true);
-static_assert(std::is_trivially_copy_assignable<fit::optional<trivially_copyable>>::value == true);
-static_assert(std::is_trivially_move_constructible<fit::optional<trivially_copyable>>::value ==
+static_assert(std::is_trivially_copy_assignable<cpp17::optional<trivially_copyable>>::value ==
               true);
-static_assert(std::is_trivially_move_assignable<fit::optional<trivially_copyable>>::value == true);
+static_assert(std::is_trivially_move_constructible<cpp17::optional<trivially_copyable>>::value ==
+              true);
+static_assert(std::is_trivially_move_assignable<cpp17::optional<trivially_copyable>>::value ==
+              true);
 
 }  // namespace trivial_copy_move_tests
 
 template <typename T>
 void construct_without_value() {
-  fit::optional<T> opt;
+  cpp17::optional<T> opt;
   EXPECT_FALSE(opt.has_value());
   EXPECT_FALSE(!!opt);
 
@@ -277,7 +280,7 @@ void construct_without_value() {
 
 template <typename T>
 void construct_with_value() {
-  fit::optional<T> opt(T{42});
+  cpp17::optional<T> opt(T{42});
   EXPECT_TRUE(opt.has_value());
   EXPECT_TRUE(!!opt);
 
@@ -294,10 +297,10 @@ void construct_with_value() {
 
 template <typename T>
 void construct_copy() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(a);
-  fit::optional<T> c;
-  fit::optional<T> d(c);
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(a);
+  cpp17::optional<T> c;
+  cpp17::optional<T> d(c);
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
   EXPECT_TRUE(b.has_value());
@@ -308,10 +311,10 @@ void construct_copy() {
 
 template <typename T>
 void construct_move() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(std::move(a));
-  fit::optional<T> c;
-  fit::optional<T> d(std::move(c));
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(std::move(a));
+  cpp17::optional<T> c;
+  cpp17::optional<T> d(std::move(c));
   EXPECT_TRUE(a.has_value());
   EXPECT_TRUE(b.has_value());
   EXPECT_EQ(42, b.value().value);
@@ -320,35 +323,35 @@ void construct_move() {
 }
 
 template <typename T>
-T get_value(fit::optional<T> opt) {
+T get_value(cpp17::optional<T> opt) {
   return opt.value();
 }
 
 TEST(OptionalTests, construct_with_implicit_conversion) {
-  // get_value expects a value of type fit::optional<T> but we pass 3
+  // get_value expects a value of type cpp17::optional<T> but we pass 3
   // so this exercises the converting constructor
   EXPECT_EQ(3, get_value<int>(3));
 }
 
 template <typename T>
 void accessors() {
-  fit::optional<T> a(T{42});
+  cpp17::optional<T> a(T{42});
   T& value = a.value();
   EXPECT_EQ(42, value.value);
 
   const T& const_value = const_cast<const decltype(a)&>(a).value();
   EXPECT_EQ(42, const_value.value);
 
-  T rvalue = fit::optional<T>(T{42}).value();
+  T rvalue = cpp17::optional<T>(T{42}).value();
   EXPECT_EQ(42, rvalue.value);
 
-  T const_rvalue = const_cast<const fit::optional<T>&&>(fit::optional<T>(T{42})).value();
+  T const_rvalue = const_cast<const cpp17::optional<T>&&>(cpp17::optional<T>(T{42})).value();
   EXPECT_EQ(42, const_rvalue.value);
 }
 
 template <typename T>
 void assign() {
-  fit::optional<T> a(T{42});
+  cpp17::optional<T> a(T{42});
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
 
@@ -363,15 +366,15 @@ void assign() {
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(55, a.value().value);
 
-  a = fit::nullopt;
+  a = cpp17::nullopt;
   EXPECT_FALSE(a.has_value());
 }
 
 template <typename T>
 void assign_copy() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(T{55});
-  fit::optional<T> c;
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(T{55});
+  cpp17::optional<T> c;
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
   EXPECT_TRUE(b.has_value());
@@ -413,9 +416,9 @@ void assign_copy() {
 
 template <typename T>
 void assign_move() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(T{55});
-  fit::optional<T> c;
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(T{55});
+  cpp17::optional<T> c;
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
   EXPECT_TRUE(b.has_value());
@@ -454,12 +457,12 @@ void assign_move() {
 
 template <typename T>
 void emplace() {
-  fit::optional<T> a;
+  cpp17::optional<T> a;
   EXPECT_EQ(55, a.emplace(55).value);
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(55, a.value().value);
 
-  fit::optional<T> b(T{42});
+  cpp17::optional<T> b(T{42});
   EXPECT_EQ(66, b.emplace(66).value);
   EXPECT_TRUE(b.has_value());
   EXPECT_EQ(66, b.value().value);
@@ -467,7 +470,7 @@ void emplace() {
 
 template <typename T>
 void invoke() {
-  fit::optional<T> a(T{42});
+  cpp17::optional<T> a(T{42});
   EXPECT_EQ(42, a->get());
   EXPECT_EQ(43, a->increment());
   EXPECT_EQ(43, (*a).value);
@@ -475,11 +478,11 @@ void invoke() {
 
 template <typename T>
 void comparisons() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(T{55});
-  fit::optional<T> c(T{42});
-  fit::optional<T> d;
-  fit::optional<T> e;
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(T{55});
+  cpp17::optional<T> c(T{42});
+  cpp17::optional<T> d;
+  cpp17::optional<T> e;
 
   EXPECT_FALSE(a == b);
   EXPECT_TRUE(a == c);
@@ -487,16 +490,16 @@ void comparisons() {
   EXPECT_TRUE(d == e);
   EXPECT_FALSE(d == a);
 
-  EXPECT_FALSE(a == fit::nullopt);
-  EXPECT_FALSE(fit::nullopt == a);
+  EXPECT_FALSE(a == cpp17::nullopt);
+  EXPECT_FALSE(cpp17::nullopt == a);
   EXPECT_TRUE(a == T{42});
   EXPECT_TRUE(T{42} == a);
   EXPECT_FALSE(a == T{55});
   EXPECT_FALSE(T{55} == a);
   EXPECT_FALSE(d == T{42});
   EXPECT_FALSE(T{42} == d);
-  EXPECT_TRUE(d == fit::nullopt);
-  EXPECT_TRUE(fit::nullopt == d);
+  EXPECT_TRUE(d == cpp17::nullopt);
+  EXPECT_TRUE(cpp17::nullopt == d);
 
   EXPECT_TRUE(a != b);
   EXPECT_FALSE(a != c);
@@ -504,24 +507,24 @@ void comparisons() {
   EXPECT_FALSE(d != e);
   EXPECT_TRUE(d != a);
 
-  EXPECT_TRUE(a != fit::nullopt);
-  EXPECT_TRUE(fit::nullopt != a);
+  EXPECT_TRUE(a != cpp17::nullopt);
+  EXPECT_TRUE(cpp17::nullopt != a);
   EXPECT_FALSE(a != T{42});
   EXPECT_FALSE(T{42} != a);
   EXPECT_TRUE(a != T{55});
   EXPECT_TRUE(T{55} != a);
   EXPECT_TRUE(d != T{42});
   EXPECT_TRUE(T{42} != d);
-  EXPECT_FALSE(d != fit::nullopt);
-  EXPECT_FALSE(fit::nullopt != d);
+  EXPECT_FALSE(d != cpp17::nullopt);
+  EXPECT_FALSE(cpp17::nullopt != d);
 }
 
 template <typename T>
 void swapping() {
-  fit::optional<T> a(T{42});
-  fit::optional<T> b(T{55});
-  fit::optional<T> c;
-  fit::optional<T> d;
+  cpp17::optional<T> a(T{42});
+  cpp17::optional<T> b(T{55});
+  cpp17::optional<T> c;
+  cpp17::optional<T> d;
 
   swap(a, b);
   EXPECT_TRUE(a.has_value());
@@ -559,57 +562,77 @@ void balance() {
 TEST(OptionalTests, make_optional) {
   {
     // Simple value.
-    auto value = fit::make_optional<int>(10);
-    static_assert(std::is_same<fit::optional<int>, decltype(value)>::value, "");
+    auto value = cpp17::make_optional<int>(10);
+    static_assert(std::is_same<cpp17::optional<int>, decltype(value)>::value, "");
     EXPECT_EQ(*value, 10);
   }
 
   {
     // Multiple args.
-    auto value = fit::make_optional<std::pair<int, int>>(10, 20);
-    static_assert(std::is_same<fit::optional<std::pair<int, int>>, decltype(value)>::value, "");
+    auto value = cpp17::make_optional<std::pair<int, int>>(10, 20);
+    static_assert(std::is_same<cpp17::optional<std::pair<int, int>>, decltype(value)>::value, "");
     EXPECT_TRUE((*value == std::pair<int, int>{10, 20}));
   }
 
   {
     // Initializer list.
-    auto value = fit::make_optional<std::vector<int>>({10, 20, 30});
-    static_assert(std::is_same<fit::optional<std::vector<int>>, decltype(value)>::value, "");
+    auto value = cpp17::make_optional<std::vector<int>>({10, 20, 30});
+    static_assert(std::is_same<cpp17::optional<std::vector<int>>, decltype(value)>::value, "");
     EXPECT_TRUE((*value == std::vector<int>{{10, 20, 30}}));
   }
 }
 
-}  // namespace
+TEST(OptionalTest, ConstructWithoutValueAndNoAssignmentOperators) {
+  construct_without_value<slot<false>>();
+}
 
-TEST(OptionalTests, construct_without_value_slot_false) { construct_without_value<slot<false>>(); }
-TEST(OptionalTests, construct_without_value_slot_true) { construct_without_value<slot<true>>(); }
-TEST(OptionalTests, construct_with_value_slot_false) { construct_with_value<slot<false>>(); }
-TEST(OptionalTests, construct_with_value_slot_true) { construct_with_value<slot<true>>(); }
-TEST(OptionalTests, construct_copy_slot_false) { construct_copy<slot<false>>(); }
-TEST(OptionalTests, construct_copy_slot_true) { construct_copy<slot<true>>(); }
-TEST(OptionalTests, construct_move_slot_false) { construct_move<slot<false>>(); }
-TEST(OptionalTests, construct_move_slot_true) { construct_move<slot<true>>(); }
-TEST(OptionalTests, accessors_slot_false) { accessors<slot<false>>(); }
-TEST(OptionalTests, accessors_slot_true) { accessors<slot<true>>(); }
-#if 0 || TEST_DOES_NOT_COMPILE
-TEST(OptionalTests, assign_slot_false) { assign<slot<false>>(); }
+TEST(OptionalTest, ConstructWithoutValueAndWithAssignmentOperators) {
+  construct_without_value<slot<true>>();
+}
+
+TEST(OptionalTest, ConstructWithValueAndNoAssignmentOperators) {
+  construct_with_value<slot<false>>();
+}
+
+TEST(OptionalTest, ConstructWithValueAndAssignmentOperators) { construct_with_value<slot<true>>(); }
+TEST(OptionalTest, ConstructWithCopyAndNoAssignmentOperators) { construct_copy<slot<false>>(); }
+TEST(OptionalTest, ConstructWithCopyAndAssignmentOperators) { construct_copy<slot<true>>(); }
+TEST(OptionalTest, ConstructWithMoveAndNoAssignementOperators) { construct_move<slot<false>>(); }
+TEST(OptionalTest, ConstructWithMoveAndAssignmentOperators) { construct_move<slot<true>>(); }
+TEST(OptionalTest, AccessorsWithoutAssignmentOperators) { accessors<slot<false>>(); }
+TEST(OptionalTest, AccessorsWithSlotTrue) { accessors<slot<true>>(); }
+TEST(OptionalTest, AssignWithAssignmentOperators) { assign<slot<true>>(); }
+TEST(OptionalTest, AssignWithCopyAndAssignmentOperators) { assign_copy<slot<true>>(); }
+TEST(OptionalTest, AssignWithMoveAndAssignmentOperators) { assign_move<slot<true>>(); }
+TEST(OptionalTest, EmplaceWithNoAssignmentOperators) { emplace<slot<false>>(); }
+TEST(OptionalTest, EmplaceWithAssignmentOperators) { emplace<slot<true>>(); }
+TEST(OptionalTest, InvokeWithNoAssignmentOperators) { invoke<slot<false>>(); }
+TEST(OptionalTest, InvokeWithAssignmentOperators) { invoke<slot<true>>(); }
+TEST(OptionalTest, ComparisonWithNoAssignmentOperators) { comparisons<slot<false>>(); }
+TEST(OptionalTest, ComparisonWithAssignmentOperators) { comparisons<slot<true>>(); }
+TEST(OptionalTest, SwappingWithoutAssignmentOperators) { swapping<slot<false>>(); }
+TEST(OptionalTest, SwappingWithAssignmentOperators) { swapping<slot<true>>(); }
+
+TEST(OptionalTest, DestructorCalledWhenNotEmpty) {
+  balance<slot<false>>();
+  balance<slot<true>>();
+}
+
+#if __cpp_lib_optional >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+// Sanity check that the template switches correctly.
+TEST(OptionalTest, PolyfillIsAliasWhenOptionaIsAvailable) {
+  static_assert(std::is_same_v<std::optional<int>, cpp17::optional<int>>);
+  static_assert(std::is_same_v<std::optional<std::string>, cpp17::optional<std::string>>);
+  static_assert(
+      std::is_same_v<std::optional<std::unique_ptr<int>>, cpp17::optional<std::unique_ptr<int>>>);
+}
 #endif
-TEST(OptionalTests, assign_slot_true) { assign<slot<true>>(); }
-#if 0 || TEST_DOES_NOT_COMPILE
+
+#if defined(TEST_DOES_NOT_COMPILE)
 TEST(OptionalTests, assign_copy_slot_false) { assign_copy<slot<false>>(); }
-#endif
-TEST(OptionalTests, assign_copy_slot_true) { assign_copy<slot<true>>(); }
-#if 0 || TEST_DOES_NOT_COMPILE
+TEST(OptionalTests, assign_slot_false) { assign<slot<false>>(); }
 TEST(OptionalTests, assign_move_slot_false) { assign_move<slot<false>>(); }
 #endif
-TEST(OptionalTests, assign_move_slot_true) { assign_move<slot<true>>(); }
-TEST(OptionalTests, emplace_slot_false) { emplace<slot<false>>(); }
-TEST(OptionalTests, emplace_slot_true) { emplace<slot<true>>(); }
-TEST(OptionalTests, invoke_slot_false) { invoke<slot<false>>(); }
-TEST(OptionalTests, invoke_slot_true) { invoke<slot<true>>(); }
-TEST(OptionalTests, comparisons_slot_false) { comparisons<slot<false>>(); }
-TEST(OptionalTests, comparisons_slot_true) { comparisons<slot<true>>(); }
-TEST(OptionalTests, swapping_slot_false) { swapping<slot<false>>(); }
-TEST(OptionalTests, swapping_slot_true) { swapping<slot<true>>(); }
-TEST(OptionalTests, balance_slot_false) { balance<slot<false>>(); }
-TEST(OptionalTests, balance_slot_true) { balance<slot<true>>(); }
+
+}  // namespace

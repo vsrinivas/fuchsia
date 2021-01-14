@@ -2,38 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_OPTIONAL_H_
-#define LIB_FIT_OPTIONAL_H_
+#ifndef LIB_STDCOMPAT_OPTIONAL_H_
+#define LIB_STDCOMPAT_OPTIONAL_H_
 
-#if defined(__cplusplus) && __cplusplus >= 201703L && !defined(FORCE_FIT_OPTIONAL)
+#include "utility.h"
+#include "version.h"
 
-// In C++17 fit::optional should simply be an alias for std::optional.
+#if __cpp_lib_optional >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <optional>
 
-namespace fit {
+namespace cpp17 {
 
 using std::make_optional;
 using std::nullopt;
 using std::nullopt_t;
 using std::optional;
 
-}  // namespace fit
+}  // namespace cpp17
 
-#else
+#else  // Provide std::optional and std::nullopt_t polyfill.
 
+#include <cstdlib>
 #include <exception>
 #include <new>
-#include <type_traits>
-#include <utility>
 
-#include "constructors_internal.h"
-#include "in_place_internal.h"
-#include "storage_internal.h"
-#include "traits.h"
-#include "utility_internal.h"
+#include "internal/constructors.h"
+#include "internal/storage.h"
+#include "internal/utility.h"
+#include "type_traits.h"
 
-namespace fit {
+namespace cpp17 {
 
 // A sentinel value for indicating that it contains no value.
 struct nullopt_t {
@@ -60,22 +59,18 @@ class bad_optional_access : public std::exception {
 };
 
 // A reasonably complete implementation of std::optional compatible with C++14.
-//
-// See also fit::nullable<T>, which may be more efficient in certain
-// circumstances when T can be initialized, assigned, and compared with nullptr.
-//
 template <typename T>
-class optional : private ::fit::internal::modulate_copy_and_move<T> {
+class optional : private ::cpp17::internal::modulate_copy_and_move<T> {
  private:
   // Helper types and values for SFINAE and noexcept rules.
   static constexpr bool nothrow_move_constructible = std::is_nothrow_move_constructible<T>::value;
 
   static constexpr bool nothrow_swappable = std::is_nothrow_move_constructible<T>::value &&
-                                            ::fit::internal::is_nothrow_swappable<T>::value;
+                                            ::cpp17::internal::is_nothrow_swappable<T>::value;
 
-  static constexpr auto trivial_init_v = ::fit::internal::trivial_init_v;
-  static constexpr auto maybe_init_v = ::fit::internal::maybe_init_v;
-  using type_tag = ::fit::internal::type_tag<T>;
+  static constexpr auto trivial_init_v = ::cpp17::internal::trivial_init_v;
+  static constexpr auto maybe_init_v = ::cpp17::internal::maybe_init_v;
+  using type_tag = ::cpp17::internal::type_tag<T>;
 
   template <typename U, typename V>
   using converts_from_optional = disjunction<
@@ -91,25 +86,27 @@ class optional : private ::fit::internal::modulate_copy_and_move<T> {
                   std::is_assignable<U&, optional<V>&&>>;
 
   template <typename U>
-  using not_self_type = ::fit::internal::not_same_type<optional, U>;
+  using not_self_type = ::cpp17::internal::not_same_type<optional, U>;
 
   template <typename U>
-  using not_in_place = ::fit::internal::not_same_type<in_place_t, U>;
+  using not_in_place = ::cpp17::internal::not_same_type<in_place_t, U>;
 
   template <typename... Conditions>
-  using requires_conditions = ::fit::internal::requires_conditions<Conditions...>;
+  using requires_conditions = ::cpp17::internal::requires_conditions<Conditions...>;
 
   template <typename... Conditions>
   using assignment_requires_conditions =
-      ::fit::internal::assignment_requires_conditions<optional&, Conditions...>;
+      ::cpp17::internal::assignment_requires_conditions<optional&, Conditions...>;
 
   template <typename... Args>
   using emplace_constructible = std::enable_if_t<std::is_constructible<T, Args...>::value, T&>;
 
   [[noreturn]] static constexpr void throw_bad_optional_access(const char* reason) {
-#if __cpp_exceptions
+#if __cpp_exceptions >= 199711L
     throw bad_optional_access(reason);
 #else
+    // C++14 has no portable version of unused, this will silence unused variable warnings when
+    // compiling without exceptions.
     (void)reason;
     __builtin_abort();
 #endif
@@ -313,19 +310,19 @@ class optional : private ::fit::internal::modulate_copy_and_move<T> {
   void reset() noexcept { storage_.reset(); }
 
  private:
-  ::fit::internal::storage_type<T> storage_;
+  ::cpp17::internal::storage_type<T> storage_;
 };
 
 // Swap.
 template <typename T>
 inline std::enable_if_t<(std::is_move_constructible<T>::value &&
-                         ::fit::internal::is_swappable<T>::value)>
+                         ::cpp17::internal::is_swappable<T>::value)>
 swap(optional<T>& a, optional<T>& b) noexcept(noexcept(a.swap(b))) {
   a.swap(b);
 }
 template <typename T>
 inline std::enable_if_t<(!std::is_move_constructible<T>::value &&
-                         ::fit::internal::is_swappable<T>::value)>
+                         ::cpp17::internal::is_swappable<T>::value)>
 swap(optional<T>& a, optional<T>& b) = delete;
 
 // Make optional.
@@ -362,121 +359,125 @@ constexpr bool operator!=(nullopt_t, const optional<T>& rhs) {
 }
 
 // Equal/not equal.
-template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>())> = true>
+template <
+    typename T, typename U,
+    ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>())> = true>
 constexpr bool operator==(const optional<T>& lhs, const optional<U>& rhs) {
   return (lhs.has_value() == rhs.has_value()) && (!lhs.has_value() || *lhs == *rhs);
 }
-template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>())> = true>
+template <
+    typename T, typename U,
+    ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>())> = true>
 constexpr bool operator!=(const optional<T>& lhs, const optional<U>& rhs) {
   return (lhs.has_value() != rhs.has_value()) || (lhs.has_value() && *lhs != *rhs);
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator==(const optional<T>& lhs, const U& rhs) {
   return lhs.has_value() && *lhs == rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator!=(const optional<T>& lhs, const U& rhs) {
   return !lhs.has_value() || *lhs != rhs;
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() == std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator==(const T& lhs, const optional<U>& rhs) {
   return rhs.has_value() && lhs == *rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() != std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator!=(const T& lhs, const optional<U>& rhs) {
   return !rhs.has_value() || lhs != *rhs;
 }
 
 // Less than/greater than.
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>())> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>())> = true>
 constexpr bool operator<(const optional<T>& lhs, const optional<U>& rhs) {
   return rhs.has_value() && (!lhs.has_value() || *lhs < *rhs);
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>())> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>())> = true>
 constexpr bool operator>(const optional<T>& lhs, const optional<U>& rhs) {
   return lhs.has_value() && (!rhs.has_value() || *lhs > *rhs);
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator<(const optional<T>& lhs, const U& rhs) {
   return !lhs.has_value() || *lhs < rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator>(const optional<T>& lhs, const U& rhs) {
   return lhs.has_value() && *lhs > rhs;
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() < std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator<(const T& lhs, const optional<U>& rhs) {
   return rhs.has_value() && lhs < *rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() > std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator>(const T& lhs, const optional<U>& rhs) {
   return !rhs.has_value() || lhs > *rhs;
 }
 
 // Less than or equal/greater than or equal.
-template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>())> = true>
+template <
+    typename T, typename U,
+    ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>())> = true>
 constexpr bool operator<=(const optional<T>& lhs, const optional<U>& rhs) {
   return !lhs.has_value() || (rhs.has_value() && *lhs <= *rhs);
 }
-template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>())> = true>
+template <
+    typename T, typename U,
+    ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>())> = true>
 constexpr bool operator>=(const optional<T>& lhs, const optional<U>& rhs) {
   return !rhs.has_value() || (lhs.has_value() && *lhs >= *rhs);
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator<=(const optional<T>& lhs, const U& rhs) {
   return !lhs.has_value() || *lhs <= rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, U>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, U>> = true>
 constexpr bool operator>=(const optional<T>& lhs, const U& rhs) {
   return lhs.has_value() && *lhs >= rhs;
 }
 
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() <= std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator<=(const T& lhs, const optional<U>& rhs) {
   return rhs.has_value() && lhs <= *rhs;
 }
 template <typename T, typename U,
-          ::fit::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>()),
-                                          ::fit::internal::not_same_type<nullopt_t, T>> = true>
+          ::cpp17::internal::enable_relop_t<decltype(std::declval<T>() >= std::declval<U>()),
+                                            ::cpp17::internal::not_same_type<nullopt_t, T>> = true>
 constexpr bool operator>=(const T& lhs, const optional<U>& rhs) {
   return !rhs.has_value() || lhs >= *rhs;
 }
 
-}  // namespace fit
+}  // namespace cpp17
 
 #endif
 
-#endif  // LIB_FIT_OPTIONAL_H_
+#endif  // LIB_STDCOMPAT_OPTIONAL_H_

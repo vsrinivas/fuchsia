@@ -16,9 +16,10 @@ zx_library("stdcompat") {
   static = true
   sdk_publishable = true
   sdk_headers = [
-    "lib/stdcompat/version.h",
+    "lib/stdcompat/optional.h",
     "lib/stdcompat/type_traits.h",
     "lib/stdcompat/utility.h",
+    "lib/stdcompat/version.h",
   ]
   sources = [
     "include/lib/stdcompat/internal/constructors.h",
