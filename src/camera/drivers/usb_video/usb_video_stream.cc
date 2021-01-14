@@ -29,12 +29,6 @@ namespace video {
 namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
-// Device FIDL thunks
-const fuchsia_hardware_camera_Device_ops_t UsbVideoStream::CAMERA_FIDL_THUNKS{
-    .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
-      return reinterpret_cast<UsbVideoStream*>(ctx)->GetChannel(handle);
-    },
-};
 
 // Only keep the first 11 bits of the USB SOF (Start of Frame) values.
 // The payload header SOF values only have 11 bits before wrapping around,

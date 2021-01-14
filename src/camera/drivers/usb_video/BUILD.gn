@@ -38,7 +38,6 @@ driver_module("usb_video_driver") {
     ":usb_video_bind",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/fidl/fuchsia.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

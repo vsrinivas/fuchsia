@@ -41,7 +41,7 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   fuchsia::hardware::camera::DeviceSyncPtr dev;
   dev.Bind(std::move(camera));
   fuchsia::camera2::hal::ControllerPtr ctrl;
-  ZX_ASSERT(dev->GetChannel2(ctrl.NewRequest(loop_.dispatcher()).TakeChannel()) == ZX_OK);
+  ZX_ASSERT(dev->GetChannel2(ctrl.NewRequest(loop_.dispatcher())) == ZX_OK);
 
   // Try to get the device info, waiting for either the info to be returned, or for an error.
   zx::event event;

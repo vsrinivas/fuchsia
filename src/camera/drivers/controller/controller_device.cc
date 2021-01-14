@@ -33,13 +33,13 @@ zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* t
   return transaction.Status();
 }
 
-void ControllerDevice::GetChannel2(zx::channel handle, GetChannel2Completer::Sync& completer) {
-  if (handle == ZX_HANDLE_INVALID) {
+void ControllerDevice::GetChannel2(zx::channel server_end, GetChannel2Completer::Sync& completer) {
+  if (server_end == ZX_HANDLE_INVALID) {
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  zx::channel channel(std::move(handle));
+  zx::channel channel(std::move(server_end));
   if (controller_ != nullptr) {
     zxlogf(ERROR, "%s: Camera2 Controller already running", __func__);
     completer.Close(ZX_ERR_INTERNAL);

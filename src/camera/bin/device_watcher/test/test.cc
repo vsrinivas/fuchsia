@@ -46,8 +46,8 @@ class FakeCamera : public fuchsia::hardware::camera::Device,
   explicit FakeCamera(fidl::InterfaceRequest<fuchsia::hardware::camera::Device> request)
       : camera_binding_(this, std::move(request)), controller_binding_(this) {}
   void GetChannel(zx::channel channel) override {}
-  void GetChannel2(zx::channel channel) override {
-    ZX_ASSERT(controller_binding_.Bind(std::move(channel)) == ZX_OK);
+  void GetChannel2(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> server_end) override {
+    ZX_ASSERT(controller_binding_.Bind(std::move(server_end)) == ZX_OK);
   }
   void GetNextConfig(fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) override {}
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,

@@ -5,7 +5,6 @@
 #ifndef SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 #define SRC_CAMERA_DRIVERS_USB_VIDEO_USB_VIDEO_STREAM_H_
 
-#include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -33,7 +32,7 @@ namespace usb {
 static constexpr int USB_ENDPOINT_INVALID = -1;
 
 class UsbVideoStream;
-using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Messageable, ddk::Unbindable>;
+using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Unbindable>;
 
 class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
@@ -47,9 +46,6 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
   // DDK device implementation
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &CAMERA_FIDL_THUNKS);
-  }
   ~UsbVideoStream();
 
  private:
@@ -207,7 +203,6 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
   // CameraStream FIDL interface
   std::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) = nullptr;
 
-  static const fuchsia_hardware_camera_Device_ops_t CAMERA_FIDL_THUNKS;
   // Loop used to run the FIDL server
   static std::unique_ptr<async::Loop> fidl_dispatch_loop_;
 

@@ -121,5 +121,5 @@ void DeviceInstance::OnControllerRequested(
     request.Close(ZX_ERR_UNAVAILABLE);
     return;
   }
-  camera_->GetChannel2(request.TakeChannel());
+  camera_->GetChannel2(std::move(request));
 }

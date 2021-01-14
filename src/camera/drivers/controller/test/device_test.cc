@@ -87,7 +87,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
     ASSERT_EQ(controller_device_->StartThread(), ZX_OK);
     ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
     camera_protocol_.set_error_handler(FailErrorHandler);
-    camera_protocol_->GetChannel2(controller_protocol_.NewRequest().TakeChannel());
+    camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
     controller_protocol_.set_error_handler(FailErrorHandler);
     RunLoopUntilIdle();
   }
@@ -123,7 +123,7 @@ TEST_F(ControllerDeviceTest, GetChannel2) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
   EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
-  camera_protocol_->GetChannel2(controller_protocol_.NewRequest().TakeChannel());
+  camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
   camera_protocol_.set_error_handler(FailErrorHandler);
   RunLoopUntilIdle();
 }
@@ -133,10 +133,10 @@ TEST_F(ControllerDeviceTest, GetChannel2InvokeTwice) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
   EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
-  camera_protocol_->GetChannel2(controller_protocol_.NewRequest().TakeChannel());
+  camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
   RunLoopUntilIdle();
   fuchsia::camera2::hal::ControllerPtr other_controller_protocol;
-  camera_protocol_->GetChannel2(other_controller_protocol.NewRequest().TakeChannel());
+  camera_protocol_->GetChannel2(other_controller_protocol.NewRequest());
   RunLoopUntilIdle();
   WaitForChannelClosure(other_controller_protocol.channel());
 }
