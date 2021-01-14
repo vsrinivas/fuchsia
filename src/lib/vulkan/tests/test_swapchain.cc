@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace {
 
 uint64_t ZirconIdFromHandle(uint32_t handle) {
@@ -57,6 +59,8 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
+    sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                         fsl::GetCurrentProcessKoid());
 
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
     status = sysmem_allocator->BindSharedCollection(buffer_collection_token.BindSync(),
