@@ -136,6 +136,15 @@ void Inference::InferMessage(const OutputEvent* event,
   const fidl_codec::HandleValue* handle_value = event->invoked_event()->GetHandleValue(
       event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
   if (handle_value->handle().handle != ZX_HANDLE_INVALID) {
+    dispatcher_->CreateHandleInfo(event->thread(), handle_value->handle().handle,
+                                  event->timestamp(),
+                                  /*startup=*/false);
+    const fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
+        GetInferredHandleInfo(event->thread()->process()->koid(), handle_value->handle().handle);
+    if (inferred_handle_info == nullptr) {
+      AddInferredHandleInfo(event->thread()->process()->koid(), handle_value->handle().handle,
+                            "channel", next_channel_++, "");
+    }
     const fidl_codec::FidlMessageValue* sent = event->invoked_event()->GetMessage();
     const fidl_codec::FidlMessageValue* received = event->GetMessage();
     const fidl_codec::StructValue* request = nullptr;
@@ -176,10 +185,9 @@ void Inference::ZxChannelCreate(const OutputEvent* event) {
   FX_DCHECK(out1 != nullptr);
   if ((out0->handle().handle != ZX_HANDLE_INVALID) &&
       (out1->handle().handle != ZX_HANDLE_INVALID)) {
-    int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandleInfo(event->thread(), out0->handle().handle, timestamp,
+    dispatcher_->CreateHandleInfo(event->thread(), out0->handle().handle, event->timestamp(),
                                   /*startup=*/false);
-    dispatcher_->CreateHandleInfo(event->thread(), out1->handle().handle, timestamp,
+    dispatcher_->CreateHandleInfo(event->thread(), out1->handle().handle, event->timestamp(),
                                   /*startup=*/false);
     // Provides the minimal semantic for both handles (that is they are channels).
     AddInferredHandleInfo(event->thread()->process()->koid(), out0->handle().handle, "channel",
@@ -197,8 +205,7 @@ void Inference::ZxPortCreate(const OutputEvent* event) {
       event->GetHandleValue(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
   FX_DCHECK(out != nullptr);
   if (out->handle().handle != ZX_HANDLE_INVALID) {
-    int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, timestamp,
+    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, event->timestamp(),
                                   /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a port).
     AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "port",
@@ -211,8 +218,7 @@ void Inference::ZxTimerCreate(const OutputEvent* event) {
       event->GetHandleValue(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
   FX_DCHECK(out != nullptr);
   if (out->handle().handle != ZX_HANDLE_INVALID) {
-    int64_t timestamp = time(NULL);
-    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, timestamp,
+    dispatcher_->CreateHandleInfo(event->thread(), out->handle().handle, event->timestamp(),
                                   /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a timer).
     AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "timer",
