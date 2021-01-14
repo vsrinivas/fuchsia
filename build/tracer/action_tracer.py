@@ -79,7 +79,7 @@ def main():
 
     depfile_deps = []
     if args.depfile:
-        allowed_write.insert(os.path.abspath(args.depfile))
+        allowed_write.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
             depfile_deps += [
                 line.partition(":")[0]
@@ -91,7 +91,7 @@ def main():
         for path in [args.script] + args.inputs + args.sources + depfile_deps
     } | allowed_write
     if args.response_file_name:
-        allowed_read.insert(os.path.abspath(response_file_name))
+        allowed_read.add(os.path.abspath(response_file_name))
 
     # Paths that are ignored
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))
