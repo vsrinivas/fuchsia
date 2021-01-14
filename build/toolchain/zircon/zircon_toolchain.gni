@@ -381,15 +381,11 @@ template("zircon_toolchain") {
     lib_switch = "-l"
     lib_dir_switch = "-L"
     default_output_dir = "{{target_out_dir}}"
-    outfile_base = "{{output_dir}}/{{target_output_name}}"
-    outfile = "$outfile_base{{output_extension}}"
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
     runtime_outputs = [ outfile ]
     outputs = runtime_outputs
 
     if (use_strip) {
-      # This doesn't use ${outfile_base} so that it's consistent that
-      # toolchain.link_output_suffix is appended whether "" or ".debug",
-      # rather than replacing output_extension, which requires more logic.
       unstripped_outfile = "${outfile}.debug"
       outputs += [ unstripped_outfile ]
       strip_command = " && "
@@ -417,7 +413,7 @@ template("zircon_toolchain") {
       strip_command = ""
     }
 
-    rspfile = "${outfile_base}.rsp"
+    rspfile = "${outfile}.rsp"
     switches = "-o $unstripped_outfile {{ldflags}}"
     if (invoker.os == "mac") {
       rspfile_content = "{{inputs_newline}}"
@@ -433,7 +429,7 @@ template("zircon_toolchain") {
         depfile = "$outfile.d"
         depsformat = "gcc"
         switches += " -Wl,--dependency-file=$depfile"
-        mapfile = "${outfile_base}.map"
+        mapfile = "${outfile}.map"
         outputs += [ mapfile ]
         switches += " -Wl,-Map,$mapfile"
       }
@@ -447,7 +443,7 @@ template("zircon_toolchain") {
     }
 
     if (use_buildidtool) {
-      buildid_stampfile = "${outfile_base}.build-id.stamp"
+      buildid_stampfile = "${outfile}.build-id.stamp"
       strip_command +=
           " && $_buildidtool -build-id-dir \".build-id\"" +
           " -stamp \"$buildid_stampfile\"" +
@@ -455,7 +451,7 @@ template("zircon_toolchain") {
     }
 
     if (use_breakpad) {
-      breakpad_outfile = "${outfile_base}.sym"
+      breakpad_outfile = "${outfile}.sym"
       outputs += [ breakpad_outfile ]
 
       # dump_syms will fail if there is no build ID.  buildidtool succeeds and
@@ -472,7 +468,7 @@ template("zircon_toolchain") {
     }
 
     if (use_gsym) {
-      gsym_outfile = "${outfile_base}.gsym"
+      gsym_outfile = "${outfile}.gsym"
       outputs += [ gsym_outfile ]
       strip_command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$gsym_outfile.gsym\""
     }
