@@ -22,7 +22,7 @@ libc_components = [
 
 group("components") {
   visibility = [ ":*" ]
-  deps = [ "$zx/third_party/scudo" ]  # TODO(mcgrathr): libc_components
+  deps = libc_components
 }
 
 group("unittests") {
