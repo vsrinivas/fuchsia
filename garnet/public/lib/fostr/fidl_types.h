@@ -5,12 +5,12 @@
 #ifndef LIB_FOSTR_FIDL_TYPES_H_
 #define LIB_FOSTR_FIDL_TYPES_H_
 
+#include <array>
+#include <sstream>
+
 #include "garnet/public/lib/fostr/hex_dump.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/indent.h"
-
-#include <array>
-#include <sstream>
 
 #ifdef __Fuchsia__
 #include "lib/fidl/cpp/binding.h"
@@ -47,6 +47,22 @@ namespace fidl {
 // convention described in indent.h.
 
 template <typename T, size_t N>
+std::ostream& operator<<(std::ostream& os, const std::array<T, N>& value);
+
+template <typename T, size_t N, size_t M>
+std::ostream& operator<<(std::ostream& os, const std::array<std::array<T, M>, N>& value) {
+  if (value.empty()) {
+    return os << "<empty>";
+  }
+
+  int index = 0;
+  for (const std::array<T, M>& item : value) {  // N items
+    os << fostr::NewLine << "[" << index++ << "]:" << fostr::Indent << item << fostr::Outdent;
+  }
+  return os;
+}
+
+template <typename T, size_t N>
 std::ostream& operator<<(std::ostream& os, const std::array<T, N>& value) {
   fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
   return os;
@@ -73,20 +89,6 @@ std::ostream& operator<<(std::ostream& os, const std::array<int8_t, N>& value) {
 }
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
-  if (value.is_null()) {
-    return os << "<null>";
-  }
-
-  if (value.get().empty()) {
-    return os << "<empty>";
-  }
-
-  fostr::internal::insert_sequence_container(os, value.get().cbegin(), value.get().cend());
-  return os;
-}
-
-template <typename T>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
   if (!value.has_value()) {
     return os << "<null>";
@@ -105,6 +107,22 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<uint8_t>& value);
 
 template <>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<int8_t>& value);
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
+  if (value.empty()) {
+    return os << "<empty>";
+  }
+
+  fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
+  return os;
+}
+
+template <>
+std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value);
+
+template <>
+std::ostream& operator<<(std::ostream& os, const std::vector<int8_t>& value);
 
 #ifdef __Fuchsia__
 template <typename T>

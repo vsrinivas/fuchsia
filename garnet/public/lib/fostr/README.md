@@ -12,8 +12,8 @@ fostr is not part of the Fuchsia SDK.
 
 ## FIDL type formatting
 
-Currently, only structs, unions and enums can be formatted. Tables will be
-supported, and support for formatting serialized messages is also intended.
+Currently, structs, tables, unions, arrays, vectors, and enums can be formatted.
+Support for formatting serialized messages is also intended.
 
 To use an existing formatter for FIDL types (say, for fuchsia.foo), add the
 dependency to your BUILD.gn file, which will look like this:
@@ -41,3 +41,25 @@ can be accommodated. Look for directories containing a file called
 If you have formatters for all the types in your library, you can just provide
 a formatting.h and skip the amendments business. There are currently no
 examples of this.
+
+### FIDL containers properly print `int8` and `uint8` as integers
+
+All FIDL containers (structs, tables, unions, arrays, and vectors) print `int8`
+and `uint8` FIDL primitives as integers. Structs, tables and unions interpret
+these as 32-bit types for printing. Arrays and vectors use hex formatting.
+
+Note that if you choose to print an 8-bit data type directly, the C++
+STL interprets these as `char` types, so you'll have to cast it yourself:
+
+```
+uint8_t my_fidl_data = get_some_uint8();
+os << static_cast<uint32_t>(my_fidl_data);
+```
+
+## Implementation notes
+
+### Code-generation templates
+
+The corresponding code-generation templates are located in the sibling directory:
+
+```garnet/public/build/fostr```

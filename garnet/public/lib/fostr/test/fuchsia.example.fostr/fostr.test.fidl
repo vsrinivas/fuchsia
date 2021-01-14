@@ -15,18 +15,24 @@ struct MyStruct {
     vector<int32>:10? nums;
     string foo;
     MyXunion bar;
+    uint8 my_uint8;
+    int8 my_int8;
 };
 
 flexible union MyXunion {
     1: int32 i;
     2: bool b;
     3: reserved;
+    4: uint8 my_uint8;
+    5: int8 my_int8;
 };
 
 union MyUnion {
     1: int32 i;
     2: bool b;
     3: reserved;
+    4: uint8 my_uint8;
+    5: int8 my_int8;
 };
 
 table SimpleTable {
@@ -34,4 +40,6 @@ table SimpleTable {
     2: reserved;
     3: MyStruct y;
     4: int32 z;
+    5: uint8 my_uint8;
+    6: int8 my_int8;
 };

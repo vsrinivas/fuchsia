@@ -200,6 +200,10 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
   os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }});
+          {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
+  os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<uint32_t>(value.{{ .Name }});
+          {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}
+  os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<int32_t>(value.{{ .Name }});
           {{- else }}
   os << ::fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }};
           {{- end }}
@@ -224,6 +228,10 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
   if (value.has_{{ .Name }}()) {
             {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
     os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }}());
+            {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
+    os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<uint32_t>(value.{{ .Name }}());
+            {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}
+    os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<int32_t>(value.{{ .Name }}());
             {{- else }}
     os << ::fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }}();
             {{- end }}
@@ -248,6 +256,10 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
             {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
       return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
+            {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
+      return os << "{{ .Name }} " << static_cast<uint32_t>(value.{{ .Name }}());
+            {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}
+      return os << "{{ .Name }} " << static_cast<int32_t>(value.{{ .Name }}());
             {{- else }}
       return os << "{{ .Name }} " << value.{{ .Name }}();
             {{- end }}
