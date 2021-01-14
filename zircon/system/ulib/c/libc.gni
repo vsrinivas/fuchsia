@@ -1,0 +1,187 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Source directory for Fucshia libc.
+libc = "$zx/system/ulib/c"
+
+# Root source directory for llvm-libc.
+llvm_libc = "$zx/third_party/llvm-libc"
+
+libc_configs = [
+  # These configs are needed for the expectations of the source code,
+  # whether compiled into libc.so or into unit test code.
+  "$libc:internal.config",
+]
+
+# When compiled for unit tests, add only those.
+libc_testonly_configs = libc_configs + [ "$libc:testonly.config" ]
+
+# These additional configs are needed when compiling for the real libc.
+libc_configs += [
+  "$libc:llvm-libc-export.config",
+
+  # libfuzzer also uses libc internally.  By removing the fuzzing
+  # instrumentation we avoid it adding noise to the fuzzing coverage.
+  # TODO(25073): Once a cleaner solution is found, remove this.
+  "$zx_build_config:no_fuzzer",
+]
+
+# Define source_set() targets for some libc code.
+#
+# This defines two source_set() targets, one with the main target name and one
+# called "$target_name.testonly".  They differ in the configs applied to the
+# code (before $configs is appended if set).  The main target is compiled for
+# libc proper and defines the public C entry points, while the testonly target
+# is compiled for unit test code and does not define the public C entry points.
+# A libc_test() target should have the corresponding ".testonly" target in its
+# $deps while the main target rolls up into the deps of libc proper.
+#
+# Paramaters
+#
+#   * configs
+#     - Optional: Extra configs to append.  Unlike source_set(), configs
+#     is not pre-set so defaults cannot be removed and += isn't used.
+#     - Type: list(config)
+#     - Default: []
+#
+#   * dir
+#     - Optional: Directory prefix for $sources file names.
+#     - Type: dir
+#     - Default: "."
+#
+#   * public
+#     - Optional: As for source_set(), but $dir is prefixed if set.
+#     This should list the headers intended to be used for other parts
+#     of libc and for unit tests.  Those targets will have deps on this one.
+#     - Type: list(file)
+#
+#   * sources
+#     - Required: As for source_set(), but $dir is prefixed if set.
+#     - Type: list(file)
+#
+#   * visibility
+#     - Optional: Additional label patterns that can use this target.
+#     All targets have visibility limited to libc code by default.
+#     This can add additional label patterns to expose libc internal
+#     pieces to other parts of the build, but minimal patterns should
+#     be used and never broad wildcards.
+#     - Type: list(label_pattern)
+#     - Default: []
+#
+# See source_set() for the rest.
+#
+template("libc_source_set") {
+  set_vars = {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "configs",
+                             "dir",
+                             "sources",
+                             "public",
+                             "visibility",
+                           ])
+
+    visibility = [ "$libc/*" ]
+    if (defined(invoker.visibility)) {
+      visibility += invoker.visibility
+    }
+
+    if (defined(invoker.dir)) {
+      sources = []
+      foreach(file, invoker.sources) {
+        sources += [ "${invoker.dir}/$file" ]
+      }
+    } else {
+      sources = invoker.sources
+    }
+
+    if (defined(invoker.public)) {
+      if (defined(invoker.dir)) {
+        public = []
+        foreach(file, invoker.public) {
+          public += [ "${invoker.dir}/$file" ]
+        }
+      } else {
+        public = invoker.public
+      }
+    }
+  }
+
+  set_configs = []
+  if (defined(invoker.configs)) {
+    set_configs = invoker.configs
+  }
+
+  source_set(target_name) {
+    configs += libc_configs + set_configs
+    forward_variables_from(set_vars, "*")
+  }
+
+  source_set("$target_name.testonly") {
+    testonly = true
+    configs += libc_testonly_configs + set_configs
+    forward_variables_from(set_vars, "*")
+  }
+}
+
+# Define a source_set() of libc unit test code.
+#
+# This defines a source_set() that will roll up into the libc-unittests
+# executable and the standalone Zircon core-tests executable.  It's expected to
+# use llvm-libc's unit test API, which acts as a wrapper for zxtest, or to use
+# the zxtest API directly.  Its $deps should include the "foo.testonly" target
+# defined by libc_source_set("foo") for the code under test, which is tested
+# via its C++ namespace-scoped entry points.
+#
+# Paramaters
+#
+#   * configs
+#     - Optional: Extra configs to append.  Unlike source_set(), configs
+#     is not pre-set so defaults cannot be removed and += isn't used.
+#     - Type: list(config)
+#     - Default: []
+#
+#   * dir
+#     - Optional: Directory prefix for $sources file names.
+#     - Type: dir
+#     - Default: "."
+#
+#   * sources
+#     - Required: As for source_set(), but $dir is prefixed if set.
+#     - Type: list(file)
+#
+# See source_set() for the rest.
+#
+template("libc_test") {
+  source_set(target_name) {
+    testonly = true
+
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "configs",
+                             "dir",
+                             "sources",
+                             "testonly",
+                           ])
+
+    if (defined(invoker.dir)) {
+      sources = []
+      foreach(file, invoker.sources) {
+        sources += [ "${invoker.dir}/$file" ]
+      }
+    } else {
+      sources = invoker.sources
+    }
+
+    configs += libc_testonly_configs
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    deps += [ "$zx/system/ulib/zxtest" ]
+  }
+}

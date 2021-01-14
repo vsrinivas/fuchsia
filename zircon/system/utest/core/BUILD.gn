@@ -76,7 +76,7 @@ unified_only = [
 
   # This builds its own separate test binary in its own BUILD.gn file, but is
   # also included in the unified standalone test binary.
-  "//zircon/third_party/scudo:unittests",
+  "//zircon/system/ulib/c:unittests",
 ]
 
 # Build each test as a standalone binary meant to be run by runtests.
