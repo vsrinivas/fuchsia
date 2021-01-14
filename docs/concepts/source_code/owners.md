@@ -34,9 +34,17 @@ to use when filing issues related to the contents of this directory.
 Here's an example `OWNERS` file:
 
 ```none
+# These users are owners
 validuser1@example.com
 validuser2@example.com
 
+# Users listed elsewhere are also owners
+include /path/to/another/OWNERS
+
+# This user is only an owner of the listed file
+per-file main.c = validuser3@example.com
+
+# The line below helps automate bug triage
 # COMPONENT: TopComponent>SubComponent
 ```
 
