@@ -9,6 +9,7 @@ group("tests") {
     "astro:tests",
     "machina:tests",
     "msm8998:tests",
+    "msm8x53-som:tests",
     "mt8167s_ref:tests",
     "nelson:tests",
     "sherlock:tests",

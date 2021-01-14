@@ -4,7 +4,6 @@
 
 #include <zircon/syscalls/smc.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>

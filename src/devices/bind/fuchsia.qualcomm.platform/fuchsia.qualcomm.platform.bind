@@ -9,6 +9,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  MSM8X53 = 0x01,
   MSM8998 = 0x02,
 };
 
