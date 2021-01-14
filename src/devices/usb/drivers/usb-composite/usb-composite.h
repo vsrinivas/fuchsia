@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/usb/cpp/banjo.h>
 
-#include <ddk/binding.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>

@@ -10,6 +10,7 @@ group("tests") {
     "dwc2:tests",
     "mt-musb-host:tests",
     "usb-bus:tests",
+    "usb-composite:tests",
     "usb-hub-rewrite:tests",
     "usb-peripheral:tests",
     "usb-peripheral-test:tests",

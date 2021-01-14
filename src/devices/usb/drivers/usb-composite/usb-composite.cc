@@ -8,6 +8,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/devices/usb/drivers/usb-composite/usb_composite_bind.h"
 #include "usb-interface.h"
 
 namespace usb_composite {
@@ -360,12 +361,6 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_composite
 
-// clang-format off
-
 // The '*' in the version string is important. This marks this driver as a fallback, to allow other
 // drivers to bind against ZX_PROTOCOL_USB_DEVICE to handle more specific cases.
-ZIRCON_DRIVER_BEGIN(usb_composite, usb_composite::driver_ops, "zircon", "*0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_DEVICE),
-ZIRCON_DRIVER_END(usb_composite)
-
-// clang-format on
+ZIRCON_DRIVER(usb_composite, usb_composite::driver_ops, "zircon", "*0.1");

@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <usb/usb-request.h>
 
