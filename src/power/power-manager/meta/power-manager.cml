@@ -21,11 +21,6 @@
     ],
     use: [
         { runner: "elf" },
-        {
-            directory: "config-data",
-            rights: [ "r*" ],
-            path: "/config/data",
-        },
         { protocol: "fuchsia.cobalt.LoggerFactory" },
         { protocol: "fuchsia.device.manager.Administrator" },
         { protocol: "fuchsia.feedback.CrashReporter" },

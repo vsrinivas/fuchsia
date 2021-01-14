@@ -3,5 +3,8 @@
 # found in the LICENSE file.
 
 group("bootstrap") {
-  deps = [ "//src/power/shutdown-shim:bootfs" ]
+  deps = [
+    "//src/power/power-manager:bootfs",
+    "//src/power/shutdown-shim:bootfs",
+  ]
 }
