@@ -51,47 +51,95 @@ async fn event_count_sampler_test() {
 
     test_app_controller.increment_int(1).unwrap();
 
-    let watch = logger_querier.watch_logs(5, fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvent);
+    let events = gather_sample_group(
+        LogQuerierConfig { project_id: 5, expected_batch_size: 3 },
+        &logger_querier,
+    )
+    .await;
 
-    let (mut events, more) = watch.await.unwrap().unwrap();
-
-    assert!(!more);
-    assert_eq!(events.len(), 1);
-
-    let cobalt_event: CobaltEvent = events.pop().unwrap();
-
-    assert_eq!(cobalt_event.metric_id, 1);
-    match cobalt_event.payload {
-        EventPayload::EventCount(event_count) => {
-            assert_eq!(event_count.count, 1);
-        }
-        _ => panic!("Only should be observing CountEvents."),
-    }
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 1, value: 1 }));
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 2, value: 10 }));
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 3, value: 20 }));
 
     // We want to guarantee a sample takes place before we increment the value again.
-    // This is to verify that despite two samples taking place, only one new log is emitted.
+    // This is to verify that despite two samples taking place, the count type isnt uploaded with no diff
+    // and the metric that is upload_once isnt sampled again.
     test_app_controller.wait_for_sample().await.unwrap().unwrap();
 
+    let events = gather_sample_group(
+        LogQuerierConfig { project_id: 5, expected_batch_size: 1 },
+        &logger_querier,
+    )
+    .await;
+
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 2, value: 10 }));
     test_app_controller.increment_int(1).unwrap();
 
     test_app_controller.wait_for_sample().await.unwrap().unwrap();
 
-    let watch = logger_querier.watch_logs(5, fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvent);
+    let events = gather_sample_group(
+        LogQuerierConfig { project_id: 5, expected_batch_size: 2 },
+        &logger_querier,
+    )
+    .await;
 
-    let (mut events, more) = watch.await.unwrap().unwrap();
+    // Even though we incremented metric-1 its value stays at 1 since it's being cached.
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 1, value: 1 }));
+    assert!(verify_event_present_once(&events, ExpectedEvent { metric_id: 2, value: 10 }));
+}
 
-    assert!(!more);
-    assert_eq!(events.len(), 1);
+struct ExpectedEvent {
+    metric_id: u32,
+    value: i64,
+}
 
-    let cobalt_event: CobaltEvent = events.pop().unwrap();
-
-    // Count stays at 1, even though the backing inspect property
-    // is now at 2.
-    assert_eq!(cobalt_event.metric_id, 1);
-    match cobalt_event.payload {
-        EventPayload::EventCount(event_count) => {
-            assert_eq!(event_count.count, 1);
+fn verify_event_present_once(events: &Vec<CobaltEvent>, expected_event: ExpectedEvent) -> bool {
+    let mut observed_count = 0;
+    for event in events {
+        match event.payload {
+            EventPayload::EventCount(event_count) => {
+                if event.metric_id == expected_event.metric_id
+                    && event_count.count == expected_event.value
+                {
+                    observed_count += 1;
+                }
+            }
+            _ => panic!("Only should be observing CountEvents."),
         }
-        _ => panic!("Only should be observing CountEvents."),
     }
+    observed_count == 1
+}
+
+struct LogQuerierConfig {
+    project_id: u32,
+    expected_batch_size: usize,
+}
+
+async fn gather_sample_group(
+    log_querier_config: LogQuerierConfig,
+    logger_querier: &LoggerQuerierProxy,
+) -> Vec<CobaltEvent> {
+    let mut events: Vec<CobaltEvent> = Vec::new();
+    loop {
+        let watch = logger_querier.watch_logs(
+            log_querier_config.project_id,
+            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvent,
+        );
+
+        let (mut new_events, more) = watch.await.unwrap().unwrap();
+        assert!(!more);
+
+        events.append(&mut new_events);
+        if events.len() < log_querier_config.expected_batch_size {
+            continue;
+        }
+
+        if events.len() == log_querier_config.expected_batch_size {
+            break;
+        }
+
+        panic!("Sampler should provide descrete groups of cobalt events. Shouldn't see more than {:?} here.", log_querier_config.expected_batch_size);
+    }
+
+    events
 }

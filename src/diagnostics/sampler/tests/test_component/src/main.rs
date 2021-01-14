@@ -38,6 +38,8 @@ impl TestState {
     pub fn new() -> Arc<Mutex<TestState>> {
         let mut integer_property_map: HashMap<u16, (String, i64)> = HashMap::new();
         integer_property_map.insert(1, ("counter".to_string(), 0));
+        integer_property_map.insert(2, ("integer_1".to_string(), 10));
+        integer_property_map.insert(3, ("integer_2".to_string(), 20));
         Arc::new(Mutex::new(TestState { integer_property_map, sample_count_callback_opt: None }))
     }
 }

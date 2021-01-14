@@ -70,9 +70,7 @@ impl SamplerExecutor {
                     // failure mode.
                     warn!("A spawned sampler has failed: {:?}", e);
                 }
-                _ => unreachable!(
-                    "These are long running futures that should never healthily terminate."
-                ),
+                Ok(()) => {}
             }
         }
     }
@@ -188,15 +186,37 @@ impl ProjectSampler {
                                             let metric_id = metric_transformation.metric_id.clone();
                                             let event_codes =
                                                 metric_transformation.event_codes.clone();
+                                            let upload_once =
+                                                metric_transformation.upload_once.clone();
 
                                             self.process_metric_transformation(
                                                 metric_type,
                                                 metric_id,
                                                 event_codes,
-                                                selector,
+                                                selector.clone(),
                                                 new_sample,
                                             )
-                                            .await?
+                                            .await?;
+
+                                            if let Some(true) = upload_once {
+                                                self.metric_transformation_map.remove(&selector);
+                                                // If the entire project sampler is based on
+                                                // upload-once metrics, then there's no reason to
+                                                // keep the task alive.
+                                                if self.metric_transformation_map.is_empty() {
+                                                    return Ok(());
+                                                } else {
+                                                    // Update archive reader since we've removed
+                                                    // a selector.
+                                                    self.archive_reader = ArchiveReader::new()
+                                                        .retry_if_empty(false)
+                                                        .add_selectors(
+                                                            self.metric_transformation_map
+                                                                .keys()
+                                                                .cloned(),
+                                                        );
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -247,7 +267,7 @@ impl ProjectSampler {
             DataType::EventCount => {
                 self.metric_cache.insert(selector.clone(), new_sample.clone());
             }
-            DataType::Int => (),
+            DataType::Integer => (),
         }
     }
 }
@@ -260,7 +280,7 @@ fn process_sample_for_data_type(
 ) -> Option<EventPayload> {
     let event_payload_res = match data_type {
         DataType::EventCount => process_event_count(new_sample, previous_sample_opt, selector),
-        DataType::Int => {
+        DataType::Integer => {
             // If we previously cached a metric with an int-type, log a warning and ignore it.
             // This may be a case of using a single selector for two metrics, one event count
             // and one int.

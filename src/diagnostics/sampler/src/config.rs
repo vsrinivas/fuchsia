@@ -26,10 +26,22 @@ pub struct ProjectConfig {
 /// to a cobalt metric.
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct MetricConfig {
+    /// Selector identifying the metric to
+    /// sample via the diagnostics platform.
     pub selector: String,
+    /// Cobalt metric id to map the selector to.
     pub metric_id: u32,
+    /// Data type to transform the metric to.
     pub metric_type: DataType,
+    /// Event codes defining the dimensions of the
+    /// cobalt metric. Note: Order matters, and
+    /// must match the order of the defined dimensions
+    /// in the cobalt metric file.
     pub event_codes: Vec<u32>,
+    /// Optional boolean specifying whether to upload
+    /// the specified metric only once, the first time
+    /// it becomes available to the sampler.
+    pub upload_once: Option<bool>,
 }
 
 /// The supported V1.0 Cobalt Metrics
@@ -40,7 +52,7 @@ pub enum DataType {
     //       are always set to 0.
     EventCount,
     // Maps raw Int inspect types.
-    Int,
+    Integer,
     // TODO(lukenicholson): Expand sampler support for new
     // data types.
     // Maps cached diffs from IntHistogram inspect type.
@@ -190,5 +202,48 @@ mod tests {
 
         let config = SamplerConfig::from_directory(10, &config_path);
         assert!(config.is_err());
+    }
+
+    #[test]
+    fn parse_optional_args() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+        fs::write(config_path.join("true.json"), r#"{
+  "project_id": 5,
+  "poll_rate_sec": 60,
+  "metrics": [
+    {
+      // Test comment for json5 portability.
+      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "metric_id": 1,
+      "metric_type": "EventCount",
+      "event_codes": [0, 0],
+      "upload_once": true,
+    }
+  ]
+}
+"#).unwrap();
+
+        fs::write(
+            config_path.join("false.json"), r#"{
+  "project_id": 5,
+  "poll_rate_sec": 60,
+  "metrics": [
+    {
+      // Test comment for json5 portability.
+      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "metric_id": 1,
+      "metric_type": "EventCount",
+      "event_codes": [0, 0],
+      "upload_once": false,
+    }
+  ]
+}
+"#).unwrap();
+
+        let config = SamplerConfig::from_directory(10, &config_path);
+        assert!(config.is_ok());
+        assert_eq!(config.unwrap().project_configs.len(), 2);
     }
 }
