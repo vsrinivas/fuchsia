@@ -68,6 +68,9 @@ type socketWriter struct {
 
 func (w *socketWriter) Write(p []byte) (int, error) {
 	n, err := w.socket.Write(p, 0)
+	if err == nil && n != len(p) {
+		err = &zx.Error{Status: zx.ErrShouldWait}
+	}
 	w.lastError = err
 	return n, err
 }

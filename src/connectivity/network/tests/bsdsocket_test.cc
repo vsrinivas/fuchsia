@@ -1645,6 +1645,62 @@ class NetStreamSocketsTest : public ::testing::Test {
   fbl::unique_fd server_;
 };
 
+TEST_F(NetStreamSocketsTest, DataTransferTest) {
+  std::thread echo([&]() {
+    std::array<uint8_t, 1024> buf;
+
+    for (;;) {
+      ssize_t r = read(server().get(), buf.data(), buf.size());
+      ASSERT_GE(r, 0) << strerror(errno);
+      if (r == 0) {
+        return;
+      }
+
+      for (ssize_t i = 0; i < r;) {
+        ssize_t w = write(server().get(), buf.data() + i, r - i);
+        ASSERT_GE(w, 0) << strerror(errno);
+        i += w;
+      }
+    }
+  });
+
+  std::string big_string;
+  while (big_string.size() < 31 << 20) {
+    big_string += "Though this upload be but little, it is fierce.";
+  }
+
+  std::thread writer([this, big_string]() {
+    auto s = big_string;
+    while (!s.empty()) {
+      ssize_t w = write(client().get(), s.data(), s.size());
+      ASSERT_GE(w, 0) << strerror(errno);
+      s = s.substr(w);
+    }
+    ASSERT_EQ(shutdown(client().get(), SHUT_WR), 0) << strerror(errno);
+  });
+
+  std::string buf;
+  buf.resize(1 << 20);
+  for (size_t i = 0; i < big_string.size();) {
+    ssize_t r = read(client().get(), buf.data(), buf.size());
+    ASSERT_GT(r, 0) << strerror(errno);
+
+    auto actual = buf.substr(0, r);
+    auto expected = big_string.substr(i, r);
+
+    constexpr size_t kChunkSize = 100;
+    for (size_t j = 0; j < actual.size(); j += kChunkSize) {
+      auto actual_chunk = actual.substr(j, kChunkSize);
+      auto expected_chunk = expected.substr(j, actual_chunk.size());
+      ASSERT_EQ(actual_chunk, expected_chunk) << "offset " << i + j;
+    }
+    i += r;
+  }
+
+  writer.join();
+  echo.join();
+}
+
 TEST_F(NetStreamSocketsTest, PeerClosedPOLLOUT) {
   fill_stream_send_buf(server().get(), client().get());
 
