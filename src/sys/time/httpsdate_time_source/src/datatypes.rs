@@ -19,8 +19,8 @@ pub struct HttpsSample {
     pub standard_deviation: zx::Duration,
     /// The size of the final bound on utc time for the sample.
     pub final_bound_size: zx::Duration,
-    /// Round trip network latencies observed in polls used to produce this sample.
-    pub round_trip_times: Vec<zx::Duration>,
+    /// Metrics for individual polls used to produce this sample.
+    pub polls: Vec<Poll>,
 }
 
 impl Into<Update> for HttpsSample {
@@ -35,15 +35,34 @@ impl Into<Update> for HttpsSample {
     }
 }
 
+/// Metrics for an individual poll.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Poll {
+    /// The round trip latency observed during this poll.
+    pub round_trip_time: zx::Duration,
+    /// An estimate of the offset of the center of the poll from the system UTC time.
+    /// TODO(fxbug.dev/67668): This value is collected for improving the error estimate produced by
+    /// HTTPSDate but violates the time architecture principle where sources shouldn't use system
+    /// time because that may introduce circular dependencies. This should be removed once the
+    /// estimate is improved.
+    pub center_offset: Option<zx::Duration>,
+}
+
+#[cfg(test)]
+impl Poll {
+    /// Construct a `Poll` with the given round trip time and no offset.
+    pub fn with_round_trip_time(round_trip_time: zx::Duration) -> Self {
+        Self { round_trip_time, center_offset: None }
+    }
+}
+
 /// A phase in the HTTPS algorithm.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Phase {
     /// A phase comprised of the first sample only.
-    #[allow(unused)]
     Initial,
     /// A phase during which samples are produced relatively frequently to converge on an accurate
     /// time.
-    #[allow(unused)]
     Converge,
     /// A phase during which samples are produced relatively infrequently to maintain an accurate
     /// time.
@@ -76,7 +95,7 @@ mod test {
             monotonic: monotonic_time,
             standard_deviation,
             final_bound_size: zx::Duration::from_nanos(9001),
-            round_trip_times: vec![],
+            polls: vec![],
         };
 
         assert_eq!(

@@ -56,6 +56,11 @@ impl Bound {
     pub fn size(&self) -> zx::Duration {
         self.utc_max - self.utc_min
     }
+
+    /// Returns the center of the possible UTC range.
+    pub fn center(&self) -> zx::Time {
+        self.utc_min + self.size() / 2
+    }
 }
 
 #[cfg(test)]

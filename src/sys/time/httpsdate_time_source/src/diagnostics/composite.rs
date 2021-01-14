@@ -54,7 +54,7 @@ mod test {
             monotonic: zx::Time::from_nanos(222_222_222),
             standard_deviation: zx::Duration::from_millis(235),
             final_bound_size: zx::Duration::from_millis(100),
-            round_trip_times: vec![],
+            polls: vec![],
         };
     }
     const TEST_ERROR: HttpsDateError = HttpsDateError::NetworkError;

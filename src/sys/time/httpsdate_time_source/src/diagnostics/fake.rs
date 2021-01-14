@@ -81,6 +81,7 @@ impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::datatypes::Poll;
     use fuchsia_zircon as zx;
     use lazy_static::lazy_static;
 
@@ -90,14 +91,26 @@ mod test {
             monotonic: zx::Time::from_nanos(222_222_222),
             standard_deviation: zx::Duration::from_millis(235),
             final_bound_size: zx::Duration::from_millis(100),
-            round_trip_times: vec![zx::Duration::from_millis(25), zx::Duration::from_millis(50)],
+            polls: vec![
+                Poll::with_round_trip_time(zx::Duration::from_millis(25)),
+                Poll::with_round_trip_time(zx::Duration::from_millis(50)),
+            ],
         };
         static ref SUCCESS_2: HttpsSample = HttpsSample {
             utc: zx::Time::from_nanos(333_333_333),
             monotonic: zx::Time::from_nanos(444_444_444),
             standard_deviation: zx::Duration::from_millis(236),
             final_bound_size: zx::Duration::from_millis(101),
-            round_trip_times: vec![zx::Duration::from_millis(26), zx::Duration::from_millis(51)],
+            polls: vec![
+                Poll {
+                    round_trip_time: zx::Duration::from_millis(26),
+                    center_offset: Some(zx::Duration::from_millis(168))
+                },
+                Poll {
+                    round_trip_time: zx::Duration::from_millis(51),
+                    center_offset: Some(zx::Duration::from_millis(-250))
+                },
+            ],
         };
     }
     const ERROR_1: HttpsDateError = HttpsDateError::NetworkError;

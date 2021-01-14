@@ -76,18 +76,18 @@ where
             mult_duration(self.retry_strategy.maintain_time_between_samples, random_factor);
 
         self.diagnostics.phase_update(&Phase::Initial);
-        self.try_generate_sample_until_successful(INITIAL_SAMPLE_POLLS, &mut sink).await?;
+        self.try_generate_sample_until_successful(INITIAL_SAMPLE_POLLS, false, &mut sink).await?;
 
         self.diagnostics.phase_update(&Phase::Converge);
         for _ in 0..CONVERGE_SAMPLES {
             fasync::Timer::new(fasync::Time::after(converge_time_between_samples)).await;
-            self.try_generate_sample_until_successful(SAMPLE_POLLS, &mut sink).await?;
+            self.try_generate_sample_until_successful(SAMPLE_POLLS, false, &mut sink).await?;
         }
 
         self.diagnostics.phase_update(&Phase::Maintain);
         loop {
             fasync::Timer::new(fasync::Time::after(maintain_time_between_samples)).await;
-            self.try_generate_sample_until_successful(SAMPLE_POLLS, &mut sink).await?;
+            self.try_generate_sample_until_successful(SAMPLE_POLLS, true, &mut sink).await?;
         }
     }
 }
@@ -106,19 +106,20 @@ where
     async fn try_generate_sample_until_successful(
         &self,
         num_polls: usize,
+        measure_offset: bool,
         sink: &mut Sender<Update>,
     ) -> Result<(), Error> {
         let mut attempt_iter = 0u32..;
         let mut last_error = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
-            match self.sampler.produce_sample(num_polls).await {
+            match self.sampler.produce_sample(num_polls, measure_offset).await {
                 Ok(sample_fut) => {
                     sink.send(Status::Ok.into()).await?;
                     let sample = sample_fut.await;
                     info!(
-                        "Got a time sample - UTC {:?}, bound size {:?}, and round trip times {:?}",
-                        sample.utc, sample.final_bound_size, sample.round_trip_times
+                        "Got a time sample - UTC {:?}, bound size {:?}, and polls {:?}",
+                        sample.utc, sample.final_bound_size, sample.polls
                     );
                     self.diagnostics.success(&sample);
                     sink.send(sample.into()).await?;
@@ -166,11 +167,11 @@ fn mult_duration(duration: zx::Duration, factor: f32) -> zx::Duration {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::datatypes::HttpsSample;
+    use crate::datatypes::{HttpsSample, Poll};
     use crate::diagnostics::FakeDiagnostics;
     use crate::sampler::FakeSampler;
     use fidl_fuchsia_time_external::TimeSample;
-    use futures::{channel::mpsc::channel, stream::StreamExt, task::Poll};
+    use futures::{channel::mpsc::channel, stream::StreamExt, task::Poll as FPoll};
     use lazy_static::lazy_static;
     use matches::assert_matches;
     use std::sync::Arc;
@@ -190,14 +191,17 @@ mod test {
             monotonic: zx::Time::from_nanos(666_777_888_999_000),
             standard_deviation: zx::Duration::from_millis(101),
             final_bound_size: zx::Duration::from_millis(20),
-            round_trip_times: vec![],
+            polls: vec![],
         };
         static ref TEST_SAMPLE_2: HttpsSample = HttpsSample {
             utc: zx::Time::from_nanos(999_999_999_999_999),
             monotonic: zx::Time::from_nanos(777_777_777_777_777),
             standard_deviation: zx::Duration::from_millis(102),
             final_bound_size: zx::Duration::from_millis(30),
-            round_trip_times: vec![zx::Duration::from_millis(23)],
+            polls: vec![Poll {
+                round_trip_time: zx::Duration::from_millis(23),
+                center_offset: Some(zx::Duration::from_millis(132))
+            }],
         };
     }
 
@@ -252,7 +256,7 @@ mod test {
         assert!(executor.run_until_stalled(&mut update_fut).is_pending());
         assert_eq!(
             executor.run_until_stalled(&mut receiver.next()),
-            Poll::Ready(Some(Status::Ok.into()))
+            FPoll::Ready(Some(Status::Ok.into()))
         );
         assert!(executor.run_until_stalled(&mut receiver.next()).is_pending());
 
@@ -260,7 +264,7 @@ mod test {
         assert!(executor.run_until_stalled(&mut update_fut).is_pending());
         assert_matches!(
             executor.run_until_stalled(&mut receiver.next()),
-            Poll::Ready(Some(Update::Sample(_)))
+            FPoll::Ready(Some(Update::Sample(_)))
         );
     }
 
@@ -374,13 +378,14 @@ mod test {
         assert_eq!(diagnostics.successes(), expected_samples);
         assert!(diagnostics.failures().is_empty());
 
-        // samples should be requested using the number of polls appropriate for the phase.
-        let expected_polls_per_sample = vec![
-            vec![INITIAL_SAMPLE_POLLS],
-            vec![SAMPLE_POLLS; CONVERGE_SAMPLES],
-            vec![SAMPLE_POLLS],
+        // Samples should be requested using the number of polls appropriate for the phase.
+        // Samples should be requested with offset metrics only in the maintain phase.
+        let expected_sample_requests = vec![
+            vec![(INITIAL_SAMPLE_POLLS, false)],
+            vec![(SAMPLE_POLLS, false); CONVERGE_SAMPLES],
+            vec![(SAMPLE_POLLS, true)],
         ]
         .concat();
-        sampler.assert_produce_sample_requests(&expected_polls_per_sample).await;
+        sampler.assert_produce_sample_requests(&expected_sample_requests).await;
     }
 }

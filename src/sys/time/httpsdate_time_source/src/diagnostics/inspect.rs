@@ -23,7 +23,7 @@ const EMPTY_SAMPLE: HttpsSample = HttpsSample {
     monotonic: zx::Time::ZERO,
     standard_deviation: zx::Duration::from_nanos(0),
     final_bound_size: zx::Duration::from_nanos(0),
-    round_trip_times: vec![],
+    polls: vec![],
 };
 
 /// Struct containing inspect metrics for HTTPSDate.
@@ -132,19 +132,19 @@ impl SampleMetric {
     /// Create a new `SampleMetric` that records to the given Node.
     fn new(node: Node, sample: &HttpsSample) -> Self {
         let round_trip_times = node.create_int_array("round_trip_times", SAMPLE_POLLS);
-        if sample.round_trip_times.len() > SAMPLE_POLLS {
+        if sample.polls.len() > SAMPLE_POLLS {
             warn!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
-                sample.round_trip_times.len(),
+                sample.polls.len(),
                 SAMPLE_POLLS
             );
         }
         sample
-            .round_trip_times
+            .polls
             .iter()
             .enumerate()
             .take(SAMPLE_POLLS)
-            .for_each(|(idx, duration)| round_trip_times.set(idx, duration.into_nanos()));
+            .for_each(|(idx, poll)| round_trip_times.set(idx, poll.round_trip_time.into_nanos()));
         let monotonic = node.create_int("monotonic", sample.monotonic.into_nanos());
         let bound_size = node.create_int("bound_size", sample.final_bound_size.into_nanos());
         Self { _node: node, round_trip_times, monotonic, bound_size }
@@ -152,20 +152,17 @@ impl SampleMetric {
 
     /// Update the recorded values in the inspect Node.
     fn update(&self, sample: &HttpsSample) {
-        if sample.round_trip_times.len() > SAMPLE_POLLS {
+        if sample.polls.len() > SAMPLE_POLLS {
             warn!(
                 "Truncating {:?} round trip time entries to {:?} to fit in inspect",
-                sample.round_trip_times.len(),
+                sample.polls.len(),
                 SAMPLE_POLLS
             );
         }
         self.round_trip_times.clear();
-        sample
-            .round_trip_times
-            .iter()
-            .enumerate()
-            .take(SAMPLE_POLLS)
-            .for_each(|(idx, duration)| self.round_trip_times.set(idx, duration.into_nanos()));
+        sample.polls.iter().enumerate().take(SAMPLE_POLLS).for_each(|(idx, poll)| {
+            self.round_trip_times.set(idx, poll.round_trip_time.into_nanos())
+        });
         self.bound_size.set(sample.final_bound_size.into_nanos());
         self.monotonic.set(sample.monotonic.into_nanos());
     }
@@ -174,6 +171,7 @@ impl SampleMetric {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::datatypes::Poll;
     use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
     use fuchsia_zircon as zx;
     use lazy_static::lazy_static;
@@ -197,7 +195,10 @@ mod test {
             monotonic: *TEST_MONOTONIC,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: round_trip_times.to_vec(),
+            polls: round_trip_times
+                .iter()
+                .map(|rtt| Poll::with_round_trip_time(*rtt))
+                .collect::<_>(),
         }
     }
 

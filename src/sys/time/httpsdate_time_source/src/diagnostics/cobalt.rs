@@ -62,7 +62,9 @@ impl Diagnostics for CobaltDiagnostics {
         );
 
         let mut bucket_counts = [0u64; HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS as usize + 2];
-        for bucket_idx in sample.round_trip_times.iter().map(Self::round_trip_time_bucket) {
+        for bucket_idx in
+            sample.polls.iter().map(|poll| Self::round_trip_time_bucket(&poll.round_trip_time))
+        {
             bucket_counts[bucket_idx as usize] += 1;
         }
         let histogram_buckets = bucket_counts
@@ -72,6 +74,7 @@ impl Diagnostics for CobaltDiagnostics {
             .map(|(index, count)| HistogramBucket { index: index as u32, count: *count })
             .collect::<Vec<_>>();
         sender.log_int_histogram(HTTPSDATE_POLL_LATENCY_METRIC_ID, (), histogram_buckets);
+        // TODO(satsukiu): report offset metrics when present in the sample.
     }
 
     fn failure(&self, _error: &HttpsDateError) {
@@ -86,6 +89,7 @@ impl Diagnostics for CobaltDiagnostics {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::datatypes::Poll;
     use fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload};
     use fuchsia_async as fasync;
     use futures::{channel::mpsc, stream::StreamExt};
@@ -156,7 +160,7 @@ mod test {
             monotonic: *TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: vec![*BUCKET_1_RTT],
+            polls: vec![Poll::with_round_trip_time(*BUCKET_1_RTT)],
         });
         assert_eq!(
             event_recv.take(2).collect::<Vec<_>>().await,
@@ -191,7 +195,7 @@ mod test {
             monotonic: *TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: vec![*BUCKET_1_RTT],
+            polls: vec![Poll::with_round_trip_time(*BUCKET_1_RTT)],
         });
         let events = event_recv.by_ref().take(2).collect::<Vec<_>>().await;
         assert_eq!(events[0].event_codes, vec![*TEST_INITIAL_PHASE_COBALT as u32]);
@@ -202,7 +206,7 @@ mod test {
             monotonic: *TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: vec![*BUCKET_1_RTT],
+            polls: vec![Poll::with_round_trip_time(*BUCKET_1_RTT)],
         });
         let events = event_recv.take(2).collect::<Vec<_>>().await;
         assert_eq!(events[0].event_codes, vec![CobaltPhase::Converge as u32]);
@@ -216,7 +220,11 @@ mod test {
             monotonic: *TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: vec![*BUCKET_1_RTT, *BUCKET_5_RTT_1, *BUCKET_5_RTT_2],
+            polls: vec![
+                Poll::with_round_trip_time(*BUCKET_1_RTT),
+                Poll::with_round_trip_time(*BUCKET_5_RTT_1),
+                Poll::with_round_trip_time(*BUCKET_5_RTT_2),
+            ],
         });
         let mut events = event_recv.take(2).collect::<Vec<_>>().await;
         assert_eq!(
@@ -254,7 +262,7 @@ mod test {
             monotonic: *TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
-            round_trip_times: vec![*OVERFLOW_RTT],
+            polls: vec![Poll::with_round_trip_time(*OVERFLOW_RTT)],
         });
         assert_eq!(
             event_recv.take(2).collect::<Vec<_>>().await,
