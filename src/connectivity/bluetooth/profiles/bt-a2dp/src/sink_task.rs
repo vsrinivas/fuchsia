@@ -176,9 +176,9 @@ impl RunningSinkTask {
         let cobalt_result = result_fut.clone();
         let cobalt_task = fasync::Task::spawn(async move {
             let start_time = fasync::Time::now();
-            trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
+            trace::instant!("bt-a2dp", "Media:Start", trace::Scope::Thread);
             let _ = cobalt_result.await;
-            trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
+            trace::instant!("bt-a2dp", "Media:Stop", trace::Scope::Thread);
             let end_time = fasync::Time::now();
 
             report_stream_metrics(
@@ -254,7 +254,7 @@ async fn decode_media_stream(
                 packet_count += 1;
 
                 // link incoming and outgoing flows togther with shared duration event
-                trace::duration!("bt-a2dp-sink", "ProfilePacket received");
+                trace::duration!("bt-a2dp", "Profile packet received");
                 trace::flow_end!("bluetooth", "ProfilePacket", packet_count);
 
                 let _ = inspect.try_lock().map(|mut l| {
