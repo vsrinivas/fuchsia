@@ -42,7 +42,6 @@ func TestRunSteps(t *testing.T) {
 	contextSpec := &fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
 		BuildDir:    "/path/to/out/default",
-		ArtifactDir: "/tmp/fint-set-artifacts",
 	}
 	staticSpec := &fintpb.Static{
 		TargetArch: fintpb.Static_X64,
@@ -71,9 +70,9 @@ func TestRunSteps(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error from runSteps: %s", err)
 		}
-		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.ArtifactDir) {
-			t.Errorf("Expected runSteps to set a gn_trace_path in the artifact dir (%q) but got: %q",
-				contextSpec.ArtifactDir, artifacts.GnTracePath)
+		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.BuildDir) {
+			t.Errorf("Expected runSteps to set a gn_trace_path in the build dir (%q) but got: %q",
+				contextSpec.BuildDir, artifacts.GnTracePath)
 		}
 	})
 
