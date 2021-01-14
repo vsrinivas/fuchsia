@@ -51,6 +51,12 @@ func TestShutdown(t *testing.T) {
 	// Make sure the shell is ready to accept commands over serial.
 	i.WaitForLogMessage("console.shell: enabled")
 
+	if arch == emulator.X64 {
+		// Ensure the ACPI driver comes up before we attempt a shutdown.
+		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY")
+		i.WaitForLogMessage("ACPI_READY")
+	}
+
 	// Trigger a shutdown.
 	i.RunCommand("dm shutdown")
 
