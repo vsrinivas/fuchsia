@@ -117,10 +117,10 @@ def main():
     # See: https://github.com/jacereda/fsatrace#output-format
     unexpected_accesses = []
     for line in raw_trace.splitlines():
-        if not line[1] == "|":
+        op, sep, path = line.partition("|")
+        if not sep == "|":
             # Not a trace line, ignore
             continue
-        path = line[2:]
         if not path.startswith(src_root):
             # Outside of root, ignore
             continue
@@ -128,7 +128,6 @@ def main():
             continue
         if any(path.endswith(ignored) for ignored in ignored_postfix):
             continue
-        op = line[0]
         if op == "r":
             if path not in allowed_read:
                 unexpected_accesses.append(("read", path))
