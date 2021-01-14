@@ -5,7 +5,6 @@
 package build
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -101,20 +100,6 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 	}
 
 	return "", ErrBuildIDNotFound
-}
-
-// LoadBinaries reads in the entries indexed in the given binary manifest.
-func loadBinaries(manifest string) ([]Binary, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var bins []Binary
-	if err := json.NewDecoder(f).Decode(&bins); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return bins, nil
 }
 
 func trimExt(p string) string {

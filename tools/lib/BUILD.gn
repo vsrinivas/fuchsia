@@ -13,6 +13,7 @@ group("tests") {
     "//tools/lib/environment:environment_tests",
     "//tools/lib/flagmisc:tests",
     "//tools/lib/iomisc:tests",
+    "//tools/lib/jsonutil:tests",
     "//tools/lib/logger:logger_tests",
     "//tools/lib/osmisc:tests",
     "//tools/lib/retry:retry_tests",

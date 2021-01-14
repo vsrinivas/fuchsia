@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/virtual_device"
 )
 
@@ -47,8 +48,8 @@ func mainImpl() error {
 		return errors.New("missing -buildinfo_cpu")
 	}
 
-	images, err := build.LoadImages(*imageManifestPath)
-	if err != nil {
+	var images build.ImageManifest
+	if err := jsonutil.ReadFromFile(*imageManifestPath, &images); err != nil {
 		return err
 	}
 

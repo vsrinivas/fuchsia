@@ -37,6 +37,7 @@ go_library("fvd_lib") {
     ":virtual_device",
     "//third_party/golibs:github.com/golang/protobuf",
     "//tools/build",
+    "//tools/lib/jsonutil",
   ]
 }
 

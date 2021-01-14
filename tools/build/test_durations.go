@@ -6,7 +6,6 @@ package build
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"time"
 )
 
@@ -48,19 +47,4 @@ func (d *TestDuration) UnmarshalJSON(data []byte) error {
 	}
 	d.MedianDuration = time.Duration(raw.MedianDurationMS) * time.Millisecond
 	return nil
-}
-
-// LoadTestDurations parses a file containing an array of JSON objects
-// conforming to the TestDurationSchema, and returns a mapping of test name
-// to TestDuration.
-func LoadTestDurations(durationsFile string) ([]TestDuration, error) {
-	bytes, err := ioutil.ReadFile(durationsFile)
-	if err != nil {
-		return nil, err
-	}
-	var durations []TestDuration
-	if err := json.Unmarshal(bytes, &durations); err != nil {
-		return nil, err
-	}
-	return durations, nil
 }

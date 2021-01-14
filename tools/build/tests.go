@@ -4,12 +4,6 @@
 
 package build
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 // TestSpec is the specification for a single test and the environments it
 // should be executed in.
 type TestSpec struct {
@@ -94,32 +88,4 @@ type DimensionSet struct {
 
 	// Pool denotes the swarming pool to run a test in.
 	Pool string `json:"pool,omitempty"`
-}
-
-// LoadTestSpecs reads in the entries in a given test manifest.
-func loadTestSpecs(manifest string) ([]TestSpec, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var specs []TestSpec
-	if err := json.NewDecoder(f).Decode(&specs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return specs, nil
-}
-
-// LoadPlatforms reads in the entries in a given platform manifest.
-func loadPlatforms(manifest string) ([]DimensionSet, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var platforms []DimensionSet
-	if err := json.NewDecoder(f).Decode(&platforms); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return platforms, nil
 }

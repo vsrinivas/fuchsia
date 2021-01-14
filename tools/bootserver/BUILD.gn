@@ -21,6 +21,7 @@ go_library("bootserver_lib") {
     "//third_party/golibs:golang.org/x/sync",
     "//tools/build",
     "//tools/lib/iomisc",
+    "//tools/lib/jsonutil",
     "//tools/lib/logger",
     "//tools/lib/retry",
     "//tools/net/netboot",

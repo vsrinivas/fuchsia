@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
 
 const (
@@ -46,66 +48,53 @@ type Modules struct {
 // NewModules returns a Modules associated with a given build directory.
 func NewModules(buildDir string) (*Modules, error) {
 	var errMsgs []string
-	var err error
 	m := &Modules{buildDir: buildDir}
 
-	m.apis, err = loadStringsFromJson(m.APIManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.APIManifest(), &m.apis); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.args, err = loadArgs(m.ArgManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.ArgManifest(), &m.args); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.binaries, err = loadBinaries(m.BinaryManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.BinaryManifest(), &m.binaries); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.checkoutArtifacts, err = loadCheckoutArtifacts(m.CheckoutArtifactManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.CheckoutArtifactManifest(), &m.checkoutArtifacts); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.images, err = LoadImages(m.ImageManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.ImageManifest(), &m.images); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.packageManifests, err = loadStringsFromJson(m.PackageManifestsManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.PackageManifestsManifest(), &m.packageManifests); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.platforms, err = loadPlatforms(m.PlatformManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.PlatformManifest(), &m.platforms); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.prebuiltBins, err = loadPrebuiltBinaries(m.PrebuiltBinaryManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.PrebuiltBinaryManifest(), &m.prebuiltBins); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.sdkArchives, err = loadSDKArchives(m.SDKArchivesManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.SDKArchivesManifest(), &m.sdkArchives); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.testSpecs, err = loadTestSpecs(m.TestManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.TestManifest(), &m.testSpecs); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.testDurations, err = LoadTestDurations(m.TestDurationsManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.TestDurationsManifest(), &m.testDurations); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.tools, err = loadTools(m.ToolManifest())
-	if err != nil {
+	if err := jsonutil.ReadFromFile(m.ToolManifest(), &m.tools); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 

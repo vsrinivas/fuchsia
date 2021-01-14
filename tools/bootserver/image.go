@@ -18,6 +18,7 @@ import (
 	"cloud.google.com/go/storage"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -91,8 +92,8 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode, imageDir s
 // ImagesFromLocalFS returns Images of a given bootMode that exist on the local
 // filesystem.
 func ImagesFromLocalFS(manifest string, bootMode Mode) ([]Image, func() error, error) {
-	buildImages, err := build.LoadImages(manifest)
-	if err != nil {
+	var buildImages []build.Image
+	if err := jsonutil.ReadFromFile(manifest, &buildImages); err != nil {
 		return nil, noOpClose, err
 	}
 	return ConvertFromBuildImages(buildImages, bootMode, filepath.Dir(manifest))

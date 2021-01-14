@@ -4,19 +4,13 @@
 
 package build
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 // Image represents an entry in an image manifest.
 type Image struct {
 	// Name is the canonical name of the image.
 	Name string `json:"name"`
 
 	// Path is the absolute path to the image.
-	// Note: when unmarshalled from a manifest this entry actually gives the relative
+	// Note: when unmarshaled from a manifest this entry actually gives the relative
 	// location from the manifest's directory; we prepend that directory when loading. See
 	// LoadImageModule() below.
 	Path string `json:"path"`
@@ -39,17 +33,3 @@ type Image struct {
 
 // ImageManifest is a JSON list of images produced by the Fuchsia build.
 type ImageManifest = []Image
-
-// LoadImages reads in the entries indexed in the given image manifest.
-func LoadImages(manifest string) (ImageManifest, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var imgs ImageManifest
-	if err := json.NewDecoder(f).Decode(&imgs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return imgs, nil
-}

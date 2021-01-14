@@ -5,14 +5,13 @@
 package ninjalog
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
 
 func TestTrace(t *testing.T) {
@@ -427,7 +426,9 @@ func TestClangTracesToInterleave(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			for filename, trace := range tc.clangTraces {
-				writeJson(t, filepath.Join(tmpDir, filename), trace)
+				if err := jsonutil.WriteToFile(filepath.Join(tmpDir, filename), trace); err != nil {
+					t.Fatal(err)
+				}
 			}
 			got, err := ClangTracesToInterleave(tc.traces, tmpDir, tc.granularity)
 			if (err != nil) != tc.wantErr {
@@ -437,16 +438,5 @@ func TestClangTracesToInterleave(t *testing.T) {
 				t.Errorf("ClangTracesToInterleave got: %#v, want: %#v, diff (-want, +got):\n%s", got, tc.want, diff)
 			}
 		})
-	}
-}
-
-// writeJson writes data as json into file named p.
-func writeJson(t *testing.T, p string, data interface{}) {
-	raw, err := json.Marshal(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(p, raw, 0o600); err != nil {
-		t.Fatal(err)
 	}
 }

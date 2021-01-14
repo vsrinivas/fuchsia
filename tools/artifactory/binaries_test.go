@@ -6,7 +6,6 @@ package artifactory
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
 
 // Implements binModules
@@ -72,7 +72,9 @@ func TestDebugBinaryUploads(t *testing.T) {
 	// Duplicates should be ignored.
 	pbins = append(pbins, pbins[0])
 	const prebuiltBinManifest = "manifest"
-	writeJSON(t, filepath.Join(buildDir, prebuiltBinManifest), pbins)
+	if err := jsonutil.WriteToFile(filepath.Join(buildDir, prebuiltBinManifest), pbins); err != nil {
+		t.Fatal(err)
+	}
 
 	bins := []build.Binary{
 		{
@@ -222,15 +224,4 @@ func touch(t *testing.T, file string) {
 		t.Fatalf("failed to create %s: %v", file, err)
 	}
 	f.Close()
-}
-
-// writeJSON writes data as json into file named p.
-func writeJSON(t *testing.T, p string, data interface{}) {
-	raw, err := json.Marshal(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(p, raw, 0o600); err != nil {
-		t.Fatal(err)
-	}
 }

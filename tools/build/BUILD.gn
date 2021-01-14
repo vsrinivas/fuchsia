@@ -39,10 +39,11 @@ go_library("build") {
     "tests.go",
     "tests_test.go",
     "tools.go",
-    "util.go",
-    "util_test.go",
   ]
-  deps = [ "//tools/lib/osmisc" ]
+  deps = [
+    "//tools/lib/jsonutil",
+    "//tools/lib/osmisc",
+  ]
 }
 
 go_test("build_tests") {

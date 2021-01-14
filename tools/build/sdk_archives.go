@@ -4,12 +4,6 @@
 
 package build
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 type SDKArchive struct {
 	// Name is the name of the SDK.
 	Name string `json:"name"`
@@ -27,18 +21,4 @@ type SDKArchive struct {
 
 	// CPU is the CPU architecture which the SDK is built for.
 	CPU string `json:"cpu"`
-}
-
-// loadSDKArchives reads in the entires indexed in the given manifest.
-func loadSDKArchives(manifest string) ([]SDKArchive, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var sdkArchives []SDKArchive
-	if err := json.NewDecoder(f).Decode(&sdkArchives); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return sdkArchives, nil
 }

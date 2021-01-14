@@ -4,12 +4,6 @@
 
 package build
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-)
-
 // CheckoutArtifact represents an entry in a checkout artifact manifest.
 type CheckoutArtifact struct {
 	// Name is the canonical name of the artifact.
@@ -20,17 +14,4 @@ type CheckoutArtifact struct {
 
 	// Type is the shorthand for the type of the artifact.
 	Type string `json:"type"`
-}
-
-func loadCheckoutArtifacts(manifest string) ([]CheckoutArtifact, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var artifacts []CheckoutArtifact
-	if err := json.NewDecoder(f).Decode(&artifacts); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return artifacts, nil
 }

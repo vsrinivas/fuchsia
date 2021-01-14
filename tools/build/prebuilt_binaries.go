@@ -5,12 +5,11 @@
 package build
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
@@ -41,19 +40,6 @@ func (pb *PrebuiltBinaries) Get(buildDir string) ([]Binary, error) {
 	} else if !exists {
 		return nil, os.ErrNotExist
 	}
-	return loadBinaries(filepath.Join(buildDir, pb.Manifest))
-}
-
-// loadPrebuiltBinaries reads in the entries indexed in the given prebuilt package manifest.
-func loadPrebuiltBinaries(manifest string) ([]PrebuiltBinaries, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var pkgs []PrebuiltBinaries
-	if err := json.NewDecoder(f).Decode(&pkgs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return pkgs, nil
+	var binaries []Binary
+	return binaries, jsonutil.ReadFromFile(filepath.Join(buildDir, pb.Manifest), &binaries)
 }
