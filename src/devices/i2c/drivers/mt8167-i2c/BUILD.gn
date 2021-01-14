@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("mt8167_i2c_bind") {
+  rules = "mt8167_i2c.bind"
+  output = "mt8167_i2c_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.mediatek.platform",
+  ]
+}
 
 driver_module("mt8167-i2c") {
   configs += [
@@ -14,6 +25,7 @@ driver_module("mt8167-i2c") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mt8167-i2c.cc" ]
   deps = [
+    ":mt8167_i2c_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
@@ -25,9 +37,6 @@ driver_module("mt8167-i2c") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -45,6 +54,7 @@ test("mt8167-i2c-test-bin") {
     "mt8167-i2c.cc",
   ]
   deps = [
+    ":mt8167_i2c_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
@@ -59,9 +69,6 @@ test("mt8167-i2c-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -81,5 +88,8 @@ fuchsia_unittest_package("mt8167-i2c-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":mt8167-i2c-test" ]
+  deps = [
+    ":mt8167-i2c-test",
+    ":mt8167_i2c_bind_test",
+  ]
 }

@@ -12,12 +12,13 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
+#include "src/devices/i2c/drivers/mt8167-i2c/mt8167_i2c_bind.h"
 
 //#define TEST_USB_REGS_READ
 
@@ -383,10 +384,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace mt8167_i2c
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167_i2c, mt8167_i2c::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_I2C),
-ZIRCON_DRIVER_END(mt8167_i2c)
-    // clang-format on
+ZIRCON_DRIVER(mt8167_i2c, mt8167_i2c::driver_ops, "zircon", "0.1");
