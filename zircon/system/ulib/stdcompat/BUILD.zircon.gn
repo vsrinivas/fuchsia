@@ -18,6 +18,7 @@ zx_library("stdcompat") {
   sdk_headers = [
     "lib/stdcompat/version.h",
     "lib/stdcompat/type_traits.h",
+    "lib/stdcompat/utility.h",
   ]
   sources = [
     "include/lib/stdcompat/internal/constructors.h",

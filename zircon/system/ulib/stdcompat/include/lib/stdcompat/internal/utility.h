@@ -5,13 +5,17 @@
 #ifndef LIB_STDCOMPAT_INTERNAL_UTILITY_H_
 #define LIB_STDCOMPAT_INTERNAL_UTILITY_H_
 
-#include <type_traits>
 #include <utility>
 
 #include "../type_traits.h"
 
 namespace cpp17 {
 namespace internal {
+
+template <typename Tag>
+struct instantiate_templated_tag {
+  static constexpr Tag storage;
+};
 
 // Utility to return the first type in a parameter pack.
 template <typename... Ts>

@@ -19,6 +19,7 @@ stdcompat_test_sources = [
   "constructors_internal_test.cc",
   "traits_test.cc",
   "utility_internal_test.cc",
+  "utility_test.cc",
   "version_test.cc",
 ]
 

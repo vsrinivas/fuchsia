@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/stdcompat/internal/utility.h>
-
-#include <type_traits>
+#include <lib/stdcompat/type_traits.h>
+#include <lib/stdcompat/utility.h>
 
 #include <gtest/gtest.h>
 
@@ -12,9 +11,9 @@ namespace {
 
 TEST(InternalTypeTraitsTest, FirstTReturnsFirstTypeInParameterPack) {
   using cpp17::internal::first_t;
-  static_assert(std::is_same_v<int, first_t<int>>, "");
-  static_assert(std::is_same_v<int, first_t<int, char>>, "");
-  static_assert(std::is_same_v<int, first_t<int, char, bool>>, "");
+  static_assert(std::is_same<int, first_t<int>>::value, "");
+  static_assert(std::is_same<int, first_t<int, char>>::value, "");
+  static_assert(std::is_same<int, first_t<int, char, bool>>::value, "");
 }
 
 TEST(InternalTypeTraitsTest, OccurrencesOfReturnsNumberOfTimesTypeIsPresent) {
@@ -164,4 +163,4 @@ TEST(InternalTypeTraitsTest, EnableRelOpIfConditionIsMet) {
   static_assert(!is_comparable(comparable_c{}, comparable_c{}), "");
 }
 
-}  // anonymous namespace
+}  // namespace

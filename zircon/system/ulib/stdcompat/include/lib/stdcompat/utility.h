@@ -2,12 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_STDCOMPAT_INTERNAL_IN_PLACE_INTERNAL_H_
-#define LIB_STDCOMPAT_INTERNAL_IN_PLACE_INTERNAL_H_
+#ifndef LIB_STDCOMPAT_UTILITY_H_
+#define LIB_STDCOMPAT_UTILITY_H_
 
-#include <cstddef>
+#include <lib/stdcompat/internal/utility.h>
 
-namespace fit {
+#include <utility>
+
+namespace cpp17 {
+// Use alias for cpp17 and above.
+#if __cplusplus >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::in_place;
+using std::in_place_t;
+
+using std::in_place_index;
+using std::in_place_index_t;
+
+using std::in_place_type;
+using std::in_place_type_t;
+
+#else  // Provide provide polyfills for |in_place*| types and variables.
 
 // Tag for requesting in-place initialization.
 struct in_place_t {
@@ -26,58 +41,34 @@ struct in_place_index_t final {
   explicit constexpr in_place_index_t() = default;
 };
 
-#ifdef __cpp_inline_variables
+// Use inline variables if available.
+#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-// Inline variables are only available on C++ 17 and beyond.
-
-inline constexpr in_place_t in_place{};
+constexpr in_place_t in_place{};
 
 template <typename T>
-inline constexpr in_place_type_t<T> in_place_type{};
+constexpr in_place_type_t<T> in_place_type{};
 
 template <size_t Index>
-inline constexpr in_place_index_t<Index> in_place_index{};
+constexpr in_place_index_t<Index> in_place_index{};
 
-#else
+#else  // Provide polyfill reference to provided variable storage.
 
-// For C++ 14 we need to provide storage for the variable so we define
-// a reference instead.
-
-template <typename Placeholder = void>
-struct in_place_holder {
-  static constexpr in_place_t instance{};
-};
+static constexpr const in_place_t& in_place =
+    internal::instantiate_templated_tag<in_place_t>::storage;
 
 template <typename T>
-struct in_place_type_holder {
-  static constexpr in_place_type_t<T> instance{};
-};
-
-template <size_t Index>
-struct in_place_index_holder {
-  static constexpr in_place_index_t<Index> instance{};
-};
-
-template <typename Placeholder>
-constexpr in_place_t in_place_holder<Placeholder>::instance;
-
-template <typename T>
-constexpr in_place_type_t<T> in_place_type_holder<T>::instance;
-
-template <size_t Index>
-constexpr in_place_index_t<Index> in_place_index_holder<Index>::instance;
-
-static constexpr const in_place_t& in_place = in_place_holder<>::instance;
-
-template <typename T>
-static constexpr const in_place_type_t<T>& in_place_type = in_place_type_holder<T>::instance;
+static constexpr const in_place_type_t<T>& in_place_type =
+    internal::instantiate_templated_tag<in_place_type_t<T>>::storage;
 
 template <size_t Index>
 static constexpr const in_place_index_t<Index>& in_place_index =
-    in_place_index_holder<Index>::instance;
+    internal::instantiate_templated_tag<in_place_index_t<Index>>::storage;
 
-#endif  // __cpp_inline_variables
+#endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-}  // namespace fit
+#endif  // __cplusplus >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#endif  // LIB_STDCOMPAT_INTERNAL_IN_PLACE_INTERNAL_H_
+}  // namespace cpp17
+
+#endif  // LIB_STDCOMPAT_UTILITY_H_
