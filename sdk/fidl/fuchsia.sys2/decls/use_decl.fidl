@@ -134,7 +134,7 @@ table UseEventStreamDecl {
     /// Must be an absolute path starting with /.
     1: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 
-    /// The set of event names to which this EventStream is subscribed.
+    /// The set of events to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
-    2: vector<fuchsia.component.name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
+    2: vector<EventSubscription>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
 };

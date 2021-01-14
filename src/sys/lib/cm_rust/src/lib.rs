@@ -532,6 +532,11 @@ fsys::UseRunnerDecl,
 {
     source_name: CapabilityName,
 });
+fidl_into_struct!(EventSubscription, EventSubscription, fsys::EventSubscription,
+fsys::EventSubscription, {
+    event_name: String,
+    mode: EventMode,
+});
 fidl_into_struct!(UseEventDecl, UseEventDecl, fsys::UseEventDecl,
 fsys::UseEventDecl,
 {
@@ -545,7 +550,7 @@ fidl_into_struct!(UseEventStreamDecl, UseEventStreamDecl, fsys::UseEventStreamDe
 fsys::UseEventStreamDecl,
 {
     target_path: CapabilityPath,
-    events: Vec<String>,
+    events: Vec<EventSubscription>,
 });
 
 fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
@@ -723,6 +728,7 @@ fidl_into_vec!(CapabilityDecl, fsys::CapabilityDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_into_vec!(RunnerRegistration, fsys::RunnerRegistration);
 fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
+fidl_into_vec!(EventSubscription, fsys::EventSubscription);
 fidl_translations_opt_type!(Vec<String>);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
@@ -1462,20 +1468,21 @@ pub enum EventMode {
     Async,
 }
 
-impl FidlIntoNative<EventMode> for Option<fsys::EventMode> {
-    fn fidl_into_native(self) -> EventMode {
-        match self {
-            Some(fsys::EventMode::Sync) => EventMode::Sync,
-            _ => EventMode::Async,
-        }
-    }
-}
-
 impl NativeIntoFidl<Option<fsys::EventMode>> for EventMode {
     fn native_into_fidl(self) -> Option<fsys::EventMode> {
         match self {
             EventMode::Sync => Some(fsys::EventMode::Sync),
-            _ => Some(fsys::EventMode::Async),
+            EventMode::Async => Some(fsys::EventMode::Async),
+        }
+    }
+}
+
+impl FidlIntoNative<EventMode> for Option<fsys::EventMode> {
+    fn fidl_into_native(self) -> EventMode {
+        match self {
+            Some(fsys::EventMode::Sync) => EventMode::Sync,
+            Some(fsys::EventMode::Async) => EventMode::Async,
+            None => panic!("invalid EventMode variant"),
         }
     }
 }

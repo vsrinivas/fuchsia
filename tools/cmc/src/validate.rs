@@ -7,6 +7,7 @@ use {
     crate::include,
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{JsonSchema, CMX_SCHEMA},
+    cm_types::Name,
     directed_graph::{self, DirectedGraph},
     serde_json::Value,
     serde_json5,
@@ -433,12 +434,24 @@ impl<'a> ValidationContext<'a> {
             if use_.path.is_none() {
                 return Err(Error::validate("\"path\" should be present with \"event_stream\""));
             }
-            let events = event_stream.to_vec();
-            for event in events {
-                if !self.all_event_names.contains(event) {
+            let event_names = event_stream
+                .iter()
+                .map(|subscription| subscription.event.to_vec())
+                .flatten()
+                .collect::<Vec<&Name>>();
+
+            let mut unique_event_names = HashSet::new();
+            for event_name in event_names {
+                if !unique_event_names.insert(event_name) {
+                    return Err(Error::validate(format!(
+                        "Event \"{}\" is duplicated in event stream subscriptions.",
+                        event_name,
+                    )));
+                }
+                if !self.all_event_names.contains(event_name) {
                     return Err(Error::validate(format!(
                         "Event \"{}\" in event stream not found in any \"use\" declaration.",
-                        event
+                        event_name
                     )));
                 }
             }
@@ -1348,7 +1361,19 @@ mod tests {
                     }
                   },
                   {
-                    "event_stream": [ "started", "stopped", "launched" ],
+                    "event_stream": [
+                        {
+                           "event": "started",
+                           "mode": "async",
+                        },
+                        {
+                            "event": "stopped",
+                            "mode": "sync",
+                        },
+                        {
+                            "event": "launched",
+                            "mode": "async",
+                        }],
                     "path": "/svc/my_stream"
                   },
                 ],
@@ -1547,7 +1572,7 @@ mod tests {
                 "use": [
                     {
                         "event": ["destroyed"],
-                        "from": "debug",
+                        "from": "debug"
                     }
                 ]
             }),
@@ -1572,12 +1597,41 @@ mod tests {
             json!({
                 "use": [
                     {
-                        "event_stream": ["destroyed"],
+                        "event_stream": [
+                            {
+                                "event": "destroyed",
+                                "mode": "async"
+                            }
+                        ],
                         "path": "/svc/stream",
                     },
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" in event stream not found in any \"use\" declaration."
+        ),
+        test_cml_use_event_stream_duplicate_registration(
+            json!({
+                "use": [
+                    {
+                        "event": [ "destroyed" ],
+                        "from": "parent",
+                    },
+                    {
+                        "event_stream": [
+                            {
+                                "event": "destroyed",
+                                "mode": "async",
+                            },
+                            {
+                                "event": "destroyed",
+                                "mode": "sync",
+                            }
+                        ],
+                        "path": "/svc/stream",
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Event \"destroyed\" is duplicated in event stream subscriptions."
         ),
         test_cml_use_event_stream_missing_path(
             json!({
@@ -1587,7 +1641,12 @@ mod tests {
                         "from": "parent",
                     },
                     {
-                        "event_stream": [ "destroyed" ],
+                        "event_stream": [
+                            {
+                                "event": "destroyed",
+                                "mode": "async",
+                            }
+                        ],
                     },
                 ]
             }),

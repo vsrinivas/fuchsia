@@ -38,23 +38,28 @@
                 "stopped",
             ],
             from: "parent",
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
             filter: { name: "diagnostics" },
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event: "capability_requested",
             from: "framework",
             filter: { name: "fuchsia.logger.LogSink" },
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
-            event_stream: [ "capability_requested" ],
+            event_stream: [
+                {
+                    event: "capability_requested",
+                    mode: "async",
+                },
+            ],
             path: "/svc/fuchsia.sys2.EventStream",
         },
     ],

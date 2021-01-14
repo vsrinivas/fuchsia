@@ -12,7 +12,7 @@ use {
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
     test_utils_lib::{
-        events::{CapabilityRequested, CapabilityRequestedError, Event, EventStream},
+        events::{CapabilityRequested, CapabilityRequestedError, Event, EventStream, Resolved},
         matcher::EventMatcher,
         trigger_capability::{TriggerCapability, TriggerReceiver},
     },
@@ -28,12 +28,12 @@ async fn start_trigger_server(
     mut rx: mpsc::UnboundedReceiver<()>,
 ) -> Result<(), Error> {
     let echo = connect_to_service::<fecho::EchoMarker>()?;
-
     let start_logging_trigger = trigger_receiver.next().await.unwrap();
+
     let _ = echo.echo_string(Some("Start trigger")).await?;
     start_logging_trigger.resume();
-
-    // These will only succeed if both EventStreams are handled.
+    // These will only succeed if all EventStreams are handled.
+    rx.next().await.unwrap();
     rx.next().await.unwrap();
     rx.next().await.unwrap();
 
@@ -53,10 +53,12 @@ fn run_main_event_stream(
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
             capability_request.component_url());
+
         assert_eq!(
             format!("{}", ftest::TriggerMarker::NAME),
             capability_request.result().unwrap().name
         );
+
         if let Some(trigger_stream) = capability_request.take_capability::<ftest::TriggerMarker>() {
             trigger_capability.serve_async(trigger_stream);
             tx.send(()).await.expect("Could not send response");
@@ -72,6 +74,7 @@ fn run_second_event_stream(
         let mut event_stream = EventStream::new(stream);
         let capability_request =
             EventMatcher::err().expect_match::<CapabilityRequested>(&mut event_stream).await;
+
         // Verify that the second stream gets an error.
         match capability_request.result() {
             Err(CapabilityRequestedError { name, .. }) if name == ftest::TriggerMarker::NAME => {
@@ -83,6 +86,18 @@ fn run_second_event_stream(
     .detach();
 }
 
+fn run_resolved_event_stream(
+    stream: fsys::EventStreamRequestStream,
+    mut tx: mpsc::UnboundedSender<()>,
+) {
+    fasync::Task::spawn(async move {
+        let mut event_stream = EventStream::new(stream);
+        EventMatcher::ok().moniker("./stub:0").expect_match::<Resolved>(&mut event_stream).await;
+        tx.send(()).await.expect("Could not send response");
+    })
+    .detach();
+}
+
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
     let mut fs = ServiceFs::new_local();
@@ -90,12 +105,16 @@ fn main() -> Result<(), Error> {
     let (tx, rx) = mpsc::unbounded();
     let tx1 = tx.clone();
     let tx2 = tx.clone();
+    let tx3 = tx.clone();
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             run_main_event_stream(stream, capability.clone(), tx1.clone());
         })
         .add_fidl_service_at("second_stream".to_string(), move |stream| {
             run_second_event_stream(stream, tx2.clone());
+        })
+        .add_fidl_service_at("resolved_stream".to_string(), move |stream| {
+            run_resolved_event_stream(stream, tx3.clone());
         });
     fs.take_and_serve_directory_handle()?;
     let fut = async move {

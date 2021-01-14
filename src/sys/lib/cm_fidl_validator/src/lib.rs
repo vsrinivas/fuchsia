@@ -48,7 +48,9 @@ pub enum Error {
     #[error("\"{1}\" is referenced in {0} but it does not appear in runners")]
     InvalidRunner(DeclField, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in events")]
-    InvalidEventStream(DeclField, String),
+    EventStreamEventNotFound(DeclField, String),
+    #[error("Event \"{1}\" is referenced in {0} with unsupported mode \"{2}\"")]
+    EventStreamUnsupportedMode(DeclField, String, String),
     #[error("{0} specifies multiple runners")]
     MultipleRunnersSpecified(String),
     #[error("dependency cycle(s) exist: {0}")]
@@ -160,14 +162,27 @@ impl Error {
         )
     }
 
-    pub fn invalid_event_stream(
+    pub fn event_stream_event_not_found(
         decl_type: impl Into<String>,
         keyword: impl Into<String>,
         event_name: impl Into<String>,
     ) -> Self {
-        Error::InvalidEventStream(
+        Error::EventStreamEventNotFound(
             DeclField { decl: decl_type.into(), field: keyword.into() },
             event_name.into(),
+        )
+    }
+
+    pub fn event_stream_unsupported_mode(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        event_name: impl Into<String>,
+        event_mode: impl Into<String>,
+    ) -> Self {
+        Error::EventStreamUnsupportedMode(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            event_name.into(),
+            event_mode.into(),
         )
     }
 
@@ -285,7 +300,7 @@ struct ValidationContext<'a> {
     all_runners: HashSet<&'a str>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
-    all_event_names: HashSet<&'a str>,
+    all_events: HashMap<&'a str, fsys::EventMode>,
     all_event_streams: HashSet<&'a str>,
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_ids: IdMap<'a>,
@@ -622,7 +637,11 @@ impl<'a> ValidationContext<'a> {
         check_name(event.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
         check_events_mode(&event.mode, "UseEventDecl", "mode", &mut self.errors);
         if let Some(target_name) = event.target_name.as_ref() {
-            if !self.all_event_names.insert(target_name) {
+            if self
+                .all_events
+                .insert(target_name, event.mode.unwrap_or(fsys::EventMode::Async))
+                .is_some()
+            {
                 self.errors.push(Error::duplicate_field(
                     "UseEventDecl",
                     "target_name",
@@ -655,15 +674,35 @@ impl<'a> ValidationContext<'a> {
             Some(events) if events.is_empty() => {
                 self.errors.push(Error::empty_field("UseEventStreamDecl", "events"));
             }
-            Some(events) => {
-                for event in events {
-                    check_name(Some(event), "UseEventStreamDecl", "event_name", &mut self.errors);
-                    if !self.all_event_names.contains(event.as_str()) {
-                        self.errors.push(Error::invalid_event_stream(
-                            "UseEventStreamDecl",
-                            "events",
-                            event,
-                        ));
+            Some(subscriptions) => {
+                for subscription in subscriptions {
+                    check_name(
+                        subscription.event_name.as_ref(),
+                        "UseEventStreamDecl",
+                        "event_name",
+                        &mut self.errors,
+                    );
+                    let event_name = subscription.event_name.clone().unwrap_or_default();
+                    let event_mode = subscription.mode.unwrap_or(fsys::EventMode::Async);
+                    match self.all_events.get(event_name.as_str()) {
+                        Some(mode) => {
+                            if *mode != fsys::EventMode::Sync && event_mode == fsys::EventMode::Sync
+                            {
+                                self.errors.push(Error::event_stream_unsupported_mode(
+                                    "UseEventStreamDecl",
+                                    "events",
+                                    event_name,
+                                    format!("{:?}", event_mode),
+                                ));
+                            }
+                        }
+                        None => {
+                            self.errors.push(Error::event_stream_event_not_found(
+                                "UseEventStreamDecl",
+                                "events",
+                                event_name,
+                            ));
+                        }
                     }
                 }
             }
@@ -1845,8 +1884,6 @@ fn check_events_mode(
     field_name: &str,
     errors: &mut Vec<Error>,
 ) {
-    // TODO(fxb/66470): This check exists while we're introducing event modes but we eventually want async
-    // events to be the default.
     if mode.is_none() {
         errors.push(Error::missing_field(decl_type, field_name));
     }
@@ -2501,12 +2538,33 @@ mod tests {
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
                         filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
-                        mode: Some(EventMode::Sync),
+                        mode: Some(EventMode::Async),
+                        ..UseEventDecl::EMPTY
+                    }),
+                    UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_name: Some("started".to_string()),
+                        target_name: Some("started".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(EventMode::Async),
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
                         target_path: Some("/bar".to_string()),
-                        events: Some(vec!["/a".to_string(), "/b".to_string()]),
+                        events: Some(vec!["/a".to_string(), "/b".to_string()].into_iter().map(|name| fsys::EventSubscription {
+                            event_name: Some(name),
+                            mode: Some(fsys::EventMode::Async),
+                            ..fsys::EventSubscription::EMPTY
+                        }).collect()),
+                        ..UseEventStreamDecl::EMPTY
+                    }),
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: Some("/bleep".to_string()),
+                        events: Some(vec![fsys::EventSubscription {
+                            event_name: Some("started".to_string()),
+                            mode: Some(fsys::EventMode::Sync),
+                            ..fsys::EventSubscription::EMPTY
+                        }]),
                         ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
@@ -2524,9 +2582,10 @@ mod tests {
                 Error::invalid_field("UseEventDecl", "source_name"),
                 Error::invalid_field("UseEventDecl", "target_name"),
                 Error::invalid_field("UseEventStreamDecl", "event_name"),
-                Error::invalid_event_stream("UseEventStreamDecl", "events", "/a".to_string()),
+                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "/a".to_string()),
                 Error::invalid_field("UseEventStreamDecl", "event_name"),
-                Error::invalid_event_stream("UseEventStreamDecl", "events", "/b".to_string()),
+                Error::event_stream_event_not_found("UseEventStreamDecl", "events", "/b".to_string()),
+                Error::event_stream_unsupported_mode("UseEventStreamDecl", "events", "started".to_string(), "Sync".to_string()),
             ])),
         },
         test_validate_uses_missing_source => {

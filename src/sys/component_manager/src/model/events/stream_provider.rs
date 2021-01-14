@@ -70,21 +70,13 @@ impl EventStreamProvider {
         registry: &Arc<EventRegistry>,
         target_moniker: &AbsoluteMoniker,
         target_path: String,
-        events: Vec<CapabilityName>,
+        events: Vec<EventSubscription>,
     ) -> Result<(), ModelError> {
         let options = SubscriptionOptions::new(
             SubscriptionType::Component(target_moniker.clone()),
             self.execution_mode.clone(),
         );
-        let event_stream = registry
-            .subscribe(
-                &options,
-                events
-                    .into_iter()
-                    .map(|event| EventSubscription::new(event, EventMode::Async))
-                    .collect(),
-            )
-            .await?;
+        let event_stream = registry.subscribe(&options, events).await?;
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
@@ -115,12 +107,20 @@ impl EventStreamProvider {
         for use_decl in &decl.uses {
             match use_decl {
                 UseDecl::EventStream(UseEventStreamDecl { target_path, events }) => {
-                    let events = events.iter().map(|e| CapabilityName(e.to_string())).collect();
                     self.create_static_event_stream(
                         &registry,
                         target_moniker,
                         target_path.to_string(),
-                        events,
+                        events
+                            .iter()
+                            .map(|subscription| EventSubscription {
+                                event_name: CapabilityName::from(subscription.event_name.clone()),
+                                mode: match subscription.mode {
+                                    cm_rust::EventMode::Sync => EventMode::Sync,
+                                    _ => EventMode::Async,
+                                },
+                            })
+                            .collect(),
                     )
                     .await?;
                 }

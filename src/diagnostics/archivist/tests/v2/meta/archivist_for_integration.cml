@@ -55,7 +55,12 @@
             modes: [ "async" ],
         },
         {
-            event_stream: [ "log_sink_requested" ],
+            event_stream: [
+                {
+                    event: "log_sink_requested",
+                    mode: "async",
+                },
+            ],
             path: "/svc/fuchsia.sys2.EventStream",
         },
     ],

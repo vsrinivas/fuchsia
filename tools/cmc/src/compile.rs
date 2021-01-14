@@ -288,11 +288,23 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                     ..fsys::UseEventDecl::EMPTY
                 }));
             }
-        } else if let Some(p) = use_.event_stream() {
+        } else if let Some(subscriptions) = use_.event_stream() {
             let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
                 target_path: Some(target_path.into()),
-                events: Some(p.to_vec().into_iter().map(|name| name.clone().into()).collect()),
+                events: Some(
+                    subscriptions
+                        .iter()
+                        .map(|subscription| fsys::EventSubscription {
+                            event_name: Some(subscription.event.to_string()),
+                            mode: Some(match subscription.mode {
+                                Some(cml::EventMode::Sync) => fsys::EventMode::Sync,
+                                _ => fsys::EventMode::Async,
+                            }),
+                            ..fsys::EventSubscription::EMPTY
+                        })
+                        .collect(),
+                ),
                 ..fsys::UseEventStreamDecl::EMPTY
             }));
         } else {

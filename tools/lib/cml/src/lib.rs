@@ -18,7 +18,10 @@ use {
     serde_json::{Map, Value},
     std::{
         collections::{HashMap, HashSet},
-        fmt, path,
+        fmt,
+        hash::Hash,
+        ops::Deref,
+        path,
     },
 };
 
@@ -530,6 +533,13 @@ pub enum EventMode {
     Sync,
 }
 
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct EventSubscription {
+    pub event: OneOrMany<Name>,
+    pub mode: Option<EventMode>,
+}
+
 /// A right or bundle of rights to apply to a directory.
 #[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -873,6 +883,23 @@ pub struct DebugRegistration {
     pub path: Option<Path>,
 }
 
+/// A list of event modes.
+#[derive(CheckedVec, Debug, PartialEq)]
+#[checked_vec(
+    expected = "a nonempty array of event subscriptions",
+    min_length = 1,
+    unique_items = false
+)]
+pub struct EventSubscriptions(pub Vec<EventSubscription>);
+
+impl Deref for EventSubscriptions {
+    type Target = Vec<EventSubscription>;
+
+    fn deref(&self) -> &Vec<EventSubscription> {
+        &self.0
+    }
+}
+
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Use {
@@ -887,7 +914,7 @@ pub struct Use {
     pub rights: Option<Rights>,
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
-    pub event_stream: Option<OneOrMany<Name>>,
+    pub event_stream: Option<EventSubscriptions>,
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
 }
@@ -970,7 +997,7 @@ pub trait CapabilityClause {
     fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
     fn event(&self) -> &Option<OneOrMany<Name>>;
-    fn event_stream(&self) -> &Option<OneOrMany<Name>>;
+    fn event_stream(&self) -> &Option<EventSubscriptions>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -998,8 +1025,14 @@ pub trait CapabilityClause {
         if let Some(event_names) = self.event().as_ref() {
             res.extend(event_names.clone());
         }
-        if let Some(event_stream_names) = self.event_stream().as_ref() {
-            res.extend(event_stream_names.clone());
+        if let Some(event_subscriptions) = self.event_stream() {
+            res.extend(
+                event_subscriptions
+                    .iter()
+                    .map(|subscription| subscription.event.to_vec())
+                    .flatten()
+                    .map(|name| name.clone()),
+            );
         }
         res
     }
@@ -1050,7 +1083,7 @@ impl CapabilityClause for Capability {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+    fn event_stream(&self) -> &Option<EventSubscriptions> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1127,7 +1160,7 @@ impl CapabilityClause for DebugRegistration {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+    fn event_stream(&self) -> &Option<EventSubscriptions> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1185,7 +1218,7 @@ impl CapabilityClause for Use {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
     }
-    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+    fn event_stream(&self) -> &Option<EventSubscriptions> {
         &self.event_stream
     }
     fn capability_name(&self) -> &'static str {
@@ -1275,7 +1308,7 @@ impl CapabilityClause for Expose {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
-    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+    fn event_stream(&self) -> &Option<EventSubscriptions> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -1359,7 +1392,7 @@ impl CapabilityClause for Offer {
     fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
     }
-    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+    fn event_stream(&self) -> &Option<EventSubscriptions> {
         &None
     }
     fn capability_name(&self) -> &'static str {

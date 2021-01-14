@@ -79,9 +79,18 @@
         },
         {
             event_stream: [
-                "began",
-                "destroyed",
-                "diagnostics_ready",
+                {
+                    event: "began",
+                    mode: "async",
+                },
+                {
+                    event: "destroyed",
+                    mode: "async",
+                },
+                {
+                    event: "diagnostics_ready",
+                    mode: "sync",
+                },
             ],
             path: "/svc/my_stream",
         },
