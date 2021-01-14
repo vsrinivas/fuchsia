@@ -11,6 +11,14 @@ Install the [Gerrit Monitor](https://chrome.google.com/webstore/detail/gerrit-mo
 Chrome extension to include the list of Gerrit changes that require
 your attention in your Chrome toolbar.
 
+### Optimize your Gerrit settings
+
+Review [Gerrit settings](https://fuchsia-review.googlesource.com/settings/)
+and tweak them to your liking.
+For instance you may want to enable "Publish comments on push", which will
+automatically send draft comments when a new patch set is published, rather than
+you having to do this manually from the web UI.
+
 ### Enable three-way diffs in Git
 
 By default Git uses two-way diffs when presenting conflicts. It does not
