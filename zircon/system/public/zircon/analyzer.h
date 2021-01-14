@@ -18,10 +18,14 @@
 // The argument that has this annotation would be used by callee. Caller still
 // owns this handle and is responsible for freeing the handle.
 #define ZX_HANDLE_USE __attribute__((use_handle("Fuchsia")))
+// When an argument has this annotation, the caller borrows the argument from
+// resource (e.g. handle) from the callee. Caller must not free the handle.
+#define ZX_HANDLE_ACQUIRE_UNOWNED __attribute__((acquire_handle("FuchsiaUnowned")))
 #else
 #define ZX_HANDLE_ACQUIRE
 #define ZX_HANDLE_RELEASE
 #define ZX_HANDLE_USE
+#define ZX_HANDLE_ACQUIRE_UNOWNED
 #endif  // __clang_analyzer__
 
 #endif  // SYSROOT_ZIRCON_ANALYZER_H_
