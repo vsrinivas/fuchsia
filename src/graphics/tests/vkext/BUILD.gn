@@ -31,3 +31,20 @@ executable("vkext") {
   # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
+
+executable("vkext_linux") {
+  testonly = true
+
+  sources = [ "test_vk_ext_fd.cc" ]
+
+  deps = [
+    "//src/graphics/tests/common",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("vkext_linux_x64") {
+  testonly = true
+  public_deps = [ ":vkext_linux(//build/toolchain:linux_x64)" ]
+}
