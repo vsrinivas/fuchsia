@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
 
@@ -20,6 +21,8 @@ bool ImagePipeSurfaceAsync::Init() {
     fprintf(stderr, "Couldn't connect to sysmem service\n");
     return false;
   }
+
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
   return true;
 }

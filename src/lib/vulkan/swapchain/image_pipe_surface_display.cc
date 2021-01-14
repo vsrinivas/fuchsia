@@ -21,6 +21,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
 
@@ -37,6 +38,8 @@ bool ImagePipeSurfaceDisplay::Init() {
     fprintf(stderr, "Couldn't connect to sysmem service\n");
     return false;
   }
+
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
   // Probe /dev/class/display-controller/ for a display controller name.
   // When the display driver restarts it comes up with a new one (e.g. '001'
@@ -320,6 +323,10 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
     fprintf(stderr, "Swapchain: BindSharedCollection failed: %d\n", status);
     return false;
   }
+  // 1000 should override the generic Magma name.
+  constexpr uint32_t kNamePriority = 1000u;
+  const char* kImageName = "ImagePipeSurfaceDisplay";
+  sysmem_collection->SetName(kNamePriority, kImageName);
   fuchsia::sysmem::BufferCollectionConstraints constraints{};
   constraints.min_buffer_count = image_count;
   // Used because every constraints need to have a usage.
