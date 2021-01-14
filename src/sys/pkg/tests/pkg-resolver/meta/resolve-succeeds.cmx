@@ -3,14 +3,16 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+                "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
             }
         }
     },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
-        "src/lib/fuchsia-hyper/hyper.shard.cmx",
-        "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
+        "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "test/resolve-succeeds"
