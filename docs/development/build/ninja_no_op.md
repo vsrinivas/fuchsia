@@ -121,3 +121,33 @@ staleness.
   allowed to modify their inputs (though this is bad practice), but they must not
   leave a last modified timestamp on any of their inputs that is newer than any of
   their outputs.
+
+## Common root causes
+
+There are infinitely many ways to create Ninja convergence issues. That said,
+prior experience taught us that there are common root causes for these problems.
+
+### Timestamp granularity
+
+Modern filesystems store timestamps on files (such as the time of last
+modification) in nanosecond resolution. Some older runtimes, such as Python 2.7,
+persist file timestamps in lower resolution, for instance milliseconds. It is
+therefore possible for an action to read an input and write an output with a
+timestamp that it considers to be "now" but is actually older than the timestamp
+of the input, if for instance the input and output were both written at the same
+millisecond and the output's timestamp is truncated after the millisecond
+digits.
+
+At the time of this writing we have mechanisms in place to ensure that all
+Python actions in the build run with Python 3.x, in part to avoid this problem.
+
+### Modifying inputs
+
+It is possible for an action to modify its inputs. Typically inputs to an action
+should be opened with read access only, however it's not out of the question to
+write to them. That said, if your action needs to modify an input, it should do
+so before writing any outputs. Or if you must modify inputs after writing
+outputs, be sure to update the timestamp on your outputs before exiting the
+action. Otherwise you will have updated one or more of your inputs to be newer
+than one or more of your outputs, and thus confused Ninja into thinking that
+your outputs are stale.
