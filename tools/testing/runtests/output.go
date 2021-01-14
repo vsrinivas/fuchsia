@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	SuccessSignature = "[runtests][PASSED] "
-	FailureSignature = "[runtests][FAILED] "
-	StartedSignature = "RUNNING TEST: "
+	SuccessSignature = "[runtests][PASSED]"
+	FailureSignature = "[runtests][FAILED]"
 )
 
 // TestPassed reads in the output from a runtests invocation of a single test and returns whether
@@ -24,8 +23,8 @@ const (
 // one in
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/runtests-utils/fuchsia-run-test.cc
 func TestPassed(ctx context.Context, testOutput io.Reader, name string) (bool, error) {
-	success := []byte(SuccessSignature + name)
-	failure := []byte(FailureSignature + name)
+	success := []byte(fmt.Sprintf("%s %s", SuccessSignature, name))
+	failure := []byte(fmt.Sprintf("%s %s", FailureSignature, name))
 	m := iomisc.NewMatchingReader(testOutput, [][]byte{success, failure})
 	match, err := iomisc.ReadUntilMatch(ctx, m)
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
@@ -490,39 +489,6 @@ func TestNewSerialSocket(t *testing.T) {
 	}
 }
 
-// fakeContext conforms to context.Context but lets us control the return
-// value of Err().
-type fakeContext struct {
-	sync.Mutex
-	err error
-}
-
-func (ctx *fakeContext) Deadline() (time.Time, bool) {
-	return time.Time{}, false
-}
-
-func (ctx *fakeContext) Done() <-chan struct{} {
-	ch := make(chan struct{})
-	close(ch)
-	return ch
-}
-
-func (ctx *fakeContext) Err() error {
-	ctx.Lock()
-	defer ctx.Unlock()
-	return ctx.err
-}
-
-func (ctx *fakeContext) SetErr(err error) {
-	ctx.Lock()
-	ctx.err = err
-	ctx.Unlock()
-}
-
-func (ctx *fakeContext) Value(key interface{}) interface{} {
-	return nil
-}
-
 func TestSerialTester(t *testing.T) {
 	ctx := context.Background()
 	serial, socket := serialAndSocket()
@@ -554,11 +520,7 @@ func TestSerialTester(t *testing.T) {
 		}
 
 		// At this point, the tester will be blocked reading from the socket.
-		started := runtests.StartedSignature + test.Name
-		if _, err := io.WriteString(serial, started); err != nil {
-			t.Errorf("failed to write %s to serial", started)
-		}
-		successReturn := runtests.SuccessSignature + test.Name
+		successReturn := runtests.SuccessSignature + " " + test.Name
 		if _, err := io.WriteString(serial, successReturn); err != nil {
 			t.Errorf("failed to write %s to serial", successReturn)
 		}
@@ -585,11 +547,7 @@ func TestSerialTester(t *testing.T) {
 		}
 
 		// At this point, the tester will be blocked reading from the socket.
-		started := runtests.StartedSignature + test.Name
-		if _, err := io.WriteString(serial, started); err != nil {
-			t.Errorf("failed to write %s to serial", started)
-		}
-		failureReturn := runtests.FailureSignature + test.Name
+		failureReturn := runtests.FailureSignature + " " + test.Name
 		if _, err := io.WriteString(serial, failureReturn); err != nil {
 			t.Errorf("failed to write %s to serial", failureReturn)
 		}
@@ -598,52 +556,6 @@ func TestSerialTester(t *testing.T) {
 		case err := <-errs:
 			if err == nil {
 				t.Error("test unexpectedly passed")
-			}
-		}
-	})
-	t.Run("test does not start on first try", func(t *testing.T) {
-		oldNewTestStartedContext := newTestStartedContext
-		defer func() {
-			newTestStartedContext = oldNewTestStartedContext
-		}()
-		var fakeTestStartedContext fakeContext
-		fakeTestStartedCancel := func() {}
-		newTestStartedContext = func(ctx context.Context) (context.Context, context.CancelFunc) {
-			return &fakeTestStartedContext, fakeTestStartedCancel
-		}
-		errs := make(chan error)
-		go func() {
-			_, err := tester.Test(ctx, test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
-			errs <- err
-		}()
-
-		// Ensure tester times out waiting for the test to start.
-		fakeTestStartedContext.SetErr(context.DeadlineExceeded)
-
-		// The tester's write to the socket will block until we read from serial.
-		buff := make([]byte, len(expectedCmd))
-		for i := 0; i < 2; i++ {
-			if _, err := io.ReadFull(serial, buff); err != nil {
-				t.Errorf("error reading from serial: %v", err)
-			} else if string(buff) != expectedCmd {
-				t.Errorf("unexpected command: %s", string(buff))
-			}
-		}
-
-		fakeTestStartedContext.SetErr(nil)
-		// At this point, the tester will be blocked reading from the socket.
-		if _, err := io.WriteString(serial, runtests.StartedSignature+test.Name); err != nil {
-			t.Errorf("failed to write to serial")
-		}
-		successReturn := runtests.SuccessSignature + test.Name
-		if _, err := io.WriteString(serial, successReturn); err != nil {
-			t.Errorf("failed to write %s to serial", successReturn)
-		}
-
-		select {
-		case err := <-errs:
-			if err != nil {
-				t.Error("test unexpectedly failed")
 			}
 		}
 	})
