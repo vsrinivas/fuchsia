@@ -11,11 +11,10 @@ use {
         connected_peers::ConnectedPeers,
         media_types::*,
         peer::ControllerPool,
-        stream::{Stream, Streams},
+        stream,
     },
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
-    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
@@ -30,7 +29,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
-    futures::{self, select, StreamExt, TryStreamExt},
+    futures::{self, Stream, StreamExt},
     log::{error, info, trace, warn},
     parking_lot::Mutex,
     std::{convert::TryFrom, convert::TryInto, sync::Arc},
@@ -43,6 +42,7 @@ mod encoding;
 mod latm;
 mod pcm_audio;
 mod player;
+mod profile;
 mod sink_task;
 mod source_task;
 mod sources;
@@ -54,7 +54,7 @@ use crate::pcm_audio::PcmAudio;
 use sources::AudioSourceType;
 
 /// Make the SDP definition for the A2DP service.
-fn make_profile_service_definition(service_uuid: Uuid) -> bredr::ServiceDefinition {
+pub(crate) fn make_profile_service_definition(service_uuid: Uuid) -> bredr::ServiceDefinition {
     bredr::ServiceDefinition {
         service_class_uuids: Some(vec![service_uuid.into()]),
         protocol_descriptor_list: Some(vec![
@@ -271,24 +271,24 @@ impl StreamsBuilder {
         )
     }
 
-    fn streams(&self) -> Result<Streams, Error> {
+    fn streams(&self) -> Result<stream::Streams, Error> {
         let publisher =
             fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
                 .context("Failed to connect to MediaSession interface")?;
 
         let domain = self.domain.clone();
 
-        let mut streams = Streams::new();
+        let mut streams = stream::Streams::new();
 
         // Sink streams
         if self.sink_enabled {
             let sink_task_builder =
                 sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
             let sbc_sink_endpoint = Self::build_sbc_sink_endpoint()?;
-            streams.insert(Stream::build(sbc_sink_endpoint, sink_task_builder.clone()));
+            streams.insert(stream::Stream::build(sbc_sink_endpoint, sink_task_builder.clone()));
             if self.aac_available {
                 let aac_sink_endpoint = Self::build_aac_sink_endpoint()?;
-                streams.insert(Stream::build(aac_sink_endpoint, sink_task_builder.clone()));
+                streams.insert(stream::Stream::build(aac_sink_endpoint, sink_task_builder.clone()));
             }
         }
 
@@ -296,11 +296,14 @@ impl StreamsBuilder {
             let source_task_builder = source_task::SourceTaskBuilder::new(source_type);
 
             let sbc_source_endpoint = Self::build_sbc_source_endpoint()?;
-            streams.insert(Stream::build(sbc_source_endpoint, source_task_builder.clone()));
+            streams.insert(stream::Stream::build(sbc_source_endpoint, source_task_builder.clone()));
 
             if self.aac_available {
                 let aac_source_endpoint = Self::build_aac_source_endpoint()?;
-                streams.insert(Stream::build(aac_source_endpoint, source_task_builder.clone()));
+                streams.insert(stream::Stream::build(
+                    aac_source_endpoint,
+                    source_task_builder.clone(),
+                ));
             }
         }
 
@@ -456,6 +459,45 @@ fn handle_audio_mode_connection(
     .detach();
 }
 
+fn setup_profiles(
+    proxy: bredr::ProfileProxy,
+    config: &config::A2dpConfiguration,
+) -> Result<profile::ProfileClient, profile::Error> {
+    let mut service_defs = Vec::new();
+    if config.enable_source {
+        let source_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
+        service_defs.push(make_profile_service_definition(source_uuid));
+    }
+
+    if config.enable_sink {
+        let sink_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSink as u16);
+        service_defs.push(make_profile_service_definition(sink_uuid));
+    }
+
+    let mut profile = profile::ProfileClient::advertise(
+        proxy,
+        &mut service_defs[..],
+        config.channel_mode.clone(),
+    )?;
+
+    const ATTRS: [u16; 4] = [
+        bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
+        bredr::ATTR_SERVICE_CLASS_ID_LIST,
+        bredr::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+        ATTR_A2DP_SUPPORTED_FEATURES,
+    ];
+
+    if config.enable_source {
+        profile.add_search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS)?;
+    }
+
+    if config.enable_sink {
+        profile.add_search(bredr::ServiceClassProfileIdentifier::AudioSource, &ATTRS)?;
+    }
+
+    Ok(profile)
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
@@ -522,118 +564,58 @@ async fn main() -> Result<(), Error> {
         let peers = peers.clone();
         move |s| handle_audio_mode_connection(peers.clone(), s)
     });
-
     if let Err(e) = fs.take_and_serve_directory_handle() {
         warn!("Unable to serve service directory: {}", e);
     }
     let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
-    let source_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
-    let sink_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSink as u16);
+    let profile = match setup_profiles(profile_svc.clone(), &config) {
+        Err(e) => {
+            let err = format!("Failed to setup profiles: {:?}", e);
+            error!("{}", err);
+            return Err(format_err!("{}", err));
+        }
+        Ok(profile) => profile,
+    };
 
-    let service_defs = vec![
-        make_profile_service_definition(source_uuid),
-        make_profile_service_definition(sink_uuid),
-    ];
-
-    let (connect_client, connect_requests) =
-        create_request_stream().context("ConnectionReceiver creation")?;
-
-    let _ = profile_svc
-        .advertise(
-            &mut service_defs.into_iter(),
-            bredr::ChannelParameters {
-                channel_mode: Some(config.channel_mode),
-                ..bredr::ChannelParameters::EMPTY
-            },
-            connect_client,
-        )
-        .check()?;
-
-    const ATTRS: [u16; 4] = [
-        bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
-        bredr::ATTR_SERVICE_CLASS_ID_LIST,
-        bredr::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
-        ATTR_A2DP_SUPPORTED_FEATURES,
-    ];
-
-    let (results_client, source_results) =
-        create_request_stream().context("make request stream")?;
-    profile_svc.search(
-        bredr::ServiceClassProfileIdentifier::AudioSource,
-        &ATTRS,
-        results_client,
-    )?;
-
-    let (results_client, sink_results) = create_request_stream().context("make request stream")?;
-    profile_svc.search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
-
-    handle_profile_events(
-        peers,
-        profile_svc,
-        config.channel_mode,
-        connect_requests,
-        source_results,
-        sink_results,
-    )
-    .await
+    handle_profile_events(profile, peers, profile_svc, config.channel_mode).await
 }
 
 async fn handle_profile_events(
+    mut profile: impl Stream<Item = Result<profile::ProfileEvent, profile::Error>> + Unpin,
     peers: Arc<Mutex<ConnectedPeers>>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
-    mut connect_requests: bredr::ConnectionReceiverRequestStream,
-    mut source_results: bredr::SearchResultsRequestStream,
-    mut sink_results: bredr::SearchResultsRequestStream,
 ) -> Result<(), Error> {
-    loop {
-        select! {
-            connect_request = connect_requests.try_next() => {
-                let request = connect_request?.ok_or(format_err!("BR/EDR ended service registration"))?;
-                match request {
-                    bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
-                        let peer_id = peer_id.into();
-                        let channel: Channel = channel.try_into()?;
-                        info!("Connection from {}: mode {} max_tx {}", peer_id, channel.channel_mode(), channel.max_tx_size());
-                        if let Err(e) = peers.lock().connected(peer_id, channel, /* initiator= */ false) {
-                            warn!("Problem accepting peer connection: {}", e);
-                        }
-                    }
-                    x => info!("Unrecognized connection request: {:?}", x),
-                };
+    while let Some(item) = profile.next().await {
+        let evt = match item {
+            Err(e) => return Err(format_err!("Profile client error: {:?}", e)),
+            Ok(evt) => evt,
+        };
+        let peer_id = evt.peer_id().clone();
+        match evt {
+            profile::ProfileEvent::PeerConnected { channel, .. } => {
+                info!(
+                    "Connection from {}: mode {} max_tx {}",
+                    peer_id,
+                    channel.channel_mode(),
+                    channel.max_tx_size()
+                );
+                if let Err(e) =
+                    peers.lock().connected(peer_id, channel, /* initiator= */ false)
+                {
+                    warn!("Problem accepting peer connection: {}", e);
+                }
             }
-            source_result = source_results.try_next() => {
-                let result = source_result?.ok_or(format_err!("BR/EDR ended source service search"))?;
-                match result {
-                    bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } => {
-                        handle_services_found(
-                            &peer_id.into(),
-                            &attributes,
-                            peers.clone(),
-                            profile_svc.clone(),
-                            channel_mode.clone());
-                        responder.send()?;
-                    }
-                    x => info!("Unhandled Search Result: {:?}", x),
-                };
+            profile::ProfileEvent::SearchResult { attributes, .. } => {
+                handle_services_found(
+                    &peer_id,
+                    &attributes,
+                    peers.clone(),
+                    profile_svc.clone(),
+                    channel_mode.clone(),
+                );
             }
-            sink_result = sink_results.try_next() => {
-                let result = sink_result?.ok_or(format_err!("BR/EDR ended sink service search"))?;
-                match result {
-                    bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } => {
-                        handle_services_found(
-                            &peer_id.into(),
-                            &attributes,
-                            peers.clone(),
-                            profile_svc.clone(),
-                            channel_mode.clone());
-                        responder.send()?;
-                    }
-                    x => info!("Unhandled Search Result: {:?}", x),
-                };
-            }
-            complete => break,
         }
     }
     Ok(())
@@ -643,16 +625,13 @@ async fn handle_profile_events(
 mod tests {
     use super::*;
 
-    use async_utils::PollExt;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_a2dp as a2dp;
-    use fidl_fuchsia_bluetooth_bredr::{
-        ConnectionReceiverMarker, ProfileRequest, ProfileRequestStream, SearchResultsMarker,
-    };
+    use fidl_fuchsia_bluetooth_bredr::{ProfileRequest, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_bluetooth::types::PeerId;
     use futures::channel::mpsc;
-    use futures::{pin_mut, task::Poll, StreamExt};
+    use futures::{task::Poll, StreamExt};
 
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -670,76 +649,12 @@ mod tests {
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
-            Streams::new(),
+            stream::Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             proxy.clone(),
             Some(cobalt_sender),
         )));
         (peers, proxy, stream)
-    }
-
-    #[test]
-    fn test_responds_to_search_results() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let (peers, profile_proxy, _profile_stream) = setup_connected_peers();
-        let (sink_results_proxy, sink_results_stream) =
-            create_proxy_and_stream::<SearchResultsMarker>()
-                .expect("SearchResults proxy should be created");
-        let (source_results_proxy, source_results_stream) =
-            create_proxy_and_stream::<SearchResultsMarker>()
-                .expect("SearchResults proxy should be created");
-        let (_connect_proxy, connect_stream) =
-            create_proxy_and_stream::<ConnectionReceiverMarker>()
-                .expect("ConnectionReceiver proxy should be created");
-
-        let handler_fut = handle_profile_events(
-            peers,
-            profile_proxy,
-            bredr::ChannelMode::Basic,
-            connect_stream,
-            source_results_stream,
-            sink_results_stream,
-        );
-        pin_mut!(handler_fut);
-
-        let res = exec.run_until_stalled(&mut handler_fut);
-        assert!(res.is_pending());
-
-        // Report a sink search result, which should be replied to.
-        let mut attributes = vec![];
-        let results_fut = sink_results_proxy.service_found(
-            &mut PeerId(1).into(),
-            None,
-            &mut attributes.iter_mut(),
-        );
-        pin_mut!(results_fut);
-
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
-        match exec.run_until_stalled(&mut results_fut) {
-            Poll::Ready(Ok(())) => {}
-            x => panic!("Expected a response from the result, got {:?}", x),
-        };
-
-        // Report a source search result, which should be replied to.
-        let mut attributes = vec![];
-        let results_fut = source_results_proxy.service_found(
-            &mut PeerId(2).into(),
-            None,
-            &mut attributes.iter_mut(),
-        );
-        pin_mut!(results_fut);
-
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
-        match exec.run_until_stalled(&mut results_fut) {
-            Poll::Ready(Ok(())) => {}
-            x => panic!("Expected a response from the result, got {:?}", x),
-        };
-
-        // Handler should finish when one of the results is disconnected.
-        drop(sink_results_proxy);
-        let res = exec.run_until_stalled(&mut handler_fut).expect("handler should have finished");
-        // Ending service search is an error condition for the handler.
-        assert!(res.is_err());
     }
 
     #[test]
