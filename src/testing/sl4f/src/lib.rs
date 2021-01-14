@@ -14,7 +14,6 @@ pub mod basemgr;
 pub mod battery_simulator;
 pub mod bluetooth;
 pub mod boot_arguments;
-pub mod camera;
 pub mod common_utils;
 pub mod component;
 pub mod cpu_ctrl;

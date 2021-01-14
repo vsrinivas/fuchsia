@@ -52,9 +52,6 @@ use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 // BootArguments-related includes
 use crate::boot_arguments::facade::BootArgumentsFacade;
 
-// Camera-related includes
-use crate::camera::facade::CameraFacade;
-
 // Cpu-Ctrl related includes
 use crate::cpu_ctrl::facade::CpuCtrlFacade;
 
@@ -220,7 +217,6 @@ impl Sl4f {
                 "bluetooth" => BluetoothFacade::new(),
                 "boot_arguments_facade" => BootArgumentsFacade::new(),
                 "bt_sys_facade" => BluetoothSysFacade::new(),
-                "camera_facade" => CameraFacade::new(),
                 "cpu_ctrl_facade" => CpuCtrlFacade::new(),
                 "component_facade" => ComponentFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
