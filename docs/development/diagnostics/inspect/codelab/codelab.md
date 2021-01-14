@@ -416,7 +416,7 @@ state without needing to dig through logs.
 
         The usual way of creating properties is through `create_*` methods on nodes. The lifetime of
         a property created with these methods is tied to the object returned and destroying the
-        object causes the property to disappear. The library provides convinience methods `record_*`
+        object causes the property to disappear. The library provides convenience methods `record_*`
         that perform creation of a property and tie the property lifetime to the node on which the
         method was called. As a result, the new property lives as long as the node itself (in this
         case, as long as the root node, so the entire execution of the component).
