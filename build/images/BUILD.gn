@@ -45,31 +45,25 @@ board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
 group("meta_packages") {
-  testonly = true
   visibility = [ ":*" ]
+  testonly = fuchsia_zbi_testonly
   public_deps = meta_package_labels
 }
 
 group("base_packages") {
-  testonly = true
+  testonly = base_cache_packages_testonly
   visibility = [ ":*" ]
   public_deps = [ "//:additional_base_packages" ]
-  if (check_production_eligibility) {
-    assert_no_deps = [ "//build/validate:non_production_tag" ]
-  }
 }
 
 group("cache_packages") {
-  testonly = true
+  testonly = base_cache_packages_testonly
   visibility = [ ":*" ]
   public_deps = [ "//:additional_cache_packages" ]
-  if (check_production_eligibility) {
-    assert_no_deps = [ "//build/validate:non_production_tag" ]
-  }
 }
 
 group("universe_packages") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
   public_deps = [
     ":base_packages",
@@ -132,7 +126,7 @@ group("package_lists") {
 }
 
 config_package("config-data") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
   deps = [
     ":component_id_index_config-config-data",
@@ -141,7 +135,7 @@ config_package("config-data") {
 }
 
 shell_commands("shell-commands") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
   deps = [ ":universe_packages" ]
 }
@@ -154,7 +148,7 @@ shell_commands("shell-commands") {
 monolith_meta_far_merkle_index =
     "$target_out_dir/monolith_meta_far_merkle_index"
 generate_package_metadata("monolith_meta_far_merkle_index") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   outputs = [ monolith_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
@@ -175,7 +169,7 @@ action("pkgsvr_index") {
     ":system_image_prime.manifest",
     ":update_packages.manifest",
   ]
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":monolith_meta_far_merkle_index" ]
   inputs = [ monolith_meta_far_merkle_index ]
@@ -191,7 +185,7 @@ action("pkgsvr_index") {
 preinstall_meta_far_merkle_index =
     "$target_out_dir/preinstall_meta_far_merkle_index"
 generate_package_metadata("preinstall_meta_far_merkle_index") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   outputs = [ preinstall_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [ ":cache_packages" ]
@@ -208,7 +202,7 @@ action("cache_index") {
     ":system_image.manifest.runtime_deps",
     ":system_image.manifest.runtime_deps_generate",
   ]
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":preinstall_meta_far_merkle_index" ]
   inputs = [ preinstall_meta_far_merkle_index ]
@@ -225,7 +219,7 @@ system_image_manifest_args = "system_image.manifest_args"
 system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
 
 generated_file(system_image_manifest_args) {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   outputs = [ system_image_manifest_args_path ]
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
@@ -239,7 +233,7 @@ generated_file(system_image_manifest_args) {
 # The system_image "package" manifest is everything that appears in /system.
 generate_manifest("system_image.manifest") {
   visibility = [ ":*" ]
-  testonly = true
+  testonly = fuchsia_zbi_testonly
 
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
@@ -309,7 +303,7 @@ action("system_image_prime.manifest") {
 pm_build("system_image.meta") {
   package_name = "system_image"
   visibility = [ ":*" ]
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   manifest = ":system_image.manifest"
 }
 
@@ -426,7 +420,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta__vb_desc",
     ":fuchsia.vbmeta__zbi_props",
   ]
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   hermetic_deps = false
   script = "manifest.py"
   outputs = [ "$target_out_dir/devmgr_config.txt" ]
@@ -485,8 +479,8 @@ action("devmgr_config.txt") {
 }
 
 devmgr_config("devmgr_config") {
+  testonly = fuchsia_zbi_testonly
   label = ":devmgr_config.txt"
-  testonly = true
 }
 
 # Generate the prime /boot/config/devmgr file. Points to system_image_prime
@@ -542,7 +536,7 @@ devmgr_config("devmgr_config_prime") {
 # The main bootable image, which requires `blob.blk` to appear on some
 # attached storage device at runtime.
 zbi("fuchsia") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
 
   output_dir = root_out_dir
 
@@ -553,6 +547,14 @@ zbi("fuchsia") {
 
   if (!include_devmgr_config_in_vbmeta) {
     deps += [ ":devmgr_config" ]
+  }
+
+  if (check_production_eligibility) {
+    # Check no rule that depends on non_production_tag is included in the final
+    # ZBI composition. This dependency might be set on rule that does not have
+    # testonly=true but is only suitable for userdebug, but not user build.
+    # We set check_production_eligibility to true only for user build.
+    assert_no_deps = [ "//build/validate:non_production_tag" ]
   }
 
   metadata = {
@@ -2267,7 +2269,7 @@ generate_package_metadata("all_package_manifests.list") {
 #
 # For more details, see //docs/development/components/component_id_index.md#system-assembly
 component_id_index_config("component_id_index_config") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
 
   # crawl for component_id_index()s in the base set.
   deps = [ ":base_packages" ]
@@ -2279,8 +2281,7 @@ generate_component_index("component_index_metadata") {
     "//build/images:*",
     "//src/sys/component_index:*",
   ]
-
-  testonly = true
+  testonly = fuchsia_zbi_testonly
 
   outputs = [ component_index_metadata ]
 

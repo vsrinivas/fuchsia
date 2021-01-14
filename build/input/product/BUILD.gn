@@ -2,14 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dev.gni")
 import("//build/product.gni")
 
 group("bootfs_labels") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   deps = product_bootfs_labels
 }
 
 group("system_image_deps") {
-  testonly = true
+  testonly = fuchsia_zbi_testonly
   deps = product_system_image_deps
 }

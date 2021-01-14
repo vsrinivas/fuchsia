@@ -152,6 +152,8 @@ group("bootstrap-zedboot") {
 
 # Debugging tools installed on the boot image.
 group("debugging") {
+  testonly = true
+
   deps = [
     "//src/bringup/bundles:debugging",
     "//src/connectivity/bundles:debugging",
