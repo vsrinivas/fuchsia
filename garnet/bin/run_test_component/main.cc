@@ -300,10 +300,7 @@ int main(int argc, const char** argv) {
             "\nWARNING: Test '%s' overrides max log severity in BUILD.gn as well as config file. "
             "Using the value from config file. If you want the test to pickup value from BUILD.gn, "
             "please remove the test url from the config file.\n"
-            "See: "
-            "https://fuchsia.dev/fuchsia-src/concepts/testing/"
-            "v1_test_component#restricting_log_severity"
-            "\n",
+            "See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n",
             program_name.c_str());
       }
       max_severity_allowed = it->second;
@@ -573,8 +570,7 @@ int main(int argc, const char** argv) {
     printf("----------------xxxxx----------------\n");
     printf(
         "Failing this test. See: "
-        "https://fuchsia.dev/fuchsia-src/concepts/testing/"
-        "v1_test_component#restricting_log_severity"
+        "https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity"
         "\n");
     fflush(stdout);
     ret_code = 1;
