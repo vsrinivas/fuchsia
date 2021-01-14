@@ -26,7 +26,9 @@
 #include <atomic>
 #include <iterator>
 #include <thread>
+#include <vector>
 
+#include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
@@ -221,6 +223,68 @@ TEST(VmoTestCase, MapRead) {
   // Read from the second page of the vmo to mapping.
   // This should succeed and not deadlock in the kernel.
   EXPECT_OK(vmo.read(reinterpret_cast<void *>(vaddr), PAGE_SIZE, PAGE_SIZE));
+}
+
+// This test attempts to write to a memory location from multiple threads
+// while other threads are decommitting that same memory.
+//
+// The expected behavior is that the writes succeed without crashing
+// the kernel.
+//
+// See fxbug.dev/66978 for more details.
+TEST(VmoTestCase, ParallelWriteAndDecommit) {
+  constexpr size_t kVmoSize = 8 * (1UL << 30);
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  uintptr_t base;
+  ASSERT_OK(
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize, &base));
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, kVmoSize, nullptr, 0));
+
+  constexpr size_t kNumThreads = 2;
+
+  void *dst = reinterpret_cast<void *>(base + kVmoSize / 2);
+
+  std::atomic<size_t> running = 0;
+  std::atomic<bool> start = false;
+
+  auto writer = [dst, &running, &start] {
+    running++;
+    while (!start) {
+      sched_yield();
+    }
+    for (int i = 0; i < 100000; i++) {
+      mandatory_memset(dst, 0x1, 128);
+    }
+  };
+
+  auto decommitter = [&vmo, &running, &start] {
+    running++;
+    while (!start) {
+      sched_yield();
+    }
+    for (int i = 0; i < 100000; i++) {
+      EXPECT_OK(vmo.op_range(ZX_VMO_OP_DECOMMIT, kVmoSize / 2, 4096, nullptr, 0));
+    }
+  };
+
+  std::vector<std::thread> threads;
+
+  for (size_t i = 0; i < kNumThreads; i++) {
+    threads.push_back(std::thread(writer));
+    threads.push_back(std::thread(decommitter));
+  }
+
+  while (running < kNumThreads * 2) {
+    sched_yield();
+  }
+  start = true;
+
+  for (auto &thread : threads) {
+    thread.join();
+  }
 }
 
 TEST(VmoTestCase, ParallelRead) {
