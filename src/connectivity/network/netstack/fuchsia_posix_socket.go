@@ -347,16 +347,16 @@ type endpointWithSocket struct {
 
 	// These channels enable coordination of orderly shutdown of loops, handles,
 	// and endpoints. See the comment on `close` for more information.
-	//
-	// Notes:
-	//
-	//  - closing is signaled iff close has been called.
-	//
-	//  - loop{Read,Write}Done are signaled iff loop{Read,Write} have
-	//    exited, respectively.
-	//
-	//  - loopPollDone is signaled when the poller goroutine exits.
-	closing, loopReadDone, loopWriteDone, loopPollDone chan struct{}
+	mu struct {
+		sync.Mutex
+
+		// loop{Read,Write,Poll}Done are signaled iff loop{Read,Write,Poll} have
+		// exited, respectively.
+		loopReadDone, loopWriteDone, loopPollDone <-chan struct{}
+	}
+
+	// closing is signaled iff close has been called.
+	closing chan struct{}
 
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
@@ -369,6 +369,12 @@ type endpointWithSocket struct {
 
 	// onHUp is used to register callback for closing events.
 	onHUp waiter.Entry
+
+	// onListen is used to register callbacks for listening sockets.
+	onListen sync.Once
+
+	// onConnect is used to register callbacks for connected sockets.
+	onConnect sync.Once
 }
 
 func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
@@ -385,13 +391,10 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 			netProto:   netProto,
 			ns:         ns,
 		},
-		local:         localS,
-		peer:          peerS,
-		loopReadDone:  make(chan struct{}),
-		loopWriteDone: make(chan struct{}),
-		loopPollDone:  make(chan struct{}),
-		closing:       make(chan struct{}),
-		linger:        make(chan struct{}),
+		local:   localS,
+		peer:    peerS,
+		closing: make(chan struct{}),
+		linger:  make(chan struct{}),
 	}
 
 	// Handle the case where the endpoint has already seen an error state.
@@ -435,55 +438,36 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
 	}
 
-	go func() {
-		defer close(eps.loopPollDone)
+	return eps, nil
+}
 
-		sigs := zx.Signals(zx.SignalSocketWriteDisabled | localSignalClosing)
+func (eps *endpointWithSocket) loopPoll(ch chan<- struct{}) {
+	defer close(ch)
 
-		for {
-			obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
-			if err != nil {
-				panic(err)
-			}
+	sigs := zx.Signals(zx.SignalSocketWriteDisabled | localSignalClosing)
 
-			if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
-				sigs ^= zx.SignalSocketWriteDisabled
-				if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil && err != tcpip.ErrNotConnected {
+	for {
+		obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+		if err != nil {
+			panic(err)
+		}
+
+		if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
+			sigs ^= zx.SignalSocketWriteDisabled
+			if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+				// Shutdown can return ErrNotConnected if the endpoint was connected
+				// but no longer is.
+				if err != tcpip.ErrNotConnected {
 					panic(err)
 				}
 			}
-
-			if obs&localSignalClosing != 0 {
-				// We're shutting down.
-				return
-			}
 		}
-	}()
 
-	{
-		// Synchronize with loopRead to ensure that:
-		//
-		// - we observe all incoming event notifications; such notifications can
-		// begin to arrive as soon as this function returns, so we must register
-		// before returning.
-		//
-		// - we correctly initialize the connected state before allowing it to be
-		// observed by the peer; the state is observable as soon as this function
-		// returns, so we must wait to be notified before returning.
-		initCh := make(chan struct{})
-		go func() {
-			inEntry, inCh := waiter.NewChannelEntry(nil)
-			eps.wq.EventRegister(&inEntry, waiter.EventIn)
-			defer eps.wq.EventUnregister(&inEntry)
-
-			eps.loopRead(inCh, initCh)
-		}()
-		<-initCh
+		if obs&localSignalClosing != 0 {
+			// We're shutting down.
+			return
+		}
 	}
-
-	go eps.loopWrite()
-
-	return eps, nil
 }
 
 type endpointWithEvent struct {
@@ -556,14 +540,23 @@ func (eps *endpointWithSocket) close() {
 			panic(err)
 		}
 
+		// Grab the loop channels _after_ having closed `eps.closing` to avoid a
+		// race in which the loops are allowed to start without guaranteeing that
+		// this routine will wait for them to return.
+		eps.mu.Lock()
+		channels := []<-chan struct{}{
+			eps.mu.loopReadDone,
+			eps.mu.loopWriteDone,
+			eps.mu.loopPollDone,
+		}
+		eps.mu.Unlock()
+
 		// The interruptions above cause our loops to exit. Wait until
 		// they do before releasing resources they may be using.
-		for _, ch := range []<-chan struct{}{
-			eps.loopReadDone,
-			eps.loopWriteDone,
-			eps.loopPollDone,
-		} {
-			<-ch
+		for _, ch := range channels {
+			if ch != nil {
+				<-ch
+			}
 		}
 
 		if err := eps.local.Close(); err != nil {
@@ -589,13 +582,113 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	if backlog < 0 {
 		backlog = 0
 	}
+
 	if err := eps.ep.Listen(int(backlog)); err != nil {
 		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
+	// It is possible to call `listen` on a connected socket - such a call would
+	// fail above, so we register the callback only in the success case to avoid
+	// incorrectly handling events on connected sockets.
+	eps.onListen.Do(func() {
+		var entry waiter.Entry
+		cb := func() {
+			var err error
+			eps.incoming.mu.Lock()
+			if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
+				err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
+				eps.incoming.mu.asserted = true
+			}
+			eps.incoming.mu.Unlock()
+			if err != nil {
+				if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrBadHandle {
+					// The endpoint is closing -- this is possible when an incoming
+					// connection races with the listening endpoint being closed.
+					go eps.wq.EventUnregister(&entry)
+				} else {
+					panic(err)
+				}
+			}
+		}
+		entry.Callback = callback(func(_ *waiter.Entry, m waiter.EventMask) {
+			if m&waiter.EventErr == 0 {
+				cb()
+			}
+		})
+		eps.wq.EventRegister(&entry, waiter.EventIn|waiter.EventErr)
+
+		// We're registering after calling Listen, so we might've missed an event.
+		// Call the callback once to check for already-present incoming
+		// connections.
+		cb()
+	})
+
 	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", eps, backlog)
 
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
+}
+
+func (eps *endpointWithSocket) startLoops() {
+	eps.mu.Lock()
+	defer eps.mu.Unlock()
+	select {
+	case <-eps.closing:
+	default:
+		for _, m := range []struct {
+			done *<-chan struct{}
+			fn   func(chan<- struct{})
+		}{
+			{&eps.mu.loopPollDone, eps.loopPoll},
+			{&eps.mu.loopReadDone, eps.loopRead},
+			{&eps.mu.loopWriteDone, eps.loopWrite},
+		} {
+			ch := make(chan struct{})
+			*m.done = ch
+			go m.fn(ch)
+		}
+	}
+}
+
+func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnectResult, error) {
+	result, err := eps.endpoint.Connect(ctx, address)
+	if err != nil {
+		return socket.BaseSocketConnectResult{}, err
+	}
+	switch result.Which() {
+	case socket.BaseSocketConnectResultErr:
+		if result.Err != posix.ErrnoEinprogress {
+			break
+		}
+		fallthrough
+	case socket.BaseSocketConnectResultResponse:
+		// It is possible to call `connect` on a listening socket - such a call
+		// would fail above, so we register the callback only in the success case
+		// to avoid incorrectly handling events on connected sockets.
+		eps.onConnect.Do(func() {
+			var (
+				once  sync.Once
+				entry waiter.Entry
+			)
+			cb := func() {
+				once.Do(func() {
+					go eps.wq.EventUnregister(&entry)
+					eps.startLoops()
+				})
+			}
+			entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
+				cb()
+			})
+			eps.wq.EventRegister(&entry, waiter.EventOut)
+
+			// We're registering after calling Connect, so we might've missed an
+			// event. Call the callback once to check for an already-complete (even
+			// with error) handshake.
+			if eps.ep.Readiness(waiter.EventOut) != 0 {
+				cb()
+			}
+		})
+	}
+	return result, nil
 }
 
 func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAddress, *endpointWithSocket, error) {
@@ -647,16 +740,22 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		}
 	}
 	{
-		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
-		return 0, addr, ep, err
+		eps, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
+		if err != nil {
+			return 0, nil, nil, err
+		}
+
+		eps.onConnect.Do(eps.startLoops)
+
+		return 0, addr, eps, nil
 	}
 }
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
-func (eps *endpointWithSocket) loopWrite() {
+func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 	triggerClose := false
 	defer func() {
-		close(eps.loopWriteDone)
+		close(ch)
 		if triggerClose {
 			eps.close()
 		}
@@ -679,8 +778,12 @@ func (eps *endpointWithSocket) loopWrite() {
 				switch err.Status {
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
-					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
-						panic(err)
+					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil {
+						// Shutdown can return ErrNotConnected if the endpoint was
+						// connected but no longer is.
+						if err != tcpip.ErrNotConnected {
+							panic(err)
+						}
 					}
 					return
 				case zx.ErrShouldWait:
@@ -720,6 +823,10 @@ func (eps *endpointWithSocket) loopWrite() {
 			}
 			// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 			switch err {
+			case tcpip.ErrNotConnected:
+				// Write never returns ErrNotConnected except for endpoints that were
+				// never connected. Such endpoints should never reach this loop.
+				panic(fmt.Sprintf("connected endpoint returned %s", err))
 			case nil:
 				v = v[n:]
 				if len(v) != 0 {
@@ -766,41 +873,25 @@ func (eps *endpointWithSocket) loopWrite() {
 }
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
-func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
+func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 	triggerClose := false
 	defer func() {
-		close(eps.loopReadDone)
+		close(ch)
 		if triggerClose {
 			eps.close()
 		}
 	}()
 
-	initDone := func() {
-		if initCh != nil {
-			close(initCh)
-			initCh = nil
-		}
-	}
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	eps.wq.EventRegister(&inEntry, waiter.EventIn)
+	defer eps.wq.EventUnregister(&inEntry)
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
-
-	outEntry, outCh := waiter.NewChannelEntry(nil)
-	connected := false
-	if !connected {
-		eps.wq.EventRegister(&outEntry, waiter.EventOut)
-		defer func() {
-			if !connected {
-				// If connected became true then we must have already unregistered
-				// below. We must never unregister the same entry twice because that
-				// can corrupt the waiter queue.
-				eps.wq.EventUnregister(&outEntry)
-			}
-		}()
-	}
 
 	writer := socketWriter{
 		socket: eps.local,
 	}
+	signaled := false
 	for {
 		// Acquire hard error lock across ep calls to avoid races and store the
 		// hard error deterministically.
@@ -812,43 +903,11 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			hardError = eps.hardError.storeAndRetrieveLocked(err)
 		}
 		eps.hardError.mu.Unlock()
-		if err == tcpip.ErrNotConnected {
-			if connected {
-				panic(fmt.Sprintf("connected endpoint returned %s", err))
-			}
-			// We're not connected; unblock the caller before waiting for incoming packets.
-			initDone()
-			select {
-			case <-eps.closing:
-				// We're shutting down.
-				return
-			case <-inCh:
-				// We got an incoming connection; we must be a listening socket.
-				// Because we are a listening socket, we don't expect anymore
-				// outbound events so there's no harm in letting outEntry remain
-				// registered until the end of the function.
-				var err error
-				eps.incoming.mu.Lock()
-				if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
-					err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
-					eps.incoming.mu.asserted = true
-				}
-				eps.incoming.mu.Unlock()
-				if err != nil {
-					panic(err)
-				}
-				continue
-			case <-outCh:
-				// We became connected; the next Read will reflect this.
-				continue
-			}
-		} else if !connected {
+		if !signaled {
+			signaled = true
 			var signals zx.Signals = zxsocket.SignalOutgoing
 			switch err {
 			case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
-				connected = true
-				eps.wq.EventUnregister(&outEntry)
-
 				signals |= zxsocket.SignalConnected
 			}
 
@@ -856,15 +915,14 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 				panic(err)
 			}
 		}
-		// Either we're connected or not; unblock the caller.
-		initDone()
 		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
 		switch err {
+		case tcpip.ErrNotConnected:
+			// Read never returns ErrNotConnected except for endpoints that were
+			// never connected. Such endpoints should never reach this loop.
+			panic(fmt.Sprintf("connected endpoint returned %s", err))
 		case tcpip.ErrNoLinkAddress:
-			// TODO(https://github.com/google/gvisor/issues/751): revisit this assertion.
-			if connected {
-				panic(fmt.Sprintf("Endpoint.Read() = %s on a connected socket should never happen", err))
-			}
+			// TODO(https://github.com/google/gvisor/issues/751): revisit this comment.
 			// At the time of writing, this error is only possible when link
 			// address resolution fails during an outbound TCP connection attempt.
 			// This happens via the following call hierarchy:
@@ -884,26 +942,15 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			// fails to respond to a SYN within 60 seconds, or if the retransmit
 			// logic gives up after 60 seconds of missing ACKs from the peer, or if
 			// the maximum number of unacknowledged keepalives is reached.
-			if connected {
-				// The connection was alive but now is dead - this is equivalent to
-				// having received a TCP RST.
-				triggerClose = true
-				return
-			}
-			// The connection was never created. This is equivalent to the
-			// connection having been refused.
-			fallthrough
+			//
+			// The connection was alive but now is dead - this is equivalent to
+			// having received a TCP RST.
+			triggerClose = true
+			return
 		case tcpip.ErrConnectionRefused:
-			// Linux allows sockets with connection errors to be reused. If the
-			// client calls connect() again (and the underlying Endpoint correctly
-			// permits the attempt), we need to wait for an outbound event again.
-			select {
-			case <-outCh:
-				continue
-			case <-eps.closing:
-				// We're shutting down.
-				return
-			}
+			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
+			// another connection attempt to match Linux.
+			return
 		case tcpip.ErrWouldBlock:
 			select {
 			case <-inCh:
@@ -947,7 +994,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 						// allow the pending data to be read without error but will
 						// return ErrNotConnected if Shutdown is called. Otherwise
 						// this is unexpected, panic.
-						if !(connected && err == tcpip.ErrNotConnected) {
+						if err != tcpip.ErrNotConnected {
 							panic(err)
 						}
 						syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
