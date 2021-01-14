@@ -18,34 +18,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
-func makeTest(id int, os string) Test {
-	test := Test{
-		Test: build.Test{
-			Name: fmt.Sprintf("test%d", id),
-			OS:   os,
-		},
-		Runs: 1,
-	}
-	if os == "fuchsia" {
-		test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
-	} else {
-		test.Name = fmt.Sprintf("/path/to/test%d", id)
-	}
-	return test
-}
-
-func shardWithOS(env build.Environment, os string, ids ...int) *Shard {
-	var tests []Test
-	for _, id := range ids {
-		tests = append(tests, makeTest(id, os))
-	}
-	return &Shard{
-		Name:  environmentName(env),
-		Tests: tests,
-		Env:   env,
-	}
-}
-
 func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 	var tests []Test
 	for _, id := range ids {
@@ -71,8 +43,6 @@ func TestMultiplyShards(t *testing.T) {
 		Dimensions: build.DimensionSet{OS: "linux"},
 		Tags:       []string{},
 	}
-
-	shard := shardWithOS
 
 	makeTestModifier := func(id int, os string, runs int) TestModifier {
 		return TestModifier{
@@ -321,8 +291,6 @@ func TestShardAffected(t *testing.T) {
 		maxAttempts int
 	}
 
-	shard := shardWithOS
-
 	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
 		for _, m := range md {
 			i := m.index
@@ -337,14 +305,8 @@ func TestShardAffected(t *testing.T) {
 	}
 
 	makeTestModifier := func(id int, os string, affected bool) TestModifier {
-		var name string
-		if os == "fuchsia" {
-			name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
-		} else {
-			name = fmt.Sprintf("/path/to/test%d", id)
-		}
 		return TestModifier{
-			Name:        name,
+			Name:        fullTestName(id, os),
 			OS:          os,
 			Affected:    affected,
 			MaxAttempts: 1,
@@ -555,15 +517,20 @@ func assertShardsContainRunConfigs(t *testing.T, shards []*Shard, expectedShards
 
 func TestWithTargetDuration(t *testing.T) {
 	env1 := build.Environment{
-		Tags: []string{"env1"},
+		Dimensions: build.DimensionSet{DeviceType: "env1"},
+		Tags:       []string{"env1"},
 	}
 	env2 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "env2"},
 		Tags:       []string{"env2"},
 	}
-	defaultInput := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5, 6)}
+	defaultInput := []*Shard{shard(env1, "fuchsia", 1, 2, 3, 4, 5, 6)}
 	defaultDurations := TestDurationsMap{
 		"*": {MedianDuration: 1},
+	}
+
+	test := func(id int) string {
+		return fullTestName(id, "fuchsia")
 	}
 
 	t.Run("does nothing if test count and duration are 0", func(t *testing.T) {
@@ -577,14 +544,14 @@ func TestWithTargetDuration(t *testing.T) {
 	t.Run("returns one shard if target test count is greater than test count", func(t *testing.T) {
 		actual := WithTargetDuration(defaultInput, 0, 20, 0, defaultDurations)
 		expectedTests := [][]string{
-			{"test1", "test2", "test3", "test4", "test5", "test6"},
+			{test(1), test(2), test(3), test(4), test(5), test(6)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("returns one shard if target duration is greater than total duration", func(t *testing.T) {
 		expectedTests := [][]string{
-			{"test1", "test2", "test3", "test4", "test5", "test6"},
+			{test(1), test(2), test(3), test(4), test(5), test(6)},
 		}
 		targetDuration := time.Duration(len(expectedTests[0]) + 1)
 		actual := WithTargetDuration(defaultInput, targetDuration, 0, 0, defaultDurations)
@@ -592,11 +559,11 @@ func TestWithTargetDuration(t *testing.T) {
 	})
 
 	t.Run("obeys max-shards-per-env", func(t *testing.T) {
-		input := []*Shard{namedShard(env1, "env1", 1, 2, 3)}
+		input := []*Shard{shard(env1, "fuchsia", 1, 2, 3)}
 		maxShardsPerEnvironment := 1
 		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
 		expectedTests := [][]string{
-			{"test1", "test2", "test3"},
+			{test(1), test(2), test(3)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -604,8 +571,8 @@ func TestWithTargetDuration(t *testing.T) {
 	t.Run("evenly distributes equal-duration tests", func(t *testing.T) {
 		actual := WithTargetDuration(defaultInput, 4, 0, 0, defaultDurations)
 		expectedTests := [][]string{
-			{"test1", "test3", "test5"},
-			{"test2", "test4", "test6"},
+			{test(1), test(3), test(5)},
+			{test(2), test(4), test(6)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -613,12 +580,12 @@ func TestWithTargetDuration(t *testing.T) {
 	t.Run("puts long tests on their own shards", func(t *testing.T) {
 		durations := TestDurationsMap{
 			"*":     {MedianDuration: 1},
-			"test1": {MedianDuration: 10},
+			test(1): {MedianDuration: 10},
 		}
 		actual := WithTargetDuration(defaultInput, 5, 0, 0, durations)
 		expectedTests := [][]string{
-			{"test1"},
-			{"test2", "test3", "test4", "test5", "test6"},
+			{test(1)},
+			{test(2), test(3), test(4), test(5), test(6)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -626,7 +593,7 @@ func TestWithTargetDuration(t *testing.T) {
 	t.Run("uses longest test as target duration, if longer than target duration", func(t *testing.T) {
 		durations := TestDurationsMap{
 			"*":     {MedianDuration: 1},
-			"test1": {MedianDuration: 10},
+			test(1): {MedianDuration: 10},
 		}
 		// targetDuration is 2, but the longest test's duration is 10 and we
 		// can't split a single test across shards. So we must have at least one
@@ -636,67 +603,67 @@ func TestWithTargetDuration(t *testing.T) {
 		// the given target.
 		actual := WithTargetDuration(defaultInput, 2, 0, 0, durations)
 		expectedTests := [][]string{
-			{"test1"},
-			{"test2", "test3", "test4", "test5", "test6"},
+			{test(1)},
+			{test(2), test(3), test(4), test(5), test(6)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("produces shards of similar expected durations", func(t *testing.T) {
-		input := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5)}
+		input := []*Shard{shard(env1, "fuchsia", 1, 2, 3, 4, 5)}
 		durations := TestDurationsMap{
-			"test1": {MedianDuration: 1},
-			"test2": {MedianDuration: 2},
-			"test3": {MedianDuration: 2},
-			"test4": {MedianDuration: 2},
-			"test5": {MedianDuration: 5},
+			test(1): {MedianDuration: 1},
+			test(2): {MedianDuration: 2},
+			test(3): {MedianDuration: 2},
+			test(4): {MedianDuration: 2},
+			test(5): {MedianDuration: 5},
 		}
 		actual := WithTargetDuration(input, 7, 0, 0, durations)
 		expectedTests := [][]string{
-			{"test1", "test5"},          // total duration: 1 + 5 = 6
-			{"test2", "test3", "test4"}, // total duration: 2 + 2 + 2 = 6
+			{test(1), test(5)},          // total duration: 1 + 5 = 6
+			{test(2), test(3), test(4)}, // total duration: 2 + 2 + 2 = 6
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("keeps different environments separate", func(t *testing.T) {
 		input := []*Shard{
-			namedShard(env1, "env1", 1),
-			namedShard(env2, "env2", 2, 3, 4, 5, 6, 7),
+			shard(env1, "fuchsia", 1),
+			shard(env2, "fuchsia", 2, 3, 4, 5, 6, 7),
 		}
 		actual := WithTargetDuration(input, 4, 0, 0, defaultDurations)
 		expectedTests := [][]string{
-			{"test1"},
-			{"test2", "test4", "test6"},
-			{"test3", "test5", "test7"},
+			{test(1)},
+			{test(2), test(4), test(6)},
+			{test(3), test(5), test(7)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("evenly divides tests even if all durations are zero", func(t *testing.T) {
 		input := []*Shard{
-			namedShard(env1, "env1", 1, 2, 3, 4, 5, 6),
+			shard(env1, "fuchsia", 1, 2, 3, 4, 5, 6),
 		}
 		durations := TestDurationsMap{
 			"*": {MedianDuration: 0},
 		}
 		actual := WithTargetDuration(input, 4, 0, 2, durations)
 		expectedTests := [][]string{
-			{"test1", "test3", "test5"},
-			{"test2", "test4", "test6"},
+			{test(1), test(3), test(5)},
+			{test(2), test(4), test(6)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
 	t.Run("assigns one shard per test if all durations are zero and test count < max-shards-per-env", func(t *testing.T) {
-		input := []*Shard{namedShard(env1, "env1", 1, 2, 3)}
+		input := []*Shard{shard(env1, "fuchsia", 1, 2, 3)}
 		maxShardsPerEnvironment := 4
 		durations := TestDurationsMap{
 			"*": {MedianDuration: 0},
 		}
 		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, durations)
 		expectedTests := [][]string{
-			{"test1"}, {"test2"}, {"test3"},
+			{test(1)}, {test(2)}, {test(3)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -708,8 +675,8 @@ func TestWithTargetDuration(t *testing.T) {
 			env2Tests = append(env2Tests, i)
 		}
 		input := []*Shard{
-			namedShard(env1, "env1", 1, 2),
-			namedShard(env2, "env2", env2Tests...),
+			shard(env1, "fuchsia", 1, 2),
+			shard(env2, "fuchsia", env2Tests...),
 		}
 		actual := WithTargetDuration(input, 1, 0, maxShardsPerEnvironment, defaultDurations)
 		// The subshards created for env2 must each have two tests and take
@@ -738,14 +705,14 @@ func TestWithTargetDuration(t *testing.T) {
 
 	t.Run("sorts shards by basename of first test", func(t *testing.T) {
 		input := []*Shard{
-			namedShard(env1, "env1", 3, 2, 1, 4, 0),
+			shard(env1, "fuchsia", 3, 2, 1, 4, 0),
 		}
 		actual := WithTargetDuration(input, 1, 0, 0, defaultDurations)
 		if len(actual) != len(input[0].Tests) {
 			t.Fatalf("expected %d shards but got %d", len(actual), len(input[0].Tests))
 		}
 		for i, shard := range actual {
-			expectedFirstTest := fmt.Sprintf("test%d", i)
+			expectedFirstTest := fullTestName(i, "fuchsia")
 			if len(shard.Tests) != 1 || shard.Tests[0].Name != expectedFirstTest {
 				t.Fatalf("expected shard %s to contain test %s", shard.Name, expectedFirstTest)
 			}
@@ -757,20 +724,16 @@ func TestWithTargetDuration(t *testing.T) {
 			Name: "env1",
 			Env:  env1,
 			Tests: []Test{{
-				Test: build.Test{
-					Name:       "test1",
-					OS:         "fuchsia",
-					PackageURL: "test1",
-				},
+				Test:         makeTest(1, "fuchsia").Test,
 				Runs:         5,
 				RunAlgorithm: KeepGoing,
 			}},
 		}}
 		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
 		expectedTests := [][]string{
-			{"test1", "test1"},
-			{"test1", "test1"},
-			{"test1"},
+			{test(1), test(1)},
+			{test(1), test(1)},
+			{test(1)},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -781,20 +744,12 @@ func TestWithTargetDuration(t *testing.T) {
 			Env:  env1,
 			Tests: []Test{
 				{
-					Test: build.Test{
-						Name:       "test1",
-						OS:         "fuchsia",
-						PackageURL: "test1",
-					},
+					Test:         makeTest(1, "fuchsia").Test,
 					Runs:         5,
 					RunAlgorithm: StopOnSuccess,
 				},
 				{
-					Test: build.Test{
-						Name:       "test2",
-						OS:         "fuchsia",
-						PackageURL: "test2",
-					},
+					Test:         makeTest(2, "fuchsia").Test,
 					Runs:         5,
 					RunAlgorithm: StopOnSuccess,
 				},
@@ -803,11 +758,7 @@ func TestWithTargetDuration(t *testing.T) {
 			Env:  env1,
 			Tests: []Test{
 				{
-					Test: build.Test{
-						Name:       "test1",
-						OS:         "fuchsia",
-						PackageURL: "test1",
-					},
+					Test:         makeTest(1, "fuchsia").Test,
 					Runs:         5,
 					RunAlgorithm: KeepGoing,
 				},
@@ -815,10 +766,10 @@ func TestWithTargetDuration(t *testing.T) {
 		}
 		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
 		expectedTests := [][]string{
-			{"test1", "test2"},
-			{"test1", "test1"},
-			{"test1", "test1"},
-			{"test1"},
+			{test(1), test(2)},
+			{test(1), test(1)},
+			{test(1), test(1)},
+			{test(1)},
 		}
 		expectedRuns := [][]runConfig{
 			{{5, StopOnSuccess}, {5, StopOnSuccess}},

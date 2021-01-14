@@ -28,29 +28,43 @@ func assertEqual(t *testing.T, expected, actual []*Shard) {
 	}
 }
 
+func fullTestName(id int, os string) string {
+	if os == "fuchsia" {
+		return fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
+	}
+	return fmt.Sprintf("/path/to/test%d", id)
+}
+
+func makeTest(id int, os string) Test {
+	return Test{
+		Test: build.Test{
+			Name:       fullTestName(id, os),
+			PackageURL: fullTestName(id, "fuchsia"),
+			Path:       fullTestName(id, "linux"),
+			OS:         os,
+		},
+		Runs: 1,
+	}
+}
+
 func spec(id int, envs ...build.Environment) build.TestSpec {
 	return build.TestSpec{
-		Test: build.Test{
-			Name:       fmt.Sprintf("test%d", id),
-			PackageURL: fmt.Sprintf("test%d", id),
-			Path:       fmt.Sprintf("/path/to/test/%d", id),
-			OS:         "fuchsia",
-		},
+		Test: makeTest(id, "fuchsia").Test,
 		Envs: envs,
 	}
 }
 
-func shard(env build.Environment, ids ...int) *Shard {
-	return namedShard(env, environmentName(env), ids...)
+func fuchsiaShard(env build.Environment, ids ...int) *Shard {
+	return shard(env, "fuchsia", ids...)
 }
 
-func namedShard(env build.Environment, name string, ids ...int) *Shard {
+func shard(env build.Environment, os string, ids ...int) *Shard {
 	var tests []Test
 	for _, id := range ids {
-		tests = append(tests, Test{Test: spec(id, env).Test, Runs: 1})
+		tests = append(tests, makeTest(id, os))
 	}
 	return &Shard{
-		Name:  name,
+		Name:  environmentName(env),
 		Tests: tests,
 		Env:   env,
 	}
@@ -89,7 +103,7 @@ func TestMakeShards(t *testing.T) {
 			[]build.TestSpec{spec(1, env1, env2), spec(2, env1, env3), spec(3, env3)},
 			basicOpts,
 		)
-		expected := []*Shard{shard(env1, 1, 2), shard(env2, 1), shard(env3, 2, 3)}
+		expected := []*Shard{fuchsiaShard(env1, 1, 2), fuchsiaShard(env2, 1), fuchsiaShard(env3, 2, 3)}
 		assertEqual(t, expected, actual)
 	})
 
@@ -98,7 +112,7 @@ func TestMakeShards(t *testing.T) {
 			[]build.TestSpec{spec(1, env1), spec(1, env1), spec(1, env1)},
 			basicOpts,
 		)
-		expected := []*Shard{shard(env1, 1, 1, 1)}
+		expected := []*Shard{fuchsiaShard(env1, 1, 1, 1)}
 		assertEqual(t, expected, actual)
 	})
 
@@ -110,7 +124,7 @@ func TestMakeShards(t *testing.T) {
 			[]build.TestSpec{spec(1, env2, env3), spec(2, env1), spec(3, env3)},
 			basicOpts,
 		)
-		expected := []*Shard{shard(env2, 1), shard(env3, 1, 3), shard(env1, 2)}
+		expected := []*Shard{fuchsiaShard(env2, 1), fuchsiaShard(env3, 1, 3), fuchsiaShard(env1, 2)}
 		assertEqual(t, expected, actual)
 	})
 
@@ -136,7 +150,7 @@ func TestMakeShards(t *testing.T) {
 		)
 		expected := []*Shard{
 			// "C", "A" and "A", "C" should define the same tags.
-			shard(tagger(env3, "A", "C"), 4, 5),
+			fuchsiaShard(tagger(env3, "A", "C"), 4, 5),
 		}
 		assertEqual(t, expected, actual)
 	})
@@ -157,9 +171,9 @@ func TestMakeShards(t *testing.T) {
 			basicOpts,
 		)
 		expected := []*Shard{
-			shard(env1, 1),
-			shard(withAcct(env1, "acct1"), 1),
-			shard(withAcct(env1, "acct2"), 1),
+			fuchsiaShard(env1, 1),
+			fuchsiaShard(withAcct(env1, "acct1"), 1),
+			fuchsiaShard(withAcct(env1, "acct2"), 1),
 		}
 		assertEqual(t, expected, actual)
 	})
@@ -183,7 +197,7 @@ func TestMakeShards(t *testing.T) {
 			},
 		)
 		expected := []*Shard{
-			shard(env1, 1),
+			fuchsiaShard(env1, 1),
 		}
 		assertEqual(t, expected, actual)
 	})
@@ -202,8 +216,8 @@ func TestMakeShards(t *testing.T) {
 			basicOpts,
 		)
 		expected := []*Shard{
-			shard(env1, 1),
-			shard(withNetboot(env1), 1),
+			fuchsiaShard(env1, 1),
+			fuchsiaShard(withNetboot(env1), 1),
 		}
 		assertEqual(t, expected, actual)
 	})
