@@ -518,10 +518,17 @@ async fn main() -> Result<(), Error> {
     let inspect = inspect::Inspector::new();
     inspect.serve(&mut fs)?;
 
-    let abs_vol_relay = volume_relay::VolumeRelay::start();
-    if let Err(e) = &abs_vol_relay {
-        info!("Failed to start AbsoluteVolume Relay: {:?}", e);
-    }
+    // The absolute volume relay is only needed if A2DP Sink is requested.
+    let _abs_vol_relay = if config.enable_sink {
+        volume_relay::VolumeRelay::start()
+            .or_else(|e| {
+                warn!("Failed to start AbsoluteVolume Relay: {:?}", e);
+                Err(e)
+            })
+            .ok()
+    } else {
+        None
+    };
 
     let cobalt: CobaltSender = {
         let (sender, reporter) =
@@ -551,11 +558,18 @@ async fn main() -> Result<(), Error> {
         peers_connected_stream.map(move |p| pool.peer_connected(p)).collect::<()>()
     });
 
-    // TODO(fxbug.dev/66124): launch the target component based on the A2DP source availability
-    let _avrcp_target = avrcp_target::launch().await.or_else(|e| {
-        warn!("Couldn't launch AVRCP target: {}", e);
-        Err(e)
-    });
+    // The AVRCP Target component is only needed if A2DP Source is requested.
+    let _avrcp_target = if config.enable_source {
+        avrcp_target::launch()
+            .await
+            .or_else(|e| {
+                warn!("Couldn't launch AVRCP target: {}", e);
+                Err(e)
+            })
+            .ok()
+    } else {
+        None
+    };
 
     let peers = Arc::new(Mutex::new(peers));
 
