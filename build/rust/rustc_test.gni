@@ -215,9 +215,7 @@ template("rustc_test") {
       } else {
         data_deps += [ "//build/toolchain/runtime:static-rust-libtest-deps" ]
       }
-    }
 
-    if (is_fuchsia) {
       deps += [ "//build/test:rust_test_metadata" ]
       metadata = {
         cmx_patches_walk = [ "//build/test:rust_test_metadata" ]
@@ -233,7 +231,7 @@ template("rustc_test") {
 
     sources = _sources
 
-    # in-tree default in 2018 edition
+    # in-tree default edition is 2018
     if (defined(invoker.edition) && invoker.edition == "2015") {
       configs -= [ "//build/config:rust_edition_2018" ]
       configs += [ "//build/config:rust_edition_2015" ]
