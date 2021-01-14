@@ -75,7 +75,7 @@ fn test_main() -> Result<(), Error> {
             } else {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &to_565(&white));
             }
-            fb.flush_frame(image_id_2)?;
+            fb.flush_frame(image_id_2).expect("flush_frame");
             fb.present_frame(image_id_2, None, true).expect("frame2 present to succeed");
             image_receiver.next().await;
             test_sender.unbounded_send(TestResult::TestPassed).unwrap();
