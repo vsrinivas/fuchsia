@@ -92,9 +92,6 @@ source_set("sessionmgr_lib") {
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(67484): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable_package("dev_session_shell") {
