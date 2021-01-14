@@ -54,6 +54,13 @@ impl Event<'_> {
 #[derive(Debug)]
 pub struct Emitter {
     events: BoundedNode<Node>,
+
+    // Detect doesn't support certain queries yet, similar to
+    // SELECT timestamp FROM events WHERE event == 'InstallationError'
+    // To get around this, we keep a buffer of specifically InstallationError events.
+    // TODO(fxbug.dev/67649): remove this field once Detect can support this query.
+    installation_error_events: BoundedNode<Node>,
+
     // Used to group events from the same update check. Independent from the Omaha session id.
     session_id: u64,
     _node: Node,
@@ -63,6 +70,10 @@ impl Emitter {
     pub fn from_node(node: Node) -> Self {
         Self {
             events: BoundedNode::from_node_and_capacity(node.create_child("events"), 50),
+            installation_error_events: BoundedNode::from_node_and_capacity(
+                node.create_child("installation_error_events"),
+                50,
+            ),
             session_id: 0,
             _node: node,
         }
@@ -77,6 +88,13 @@ impl Emitter {
             event.write_to_inspect(&n, session_id);
             n
         });
+
+        if let Event::InstallationError { .. } = event {
+            self.installation_error_events.push(|n| {
+                event.write_to_inspect(&n, session_id);
+                n
+            });
+        }
     }
 }
 
@@ -125,7 +143,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             "root": {
-                "emitter": {
+                "emitter": contains {
                     "events": contains {
                         "capacity": 50u64,
                         "children": {
@@ -217,16 +235,39 @@ mod test {
     #[test]
     fn installation_error() {
         mock::set_session_id(9);
-        assert_emit_inspect(
-            Event::InstallationError { target_version: Some(TARGET_VERSION) },
-            tree_assertion!(
-                "0": {
-                    "event": "InstallationError",
-                    "ts": AnyProperty,
-                    "session-id": 0u64,
-                    "target-version": TARGET_VERSION,
+        let inspector = Inspector::new();
+        let mut emitter = Emitter::from_node(inspector.root().create_child("emitter"));
+
+        emitter.emit(Event::InstallationError { target_version: Some(TARGET_VERSION) });
+
+        assert_inspect_tree!(
+            inspector,
+            "root": {
+                "emitter": contains {
+                    "events": contains {
+                        "capacity": 50u64,
+                        "children": {
+                            "0": {
+                                "event": "InstallationError",
+                                "ts": AnyProperty,
+                                "session-id": 0u64,
+                                "target-version": TARGET_VERSION,
+                            },
+                        },
+                    },
+                    "installation_error_events": contains {
+                        "capacity": 50u64,
+                        "children": {
+                            "0": {
+                                "event": "InstallationError",
+                                "ts": AnyProperty,
+                                "session-id": 0u64,
+                                "target-version": TARGET_VERSION,
+                            },
+                        }
+                    }
                 }
-            ),
+            }
         );
     }
 
@@ -275,7 +316,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             "root": {
-                "emitter": {
+                "emitter": contains {
                     "events": contains {
                         "capacity": 50u64,
                         "children": {
@@ -309,7 +350,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             "root": {
-                "emitter": {
+                "emitter": contains {
                     "events": contains {
                         "capacity": 50u64,
                         "children": {

@@ -1,0 +1,46 @@
+{
+    select: {
+        installation_error_timestamps: "INSPECT:omaha-client-service.cmx:root/platform_metrics/installation_error_events/children/*:ts",
+    },
+    eval: {
+        // The timestamps output by OMCL are monontonic time, and Now() is as well.
+        last_24_hours: "Fn([time], time > Now() - Hours(24))",
+        installation_errors_today: "Count(Filter(last_24_hours, installation_error_timestamps))",
+    },
+    act: {
+        installation_error_today: {
+            type: "Snapshot",
+            trigger: "installation_errors_today >= 1",
+            repeat: "Hours(24)",
+            signature: "installation-error-today",
+        },
+    },
+    test: {
+        recent_installation_error: {
+            yes: [
+                "installation_error_today",
+            ],
+            now: "Hours(48)",
+            values: {
+                installation_error_timestamps: [
+                    // A day's worth of nanoseconds is 8.64e13, the second timestamp should trigger.
+                    7e13,
+                    9e13,
+                ],
+            },
+        },
+        no_recent_installation_error: {
+            no: [
+                "installation_error_today",
+            ],
+            now: "Hours(48)",
+            values: {
+                installation_error_timestamps: [
+                    // A day's worth of nanoseconds is 8.64e13, neither should trigger.
+                    6e13,
+                    7e13,
+                ],
+            },
+        },
+    },
+}

@@ -33,8 +33,9 @@ triage_files = [
 
 detect_files = [
   "detect/mali-detect.triage",
-  "detect/wlan-detect.triage",
+  "detect/omaha-client-detect.triage",
   "detect/sysmem-detect.triage",
+  "detect/wlan-detect.triage",
 ]
 
 triage_files += detect_files

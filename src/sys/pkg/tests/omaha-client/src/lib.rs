@@ -22,7 +22,10 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_inspect::{
-        assert_inspect_tree, reader::DiagnosticsHierarchy, testing::TreeAssertion, tree_assertion,
+        assert_inspect_tree,
+        reader::DiagnosticsHierarchy,
+        testing::{AnyProperty, TreeAssertion},
+        tree_assertion,
     },
     fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
     fuchsia_zircon as zx,
@@ -341,7 +344,7 @@ impl TestEnv {
         assert_inspect_tree!(
             self.inspect_hierarchy().await,
             "root": contains {
-                "platform_metrics": {
+                "platform_metrics": contains {
                     "events": contains {
                         "capacity": 50u64,
                         children,
@@ -779,6 +782,25 @@ async fn test_omaha_client_update_error() {
         }
     ))
     .await;
+
+    assert_inspect_tree!(
+        env.inspect_hierarchy().await,
+        "root": contains {
+            "platform_metrics": contains {
+                "installation_error_events": contains {
+                    "capacity": 50u64,
+                    "children": {
+                        "0": contains {
+                            "event": "InstallationError",
+                            "target-version": "0.1.2.3",
+                            "ts": AnyProperty,
+                        }
+                    }
+
+                }
+            }
+        }
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
