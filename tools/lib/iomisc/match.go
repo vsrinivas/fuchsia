@@ -71,10 +71,6 @@ func (m *MatchingReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-type byteTracker interface {
-	Bytes() []byte
-}
-
 // ReadUntilMatch reads from a MatchingReader until a match has been read
 // and returns the match.
 // Checks ctx for cancellation only between calls to m.Read(), so cancellation

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -490,6 +491,22 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 	}, nil
 }
 
+// Exposed for testability.
+var newTestStartedContext = func(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, time.Second)
+}
+
+// lastWriteSaver is an io.Writer that saves the bytes written in the last Write().
+type lastWriteSaver struct {
+	buf []byte
+}
+
+func (w *lastWriteSaver) Write(p []byte) (int, error) {
+	w.buf = make([]byte, len(p))
+	copy(w.buf, p)
+	return len(p), nil
+}
+
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
 	if err != nil {
@@ -497,11 +514,30 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 	}
 	cmd := asSerialCmd(command)
 	logger.Debugf(ctx, "starting: %v", command)
-	if _, err := io.WriteString(t.socket, cmd); err != nil {
-		return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+
+	// If a single read from the socket includes both the bytes that indicate the test started and the bytes
+	// that indicate the test completed, then the startedReader will consume the bytes needed for detecting
+	// completion. Thus we save the last read from the socket and replay it when searching for completion.
+	lastWrite := &lastWriteSaver{}
+	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
+	for ctx.Err() == nil {
+		if _, err := io.WriteString(t.socket, cmd); err != nil {
+			return nil, fmt.Errorf("failed to write to serial socket: %v", err)
+		}
+		startedCtx, cancel := newTestStartedContext(ctx)
+		_, err := iomisc.ReadUntilMatch(startedCtx, startedReader)
+		cancel()
+		if err == nil {
+			break
+		}
+		logger.Warningf(ctx, "test not started after timeout, retrying")
 	}
 
-	success, err := runtests.TestPassed(ctx, t.socket, test.Name)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	success, err := runtests.TestPassed(ctx, io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket), test.Name)
 
 	if err != nil {
 		return nil, err
