@@ -17,11 +17,12 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/devices/board/drivers/machina/machina_board_bind.h"
 
 static zx_status_t machina_pci_init(void) {
   zx_status_t status;
@@ -188,7 +189,4 @@ static zx_driver_ops_t machina_board_driver_ops = {
     .bind = machina_board_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(machina_board, machina_board_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MACHINA), ZIRCON_DRIVER_END(machina_board)
+ZIRCON_DRIVER(machina_board, machina_board_driver_ops, "zircon", "0.1");

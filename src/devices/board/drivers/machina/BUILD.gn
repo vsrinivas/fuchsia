@@ -2,7 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("machina_board_bind") {
+  rules = "machina_board.bind"
+  output = "machina_board_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":machina_board_bind_test" ]
+}
 
 driver_module("machina") {
   configs += [
@@ -17,13 +33,11 @@ driver_module("machina") {
     "machina.c",
   ]
   deps = [
+    ":machina_board_bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
