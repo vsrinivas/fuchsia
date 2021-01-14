@@ -61,6 +61,7 @@ class DeviceImplTest : public gtest::RealLoopFixture {
   void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());
     allocator_.set_error_handler(MakeErrorHandler("Sysmem Allocator"));
+    allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     fuchsia::camera2::hal::ControllerHandle controller;
     auto controller_result = FakeController::Create(controller.NewRequest());
@@ -192,7 +193,9 @@ TEST_F(DeviceImplTest, GetFrames) {
         auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
-        token.BindSync()->Close();
+        auto bound_token = token.BindSync();
+        bound_token->SetName(1, "DeviceImplTestFakeStream");
+        bound_token->Close();
         legacy_stream_created = true;
         callback(kMaxCampingBuffers);
       },
