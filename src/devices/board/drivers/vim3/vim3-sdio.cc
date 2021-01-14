@@ -12,6 +12,7 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
+#include "vim3-gpios.h"
 #include "vim3.h"
 
 namespace vim3 {
@@ -85,12 +86,12 @@ zx_status_t Vim3::SdioInit() {
   sdio_dev.metadata_list = sdio_metadata;
   sdio_dev.metadata_count = countof(sdio_metadata);
 
-  gpio_impl_.SetAltFunction(A311D_GPIOX(0), A311D_GPIOX_0_SDIO_D0_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOX(1), A311D_GPIOX_1_SDIO_D1_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOX(2), A311D_GPIOX_2_SDIO_D2_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOX(3), A311D_GPIOX_3_SDIO_D3_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOX(4), A311D_GPIOX_4_SDIO_CLK_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOX(5), A311D_GPIOX_5_SDIO_CMD_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_D0, A311D_GPIOX_0_SDIO_D0_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_D1, A311D_GPIOX_1_SDIO_D1_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_D2, A311D_GPIOX_2_SDIO_D2_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_D3, A311D_GPIOX_3_SDIO_D3_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_CLK, A311D_GPIOX_4_SDIO_CLK_FN);
+  gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
   if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, countof(sdio_fragments),
                                          UINT32_MAX)) != ZX_OK) {
