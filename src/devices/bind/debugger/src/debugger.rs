@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 use crate::compiler;
+use crate::ddk_bind_constants::{BIND_AUTOBIND, BIND_FLAGS, BIND_PROTOCOL};
+use crate::encode_bind_program_v1::{RawCondition, RawInstruction, RawOp};
 use crate::errors::UserError;
-use crate::instruction::{DeviceProperty, RawAstLocation, RawCondition, RawInstruction, RawOp};
+use crate::instruction::{DeviceProperty, RawAstLocation};
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::fmt;
-
-// From <ddk/binding.h>.
-const BIND_FLAGS: u32 = 0;
-const BIND_PROTOCOL: u32 = 1;
-const BIND_AUTOBIND: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebuggerError {
@@ -46,6 +43,7 @@ enum DebuggerOutput {
     IfCondition { key: u32, condition: RawCondition, success: bool, line: u32 },
 }
 
+// TODO(fxb:67441): Support the new bytecode format in the debugger.
 pub fn debug(
     instructions: &[RawInstruction<[u32; 3]>],
     properties: &[DeviceProperty],
@@ -372,18 +370,20 @@ mod test {
     use super::*;
     use crate::bind_program::{Condition, ConditionOp, Statement};
     use crate::compiler::{self, Symbol, SymbolTable};
+    use crate::encode_bind_program_v1::encode_instruction;
     use crate::instruction::{self, Instruction};
     use crate::make_identifier;
     use crate::parser_common::{CompoundIdentifier, Span, Value};
 
     fn compile_to_raw(
         statements: Vec<Statement>,
-        symbol_table: &SymbolTable,
+        symbol_table: SymbolTable,
     ) -> Vec<RawInstruction<[u32; 3]>> {
         compiler::compile_statements(statements, symbol_table)
             .unwrap()
+            .instructions
             .into_iter()
-            .map(|symbolic| symbolic.to_instruction().to_raw())
+            .map(|symbolic| encode_instruction(symbolic.to_instruction()))
             .collect()
     }
 
@@ -397,8 +397,11 @@ mod test {
     fn autobind() {
         // Autobind is false (BIND_AUTOBIND has the value 0).
         let instructions = vec![
-            Instruction::Match(instruction::Condition::Equal(BIND_AUTOBIND, 0)).to_raw(),
-            Instruction::Abort(instruction::Condition::Always).to_raw(),
+            RawInstruction::from(Instruction::Match(instruction::Condition::Equal(
+                BIND_AUTOBIND,
+                0,
+            ))),
+            RawInstruction::from(Instruction::Abort(instruction::Condition::Always)),
         ];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Ok(true));
@@ -406,16 +409,18 @@ mod test {
 
     #[test]
     fn bind_flags_not_supported() {
-        let instructions =
-            vec![Instruction::Abort(instruction::Condition::Equal(BIND_FLAGS, 0)).to_raw()];
+        let instructions = vec![RawInstruction::from(Instruction::Abort(
+            instruction::Condition::Equal(BIND_FLAGS, 0),
+        ))];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::BindFlagsNotSupported));
     }
 
     #[test]
     fn missing_bind_protocol() {
-        let instructions =
-            vec![Instruction::Abort(instruction::Condition::Equal(BIND_PROTOCOL, 5)).to_raw()];
+        let instructions = vec![RawInstruction::from(Instruction::Abort(
+            instruction::Condition::Equal(BIND_PROTOCOL, 5),
+        ))];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::MissingBindProtocol));
     }
@@ -444,7 +449,7 @@ mod test {
         }];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
-        let raw_instructions = compile_to_raw(statements, &symbol_table);
+        let raw_instructions = compile_to_raw(statements, symbol_table);
         let properties = Vec::new();
         assert_eq!(debug(&raw_instructions, &properties), Ok(true));
     }
@@ -464,7 +469,7 @@ mod test {
             }];
             let mut symbol_table = HashMap::new();
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]
@@ -537,7 +542,7 @@ mod test {
             }];
             let mut symbol_table = HashMap::new();
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]
@@ -607,7 +612,7 @@ mod test {
             let mut symbol_table = HashMap::new();
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
 
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]
@@ -716,7 +721,7 @@ mod test {
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
             symbol_table.insert(make_identifier!("xyz"), Symbol::DeprecatedKey(0x0200));
 
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]
@@ -902,7 +907,7 @@ mod test {
             let mut symbol_table = HashMap::new();
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
 
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]
@@ -975,7 +980,7 @@ mod test {
             symbol_table.insert(make_identifier!("xyz"), Symbol::DeprecatedKey(0x0200));
             symbol_table.insert(make_identifier!("pqr"), Symbol::DeprecatedKey(0x0300));
 
-            compile_to_raw(statements, &symbol_table)
+            compile_to_raw(statements, symbol_table)
         }
 
         #[test]

@@ -55,8 +55,8 @@ pub fn run(program: &str, libraries: &[String], tests: &str) -> Result<bool, Tes
 
 impl TestSuite {
     fn run(&self, program: &str, libraries: &[String]) -> Result<bool, TestError> {
-        let (instructions, symbol_table) =
-            compiler::compile_to_symbolic(program, libraries).map_err(TestError::CompilerError)?;
+        let bind_program =
+            compiler::compile(program, libraries).map_err(TestError::CompilerError)?;
 
         for test in &self.specs {
             let mut device_specification = DeviceSpecification::new();
@@ -66,9 +66,8 @@ impl TestSuite {
                     .map_err(TestError::DeviceSpecParserError)?;
             }
 
-            let result =
-                debug_from_device_specification(&instructions, &symbol_table, device_specification)
-                    .map_err(TestError::DebuggerError)?;
+            let result = debug_from_device_specification(&bind_program, device_specification)
+                .map_err(TestError::DebuggerError)?;
             match (&test.expected, result) {
                 (ExpectedResult::Match, false) => return Ok(false),
                 (ExpectedResult::Abort, true) => return Ok(false),

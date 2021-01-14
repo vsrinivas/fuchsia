@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use bind_debugger::debugger;
-use bind_debugger::instruction::{DeviceProperty, RawInstruction};
+use bind_debugger::encode_bind_program_v1::RawInstruction;
+use bind_debugger::instruction::DeviceProperty;
 use fidl_fuchsia_device_manager::BindDebuggerMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
