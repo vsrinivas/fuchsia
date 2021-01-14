@@ -32,8 +32,20 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
 
   upload_all_every_fifteen_minutes_task_.set_handler([this]() { UploadAllEveryFifteenMinutes(); });
 
-  // TODO(fxbug.dev/56448): Initialize queue with the reports in the store. We need to be able to
-  // distinguish archived reports from reports that have not been uploaded yet.
+  // Note: The upload attempt data is lost when the component stops and all reports start with
+  // upload attempts of 0.
+  pending_reports_ = store_.GetReports();
+  std::sort(pending_reports_.begin(), pending_reports_.end());
+
+  if (!pending_reports_.empty()) {
+    FX_LOGS(INFO) << "Initializing queue with reports: ";
+    std::string reports_str;
+    for (const auto& report_id : pending_reports_) {
+      reports_str.append(std::to_string(report_id));
+      reports_str.push_back(' ');
+    }
+    FX_LOGS(INFO) << "\t" << reports_str;
+  }
 }
 
 uint64_t Queue::Size() const {
@@ -64,7 +76,7 @@ bool Queue::Add(Report report) {
   const auto is_hourly_report = report.IsHourlyReport();
 
   // If an hourly report is already present, don't delete it and don't store a new one. This is done
-  // to preserve the data from the first hourly report that wasn't successfully uploaded and will 
+  // to preserve the data from the first hourly report that wasn't successfully uploaded and will
   // have the best chance of containing data on why.
   if (report.IsHourlyReport() && hourly_report_.has_value()) {
     Delete(report.Id());

@@ -155,9 +155,12 @@ class QueueTest : public UnitTestFixture {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
+    InitQueue();
+  }
+
+  void InitQueue() {
     queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
                                      crash_server_.get(), snapshot_manager_.get());
-    ASSERT_TRUE(queue_);
     queue_->WatchReportingPolicy(&reporting_policy_watcher_);
     queue_->WatchNetwork(&network_watcher_);
   }
@@ -580,6 +583,29 @@ TEST_F(QueueTest, Check_ThrottledReportDropped) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
               }));
+}
+
+TEST_F(QueueTest, Check_InitializesFromStore) {
+  // This test cannot call RunLoopUntilIdle in any capacity one IntiQueue has been called been
+  // called for the second time. The watchers still hold callbacks tied to the old, deleted queue
+  // and will crash if they attempt to execute the callbacks.
+  SetUpQueue({});
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUndecided,
+      QueueOps::AddNewReport,
+      QueueOps::AddNewReport,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  EXPECT_EQ(queue_->Size(), 3u);
+
+  InitQueue();
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUndecided,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  EXPECT_EQ(queue_->Size(), 4u);
 }
 
 TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
