@@ -4,10 +4,11 @@
 
 #include "c18.h"
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/board/drivers/c18/c18_bind.h"
 
 namespace board_c18 {
 
@@ -104,7 +105,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace board_c18
 
-ZIRCON_DRIVER_BEGIN(c18, board_c18::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_C18), ZIRCON_DRIVER_END(c18)
+ZIRCON_DRIVER(c18, board_c18::driver_ops, "zircon", "0.1");
