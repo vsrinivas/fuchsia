@@ -259,17 +259,15 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 	defer eps.close()
 
-	eps.mu.Lock()
 	channels := []struct {
 		ch   <-chan struct{}
 		name string
 	}{
 		{ch: eps.closing, name: "closing"},
-		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
-		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
+		{ch: eps.loopReadDone, name: "loopReadDone"},
+		{ch: eps.loopWriteDone, name: "loopWriteDone"},
+		{ch: eps.loopPollDone, name: "loopPollDone"},
 	}
-	eps.mu.Unlock()
 
 	// Check starting conditions.
 	for _, ch := range channels {
@@ -372,12 +370,10 @@ func TestEndpoint_Close(t *testing.T) {
 	timeout := make(chan struct{})
 	time.AfterFunc(5*time.Second, func() { close(timeout) })
 	for _, ch := range channels {
-		if ch.ch != nil {
-			select {
-			case <-ch.ch:
-			case <-timeout:
-				t.Errorf("%s not cleaned up", ch.name)
-			}
+		select {
+		case <-ch.ch:
+		case <-timeout:
+			t.Errorf("%s not cleaned up", ch.name)
 		}
 	}
 
@@ -476,28 +472,24 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		}
 		defer eps.close()
 
-		eps.mu.Lock()
 		channels := []struct {
 			ch   <-chan struct{}
 			name string
 		}{
 			{ch: eps.closing, name: "closing"},
-			{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-			{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
-			{ch: eps.mu.loopPollDone, name: "loopPollDone"},
+			{ch: eps.loopReadDone, name: "loopReadDone"},
+			{ch: eps.loopWriteDone, name: "loopWriteDone"},
+			{ch: eps.loopPollDone, name: "loopPollDone"},
 		}
-		eps.mu.Unlock()
 
 		// Give a generous timeout for the closed channel to be detected.
 		timeout := make(chan struct{})
 		time.AfterFunc(5*time.Second, func() { close(timeout) })
 		for _, ch := range channels {
-			if ch.ch != nil {
-				select {
-				case <-ch.ch:
-				case <-timeout:
-					t.Errorf("%s not cleaned up", ch.name)
-				}
+			select {
+			case <-ch.ch:
+			case <-timeout:
+				t.Errorf("%s not cleaned up", ch.name)
 			}
 		}
 
