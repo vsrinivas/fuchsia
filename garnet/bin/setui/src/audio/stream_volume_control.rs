@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::audio::utils::round_volume_level,
     crate::base::SettingType,
     crate::call,
     crate::handler::setting_handler::ControllerError,
@@ -76,9 +77,9 @@ impl StreamVolumeControl {
             self.bind_volume_control().await?;
         }
 
-        // Round to 1%.
+        // Round volume level from user input.
         let mut new_stream_value = stream.clone();
-        new_stream_value.user_volume_level = (stream.user_volume_level * 100.0).floor() / 100.0;
+        new_stream_value.user_volume_level = round_volume_level(stream.user_volume_level);
 
         let proxy = self.proxy.as_ref().unwrap();
 
