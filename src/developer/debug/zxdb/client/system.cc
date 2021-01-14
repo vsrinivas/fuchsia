@@ -84,14 +84,15 @@ const char* ClientSettings::System::kLanguage_Auto = "auto";
 
 const char* ClientSettings::System::kSecondChanceExceptions = "second-chance-exceptions";
 static const char* kSecondChanceExceptionsDescription =
-    R"( List of exception types that should be handled as second-chance by
-    default; anything not in this list will be handled as first-chance. For
-    brevity two-to-three letter shorthands are used represent the types; valid
-    shorthands are
-    • "gen": general
-    • "pf": page faults
-    • "ui": undefined instruction
-    • "ua": unaligned access)";
+    R"(  List of exception types that should be handled as second-chance by
+  default; anything not in this list will be handled as first-chance. For
+  brevity two-to-three letter shorthands are used represent the types; valid
+  shorthands are:
+
+   • "gen": general
+   • "pf": page faults
+   • "ui": undefined instruction
+   • "ua": unaligned access)";
 
 // Symbol lookup.
 const char* ClientSettings::System::kSymbolIndexFiles = "symbol-index-files";

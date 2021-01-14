@@ -149,7 +149,7 @@ R  000059f5c7068000-000059f5c708d000      148k:sz                    'useralloc'
 ```
 
 > You can also display memory mappings using the `aspace` command in
-> [zxdb](/docs/development/debugger/debugger_usage.md).
+> [zxdb](/docs/development/debugger/README.md).
 
 ### Dump all VMOs associated with a process
 
@@ -212,7 +212,7 @@ PSS     =  PRIVATE + (SHARED / #shr)
 ```
 
 > You can also display VMO information using the `handle` command in
-> [zxdb](/docs/development/debugger/debugger_usage.md).
+> [zxdb](/docs/development/debugger/kernel_objects.md).
 
 ### Dump "hidden" (unmapped and kernel) VMOs
 

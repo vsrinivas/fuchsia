@@ -72,7 +72,7 @@ The `handles` tool supports filtering and reverse filtering by object type; use
 
 ## Handles in the debugger
 
-You can view handle information using the [debugger](/docs/development/debugger/debugger_usage.md).
+You can view handle information using the [debugger](/docs/development/debugger/kernel_objects.md).
 To do this, attach to the process in question and run the `handles` command. This shows the handle
 value, object type, and object koid:
 
