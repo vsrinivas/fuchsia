@@ -20,6 +20,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/type_traits.h",
   ]
   sources = [
+    "include/lib/stdcompat/internal/constructors.h",
     "include/lib/stdcompat/internal/storage.h",
     "include/lib/stdcompat/internal/utility.h",
   ]

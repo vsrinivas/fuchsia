@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
-#define LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
+#ifndef LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_H_
+#define LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_H_
 
 #include <type_traits>
 #include <utility>
 
-#include "utility_internal.h"
-
-namespace fit {
+namespace cpp17 {
 namespace internal {
 
 // Mixin that implicitly deletes the subclass default constructor when type T
@@ -96,6 +94,6 @@ struct modulate_copy_and_move
     : modulate_copy_and_move_index<std::index_sequence_for<Ts...>, Ts...> {};
 
 }  // namespace internal
-}  // namespace fit
+}  // namespace cpp17
 
-#endif  // LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
+#endif  // LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_H_
