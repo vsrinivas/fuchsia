@@ -101,6 +101,8 @@ WEAVE_ERROR ConfigurationManagerImpl::GetBleDeviceNamePrefix(char* device_name_p
   return delegate_->GetBleDeviceNamePrefix(device_name_prefix, device_name_prefix_size, out_len);
 }
 
+bool ConfigurationManagerImpl::IsThreadEnabled() { return delegate_->IsThreadEnabled(); }
+
 bool ConfigurationManagerImpl::IsWoBLEEnabled() { return delegate_->IsWoBLEEnabled(); }
 
 bool ConfigurationManagerImpl::IsWoBLEAdvertisementEnabled() {

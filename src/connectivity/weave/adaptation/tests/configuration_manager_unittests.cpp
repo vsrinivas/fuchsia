@@ -596,5 +596,9 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   EXPECT_STREQ(serial_num, expected_serial.c_str());
 }
 
+TEST_F(ConfigurationManagerTest, IsThreadEnabled) {
+  EXPECT_TRUE(ConfigurationMgrImpl().IsThreadEnabled());
+}
+
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

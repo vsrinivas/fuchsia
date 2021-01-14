@@ -41,6 +41,7 @@ constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
 constexpr char kDeviceInfoConfigKey_BleDeviceNamePrefix[] = "ble-device-name-prefix";
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
+constexpr char kDeviceInfoConfigKey_EnableThread[] = "enable-thread";
 constexpr char kDeviceInfoConfigKey_EnableWoBLE[] = "enable-woble";
 constexpr char kDeviceInfoConfigKey_EnableWoBLEAdvertisement[] = "enable-woble-advertisement";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
@@ -209,6 +210,12 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetBleDeviceNamePrefix(char* devic
                                                                      size_t* out_len) {
   return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_BleDeviceNamePrefix,
                                           device_name_prefix, device_name_prefix_size, out_len);
+}
+
+bool ConfigurationManagerDelegateImpl::IsThreadEnabled() {
+  bool is_enabled = false;
+  device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableThread, &is_enabled);
+  return is_enabled;
 }
 
 bool ConfigurationManagerDelegateImpl::IsWoBLEEnabled() {

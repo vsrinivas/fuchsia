@@ -118,6 +118,12 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // Returns whether this device is a member of a fabric.
     virtual bool IsMemberOfFabric() = 0;
 
+    // Returns whether Thread is enabled.
+    //
+    // When enabled, ThreadStackManager will attempt to support Thread
+    // operations and fail if it is unable to provide such support.
+    virtual bool IsThreadEnabled() = 0;
+
     // Returns whether WoBLE is enabled.
     //
     // When enabled, weavestack will publish GATT service for WoBLE.
@@ -155,6 +161,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   // Reads the BLE device name prefix, see definition in delegate.
   WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
                                      size_t* out_len);
+
+  // Returns whether Thread is enabled, see definition in delegate.
+  bool IsThreadEnabled();
 
   // Returns whether WoBLE is enabled, see definition in delegate.
   bool IsWoBLEEnabled();

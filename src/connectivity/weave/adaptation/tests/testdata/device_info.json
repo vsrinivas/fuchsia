@@ -6,6 +6,7 @@
     "device-id-path" : "test_device_id",
     "mfr-device-cert-path": "test_mfr_cert",
     "enable-woble" : true,
+    "enable-thread" : true,
     "ble-device-name-prefix" : "Fuchsia",
     "mfr-private-key-path" : "test_mfr_private_key",
     "serial-number": "ABCD1234",

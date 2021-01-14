@@ -45,6 +45,7 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   WEAVE_ERROR WritePersistedStorageValue(Key key, uint32_t value) override;
   WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
                                      size_t* out_len) override;
+  bool IsThreadEnabled() override;
   bool IsWoBLEEnabled() override;
   bool IsWoBLEAdvertisementEnabled() override;
   WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override;
