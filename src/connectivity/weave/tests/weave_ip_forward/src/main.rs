@@ -307,17 +307,17 @@ async fn run_client_node(
         let () = bus.wait_for_client(server_node_name).await?;
     }
 
-    let mut fut_vec = Vec::new();
-
-    for connect_addr in connect_addrs {
+    let futs = connect_addrs.into_iter().map(|connect_addr| async move {
         fx_log_info!("connecting to {}...", connect_addr);
-        fut_vec.push(get_test_fut_client(connect_addr));
-        fx_log_info!("succeed");
-    }
+        let result = get_test_fut_client(connect_addr.clone()).await;
+        match result {
+            Ok(()) => fx_log_info!("connected to {}", connect_addr),
+            Err(ref e) => fx_log_info!("failed to connect to {}: {}", connect_addr, e),
+        };
+        result
+    });
 
-    for fut in fut_vec {
-        fut.await?;
-    }
+    let _: Vec<()> = futures::future::try_join_all(futs).await?;
 
     fx_log_info!("client {} exited", node_name);
     Ok(())
