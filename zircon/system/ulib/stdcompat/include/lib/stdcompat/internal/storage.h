@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_STORAGE_INTERNAL_H_
-#define LIB_FIT_STORAGE_INTERNAL_H_
+#ifndef LIB_STDCOMPAT_INTERNAL_STORAGE_H_
+#define LIB_STDCOMPAT_INTERNAL_STORAGE_H_
 
 #include <cstdint>
 #include <limits>
 #include <type_traits>
 
-#include "utility_internal.h"
+#include "utility.h"
 
-namespace fit {
+namespace cpp17 {
 namespace internal {
 
 // Type tag to select overloads based on type T.
@@ -80,9 +80,9 @@ using index_type = size_t;
 constexpr index_type empty_index = std::numeric_limits<index_type>::max();
 
 #ifdef NDEBUG
-#define FIT_INTERNAL_UNREACHABLE_OR_ABORT __builtin_unreachable
+#define LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT __builtin_unreachable
 #else
-#define FIT_INTERNAL_UNREACHABLE_OR_ABORT __builtin_abort
+#define LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT __builtin_abort
 #endif
 
 // Base type for lazy-initialized union storage types. This type implements a
@@ -114,14 +114,14 @@ union storage_base<destructor_class::non_trivial, type_index<empty_type, empty_i
     if (index == empty_index) {
       new (&empty) empty_type{};
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
   void construct_at(size_t index, storage_base&&) {
     if (index == empty_index) {
       new (&empty) empty_type{};
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -129,14 +129,14 @@ union storage_base<destructor_class::non_trivial, type_index<empty_type, empty_i
     if (index == empty_index) {
       empty = other.empty;
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
   void assign_at(size_t index, storage_base&& other) {
     if (index == empty_index) {
       empty = std::move(other.empty);
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -145,7 +145,7 @@ union storage_base<destructor_class::non_trivial, type_index<empty_type, empty_i
       using std::swap;
       swap(empty, other.empty);
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -164,7 +164,7 @@ union storage_base<destructor_class::non_trivial, type_index<empty_type, empty_i
     if (index == empty_index) {
       empty.empty_type::~empty_type();
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -209,14 +209,14 @@ union storage_base<destructor_class::trivial, type_index<empty_type, empty_index
     if (index == empty_index) {
       new (&empty) empty_type{};
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
   constexpr void construct_at(size_t index, storage_base&&) {
     if (index == empty_index) {
       new (&empty) empty_type{};
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -224,14 +224,14 @@ union storage_base<destructor_class::trivial, type_index<empty_type, empty_index
     if (index == empty_index) {
       empty = other.empty;
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
   constexpr void assign_at(size_t index, storage_base&& other) {
     if (index == empty_index) {
       empty = std::move(other.empty);
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -240,7 +240,7 @@ union storage_base<destructor_class::trivial, type_index<empty_type, empty_index
       using std::swap;
       swap(empty, other.empty);
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -259,7 +259,7 @@ union storage_base<destructor_class::trivial, type_index<empty_type, empty_index
     if (index == empty_index) {
       empty.empty_type::~empty_type();
     } else {
-      FIT_INTERNAL_UNREACHABLE_OR_ABORT();
+      LIB_STDCOMPAT_INTERNAL_UNREACHABLE_OR_ABORT();
     }
   }
 
@@ -841,6 +841,6 @@ template <typename... Ts>
 using storage_type = decltype(make_storage<Ts...>(std::index_sequence_for<Ts...>{}));
 
 }  // namespace internal
-}  // namespace fit
+}  // namespace cpp17
 
-#endif  // LIB_FIT_STORAGE_INTERNAL_H_
+#endif  // LIB_STDCOMPAT_INTERNAL_STORAGE_H_

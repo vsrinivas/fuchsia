@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_CONSTRUCTORS_INTERNAL_H_
-#define LIB_FIT_CONSTRUCTORS_INTERNAL_H_
+#ifndef LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
+#define LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
 
 #include <type_traits>
 #include <utility>
@@ -98,4 +98,4 @@ struct modulate_copy_and_move
 }  // namespace internal
 }  // namespace fit
 
-#endif  //  LIB_FIT_CONSTRUCTORS_INTERNAL_H_
+#endif  // LIB_STDCOMPAT_INTERNAL_CONSTRUCTORS_INTERNAL_H_
