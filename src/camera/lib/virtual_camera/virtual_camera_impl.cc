@@ -19,6 +19,7 @@
 
 #include <safemath/safe_conversions.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 namespace camera {
 
 fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCamera::Create(
@@ -110,6 +111,8 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
     FX_PLOGS(ERROR, status) << "fuchsia.sysmem.Allocator server disconnected.";
     camera->camera_ = nullptr;
   });
+  camera->allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                         fsl::GetCurrentProcessKoid());
 
   auto stream_result =
       FakeStream::Create(DefaultStreamProperties(),

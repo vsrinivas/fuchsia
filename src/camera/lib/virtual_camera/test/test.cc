@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include "src/camera/lib/virtual_camera/virtual_camera.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class VirtualCameraTest : public gtest::RealLoopFixture {
@@ -19,6 +20,8 @@ class VirtualCameraTest : public gtest::RealLoopFixture {
   virtual void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());
     SetFailOnError(allocator_);
+    allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + "-client",
+                                   fsl::GetCurrentProcessKoid());
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
     context_->svc()->Connect(allocator.NewRequest());
     auto result = camera::VirtualCamera::Create(std::move(allocator));
