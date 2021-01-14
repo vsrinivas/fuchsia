@@ -10,12 +10,13 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::persist::Storage;
 use crate::internal::core;
-use crate::internal::core::message::Messenger;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
 use crate::policy::base::Request;
-use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, Transform};
-use crate::switchboard::base::{PrivacyInfo, SettingRequest};
+use crate::policy::policy_handler::{
+    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
+};
+use crate::switchboard::base::{PrivacyInfo, SettingEvent, SettingRequest};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -56,8 +57,11 @@ impl<S: Storage> PolicyHandler for FakePolicyHandler<S> {
     async fn handle_setting_request(
         &mut self,
         _request: SettingRequest,
-        _messenger: Messenger,
-    ) -> Option<Transform> {
+    ) -> Option<RequestTransform> {
+        None
+    }
+
+    async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
         None
     }
 }
@@ -68,9 +72,16 @@ async fn test_write() {
     let expected_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
     let core_messenger_factory = core::message::create_hub();
     let (core_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (_, setting_proxy_receptor) =
+        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<PrivacyInfo>(CONTEXT_ID);
-    let client_proxy = ClientProxy::new(core_messenger, store.clone(), SettingType::Audio);
+    let client_proxy = ClientProxy::new(
+        core_messenger,
+        setting_proxy_receptor.get_signature(),
+        store.clone(),
+        SettingType::Audio,
+    );
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.

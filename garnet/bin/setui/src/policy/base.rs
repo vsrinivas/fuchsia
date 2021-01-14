@@ -64,6 +64,7 @@ pub type GenerateHandler<T> =
 pub struct Context<T: DeviceStorageFactory> {
     pub setting_type: SettingType,
     pub messenger: message::Messenger,
+    pub setting_proxy_signature: message::Signature,
     pub storage_factory_handle: Arc<Mutex<T>>,
     pub id: u64,
 }
@@ -75,7 +76,8 @@ pub trait PolicyHandlerFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: message::Factory,
+        messenger: message::Messenger,
+        setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError>;
 }
 
@@ -86,9 +88,6 @@ pub enum PolicyHandlerFactoryError {
 
     #[error("Cannot find setting handler generator for {0:?}")]
     GeneratorNotFound(SettingType),
-
-    #[error("Core messageHub messenger for setting handler could not be created")]
-    HandlerMessengerError,
 
     #[error("Setting handler for {0:?} failed to startup")]
     HandlerStartupError(SettingType),

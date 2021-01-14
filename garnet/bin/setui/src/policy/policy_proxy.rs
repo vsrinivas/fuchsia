@@ -12,7 +12,7 @@ use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::policy::base::{PolicyHandlerFactory, Request};
-use crate::policy::policy_handler::{PolicyHandler, Transform};
+use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 use futures::lock::Mutex;
 use std::sync::Arc;
@@ -23,7 +23,6 @@ use std::sync::Arc;
 /// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
 pub struct PolicyProxy {
     policy_handler: Box<dyn PolicyHandler + Send + Sync + 'static>,
-    core_messenger: core::message::Messenger,
 }
 
 impl PolicyProxy {
@@ -32,8 +31,9 @@ impl PolicyProxy {
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
-    ) -> Result<(), Error> {
-        let core_messenger_result = core_messenger_factory
+        setting_proxy_signature: core::message::Signature,
+    ) -> Result<core::message::Signature, Error> {
+        let (_, switchboard_receptor) = core_messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     // Only catch messages that were originally sent from the switchboard, and that
@@ -48,23 +48,42 @@ impl PolicyProxy {
                     )
                 })),
             ))))
-            .await;
-        let (core_messenger, core_receptor) = core_messenger_result.map_err(Error::new)?;
+            .await
+            .map_err(Error::new)?;
+
+        let (_, proxy_receptor) = core_messenger_factory
+            .create(MessengerType::Broker(Some(filter::Builder::single(
+                filter::Condition::Custom(Arc::new(move |message| {
+                    // Only catch messages that were sent by the setting proxy and contain a
+                    // SettingEvent.
+                    message.get_author() == setting_proxy_signature
+                        && matches!(message.payload(), core::Payload::Event(_))
+                })),
+            ))))
+            .await
+            .map_err(Error::new)?;
 
         let policy_messenger_result = policy_messenger_factory
             .create(MessengerType::Addressable(Address::Policy(setting_type)))
             .await;
         let (_, policy_receptor) = policy_messenger_result.map_err(Error::new)?;
 
-        let policy_handler =
-            handler_factory.lock().await.generate(setting_type, core_messenger_factory).await?;
+        let (handler_messenger, handler_receptor) =
+            core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
-        let mut proxy = Self { policy_handler, core_messenger };
+        let policy_handler = handler_factory
+            .lock()
+            .await
+            .generate(setting_type, handler_messenger, setting_proxy_signature)
+            .await?;
+
+        let mut proxy = Self { policy_handler };
 
         Task::spawn(async move {
             let policy_fuse = policy_receptor.fuse();
-            let core_fuse = core_receptor.fuse();
-            futures::pin_mut!(policy_fuse, core_fuse);
+            let switchboard_fuse = switchboard_receptor.fuse();
+            let proxy_fuse = proxy_receptor.fuse();
+            futures::pin_mut!(policy_fuse, switchboard_fuse, proxy_fuse);
             loop {
                 futures::select! {
                     // Handle policy messages.
@@ -78,8 +97,8 @@ impl PolicyProxy {
                         }
                     }
 
-                    // Handle intercepted messages from the core message hub.
-                    core_event = core_fuse.select_next_some() => {
+                    // Handle intercepted messages from the switchboard.
+                    switchboard_message = switchboard_fuse.select_next_some() => {
                         if let MessageEvent::Message(
                             core::Payload::Action(SettingAction {
                                 id,
@@ -87,10 +106,20 @@ impl PolicyProxy {
                                 data: SettingActionData::Request(request),
                             }),
                             message_client,
-                        ) = core_event
+                        ) = switchboard_message
                         {
                             proxy
                                 .process_settings_request(id, setting_type, request, message_client)
+                                .await;
+                        }
+                    }
+
+                    // Handler intercepted an event sent by the setting proxy.
+                    proxy_message = proxy_fuse.select_next_some() => {
+                        if let MessageEvent::Message(core::Payload::Event(setting_event), message_client) = proxy_message
+                        {
+                            proxy
+                                .process_settings_event(setting_event, message_client)
                                 .await;
                         }
                     }
@@ -104,7 +133,7 @@ impl PolicyProxy {
         })
         .detach();
 
-        Ok(())
+        Ok(handler_receptor.get_signature())
     }
 
     async fn process_policy_request(
@@ -117,11 +146,11 @@ impl PolicyProxy {
     }
 
     /// Passes the given setting request to the [`PolicyHandler`], then take an appropriate action
-    /// based on the [`Transform`], such as ignoring the message, intercepting the message and
+    /// based on the [`RequestTransform`], such as ignoring the message, intercepting the message and
     /// answering the client directly, or forwarding the message with a modified request.
     ///
     /// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
-    /// [`Transform`]: ../policy_handler/enum.Transform.html
+    /// [`RequestTransform`]: ../policy_handler/enum.RequestTransform.html
     async fn process_settings_request(
         &mut self,
         request_id: u64,
@@ -129,10 +158,9 @@ impl PolicyProxy {
         request: SettingRequest,
         message_client: core::message::Client,
     ) {
-        let handler_result =
-            self.policy_handler.handle_setting_request(request, self.core_messenger.clone()).await;
+        let handler_result = self.policy_handler.handle_setting_request(request).await;
         match handler_result {
-            Some(Transform::Request(modified_request)) => {
+            Some(RequestTransform::Request(modified_request)) => {
                 // Handler provided a modified request to forward to the setting handler in place of
                 // the original.
                 message_client
@@ -143,7 +171,7 @@ impl PolicyProxy {
                     }))
                     .send();
             }
-            Some(Transform::Result(result)) => {
+            Some(RequestTransform::Result(result)) => {
                 // Handler provided a result to return directly to the client, respond to the
                 // intercepted message with the result. By replying through the MessageClient, the
                 // message doesn't continue to be propagated to the setting handler.
@@ -152,6 +180,30 @@ impl PolicyProxy {
                     .send();
             }
             // Don't do anything with the message, it'll continue onwards to the handler as
+            // expected.
+            None => return,
+        }
+    }
+
+    /// Passes the given setting event to the [`PolicyHandler`], then take an appropriate action
+    /// based on the [`EventTransform`] it returns, such as ignoring the event or forwarding the
+    /// event with a modified request.
+    ///
+    /// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
+    /// [`EventTransform`]: ../policy_handler/enum.EventTransform.html
+    async fn process_settings_event(
+        &mut self,
+        event: SettingEvent,
+        message_client: core::message::Client,
+    ) {
+        let handler_result = self.policy_handler.handle_setting_event(event).await;
+        match handler_result {
+            Some(EventTransform::Event(setting_event)) => {
+                // Handler provided a modified setting event to forward to the switchboard in place
+                // of the original.
+                message_client.propagate(core::Payload::Event(setting_event)).send();
+            }
+            // Don't do anything with the message, it'll continue onwards to the switchboard as
             // expected.
             None => return,
         }

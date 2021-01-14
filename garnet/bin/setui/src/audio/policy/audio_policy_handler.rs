@@ -4,11 +4,12 @@
 
 use crate::audio::default_audio_info;
 use crate::audio::policy::{Request, Response, State, StateBuilder, TransformFlags};
-use crate::internal::core::message::Messenger;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
-use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, Transform};
-use crate::switchboard::base::SettingRequest;
+use crate::policy::policy_handler::{
+    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
+};
+use crate::switchboard::base::{SettingEvent, SettingRequest};
 use anyhow::Error;
 use async_trait::async_trait;
 use std::collections::hash_map::Entry;
@@ -89,10 +90,14 @@ impl PolicyHandler for AudioPolicyHandler {
     async fn handle_setting_request(
         &mut self,
         _request: SettingRequest,
-        _messenger: Messenger,
-    ) -> Option<Transform> {
+    ) -> Option<RequestTransform> {
         // TODO(fxbug.dev/60367): implement policy transforms
         return None;
+    }
+
+    async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
+        // TODO(fxbug.dev/60367): implement policy transforms
+        None
     }
 }
 

@@ -104,6 +104,7 @@ pub struct SwitchboardBuilder {
     core_messenger_factory: Option<core::message::Factory>,
     switchboard_messenger_factory: Option<switchboard::message::Factory>,
     setting_proxies: HashMap<SettingType, core::message::Signature>,
+    policy_proxies: HashMap<core::message::Signature, SettingType>,
     inspect_node: Option<inspect::Node>,
 }
 
@@ -113,6 +114,7 @@ impl SwitchboardBuilder {
             core_messenger_factory: None,
             switchboard_messenger_factory: None,
             setting_proxies: HashMap::new(),
+            policy_proxies: HashMap::new(),
             inspect_node: None,
         }
     }
@@ -144,6 +146,14 @@ impl SwitchboardBuilder {
         self
     }
 
+    pub fn add_policy_proxies(
+        mut self,
+        policy_proxies: HashMap<core::message::Signature, SettingType>,
+    ) -> Self {
+        self.policy_proxies.extend(policy_proxies);
+        self
+    }
+
     pub fn inspect_node(mut self, node: inspect::Node) -> Self {
         self.inspect_node = Some(node);
         self
@@ -154,6 +164,7 @@ impl SwitchboardBuilder {
             self.core_messenger_factory.unwrap_or(core::message::create_hub()),
             self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
             self.setting_proxies,
+            self.policy_proxies,
             self.inspect_node.unwrap_or(component::inspector().root().create_child("switchboard")),
         )
         .await
@@ -189,6 +200,7 @@ impl Switchboard {
         core_messenger_factory: core::message::Factory,
         switchboard_messenger_factory: switchboard::message::Factory,
         setting_proxies: HashMap<SettingType, core::message::Signature>,
+        policy_proxies: HashMap<core::message::Signature, SettingType>,
         inspect_node: inspect::Node,
     ) -> Result<(), Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
@@ -209,6 +221,11 @@ impl Switchboard {
         for (key, value) in &setting_proxies {
             proxy_settings.insert(value.clone(), key.clone());
         }
+
+        // Add policy proxies, since they can directly send SettingEvents to the switchboard.
+        // TODO(fxbug.dev/67695): migrate to a refresh command instead of talking directly to the
+        // switchboard.
+        proxy_settings.extend(policy_proxies);
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_action_id: 0,

@@ -563,18 +563,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
-    // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
-    // configured policy types.
-    if components.contains(&SettingType::Audio) {
-        PolicyProxy::create(
-            SettingType::Audio,
-            policy_handler_factory.clone(),
-            core_messenger_factory.clone(),
-            policy_messenger_factory.clone(),
-        )
-        .await?;
-    }
-
     let mut proxies = HashMap::new();
 
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
@@ -598,12 +586,30 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         );
     }
 
+    // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
+    // configured policy types.
+    let mut policy_proxies = HashMap::new();
+    if components.contains(&SettingType::Audio) {
+        policy_proxies.insert(
+            PolicyProxy::create(
+                SettingType::Audio,
+                policy_handler_factory,
+                core_messenger_factory.clone(),
+                policy_messenger_factory.clone(),
+                proxies.get(&SettingType::Audio).expect("Audio proxy not found").clone(),
+            )
+            .await?,
+            SettingType::Audio,
+        );
+    }
+
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     SwitchboardBuilder::create()
         .core_messenger_factory(core_messenger_factory)
         .switchboard_messenger_factory(switchboard_messenger_factory.clone())
-        .add_setting_proxies(proxies)
+        .add_setting_proxies(proxies.clone())
+        .add_policy_proxies(policy_proxies)
         .build()
         .await
         .expect("could not create switchboard");

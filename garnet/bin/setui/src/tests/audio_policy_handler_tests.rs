@@ -50,7 +50,10 @@ fn verify_state(state: &State, target: PropertyTarget, transform: Transform) {
             // One property was added.
             assert_eq!(property.active_policies.len(), 1);
             // The expected transform was added.
-            assert_eq!(property.active_policies.first().unwrap().transform, transform);
+            assert_eq!(
+                property.active_policies.first().expect("should have policies").transform,
+                transform
+            );
         } else {
             // Other properties have no policies.
             assert_eq!(property.active_policies.len(), 0);
@@ -60,10 +63,22 @@ fn verify_state(state: &State, target: PropertyTarget, transform: Transform) {
 
 async fn create_handler_test_environment() -> TestEnvironment {
     let core_messenger_factory = core::message::create_hub();
-    let (core_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (core_messenger, _) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("core messenger created");
+    let (_, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
-    let client_proxy = ClientProxy::new(core_messenger, store.clone(), SettingType::Audio);
+    let client_proxy = ClientProxy::new(
+        core_messenger,
+        setting_proxy_receptor.get_signature(),
+        store.clone(),
+        SettingType::Audio,
+    );
 
     let handler =
         AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
@@ -109,10 +124,22 @@ async fn test_handler_restore_persisted_state() {
         .add_transform(expected_transform);
 
     let core_messenger_factory = core::message::create_hub();
-    let (core_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (core_messenger, _) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("core messenger created");
+    let (_, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
-    let client_proxy = ClientProxy::new(core_messenger, store.clone(), SettingType::Audio);
+    let client_proxy = ClientProxy::new(
+        core_messenger,
+        setting_proxy_receptor.get_signature(),
+        store.clone(),
+        SettingType::Audio,
+    );
 
     // Write the "persisted" value to storage for the handler to read on start.
     store.lock().await.write(&persisted_state, false).await.expect("write failed");

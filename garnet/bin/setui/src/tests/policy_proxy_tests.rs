@@ -12,7 +12,7 @@ use crate::internal::policy::Address;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base as policy_base;
 use crate::policy::base::{BoxedHandler, PolicyHandlerFactory};
-use crate::policy::policy_handler::{PolicyHandler, Transform};
+use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::switchboard::base::{
@@ -43,19 +43,27 @@ static SETTING_RESPONSE_PAYLOAD: core::Payload = core::Payload::Event(SettingEve
 ));
 static SETTING_RESULT_NO_RESPONSE: SettingHandlerResult = Ok(None);
 
+static SETTING_EVENT_ORIGINAL: SettingEvent = SettingEvent::Changed(SettingInfo::Unknown);
+static SETTING_EVENT_MODIFIED: SettingEvent =
+    SettingEvent::Changed(SettingInfo::Privacy(PrivacyInfo {
+        user_data_sharing_consent: Some(true),
+    }));
+
 /// `FakePolicyHandler` always returns the provided responses for handling policy/setting requests.
 #[derive(Clone)]
 struct FakePolicyHandler {
     policy_response: policy_base::response::Response,
-    setting_response: Option<Transform>,
+    setting_response: Option<RequestTransform>,
+    event_response: Option<EventTransform>,
 }
 
 impl FakePolicyHandler {
     fn create(
         policy_response: policy_base::response::Response,
-        setting_response: Option<Transform>,
+        setting_response: Option<RequestTransform>,
+        event_response: Option<EventTransform>,
     ) -> Self {
-        Self { policy_response, setting_response }
+        Self { policy_response, setting_response, event_response }
     }
 }
 
@@ -71,9 +79,12 @@ impl PolicyHandler for FakePolicyHandler {
     async fn handle_setting_request(
         &mut self,
         _request: SettingRequest,
-        _messenger: core::message::Messenger,
-    ) -> Option<Transform> {
+    ) -> Option<RequestTransform> {
         self.setting_response.clone()
+    }
+
+    async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
+        self.event_response.clone()
     }
 }
 
@@ -102,11 +113,16 @@ fn create_handler_factory(
 async fn test_policy_proxy_creation() {
     let core_messenger_factory = core::message::create_hub();
     let policy_messenger_factory = policy::message::create_hub();
+    let (_, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("core messenger created");
     let storage_factory = InMemoryStorageFactory::create();
     let handler_factory = create_handler_factory(
         storage_factory,
         FakePolicyHandler::create(
             Ok(policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)))),
+            None,
             None,
         ),
     );
@@ -117,6 +133,7 @@ async fn test_policy_proxy_creation() {
         handler_factory,
         core_messenger_factory,
         policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
     )
     .await;
 
@@ -134,10 +151,14 @@ async fn test_policy_messages_passed_to_handler() {
     let storage_factory = InMemoryStorageFactory::create();
     let handler_factory = create_handler_factory(
         storage_factory,
-        FakePolicyHandler::create(Ok(policy_payload.clone()), None),
+        FakePolicyHandler::create(Ok(policy_payload.clone()), None, None),
     );
 
     let core_messenger_factory = core::message::create_hub();
+    let (_, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("core messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
@@ -145,11 +166,14 @@ async fn test_policy_messages_passed_to_handler() {
         handler_factory,
         core_messenger_factory,
         policy_messenger_factory.clone(),
+        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
-    let (policy_messenger, _) =
-        policy_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (policy_messenger, _) = policy_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("policy messenger created");
 
     // Send a policy request to the policy proxy.
     let mut policy_send_receptor = policy_messenger
@@ -160,7 +184,8 @@ async fn test_policy_messages_passed_to_handler() {
         .send();
 
     // Wait for a response.
-    let (policy_response, _) = policy_send_receptor.next_payload().await.unwrap();
+    let (policy_response, _) =
+        policy_send_receptor.next_payload().await.expect("policy response received");
 
     // Policy handler returned its response through the policy proxy, back to the client.
     assert_eq!(policy_response, policy::Payload::Response(Ok(policy_payload)));
@@ -171,19 +196,24 @@ async fn test_policy_messages_passed_to_handler() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_pass_through() {
     let core_messenger_factory = core::message::create_hub();
+    let (_, mut setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("core messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     let storage_factory = InMemoryStorageFactory::create();
     // Include None as the transform result so that the message passes through the policy layer
     // without interruption.
     let handler_factory = create_handler_factory(
         storage_factory,
-        FakePolicyHandler::create(Err(policy_base::response::Error::Unexpected), None),
+        FakePolicyHandler::create(Err(policy_base::response::Error::Unexpected), None, None),
     );
     PolicyProxy::create(
         SETTING_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
@@ -192,26 +222,20 @@ async fn test_setting_message_pass_through() {
     let (switchboard_messenger, _) = core_messenger_factory
         .create(MessengerType::Addressable(core::Address::Switchboard))
         .await
-        .unwrap();
-    // Create a messenger that represents a setting handler.
-    let mut setting_handler_receptor = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("messenger should be created")
-        .1;
+        .expect("switchboard messenger created");
 
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone(),
-            Audience::Messenger(setting_handler_receptor.get_signature()),
+            Audience::Messenger(setting_proxy_receptor.get_signature()),
         )
         .send();
 
     // Verify the setting handler received the original payload, then reply with a response.
     verify_payload(
         SETTING_REQUEST_PAYLOAD.clone(),
-        &mut setting_handler_receptor,
+        &mut setting_proxy_receptor,
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 client.reply(SETTING_RESPONSE_PAYLOAD.clone()).send();
@@ -229,6 +253,11 @@ async fn test_setting_message_pass_through() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_result_replacement() {
     let core_messenger_factory = core::message::create_hub();
+
+    let (_, mut setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     let storage_factory = InMemoryStorageFactory::create();
     // Include a different response than the original as the transform result, so that the
@@ -237,7 +266,8 @@ async fn test_setting_message_result_replacement() {
         storage_factory,
         FakePolicyHandler::create(
             Err(policy_base::response::Error::Unexpected),
-            Some(Transform::Result(SETTING_RESULT_NO_RESPONSE.clone())),
+            Some(RequestTransform::Result(SETTING_RESULT_NO_RESPONSE.clone())),
+            None,
         ),
     );
     PolicyProxy::create(
@@ -245,6 +275,7 @@ async fn test_setting_message_result_replacement() {
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
@@ -253,19 +284,13 @@ async fn test_setting_message_result_replacement() {
     let (switchboard_messenger, _) = core_messenger_factory
         .create(MessengerType::Addressable(core::Address::Switchboard))
         .await
-        .unwrap();
-    // Create a messenger that represents a setting handler.
-    let mut setting_handler_receptor = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("messenger should be created")
-        .1;
+        .expect("switchboard messenger created");
 
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone(),
-            Audience::Messenger(setting_handler_receptor.get_signature()),
+            Audience::Messenger(setting_proxy_receptor.get_signature()),
         )
         .send();
 
@@ -274,14 +299,15 @@ async fn test_setting_message_result_replacement() {
     // and wait for it to be received. Since messages are delivered in-order, if the setting handler
     // received the switchboard's message, this will fail. We can't send a message as the
     // switchboard, since the policy proxy will intercept it.
-    let (test_messenger, _) = core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (test_messenger, _) =
+        core_messenger_factory.create(MessengerType::Unbound).await.expect("messenger created");
     test_messenger
         .message(
             SETTING_REQUEST_PAYLOAD_2.clone(),
-            Audience::Messenger(setting_handler_receptor.get_signature()),
+            Audience::Messenger(setting_proxy_receptor.get_signature()),
         )
         .send();
-    verify_payload(SETTING_REQUEST_PAYLOAD_2.clone(), &mut setting_handler_receptor, None).await;
+    verify_payload(SETTING_REQUEST_PAYLOAD_2.clone(), &mut setting_proxy_receptor, None).await;
 
     // Verify that the "switchboard" receives the response that the policy handler returned.
     verify_payload(
@@ -316,6 +342,11 @@ async fn test_setting_message_payload_replacement() {
     });
 
     let core_messenger_factory = core::message::create_hub();
+
+    let (_, mut setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     let storage_factory = InMemoryStorageFactory::create();
     // Fake handler will return request 2 to be sent to the setting handler.
@@ -323,7 +354,8 @@ async fn test_setting_message_payload_replacement() {
         storage_factory,
         FakePolicyHandler::create(
             Err(policy_base::response::Error::Unexpected),
-            Some(Transform::Request(setting_request_2)),
+            Some(RequestTransform::Request(setting_request_2)),
+            None,
         ),
     );
     PolicyProxy::create(
@@ -331,6 +363,7 @@ async fn test_setting_message_payload_replacement() {
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
@@ -339,19 +372,12 @@ async fn test_setting_message_payload_replacement() {
     let (switchboard_messenger, _) = core_messenger_factory
         .create(MessengerType::Addressable(core::Address::Switchboard))
         .await
-        .unwrap();
-    // Create a messenger that represents a setting handler.
-    let mut setting_handler_receptor = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("setting handler should be created")
-        .1;
-
+        .expect("switchboard messenger created");
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             setting_request_1_payload,
-            Audience::Messenger(setting_handler_receptor.get_signature()),
+            Audience::Messenger(setting_proxy_receptor.get_signature()),
         )
         .send();
 
@@ -359,7 +385,7 @@ async fn test_setting_message_payload_replacement() {
     // original sent by the switchboard.
     verify_payload(
         setting_request_2_payload,
-        &mut setting_handler_receptor,
+        &mut setting_proxy_receptor,
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 client.reply(SETTING_RESPONSE_PAYLOAD.clone()).send();
@@ -372,6 +398,110 @@ async fn test_setting_message_payload_replacement() {
     verify_payload(SETTING_RESPONSE_PAYLOAD.clone(), &mut settings_send_receptor, None).await;
 }
 
+/// Verify that when the policy handler doesn't take any action on a setting event, it will
+/// continue on to its intended destination without interference.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_setting_event_pass_through() {
+    let core_messenger_factory = core::message::create_hub();
+    let (setting_proxy_messenger, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
+    let policy_messenger_factory = policy::message::create_hub();
+    let storage_factory = InMemoryStorageFactory::create();
+    // Include None as the transform result so that the message passes through the policy layer
+    // without interruption.
+    let handler_factory = create_handler_factory(
+        storage_factory,
+        FakePolicyHandler::create(Err(policy_base::response::Error::Unexpected), None, None),
+    );
+    PolicyProxy::create(
+        SETTING_TYPE,
+        handler_factory,
+        core_messenger_factory.clone(),
+        policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
+    )
+    .await
+    .ok();
+
+    // Create a messenger that represents the switchboard.
+    let (_, mut switchboard_receptor) = core_messenger_factory
+        .create(MessengerType::Addressable(core::Address::Switchboard))
+        .await
+        .expect("switchboard messenger created");
+
+    // Send a setting event from the setting proxy to the switchboard.
+    setting_proxy_messenger
+        .message(
+            core::Payload::Event(SETTING_EVENT_ORIGINAL.clone()),
+            Audience::Address(core::Address::Switchboard),
+        )
+        .send();
+
+    // Verify the switchboard receives the event.
+    verify_payload(
+        core::Payload::Event(SETTING_EVENT_ORIGINAL.clone()),
+        &mut switchboard_receptor,
+        None,
+    )
+    .await;
+}
+
+/// Verify that when the policy handler returns a replacement event to propagate, that the given
+/// result is received by the switchboard.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_setting_event_replace() {
+    let core_messenger_factory = core::message::create_hub();
+    let (setting_proxy_messenger, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
+    let policy_messenger_factory = policy::message::create_hub();
+    let storage_factory = InMemoryStorageFactory::create();
+    // Include None as the transform result so that the message passes through the policy layer
+    // without interruption.
+    let handler_factory = create_handler_factory(
+        storage_factory,
+        FakePolicyHandler::create(
+            Err(policy_base::response::Error::Unexpected),
+            None,
+            Some(EventTransform::Event(SETTING_EVENT_MODIFIED.clone())),
+        ),
+    );
+    PolicyProxy::create(
+        SETTING_TYPE,
+        handler_factory,
+        core_messenger_factory.clone(),
+        policy_messenger_factory,
+        setting_proxy_receptor.get_signature(),
+    )
+    .await
+    .ok();
+
+    // Create a messenger that represents the switchboard.
+    let (_, mut switchboard_receptor) = core_messenger_factory
+        .create(MessengerType::Addressable(core::Address::Switchboard))
+        .await
+        .expect("switchboard messenger created");
+
+    // Send a setting request from the setting proxy to the switchboard.
+    setting_proxy_messenger
+        .message(
+            core::Payload::Event(SETTING_EVENT_ORIGINAL.clone()),
+            Audience::Address(core::Address::Switchboard),
+        )
+        .send();
+
+    // Verify the switchboard receives the event.
+    verify_payload(
+        core::Payload::Event(SETTING_EVENT_MODIFIED.clone()),
+        &mut switchboard_receptor,
+        None,
+    )
+    .await;
+}
+
 /// Exercises the main loop in the policy proxy by sending a series of messages and ensuring they're
 /// all answered.
 #[fuchsia_async::run_until_stalled(test)]
@@ -381,13 +511,19 @@ async fn test_multiple_messages() {
         policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
 
     let core_messenger_factory = core::message::create_hub();
+
+    let (_, setting_proxy_receptor) = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting proxy messenger created");
     let policy_messenger_factory = policy::message::create_hub();
     let storage_factory = InMemoryStorageFactory::create();
     let handler_factory = create_handler_factory(
         storage_factory,
         FakePolicyHandler::create(
             Ok(policy_payload.clone()),
-            Some(Transform::Result(SETTING_RESULT_NO_RESPONSE.clone())),
+            Some(RequestTransform::Result(SETTING_RESULT_NO_RESPONSE.clone())),
+            None,
         ),
     );
     // Initialize the policy proxy and a messenger to communicate with it.
@@ -396,25 +532,21 @@ async fn test_multiple_messages() {
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory.clone(),
+        setting_proxy_receptor.get_signature(),
     )
     .await
     .ok();
 
-    // Create a messagenger for sending messages directly to the policy proxy.
-    let (policy_messenger, _) =
-        policy_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    // Create a messenger for sending messages directly to the policy proxy.
+    let (policy_messenger, _) = policy_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("policy messenger created");
     // Create a messenger that represents the switchboard.
     let (switchboard_messenger, _) = core_messenger_factory
         .create(MessengerType::Addressable(core::Address::Switchboard))
         .await
-        .unwrap();
-    // Create a messenger that represents a setting handler.
-    let setting_handler_signature = core_messenger_factory
-        .create(MessengerType::Unbound)
-        .await
-        .expect("messenger should be created")
-        .1
-        .get_signature();
+        .expect("switchboard messenger created");
 
     // Send a few requests to the policy proxy.
     for _ in 0..3 {
@@ -438,7 +570,7 @@ async fn test_multiple_messages() {
         let mut settings_send_receptor = switchboard_messenger
             .message(
                 SETTING_REQUEST_PAYLOAD.clone(),
-                Audience::Messenger(setting_handler_signature),
+                Audience::Messenger(setting_proxy_receptor.get_signature()),
             )
             .send();
 

@@ -5,7 +5,6 @@
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
-use crate::message::base::MessengerType;
 use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError};
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
 use async_trait::async_trait;
@@ -31,16 +30,12 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: message::Factory,
+        messenger: message::Messenger,
+        setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError> {
         if !self.settings.contains(&setting_type) {
             return Err(PolicyHandlerFactoryError::SettingNotFound(setting_type));
         }
-
-        let (messenger, _) = messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(|_| PolicyHandlerFactoryError::HandlerMessengerError)?;
 
         let generate_function = self
             .generators
@@ -49,7 +44,8 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
 
         let context = Context {
             setting_type,
-            messenger: messenger.clone(),
+            messenger,
+            setting_proxy_signature,
             storage_factory_handle: self.storage_factory.clone(),
             id: self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         };
