@@ -214,7 +214,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		c := newZeroJitterClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c.Info()
 		go func() {
-			_, err := acquire(ctx, c, &info)
+			_, err := acquire(ctx, c, t.Name(), &info)
 			errs <- err
 		}()
 	}
@@ -279,7 +279,7 @@ func TestDHCP(t *testing.T) {
 	info := c0.Info()
 	{
 		{
-			cfg, err := acquire(ctx, c0, &info)
+			cfg, err := acquire(ctx, c0, t.Name(), &info)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -292,7 +292,7 @@ func TestDHCP(t *testing.T) {
 			c0.verifyClientStats(t, 1)
 		}
 		{
-			cfg, err := acquire(ctx, c0, &info)
+			cfg, err := acquire(ctx, c0, t.Name(), &info)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -309,7 +309,7 @@ func TestDHCP(t *testing.T) {
 	{
 		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c1.Info()
-		cfg, err := acquire(ctx, c1, &info)
+		cfg, err := acquire(ctx, c1, t.Name(), &info)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -330,7 +330,7 @@ func TestDHCP(t *testing.T) {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
 		defer s.RemoveAddress(testNICID, info.Addr.Address)
-		cfg, err := acquire(ctx, c0, &info)
+		cfg, err := acquire(ctx, c0, t.Name(), &info)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -424,7 +424,7 @@ func TestDelayRetransmission(t *testing.T) {
 			}
 
 			info := c.Info()
-			cfg, err := acquire(ctx, c, &info)
+			cfg, err := acquire(ctx, c, t.Name(), &info)
 			if tc.success {
 				if err != nil {
 					t.Fatal(err)
@@ -799,26 +799,26 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 				signal(ctx, unblockResponse)
 			}()
 
-			if _, err := acquire(ctx, c, &info); err != nil {
-				t.Fatalf("acquire(_, _, _) failed: %s", err)
+			if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
+				t.Fatalf("acquire(...) failed: %s", err)
 			}
 
 			wg.Wait()
 
 			if diff := cmp.Diff(tc.wantTimeouts, gotTimeouts); diff != "" {
-				t.Errorf("acquire(_, _, _) got timeouts diff (-want +got):\n%s", diff)
+				t.Errorf("acquire(...) got timeouts diff (-want +got):\n%s", diff)
 			}
 			if got := c.stats.RecvOfferTimeout.Value(); int(got) != tc.offerTimeouts {
-				t.Errorf("acquire(_, _, _) got RecvOfferTimeout count: %d, want: %d", got, tc.offerTimeouts)
+				t.Errorf("acquire(...) got RecvOfferTimeout count: %d, want: %d", got, tc.offerTimeouts)
 			}
 			if got := c.stats.RecvOffers.Value(); got != 1 {
-				t.Errorf("acquire(_, _, _) got RecvOffers count: %d, want: 1", got)
+				t.Errorf("acquire(...) got RecvOffers count: %d, want: 1", got)
 			}
 			if got := c.stats.RecvAckTimeout.Value(); int(got) != tc.ackTimeouts {
-				t.Errorf("acquire(_, _, _) got RecvAckTimeout count: %d, want: %d", got, tc.ackTimeouts)
+				t.Errorf("acquire(...) got RecvAckTimeout count: %d, want: %d", got, tc.ackTimeouts)
 			}
 			if got := c.stats.RecvAcks.Value(); got != 1 {
-				t.Errorf("acquire(_, _, _) got RecvAcks count: %d, want: 1", got)
+				t.Errorf("acquire(...) got RecvAcks count: %d, want: 1", got)
 			}
 		})
 	}
@@ -916,7 +916,7 @@ func TestRenewRebindBackoff(t *testing.T) {
 				} else {
 					info.Server = serverAddr
 				}
-				_, err := acquire(ctx, c, &info)
+				_, err := acquire(ctx, c, t.Name(), &info)
 				errs <- err
 			}()
 
@@ -928,12 +928,12 @@ func TestRenewRebindBackoff(t *testing.T) {
 				select {
 				case timeoutCh <- time.Time{}:
 				case err := <-errs:
-					t.Fatalf("acquire(_, _, _) failed: %s", err)
+					t.Fatalf("acquire(...) failed: %s", err)
 				}
 			}
 			cancel()
 			if err := <-errs; !errors.Is(err, context.Canceled) {
-				t.Fatalf("acquire(_, _, _) failed: %s", err)
+				t.Fatalf("acquire(...) failed: %s", err)
 			}
 
 			if diff := cmp.Diff(tc.wantTimeouts, gotTimeouts); diff != "" {
@@ -1040,29 +1040,29 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}()
 
 	info := c.Info()
-	if _, err := acquire(ctx, c, &info); err != nil {
-		t.Fatalf("acquire(_, _, _) failed: %s", err)
+	if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
+		t.Fatalf("acquire(...) failed: %s", err)
 	}
 
 	wg.Wait()
 
 	if got := c.stats.RecvOfferTimeout.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvOfferTimeout count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvOfferTimeout count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvOfferUnexpectedType.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvOfferUnexpectedType count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvOfferUnexpectedType count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvOffers.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvOffers count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvOffers count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAckTimeout.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvAckTimeout count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvAckTimeout count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAckUnexpectedType.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvAckUnexpectedType count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvAckUnexpectedType count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAcks.Value(); got != 1 {
-		t.Errorf("acquire(_, _, _) got RecvAcks count: %d, want: 1", got)
+		t.Errorf("acquire(...) got RecvAcks count: %d, want: 1", got)
 	}
 }
 
@@ -1225,9 +1225,14 @@ func TestStateTransition(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c := newZeroJitterClient(nil, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+			s := stack.New(stack.Options{})
+			if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
+				t.Fatalf("s.CreateNIC(_, nil) = %s", err)
+			}
 
-			c.acquire = func(ctx context.Context, _ *Client, info *Info) (Config, error) {
+			c := newZeroJitterClient(s, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+
+			c.acquire = func(ctx context.Context, _ *Client, _ string, info *Info) (Config, error) {
 				timeout := false
 				switch info.State {
 				case renewing:
@@ -1341,12 +1346,17 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := newZeroJitterClient(nil, testNICID, linkAddr1, acquireTimeout, backoffTime, defaultRetransTime, nil)
+	s := stack.New(stack.Options{})
+	if err := s.CreateNIC(testNICID, &endpoint{}); err != nil {
+		t.Fatalf("s.CreateNIC(_, nil) = %s", err)
+	}
+
+	c := newZeroJitterClient(s, testNICID, linkAddr1, acquireTimeout, backoffTime, defaultRetransTime, nil)
 	// Only returns a valid config in the first acquisition. Blocks until context
 	// cancellation in following acquisitions. This makes sure the client is stuck
 	// in init selecting state after lease expiration.
 	firstAcquisition := true
-	c.acquire = func(ctx context.Context, _ *Client, info *Info) (Config, error) {
+	c.acquire = func(ctx context.Context, _ *Client, _ string, info *Info) (Config, error) {
 		if !firstAcquisition {
 			// Simulates a timeout using the deadline from context.
 			<-ctx.Done()
@@ -1541,7 +1551,7 @@ func TestTwoServers(t *testing.T) {
 
 	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c.Info()
-	if _, err := acquire(ctx, c, &info); err != nil {
+	if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
 		t.Fatal(err)
 	}
 }

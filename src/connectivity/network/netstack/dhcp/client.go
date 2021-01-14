@@ -58,7 +58,7 @@ type Client struct {
 	// Stubbable in test.
 	rand           *rand.Rand
 	retransTimeout func(time.Duration) <-chan time.Time
-	acquire        func(context.Context, *Client, *Info) (Config, error)
+	acquire        func(context.Context, *Client, string, *Info) (Config, error)
 	now            func() time.Time
 }
 
@@ -117,9 +117,6 @@ type Info struct {
 //
 // acquiredFunc will be called after each DHCP acquisition, and is responsible
 // for making necessary modifications to the stack state.
-//
-// TODO: use (*stack.Stack).NICInfo()[nicid].LinkAddress instead of passing
-// linkAddr when broadcasting on multiple interfaces works.
 func NewClient(
 	s *stack.Stack,
 	nicid tcpip.NICID,
@@ -163,6 +160,9 @@ func (c *Client) Stats() *Stats {
 // The function periodically searches for a new IP address.
 func (c *Client) Run(ctx context.Context) {
 	info := c.Info()
+
+	nicName := c.stack.FindNICNameFromID(info.NICID)
+
 	// For the initial iteration of the acquisition loop, the client should
 	// be in the initSelecting state, corresponding to the
 	// INIT->SELECTING->REQUESTING->BOUND state transition:
@@ -172,7 +172,7 @@ func (c *Client) Run(ctx context.Context) {
 	c.sem <- struct{}{}
 	defer func() { <-c.sem }()
 	defer func() {
-		_ = syslog.InfoTf(tag, "client is stopping, cleaning up")
+		_ = syslog.InfoTf(tag, "%s: client is stopping, cleaning up", nicName)
 		c.cleanup(&info)
 		// cleanup mutates info.
 		c.info.Store(info)
@@ -216,7 +216,7 @@ func (c *Client) Run(ctx context.Context) {
 			ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
 			defer cancel()
 
-			cfg, err := c.acquire(ctx, c, &info)
+			cfg, err := c.acquire(ctx, c, nicName, &info)
 			if err != nil {
 				return err
 			}
@@ -231,18 +231,18 @@ func (c *Client) Run(ctx context.Context) {
 			}
 
 			if cfg.LeaseLength == 0 {
-				_ = syslog.WarnTf(tag, "unspecified lease length; proceeding with default (%s)", defaultLeaseLength)
+				_ = syslog.WarnTf(tag, "%s: unspecified lease length; proceeding with default (%s)", nicName, defaultLeaseLength)
 				cfg.LeaseLength = defaultLeaseLength
 			}
 			{
 				// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
 				defaultRenewTime := cfg.LeaseLength / 2
 				if cfg.RenewTime == 0 {
-					_ = syslog.WarnTf(tag, "unspecified renew time; proceeding with default (%s)", defaultRenewTime)
+					_ = syslog.WarnTf(tag, "%s: unspecified renew time; proceeding with default (%s)", nicName, defaultRenewTime)
 					cfg.RenewTime = defaultRenewTime
 				}
 				if cfg.RenewTime >= cfg.LeaseLength {
-					_ = syslog.WarnTf(tag, "renew time (%s) >= lease length (%s); proceeding with default (%s)", cfg.RenewTime, cfg.LeaseLength, defaultRenewTime)
+					_ = syslog.WarnTf(tag, "%s: renew time (%s) >= lease length (%s); proceeding with default (%s)", nicName, cfg.RenewTime, cfg.LeaseLength, defaultRenewTime)
 					cfg.RenewTime = defaultRenewTime
 				}
 			}
@@ -253,7 +253,7 @@ func (c *Client) Run(ctx context.Context) {
 					cfg.RebindTime = defaultRebindTime
 				}
 				if cfg.RebindTime <= cfg.RenewTime {
-					_ = syslog.WarnTf(tag, "rebind time (%s) <= renew time (%s); proceeding with default (%s)", cfg.RebindTime, cfg.RenewTime, defaultRebindTime)
+					_ = syslog.WarnTf(tag, "%s: rebind time (%s) <= renew time (%s); proceeding with default (%s)", nicName, cfg.RebindTime, cfg.RenewTime, defaultRebindTime)
 					cfg.RebindTime = defaultRebindTime
 				}
 			}
@@ -274,7 +274,7 @@ func (c *Client) Run(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			_ = syslog.InfoTf(tag, "%s; retrying", err)
+			_ = syslog.InfoTf(tag, "%s: %s; retrying %s", nicName, err, info.State)
 		}
 
 		// Synchronize info after attempt to acquire is complete.
@@ -336,7 +336,7 @@ func (c *Client) Run(ctx context.Context) {
 		}
 
 		if info.State != initSelecting && next == initSelecting {
-			_ = syslog.WarnTf(tag, "lease time expired, cleaning up")
+			_ = syslog.WarnTf(tag, "%s: lease time expired, cleaning up", nicName)
 			c.cleanup(&info)
 		}
 
@@ -392,7 +392,7 @@ func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 	return backoff
 }
 
-func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
+func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config, error) {
 	netEP, err := c.stack.GetNetworkEndpoint(info.NICID, header.IPv4ProtocolNumber)
 	if err != nil {
 		return Config{}, fmt.Errorf("stack.GetNetworkEndpoint(%d, header.IPv4ProtocolNumber): %s", info.NICID, err)
@@ -466,6 +466,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 		for i := uint(0); ; i++ {
 			if err := c.send(
 				ctx,
+				nicName,
 				info,
 				netEP,
 				discOpts,
@@ -482,7 +483,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 			// Receive a DHCPOFFER message from a responding DHCP server.
 			retransmit := c.retransTimeout(c.exponentialBackoff(i))
 			for {
-				result, retransmit, err := c.recv(ctx, ep, ch, xid[:], retransmit)
+				result, retransmit, err := c.recv(ctx, nicName, ep, ch, xid[:], retransmit)
 				if err != nil {
 					if retransmit {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
@@ -493,13 +494,13 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 				}
 				if retransmit {
 					c.stats.RecvOfferTimeout.Increment()
-					_ = syslog.WarnTf(tag, "recv timeout waiting for %s; retransmitting %s", dhcpOFFER, dhcpDISCOVER)
+					_ = syslog.WarnTf(tag, "%s: recv timeout waiting for %s; retransmitting %s", nicName, dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
 				if result.typ != dhcpOFFER {
 					c.stats.RecvOfferUnexpectedType.Increment()
-					_ = syslog.InfoTf(tag, "got DHCP type = %s from %s, want = %s; discarding", result.typ, result.source, dhcpOFFER)
+					_ = syslog.InfoTf(tag, "%s: got DHCP type = %s from %s, want = %s; discarding", nicName, result.typ, result.source, dhcpOFFER)
 					continue
 				}
 				c.stats.RecvOffers.Increment()
@@ -529,7 +530,8 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 
 				_ = syslog.InfoTf(
 					tag,
-					"got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s",
+					"%s: got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s",
+					nicName,
 					result.typ,
 					result.source,
 					requestedAddr,
@@ -559,6 +561,7 @@ retransmitRequest:
 	for i := uint(0); ; i++ {
 		if err := c.send(
 			ctx,
+			nicName,
 			info,
 			netEP,
 			reqOpts,
@@ -601,7 +604,7 @@ retransmitRequest:
 		// Receive a DHCPACK/DHCPNAK from the server.
 		retransmit := c.retransTimeout(retransmitAfter)
 		for {
-			result, retransmit, err := c.recv(ctx, ep, ch, xid[:], retransmit)
+			result, retransmit, err := c.recv(ctx, nicName, ep, ch, xid[:], retransmit)
 			if err != nil {
 				if retransmit {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
@@ -612,7 +615,7 @@ retransmitRequest:
 			}
 			if retransmit {
 				c.stats.RecvAckTimeout.Increment()
-				_ = syslog.WarnTf(tag, "recv timeout waiting for %s; retransmitting %s", dhcpACK, dhcpREQUEST)
+				_ = syslog.WarnTf(tag, "%s: recv timeout waiting for %s; retransmitting %s", nicName, dhcpACK, dhcpREQUEST)
 				continue retransmitRequest
 			}
 
@@ -636,7 +639,7 @@ retransmitRequest:
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Addr = requestedAddr
-				_ = syslog.InfoTf(tag, "got %s from %s with leaseLength=%s", result.typ, result.source, cfg.LeaseLength)
+				_ = syslog.InfoTf(tag, "%s: got %s from %s with leaseLength=%s", nicName, result.typ, result.source, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
 				if msg := result.options.message(); len(msg) != 0 {
@@ -644,14 +647,14 @@ retransmitRequest:
 					return Config{}, fmt.Errorf("%s: %x", result.typ, msg)
 				}
 				c.stats.RecvNaks.Increment()
-				_ = syslog.InfoTf(tag, "got %s from %s", result.typ, result.source)
+				_ = syslog.InfoTf(tag, "%s: got %s from %s", nicName, result.typ, result.source)
 				// We lost the lease.
 				return Config{
 					Declined: true,
 				}, nil
 			default:
 				c.stats.RecvAckUnexpectedType.Increment()
-				_ = syslog.InfoTf(tag, "got DHCP type = %s from %s, want = %s or %s; discarding", result.typ, result.source, dhcpACK, dhcpNAK)
+				_ = syslog.InfoTf(tag, "%s: got DHCP type = %s from %s, want = %s or %s; discarding", nicName, result.typ, result.source, dhcpACK, dhcpNAK)
 				continue
 			}
 		}
@@ -660,6 +663,7 @@ retransmitRequest:
 
 func (c *Client) send(
 	ctx context.Context,
+	nicName string,
 	info *Info,
 	ep stack.NetworkEndpoint,
 	opts options,
@@ -697,11 +701,16 @@ func (c *Client) send(
 
 	_ = syslog.InfoTf(
 		tag,
-		"send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
+		"%s: send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
+		nicName,
 		typ,
-		info.Addr.Address, ClientPort,
-		writeTo.Addr, writeTo.Port, writeTo.NIC,
-		broadcast, ciaddr,
+		info.Addr.Address,
+		ClientPort,
+		writeTo.Addr,
+		writeTo.Port,
+		writeTo.NIC,
+		broadcast,
+		ciaddr,
 	)
 
 	// TODO(https://gvisor.dev/issues/4957): Use more streamlined serialization
@@ -776,6 +785,7 @@ const maxInt = int(^uint(0) >> 1)
 
 func (c *Client) recv(
 	ctx context.Context,
+	nicName string,
 	ep tcpip.Endpoint,
 	read <-chan struct{},
 	xid []byte,
@@ -819,7 +829,8 @@ func (c *Client) recv(
 		if !ip.IsValid(len(v)) {
 			_ = syslog.WarnTf(
 				tag,
-				"received malformed IP frame from %s; discarding %d bytes",
+				"%s: received malformed IP frame from %s; discarding %d bytes",
+				nicName,
 				senderAddr,
 				len(v),
 			)
@@ -829,7 +840,8 @@ func (c *Client) recv(
 		if ip.CalculateChecksum() != 0xffff {
 			_ = syslog.WarnTf(
 				tag,
-				"received damaged IP frame from %s; discarding %d bytes",
+				"%s: received damaged IP frame from %s; discarding %d bytes",
+				nicName,
 				senderAddr,
 				len(v),
 			)
@@ -838,7 +850,8 @@ func (c *Client) recv(
 		if ip.More() || ip.FragmentOffset() != 0 {
 			_ = syslog.WarnTf(
 				tag,
-				"received fragmented IP frame from %s; discarding %d bytes",
+				"%s: received fragmented IP frame from %s; discarding %d bytes",
+				nicName,
 				senderAddr,
 				len(v),
 			)
@@ -851,7 +864,8 @@ func (c *Client) recv(
 		if len(udp) < header.UDPMinimumSize {
 			_ = syslog.WarnTf(
 				tag,
-				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				"%s: received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				nicName,
 				ip.SourceAddress(),
 				senderAddr,
 				ip.DestinationAddress(),
@@ -865,7 +879,8 @@ func (c *Client) recv(
 		if udp.Length() > uint16(len(udp)) {
 			_ = syslog.WarnTf(
 				tag,
-				"received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				"%s: received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				nicName,
 				ip.SourceAddress(),
 				senderAddr,
 				ip.DestinationAddress(),
@@ -880,7 +895,8 @@ func (c *Client) recv(
 			if udp.CalculateChecksum(xsum) != 0xffff {
 				_ = syslog.WarnTf(
 					tag,
-					"received damaged UDP frame (%s@%s -> %s); discarding %d bytes",
+					"%s: received damaged UDP frame (%s@%s -> %s); discarding %d bytes",
+					nicName,
 					ip.SourceAddress(),
 					senderAddr,
 					ip.DestinationAddress(),
