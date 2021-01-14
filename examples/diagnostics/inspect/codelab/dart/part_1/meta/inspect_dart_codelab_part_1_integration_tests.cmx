@@ -1,0 +1,11 @@
+{
+    "program": {
+        "data": "data/inspect-dart-codelab-part-1-integration-tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

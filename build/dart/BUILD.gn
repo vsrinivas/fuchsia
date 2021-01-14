@@ -30,26 +30,19 @@ group("deprecated_dart_app_allowlist") {
   # This is an allowlist of packages that have not migrated to use dart_component.
   # This is only intended to be used as a temporary allowlist. Do not add to this list.
   allowlist = [
+    "//examples/diagnostics/inspect/codelab/dart/client:bin",
+    "//examples/diagnostics/inspect/codelab/dart/fizzbuzz:bin",
+    "//examples/diagnostics/inspect/codelab/dart/part_1:bin",
+    "//examples/diagnostics/inspect/codelab/dart/part_2:bin",
+    "//examples/diagnostics/inspect/codelab/dart/part_3:bin",
+    "//examples/diagnostics/inspect/codelab/dart/part_4:bin",
+    "//examples/diagnostics/inspect/codelab/dart/part_5:bin",
     "//examples/fidl/dart/client:echo-dart-client",
     "//examples/fidl/dart/request_pipelining/client:echo-launcher-dart-client",
     "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server",
     "//examples/fidl/dart/server:echo-dart-server",
     "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
     "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/client:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/fizzbuzz:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/part_1:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/part_2:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/part_3:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/part_4:bin",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/codelab/part_5:bin",
     get_label_info(dart_package_label.fuchsia_inspect, "dir") +
         "/test/integration:dart-inspect-vmo-test-writer",
     get_label_info(dart_package_label.fuchsia_inspect, "dir") +

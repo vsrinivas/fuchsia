@@ -6,7 +6,7 @@ The code is available at:
 
 * [//examples/diagnostics/inspect/codelab/cpp][inspect-cpp-codelab].
 * [//examples/diagnostics/inspect/codelab/rust][inspect-rust-codelab].
-* [//topaz/public/dart/fuchsia_inspect/codelab][inspect-dart-codelab].
+* [//examples/diagnostics/inspect/codelab/dart][inspect-dart-codelab].
 
 This codelab is organized into several parts, each with their own
 subdirectory. The starting point for the codelab is part 1,
@@ -58,7 +58,8 @@ Note: Replace core.x64 with your product and board configuration.
 
    ```
    fx set workstation.x64
-   --with //topaz/public/dart/fuchsia_inspect/codelab:all
+   --with //examples/diagnostics/inspect/codelab/dart \
+   --with //examples/diagnostics/inspect/codelab/dart:tests
    ```
 
 ## Part 1: A buggy component
@@ -177,7 +178,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
   In the [client main][dart-client-main]:
 
   ```dart
-  {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/client/lib/main.dart" region_tag="reverse_loop" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/client/lib/main.dart" region_tag="reverse_loop" adjust_indentation="auto" %}
   ```
 
 
@@ -245,13 +246,13 @@ codelab. There is a lot of standard component setup:
    - Logging initialization
 
      ```dart
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="init_logger" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_1/lib/main.dart" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
    - Serving a public service
 
      ```dart
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="serve_service" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_1/lib/main.dart" region_tag="serve_service" adjust_indentation="auto" %}
      ```
 
 See what the reverser definition is:
@@ -284,7 +285,7 @@ See what the reverser definition is:
    In [reverser.dart][dart-part1-reverser]:
 
    ```dart
-   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart" region_tag="reverser_impl" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_1/lib/reverser.dart" region_tag="reverser_impl" adjust_indentation="auto" %}
    ```
 
    This class implements the `Reverser` protocol. A helper method called `getDefaultBinder` returns
@@ -330,7 +331,7 @@ state without needing to dig through logs.
      `dart_app("bin")`:
 
      ```
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
      ```
 
 2. Initialize Inspect:
@@ -359,8 +360,8 @@ state without needing to dig through logs.
       In [main.dart][dart-part1-main]:
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_import_inspect" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/main.dart" region_tag="part_1_import_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/main.dart" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
       ```
 
    You are now using Inspect.
@@ -423,7 +424,7 @@ state without needing to dig through logs.
    * {Dart}
 
      ```dart
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_write_version" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/main.dart" region_tag="part_1_write_version" adjust_indentation="auto" %}
      ```
 
      This snippet does the following:
@@ -595,7 +596,7 @@ is even being handled by your component.
 
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_new_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/main.dart" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
 2. Update your server to accept this node:
@@ -625,8 +626,8 @@ is even being handled by your component.
       and [reverser.cc][part1-reverser-cc]:
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_import" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/reverser.dart" region_tag="part_1_import" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/reverser.dart" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
       ```
 
 3. Add a property to keep track of the number of connections:
@@ -657,7 +658,7 @@ is even being handled by your component.
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/reverser.dart" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
    This snippet demonstrates creating a new `UintProperty` (containing a 64
@@ -727,7 +728,7 @@ implementation itself. In particular, it will be helpful to know:
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_connection_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/reverser.dart" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    This will create unique names starting with "connection".
@@ -814,7 +815,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
       ```
 
 2. Run the client again:
@@ -881,7 +882,7 @@ out to the "FizzBuzz" service and prints the response:
 * {Dart}
 
    ```dart
-   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="connect_fizzbuzz" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_1/lib/main.dart" region_tag="connect_fizzbuzz" adjust_indentation="auto" %}
    ```
 
 If you see the logs, you will see that this log is never printed.
@@ -963,7 +964,7 @@ You will need to diagnose and solve this problem.
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/lib/main.dart" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
 **Exercise**: Add Inspect to the FizzBuzz connection to identify the problem
@@ -1236,7 +1237,7 @@ The code to open a Reverser looks like the following:
 * {Dart}
 
    ```dart
-   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart" region_tag="open_reverser" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_3/test/reverser_test.dart" region_tag="open_reverser" adjust_indentation="auto" %}
    ```
 
 A default version of the Inspect Node is passed into the Reverser. This
@@ -1317,7 +1318,7 @@ Add code to test the output in Inspect:
 * {Dart}
 
    ```dart
-   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_4/test/reverser_test.dart" region_tag="reverser_test" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_4/test/reverser_test.dart" region_tag="reverser_test" adjust_indentation="auto" %}
    ```
 
    The `VmoMatcher` is a convenient utility for testing inspect integrations. It allows to assert
@@ -1463,7 +1464,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part_4/test/integration_test.dart][dart-part4-integration].
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart" region_tag="integration_test" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_4/test/integration_test.dart" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `env.create()` is responsible for creating a new test environment.
@@ -1490,8 +1491,8 @@ Look at how the integration test is setup:
    * {Dart}
 
      ```dart
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="include_test_stuff" adjust_indentation="auto" %}
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="get_inspect" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_5/test/integration_test.dart" region_tag="include_test_stuff" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_5/test/integration_test.dart" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
 
@@ -1529,7 +1530,7 @@ Look at how the integration test is setup:
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="result_hierarchy" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_5/test/integration_test.dart" region_tag="result_hierarchy" adjust_indentation="auto" %}
       ```
 
       Add assertions on the returned Map data.
@@ -1581,15 +1582,15 @@ This section is under construction.
 [rust-part4-integration]: /examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs
 [rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/integration_test_part_4.cmx
 
-[inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab
-[dart-part1]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1
-[dart-part1-main]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart
-[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart
-[dart-part1-build]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_1/BUILD.gn
-[dart-client-main]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/client/lib/main.dart#9
-[dart-part2-meta]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_2/meta/inspect_dart_codelab_part_2.cmx
-[dart-part3-unittest]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart
-[dart-part4-integration]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart
-[dart-part4-integration-meta]: https://fuchsia.googlesource.com/topaz/+/HEAD/public/dart/fuchsia_inspect/codelab/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx
+[inspect-dart-codelab]: /examples/diagnostics/inspect/codelab/dart
+[dart-part1]: /examples/diagnostics/inspect/codelab/dart/part_1
+[dart-part1-main]: /examples/diagnostics/inspect/codelab/dart/part_1/lib/main.dart
+[dart-part1-reverser]: /examples/diagnostics/inspect/codelab/dart/part_1/lib/reverser.dart
+[dart-part1-build]: /examples/diagnostics/inspect/codelab/dart/part_1/BUILD.gn
+[dart-client-main]: /examples/diagnostics/inspect/codelab/dart/client/lib/main.dart#9
+[dart-part2-meta]: /examples/diagnostics/inspect/codelab/dart/part_2/meta/inspect_dart_codelab_part_2.cmx
+[dart-part3-unittest]: /examples/diagnostics/inspect/codelab/dart/part_3/test/reverser_test.dart
+[dart-part4-integration]: /examples/diagnostics/inspect/codelab/dart/part_4/test/integration_test.dart
+[dart-part4-integration-meta]: /examples/diagnostics/inspect/codelab/dart/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx
 
 [fuchsia-inspect-derive]: /docs/development/languages/rust/ergonomic_inspect.md

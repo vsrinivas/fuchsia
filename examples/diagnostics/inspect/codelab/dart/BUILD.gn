@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("dart") {
+  deps = [ ":bin" ]
+}
+
+group("bin") {
+  deps = [
+    ":parts_bin",
+    "client:bin",
+    "fizzbuzz:bin",
+  ]
+}
+
+group("parts_bin") {
+  deps = [
+    "part_1:bin",
+    "part_2:bin",
+    "part_3:bin",
+    "part_4:bin",
+    "part_5:bin",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":integration_tests",
+    ":unittests",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+  deps = [
+    ":parts_bin",
+    "part_1:inspect_dart_codelab_part_1_unittests($host_toolchain)",
+    "part_2:inspect_dart_codelab_part_2_unittests($host_toolchain)",
+    "part_3:inspect_dart_codelab_part_3_unittests($host_toolchain)",
+    "part_4:inspect_dart_codelab_part_4_unittests($host_toolchain)",
+
+    # TODO(49644): Re-enable after migration is finished.
+    # "part_5:inspect_dart_codelab_part_5_unittests($host_toolchain)",
+  ]
+}
+
+group("integration_tests") {
+  testonly = true
+  deps = [
+    "part_1:inspect-dart-codelab-part-1-integration-tests",
+    "part_2:inspect-dart-codelab-part-2-integration-tests",
+    "part_3:inspect-dart-codelab-part-3-integration-tests",
+    "part_4:inspect-dart-codelab-part-4-integration-tests",
+
+    # TODO(49644): Re-enable after migration is finished.
+    # "part_5:inspect-dart-codelab-part-5-integration-tests",
+  ]
+}
