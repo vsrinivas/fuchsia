@@ -423,7 +423,9 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		// trigger a close of the endpoint.
 		eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 			eps.onHUpOnce.Do(func() {
-				eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
+				if !eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key) {
+					_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", eps.endpoint.key)
+				}
 				// Run this in a separate goroutine to avoid deadlock.
 				//
 				// The waiter.Queue lock is held by the caller of this callback.
@@ -1045,7 +1047,9 @@ func (s *datagramSocketImpl) close() {
 			panic(fmt.Sprintf("peer.Close() = %s", err))
 		}
 
-		s.ns.onRemoveEndpoint(s.endpoint.key)
+		if !s.ns.onRemoveEndpoint(s.endpoint.key) {
+			_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", s.endpoint.key)
+		}
 
 		s.ep.Close()
 
@@ -1341,17 +1345,15 @@ func (ns *Netstack) onAddEndpoint(e *endpoint) {
 	}
 }
 
-func (ns *Netstack) onRemoveEndpoint(key uint64) {
+func (ns *Netstack) onRemoveEndpoint(key uint64) bool {
 	ns.stats.SocketsDestroyed.Increment()
 	// Key value 0 would indicate that the endpoint was never
 	// added to the endpoints map.
 	if key == 0 {
-		syslog.Errorf("endpoint map delete error, endpoint with key 0 is not being removed")
-		return
+		return false
 	}
-	if _, loaded := ns.endpoints.LoadAndDelete(key); !loaded {
-		syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", key)
-	}
+	_, deleted := ns.endpoints.LoadAndDelete(key)
+	return deleted
 }
 
 type providerImpl struct {

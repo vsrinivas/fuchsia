@@ -766,7 +766,9 @@ func TestEndpointsMapKey(t *testing.T) {
 	// Key value 0 is not expected to be removed from the map.
 	_, ep := tcpipEP()
 	ns.endpoints.Store(0, ep)
-	ns.onRemoveEndpoint(0)
+	if ns.onRemoveEndpoint(0) {
+		t.Errorf("got ns.onRemoveEndpoint(0) = true, want false")
+	}
 	if _, ok := ns.endpoints.Load(0); !ok {
 		t.Fatal("got endpoints.Load(0) = (_,false)")
 	}
