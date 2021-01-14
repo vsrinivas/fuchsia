@@ -8,6 +8,7 @@ group("tests") {
     "as370:tests",
     "astro:tests",
     "machina:tests",
+    "msm8998:tests",
     "mt8167s_ref:tests",
     "nelson:tests",
     "sherlock:tests",

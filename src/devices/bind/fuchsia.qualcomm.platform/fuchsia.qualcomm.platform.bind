@@ -8,6 +8,10 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   QUALCOMM = 19,
 };
 
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  MSM8998 = 0x02,
+};
+
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   GPIO = 0x01,
   PIL = 0x02,
