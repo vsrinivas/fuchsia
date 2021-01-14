@@ -8,6 +8,7 @@ use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileProxy},
     fuchsia_hash::Hash,
+    fuchsia_pkg::MetaContents,
     thiserror::Error,
 };
 
@@ -55,8 +56,7 @@ impl Directory {
 
     /// Reads the merkle root of the package.
     pub async fn merkle_root(&self) -> Result<Hash, anyhow::Error> {
-        let f = self.open_file("meta", OpenRights::Read).await?;
-        let merkle = io_util::file::read_to_string(&f).await?;
+        let merkle = self.read_file_to_string("meta").await?;
         Ok(merkle.parse()?)
     }
 
@@ -81,6 +81,18 @@ impl Directory {
             .expect("no other users of the wrapped channel")
             .into_zx_channel()
             .into()
+    }
+
+    /// Returns the list of blobs needed by this package, does not include meta.far blob itself.
+    pub async fn blobs(&self) -> Result<impl Iterator<Item = Hash>, anyhow::Error> {
+        let meta_contents = self.read_file_to_string("meta/contents").await?;
+        let meta_contents = MetaContents::deserialize(meta_contents.as_bytes())?;
+        Ok(meta_contents.into_contents().into_iter().map(|(_, hash)| hash))
+    }
+
+    async fn read_file_to_string(&self, path: &str) -> Result<String, anyhow::Error> {
+        let f = self.open_file(path, OpenRights::Read).await?;
+        Ok(io_util::file::read_to_string(&f).await?)
     }
 }
 

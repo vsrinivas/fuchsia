@@ -20,6 +20,7 @@ use {
 mod blob_location;
 mod blobs;
 mod cache_service;
+mod dynamic_index;
 mod gc_service;
 mod pkgfs_inspect;
 

@@ -4,12 +4,9 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
     fuchsia_inspect as finspect,
     fuchsia_inspect_contrib::inspectable::InspectableLen,
     fuchsia_merkle::Hash,
-    fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     futures::{stream::FuturesUnordered, TryStreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
@@ -105,15 +102,13 @@ impl BlobLocation {
         versions: &Versions,
         package: &Hash,
     ) -> Result<impl Iterator<Item = Hash>, Error> {
-        let meta_contents = MetaContents::deserialize(
-            client_end_to_openat(versions.open_package(package).await?.into_client_end())?
-                .open_file("meta/contents")
-                .with_context(|| format!("error opening meta/contents of {}", package))?,
-        )
-        .context(format!("error deserializing meta/contents of {}", package))?;
+        let package_dir = versions.open_package(package).await?;
+        let blobs = package_dir
+            .blobs()
+            .await
+            .with_context(|| format!("error reading package blobs of {}", package))?;
 
-        Ok(std::iter::once(package.clone())
-            .chain(meta_contents.into_contents().into_iter().map(|(_, hash)| hash)))
+        Ok(std::iter::once(package.clone()).chain(blobs))
     }
 
     // TODO(fxbug.dev/43635) use this function, remove allow
@@ -126,16 +121,12 @@ impl BlobLocation {
     }
 }
 
-fn client_end_to_openat(client: ClientEnd<DirectoryMarker>) -> Result<openat::Dir, Error> {
-    fdio::create_fd(client.into()).context("failed to create fd")
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         fuchsia_inspect::assert_inspect_tree,
-        fuchsia_pkg::PackagePath,
+        fuchsia_pkg::{MetaContents, PackagePath},
         maplit::{btreemap, hashmap},
         std::{
             collections::HashMap,

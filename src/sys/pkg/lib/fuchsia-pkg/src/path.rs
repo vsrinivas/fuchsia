@@ -90,7 +90,7 @@ pub fn check_package_variant(input: &str) -> Result<&str, PackageVariantError> {
 }
 
 /// A Fuchsia Package Path. Paths must currently be "{name}/{variant}".
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct PackagePath {
     name: String,
     variant: String,

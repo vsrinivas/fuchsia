@@ -54,6 +54,11 @@ impl<T> PathHashMapping<T> {
         self.contents.iter()
     }
 
+    /// Iterator over the contents of the mapping, consuming self.
+    pub fn into_contents(self) -> impl Iterator<Item = (PackagePath, Hash)> + ExactSizeIterator {
+        self.contents.into_iter()
+    }
+
     /// Iterator over the contained hashes.
     pub fn hashes(&self) -> impl Iterator<Item = &Hash> {
         self.contents.iter().map(|(_, hash)| hash)
