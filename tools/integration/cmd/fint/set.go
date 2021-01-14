@@ -156,9 +156,7 @@ func runSteps(
 	if err != nil {
 		return nil, err
 	}
-	// TODO(olivernewman): Write the GN trace to `contextSpec.ArtifactDir` after
-	// recipes no longer assume that it's written to the build directory.
-	artifacts.GnTracePath = filepath.Join(contextSpec.BuildDir, "gn_trace.json")
+	artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
 	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
 	if err != nil {
 		artifacts.FailureSummary = genStdout
