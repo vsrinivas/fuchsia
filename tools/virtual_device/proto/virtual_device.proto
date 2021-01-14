@@ -38,8 +38,8 @@ message VirtualDevice {
   // The device characterics.
   HardwareProfile hw = 6;
 
-  // The device nodename.
-  string nodename = 7;
+  // Kernel command line arguments.
+  repeated string kernel_args = 7;
 }
 
 // QEMU describes how to run a VirtualDevice in QEMU.
@@ -69,10 +69,15 @@ message Drive {
   // Defaults to false.
   bool is_filename = 3;
 
+  // DEPRECATED: Use device instead.
+  // TODO(kjharland): Refactor //tools/qemu.go to use device and remove this.
+  //
   // The PCI address for the device.
   //
   // Defaults to the empty string.
   string pci_address = 4;
+
+  Device device = 5;
 }
 
 message HardwareProfile {
@@ -101,15 +106,37 @@ message HardwareProfile {
   // The MAC address to use for the device.
   string mac = 4;
 
-  // Optional Tap device.
+  // Optional networking devices.
   //
-  // If set, user networking is disabled. If unset, user networking is enabled.
-  TapDevice tap = 5;
+  // If unset, networking is disabled.
+  repeated Netdev network_devices = 5;
+
+  // Optional list of drives to mount.
+  //
+  // If any drive is a USB, remember to specify a USB host controller.
+  repeated Drive drives = 6;
+
+  // Optional USB host controller interface.
+  //
+  // This must be set if USB drives are specified. The only supported value is
+  // 'xhci'.
+  string hci = 7;
 
   // Whether to enable KVM.
   //
   // Defaults to false.
-  bool enable_kvm = 100;
+  bool enable_kvm = 8;
 }
 
-message TapDevice { string name = 1; }
+message Netdev {
+  Device device = 1;
+  string id = 2;
+  string mac = 3;
+}
+
+message Device {
+  string model = 1;
+
+  // Named fields that and can be added to `-device` options.
+  repeated string options = 2;
+}

@@ -14,9 +14,9 @@ import (
 func TestValidate(t *testing.T) {
 	// An ImageManifest shared by all test cases. This is not modified during testing.
 	testImageManifest := build.ImageManifest{
-		{Name: "qemu-kernel", Path: "/kernel"},
-		{Name: "storage-full", Path: "/fvm"},
-		{Name: "zircon-a", Path: "/ramdisk"},
+		{Name: "qemu-kernel", Path: "/kernel", Type: "kernel"},
+		{Name: "storage-full", Path: "/fvm", Type: "blk"},
+		{Name: "zircon-a", Path: "/ramdisk", Type: "zbi"},
 		// Images for testing error cases.
 		{Name: "no-path"},
 		{Name: "duplicate", Path: "/duplicate"},
@@ -41,14 +41,6 @@ func TestValidate(t *testing.T) {
 	}, {
 		name:     "missing drive name",
 		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Drive.Image = "" },
-		wantErr:  true,
-	}, {
-		name:     "nil drive",
-		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Drive = nil },
-		wantErr:  true,
-	}, {
-		name:     "missing nodename",
-		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Nodename = "" },
 		wantErr:  true,
 	}, {
 		name:     "missing MAC",

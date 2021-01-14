@@ -15,15 +15,12 @@ import (
 // TODO(kjharland): Add E2E tests to verify that QEMU launches as expected.
 func TestQEMUCommand(t *testing.T) {
 	testImageManifest := build.ImageManifest{
-		{Name: "qemu-kernel", Path: "/kernel"},
-		{Name: "storage-full", Path: "/fvm"},
-		{Name: "zircon-a", Path: "/ramdisk"},
+		{Name: "qemu-kernel", Path: "/kernel", Type: "kernel"},
+		{Name: "storage-full", Path: "/fvm", Type: "blk"},
+		{Name: "zircon-a", Path: "/ramdisk", Type: "zbi"},
 	}
 
 	t.Run("errs on invalid inputs", func(t *testing.T) {
-		if err := QEMUCommand(nil, Default(), testImageManifest); err == nil {
-			t.Errorf("QEMUCommand with nil builder did not return an error")
-		}
 		if err := QEMUCommand(&qemu.QEMUCommandBuilder{}, nil, testImageManifest); err == nil {
 			t.Errorf("QEMUCommand with nil FVD did not return an error")
 		}
@@ -65,12 +62,8 @@ func TestQEMUCommand(t *testing.T) {
 			"q35",
 			"-cpu",
 			"Haswell,+smap,-check,-fsgsbase",
-			"-netdev",
-			"user,id=netdev0",
-			"-device",
-			"virtio-net-pci,netdev=netdev0,mac=52:54:00:63:5e:7a",
-			"-append",
-			"zircon.nodename=fuchsia-virtual-device",
+			"-net",
+			"none",
 		}
 
 		if diff := cmp.Diff(gotArgs, wantArgs); diff != "" {

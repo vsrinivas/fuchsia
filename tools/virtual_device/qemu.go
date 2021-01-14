@@ -6,6 +6,7 @@ package virtual_device
 
 import (
 	"errors"
+	"fmt"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
@@ -20,7 +21,7 @@ var qemuTargets = map[string]qemu.Target{
 	"arm64": qemu.TargetEnum.AArch64,
 }
 
-// QEMUCommand sets options to run Fuchsia in QEMU using the given VirtualDevice.
+// QEMUCommand sets options to run Fuchsia in QEMU on the given QEMUCommandBuilder.
 //
 // This returns an error if `Validate(fvd, images)` returns an error.
 //
@@ -31,9 +32,6 @@ var qemuTargets = map[string]qemu.Target{
 // The caller is free to set additional options on the builder before calling this function
 // or after this function returns.
 func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images build.ImageManifest) error {
-	if b == nil {
-		return errors.New("QEMUCommandBuilder cannot be nil")
-	}
 	if len(images) == 0 {
 		return errors.New("image manifest cannot be empty")
 	}
@@ -46,27 +44,56 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 	initrd := ""
 	kernel := ""
 	for _, image := range images {
-		switch image.Name {
-		case fvd.Kernel:
+		switch {
+		case fvd.Kernel != "" && image.Name == fvd.Kernel && image.Type == "kernel":
 			kernel = image.Path
-		case fvd.Initrd:
+		case image.Name == fvd.Initrd && image.Type == "zbi":
 			initrd = image.Path
-		case fvd.Drive.Image:
+		case fvd.Drive != nil && image.Name == fvd.Drive.Image && image.Type == "blk":
 			drive = image.Path
 		}
 	}
-	if fvd.Drive.IsFilename {
-		// Drive is a path instead of an image name. Assume the caller verified it exists.
-		drive = fvd.Drive.Image
+	if fvd.Drive != nil {
+		if fvd.Drive.IsFilename {
+			// Drive is a path instead of an image name. Assume the caller verified it exists.
+			drive = fvd.Drive.Image
+		}
+		b.AddVirtioBlkPciDrive(qemu.Drive{
+			ID:   fvd.Drive.Id,
+			Addr: fvd.Drive.PciAddress,
+			File: drive,
+		})
 	}
 
-	b.SetKernel(kernel)
+	if kernel != "" {
+		b.SetKernel(kernel)
+	}
+
 	b.SetInitrd(initrd)
-	b.AddVirtioBlkPciDrive(qemu.Drive{
-		ID:   fvd.Drive.Id,
-		Addr: fvd.Drive.PciAddress,
-		File: drive,
-	})
+
+	if fvd.Hw.Hci != "" {
+		b.AddHCI(qemu.HCI(fvd.Hw.Hci))
+	}
+
+	for _, drive := range fvd.Hw.Drives {
+		// TODO(kjharland): Refactor //tools/qemu to use a `Device` model and move this there.
+		switch drive.Device.Model {
+		case "usb-storage":
+			b.AddUSBDrive(qemu.Drive{
+				ID:   drive.Id,
+				File: drive.Image,
+				Addr: drive.PciAddress,
+			})
+		case "virtio-blk-pci":
+			b.AddVirtioBlkPciDrive(qemu.Drive{
+				ID:   drive.Id,
+				File: drive.Image,
+				Addr: drive.PciAddress,
+			})
+		default:
+			return fmt.Errorf("unimplemented drive model: %q", drive.Device.Model)
+		}
+	}
 
 	b.SetCPUCount(int(fvd.Hw.CpuCount))
 
@@ -82,15 +109,25 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 		return err
 	}
 
-	netdev := qemu.Netdev{ID: "netdev0", MAC: fvd.Hw.Mac}
-	if fvd.Hw.Tap == nil || fvd.Hw.Tap.Name == "" {
-		netdev.User = &qemu.NetdevUser{}
-	} else {
-		netdev.Tap = &qemu.NetdevTap{Name: fvd.Hw.Tap.Name}
+	for _, d := range fvd.Hw.NetworkDevices {
+		// TODO(kjharland): Refactor //tools/qemu to use a `Device` model and move this there.
+		// TODO(kjharland): Switch all tests to -nic, which is newer than -netdev.
+		netdev := qemu.Netdev{ID: d.Id, MAC: d.Mac}
+		switch d.Device.Model {
+		case "user":
+			netdev.User = &qemu.NetdevUser{}
+		case "tap":
+			netdev.Tap = &qemu.NetdevTap{Name: d.Id}
+		default:
+			// TODO(kjharland): Check this in Validate()
+			return fmt.Errorf("unimplemented network device model: %q", d.Device.Model)
+		}
+		b.AddNetwork(netdev)
 	}
-	b.AddNetwork(netdev)
 
-	b.AddKernelArg("zircon.nodename=" + fvd.Nodename)
+	for _, arg := range fvd.KernelArgs {
+		b.AddKernelArg(arg)
+	}
 
 	return nil
 }

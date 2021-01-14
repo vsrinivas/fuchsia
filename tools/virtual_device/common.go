@@ -34,10 +34,9 @@ var (
 // Default returns a VirtualDevice with default values.
 func Default() *fvdpb.VirtualDevice {
 	return &fvdpb.VirtualDevice{
-		Name:     "default",
-		Nodename: "fuchsia-virtual-device",
-		Kernel:   "qemu-kernel",
-		Initrd:   "zircon-a",
+		Name:   "default",
+		Kernel: "qemu-kernel",
+		Initrd: "zircon-a",
 		Drive: &fvdpb.Drive{
 			Id:    "maindisk",
 			Image: "storage-full",
@@ -58,44 +57,41 @@ func Validate(fvd *fvdpb.VirtualDevice, images build.ImageManifest) error {
 	if fvd == nil {
 		return errors.New("virtual device cannot be nil")
 	}
-	if fvd.Drive == nil {
-		return errors.New("drive must not be nil")
-	}
-	if fvd.Nodename == "" {
-		return errors.New("a nodename is required")
-	}
 
 	// Ensure the images referenced in the FVD exist in the image manifest.
-	paths := map[string][]string{}
+	imageByNameAndType := map[string][]string{}
 	for _, image := range images {
-		paths[image.Name] = append(paths[image.Name], image.Path)
+		key := image.Name + ":" + image.Type
+		// Using a custom string key-format is slightly easier than using a nested map.
+		imageByNameAndType[key] = append(imageByNameAndType[key], image.Path)
 	}
 
 	// A helper function that ensures an image exists in the manifest, has a unique
 	// name within the manifest, and has a non-empty path.
-	uniqueImageExists := func(name string) error {
-		if imagePaths, ok := paths[name]; !ok {
-			return fmt.Errorf("image %q not found", name)
+	uniqueImageExists := func(name, typ string) error {
+		if imagePaths, ok := imageByNameAndType[name+":"+typ]; !ok {
+			return fmt.Errorf("image %q of type %q not found", name, typ)
 		} else if len(imagePaths) != 1 {
-			return fmt.Errorf("manifest contains multiple images named %q: %v", name, imagePaths)
+			return fmt.Errorf("manifest contains multiple images named %q of type %q: %v", name, typ, imagePaths)
 		} else if imagePaths[0] == "" {
 			return fmt.Errorf("no path specified for image %q", name)
 		}
 		return nil
 	}
 
-	if err := uniqueImageExists(fvd.Kernel); err != nil {
+	if err := uniqueImageExists(fvd.Kernel, "kernel"); err != nil {
 		return err
 	}
-	if err := uniqueImageExists(fvd.Initrd); err != nil {
+
+	if err := uniqueImageExists(fvd.Initrd, "zbi"); err != nil {
 		return err
 	}
 
 	// If drive points to a file instead of an entry in the image manifest, the filepath
 	// will be checked at runtime instead since it may not exist when this function is
 	// called (e.g. it could be a MinFS image which is created during a test run).
-	if !fvd.Drive.IsFilename {
-		if err := uniqueImageExists(fvd.Drive.Image); err != nil {
+	if fvd.Drive != nil && !fvd.Drive.IsFilename {
+		if err := uniqueImageExists(fvd.Drive.Image, "blk"); err != nil {
 			return err
 		}
 	}

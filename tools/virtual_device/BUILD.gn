@@ -10,6 +10,7 @@ import("//third_party/protobuf/proto_library.gni")
 
 go_library("virtual_device") {
   sources = [
+    "aemu.go",
     "common.go",
     "common_test.go",
     "qemu.go",
