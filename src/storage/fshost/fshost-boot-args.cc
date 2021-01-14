@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include <fbl/string_printf.h>
+
 namespace devmgr {
 
 // static

@@ -36,7 +36,6 @@ class FilesystemMounterHarness : public testing::Test {
       EXPECT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
                                     *watcher_),
                 ZX_OK);
-      manager_.WatchExit();
     }
     return manager_;
   }

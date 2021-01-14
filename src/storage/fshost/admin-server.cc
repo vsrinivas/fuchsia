@@ -28,8 +28,7 @@ void AdminServer::Shutdown(ShutdownCompleter::Sync& completer) {
   FX_LOGS(INFO) << "received shutdown command over admin interface";
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "error waiting for FSHOST_SIGNAL_EXIT_DONE: "
-                     << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
     } else {
       completer.Reply();
       FX_LOGS(INFO) << "shutdown complete";

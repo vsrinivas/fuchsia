@@ -59,21 +59,16 @@ FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
 
 // In the event that we haven't been explicitly signalled, tear ourself down.
 FsManager::~FsManager() {
-  if (global_shutdown_.has_handler()) {
-    event_.signal(0, FSHOST_SIGNAL_EXIT);
-    auto deadline = zx::deadline_after(zx::sec(2));
-    zx_signals_t pending;
-    event_.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending);
+  if (!shutdown_called_) {
+    Shutdown([](zx_status_t status) {
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
+        return;
+      }
+      FX_LOGS(INFO) << "filesystem shutdown complete";
+    });
   }
-  sync_completion_t sync;
-  outgoing_vfs_.Shutdown([&](zx_status_t status) { sync_completion_signal(&sync); });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  // Ensure all asynchronous work on global_loop_ finishes.
-  // Some of the asynchronous work references memory owned by this instance, so we need to ensure
-  // the work is complete before destruction.
-  // TODO(sdemos): Clean up ordering of fields to let the natural destructor ordering handle
-  // shutdown.
-  global_loop_->Shutdown();
+  sync_completion_wait(&shutdown_, ZX_TIME_INFINITE);
 }
 
 zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
@@ -208,12 +203,6 @@ zx_status_t FsManager::Initialize(zx::channel dir_request, zx::channel lifecycle
     FX_LOGS(ERROR) << "failed to serve /data stats";
   }
 
-  status = zx::event::create(0, &event_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create fs-manager event: " << status;
-    return status;
-  }
-
   global_loop_->StartThread("root-dispatcher");
   root_vfs_->SetDispatcher(global_loop_->dispatcher());
   if (dir_request.is_valid()) {
@@ -251,34 +240,27 @@ zx_status_t FsManager::ServeRoot(zx::channel server) {
   return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }
 
-void FsManager::WatchExit() {
-  FX_LOGS(INFO) << "watching for exit";
-  global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                      zx_status_t status, const zx_packet_signal_t* signal) {
-    FX_LOGS(INFO) << "exit signal detected";
-    root_vfs_->UninstallAll(zx::time::infinite());
-    event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
-  });
-
-  global_shutdown_.set_object(event_.get());
-  global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
-  global_shutdown_.Begin(global_loop_->dispatcher());
-}
-
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
-  zx_status_t status = event_.signal(0, FSHOST_SIGNAL_EXIT);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error signalling event: " << zx_status_get_string(status);
+  std::lock_guard guard(lock_);
+  if (shutdown_called_) {
+    FX_LOGS(ERROR) << "shutdown called more than once";
+    callback(ZX_ERR_INTERNAL);
     return;
   }
+  shutdown_called_ = true;
 
-  shutdown_waiter_ = std::make_unique<async::Wait>(event_.get(), FSHOST_SIGNAL_EXIT_DONE);
-  shutdown_waiter_->set_handler(
-      [callback = std::move(callback)](
-          async_dispatcher_t* unused_dispatched, async::Wait* unused_wait, zx_status_t status,
-          /*signal*/ const zx_packet_signal_t* unused_packet_signal) { callback(status); });
-  shutdown_waiter_->Begin(global_loop_->dispatcher());
+  async::PostTask(global_loop_->dispatcher(), [this, callback = std::move(callback)]() {
+    FX_LOGS(INFO) << "filesystem shutdown initiated";
+    zx_status_t status = root_vfs_->UninstallAll(zx::time::infinite());
+    callback(status);
+    sync_completion_signal(&shutdown_);
+    // after this signal, FsManager can be destroyed.
+  });
 }
+
+bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
+
+void FsManager::WaitForShutdown() { sync_completion_wait(&shutdown_, ZX_TIME_INFINITE); }
 
 zx_status_t FsManager::AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
                                                  zx::channel fs_diagnostics_dir_client) {

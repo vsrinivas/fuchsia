@@ -58,7 +58,6 @@ class BlockDeviceTest : public testing::Test {
     fdio_ns_t* ns;
     ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
     ASSERT_EQ(fdio_ns_bind(ns, "/fs", client.release()), ZX_OK);
-    manager_.WatchExit();
 
     // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
     // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.

@@ -42,7 +42,6 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
@@ -63,6 +62,7 @@ constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 
 // Signal that is set on the watcher channel we want to stop watching.
 constexpr zx_signals_t kSignalWatcherPaused = ZX_USER_SIGNAL_0;
+constexpr zx_signals_t kSignalWatcherShutDown = ZX_USER_SIGNAL_1;
 
 }  // namespace
 
@@ -76,6 +76,10 @@ BlockWatcher::BlockWatcher(FsManager& fshost, const Config* config)
 }
 
 void BlockWatcher::Run() {
+  thread_ = std::thread([this] { Thread(); });
+}
+
+void BlockWatcher::Thread() {
   fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
   if (!dirfd) {
     FX_LOGS(ERROR) << "failed to open block device dir: " << strerror(errno);
@@ -136,19 +140,36 @@ void BlockWatcher::Run() {
       // reset the buffer for the next read.
       buf_span = fbl::Span(buf, std::size(buf) - 1);
     }
-    if (signals == kSignalWatcherPaused) {
-      std::scoped_lock guard(lock_);
-      is_paused_ = true;
-      FX_LOGS(INFO) << "block watcher paused";
-      pause_condition_.notify_all();
-      // We were told to pause. Wait until we're resumed before re-starting the watch.
-      while (pause_count_ > 0) {
-        pause_condition_.wait(lock_);
+    switch (signals) {
+      case kSignalWatcherPaused: {
+        std::scoped_lock guard(lock_);
+        is_paused_ = true;
+        FX_LOGS(INFO) << "block watcher paused";
+        pause_condition_.notify_all();
+        // We were told to pause. Wait until we're resumed before re-starting the watch.
+        while (pause_count_ > 0) {
+          pause_condition_.wait(lock_);
+        }
+        break;
       }
-    } else {
-      FX_LOGS(ERROR) << "watch failed with signal " << signals;
-      break;
+      case kSignalWatcherShutDown:
+        return;
+      default:
+        FX_LOGS(ERROR) << "watch failed with signal " << signals;
+        return;
     }
+  }
+}
+
+void BlockWatcher::ShutDown() {
+  if (thread_.joinable()) {
+    {
+      std::scoped_lock guard(lock_);
+      pause_count_ = -1;
+    }
+    pause_condition_.notify_all();
+    pause_event_.signal(0, kSignalWatcherShutDown);
+    thread_.join();
   }
 }
 
@@ -163,7 +184,7 @@ zx_status_t BlockWatcher::Pause() {
   while (pause_count_ == 0 && is_paused_ && pause_event_)
     pause_condition_.wait(lock_);
 
-  if (pause_count_ == std::numeric_limits<unsigned int>::max()) {
+  if (pause_count_ == std::numeric_limits<int>::max() || pause_count_ < 0) {
     return ZX_ERR_UNAVAILABLE;
   }
   if (!pause_event_) {
@@ -199,7 +220,7 @@ zx_status_t BlockWatcher::Resume() {
   while (pause_count_ > 0 && !is_paused_ && pause_event_)
     pause_condition_.wait(lock_);
 
-  if (pause_count_ == 0 || !pause_event_) {
+  if (pause_count_ <= 0 || !pause_event_) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -236,7 +257,7 @@ bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
   }
   // If we lost the race and the watcher was paused sometime between
   // zx_object_wait_many returning and us acquiring the lock, bail out.
-  if (pause_count_ > 0) {
+  if (pause_count_ != 0) {
     return false;
   }
 

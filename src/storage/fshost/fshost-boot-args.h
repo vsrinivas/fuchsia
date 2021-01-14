@@ -14,7 +14,6 @@
 #include <map>
 #include <optional>
 
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
 namespace devmgr {

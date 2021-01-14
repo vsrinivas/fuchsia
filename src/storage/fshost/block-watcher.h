@@ -23,7 +23,9 @@ class BlockWatcher {
   // Does not take ownership of |config|, which must refer to a valid object that outlives this
   // object.
   BlockWatcher(FsManager& fshost, const Config* config);
+  ~BlockWatcher() { ShutDown(); }
 
+  // Run the block watcher on a separate thread.
   void Run();
 
   // Increment the pause count for the block watcher.  This function will not return until the block
@@ -34,7 +36,12 @@ class BlockWatcher {
   // Decrement the pause count for the block watcher.
   zx_status_t Resume();
 
+  // Shut down the block watcher.  This will block until complete.
+  void ShutDown();
+
  private:
+  void Thread();
+
   // Returns true if we received a WATCH_EVENT_IDLE and the watcher is paused.
   bool Callback(int dirfd, int event, const char* name);
 
@@ -48,7 +55,8 @@ class BlockWatcher {
                                     fbl::Span<uint8_t>& buf);
 
   std::mutex lock_;
-  unsigned int pause_count_ TA_GUARDED(lock_) = 0;
+  // pause_count_ == -1 means shut down.
+  int pause_count_ TA_GUARDED(lock_) = 0;
   // Notified when watcher thread should resume, or when watcher thread is paused.
   std::condition_variable_any pause_condition_;
   zx::event pause_event_;
@@ -56,6 +64,7 @@ class BlockWatcher {
 
   FilesystemMounter mounter_;
   BlockDeviceManager device_manager_;
+  std::thread thread_;
 };
 
 class BlockWatcherServer final : public llcpp::fuchsia::fshost::BlockWatcher::Interface {

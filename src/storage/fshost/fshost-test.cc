@@ -107,29 +107,36 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
-// Test that the manager responds to external signals for unmounting.
-TEST(FsManagerTestCase, WatchExit) {
+// Test that the manager performs the shutdown procedure correctly with respect to externally
+// observable behaviors.
+TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
   ASSERT_OK(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
-  manager.WatchExit();
 
-  zx::event controller;
-  ASSERT_OK(manager.event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
+  // The manager should not have exited yet: No one has asked for the shutdown.
+  EXPECT_FALSE(manager.IsShutdown());
 
-  // The manager should not have exited yet: No one has asked for an unmount.
-  zx_signals_t pending;
-  auto deadline = zx::deadline_after(zx::msec(10));
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
+  // Once we trigger shutdown, we expect a shutdown signal.
+  sync_completion_t callback_called;
+  manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
+    EXPECT_OK(status);
+    sync_completion_signal(callback_called);
+  });
+  manager.WaitForShutdown();
+  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
 
-  // Once we "SIGNAL_EXIT", we expect an "EXIT_DONE" response.
-  ASSERT_OK(controller.signal(0, FSHOST_SIGNAL_EXIT));
-  deadline = zx::deadline_after(zx::sec(1));
-  EXPECT_OK(controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
-  EXPECT_TRUE(pending & FSHOST_SIGNAL_EXIT_DONE);
+  // It's an error if shutdown gets called twice, but we expect the callback to still get called
+  // with the appropriate error message since the shutdown function has no return value.
+  sync_completion_reset(&callback_called);
+  manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_INTERNAL);
+    sync_completion_signal(callback_called);
+  });
+  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
 }
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
@@ -143,15 +150,9 @@ TEST(FsManagerTestCase, LifecycleStop) {
   BlockWatcher watcher(manager, &config);
   ASSERT_OK(
       manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
-  manager.WatchExit();
-
-  zx::event controller;
-  ASSERT_OK(manager.event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   // The manager should not have exited yet: No one has asked for an unmount.
-  zx_signals_t pending;
-  auto deadline = zx::deadline_after(zx::msec(10));
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending));
+  EXPECT_FALSE(manager.IsShutdown());
 
   // Call stop on the lifecycle channel
   llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(std::move(lifecycle));
@@ -159,12 +160,12 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_OK(result.status());
 
   // the lifecycle channel should be closed now
+  zx_signals_t pending;
   EXPECT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
   EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
 
-  // Now we expect an "EXIT_DONE" signal.
-  EXPECT_OK(controller.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(), &pending));
-  EXPECT_TRUE(pending & FSHOST_SIGNAL_EXIT_DONE);
+  // Now we expect a shutdown signal.
+  manager.WaitForShutdown();
 }
 
 struct Context {

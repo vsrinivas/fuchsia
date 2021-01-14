@@ -335,9 +335,6 @@ int Main(bool disable_block_watcher) {
     FX_LOGS(ERROR) << "cannot bind namespace";
     return EXIT_FAILURE;
   }
-  // TODO(dgonyeo): call WatchExit from inside FsManager, instead of doing it
-  // here.
-  fs_manager.WatchExit();
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
@@ -358,11 +355,11 @@ int Main(bool disable_block_watcher) {
 
   if (disable_block_watcher) {
     FX_LOGS(INFO) << "block-watcher disabled";
-    zx::nanosleep(zx::time::infinite());
   } else {
     watcher.Run();
   }
 
+  fs_manager.WaitForShutdown();
   FX_LOGS(INFO) << "terminating";
   return EXIT_SUCCESS;
 }
