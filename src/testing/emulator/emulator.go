@@ -257,11 +257,13 @@ func (d *Distribution) appendCommonFemuArgs(params Params, b commandBuilder) {
 	}
 
 	if params.Networking {
-		b.AddNetwork(qemu.Netdev{
-			ID:  "net0",
-			MAC: "52:54:00:63:5e:7a",
-			Tap: &qemu.NetdevTap{Name: "qemu"},
-		})
+		network := qemu.Netdev{
+			ID:     "net0",
+			Tap:    &qemu.NetdevTap{Name: "qemu"},
+			Device: qemu.Device{Model: qemu.DeviceModelVirtioNetPCI},
+		}
+		network.Device.AddOption("mac", "52:54:00:63:5e:7a")
+		b.AddNetwork(network)
 	}
 }
 

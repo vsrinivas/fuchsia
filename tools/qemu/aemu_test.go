@@ -148,7 +148,10 @@ func TestAEMUCommandBuilder(t *testing.T) {
 		Netdev{
 			ID:   "net0",
 			User: &NetdevUser{},
-			MAC:  "52:54:00:63:5e:7a",
+			Device: Device{
+				Model:   DeviceModelVirtioNetPCI,
+				options: []string{"mac=52:54:00:63:5e:7a"},
+			},
 		},
 	)
 
@@ -174,7 +177,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
 			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
 			"-netdev", "user,id=net0",
-			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
+			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,netdev=net0",
 			"-append", "infra.foo=bar kernel.serial=legacy"},
 		err: nil,
 	}, cmd, err)

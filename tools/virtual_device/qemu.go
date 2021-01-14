@@ -7,6 +7,7 @@ package virtual_device
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
@@ -110,10 +111,21 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 	}
 
 	for _, d := range fvd.Hw.NetworkDevices {
-		// TODO(kjharland): Refactor //tools/qemu to use a `Device` model and move this there.
 		// TODO(kjharland): Switch all tests to -nic, which is newer than -netdev.
-		netdev := qemu.Netdev{ID: d.Id, MAC: d.Mac}
-		switch d.Device.Model {
+		netdev := qemu.Netdev{
+			ID:     d.Id,
+			Device: qemu.Device{Model: d.Device.Model},
+		}
+
+		for _, option := range d.Device.Options {
+			if opt := strings.SplitN(option, "=", 2); len(opt) == 2 {
+				netdev.Device.AddOption(opt[0], opt[1])
+			} else {
+				return fmt.Errorf("invalid option: %q", option)
+			}
+		}
+
+		switch d.Kind {
 		case "user":
 			netdev.User = &qemu.NetdevUser{}
 		case "tap":

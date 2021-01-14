@@ -94,16 +94,18 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 		File: blk,
 	})
 
-	qemuCmd.AddNetwork(qemu.Netdev{
-		ID:  "net0",
-		MAC: "52:54:00:63:5e:7b",
+	network := qemu.Netdev{
+		ID:     "net0",
+		Device: qemu.Device{Model: qemu.DeviceModelVirtioBlkPCI},
 		User: &qemu.NetdevUser{
 			Network:   "192.168.3.0/24",
 			DHCPStart: "192.168.3.9",
 			Host:      "192.168.3.2",
 			Forwards:  []qemu.Forward{{HostPort: port, GuestPort: 22}},
 		},
-	})
+	}
+	network.Device.AddOption("mac", "52:54:00:63:5e:7b")
+	qemuCmd.AddNetwork(network)
 
 	// The system will halt on a kernel panic instead of rebooting.
 	qemuCmd.AddKernelArg("kernel.halt-on-panic=true")

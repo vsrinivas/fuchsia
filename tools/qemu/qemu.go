@@ -17,6 +17,8 @@ const (
 )
 
 type Drive struct {
+	// TODO(kjharland): Embed `Device` here.
+
 	// ID is the block device identifier.
 	ID string
 
@@ -47,8 +49,7 @@ type Forward struct {
 }
 
 type Netdev struct {
-	// ID is the network device identifier.
-	ID string
+	Device
 
 	// User is a netdev user backend.
 	User *NetdevUser
@@ -56,8 +57,29 @@ type Netdev struct {
 	// Tap is a netdev tap backend.
 	Tap *NetdevTap
 
-	// MAC is the network device MAC address.
-	MAC string
+	// ID is the network device identifier.
+	ID string
+}
+
+type Device struct {
+	Model   string
+	options []string
+}
+
+type DeviceModel string
+
+// DeviceModel constants.
+const (
+	DeviceModelVirtioBlkPCI = "virtio-blk-pci"
+	DeviceModelVirtioNetPCI = "virtio-net-pci"
+)
+
+func (d *Device) AddOption(key, val string) {
+	d.options = append(d.options, fmt.Sprintf("%s=%s", key, val))
+}
+
+func (d *Device) String() string {
+	return fmt.Sprintf("%s,%s", d.Model, strings.Join(d.options, ","))
 }
 
 // NetdevUser defines a netdev backend giving user networking.
@@ -233,12 +255,8 @@ func (q *QEMUCommandBuilder) AddNetwork(n Netdev) {
 		}
 	}
 	q.SetFlag("-netdev", network.String())
-
-	device := fmt.Sprintf("virtio-net-pci,netdev=%s", n.ID)
-	if n.MAC != "" {
-		device += fmt.Sprintf(",mac=%s", n.MAC)
-	}
-	q.SetFlag("-device", device)
+	n.Device.AddOption("netdev", n.ID)
+	q.SetFlag("-device", n.Device.String())
 
 	q.hasNetwork = true
 }

@@ -279,16 +279,16 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	}
 
 	netdev := qemu.Netdev{
-		ID:  "net0",
-		MAC: net.HardwareAddr(t.mac[:]).String(),
+		ID:     "net0",
+		Device: qemu.Device{Model: qemu.DeviceModelVirtioNetPCI},
 	}
+	netdev.Device.AddOption("mac", net.HardwareAddr(t.mac[:]).String())
 	if t.config.UserNetworking {
 		netdev.User = &qemu.NetdevUser{}
 	} else {
-		netdev.Tap = &qemu.NetdevTap{
-			Name: defaultInterfaceName,
-		}
+		netdev.Tap = &qemu.NetdevTap{Name: defaultInterfaceName}
 	}
+
 	qemuCmd.AddNetwork(netdev)
 
 	chardev := qemu.Chardev{

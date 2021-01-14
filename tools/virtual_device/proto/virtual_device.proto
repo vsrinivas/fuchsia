@@ -131,7 +131,9 @@ message HardwareProfile {
 message Netdev {
   Device device = 1;
   string id = 2;
-  string mac = 3;
+
+  // One of "user" or "tap".
+  string kind = 3;
 }
 
 message Device {
