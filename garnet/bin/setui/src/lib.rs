@@ -7,6 +7,7 @@
 
 use {
     crate::accessibility::accessibility_controller::AccessibilityController,
+    crate::accessibility::types::AccessibilityInfo,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
@@ -41,7 +42,6 @@ use {
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
-    crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources,
         NightModeInfo, PrivacyInfo, SetupInfo,

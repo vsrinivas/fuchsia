@@ -8,12 +8,12 @@ use fuchsia_syslog::fx_log_warn;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::ModifiedCounters;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
-use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::input_types::{InputDevice, InputState};
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightState;

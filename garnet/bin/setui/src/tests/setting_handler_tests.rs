@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #[cfg(test)]
 use {
+    crate::accessibility::types::AccessibilityInfo,
     crate::agent::restore_agent,
     crate::base::{SettingInfo, SettingType},
     crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
@@ -16,7 +17,6 @@ use {
     },
     crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
     },

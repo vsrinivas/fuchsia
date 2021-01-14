@@ -13,7 +13,7 @@
 //! while particular types, such as setting-specific definitions, are moved to
 //! a common base mod underneath the parent setting mod.
 
-use crate::switchboard::accessibility_types::AccessibilityInfo;
+use crate::accessibility::types::AccessibilityInfo;
 use crate::switchboard::base::{
     AudioInfo, DeviceInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, LightData,
     NightModeInfo, PrivacyInfo, SetupInfo,

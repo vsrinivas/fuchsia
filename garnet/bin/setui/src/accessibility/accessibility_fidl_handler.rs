@@ -8,14 +8,13 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::accessibility::types::{AccessibilityInfo, CaptionsSettings, ColorBlindnessType};
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
-use crate::switchboard::accessibility_types::{
-    AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
-};
+
 use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(
@@ -127,9 +126,7 @@ async fn process_request_2(
 
 #[cfg(test)]
 mod tests {
-    use crate::switchboard::accessibility_types::{
-        CaptionFontFamily, CaptionFontStyle, ColorRgba, EdgeStyle,
-    };
+    use crate::accessibility::types::{CaptionFontFamily, CaptionFontStyle, ColorRgba, EdgeStyle};
     use fidl_fuchsia_settings::ColorBlindnessType;
 
     use super::*;
@@ -172,9 +169,7 @@ mod tests {
             screen_reader: Some(true),
             color_inversion: Some(true),
             enable_magnification: Some(true),
-            color_correction: Some(
-                crate::switchboard::accessibility_types::ColorBlindnessType::Protanomaly,
-            ),
+            color_correction: Some(crate::accessibility::types::ColorBlindnessType::Protanomaly),
             captions_settings: Some(EXPECTED_CAPTION_SETTINGS),
         };
 

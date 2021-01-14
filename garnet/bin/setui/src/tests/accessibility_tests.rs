@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 use {
+    crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
     crate::base::SettingType,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
