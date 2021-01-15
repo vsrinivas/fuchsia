@@ -26,6 +26,10 @@ declare_args() {
   # it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
   # debug issues.
   format_minfs_on_corruption = true
+
+  # If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
+  # corrupted. Setting this flag to true helps debugging corruptions.
+  extract_minfs_metadata_on_corruption = false
 }
 
 group("tests") {
@@ -182,6 +186,13 @@ source_set("block-watcher") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+
+  if (extract_minfs_metadata_on_corruption) {
+    sources += [ "extract-metadata.cc" ]
+    public_deps += [ "//src/storage/extractor/cpp:disk_extractor" ]
+  } else {
+    sources += [ "extract-metadata-noop.cc" ]
+  }
 }
 
 executable("fshost") {

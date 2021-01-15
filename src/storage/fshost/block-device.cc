@@ -38,11 +38,13 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/format.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 
 #include "block-watcher.h"
 #include "encrypted-volume.h"
+#include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 #include "src/storage/minfs/fsck.h"
@@ -147,8 +149,7 @@ std::string GetTopologicalPath(int fd) {
 
 }  // namespace
 
-BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
-                         const Config* device_config)
+BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config)
     : mounter_(mounter),
       fd_(std::move(fd)),
       device_config_(device_config),
@@ -421,6 +422,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "|   team. Please file bugs with logs before and after reboot.\n"
                           "|\n"
                           "--------------------------------------------------------------";
+        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
       } else {
         FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " completed OK";
       }
@@ -537,6 +539,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount minfs partition: " << zx_status_get_string(status)
                        << ".";
+        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
         return status;
       }
       mounter_->TryMountPkgfs();
