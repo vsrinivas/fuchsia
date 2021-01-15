@@ -75,10 +75,20 @@ class MockOS : public OS {
   }
 
   zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
-                                   zx_info_kmem_stats_extended_t* kmem) override {
+                                   zx_info_kmem_stats_t* kmem) override {
     const auto& r = responses_.get_info.at(i_get_info_++);
     memcpy(kmem, r.values, r.value_size);
     return r.ret;
+  }
+
+  zx_status_t GetKernelMemoryStatsExtended(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
+                                           zx_info_kmem_stats_extended_t* kmem_ext,
+                                           zx_info_kmem_stats_t* kmem) override {
+    const auto& r1 = responses_.get_info.at(i_get_info_);
+    memcpy(kmem, r1.values, r1.value_size);
+    const auto& r2 = responses_.get_info.at(i_get_info_++);
+    memcpy(kmem_ext, r2.values, r2.value_size);
+    return r2.ret;
   }
 
   OsResponses responses_;
@@ -90,6 +100,10 @@ class MockOS : public OS {
 void TestUtils::CreateCapture(Capture* capture, const CaptureTemplate& t, CaptureLevel level) {
   capture->time_ = t.time;
   capture->kmem_ = t.kmem;
+  if (level == KMEM) {
+    return;
+  }
+  capture->kmem_extended_ = t.kmem_extended;
   if (level != VMO) {
     return;
   }

@@ -41,6 +41,18 @@ TEST_F(PrinterUnitTest, PrintCapture) {
                                            .total_heap_bytes = 20,
                                            .free_heap_bytes = 30,
                                            .vmo_bytes = 40,
+                                           .mmu_overhead_bytes = 50,
+                                           .ipc_bytes = 60,
+                                           .other_bytes = 70,
+                                       },
+                                   .kmem_extended =
+                                       {
+                                           .total_bytes = 300,
+                                           .free_bytes = 100,
+                                           .wired_bytes = 10,
+                                           .total_heap_bytes = 20,
+                                           .free_heap_bytes = 30,
+                                           .vmo_bytes = 40,
                                            .vmo_pager_total_bytes = 15,
                                            .vmo_pager_newest_bytes = 4,
                                            .vmo_pager_oldest_bytes = 8,
@@ -84,14 +96,14 @@ TEST_F(PrinterUnitTest, PrintCapture) {
   EXPECT_EQ(20U, kernel["total_heap"].GetUint64());
   EXPECT_EQ(30U, kernel["free_heap"].GetUint64());
   EXPECT_EQ(40U, kernel["vmo"].GetUint64());
+  EXPECT_EQ(50U, kernel["mmu"].GetUint64());
+  EXPECT_EQ(60U, kernel["ipc"].GetUint64());
+  EXPECT_EQ(70U, kernel["other"].GetUint64());
   EXPECT_EQ(15U, kernel["vmo_pager_total"].GetUint64());
   EXPECT_EQ(4U, kernel["vmo_pager_newest"].GetUint64());
   EXPECT_EQ(8U, kernel["vmo_pager_oldest"].GetUint64());
   EXPECT_EQ(3U, kernel["vmo_discardable_locked"].GetUint64());
   EXPECT_EQ(7U, kernel["vmo_discardable_unlocked"].GetUint64());
-  EXPECT_EQ(50U, kernel["mmu"].GetUint64());
-  EXPECT_EQ(60U, kernel["ipc"].GetUint64());
-  EXPECT_EQ(70U, kernel["other"].GetUint64());
 
   auto processes = doc["Processes"].GetArray();
   ASSERT_EQ(2U, processes.Size());
@@ -450,6 +462,13 @@ TEST_F(PrinterUnitTest, OutputDigest) {
   TestUtils::CreateCapture(&c, {
                                    .time = 1234L * 1000000000L,
                                    .kmem =
+                                       {
+                                           .total_bytes = 1000,
+                                           .wired_bytes = 10,
+                                           .free_bytes = 100,
+                                           .vmo_bytes = 700,
+                                       },
+                                   .kmem_extended =
                                        {
                                            .total_bytes = 1000,
                                            .wired_bytes = 10,

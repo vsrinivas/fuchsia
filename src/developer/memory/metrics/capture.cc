@@ -83,12 +83,12 @@ class OSImpl : public OS, public TaskEnumerator {
   }
 
   zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
-                                   zx_info_kmem_stats_extended_t* kmem) override {
+                                   zx_info_kmem_stats_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStats");
     if (stats_client == nullptr) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client->GetMemoryStatsExtended();
+    auto result = stats_client->GetMemoryStats();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -99,14 +99,51 @@ class OSImpl : public OS, public TaskEnumerator {
     kmem->total_heap_bytes = stats.total_heap_bytes();
     kmem->free_heap_bytes = stats.free_heap_bytes();
     kmem->vmo_bytes = stats.vmo_bytes();
-    kmem->vmo_pager_total_bytes = stats.vmo_pager_total_bytes();
-    kmem->vmo_pager_newest_bytes = stats.vmo_pager_newest_bytes();
-    kmem->vmo_pager_oldest_bytes = stats.vmo_pager_oldest_bytes();
-    kmem->vmo_discardable_locked_bytes = stats.vmo_discardable_locked_bytes();
-    kmem->vmo_discardable_unlocked_bytes = stats.vmo_discardable_unlocked_bytes();
     kmem->mmu_overhead_bytes = stats.mmu_overhead_bytes();
     kmem->ipc_bytes = stats.ipc_bytes();
     kmem->other_bytes = stats.other_bytes();
+    return ZX_OK;
+  }
+
+  zx_status_t GetKernelMemoryStatsExtended(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
+                                           zx_info_kmem_stats_extended_t* kmem_ext,
+                                           zx_info_kmem_stats_t* kmem) override {
+    TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStatsExtended");
+    if (stats_client == nullptr) {
+      return ZX_ERR_BAD_STATE;
+    }
+    auto result = stats_client->GetMemoryStatsExtended();
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    const auto& stats = result.Unwrap()->stats;
+    kmem_ext->total_bytes = stats.total_bytes();
+    kmem_ext->free_bytes = stats.free_bytes();
+    kmem_ext->wired_bytes = stats.wired_bytes();
+    kmem_ext->total_heap_bytes = stats.total_heap_bytes();
+    kmem_ext->free_heap_bytes = stats.free_heap_bytes();
+    kmem_ext->vmo_bytes = stats.vmo_bytes();
+    kmem_ext->vmo_pager_total_bytes = stats.vmo_pager_total_bytes();
+    kmem_ext->vmo_pager_newest_bytes = stats.vmo_pager_newest_bytes();
+    kmem_ext->vmo_pager_oldest_bytes = stats.vmo_pager_oldest_bytes();
+    kmem_ext->vmo_discardable_locked_bytes = stats.vmo_discardable_locked_bytes();
+    kmem_ext->vmo_discardable_unlocked_bytes = stats.vmo_discardable_unlocked_bytes();
+    kmem_ext->mmu_overhead_bytes = stats.mmu_overhead_bytes();
+    kmem_ext->ipc_bytes = stats.ipc_bytes();
+    kmem_ext->other_bytes = stats.other_bytes();
+
+    // Copy over shared fields from kmem_ext to kmem, if provided.
+    if (kmem) {
+      kmem->total_bytes = kmem_ext->total_bytes;
+      kmem->free_bytes = kmem_ext->free_bytes;
+      kmem->wired_bytes = kmem_ext->wired_bytes;
+      kmem->total_heap_bytes = kmem_ext->total_heap_bytes;
+      kmem->free_heap_bytes = kmem_ext->free_heap_bytes;
+      kmem->vmo_bytes = kmem_ext->vmo_bytes;
+      kmem->mmu_overhead_bytes = kmem_ext->mmu_overhead_bytes;
+      kmem->ipc_bytes = kmem_ext->ipc_bytes;
+      kmem->other_bytes = kmem_ext->other_bytes;
+    }
     return ZX_OK;
   }
 
@@ -154,13 +191,21 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
   TRACE_DURATION("memory_metrics", "Capture::GetCapture");
   capture->time_ = os->GetMonotonic();
 
-  zx_status_t err = os->GetKernelMemoryStats(state.stats_client.get(), &capture->kmem_);
-  if (err != ZX_OK) {
-    return err;
+  // Capture level KMEM only queries ZX_INFO_KMEM_STATS, as opposed to ZX_INFO_KMEM_STATS_EXTENDED
+  // which queries a more detailed set of kernel metrics. KMEM capture level is used to poll the
+  // free memory level every 10s in order to keep the highwater digest updated, so a lightweight
+  // syscall is preferable.
+  if (level == KMEM) {
+    return os->GetKernelMemoryStats(state.stats_client.get(), &capture->kmem_);
   }
 
-  if (level == KMEM) {
-    return ZX_OK;
+  // ZX_INFO_KMEM_STATS_EXTENDED is more expensive to collect than ZX_INFO_KMEM_STATS, so only query
+  // it for the more detailed capture levels. Use kmem_extended_ to populate the shared fields in
+  // kmem_ (kmem_extended_ is a superset of kmem_), avoiding the need for a redundant syscall.
+  zx_status_t err = os->GetKernelMemoryStatsExtended(state.stats_client.get(),
+                                                     &capture->kmem_extended_, &capture->kmem_);
+  if (err != ZX_OK) {
+    return err;
   }
 
   err = os->GetProcesses(

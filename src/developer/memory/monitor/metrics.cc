@@ -167,7 +167,7 @@ void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
   }
 }
 
-void Metrics::AddKmemEvents(const zx_info_kmem_stats_extended_t& kmem,
+void Metrics::AddKmemEvents(const zx_info_kmem_stats_t& kmem,
                             std::vector<fuchsia::cobalt::CobaltEvent>* events) {
   TRACE_DURATION("memory_monitor", "Metrics::AddKmemEvents");
   auto builder = cobalt::CobaltEventBuilder(cobalt_registry::kMemoryGeneralBreakdownMetricId);
@@ -200,7 +200,7 @@ void Metrics::AddKmemEvents(const zx_info_kmem_stats_extended_t& kmem,
 
 // TODO(fxbug.dev/3778): Refactor this when dedup enum is availble in generated
 // cobalt config source code.
-void Metrics::AddKmemEventsWithUptime(const zx_info_kmem_stats_extended_t& kmem,
+void Metrics::AddKmemEventsWithUptime(const zx_info_kmem_stats_t& kmem,
                                       const zx_time_t capture_time,
                                       std::vector<fuchsia::cobalt::CobaltEvent>* events) {
   TRACE_DURATION("memory_monitor", "Metrics::AddKmemEventsWithUptime");

@@ -140,16 +140,18 @@ void Digester::Digest(const Capture& capture, class Digest* digest) {
                                                 kmem.other_bytes);
     digest->buckets_.emplace_back("Free", kmem.free_bytes);
 
-    if (kmem.vmo_pager_total_bytes > 0) {
-      digest->buckets_.emplace_back("[Addl]PagerTotal", kmem.vmo_pager_total_bytes);
-      digest->buckets_.emplace_back("[Addl]PagerNewest", kmem.vmo_pager_newest_bytes);
-      digest->buckets_.emplace_back("[Addl]PagerOldest", kmem.vmo_pager_oldest_bytes);
+    const auto& kmem_ext = capture.kmem_extended();
+    if (kmem_ext.vmo_pager_total_bytes > 0) {
+      digest->buckets_.emplace_back("[Addl]PagerTotal", kmem_ext.vmo_pager_total_bytes);
+      digest->buckets_.emplace_back("[Addl]PagerNewest", kmem_ext.vmo_pager_newest_bytes);
+      digest->buckets_.emplace_back("[Addl]PagerOldest", kmem_ext.vmo_pager_oldest_bytes);
     }
 
-    if (kmem.vmo_discardable_locked_bytes > 0 || kmem.vmo_discardable_unlocked_bytes > 0) {
-      digest->buckets_.emplace_back("[Addl]DiscardableLocked", kmem.vmo_discardable_locked_bytes);
+    if (kmem_ext.vmo_discardable_locked_bytes > 0 || kmem_ext.vmo_discardable_unlocked_bytes > 0) {
+      digest->buckets_.emplace_back("[Addl]DiscardableLocked",
+                                    kmem_ext.vmo_discardable_locked_bytes);
       digest->buckets_.emplace_back("[Addl]DiscardableUnlocked",
-                                    kmem.vmo_discardable_unlocked_bytes);
+                                    kmem_ext.vmo_discardable_unlocked_bytes);
     }
   }
 }
