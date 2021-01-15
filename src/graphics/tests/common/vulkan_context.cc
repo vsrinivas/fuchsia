@@ -99,7 +99,8 @@ bool VulkanContext::InitInstance() {
   }
 
   if (vk::Result::eSuccess != rv_instance.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Create instance.\n", rv_instance.result);
+    RTN_MSG(false, "VK Error - Create instance: %d (%s)\n", rv_instance.result,
+            vk::to_string(rv_instance.result).data());
   }
   instance_ = std::move(rv_instance.value);
 
@@ -110,7 +111,8 @@ bool VulkanContext::InitInstance() {
     auto rv_messenger =
         instance_->createDebugUtilsMessengerEXTUnique(debug_info_, nullptr, loader_);
     if (rv_messenger.result != vk::Result::eSuccess) {
-      RTN_MSG(false, "VK Error: 0x%x - CreateDebugUtilsMessengeEXT\n", rv_messenger.result);
+      RTN_MSG(false, "VK Error - CreateDebugUtilsMessengeEXT: %d (%s)\n", rv_messenger.result,
+              vk::to_string(rv_messenger.result).data());
     }
     messenger_ = std::move(rv_messenger.value);
   }
@@ -127,7 +129,8 @@ bool VulkanContext::InitQueueFamily() {
   }
   auto [r_physical_devices, physical_devices] = instance_->enumeratePhysicalDevices();
   if (vk::Result::eSuccess != r_physical_devices || physical_devices.empty()) {
-    RTN_MSG(false, "VK Error: 0x%x - No physical device found.\n", r_physical_devices);
+    RTN_MSG(false, "VK Error - No physical device found: %d (%s)\n", r_physical_devices,
+            vk::to_string(r_physical_devices).data());
   }
   physical_device_ = physical_devices[physical_device_index_];
 
@@ -163,7 +166,8 @@ bool VulkanContext::InitDevice() {
     rv_device = physical_device_.createDeviceUnique(device_info_);
   }
   if (vk::Result::eSuccess != rv_device.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Create device.\n", rv_device.result);
+    RTN_MSG(false, "VK Error - Create device: %d (%s)\n", rv_device.result,
+            vk::to_string(rv_device.result).data());
   }
   device_ = std::move(rv_device.value);
   queue_ = device_->getQueue(queue_family_index_, 0);
