@@ -18,7 +18,7 @@ use {
         lock::Mutex,
         select, FutureExt, StreamExt,
     },
-    log::{info, trace},
+    log::{info, trace, warn},
     std::sync::Arc,
     thiserror::Error,
 };
@@ -62,14 +62,18 @@ impl MediaTaskBuilder for SinkTaskBuilder {
                 ..sessions2::PlayerRegistration::EMPTY
             };
 
-            let session_id = s
-                .publisher
-                .publish(player_client, registration)
-                .await
-                .or(Err(MediaTaskError::ResourcesInUse))?;
-            info!("Session ID: {}", session_id);
-            // Ignoring AVRCP relay errors, they are logged.
-            let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_requests).ok();
+            let (session_id, avrcp_task) =
+                match s.publisher.publish(player_client, registration).await {
+                    Ok(session_id) => {
+                        info!("Session ID: {}", session_id);
+                        // We ignore AVRCP relay errors, they are logged.
+                        (session_id, AvrcpRelay::start(peer_id.clone(), player_requests).ok())
+                    }
+                    Err(e) => {
+                        warn!("Couldn't publish session: {:?}", e);
+                        (0, None)
+                    }
+                };
 
             Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
                 codec_config,
@@ -310,6 +314,7 @@ mod tests {
             AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
             StreamSinkRequest,
         },
+        fidl_fuchsia_media_sessions2::{PublisherMarker, PublisherRequest},
         fuchsia_inspect as inspect,
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon::DurationNum,
@@ -317,6 +322,34 @@ mod tests {
     };
 
     use crate::tests::fake_cobalt_sender;
+
+    #[test]
+    fn sink_task_builds_without_session() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (send, _recv) = fake_cobalt_sender();
+        let (proxy, mut session_requests) =
+            fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
+        let builder = SinkTaskBuilder::new(send, proxy, "Tests".to_string());
+
+        let sbc_config = MediaCodecConfig::min_sbc();
+        let configured_fut =
+            builder.configure(&PeerId(1), &sbc_config, DataStreamInspect::default());
+        pin_mut!(configured_fut);
+
+        // Pending on response from the proxy at first.
+        assert!(exec.run_until_stalled(&mut configured_fut).is_pending());
+
+        match exec.run_until_stalled(&mut session_requests.next()) {
+            Poll::Ready(Some(Ok(PublisherRequest::Publish { responder, .. }))) => {
+                drop(responder);
+            }
+            x => panic!("Expected a publisher request, got {:?}", x),
+        };
+        drop(session_requests);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        exec.run_singlethreaded(&mut configured_fut).expect("ok response from configure");
+    }
 
     fn setup_media_stream_test(
     ) -> (fasync::Executor, MediaCodecConfig, Arc<Mutex<DataStreamInspect>>) {

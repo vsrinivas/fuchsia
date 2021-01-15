@@ -10,8 +10,9 @@ use {
     },
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_inspect_derive::{AttachError, Inspect, WithInspect},
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{future::BoxFuture, FutureExt, TryFutureExt},
+    log::warn,
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
 };
 
@@ -112,9 +113,14 @@ impl Stream {
         peer_id: &PeerId,
         config: &MediaCodecConfig,
     ) -> Option<Box<dyn MediaTaskRunner>> {
-        match DataStreamInspect::default().with_inspect(&self.inspect, "media_stream") {
-            Err(_) => None,
-            Ok(inspect) => self.media_task_builder.configure(peer_id, &config, inspect).await.ok(),
+        let mut inspect = DataStreamInspect::default();
+        let _ = inspect.iattach(&self.inspect, "media_stream");
+        match self.media_task_builder.configure(peer_id, &config, inspect).await {
+            Err(e) => {
+                warn!("Failed to build media task: {:?}", e);
+                None
+            }
+            Ok(media_task_runner) => Some(media_task_runner),
         }
     }
 
