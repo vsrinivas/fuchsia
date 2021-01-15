@@ -100,7 +100,12 @@ pub fn main() -> Result<(), Error> {
     fx_log_info!("starting package resolver");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
-    executor.run_singlethreaded(main_inner_async(startup_time, argh::from_env()))
+    executor.run_singlethreaded(main_inner_async(startup_time, argh::from_env())).map_err(|err| {
+        // Use anyhow to print the error chain.
+        let err = anyhow!(err);
+        fuchsia_syslog::fx_log_err!("error running pkg-resolver: {:#}", err);
+        err
+    })
 }
 
 async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error> {

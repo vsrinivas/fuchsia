@@ -40,6 +40,15 @@ const MAX_CONCURRENT_CONNECTIONS: usize = 100;
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["system-update-checker"]).context("syslog init failed")?;
 
+    main_inner().await.map_err(|err| {
+        // Use anyhow to print the error chain.
+        let err = anyhow!(err);
+        fuchsia_syslog::fx_log_err!("error running system-update-checker: {:#}", err);
+        err
+    })
+}
+
+async fn main_inner() -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
     if let Some(url) = config.update_package_url() {
         fx_log_warn!("Ignoring custom update package url: {}", url);

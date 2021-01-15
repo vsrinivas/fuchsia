@@ -30,6 +30,16 @@ const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
+
+    main_inner().await.map_err(|err| {
+        // Use anyhow to print the error chain.
+        let err = anyhow!(err);
+        fx_log_err!("error running pkg-cache: {:#}", err);
+        err
+    })
+}
+
+async fn main_inner() -> Result<(), Error> {
     fx_log_info!("starting package cache service");
 
     let inspector = finspect::Inspector::new();
