@@ -4,6 +4,7 @@
 
 use {
     crate::base::{SettingInfo, SettingType},
+    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,

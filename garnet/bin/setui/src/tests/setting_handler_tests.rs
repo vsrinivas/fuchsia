@@ -6,6 +6,7 @@ use {
     crate::accessibility::types::AccessibilityInfo,
     crate::agent::restore_agent,
     crate::base::{SettingInfo, SettingType},
+    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
@@ -17,9 +18,7 @@ use {
     },
     crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::switchboard::base::{
-        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
-    },
+    crate::switchboard::base::{get_all_setting_types, ControllerStateResult, SettingRequest},
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},

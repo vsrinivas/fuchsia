@@ -12,6 +12,7 @@ use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
 use crate::display::types::{LowLightMode, Theme};
+use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
@@ -251,21 +252,6 @@ bitflags! {
         const ETHERNET = 1 << 0;
         const WIFI = 1 << 1;
         const DEFAULT = Self::WIFI.bits;
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct DoNotDisturbInfo {
-    pub user_dnd: Option<bool>,
-    pub night_mode_dnd: Option<bool>,
-}
-
-impl DoNotDisturbInfo {
-    pub const fn empty() -> DoNotDisturbInfo {
-        DoNotDisturbInfo { user_dnd: None, night_mode_dnd: None }
-    }
-    pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
-        DoNotDisturbInfo { user_dnd: Some(user_dnd), night_mode_dnd: Some(night_mode_dnd) }
     }
 }
 

@@ -5,8 +5,8 @@
 #[cfg(test)]
 use {
     crate::base::SettingType,
+    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::DoNotDisturbInfo,
     crate::EnvironmentBuilder,
     fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
 };

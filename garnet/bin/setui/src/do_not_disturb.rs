@@ -5,3 +5,4 @@ pub use self::do_not_disturb_fidl_handler::fidl_io;
 
 pub mod do_not_disturb_controller;
 pub mod do_not_disturb_fidl_handler;
+pub mod types;

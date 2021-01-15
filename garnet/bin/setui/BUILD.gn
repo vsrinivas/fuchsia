@@ -129,6 +129,7 @@ rustc_library("lib") {
     "src/do_not_disturb.rs",
     "src/do_not_disturb/do_not_disturb_controller.rs",
     "src/do_not_disturb/do_not_disturb_fidl_handler.rs",
+    "src/do_not_disturb/types.rs",
     "src/factory_reset.rs",
     "src/factory_reset/factory_reset_controller.rs",
     "src/factory_reset/factory_reset_fidl_handler.rs",

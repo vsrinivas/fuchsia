@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
+use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest};
+use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {

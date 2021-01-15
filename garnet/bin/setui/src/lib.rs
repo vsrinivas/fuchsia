@@ -22,6 +22,7 @@ use {
     crate::display::light_sensor_controller::LightSensorController,
     crate::display::types::DisplayInfo,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
+    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::factory_reset::factory_reset_controller::FactoryResetController,
     crate::handler::base::GenerateHandler,
     crate::handler::device_storage::DeviceStorageFactory,
@@ -45,9 +46,7 @@ use {
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
-    crate::switchboard::base::{
-        DoNotDisturbInfo, FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo,
-    },
+    crate::switchboard::base::{FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo},
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
     crate::switchboard::switchboard::SwitchboardBuilder,
