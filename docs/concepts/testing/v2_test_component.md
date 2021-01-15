@@ -69,8 +69,11 @@ For more information, see [Run Fuchsia tests][executing-tests].
 
 ## Further reading
 
-- [Test Runner Framework][trf]
-- [Complex topologies & integration testing][integration-testing]
+- [Test Runner Framework][trf]: writing idiomatic tests in different languages
+  and using common testing frameworks.
+- [Complex topologies and integration testing][integration-testing]: testing
+  interactions between multiple components in isolation from the rest of the
+  system.
 
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [glossary-component]: /docs/glossary.md#component
