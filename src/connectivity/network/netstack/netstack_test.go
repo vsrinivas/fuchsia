@@ -580,57 +580,26 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 		},
 	})
 
-	// TODO(https://github.com/google/gvisor/issues/5155): Remove the poll=false
-	// case when link address resolution failures deliver EventHUp.
-	for _, pollForError := range []bool{false, true} {
-		t.Run(fmt.Sprintf("pollForError=%t", pollForError), func(t *testing.T) {
-			var wq waiter.Queue
-			eps := createEP(t, ns, &wq)
+	var wq waiter.Queue
+	eps := createEP(t, ns, &wq)
 
-			events := make(chan waiter.EventMask)
-			if pollForError {
-				// TODO(https://github.com/google/gvisor/issues/5155): Remove the else
-				// branch when link address resolution failures deliver EventHUp.
-				if false {
-					waitEntry := waiter.Entry{Callback: callback(func(_ *waiter.Entry, m waiter.EventMask) {
-						events <- m
-					})}
-					wq.EventRegister(&waitEntry, math.MaxUint64)
-					defer wq.EventUnregister(&waitEntry)
-				} else {
-					go func() {
-						ticker := time.NewTicker(10 * time.Millisecond)
-						defer ticker.Stop()
-						// Wait until link address resolution fails.
-						for {
-							if tcp.EndpointState(eps.ep.State()) == tcp.StateError {
-								break
-							}
-							<-ticker.C
-						}
-						close(events)
-					}()
-				}
-			} else {
-				close(events)
-			}
+	events := make(chan waiter.EventMask)
+	waitEntry := waiter.Entry{Callback: callback(func(_ *waiter.Entry, m waiter.EventMask) {
+		events <- m
+	})}
+	wq.EventRegister(&waitEntry, math.MaxUint64)
+	defer wq.EventUnregister(&waitEntry)
 
-			if want, got := tcpip.ErrConnectStarted, eps.ep.Connect(destination); got != want {
-				t.Fatalf("got Connect(%#v) = %s, want %s", destination, got, want)
-			}
-			// TODO(https://github.com/google/gvisor/issues/5155): Assert on the
-			// signals here when link address resolution failures deliver EventHUp.
-			<-events
+	if want, got := tcpip.ErrConnectStarted, eps.ep.Connect(destination); got != want {
+		t.Fatalf("got Connect(%#v) = %s, want %s", destination, got, want)
+	}
+	if got, want := <-events, waiter.EventIn|waiter.EventOut|waiter.EventErr|waiter.EventHUp; got != want {
+		t.Fatalf("got event = %b, want %b", got, want)
+	}
 
-			// Closing the endpoint should remove it from the endpoints map.
-			if _, ok := ns.endpoints.Load(eps.endpoint.key); !ok {
-				t.Fatalf("got endpoints.Load(%d) = (_, false)", eps.endpoint.key)
-			}
-			eps.close()
-			if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
-				t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
-			}
-		})
+	// The callback on HUp should have removed the endpoint from the map.
+	if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
 	}
 }
 

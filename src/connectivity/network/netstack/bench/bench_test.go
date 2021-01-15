@@ -105,7 +105,7 @@ func BenchmarkWritePacket(b *testing.B) {
 				payload := tcpip.SlicePayload(make([]byte, size))
 				b.Run(fmt.Sprintf("len(payload)=%d", size), func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						if _, _, err := ep.Write(payload, tcpip.WriteOptions{}); err != nil {
+						if _, err := ep.Write(payload, tcpip.WriteOptions{}); err != nil {
 							b.Fatal(err)
 						}
 					}

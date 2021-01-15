@@ -25,7 +25,7 @@ type noopEndpoint struct {
 }
 
 func (*noopEndpoint) MTU() uint32 {
-	return 0
+	return header.IPv4MinimumMTU
 }
 
 func (ep *noopEndpoint) Capabilities() stack.LinkEndpointCapabilities {

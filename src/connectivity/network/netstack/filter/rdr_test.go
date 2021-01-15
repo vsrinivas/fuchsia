@@ -114,7 +114,7 @@ func TestRDROneWayWANToLANUDP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("failed to write: %s", err)
 	}
 
@@ -174,7 +174,7 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -206,7 +206,7 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 		waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
 		wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-		if _, _, err := epLANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
+		if _, err := epLANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
 			t.Fatalf("Write error: %s", err)
 		}
 
@@ -307,7 +307,7 @@ func TestRDRWANToLANTCP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWANTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
+	if _, err := epWANTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -330,7 +330,7 @@ func TestRDRWANToLANTCP(t *testing.T) {
 
 	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, _, err := epLANTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
+	if _, err := epLANTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 

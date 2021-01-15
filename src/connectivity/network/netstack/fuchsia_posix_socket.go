@@ -565,15 +565,6 @@ func (eps *endpointWithSocket) close() {
 			panic(err)
 		}
 
-		// TODO(https://github.com/google/gvisor/issues/5155): Remove this when
-		// link address resolution failures deliver EventHUp.
-		switch tcp.EndpointState(eps.ep.State()) {
-		case tcp.StateConnecting, tcp.StateSynSent, tcp.StateError:
-			if cb := eps.onHUp.Callback; cb != nil {
-				cb.Callback(nil, 0)
-			}
-		}
-
 		eps.ep.Close()
 
 		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
@@ -823,13 +814,10 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			// Acquire hard error lock across ep calls to avoid races and store the
 			// hard error deterministically.
 			eps.hardError.mu.Lock()
-			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			n, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
 			hardError := eps.hardError.storeAndRetrieveLocked(err)
 			eps.hardError.mu.Unlock()
 
-			if resCh != nil {
-				panic(fmt.Sprintf("TCP link address resolutions happen on connect; saw %d/%d", n, len(v)))
-			}
 			// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 			switch err {
 			case tcpip.ErrNotConnected:
@@ -917,21 +905,6 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			// Read never returns ErrNotConnected except for endpoints that were
 			// never connected. Such endpoints should never reach this loop.
 			panic(fmt.Sprintf("connected endpoint returned %s", err))
-		case tcpip.ErrNoLinkAddress:
-			// TODO(https://github.com/google/gvisor/issues/751): revisit this comment.
-			// At the time of writing, this error is only possible when link
-			// address resolution fails during an outbound TCP connection attempt.
-			// This happens via the following call hierarchy:
-			//
-			//  (*tcp.endpoint).protocolMainLoop
-			//    (*tcp.handshake).execute
-			//      (*tcp.handshake).resolveRoute
-			//        (*stack.Route).Resolve
-			//          (*stack.Stack).GetLinkAddress
-			//            (*stack.linkAddrCache).get
-			//
-			// This is equivalent to the connection having been refused.
-			fallthrough
 		case tcpip.ErrTimeout:
 			// At the time of writing, this error indicates that a TCP connection
 			// has failed. This can occur during the TCP handshake if the peer
@@ -1146,20 +1119,11 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 		writeOpts.To = &addr
 	}
 	// TODO(https://fxbug.dev/21106): do something with control.
-	for {
-		n, resCh, err := s.ep.Write(tcpip.SlicePayload(data), writeOpts)
-		if resCh != nil {
-			if err != tcpip.ErrNoLinkAddress {
-				panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
-			}
-			<-resCh
-			continue
-		}
-		if err != nil {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
-		}
-		return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
+	n, err := s.ep.Write(tcpip.SlicePayload(data), writeOpts)
+	if err != nil {
+		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
+	return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
 }
 
 type streamSocketImpl struct {
@@ -1676,8 +1640,6 @@ func tcpipErrorToCode(err *tcpip.Error) posix.Errno {
 		return posix.ErrnoEnoent
 	case tcpip.ErrInvalidOptionValue:
 		return posix.ErrnoEinval
-	case tcpip.ErrNoLinkAddress:
-		return posix.ErrnoEhostdown
 	case tcpip.ErrBadAddress:
 		return posix.ErrnoEfault
 	case tcpip.ErrNetworkUnreachable:

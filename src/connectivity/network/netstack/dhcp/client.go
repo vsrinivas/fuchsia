@@ -766,7 +766,7 @@ func (c *Client) send(
 					return fmt.Errorf("client address resolution: %w", ctx.Err())
 				}
 			}
-			err = tcpip.ErrNoLinkAddress
+			err = tcpip.ErrTimeout
 			fallthrough
 		default:
 			return fmt.Errorf("failed to resolve link address: %s", err)

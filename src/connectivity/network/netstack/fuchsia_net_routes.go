@@ -69,7 +69,7 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 						}
 					}
 				}
-				err = tcpip.ErrNoLinkAddress
+				err = tcpip.ErrNoRoute
 				fallthrough
 			default:
 				_ = syslog.InfoTf(

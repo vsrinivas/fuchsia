@@ -100,8 +100,6 @@ func (e TcpIpError) ToStackError() stack.Error {
 		return stack.ErrorNotFound
 	case tcpip.ErrInvalidOptionValue:
 		return stack.ErrorInvalidArgs
-	case tcpip.ErrNoLinkAddress:
-		return stack.ErrorBadState
 	case tcpip.ErrBadAddress:
 		return stack.ErrorInvalidArgs
 	case tcpip.ErrNetworkUnreachable:
@@ -186,8 +184,6 @@ func (e TcpIpError) ToZxStatus() zx.Status {
 		return zx.ErrNotFound
 	case tcpip.ErrInvalidOptionValue:
 		return zx.ErrInvalidArgs
-	case tcpip.ErrNoLinkAddress:
-		return zx.ErrBadState
 	case tcpip.ErrBadAddress:
 		return zx.ErrInvalidArgs
 	case tcpip.ErrNetworkUnreachable:
