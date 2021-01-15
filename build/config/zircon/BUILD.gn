@@ -333,12 +333,10 @@ config("optimize_sanitizer") {
 }
 
 config("optimize_profile") {
-  # NOTE: //build/config:optimize_profile disables optimizations, but this
-  # prevents building userboot.so in "profile" optimization mode.
-  # See fxbug.dev/67442.
-  cflags = [ "-O1" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
+  # NOTE: Unlike //build/config:optimize_profile", this must always enable
+  # optimizations to ensure userboot.so is compiled with -O2
+  # See https://fxbug.dev/67467 for more context.
+  configs = [ "//build/config:optimize_default" ]
 }
 
 config("default_optimize") {

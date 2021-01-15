@@ -50,7 +50,7 @@ source_set("profile") {
     _has_profile = toolchain.configs + _profile_config - _profile_config !=
                    toolchain.configs
   } else {
-    _profile_config = [ "//build/config/profile:profile" ]
+    _profile_config = [ "//build/config/profile" ]
     _has_profile = toolchain_variant.configs + _profile_config -
                    _profile_config != toolchain_variant.configs
   }
