@@ -10,9 +10,17 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
-    futures::{channel::mpsc, StreamExt},
+    futures::{
+        channel::{mpsc, oneshot},
+        Future, Stream, StreamExt,
+    },
     parking_lot::Mutex,
-    std::sync::Arc,
+    pin_project::pin_project,
+    std::{
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
 };
 
 /// Tracks all event sources and listens to events coming from them pushing them into an MPSC
@@ -21,26 +29,24 @@ pub struct EventSourceRegistry {
     /// The registered event sources
     sources: Arc<EventSourceStore>,
 
-    /// The data used to initialiez the event stream. This can be used a single time to create a
-    /// single stream of events with the consumer end of the MPSC channel.
-    event_stream_init_data: Option<EventStreamInitData>,
-
     /// The sender end of th events MPSC channel. A clone of this is given to every event source
     /// that is added when starting to listen for events on them.
     event_sender: mpsc::Sender<ComponentEvent>,
 
     /// The root node for events instrumentation.
-    _node: inspect::Node,
+    node: inspect::Node,
 
     /// Used to dynamically register event sources
     source_sender: mpsc::Sender<EventSourceRegistration>,
 
     _source_receiver_task: fasync::Task<()>,
-}
 
-struct EventStreamInitData {
-    receiver: mpsc::Receiver<ComponentEvent>,
-    logger: EventStreamLogger,
+    /// The stream that is exposed to clients. It can only be taken once.
+    event_stream: Option<EventStream>,
+
+    /// Used to close the receiving end of `event_sender` to stop receiving new events in the
+    /// channel and proceed to drain existing ones.
+    stop_accepting_events: oneshot::Sender<()>,
 }
 
 const RECENT_EVENT_LIMIT: usize = 200;
@@ -50,19 +56,20 @@ impl EventSourceRegistry {
     pub fn new(node: inspect::Node) -> Self {
         let sources_node = node.create_child("sources");
         let (event_sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        let (source_sender, source_receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        let logger = EventStreamLogger::new(&node);
+        let (source_sender, source_receiver) = mpsc::channel(1);
         let sources =
             Arc::new(EventSourceStore { sources: Mutex::new(Vec::new()), node: sources_node });
+        let (stop_accepting_events, event_stream) = EventStream::new(receiver);
 
         let sources_for_task = sources.clone();
         let event_sender_for_task = event_sender.clone();
         let registry = Self {
             sources,
-            event_stream_init_data: Some(EventStreamInitData { receiver, logger }),
-            _node: node,
+            event_stream: Some(event_stream),
+            node,
             event_sender,
             source_sender,
+            stop_accepting_events,
             _source_receiver_task: fasync::Task::spawn(async move {
                 let mut stream = Box::pin(source_receiver.boxed());
                 while let Some(registration) = stream.next().await {
@@ -85,10 +92,11 @@ impl EventSourceRegistry {
 
     /// Takes the single stream where component events are pushed.
     pub async fn take_stream(&mut self) -> Result<ComponentEventStream, EventError> {
-        match self.event_stream_init_data.take() {
+        match self.event_stream.take() {
             None => Err(EventError::StreamAlreadyTaken),
-            Some(EventStreamInitData { receiver, mut logger }) => {
-                Ok(Box::pin(receiver.boxed().map(move |event| {
+            Some(stream) => {
+                let mut logger = EventStreamLogger::new(&self.node);
+                Ok(Box::pin(stream.map(move |event| {
                     logger.log_event(&event);
                     event
                 })))
@@ -96,8 +104,14 @@ impl EventSourceRegistry {
         }
     }
 
+    /// Gets a handle to the channel through which new EventSources can be added asynchronously.
     pub fn get_event_source_publisher(&self) -> mpsc::Sender<EventSourceRegistration> {
         self.source_sender.clone()
+    }
+
+    pub fn terminate(self) {
+        // Swallow error, if the stream was dropped, it's already terminated.
+        let _ = self.stop_accepting_events.send(());
     }
 }
 
@@ -130,6 +144,37 @@ impl EventSourceStore {
         }
         self.sources.lock().push(registration.source);
         self.node.record(source_node);
+    }
+}
+
+#[pin_project]
+pub struct EventStream {
+    #[pin]
+    receiver: mpsc::Receiver<ComponentEvent>,
+    #[pin]
+    terminate_rx: oneshot::Receiver<()>,
+    receiver_active: bool,
+}
+
+impl EventStream {
+    fn new(receiver: mpsc::Receiver<ComponentEvent>) -> (oneshot::Sender<()>, Self) {
+        let (terminate_sender, terminate_rx) = oneshot::channel();
+        (terminate_sender, Self { receiver, terminate_rx, receiver_active: true })
+    }
+}
+
+impl Stream for EventStream {
+    type Item = ComponentEvent;
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+        if *this.receiver_active {
+            if let Poll::Ready(_) = this.terminate_rx.poll(cx) {
+                // Close the receiver, but still allow to drain all its messages.
+                this.receiver.close();
+                *this.receiver_active = false;
+            }
+        }
+        this.receiver.poll_next(cx)
     }
 }
 

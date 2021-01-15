@@ -11,7 +11,7 @@ use {
         diagnostics,
         events::{
             source_registry::{EventSourceRegistration, EventSourceRegistry},
-            sources::StaticEventStream,
+            sources::{StaticEventStream, UnattributedLogSinkSource},
             types::{
                 ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
                 EventSource,
@@ -100,7 +100,7 @@ pub struct ArchivistBuilder {
 impl ArchivistBuilder {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
-    /// Call `install_logger_services`, `install_event_sources`.
+    /// Call `install_log_services`, `install_event_sources`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
@@ -349,11 +349,15 @@ impl ArchivistBuilder {
     /// Installs `LogSink` and `Log` services. Panics if called twice.
     /// # Arguments:
     /// * `log_connector` - If provided, install log connector.
-    pub fn install_logger_services(&mut self) -> &mut Self {
+    pub async fn install_log_services(&mut self) -> &mut Self {
         let data_repo_1 = self.data_repo().clone();
-        let data_repo_2 = self.data_repo().clone();
-        let log_sender = self.log_sender.clone();
         let listen_sender = self.listen_sender.clone();
+
+        let unattributed_log_sink_source = UnattributedLogSinkSource::new();
+        let unattributed_log_sink_publisher = unattributed_log_sink_source.get_publisher();
+        self.event_source_registry
+            .add_source("unattributed_log_sink", Box::new(unattributed_log_sink_source))
+            .await;
         let event_source_publisher = self.event_source_registry.get_event_source_publisher();
 
         self.fs
@@ -363,10 +367,16 @@ impl ArchivistBuilder {
                 data_repo_1.clone().handle_log(stream, listen_sender.clone());
             })
             .add_fidl_service(move |stream| {
-                // TODO(fxbug.dev/66950) create a channel and add it to the EventStream as a source
                 debug!("unattributed fuchsia.logger.LogSink connection");
-                let container = data_repo_2.write().get_log_container(ComponentIdentity::unknown());
-                fasync::Task::spawn(container.handle_log_sink(stream, log_sender.clone())).detach();
+                let mut publisher = unattributed_log_sink_publisher.clone();
+                // TODO(fxbug.dev/67769): get rid of this Task spawn since it introduces a small
+                // window in which we might lose LogSinks.
+                fasync::Task::spawn(async move {
+                    publisher.send(stream).await.unwrap_or_else(|err| {
+                        error!(?err, "Failed to add unattributed LogSink connection")
+                    })
+                })
+                .detach();
             })
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.sys.EventStream connection");
@@ -425,12 +435,13 @@ impl ArchivistBuilder {
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
         // collect events.
-        let run_event_collection = Self::collect_component_events(
-            self.event_source_registry,
+        let events = self.event_source_registry.take_stream().await.expect("Created event stream");
+        let run_event_collection_task = fasync::Task::spawn(Self::collect_component_events(
+            events,
             self.log_sender.clone(),
             self.state,
             self.pipeline_exists,
-        );
+        ));
 
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
@@ -444,14 +455,16 @@ impl ArchivistBuilder {
             debug!("Log listeners stopped.");
         };
 
-        let (abortable_fut, abort_handle) =
-            abortable(future::join(run_outgoing, run_event_collection));
+        let (abortable_fut, abort_handle) = abortable(run_outgoing);
 
         let mut listen_sender = self.listen_sender;
         let mut log_sender = self.log_sender;
+        let event_source_registry = self.event_source_registry;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
                 stop_recv.into_future().await;
+                event_source_registry.terminate();
+                run_event_collection_task.await;
                 listen_sender.disconnect();
                 log_sender.disconnect();
                 abort_handle.abort()
@@ -466,12 +479,11 @@ impl ArchivistBuilder {
     }
 
     async fn collect_component_events(
-        mut event_source_registry: EventSourceRegistry,
+        events: ComponentEventStream,
         log_sender: mpsc::UnboundedSender<Task<()>>,
         state: ArchivistState,
         pipeline_exists: bool,
     ) {
-        let events = event_source_registry.take_stream().await.expect("Created event stream");
         if !pipeline_exists {
             component::health().set_unhealthy("Pipeline config has an error");
         } else {
@@ -813,10 +825,10 @@ mod tests {
     }
 
     // run archivist and send signal when it dies.
-    fn run_archivist_and_signal_on_exit() -> (DirectoryProxy, oneshot::Receiver<()>) {
+    async fn run_archivist_and_signal_on_exit() -> (DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
-        archivist.install_logger_services().install_controller_service();
+        archivist.install_log_services().await.install_controller_service();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
@@ -827,10 +839,10 @@ mod tests {
     }
 
     // runs archivist and returns its directory.
-    fn run_archivist() -> DirectoryProxy {
+    async fn run_archivist() -> DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut archivist = init_archivist();
-        archivist.install_logger_services();
+        archivist.install_log_services().await;
         fasync::Task::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
         })
@@ -840,7 +852,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_log_and_retrive_log() {
-        let directory = run_archivist();
+        let directory = run_archivist().await;
         let mut recv_logs = start_listener(&directory);
 
         let mut log_helper = LogSinkHelper::new(&directory);
@@ -890,7 +902,7 @@ mod tests {
     /// log sink.
     #[fasync::run_singlethreaded(test)]
     async fn log_from_multiple_sock() {
-        let directory = run_archivist();
+        let directory = run_archivist().await;
         let mut recv_logs = start_listener(&directory);
 
         let log_helper = LogSinkHelper::new(&directory);
@@ -928,7 +940,7 @@ mod tests {
     /// Stop API works
     #[fasync::run_singlethreaded(test)]
     async fn stop_works() {
-        let (directory, signal_recv) = run_archivist_and_signal_on_exit();
+        let (directory, signal_recv) = run_archivist_and_signal_on_exit().await;
         let mut recv_logs = start_listener(&directory);
 
         {

@@ -98,8 +98,7 @@ fn main() -> Result<(), Error> {
     let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    archivist.install_logger_services();
-
+    executor.run_singlethreaded(archivist.install_log_services());
     executor
         .run_singlethreaded(archivist.install_event_sources(!opt.disable_event_source))
         .context("failed to add event lifecycle event sources")?;
