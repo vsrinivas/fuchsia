@@ -35,6 +35,8 @@ const STARTUP_DELAY: Duration = Duration::from_secs(60);
 const RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
 /// Allow reboot if it's been more than 48 hours since waiting to reboot.
 const VALID_REBOOT_DURATION: Duration = Duration::from_secs(48 * 60 * 60);
+/// Default value for `fuzz_percentage_range`, see `fuzz_interval` for details.
+const DEFAULT_FUZZ_PERCENTAGE_RANGE: u32 = 25;
 
 /// The policy implementation for Fuchsia.
 struct FuchsiaPolicy;
@@ -82,13 +84,12 @@ impl Policy for FuchsiaPolicy {
             .periodic_interval
             .unless(protocol_state.server_dictated_poll_interval);
 
-        let interval =
-            match (policy_data.interval_fuzz_seed, policy_data.config.fuzz_percentage_range) {
-                (Some(fuzz_seed), Some(fuzz_range)) => {
-                    fuzz_interval(interval, fuzz_seed, fuzz_range)
-                }
-                _ => interval,
-            };
+        let interval = match policy_data.interval_fuzz_seed {
+            Some(fuzz_seed) => {
+                fuzz_interval(interval, fuzz_seed, policy_data.config.fuzz_percentage_range)
+            }
+            _ => interval,
+        };
 
         // The `CheckTiming` to return is primarily based on the state of the `last_update_time`.
         //
@@ -527,7 +528,7 @@ pub struct PolicyConfig {
     pub startup_delay: Duration,
     pub retry_delay: Duration,
     pub allow_reboot_when_idle: bool,
-    pub fuzz_percentage_range: Option<u32>,
+    pub fuzz_percentage_range: u32,
 }
 
 impl From<Option<PolicyConfigJson>> for PolicyConfig {
@@ -552,7 +553,10 @@ impl From<Option<PolicyConfigJson>> for PolicyConfig {
                 .as_ref()
                 .and_then(|c| c.allow_reboot_when_idle)
                 .unwrap_or(true),
-            fuzz_percentage_range: config.as_ref().and_then(|c| c.fuzz_percentage_range),
+            fuzz_percentage_range: config
+                .as_ref()
+                .and_then(|c| c.fuzz_percentage_range)
+                .unwrap_or(DEFAULT_FUZZ_PERCENTAGE_RANGE),
         }
     }
 }
@@ -1484,8 +1488,7 @@ mod tests {
                 periodic_interval: Duration::from_secs(42 * 60),
                 startup_delay: Duration::from_secs(43),
                 retry_delay: Duration::from_secs(301),
-                allow_reboot_when_idle: true,
-                fuzz_percentage_range: None,
+                ..PolicyConfig::default()
             }
         );
     }
@@ -1497,7 +1500,7 @@ mod tests {
             startup_delay: STARTUP_DELAY,
             retry_delay: RETRY_DELAY,
             allow_reboot_when_idle: true,
-            fuzz_percentage_range: None,
+            fuzz_percentage_range: DEFAULT_FUZZ_PERCENTAGE_RANGE,
         };
         assert_eq!(PolicyConfig::default(), default_policy_config);
         assert_eq!(PolicyConfig::from(None), default_policy_config);
@@ -1511,13 +1514,7 @@ mod tests {
                 startup_delay_seconds: Some(123),
                 ..PolicyConfigJson::default()
             })),
-            PolicyConfig {
-                periodic_interval: PERIODIC_INTERVAL,
-                startup_delay: Duration::from_secs(123),
-                retry_delay: RETRY_DELAY,
-                allow_reboot_when_idle: true,
-                fuzz_percentage_range: None,
-            }
+            PolicyConfig { startup_delay: Duration::from_secs(123), ..PolicyConfig::default() }
         );
     }
 
