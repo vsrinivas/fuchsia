@@ -311,8 +311,7 @@ void MessageLoopTarget::HandleChannelException(const ChannelExceptionHandler& ha
 }
 
 uint64_t MessageLoopTarget::GetMonotonicNowNS() const {
-  zx::time ret;
-  zx::clock::get(&ret);
+  zx::time ret = zx::clock::get_monotonic();
 
   return ret.get();
 }
