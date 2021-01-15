@@ -196,30 +196,6 @@ impl NetworkTimeClient {
 }
 
 #[cfg(test)]
-impl HttpsDateError {
-    pub fn is_network_error(&self) -> bool {
-        match self {
-            HttpsDateError::NetworkError => true,
-            _ => false,
-        }
-    }
-    pub fn is_pki_error(&self) -> bool {
-        use HttpsDateError::*;
-        match self {
-            NoCertificatesPresented | InvalidCertificateChain | CorruptLeafCertificate => true,
-            _ => false,
-        }
-    }
-    pub fn is_date_error(&self) -> bool {
-        use HttpsDateError::*;
-        match self {
-            DateFormatError => true,
-            _ => false,
-        }
-    }
-}
-
-#[cfg(test)]
 mod test {
     use super::*;
     use anyhow::Error;
@@ -347,7 +323,10 @@ mod test {
             NetworkTimeClient::new_with_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
-        assert!(client.get_network_time(url).await.unwrap_err().is_pki_error());
+        assert_eq!(
+            client.get_network_time(url).await.unwrap_err(),
+            HttpsDateError::InvalidCertificateChain
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -358,7 +337,10 @@ mod test {
         let mut client = NetworkTimeClient::new_with_trust_anchors(&TEST_TLS_SERVER_ROOTS);
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
-        assert!(client.get_network_time(url).await.unwrap_err().is_pki_error());
+        assert_eq!(
+            client.get_network_time(url).await.unwrap_err(),
+            HttpsDateError::InvalidCertificateChain
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -377,6 +359,9 @@ mod test {
         let mut client = NetworkTimeClient::new_with_trust_anchors(&TEST_TLS_SERVER_ROOTS);
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
-        assert!(client.get_network_time(url).await.unwrap_err().is_date_error());
+        assert_eq!(
+            client.get_network_time(url).await.unwrap_err(),
+            HttpsDateError::DateFormatError
+        );
     }
 }
