@@ -13,5 +13,9 @@ ffx_plugin("ffx_target_add") {
     "src/args.rs",
     "src/lib.rs",
   ]
-  deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:regex",
+  ]
 }

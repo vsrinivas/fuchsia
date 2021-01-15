@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, std::net::IpAddr};
+use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq, Clone)]
@@ -28,5 +28,5 @@ address, often used for remote workflows."
 pub struct AddCommand {
     #[argh(positional)]
     /// IP of the target.
-    pub addr: IpAddr,
+    pub addr: String,
 }
