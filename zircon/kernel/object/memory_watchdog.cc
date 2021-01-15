@@ -292,7 +292,7 @@ void MemoryWatchdog::Init(Executor* executor) {
       watchdog->WorkerThread();
     };
     auto thread =
-        Thread::Create("memory-pressure-thread", memory_worker_thread, this, HIGH_PRIORITY);
+        Thread::Create("memory-pressure-thread", memory_worker_thread, this, HIGHEST_PRIORITY);
     DEBUG_ASSERT(thread);
     thread->Detach();
     thread->Resume();
