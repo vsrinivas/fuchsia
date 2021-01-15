@@ -27,7 +27,7 @@ $ fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_ma
 Use the [`session_control`](/src/session/tools/session_control/README.md) tool to run a specific session. For example:
 
 ```
-$ fx shell 'session_control -s "fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm"'
+$ fx shell 'session_control launch "fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm"'
 ```
 
 ### Running on boot

@@ -34,7 +34,7 @@ To build the relevant components and boot into the session, follow the instructi
 
 To instruct a running `session_manager` to launch the session, run:
 ```
-fx shell session_control -s fuchsia-pkg://fuchsia.com/scene_manager_session#meta/scene_manager_session.cm
+fx shell session_control launch fuchsia-pkg://fuchsia.com/scene_manager_session#meta/scene_manager_session.cm
 ```
 
 ## Testing

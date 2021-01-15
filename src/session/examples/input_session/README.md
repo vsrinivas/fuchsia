@@ -35,7 +35,7 @@ To build the relevant components and boot into the session, follow the instructi
 
 To instruct a running `session_manager` to launch the session, run:
 ```
-fx shell session_control -s fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm
+fx shell session_control launch fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm
 ```
 
 The last command should output messages to the system log for each connected (known) input device. Some device types (such as keyboard and mouse) have multiple devices under certain circumstances, such as when running from a Chrome Remote Desktop session. Typically only one of each device type produces events.
