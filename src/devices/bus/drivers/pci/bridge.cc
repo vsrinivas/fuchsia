@@ -152,7 +152,7 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
 void Bridge::Unplug() {
   UnplugDownstream();
   pci::Device::Unplug();
-  zxlogf(INFO, "bridge [%s] unplugged", cfg_->addr());
+  zxlogf(DEBUG, "bridge [%s] unplugged", cfg_->addr());
 }
 
 zx_status_t Bridge::ConfigureBars() {

@@ -238,9 +238,22 @@ class FakeEcam {
     ZX_ASSERT(ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                       &mmio) == ZX_OK);
     mmio_ = std::move(*mmio);
-    // TODO(fxbug.dev/56253): Use a fake-mmio instead.
+    // Most access will be done via config objects using MmioViews, but the pointer is cast here
+    // so that we can reach in and fiddle with the raw config as necessary to modify and verify
+    // state in tests.
     configs_ = static_cast<FakeDeviceConfig*>((void*)mmio_->get());
     reset();
+  }
+
+  ddk::MmioBuffer CopyEcam() {
+    mmio_buffer_t buffer = {
+        .vaddr = mmio_->get(),
+        .offset = mmio_->get_offset(),
+        .size = mmio_->get_size(),
+        .vmo = mmio_->get_vmo()->get(),
+    };
+
+    return ddk::MmioBuffer(buffer);
   }
 
   // Provide ways to access individual devices in the ecam by BDF address.
@@ -256,6 +269,7 @@ class FakeEcam {
   }
 
   FakeDeviceConfig& get(pci_bdf_t bdf) { return get(bdf.bus_id, bdf.device_id, bdf.function_id); }
+  zx::unowned_vmo vmo() { return mmio_->get_vmo(); }
 
   uint8_t bus_start() const { return bus_start_; }
   uint8_t bus_end() const { return bus_end_; }

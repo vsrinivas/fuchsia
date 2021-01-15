@@ -248,6 +248,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
   EXPECT_EQ(4, msi.vectors_avail());
   EXPECT_EQ(false, msi.supports_pvm());
 
+  // MSI should be disabled by Device initialization.
   MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
   EXPECT_EQ(0, ctrl.enable());
 }
@@ -268,6 +269,7 @@ TEST_F(PciDeviceTests, MsixCapabilityTest) {
   EXPECT_EQ(1, msix.pba_bar());
   EXPECT_EQ(0x800, msix.pba_offset());
 
+  // MSI-X should be disabled by Device initialization.
   MsixControlReg ctrl = {.value = dev.config()->Read(msix.ctrl())};
   EXPECT_EQ(0, ctrl.enable());
 }

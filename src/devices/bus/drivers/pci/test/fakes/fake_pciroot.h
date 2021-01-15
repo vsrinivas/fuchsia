@@ -4,7 +4,11 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 
+#include <assert.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/fake-bti/bti.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
 
 #include "fake_ecam.h"
@@ -17,10 +21,16 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
  public:
   // By default, pciroot won't populate an ecam unless it's called with Create().
   FakePciroot(uint8_t bus_start = 0, uint8_t bus_end = 0)
-      : bus_start_(bus_start),
-        bus_end_(bus_end),
-        proto_({&pciroot_protocol_ops_, this}),
-        ecam_(bus_start, bus_end) {}
+      : proto_({&pciroot_protocol_ops_, this}),
+        ecam_(bus_start, bus_end),
+        info_{
+            .name = "fakroot",
+            .start_bus_num = bus_start,
+            .end_bus_num = bus_end,
+            .ecam_vmo = ecam_.vmo()->get(),
+        } {
+    ZX_ASSERT(fake_bti_create(bti_.reset_and_get_address()) == ZX_OK);
+  }
 
   // Allow move.
   FakePciroot(FakePciroot&&) = default;
@@ -29,21 +39,28 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   FakePciroot(const FakePciroot&) = delete;
   FakePciroot& operator=(const FakePciroot&) = delete;
 
-  const pciroot_protocol_t* proto() const { return &proto_; }
+  pciroot_protocol_t* proto() { return &proto_; }
+  pci_platform_info_t info() { return info_; }
   FakeEcam& ecam() { return ecam_; }
-  uint8_t bus_start() { return bus_start_; }
-  uint8_t bus_end() { return bus_end_; }
+  uint8_t bus_start() { return info_.start_bus_num; }
+  uint8_t bus_end() { return info_.end_bus_num; }
   int32_t allocation_cnt() { return allocation_cnt_; }
+  zx::bti& bti() { return bti_; }
 
   // Protocol methods.
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, bti);
   }
+
   zx_status_t PcirootConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
+    *info = info_;
+    return ZX_OK;
+  }
+
   bool PcirootDriverShouldProxyConfig(void) { return false; }
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -51,7 +68,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset, uint16_t* value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -59,7 +76,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset, uint32_t* value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -67,21 +84,21 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset, uint8_t value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset, uint16_t value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset, uint32_t value) {
-    if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
+    if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
@@ -102,10 +119,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   }
 
  private:
-  uint8_t bus_start_ = 0;
-  uint8_t bus_end_ = 0;
   pciroot_protocol_t proto_;
   FakeEcam ecam_;
+  pci_platform_info_t info_;
+  zx::bti bti_;
   int32_t allocation_cnt_ = 0;
 };
 

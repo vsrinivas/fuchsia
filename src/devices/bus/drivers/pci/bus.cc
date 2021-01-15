@@ -17,6 +17,7 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "bridge.h"
@@ -26,53 +27,55 @@
 
 namespace pci {
 
-// Creates the PCI bus driver instance and attempts initialization.
-zx_status_t Bus::Create(zx_device_t* parent) {
+zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
   pciroot_protocol_t pciroot = {};
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &pciroot);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to obtain pciroot protocol: %d!", status);
+    zxlogf(ERROR, "failed to obtain pciroot protocol: %s", zx_status_get_string(status));
     return status;
   }
 
   pci_platform_info_t info = {};
   status = pciroot_get_pci_platform_info(&pciroot, &info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to obtain platform information: %d!", status);
+    zxlogf(ERROR, "failed to obtain platform information: %s!", zx_status_get_string(status));
     return status;
   }
 
-  Bus* bus = new Bus(parent, info, &pciroot);
+  // A PCI bus should have an ecam, but they are not mandatory per spec depending on the
+  // platform tables offered to us.
+  std::optional<ddk::MmioBuffer> ecam;
+  if (info.ecam_vmo != ZX_HANDLE_INVALID) {
+    if (auto result = pci::Bus::MapEcam(zx::vmo(info.ecam_vmo)); result.is_ok()) {
+      ecam = std::move(result.value());
+    } else {
+      return result.status_value();
+    }
+  }
+
+  auto bus = std::make_unique<pci::Bus>(parent, &pciroot, info, std::move(ecam));
   if (!bus) {
-    zxlogf(ERROR, "failed to allocate bus object.");
+    zxlogf(ERROR, "failed to allocate bus object");
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Name the bus instance with segment group and bus range, for example:
-  // pci[0][0:255] for a legacy pci bus in segment group 0.
   if ((status = bus->DdkAdd("bus")) != ZX_OK) {
-    zxlogf(ERROR, "failed to add bus driver: %d", status);
+    zxlogf(ERROR, "failed to add bus driver: %s", zx_status_get_string(status));
     return status;
   }
 
   if ((status = bus->Initialize()) != ZX_OK) {
-    zxlogf(ERROR, "failed to initialize bus driver: %d!", status);
+    zxlogf(ERROR, "failed to initialize driver: %s", zx_status_get_string(status));
     bus->DdkAsyncRemove();
     return status;
   }
 
+  // The DDK owns the object if we've mae it this far.
+  (void)bus.release();
   return ZX_OK;
 }
 
 zx_status_t Bus::Initialize() {
-  zx_status_t status = ZX_OK;
-  if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
-    if ((status = MapEcam()) != ZX_OK) {
-      zxlogf(ERROR, "failed to map ecam: %d!", status);
-      return status;
-    }
-  }
-
   // Stash the ops/ctx pointers for the pciroot protocol so we can pass
   // them to the allocators provided by Pci(e)Root. The initial root is
   // created to manage the start of the bus id range given to use by the
@@ -81,9 +84,11 @@ zx_status_t Bus::Initialize() {
 
   // Begin our bus scan starting at our root
   ScanDownstream();
-  if ((status = ConfigureLegacyIrqs()) != ZX_OK) {
+  zx_status_t status = ConfigureLegacyIrqs();
+  if (status != ZX_OK) {
     zxlogf(ERROR, "error configuring legacy IRQs, they will be unavailable: %s",
            zx_status_get_string(status));
+    return status;
   }
   root_->ConfigureDownstreamDevices();
 
@@ -93,26 +98,24 @@ zx_status_t Bus::Initialize() {
 
 // Maps a vmo as an mmio_buffer to be used as this Bus driver's ECAM region
 // for config space access.
-zx_status_t Bus::MapEcam() {
-  ZX_DEBUG_ASSERT(info_.ecam_vmo != ZX_HANDLE_INVALID);
-
+zx::status<ddk::MmioBuffer> Bus::MapEcam(zx::vmo ecam_vmo) {
   size_t size;
-  zx_status_t status = zx_vmo_get_size(info_.ecam_vmo, &size);
+  zx_status_t status = ecam_vmo.get_size(&size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "couldn't get ecam vmo size: %d!", status);
-    return status;
+    return zx::error(status);
   }
 
-  status = ddk::MmioBuffer::Create(0, size, zx::vmo(info_.ecam_vmo),
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &ecam_);
+  std::optional<ddk::MmioBuffer> ecam = {};
+  status =
+      ddk::MmioBuffer::Create(0, size, std::move(ecam_vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE, &ecam);
   if (status != ZX_OK) {
     zxlogf(ERROR, "couldn't map ecam vmo: %d!", status);
-    return status;
+    return zx::error(status);
   }
 
-  zxlogf(DEBUG, "ecam for segment %u mapped at %p (size: %#zx)", info_.segment_group, ecam_->get(),
-         ecam_->get_size());
-  return ZX_OK;
+  zxlogf(DEBUG, "ecam for mapped at %p (size: %#zx)", ecam->get(), ecam->get_size());
+  return zx::ok(std::move(*ecam));
 }
 
 zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) {
@@ -124,7 +127,7 @@ zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) 
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to create config for %02x:%02x:%1x: %d!", bdf.bus_id, bdf.device_id,
+    zxlogf(ERROR, "failed to create config for %02x:%02x.%1x: %d!", bdf.bus_id, bdf.device_id,
            bdf.function_id, status);
   }
 
@@ -222,7 +225,11 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
       }
 
       // We're at a leaf node in the topology so create a normal device
-      pci::Device::Create(zxdev(), std::move(config), upstream, this);
+      status = pci::Device::Create(zxdev(), std::move(config), upstream, this);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "failed to create device at %s: %s", config->addr(),
+               zx_status_get_string(status));
+      }
     }
 
     // Reset _func_id to zero here so that after we resume a single function
@@ -239,13 +246,14 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   }
 
   // most cases they'll be using MSI / MSI-X anyway so a warning is sufficient.
-  fbl::Array<const pci_legacy_irq> irqs(info_.legacy_irqs_list, info_.legacy_irqs_count);
+  fbl::Span<const pci_legacy_irq> irqs(info_.legacy_irqs_list, info_.legacy_irqs_count);
   for (auto& irq : irqs) {
     zx::unowned_interrupt interrupt(irq.interrupt);
     status = interrupt->bind(legacy_irq_port_, irq.vector, ZX_INTERRUPT_BIND);
     if (status != ZX_OK) {
       zxlogf(WARNING, "failed to bind irq %#x to port: %s", irq.vector,
              zx_status_get_string(status));
+      return status;
     }
   }
 
@@ -253,8 +261,8 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   // routing table provided by the platform. While we hold the devices_lock no
   // changes can be made to the Bus topology, ensuring the lifetimes of the
   // upstream paths and config accesses.
-  fbl::Array<const pci_irq_routing_entry_t> routing_entries(info_.irq_routing_list,
-                                                            info_.irq_routing_count);
+  fbl::Span<const pci_irq_routing_entry_t> routing_entries(info_.irq_routing_list,
+                                                           info_.irq_routing_count);
   fbl::AutoLock devices_lock(&devices_lock_);
   for (auto& device : devices_) {
     uint8_t pin = device.config()->Read(Config::kInterruptPin);

@@ -18,11 +18,14 @@ test("pci-unit") {
   output_name = "pci-unit-test"
   sources = [
     "unit/allocation_tests.cc",
+    "unit/bus_tests.cc",
     "unit/config_tests.cc",
     "unit/device_tests.cc",
   ]
   deps = [
     "//src/devices/bus/drivers/pci:user_pci",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-msi",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
@@ -77,6 +80,7 @@ driver_module("pci_fake") {
   public_deps = [
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
+    "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-msi",
     "//src/lib/ddk",
     "//src/lib/ddktl",

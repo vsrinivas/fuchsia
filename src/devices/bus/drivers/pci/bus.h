@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pci/llcpp/fidl.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
 #include <zircon/compiler.h>
@@ -57,8 +58,17 @@ class Bus;
 using PciBusType = ddk::Device<Bus, ddk::Messageable>;
 class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceInterface {
  public:
-  ~Bus() override;
   static zx_status_t Create(zx_device_t* parent);
+  Bus(zx_device_t* parent, const pciroot_protocol_t* pciroot, const pci_platform_info_t info,
+      std::optional<ddk::MmioBuffer> ecam)
+      : PciBusType(parent),  // fulfills the DDK mixins
+        pciroot_(pciroot),
+        info_(info),
+        ecam_(std::move(ecam)) {}
+  ~Bus() override;
+  zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
+  // Map an ecam VMO for Bus and Config use.
+  static zx::status<ddk::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
   void DdkRelease();
 
   // Bus Device Interface implementation
@@ -78,19 +88,18 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   void GetDevices(GetDevicesCompleter::Sync& completer) final;
   void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
 
- private:
-  // Our constructor exists to fulfill the mixin constructors
-  Bus(zx_device_t* parent, const pci_platform_info_t info, const pciroot_protocol_t* proto)
-      : PciBusType(parent),  // fulfills the DDK mixins
-        info_(info),
-        pciroot_(proto) {}
+ protected:
+  // These are used for derived test classes.
+  fbl::Mutex* devices_lock() __TA_RETURN_CAPABILITY(devices_lock_) { return &devices_lock_; }
+  pci::DeviceTree& devices() { return devices_; }
+  SharedIrqMap& shared_irqs() { return shared_irqs_; }
+  LegacyIrqs& legacy_irqs() { return legacy_irqs_; }
 
-  // Utility methods for the bus driver
-  zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
-  // Map an ecam VMO for Bus and Config use.
-  zx_status_t MapEcam();
-  // Scan all buses downstream from the root within the start and end
+ private:
   // bus values given to the Bus driver through Pciroot.
+  // Creates a Config object for accessing the config space of the device at |bdf|.
+  zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
+  // Scan all buses downstream from the root within the start and end
   zx_status_t ScanDownstream();
   ddk::PcirootProtocolClient& pciroot() { return pciroot_; }
   // Scan a specific bus
@@ -99,12 +108,10 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   // All methods related to shared IRQ handling around legacy interrupts.
   // Creates interrupts corresponding to legacy IRQ vectors and configures devices accordingly.
   zx_status_t ConfigureLegacyIrqs();
-  // Creates a Config object for accessing the config space of the device at |bdf|.
-  zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
 
   // members
-  const pci_platform_info_t info_;
   ddk::PcirootProtocolClient pciroot_;
+  const pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
   // All devices hang off of this Bus's root port.
   std::unique_ptr<PciRoot> root_;
@@ -119,6 +126,8 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   LegacyIrqs legacy_irqs_;
   SharedIrqMap shared_irqs_ __TA_GUARDED(devices_lock_);
 };
+
+zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent);
 
 }  // namespace pci
 
