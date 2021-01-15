@@ -13,6 +13,7 @@ group("tests") {
     "msm8x53-som:tests",
     "mt8167s_ref:tests",
     "nelson:tests",
+    "qemu-arm64:tests",
     "sherlock:tests",
     "vim2:tests",
     "vim3:tests",

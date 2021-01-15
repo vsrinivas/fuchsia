@@ -33,4 +33,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   GENERIC = 0,
+  QEMU = 1,
 };

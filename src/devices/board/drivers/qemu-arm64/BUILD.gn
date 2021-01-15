@@ -2,8 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
+
+bind_rules("qemu_bus_bind") {
+  rules = "qemu_bus.bind"
+  output = "qemu_bus_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":qemu_bus_bind_test" ]
+}
 
 driver_module("qemu-arm64") {
   configs += [
@@ -21,15 +34,13 @@ driver_module("qemu-arm64") {
     "qemu-sysmem.cc",
   ]
   deps = [
+    ":qemu_bus_bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

@@ -4,13 +4,14 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 
 #include "qemu-bus.h"
 #include "qemu-virt.h"
+#include "src/devices/board/drivers/qemu-arm64/qemu_bus_bind.h"
+
 namespace board_qemu_arm64 {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
