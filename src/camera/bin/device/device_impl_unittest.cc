@@ -1101,7 +1101,9 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
         auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
-        token.BindSync()->Close();
+        auto bound_token = token.BindSync();
+        bound_token->SetName(1, "DeviceImplTestFakeStream");
+        bound_token->Close();
         legacy_stream_created = true;
         callback(kMaxCampingBuffers * kNumClients);
       },
