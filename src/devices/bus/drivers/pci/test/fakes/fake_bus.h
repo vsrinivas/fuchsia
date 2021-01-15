@@ -21,14 +21,15 @@ class FakeBus : public BusDeviceInterface {
  public:
   explicit FakeBus(uint8_t bus_start = 0, uint8_t bus_end = 0) : pciroot_(bus_start, bus_end) {}
 
-  void LinkDevice(fbl::RefPtr<pci::Device> device) final {
+  zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.insert(device);
+    return ZX_OK;
   }
 
-  void UnlinkDevice(pci::Device* device) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
+  zx_status_t UnlinkDevice(pci::Device* device) final {
     devices_.erase(*device);
+    return ZX_OK;
   }
 
   zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) final {

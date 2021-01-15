@@ -312,6 +312,12 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   return ZX_OK;
 }
 
+Bus::~Bus() {
+  ZX_DEBUG_ASSERT(root_);
+  root_->DisableDownstream();
+  root_->UnplugDownstream();
+}
+
 void Bus::DdkRelease() { delete this; }
 
 }  // namespace pci

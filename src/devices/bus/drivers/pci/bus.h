@@ -17,6 +17,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
 
@@ -43,35 +44,16 @@ class Bus;
 using PciBusType = ddk::Device<Bus, ddk::Messageable>;
 class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceInterface {
  public:
+  ~Bus() override;
   static zx_status_t Create(zx_device_t* parent);
   void DdkRelease();
 
-  // Accessors for the device list, used by BusDeviceInterface
-  void LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    devices_.insert(device);
-  }
-
-  void UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    devices_.erase(*device);
-  }
-
-  zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) __TA_EXCLUDES(devices_lock_) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    return pciroot().AllocateMsi(count, false, msi);
-  }
-
-  zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti)
-      __TA_EXCLUDES(devices_lock_) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    return pciroot().GetBti(device->packed_addr(), index, bti);
-  }
-
-  zx_status_t ConnectSysmem(zx::channel channel) __TA_EXCLUDES(devices_lock_) final {
-    fbl::AutoLock devices_lock(&devices_lock_);
-    return pciroot().ConnectSysmem(std::move(channel));
-  }
+  // Bus Device Interface implementation
+  zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final;
+  zx_status_t UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final;
+  zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) __TA_EXCLUDES(devices_lock_) final;
+  zx_status_t ConnectSysmem(zx::channel channel) __TA_EXCLUDES(devices_lock_) final;
+  zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti) final;
 
   // All methods related to the fuchsia.hardware.pci service.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
