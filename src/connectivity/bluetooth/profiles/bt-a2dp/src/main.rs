@@ -96,14 +96,6 @@ const MAX_BITRATE_AAC: u32 = 250000;
 /// Pick a reasonable quality bitrate to use by default. 64k average per channel.
 const PREFERRED_BITRATE_AAC: u32 = 128000;
 
-// Duration for A2DP to wait before assuming role of the initiator.
-// If a signaling channel has not been established by this time, A2DP will
-// create the signaling channel, configure, open and start the stream.
-//
-// NOTE: This must be low enough to prevent peers from timing out while waiting for initiation.
-// The true delay from the peer's perspective is experimentally 100-500ms larger than the value here.
-const INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);
-
 fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapability> {
     endpoint.capabilities().iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
@@ -315,15 +307,16 @@ impl StreamsBuilder {
     }
 }
 
-/// Establishes the signaling channel after an INITIATOR_DELAY.
+/// Establishes the signaling channel after an `initiator_delay`.
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
+    initiator_delay: zx::Duration,
 ) {
-    trace!("waiting {}s before connecting to peer {}.", INITIATOR_DELAY.into_seconds(), peer_id);
-    fuchsia_async::Timer::new(INITIATOR_DELAY.after_now()).await;
+    trace!("waiting {}ms before connecting to peer {}.", initiator_delay.into_millis(), peer_id);
+    fuchsia_async::Timer::new(initiator_delay.after_now()).await;
     if peers.lock().is_connected(&peer_id) {
         return;
     }
@@ -381,6 +374,7 @@ fn handle_services_found(
     peers: Arc<Mutex<ConnectedPeers>>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
+    initiator_delay: Option<zx::Duration>,
 ) {
     let service_names: Vec<&str> =
         find_service_classes(attributes).iter().map(|an| an.name).collect();
@@ -411,13 +405,16 @@ fn handle_services_found(
         return;
     }
 
-    fasync::Task::local(connect_after_timeout(
-        peer_id.clone(),
-        peers.clone(),
-        profile_svc,
-        channel_mode,
-    ))
-    .detach();
+    if let Some(initiator_delay) = initiator_delay {
+        fasync::Task::local(connect_after_timeout(
+            peer_id.clone(),
+            peers.clone(),
+            profile_svc,
+            channel_mode,
+            initiator_delay,
+        ))
+        .detach();
+    }
 }
 
 async fn test_encode_sbc() -> Result<(), Error> {
@@ -501,6 +498,9 @@ fn setup_profiles(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
+
+    let initiator_delay =
+        if config.initiator_delay.into_millis() == 0 { None } else { Some(config.initiator_delay) };
 
     fuchsia_syslog::init_with_tags(&["a2dp"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
@@ -592,7 +592,7 @@ async fn main() -> Result<(), Error> {
         Ok(profile) => profile,
     };
 
-    handle_profile_events(profile, peers, profile_svc, config.channel_mode).await
+    handle_profile_events(profile, peers, profile_svc, config.channel_mode, initiator_delay).await
 }
 
 async fn handle_profile_events(
@@ -600,6 +600,7 @@ async fn handle_profile_events(
     peers: Arc<Mutex<ConnectedPeers>>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
+    initiator_delay: Option<zx::Duration>,
 ) -> Result<(), Error> {
     while let Some(item) = profile.next().await {
         let evt = match item {
@@ -628,6 +629,7 @@ async fn handle_profile_events(
                     peers.clone(),
                     profile_svc.clone(),
                     channel_mode.clone(),
+                    initiator_delay,
                 );
             }
         }
@@ -638,6 +640,7 @@ async fn handle_profile_events(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::DEFAULT_INITIATOR_DELAY;
 
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_a2dp as a2dp;
@@ -728,6 +731,7 @@ mod tests {
             peers.clone(),
             proxy.clone(),
             bredr::ChannelMode::Basic,
+            Some(DEFAULT_INITIATOR_DELAY),
         );
 
         run_to_stalled(&mut exec);
@@ -789,6 +793,7 @@ mod tests {
             peers.clone(),
             proxy.clone(),
             bredr::ChannelMode::Basic,
+            Some(DEFAULT_INITIATOR_DELAY),
         );
 
         // At this point, a remote peer was found, but hasn't connected yet. There

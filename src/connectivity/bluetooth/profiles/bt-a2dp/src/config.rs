@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    fidl_fuchsia_bluetooth_bredr as bredr,
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_zircon as zx,
     serde::{self, Deserialize},
     std::{collections::HashSet, fs::File, io::Read},
     thiserror::Error,
@@ -16,6 +16,7 @@ use crate::sources::AudioSourceType;
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "/config/data/a2dp.config";
 
 pub(crate) const DEFAULT_DOMAIN: &str = "Bluetooth";
+pub(crate) const DEFAULT_INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);
 
 #[derive(FromArgs)]
 #[argh(description = "Bluetooth Advanced Audio Distribution Profile")]
@@ -38,6 +39,17 @@ pub struct A2dpConfigurationArgs {
     /// enable sink, allowing peers to stream audio from this device. defaults to true.
     #[argh(option)]
     pub enable_sink: Option<bool>,
+
+    /// duration for A2DP to wait in milliseconds before assuming role of the initiator.
+    /// If a signaling channel has not been established by this time, A2DP will
+    /// create the signaling channel, configure, open and start the stream. Defaults to 500
+    /// milliseconds. Set to 0 to disable initiation.
+    ///
+    /// NOTE: This must be low enough to prevent peers from timing out while waiting for
+    /// initiation. The true delay from the peer's perspective is experimentally 100-500ms larger
+    /// than the value here.
+    #[argh(option)]
+    pub initiator_delay: Option<u32>,
 }
 
 /// Parses the ChannelMode from the String argument.
@@ -60,6 +72,14 @@ where
     channel_mode_from_str(str).map_err(serde::de::Error::custom)
 }
 
+fn deserialize_initiator_delay<'de, D>(deserializer: D) -> Result<zx::Duration, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let num = u32::deserialize(deserializer)?;
+    Ok(zx::Duration::from_millis(num.into()))
+}
+
 /// Configuration parameters for A2DP.
 /// Typically loaded from a config file provided during build.
 /// See [`A2dpConfiguration::load_default`]
@@ -78,6 +98,12 @@ pub struct A2dpConfiguration {
     pub enable_source: bool,
     /// Enable sink streams. defaults to true.
     pub enable_sink: bool,
+    /// Duration for A2DP to wait before assuming role of the initiator.
+    /// If a signaling channel has not been established by this time, A2DP will
+    /// create the signaling channel, configure, open and start the stream. Defaults
+    /// to 500 milliseconds. Set to 0 to disable initiation.
+    #[serde(deserialize_with = "deserialize_initiator_delay")]
+    pub initiator_delay: zx::Duration,
 }
 
 impl Default for A2dpConfiguration {
@@ -88,6 +114,7 @@ impl Default for A2dpConfiguration {
             channel_mode: bredr::ChannelMode::Basic,
             enable_source: true,
             enable_sink: true,
+            initiator_delay: DEFAULT_INITIATOR_DELAY,
         }
     }
 }
@@ -120,12 +147,17 @@ impl A2dpConfiguration {
             Some(s) => channel_mode_from_str(s)?,
             None => self.channel_mode,
         };
+        let initiator_delay = match args.initiator_delay {
+            Some(d) => zx::Duration::from_millis(d.into()),
+            None => self.initiator_delay,
+        };
         Ok(Self {
             domain: args.domain.unwrap_or(self.domain),
             source: args.source.unwrap_or(self.source),
             enable_source: args.enable_source.unwrap_or(self.enable_source),
             enable_sink: args.enable_sink.unwrap_or(self.enable_sink),
             channel_mode,
+            initiator_delay,
             ..self
         })
     }
@@ -220,7 +252,8 @@ mod tests {
         let missing_domain = br#"
             {
                 "source": "big_ben",
-                "channel_mode": "ertm"
+                "channel_mode": "ertm",
+                "initiator_delay": 10000
             }
         "#;
         let config =
@@ -228,6 +261,7 @@ mod tests {
         assert_eq!(A2dpConfiguration::default().domain, config.domain);
         assert_eq!(AudioSourceType::BigBen, config.source);
         assert_eq!(true, config.enable_source);
+        assert_eq!(zx::Duration::from_millis(10000), config.initiator_delay);
 
         let missing_source = br#"
             {
