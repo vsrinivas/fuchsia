@@ -30,11 +30,6 @@ declare_args() {
 #     The list of all sources in this library.
 #     These sources must be within source_dir.
 #
-#   sources_required (optional)
-#     Whether complete source files are required by the rule. If true, all
-#     files under the source_dir must be included in sources.
-#     Defaults to true.
-#
 #   package_root (optional)
 #     Path to the directory hosting the library.
 #     This is useful for generated content, and can be ignored otherwise.
@@ -60,7 +55,8 @@ declare_args() {
 #
 #   source_dir (optional)
 #     Path to the directory containing the package sources, relative to
-#     package_root.
+#     package_root. All non third-party dart files under source_dir must be
+#     included in sources.
 #     Defaults to "lib".
 #
 #   deps (optional)
@@ -262,41 +258,30 @@ if (current_toolchain == dart_toolchain) {
     # not explicitly part of sources. This may cause a failure when syncing to
     # another repository, as they will be excluded from the resulting BUILD
     # file.
-    sources_required = true
-    if (defined(invoker.sources_required)) {
-      sources_required = invoker.sources_required
-    }
+    source_verification_target_name = "${target_name}_source_verification"
+    output_file = "$target_gen_dir/$target_name.missing"
 
-    if (sources_required) {
-      source_verification_target_name = "${target_name}_source_verification"
-      output_file = "$target_gen_dir/$target_name.missing"
+    action(source_verification_target_name) {
+      script = "//build/dart/verify_sources.py"
 
-      action(source_verification_target_name) {
-        script = "//build/dart/verify_sources.py"
+      outputs = [ output_file ]
 
-        outputs = [ output_file ]
+      args = [
+        "--package_root",
+        rebase_path(package_root),
+        "--source_dir",
+        source_dir,
+        "--stamp",
+        rebase_path(output_file),
+      ]
 
-        args = [
-          "--package_root",
-          rebase_path(package_root),
-          "--source_dir",
-          source_dir,
-          "--stamp",
-          rebase_path(output_file),
-        ]
-
-        foreach(source, invoker.sources) {
-          args += [ source ]
-        }
-
-        forward_variables_from(invoker, [ "testonly" ])
+      foreach(source, invoker.sources) {
+        args += [ source ]
       }
-      group_deps += [ ":$source_verification_target_name" ]
-    } else {
-      # Opting out of source listings requires that the package is present
-      # in a global allow-list.
-      group_deps += []
+
+      forward_variables_from(invoker, [ "testonly" ])
     }
+    group_deps += [ ":$source_verification_target_name" ]
 
     ################################
 

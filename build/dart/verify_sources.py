@@ -14,9 +14,9 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.abspath(__file__))))
 
 if sys.version_info[0] >= 3:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
+    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
 else:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
+    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 
 import yaml
 
@@ -40,7 +40,7 @@ def main():
         'sources', help='source files', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    if "third_party" in args.package_root:
+    if "/third_party/dart-pkg/git/flutter" in args.package_root:
         with open(args.stamp, 'w') as stamp:
             stamp.write('Success!')
             return 0
