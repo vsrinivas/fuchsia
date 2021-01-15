@@ -5,7 +5,7 @@
 use {
     crate::startup,
     anyhow::{Context as _, Error},
-    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_input_injection::{
         InputDeviceRegistryMarker, InputDeviceRegistryProxy, InputDeviceRegistryRequest,
         InputDeviceRegistryRequestStream,
@@ -26,6 +26,7 @@ use {
 
 /// The services exposed by the session manager.
 enum ExposedServices {
+    Manager(felement::ManagerRequestStream),
     ElementManager(ElementManagerRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
@@ -101,6 +102,7 @@ impl SessionManager {
     pub async fn expose_services(&mut self) -> Result<(), Error> {
         let mut fs = ServiceFs::new_local();
         fs.dir("svc")
+            .add_fidl_service(ExposedServices::Manager)
             .add_fidl_service(ExposedServices::ElementManager)
             .add_fidl_service(ExposedServices::Launcher)
             .add_fidl_service(ExposedServices::Restarter)
@@ -109,6 +111,28 @@ impl SessionManager {
 
         while let Some(service_request) = fs.next().await {
             match service_request {
+                ExposedServices::Manager(request_stream) => {
+                    // Connect to element.Manager served by the session.
+                    let (manager_proxy, server_end) =
+                        fidl::endpoints::create_proxy::<felement::ManagerMarker>()
+                            .expect("Failed to create ManagerProxy");
+                    {
+                        let state = self.state.lock().await;
+                        let session_exposed_dir_channel =
+                            state.session_exposed_dir_channel.as_ref().expect(
+                                "Failed to connect to ManagerProxy because no session was started",
+                            );
+                        fdio::service_connect_at(
+                            session_exposed_dir_channel,
+                            "fuchsia.element.Manager",
+                            server_end.into_channel(),
+                        )
+                        .expect("Failed to connect to Manager service");
+                    }
+                    SessionManager::handle_manager_request_stream(request_stream, manager_proxy)
+                        .await
+                        .expect("Manager request stream got an error.");
+                }
                 ExposedServices::ElementManager(request_stream) => {
                     // Connect to ElementManager served by the session.
                     let (element_manager_proxy, server_end) =
@@ -169,6 +193,31 @@ impl SessionManager {
             }
         }
 
+        Ok(())
+    }
+
+    /// Serves a specified [`ManagerRequestStream`].
+    ///
+    /// # Parameters
+    /// - `request_stream`: the ManagerRequestStream.
+    /// - `manager_proxy`: the ManagerProxy that will handle the relayed commands.
+    ///
+    /// # Errors
+    /// When an error is encountered reading from the request stream.
+    pub async fn handle_manager_request_stream(
+        mut request_stream: felement::ManagerRequestStream,
+        manager_proxy: felement::ManagerProxy,
+    ) -> Result<(), Error> {
+        while let Some(request) =
+            request_stream.try_next().await.context("Error handling Manager request stream")?
+        {
+            match request {
+                felement::ManagerRequest::ProposeElement { spec, controller, responder } => {
+                    let mut result = manager_proxy.propose_element(spec, controller).await?;
+                    responder.send(&mut result)?;
+                }
+            };
+        }
         Ok(())
     }
 
