@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1305
+From //build/config/BUILDCONFIG.gn:1251
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -569,7 +569,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2239
+From //build/config/BUILDCONFIG.gn:2185
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -1061,7 +1061,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1084
+From //build/config/BUILDCONFIG.gn:1030
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1680,7 +1680,7 @@ Each element of the list is one variant, which is a scope defining:
   tags = ["lto"]
 }, {
   configs = ["//build/config/profile"]
-  tags = ["instrumented", "profile"]
+  tags = ["instrumented", "profile", "breaks-gc-sections"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -1751,7 +1751,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:959
+From //build/config/BUILDCONFIG.gn:898
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2970,7 +2970,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1295
+From //build/config/BUILDCONFIG.gn:1241
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2979,7 +2979,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1300
+From //build/config/BUILDCONFIG.gn:1246
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3011,7 +3011,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1130
+From //build/config/BUILDCONFIG.gn:1076
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3281,7 +3281,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1114
+From //build/config/BUILDCONFIG.gn:1060
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
