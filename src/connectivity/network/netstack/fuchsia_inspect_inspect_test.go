@@ -42,18 +42,12 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		value: reflect.ValueOf(s),
 	}
 	children := v.ListChildren()
-	for i := range children {
-		// TODO(tamird): Remove this after the next gvisor roll.
-		if children[i] == "ARP" {
-			children = append(children[:i], children[i+1:]...)
-			break
-		}
-	}
 
 	if diff := cmp.Diff([]string{
 		"ICMP",
 		"IGMP",
 		"IP",
+		"ARP",
 		"TCP",
 		"UDP",
 	}, children); diff != "" {
