@@ -20,6 +20,7 @@
 #include <fbl/macros.h>
 
 #include "lib/media/codec_impl/codec_port.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/media/lib/metrics/metrics.cb.h"
 
 // "is_bound_checks" - In several lambdas that just send a message, we check
@@ -295,6 +296,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
         return;
       }
       ZX_DEBUG_ASSERT(!tmp_sysmem_);
+      sysmem_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
       status = binding_.Bind(std::move(tmp_interface_request_), shared_fidl_dispatcher_);
       if (status != ZX_OK) {

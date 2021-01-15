@@ -175,6 +175,7 @@ class TestAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
                                 buffer_collection_request) override {
     collection_.Bind(std::move(buffer_collection_request));
   }
+  void SetDebugClientInfo(std::string name, uint64_t id) override {}
 
   void NotImplemented_(const std::string& name) override {
     // Unexpected.
