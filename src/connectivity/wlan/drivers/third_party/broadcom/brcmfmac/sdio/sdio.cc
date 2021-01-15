@@ -962,7 +962,7 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio* bus, bool abort, bool rtx) {
   if (!retries) {
     BRCMF_ERR("count never zeroed: last 0x%04x", lastrbc);
   } else {
-    THROTTLE(20, BRCMF_DBG(SDIO, "flush took %d iterations", 0xffff - retries););
+    BRCMF_DBG_THROTTLE(SDIO, "flush took %d iterations", 0xffff - retries);
   }
 
   if (rtx) {
@@ -1745,7 +1745,7 @@ static uint brcmf_sdio_readframes(struct brcmf_sdio* bus, uint maxframes) {
   rxcount = maxframes - rxleft;
   /* Message if we hit the limit */
   if (!rxleft) {
-    THROTTLE(20, BRCMF_DBG(DATA, "hit rx limit of %d frames", maxframes););
+    BRCMF_DBG_THROTTLE(DATA, "hit rx limit of %d frames", maxframes);
   } else {
     BRCMF_DBG(DATA, "processed %d frames", rxcount);
   }
@@ -3083,7 +3083,7 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
   uint32_t intstatus;
 
   while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
-    THROTTLE(20, BRCMF_DBG(INTR, "OOB intr triggered"););
+    BRCMF_DBG_THROTTLE(INTR, "OOB intr triggered");
     sdio_claim_host(sdiodev->func1);
     if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
       BRCMF_ERR("failed backplane access");
@@ -3093,10 +3093,10 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
     brcmf_sdio_event_handler(sdiodev->bus);
     sdio_release_host(sdiodev->func1);
     if (intstatus == 0) {
-      THROTTLE(20, BRCMF_DBG(TEMP, "Zero intstatus; pausing 5 msec"););
+      BRCMF_DBG_THROTTLE(TEMP, "Zero intstatus; pausing 5 msec");
       zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
     }
-    THROTTLE(20, BRCMF_DBG(INTR, "Done with OOB intr"););
+    BRCMF_DBG_THROTTLE(INTR, "Done with OOB intr");
   }
 
   BRCMF_ERR("ISR exiting with status %s", zx_status_get_string(status));

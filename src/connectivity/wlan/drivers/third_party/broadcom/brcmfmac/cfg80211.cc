@@ -2203,9 +2203,9 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping data recv");
     return;
   }
-  THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
-                                  std::min<size_t>(size, 64u),
-                                  "Data received (%zu bytes, max 64 shown):", size));
+  BRCMF_THROTTLE_IF(5, BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA),
+                    BRCMF_DBG_HEX_DUMP(true, data, std::min<size_t>(size, 64u),
+                                       "Data received (%zu bytes, max 64 shown):", size));
   // IEEE Std. 802.3-2015, 3.1.1
   const uint16_t eth_type = ((uint16_t*)(data))[6];
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {

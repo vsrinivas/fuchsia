@@ -20,11 +20,13 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <cinttypes>
 #include <cstring>
 #include <utility>
 
 #include <ddk/debug.h>
 
+#include "throttle_counter.h"
 #include "token_bucket.h"
 
 // Some convenience macros for error and debug printing.
@@ -34,11 +36,13 @@
 
 #define BRCMF_INFO(fmt, ...) zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__)
 
-#define BRCMF_DBG(filter, fmt, ...)                        \
-  do {                                                     \
-    if (BRCMF_IS_ON(filter)) {                             \
-      zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__); \
-    }                                                      \
+#define BRCMF_DBG_UNFILTERED BRCMF_INFO
+
+#define BRCMF_DBG(filter, fmt, ...)                                \
+  do {                                                             \
+    if (BRCMF_IS_ON(filter)) {                                     \
+      BRCMF_DBG_UNFILTERED("(%s): " fmt, __func__, ##__VA_ARGS__); \
+    }                                                              \
   } while (0)
 
 #define BRCMF_DBG_EVENT(ifp, event_msg, REASON_FMT, reason_formatter) \
@@ -101,33 +105,70 @@ constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be tr
 #define BRCMF_IS_ON(filter) \
   ::wlan::brcmfmac::Debug::IsFilterOn(::wlan::brcmfmac::Debug::Filter::k##filter)
 
-#define THROTTLE(count, event)            \
-  do {                                    \
-    static std::atomic<unsigned> counter; \
-    if (counter.fetch_add(1) <= count) {  \
-      event;                              \
-    }                                     \
-  } while (0)
-
-// Throttle calls to only happen at a specific rate per second. If an event is
-// throttled it will not be called at all and no additional operations will be
-// performed nor any additional logs created.
-#define BRCMF_THROTTLE(events_per_second, event)                  \
-  do {                                                            \
+// Throttle an event so that it is only called at most |events_per_second| times each second. If the
+// event is throttled it will not be called at all and no additional side effects take place.
+#define BRCMF_THROTTLE(events_per_second, event) \
+  do { \
     static wlan::brcmfmac::TokenBucket bucket(events_per_second); \
-    if (bucket.consume()) {                                       \
-      event;                                                      \
-    }                                                             \
+    if (bucket.consume()) { \
+      event; \
+    } \
   } while (0)
 
+// Enable an event if |condition| is true and if it is enabled throttle it so that it is only called
+// at a rate of at most |events_per_second|. If the condition is not true this will efficiently
+// avoid any throttling checks but note that this also means that any calls to this macro when
+// condition is false will not count towards throttling.
+#define BRCMF_THROTTLE_IF(events_per_second, condition, event) \
+  do { \
+    if (condition) { \
+      BRCMF_THROTTLE(events_per_second, event); \
+    } \
+  } while (0)
+
+// Throttle calls to |event| to only happen at a specific rate per second. If an event is called
+// it will be passed the parameters fmt and variadic arguments in |...|. In the case of an event
+// being allowed after previous events have been throttled an additional string will be appended
+// at the end of |fmt| which will indicate the number of times the event was previously throttled.
+// This counter is reset on each non-throttled event. This behavior makes the assumption that the
+// event being throttled is printing or logging a message in printf style. If an event is throttled
+// it will not be called and no additional side effects take place.
+//
+// NOTE: A log message may produce different output because of different arguments to the printf
+//       style call but it may still be throttled even if it's different from the previous message.
+//       Each BRCMF_THROTTLE_MSG statement is its own throttler that is independent of other
+//       throttlers but will evaluate its throttling condition every time regardless of parameters.
+#define BRCMF_THROTTLE_MSG(events_per_second, event, fmt, ...) \
+  do { \
+    static wlan::brcmfmac::TokenBucket bucket(events_per_second); \
+    static wlan::brcmfmac::ThrottleCounter counter(bucket); \
+    uint64_t events = 0; \
+    if (counter.consume(&events)) { \
+      if (events > 0) { \
+        event(fmt " [Throttled %" PRIu64 " times]", ##__VA_ARGS__, events); \
+      } else { \
+        event(fmt, ##__VA_ARGS__); \
+      } \
+    } \
+  } while (0)
+
+// Convenience macros for logging with certain log levels and a default number of events per second
+// allowed. In order to log with a custom number of events per second just do something like:
+// BRCMF_THROTTLE_MSG(42, BRCMF_ERR, "error occurred: %s", error_str);
+// which would allow 42 errors per second at most. Replace BRCMF_ERR with the log function you want.
 #define BRCMF_ERR_THROTTLE(fmt, ...) \
-  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_ERR(fmt, ##__VA_ARGS__))
+  BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_ERR, fmt, ##__VA_ARGS__)
 #define BRCMF_WARN_THROTTLE(fmt, ...) \
-  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_WARN(fmt, ##__VA_ARGS__))
+  BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_WARN, fmt, ##__VA_ARGS__)
 #define BRCMF_INFO_THROTTLE(fmt, ...) \
-  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_INFO(fmt, ##__VA_ARGS__))
+  BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_INFO, fmt, ##__VA_ARGS__)
 #define BRCMF_DBG_THROTTLE(filter, fmt, ...) \
-  BRCMF_THROTTLE(wlan::brcmfmac::kLogThrottleEventsPerSec, BRCMF_DBG(filter, fmt, ##__VA_ARGS__))
+  do { \
+    if (BRCMF_IS_ON(filter)) { \
+      BRCMF_THROTTLE_MSG(wlan::brcmfmac::kLogThrottleEventsPerSec, \
+                         BRCMF_DBG_UNFILTERED, fmt, ##__VA_ARGS__); \
+    } \
+  } while (0)
 
 namespace wlan {
 namespace brcmfmac {
