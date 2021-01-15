@@ -203,6 +203,7 @@ build_api_module("api") {
     ":package-repositories",
     ":platforms",
     ":prebuilt_binaries",
+    ":prebuilt_package_flavors",
     ":sdk_archives",
     ":test_durations",
     ":tests",
@@ -702,6 +703,35 @@ build_api_module("prebuilt_binaries") {
     "//build/prebuilt",
     "//sdk",
   ]
+}
+
+# This describes which flavor was used for each of the prebuilt packages
+# which provide multiple flavors to choose from.
+#
+# in file:
+#  "$root_build_dir/images.json"
+#
+# For more information, see:  //build/packages/prebuilt_package_with_flavors.gni
+#
+# Type: list(scope)
+#
+#   package
+#     Required: The name of the package.
+#
+#   name
+#     Required: The name of the flavor that is being used.
+#
+#   archive
+#     Required: The path to the archive that was used.
+#
+#   production_safe
+#     Required:  if 'true' then this flavor is valid for use in production
+#     contexts.
+#
+build_api_module("prebuilt_package_flavors") {
+  testonly = true
+  data_keys = [ "prebuilt_package_with_flavors" ]
+  deps = [ "//build/images:packages" ]
 }
 
 # Tests in the build.

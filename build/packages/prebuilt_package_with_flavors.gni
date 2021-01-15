@@ -1,0 +1,177 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/package_metadata.gni")
+import("//build/packages/prebuilt_package.gni")
+
+declare_args() {
+  # Used to configure the set of package flavors desired.
+  #
+  # Usage:
+  #
+  #  package_flavor_selections = [
+  #    {
+  #      name = "snazzy"
+  #      flavor = "with_hooks"
+  #    },
+  #    {
+  #      name = "some_other_package"
+  #      flavor = "some_other_flavor"
+  #    },
+  #  ]
+  #
+  # The above specifies that the package "snazzy" should use the
+  # "with_hooks" flavor, and that "some_other_package" should use
+  # the "some_other_flavor" flavor instead of their default flavor
+  # all other packages using this template would use their default
+  # package flavors.
+  package_flavor_selections = []
+}
+
+# Choose which flavor from a set of signed, sealed pre-built package files
+# which all are mutually-exclusive implementations of a given package.
+#
+# This template produces a single GN label and package to publish in
+# build output TUF repo.
+#
+# THIS SHOULD BE USED WITH CARE
+#
+# This template records metadata about which flavor was chosen, which
+# can be used to generate build output manifests of the chosen flavors
+#
+# src/prebuilt/snazzy/BUILD.gn:
+#
+# prebuilt_package_with_flavors("snazzy") {
+#   default = "release"
+#   flavors = [
+#     {
+#       name = "release"
+#       path = "some/path/to/snazzy/release"
+#     },
+#     {
+#       name = "with_hooks"
+#       path = "some/path/to/snazzy/with_hooks"
+#     }
+#   ]
+#   package_flavor_selections
+# }
+#
+# and the following in GN build args:
+#
+# package_flavor_selections = [
+#  {
+#    name = "snzzy"
+#    flavor = "with_hooks"
+#  },
+#]
+#
+# will produce the following GN label:
+#  `//src/prebuilt/snazzy:snazzy`
+#
+# a package with the name `snazzy` and will use the archive at
+# `some/path/to/snazzy/with_hooks` as the implementation for that
+# package.
+#
+# Parameters
+#
+#  default (required; string)
+#    The name of the default flavor to use if not overridden
+#    in `flavor_selections`
+#
+#  flavors (required)
+#    A list of "flavor" definition scopes, each of which has:
+#      name (required)
+#        The name of the flavor
+#      archive (required)
+#        The path to this flavor's prebuilt archive
+#      production_safe (optional, boolean, default: false)
+#        If not set to true, the flavor is marked with
+#        //build/validate:non_production_tag
+#
+#  deps (optional)
+#  testonly (optional)
+#  visibility (optional)
+#    Usual GN meanings.
+#
+template("prebuilt_package_with_flavors") {
+  pkg_name = target_name
+
+  # Start with the default value
+  assert(defined(invoker.default), "A default flavor must be specified")
+  flavor_name_to_use = invoker.default
+
+  # Since we can't index into a scope by a variable, the
+  # package_flavor_selections build arg is a list that's walked,
+  # looking for an entry that matches this invocation of the
+  # template.  If multiple entries in the list match, the last one wins
+  # (which is the same result as if it was key=value pairs in a scope).
+  foreach(selection, package_flavor_selections) {
+    assert(defined(selection.name),
+           "package flavor selections need to have a `name`")
+    assert(
+        defined(selection.flavor),
+        "package flavor selection for ${selection.name} doesn't have a `flavor`")
+
+    if (selection.name == pkg_name) {
+      flavor_name_to_use = selection.flavor
+    }
+  }
+
+  # This is used to track all the flavor names for error printing
+  all_names = []
+
+  # Find the selected flavor in the list of possible flavors
+  foreach(flavor, invoker.flavors) {
+    assert(defined(flavor.name), "all package flavors must be named")
+    assert(defined(flavor.archive),
+           "${flavor.name} does not define an archive to use")
+    all_names += [ flavor.name ]
+    if (flavor_name_to_use == flavor.name) {
+      flavor_to_use = flavor
+    }
+  }
+  assert(
+      defined(flavor_to_use),
+      "The chosen flavor: '${flavor_name_to_use}', is not a valid flavor: ${all_names}")
+
+  # Default all prebuilts to not "production-safe" unless they explicitly are set to true
+  production_safe = false
+  if (defined(flavor_to_use.production_safe)) {
+    production_safe = flavor_to_use.production_safe
+  }
+
+  # Invoke the prebuilt_package template with the chosen flavor.
+  prebuilt_package(pkg_name) {
+    archive = flavor_to_use.archive
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # setup the non-production-safe status of the package
+    if (!production_safe) {
+      if (!defined(deps)) {
+        deps = []
+      }
+
+      # Mark as not safe for production use.
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+
+    # Set up the metadata to track which flavor is being used.
+    metadata = {
+      prebuilt_package_with_flavors = [
+        {
+          package = pkg_name
+
+          # This also passes any other fields set on the scope for the flavor,
+          # so that it can additionally be captured in the metadata manifest.
+          forward_variables_from(flavor_to_use, "*")
+        },
+      ]
+    }
+  }
+}

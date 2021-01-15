@@ -90,6 +90,7 @@ template("prebuilt_package") {
   action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "metadata",
                              "testonly",
                              "visibility",
                            ])
