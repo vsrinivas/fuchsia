@@ -23,6 +23,7 @@ type Config struct {
 	ProhibitedLicenseTypes       []string               `json:"prohibitedLicenseTypes"`
 	TextExtensionList            []string               `json:"textExtensionList"`
 	StrictTextExtensionList      []string               `json:"strictTextExtensionList"`
+	ExitOnDirRestrictedLicense   bool                   `json:"exitOnDirRestrictedLicense"`
 	ExitOnProhibitedLicenseTypes bool                   `json:"exitOnProhibitedLicenseTypes"`
 	ExitOnUnlicensedFiles        bool                   `json:"exitOnUnlicensedFiles"`
 	StrictAnalysis               bool                   `json:"strictAnalysis"`
@@ -39,6 +40,7 @@ type Config struct {
 	BaseDir                      string                 `json:"baseDir"`
 	Target                       string                 `json:"target"`
 	LogLevel                     string                 `json:"logLevel"`
+	LicenseAllowList             map[string][]string    `json:"licenseAllowList"`
 }
 
 // Init populates Config object with values found in the json config file.

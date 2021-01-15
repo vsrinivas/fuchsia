@@ -68,9 +68,34 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 	return filesWithProhibitedLicenses
 }
 
+func (l *Licenses) GetFilesWithBadLicenseUsage() []string {
+	var filesWithBadLicenseUsage []string
+	set := map[string]bool{}
+	for _, license := range l.licenses {
+		if len(license.BadLicenseUsage) > 0 {
+			for _, path := range license.BadLicenseUsage {
+				if _, found := set[path]; !found {
+					set[path] = true
+					filesWithBadLicenseUsage = append(filesWithBadLicenseUsage, path)
+				}
+			}
+		}
+	}
+	return filesWithBadLicenseUsage
+}
+
+func CheckLicenseAllowList(license *License, path string) bool {
+	var licenseAllowed = true
+	if len(license.AllowedDirs) > 0 && !contains(license.AllowedDirs, path) {
+		license.BadLicenseUsage = append(license.BadLicenseUsage, path)
+		licenseAllowed = false
+	}
+	return licenseAllowed
+}
+
 func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
 	for _, license := range l.licenses {
-		if license.Search(data, path) {
+		if license.Search(data, path) && CheckLicenseAllowList(license, path) {
 			metrics.increment("num_single_license_file_match")
 			ft.Lock()
 			ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], license)
@@ -84,7 +109,7 @@ func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Met
 // if there were no matches.
 func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, *License) {
 	for _, license := range l.licenses {
-		if license.Search(data, path) {
+		if license.Search(data, path) && CheckLicenseAllowList(license, path) {
 			metrics.increment("num_licensed")
 			return true, license
 		}
@@ -95,8 +120,8 @@ func (l *Licenses) MatchFile(data []byte, path string, metrics *Metrics) (bool, 
 func contains(matches []string, item string) bool {
 	for _, m := range matches {
 		if strings.Contains(item, m) {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }

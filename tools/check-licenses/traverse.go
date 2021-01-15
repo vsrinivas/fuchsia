@@ -102,6 +102,14 @@ func Walk(ctx context.Context, config *Config) error {
 		return fmt.Errorf("Encountered files with licenses that are either malformed or missing. File paths are:\n\n%v\n\nPlease add license information to the headers of each file. If this is Fuchsia code (e.g. not in //prebuilt, //third_party, etc), paste this example header text into the top of each file (replacing '#' with the proper comment character for your file):\n\n%s\n\nReach out to //tools/check-licenses/OWNERS for file exceptions or errors.\n", files, header)
 	}
 
+	if config.ExitOnDirRestrictedLicense {
+		filesWithBadLicenseUsage := licenses.GetFilesWithBadLicenseUsage()
+		if len(filesWithBadLicenseUsage) > 0 {
+			files := strings.Join(filesWithBadLicenseUsage, "\n")
+			return fmt.Errorf("Encountered files with licenses that may not be used in those directories. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
+		}
+	}
+
 	if config.OutputLicenseFile {
 		path := config.OutputFilePrefix + "." + config.OutputFileExtension
 		if err := saveToOutputFile(path, licenses); err != nil {

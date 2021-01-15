@@ -29,11 +29,13 @@ var (
 	logLevel                     = flag.Int("log_level", 0, "Log level, see https://godoc.org/github.com/golang/glog for more info.")
 	exitOnUnlicensedFiles        = flag.Bool("exit_on_unlicensed_files", true, "If true, exits if it encounters files that are unlicensed.")
 	exitOnProhibitedLicenseTypes = flag.Bool("exit_on_prohibited_license_types", true, "If true, exits if it encounters a prohibited license type.")
+	exitOnDirRestrictedLicense   = flag.Bool("exit_on_dir_restricted_license", true, "If true, exits if it encounters a license used outside of its allowed directories.")
 	outputLicenseFile            = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
 	pproffile                    = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
 	tracefile                    = flag.String("trace", "", "generate file that can be parsed by go tool trace")
 	noticeTxtFiles               = flag.String("notice_txt", "", "Comma separated list of NOTICE.txt files to parse, in addition to those listed in config.json.")
+	licenseAllowList             = flag.String("license_allow_list", "", "Map of license pattern file (.lic) to list of directories where the license can be used.")
 )
 
 func mainImpl() error {

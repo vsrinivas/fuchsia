@@ -45,7 +45,9 @@ type License struct {
 	ValidType bool   `json:"valid license"`
 
 	sync.Mutex
-	matches map[string]*Match
+	matches         map[string]*Match
+	AllowedDirs     []string
+	BadLicenseUsage []string
 }
 
 // licenseByPattern implements sort.Interface for []*License based on the length of the Pattern field.
@@ -88,11 +90,14 @@ func NewLicense(path string, config *Config) (*License, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
+
 	return &License{
-		pattern:   re,
-		Category:  filepath.Base(path),
-		ValidType: contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
-		matches:   map[string]*Match{},
+		pattern:         re,
+		Category:        filepath.Base(path),
+		ValidType:       !contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
+		matches:         map[string]*Match{},
+		AllowedDirs:     config.LicenseAllowList[filepath.Base(path)],
+		BadLicenseUsage: []string{},
 	}, nil
 }
 

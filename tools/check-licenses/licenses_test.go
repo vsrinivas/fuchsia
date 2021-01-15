@@ -14,6 +14,12 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 	root := filepath.Join(*testDataDir, "licenses", "simple")
 	config := setupConfig("simple", t)
 
+	licenseAllowList := map[string][]string{
+		"apache.lic": {"foo.rs"},
+		"bsd.lic":    {"bar.rs"},
+	}
+	config.LicenseAllowList = licenseAllowList
+
 	l, err := NewLicenses(context.Background(), config)
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
@@ -27,6 +33,9 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 	l.MatchSingleLicenseFile(data, "foo.rs", metrics, ft)
 	data = []byte("BSD much.\nCopyright Bar Inc\n")
 	l.MatchSingleLicenseFile(data, "bar.rs", metrics, ft)
+	// Shouldn't add to num_single_license_file_match
+	l.MatchSingleLicenseFile(data, "baz.rs", metrics, ft)
+
 	if metrics.values["num_single_license_file_match"] != 2 {
 		t.Error(metrics.values["num_single_license_file_match"])
 	}
@@ -34,6 +43,12 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 
 func TestLicensesMatchFile(t *testing.T) {
 	config := setupConfig("simple", t)
+
+	licenseAllowList := map[string][]string{
+		"apache.lic": {"foo.rs"},
+		"bsd.lic":    {"bar.rs"},
+	}
+	config.LicenseAllowList = licenseAllowList
 
 	l, err := NewLicenses(context.Background(), config)
 	if err != nil {
@@ -49,6 +64,11 @@ func TestLicensesMatchFile(t *testing.T) {
 	ok, _ = l.MatchFile(data, "bar.rs", metrics)
 	if !ok {
 		t.Error("Apache didn't match")
+	}
+	// Shouldn't add to num_licensed
+	ok, _ = l.MatchFile(data, "baz.rs", metrics)
+	if ok {
+		t.Error("BSD shouldn't have matched")
 	}
 	if metrics.values["num_licensed"] != 2 {
 		t.Error(metrics.values["num_licensed"])
@@ -71,6 +91,33 @@ func TestNewLicenses(t *testing.T) {
 	}
 	if l.licenses[1].Category != "apache.lic" {
 		t.Fatalf("Got %#v", l.licenses[0])
+	}
+}
+
+func TestCheckLicenseAllowList(t *testing.T) {
+	config := setupConfig("simple", t)
+
+	licenseAllowList := map[string][]string{
+		"apache.lic": {"foo.rs"},
+		"bsd.lic":    {"bar.rs"},
+	}
+	config.LicenseAllowList = licenseAllowList
+
+	l, err := NewLicenses(context.Background(), config)
+	if err != nil {
+		t.Fatalf("NewLicenses(...): %s", err)
+	}
+	if !CheckLicenseAllowList(l.licenses[0], "bar.rs") {
+		t.Errorf("%s was not able to be used in bar.rs", l.licenses[0].Category)
+	}
+	if !CheckLicenseAllowList(l.licenses[1], "foo.rs") {
+		t.Errorf("%s was not able to be used in foo.rs", l.licenses[1].Category)
+	}
+	if CheckLicenseAllowList(l.licenses[0], "foo.rs") {
+		t.Errorf("%s should not be able to be used in foo.rs", l.licenses[0].Category)
+	}
+	if CheckLicenseAllowList(l.licenses[1], "bar.rs") {
+		t.Errorf("%s should not able to be used in bar.rs", l.licenses[0].Category)
 	}
 }
 

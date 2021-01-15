@@ -8,7 +8,6 @@ var additionalSkipDirs = []string{
 	"build/secondary/third_party/llvm",
 	"prebuilt",                                           // TODO(b/172076124): Remove once completed.
 	"prebuilt/third_party/flutter",                       // TODO(b/169676435): Remove once completed.
-	"prebuilt/third_party/llvm",                          // TODO(b/172076113): Remove once completed.
 	"prebuilt/third_party/ovmf",                          // TODO(fxb/59350): Remove once completed.
 	"prebuilt/third_party/zlib",                          // TODO(b/172066115): Remove once completed.
 	"prebuilt/virtualization/packages/termina_guest",     // TODO(b/171975485): Remove once completed.

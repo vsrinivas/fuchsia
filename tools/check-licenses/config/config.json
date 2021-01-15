@@ -101,6 +101,7 @@
     "gnu",
     "redhat"
   ],
+  "exitOnDirRestrictedLicense": true,
   "exitOnProhibitedLicenseTypes": true,
   "exitOnUnlicensedFiles": true,
   "strictAnalysis": true,
@@ -202,5 +203,10 @@
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",
-  "logLevel": "verbose"
+  "logLevel": "verbose",
+  "licenseAllowList": {
+    "university_of_illinois.lic": [
+      "prebuilt/third_party/llvm/linux-x64/include/llvm/Support/"
+    ]
+  }
 }
