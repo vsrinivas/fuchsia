@@ -13,7 +13,6 @@
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -262,5 +261,4 @@ static zx_driver_ops_t bootpart_driver_ops = {
     .bind = bootpart_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(bootpart, bootpart_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF_AUTOBIND, BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK), ZIRCON_DRIVER_END(bootpart)
+ZIRCON_DRIVER(bootpart, bootpart_driver_ops, "zircon", "0.1");
