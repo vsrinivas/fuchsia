@@ -124,14 +124,19 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  crash_reports_dir=`fx-command-run shell ls /tmp/r/sys | grep crash_reports`
-  if [[ -z "${crash_reports_dir}" ]]; then
+  crash_reports_cache_dir=`fx-command-run shell ls /data/cache/r/sys | grep crash_reports`
+  crash_reports_tmp_dir=`fx-command-run shell ls /tmp/r/sys | grep crash_reports`
+  if [[ -z "${crash_reports_tmp_dir}" ]] || [[ -z "${crash_reports_cache_dir}" ]]; then
     fx-error "Could not find crash reports directory on target"
     exit 1
   fi
 
-  core_name=`fx-command-run shell \
-    "cd /tmp/r/sys/${crash_reports_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
+  cache_core_names=`fx-command-run shell \
+    "cd /data/cache/r/sys/${crash_reports_cache_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
+  tmp_core_names=`fx-command-run shell \
+    "cd /tmp/r/sys/${crash_reports_tmp_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
+
+  core_name="$echo "${cache_core_names[@]}" "${tmp_core_names[@]}""
 
   if [[ -z "${core_name}" ]]; then
     fx-error "No cores available on device"
@@ -147,9 +152,15 @@ if [[ -n "${target_core}" ]]; then
   fi
 
   core="/tmp/zxdb_fetched_core.dmp"
-  fx-command-run "cp" "--to-host" \
-    "/tmp/r/sys/${crash_reports_dir}/reports/${core_name}" \
-    "${core}"
+  if [[ " ${cache_core_names[*]} " == *"$core_name"* ]]; then
+    fx-command-run "cp" "--to-host" \
+      "/data/cache/r/sys/${crash_reports_cache_dir}/reports/${core_name}" \
+      "${core}"
+  else
+    fx-command-run "cp" "--to-host" \
+      "/tmp/r/sys/${crash_reports_tmp_dir}/reports/${core_name}" \
+      "${core}"
+  fi
 fi
 
 if [[ -n "${core}" && ! -f "${core}" ]]; then

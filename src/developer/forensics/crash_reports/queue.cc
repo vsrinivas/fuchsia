@@ -12,6 +12,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -23,7 +24,8 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
     : dispatcher_(dispatcher),
       services_(services),
       tags_(tags),
-      store_(tags_, info_context, kStorePath, kStoreMaxSize),
+      store_(tags_, info_context, /*temp_root=*/Store::Root{kStoreTmpPath, kStoreMaxTmpSize},
+             /*persistent_root=*/Store::Root{kStoreCachePath, kStoreMaxCacheSize}),
       crash_server_(crash_server),
       snapshot_manager_(snapshot_manager),
       info_(std::move(info_context)) {
@@ -38,13 +40,11 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
   std::sort(pending_reports_.begin(), pending_reports_.end());
 
   if (!pending_reports_.empty()) {
-    FX_LOGS(INFO) << "Initializing queue with reports: ";
-    std::string reports_str;
+    std::vector<std::string> report_id_strs;
     for (const auto& report_id : pending_reports_) {
-      reports_str.append(std::to_string(report_id));
-      reports_str.push_back(' ');
+      report_id_strs.push_back(std::to_string(report_id));
     }
-    FX_LOGS(INFO) << "\t" << reports_str;
+    FX_LOGS(INFO) << "Initializing queue with reports: " << fxl::JoinStrings(report_id_strs, " ");
   }
 }
 
@@ -75,9 +75,9 @@ bool Queue::Add(Report report) {
   const auto report_id = report.Id();
   const auto is_hourly_report = report.IsHourlyReport();
 
-  // If an hourly report is already present, don't delete it and don't store a new one. This is done
-  // to preserve the data from the first hourly report that wasn't successfully uploaded and will
-  // have the best chance of containing data on why.
+  // If an hourly report is already present, don't delete it and don't store a new one. This is
+  // done to preserve the data from the first hourly report that wasn't successfully uploaded and
+  // will have the best chance of containing data on why.
   if (report.IsHourlyReport() && hourly_report_.has_value()) {
     Delete(report.Id());
     return true;
@@ -167,8 +167,9 @@ size_t Queue::UploadAll() {
   for (const auto& report_id : pending_reports_) {
     std::optional<Report> report = store_.Get(report_id);
     if (!report.has_value()) {
-      // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the report
-      // is deleted from the store by an external influence, e.g., the filesystem flushes /cache.
+      // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the
+      // report is deleted from the store by an external influence, e.g., the filesystem flushes
+      // /cache.
       FreeResources(report_id);
       continue;
     }

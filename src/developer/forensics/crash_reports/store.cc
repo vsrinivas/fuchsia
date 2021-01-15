@@ -130,24 +130,33 @@ bool ReadSnapshotUuid(const std::string& path, SnapshotUuid* snapshot_uuid) {
 
 }  // namespace
 
-Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const std::string& root_dir,
-             StorageSize max_size)
-    : root_dir_(root_dir), metadata_(root_dir, max_size), tags_(tags), info_(std::move(info)) {
-  info_.LogMaxStoreSize(max_size);
+Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const Store::Root& temp_root,
+             const Store::Root& persistent_root)
+    : tmp_metadata_(temp_root.dir, temp_root.max_size),
+      cache_metadata_(persistent_root.dir, persistent_root.max_size),
+      tags_(tags),
+      info_(std::move(info)) {
+  info_.LogMaxStoreSize(temp_root.max_size + persistent_root.max_size);
 
-  // Clean up any empty directories under |root_dir_|. This may happen if the component stops
-  // running while it is deleting a report.
-  RemoveEmptyDirectories(root_dir_);
+  // Clean up any empty directories in the store. This may happen if the component stops running
+  // while it is deleting a report.
+  RemoveEmptyDirectories(tmp_metadata_.RootDir());
+  RemoveEmptyDirectories(cache_metadata_.RootDir());
 
-  metadata_.RecreateFromFilesystem();
+  tmp_metadata_.RecreateFromFilesystem();
+  cache_metadata_.RecreateFromFilesystem();
 
-  for (const auto report_id : metadata_.Reports()) {
-    tags_->Register(report_id, {Logname(metadata_.ReportProgram(report_id))});
+  for (const auto report_id : tmp_metadata_.Reports()) {
+    tags_->Register(report_id, {Logname(tmp_metadata_.ReportProgram(report_id))});
+  }
+
+  for (const auto report_id : cache_metadata_.Reports()) {
+    tags_->Register(report_id, {Logname(cache_metadata_.ReportProgram(report_id))});
   }
 }
 
 bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports) {
-  if (metadata_.Contains(report.Id())) {
+  if (Contains(report.Id())) {
     FX_LOGST(ERROR, tags_->Get(report.Id())) << "Duplicate local report id";
     return false;
   }
@@ -157,16 +166,6 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
       FX_LOGST(ERROR, tags_->Get(report.Id())) << "Attachment is using reserved key: " << key;
       return false;
     }
-  }
-
-  const std::string program_dir = files::JoinPath(root_dir_, report.ProgramShortname());
-  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report.Id()));
-
-  auto cleanup_on_error = fit::defer([report_dir] { DeletePath(report_dir); });
-
-  if (!files::CreateDirectory(report_dir)) {
-    FX_LOGS(ERROR) << "Failed to create directory for report: " << report_dir;
-    return false;
   }
 
   const std::string annotations_json = FormatAnnotationsAsJson(report.Annotations());
@@ -187,9 +186,22 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
     report_size += StorageSize::Bytes(data.size());
   }
 
+  auto& root_metadata = PickRootForStorage(report_size);
+
   // Ensure there's enough space in the store for the report.
-  if (!MakeFreeSpace(report_size, garbage_collected_reports)) {
+  if (!MakeFreeSpace(root_metadata, report_size, garbage_collected_reports)) {
     FX_LOGST(ERROR, tags_->Get(report.Id())) << "Failed to make space for report";
+    return false;
+  }
+
+  const std::string program_dir =
+      files::JoinPath(root_metadata.RootDir(), report.ProgramShortname());
+  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report.Id()));
+
+  auto cleanup_on_error = fit::defer([report_dir] { DeletePath(report_dir); });
+
+  if (!files::CreateDirectory(report_dir)) {
+    FX_LOGS(ERROR) << "Failed to create directory for report: " << report_dir;
     return false;
   }
 
@@ -204,19 +216,22 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
     }
   }
 
-  metadata_.Add(report.Id(), report.ProgramShortname(), std::move(attachment_keys), report_size);
+  root_metadata.Add(report.Id(), report.ProgramShortname(), std::move(attachment_keys),
+                    report_size);
 
   cleanup_on_error.cancel();
   return true;
 }
 
 std::optional<Report> Store::Get(const ReportId report_id) {
-  if (!metadata_.Contains(report_id)) {
+  if (!Contains(report_id)) {
     return std::nullopt;
   }
 
-  auto attachment_files = metadata_.ReportAttachments(report_id, /*absolute_paths=*/false);
-  auto attachment_paths = metadata_.ReportAttachments(report_id, /*absolute_paths=*/true);
+  auto& root_metadata = RootFor(report_id);
+  auto attachment_files = root_metadata.ReportAttachments(report_id, /*absolute_paths=*/
+                                                          false);
+  auto attachment_paths = root_metadata.ReportAttachments(report_id, /*absolute_paths=*/true);
 
   if (attachment_files.empty()) {
     return std::nullopt;
@@ -236,7 +251,6 @@ std::optional<Report> Store::Get(const ReportId report_id) {
       if (!ReadSnapshotUuid(attachment_paths[i], &snapshot_uuid)) {
         snapshot_uuid = SnapshotManager::UuidForNoSnapshotUuid();
       }
-
     } else {
       SizedData attachment;
       if (!ReadAttachment(attachment_paths[i], &attachment)) {
@@ -251,59 +265,84 @@ std::optional<Report> Store::Get(const ReportId report_id) {
     }
   }
 
-  return Report(report_id, metadata_.ReportProgram(report_id), std::move(annotations),
+  return Report(report_id, root_metadata.ReportProgram(report_id), std::move(annotations),
                 std::move(attachments), std::move(snapshot_uuid), std::move(minidump));
 }
 
-std::vector<ReportId> Store::GetReports() const { return metadata_.Reports(); }
+std::vector<ReportId> Store::GetReports() const {
+  auto all_reports = tmp_metadata_.Reports();
+  const auto cache_reports = cache_metadata_.Reports();
 
-bool Store::Contains(const ReportId report_id) const { return metadata_.Contains(report_id); }
+  all_reports.insert(all_reports.end(), cache_reports.begin(), cache_reports.end());
+
+  return all_reports;
+}
+
+bool Store::Contains(const ReportId report_id) const {
+  return tmp_metadata_.Contains(report_id) || cache_metadata_.Contains(report_id);
+}
 
 bool Store::Remove(const ReportId report_id) {
-  if (!metadata_.Contains(report_id)) {
+  if (!Contains(report_id)) {
     return false;
   }
 
-  //  The report is stored under /tmp/store/<program shortname>/$id.
+  auto& root_metadata = RootFor(report_id);
+
+  //  The report is stored under /{cache, tmp}/store/<program shortname>/$id.
   //  We first delete /tmp/store/<program shortname>/$id and then if $id was the only report
-  //  for
-  // <program shortname>, we also delete /tmp/store/<program name>.
-  if (!DeletePath(metadata_.ReportDirectory(report_id))) {
-    FX_LOGS(ERROR) << "Failed to delete report at " << metadata_.ReportDirectory(report_id);
+  //  for <program shortname>, we also delete /{cache, tmp}/store/<program name>.
+  if (!DeletePath(root_metadata.ReportDirectory(report_id))) {
+    FX_LOGS(ERROR) << "Failed to delete report at " << root_metadata.ReportDirectory(report_id);
   }
 
   // If this was the last report for a program, delete the directory for the program.
-  const auto& program = metadata_.ReportProgram(report_id);
-  if (metadata_.ProgramReports(program).size() == 1 &&
-      !DeletePath(metadata_.ProgramDirectory(program))) {
-    FX_LOGS(ERROR) << "Failed to delete " << metadata_.ProgramDirectory(program);
+  const auto& program = root_metadata.ReportProgram(report_id);
+  if (root_metadata.ProgramReports(program).size() == 1 &&
+      !DeletePath(root_metadata.ProgramDirectory(program))) {
+    FX_LOGS(ERROR) << "Failed to delete " << root_metadata.ProgramDirectory(program);
   }
 
-  metadata_.Delete(report_id);
+  root_metadata.Delete(report_id);
 
   return true;
 }
 
 void Store::RemoveAll() {
-  if (!DeletePath(root_dir_)) {
-    FX_LOGS(ERROR) << "Failed to delete all reports";
-  }
-  files::CreateDirectory(root_dir_);
+  auto DeleteAll = [](const std::string& root_dir) {
+    if (!DeletePath(root_dir)) {
+      FX_LOGS(ERROR) << "Failed to delete all reports from " << root_dir;
+    }
+    files::CreateDirectory(root_dir);
+  };
 
-  metadata_.RecreateFromFilesystem();
+  DeleteAll(tmp_metadata_.RootDir());
+  tmp_metadata_.RecreateFromFilesystem();
+
+  DeleteAll(cache_metadata_.RootDir());
+  cache_metadata_.RecreateFromFilesystem();
 }
 
-bool Store::MakeFreeSpace(const StorageSize required_space,
+StoreMetadata& Store::RootFor(const ReportId id) {
+  return (tmp_metadata_.Contains(id)) ? tmp_metadata_ : cache_metadata_;
+}
+
+StoreMetadata& Store::PickRootForStorage(const StorageSize report_size) {
+  // Only use cache if there's enough space to put the report there.
+  return (cache_metadata_.RemainingSpace() < report_size) ? tmp_metadata_ : cache_metadata_;
+}
+
+bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize required_space,
                           std::vector<ReportId>* garbage_collected_reports) {
   if (required_space >
-      metadata_.CurrentSize() + metadata_.RemainingSpace() /*the store's max size*/) {
+      root_metadata.CurrentSize() + root_metadata.RemainingSpace() /*the store's max size*/) {
     return false;
   }
 
   FX_CHECK(garbage_collected_reports);
   garbage_collected_reports->clear();
 
-  StorageSize remaining_space = metadata_.RemainingSpace();
+  StorageSize remaining_space = root_metadata.RemainingSpace();
   if (remaining_space > required_space) {
     return true;
   }
@@ -317,8 +356,8 @@ bool Store::MakeFreeSpace(const StorageSize required_space,
 
   // Create the garbage collection metadata for the reports.
   std::deque<GCMetadata> gc_order;
-  for (const auto& program : metadata_.Programs()) {
-    const auto& report_ids = metadata_.ProgramReports(program);
+  for (const auto& program : root_metadata.Programs()) {
+    const auto& report_ids = root_metadata.ProgramReports(program);
 
     for (size_t i = 0; i < report_ids.size(); ++i) {
       gc_order.push_back(GCMetadata{
@@ -339,12 +378,12 @@ bool Store::MakeFreeSpace(const StorageSize required_space,
   });
 
   size_t num_garbage_collected{0};
-  const size_t total_num_report_ids = metadata_.Reports().size();
+  const size_t total_num_report_ids = root_metadata.Reports().size();
 
   // Commit to garbage collection reports until either all reports are garbage collected or
   // enough space has been freed.
   for (size_t i = 0; i < total_num_report_ids && remaining_space < required_space; ++i) {
-    remaining_space -= metadata_.ReportSize(gc_order[i].oldest_report);
+    remaining_space -= root_metadata.ReportSize(gc_order[i].oldest_report);
     ++num_garbage_collected;
   }
 

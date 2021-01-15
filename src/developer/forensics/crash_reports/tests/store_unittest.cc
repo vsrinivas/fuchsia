@@ -47,10 +47,13 @@ class StoreTest : public UnitTestFixture {
   StoreTest() { MakeNewStore(StorageSize::Megabytes(1)); }
 
  protected:
-  void MakeNewStore(const StorageSize max_size) {
+  void MakeNewStore(const StorageSize max_tmp_size,
+                    const StorageSize max_cache_size = StorageSize::Bytes(0)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    store_ = std::make_unique<Store>(&tags_, info_context_, tmp_dir_.path(), max_size);
+    store_ = std::make_unique<Store>(&tags_, info_context_,
+                                     /*temp_root=*/Store::Root{tmp_dir_.path(), max_tmp_size},
+                                     /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size});
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -109,14 +112,31 @@ class StoreTest : public UnitTestFixture {
     return true;
   }
 
-  bool Read(const std::string& program_shortname, const ReportId& id,
+  bool ReadTmp(const std::string& program_shortname, const ReportId& id,
+               std::map<std::string, std::string>* annotations_out,
+               std::map<std::string, std::string>* attachments_out,
+               std::optional<std::string>* snapshot_uuid_out,
+               std::optional<std::string>* minidump_out) {
+    return Read(tmp_dir_.path(), program_shortname, id, annotations_out, attachments_out,
+                snapshot_uuid_out, minidump_out);
+  }
+
+  bool ReadCache(const std::string& program_shortname, const ReportId& id,
+                 std::map<std::string, std::string>* annotations_out,
+                 std::map<std::string, std::string>* attachments_out,
+                 std::optional<std::string>* snapshot_uuid_out,
+                 std::optional<std::string>* minidump_out) {
+    return Read(cache_dir_.path(), program_shortname, id, annotations_out, attachments_out,
+                snapshot_uuid_out, minidump_out);
+  }
+
+  bool Read(const std::string& root_dir, const std::string& program_shortname, const ReportId& id,
             std::map<std::string, std::string>* annotations_out,
             std::map<std::string, std::string>* attachments_out,
             std::optional<std::string>* snapshot_uuid_out,
             std::optional<std::string>* minidump_out) {
     const std::string id_str = std::to_string(id);
-    const std::string path =
-        files::JoinPath(files::JoinPath(tmp_dir_.path(), program_shortname), id_str);
+    const std::string path = files::JoinPath(files::JoinPath(root_dir, program_shortname), id_str);
 
     auto ReadFile = [&path](const std::string& filename, std::string* out) {
       return files::ReadFileToString(files::JoinPath(path, filename), out);
@@ -188,12 +208,13 @@ class StoreTest : public UnitTestFixture {
   std::shared_ptr<InfoContext> info_context_;
 
   files::ScopedTempDir tmp_dir_;
+  files::ScopedTempDir cache_dir_;
   std::unique_ptr<Store> store_;
 
   ReportId next_report_id_{0};
 };
 
-TEST_F(StoreTest, Succeed_Add) {
+TEST_F(StoreTest, Succeed_AddDefaultsToCache) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -211,20 +232,50 @@ TEST_F(StoreTest, Succeed_Add) {
   const std::string expected_snapshot_uuid = "snapshot_uuid";
   const std::string expected_minidump = "mindump";
 
-  std::vector<ReportId> garbage_collected_reports;
-  const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
-                      expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
-  EXPECT_TRUE(id.has_value());
-  EXPECT_TRUE(garbage_collected_reports.empty());
+  size_t expected_report_size = expected_snapshot_uuid.size() + expected_minidump.size();
+  for (const auto& [k, v] : expected_annotations) {
+    expected_report_size += k.size() + v.size() + 11 /*json formatting*/;
+  }
+  expected_report_size += 5 /*json formatting*/;
+  for (const auto& [k, v] : expected_attachments) {
+    expected_report_size += v.size();
+  }
+
+  MakeNewStore(/*max_tmp_size=*/StorageSize::Bytes(expected_report_size),
+               /*max_cache_size=*/StorageSize::Bytes(expected_report_size));
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, std::string> attachments;
   std::optional<std::string> snapshot_uuid;
   std::optional<std::string> minidump;
 
-  ASSERT_TRUE(store_->Contains(id.value()));
-  ASSERT_TRUE(Read(expected_program_shortname, id.value(), &annotations, &attachments,
-                   &snapshot_uuid, &minidump));
+  // The first report should be placed under the cache directory.
+  std::vector<ReportId> garbage_collected_reports;
+  const auto cache_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                            expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
+  EXPECT_TRUE(cache_id.has_value());
+  EXPECT_TRUE(garbage_collected_reports.empty());
+
+  ASSERT_TRUE(store_->Contains(cache_id.value()));
+  ASSERT_TRUE(ReadCache(expected_program_shortname, cache_id.value(), &annotations, &attachments,
+                        &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(expected_annotations, annotations);
+  EXPECT_EQ(expected_attachments, attachments);
+  ASSERT_TRUE(snapshot_uuid.has_value());
+  EXPECT_EQ(expected_snapshot_uuid, snapshot_uuid.value());
+  ASSERT_TRUE(minidump.has_value());
+  EXPECT_EQ(expected_minidump, minidump.value());
+
+  // The second report should be placed under the tmp directory.
+  const auto tmp_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                          expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
+  EXPECT_TRUE(tmp_id.has_value());
+  EXPECT_TRUE(garbage_collected_reports.empty());
+
+  ASSERT_TRUE(store_->Contains(tmp_id.value()));
+  ASSERT_TRUE(ReadTmp(expected_program_shortname, tmp_id.value(), &annotations, &attachments,
+                      &snapshot_uuid, &minidump));
 
   EXPECT_EQ(expected_annotations, annotations);
   EXPECT_EQ(expected_attachments, attachments);
@@ -310,7 +361,18 @@ TEST_F(StoreTest, Succeed_Remove) {
   EXPECT_TRUE(GetProgramShortnames().empty());
 }
 
-TEST_F(StoreTest, Succeed_GarbageCollection) {
+TEST_F(StoreTest, NoCacheGarbageCollection) {
+  // Cache only has space for one report.
+  MakeNewStore(/*tmp_max_size=*/StorageSize::Bytes(0),
+               /*cache_max_size=*/
+               StorageSize::Bytes(2u /*the empty annotations.json*/));
+  std::vector<ReportId> garbage_collected_reports;
+
+  EXPECT_TRUE(Add("program_name_1", &garbage_collected_reports).has_value());
+  EXPECT_FALSE(Add("program_name_2", &garbage_collected_reports).has_value());
+}
+
+TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
   // To make this test easier to understand, the below table shows when and why each report is being
   // garbage collected.
   //

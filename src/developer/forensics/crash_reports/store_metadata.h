@@ -33,6 +33,8 @@ class StoreMetadata {
   StorageSize CurrentSize() const;
   StorageSize RemainingSpace() const;
 
+  const std::string& RootDir() const;
+
   void Add(ReportId report_id, std::string program, std::vector<std::string> attachments,
            StorageSize size);
   void Delete(ReportId report_id);
@@ -41,19 +43,19 @@ class StoreMetadata {
   std::vector<ReportId> Reports() const;
 
   // The directory that contains reports for |program|.
-  const std::string& ProgramDirectory(const std::string& program);
+  const std::string& ProgramDirectory(const std::string& program) const;
 
   // The ReportIds of all reports filed for |program|.
-  const std::deque<ReportId>& ProgramReports(const std::string& program);
+  const std::deque<ReportId>& ProgramReports(const std::string& program) const;
 
   // The program report |report_id| was filed under.
-  const std::string& ReportProgram(ReportId report_id);
+  const std::string& ReportProgram(ReportId report_id) const;
 
   // The directory that contains the attachments of report |report_id|.
-  const std::string& ReportDirectory(ReportId report_id);
+  const std::string& ReportDirectory(ReportId report_id) const;
 
   // The size of report |report_id|.
-  StorageSize ReportSize(ReportId report_id);
+  StorageSize ReportSize(ReportId report_id) const;
 
   // The attachments for report |report_id|. If |absolute_paths| is true, the absolute path of the
   // attachments in the filesystem will be returned otherwise the attachment file names will be

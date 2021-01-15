@@ -23,13 +23,21 @@ namespace crash_reports {
 // Stores the contents of reports that have not yet been uploaded.
 class Store {
  public:
-  // |root_dir| is the location in the filesystem where reports will be stored. For example,
-  // if |root_dir| is /tmp/store and a report for "foo" is filed, that report
-  // will be stored in /tmp/store/foo/<report ReportId>.
-  // |max_size| is the maximum size the store can take, garbage collecting the reports of lowest
-  // ReportIds.
-  Store(LogTags* tags, std::shared_ptr<InfoContext> info_context, const std::string& root_dir,
-        StorageSize max_size);
+  // A directory to store snapshots under and the maximum amount of data that can be stored under
+  // that directory before garbage collection or adds fail.
+  struct Root {
+    std::string dir;
+    StorageSize max_size;
+  };
+
+  // |temp_root| is where reports that don't need to survive a device reboot should be stored
+  // whereas reports that need to do will be stored under |persistent_root|.
+  //
+  // Regardless of which is actually used, reports will be stored in a similar manner. For example,
+  // if a report is filed for "foo" and it is determined that it will be stored under |temp_root|,
+  // that report will be stored in the filesytem under |temp_root|.dir/foo/<report ReportId>.
+  Store(LogTags* tags, std::shared_ptr<InfoContext> info_context, const Root& temp_root,
+        const Root& persistent_root);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
   // process.
@@ -50,15 +58,21 @@ class Store {
   bool Contains(ReportId id) const;
 
  private:
-  // Removes reports until |required_space| is free in the store and returns the ReportIds of the
-  // reports removed.
+  // The root that the report with ReportId |id| is stored under.
+  StoreMetadata& RootFor(ReportId id);
+
+  // Pick the root to store a report with size of |report_size| under.
+  StoreMetadata& PickRootForStorage(StorageSize report_size);
+
+  // Removes reports until |required_space| is free under |root_metadata| and returns the ReportIds
+  // of the reports removed.
   //
   // Return false if |required_space| cannot be freed.
-  bool MakeFreeSpace(StorageSize required_space, std::vector<ReportId>* garbage_collected_reports);
+  bool MakeFreeSpace(const StoreMetadata& root_metadata, StorageSize required_space,
+                     std::vector<ReportId>* garbage_collected_reports);
 
-  std::string root_dir_;
-
-  StoreMetadata metadata_;
+  StoreMetadata tmp_metadata_;
+  StoreMetadata cache_metadata_;
   LogTags* tags_;
   StoreInfo info_;
 };

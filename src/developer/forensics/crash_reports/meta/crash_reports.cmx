@@ -10,6 +10,7 @@
             "build-info",
             "config-data",
             "isolated-temp",
+            "isolated-cache-storage",
             "root-ssl-certificates"
         ],
         "services": [

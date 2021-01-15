@@ -47,8 +47,6 @@ constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatu
 constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
 constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus::kThrottled;
 
-constexpr char kStorePath[] = "/tmp/reports";
-
 constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
 constexpr char kAnnotationKey[] = "annotation.key";
@@ -77,10 +75,10 @@ std::optional<std::string> DeleteReportFromStore() {
   };
 
   std::vector<std::string> program_shortnames;
-  files::ReadDirContents(kStorePath, &program_shortnames);
+  files::ReadDirContents(kStoreCachePath, &program_shortnames);
   RemoveCurDir(&program_shortnames);
   for (const auto& program_shortname : program_shortnames) {
-    const std::string path = files::JoinPath(kStorePath, program_shortname);
+    const std::string path = files::JoinPath(kStoreCachePath, program_shortname);
 
     std::vector<std::string> report_ids;
     files::ReadDirContents(path, &report_ids);
@@ -134,7 +132,10 @@ class QueueTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
-  void TearDown() override { ASSERT_TRUE(files::DeletePath(kStorePath, /*recursive=*/true)); }
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kStoreTmpPath, /*recursive=*/true));
+    ASSERT_TRUE(files::DeletePath(kStoreCachePath, /*recursive=*/true));
+  }
 
  protected:
   void SetUpNetworkReachabilityProvider() {

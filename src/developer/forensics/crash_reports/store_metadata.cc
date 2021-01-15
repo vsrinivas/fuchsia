@@ -77,6 +77,8 @@ StorageSize StoreMetadata::CurrentSize() const { return current_size_; }
 
 StorageSize StoreMetadata::RemainingSpace() const { return max_size_ - current_size_; }
 
+const std::string& StoreMetadata::RootDir() const { return store_root_; }
+
 void StoreMetadata::Add(const ReportId report_id, std::string program,
                         std::vector<std::string> attachments, const StorageSize size) {
   current_size_ += size;
@@ -123,29 +125,29 @@ std::vector<ReportId> StoreMetadata::Reports() const {
   return report_ids;
 }
 
-const std::deque<ReportId>& StoreMetadata::ProgramReports(const std::string& program) {
+const std::deque<ReportId>& StoreMetadata::ProgramReports(const std::string& program) const {
   FX_CHECK(program_metadata_.find(program) != program_metadata_.end());
-  return program_metadata_[program].report_ids;
+  return program_metadata_.at(program).report_ids;
 }
 
-const std::string& StoreMetadata::ReportProgram(const ReportId report_id) {
+const std::string& StoreMetadata::ReportProgram(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
-  return report_metadata_[report_id].program;
+  return report_metadata_.at(report_id).program;
 }
 
-const std::string& StoreMetadata::ProgramDirectory(const std::string& program) {
+const std::string& StoreMetadata::ProgramDirectory(const std::string& program) const {
   FX_CHECK(program_metadata_.find(program) != program_metadata_.end());
-  return program_metadata_[program].dir;
+  return program_metadata_.at(program).dir;
 }
 
-const std::string& StoreMetadata::ReportDirectory(const ReportId report_id) {
+const std::string& StoreMetadata::ReportDirectory(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
-  return report_metadata_[report_id].dir;
+  return report_metadata_.at(report_id).dir;
 }
 
-StorageSize StoreMetadata::ReportSize(const ReportId report_id) {
+StorageSize StoreMetadata::ReportSize(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
-  return report_metadata_[report_id].size;
+  return report_metadata_.at(report_id).size;
 }
 
 std::vector<std::string> StoreMetadata::ReportAttachments(ReportId report_id,

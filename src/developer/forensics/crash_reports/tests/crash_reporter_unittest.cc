@@ -76,8 +76,6 @@ constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatu
 constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
 constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus::kThrottled;
 
-constexpr char kStorePath[] = "/tmp/reports";
-
 constexpr char kProgramName[] = "crashing_program";
 
 constexpr char kBuildVersion[] = "some-version";
@@ -146,7 +144,10 @@ class CrashReporterTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
-  void TearDown() override { ASSERT_TRUE(files::DeletePath(kStorePath, /*recursive=*/true)); }
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kStoreTmpPath, /*recursive=*/true));
+    ASSERT_TRUE(files::DeletePath(kStoreCachePath, /*recursive=*/true));
+  }
 
  protected:
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.

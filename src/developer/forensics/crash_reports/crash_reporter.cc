@@ -59,7 +59,11 @@ constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 // Note: This function traverses store in the filesystem to and should be used sparingly.
 ReportId SeedReportId() {
   // The next ReportId will be one more than the largest in the store.
-  auto all_report_ids = StoreMetadata(kStorePath, kStoreMaxSize).Reports();
+  auto all_report_ids = StoreMetadata(kStoreTmpPath, kStoreMaxTmpSize).Reports();
+  const auto all_cache_report_ids = StoreMetadata(kStoreCachePath, kStoreMaxCacheSize).Reports();
+  all_report_ids.insert(all_report_ids.end(), all_cache_report_ids.begin(),
+                        all_cache_report_ids.end());
+
   std::sort(all_report_ids.begin(), all_report_ids.end());
   return (all_report_ids.empty()) ? 0u : all_report_ids.back() + 1;
 }
@@ -142,7 +146,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   info_.ExposeReportingPolicy(reporting_policy_watcher_.get());
 
   if (config.hourly_snapshot) {
-    // We schedule the first hourly snapshot in 5 minutes and then it will auto-schedule itself 
+    // We schedule the first hourly snapshot in 5 minutes and then it will auto-schedule itself
     // every hour after that.
     ScheduleHourlySnapshot(zx::min(5));
   }
