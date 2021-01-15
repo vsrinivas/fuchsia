@@ -55,6 +55,8 @@ class FakePrinter : public print_input_report::Printer {
     expected_strings_ = strings;
   }
 
+  void AssertSawAllStrings() { ASSERT_EQ(current_string_index_, expected_strings_.size()); }
+
  private:
   static constexpr size_t kMaxBufLen = 1024;
   size_t current_string_index_ = 0;
@@ -68,23 +70,20 @@ class PrintInputReport : public testing::Test {
     zx::channel token_server, token_client;
     ASSERT_EQ(zx::channel::create(0, &token_server, &token_client), ZX_OK);
 
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
 
     fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
         fidl::InterfaceRequest<fuchsia::input::report::InputDevice>(std::move(token_server)),
         loop_->dispatcher());
-    ASSERT_EQ(ZX_OK, loop_->StartThread("print-input-report-test-thread"));
-    client_ = fuchsia_input_report::InputDevice::SyncClient(std::move(token_client));
+    client_ = fidl::Client<fuchsia_input_report::InputDevice>(std::move(token_client),
+                                                              loop_->dispatcher());
   }
 
-  virtual void TearDown() {
-    loop_->Quit();
-    loop_->JoinThreads();
-  }
+  virtual void TearDown() { loop_->Quit(); }
 
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
   std::unique_ptr<async::Loop> loop_;
-  std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
+  std::optional<fidl::Client<fuchsia_input_report::InputDevice>> client_;
 };
 
 TEST_F(PrintInputReport, PrintMouseInputReport) {
@@ -112,7 +111,14 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
       "Button 05 pressed\n",
       "\n",
   });
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
@@ -153,6 +159,9 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
+
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
@@ -191,6 +200,7 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  loop_->RunUntilIdle();
 }
 
 TEST_F(PrintInputReport, PrintSensorInputReport) {
@@ -208,7 +218,13 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
       "\n",
   });
 
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
@@ -257,6 +273,7 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  loop_->RunUntilIdle();
 }
 
 TEST_F(PrintInputReport, PrintTouchInputReport) {
@@ -287,7 +304,13 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
       "\n",
   });
 
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
@@ -313,6 +336,7 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  loop_->RunUntilIdle();
 }
 
 TEST_F(PrintInputReport, PrintKeyboardInputReport) {
@@ -334,7 +358,13 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
       "\n",
   });
 
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
@@ -352,7 +382,13 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
       "\n",
   });
 
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
@@ -371,10 +407,12 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
       "  Button:        VOLUME_UP\n",
       "  Button:      VOLUME_DOWN\n",
       "  Button:           REBOOT\n",
-      "\n",
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
+
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 TEST_F(PrintInputReport, PrintConsumerControlReport) {
@@ -397,7 +435,13 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
       "\n",
   });
 
-  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+  auto res = print_input_report::GetReaderClient(&client_.value(), loop_->dispatcher());
+  ASSERT_EQ(res.status_value(), ZX_OK);
+  auto reader = std::move(res.value());
+
+  print_input_report::PrintInputReports(&printer, &reader, 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 }  // namespace test

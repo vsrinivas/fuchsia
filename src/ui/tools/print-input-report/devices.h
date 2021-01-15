@@ -5,14 +5,21 @@
 #ifndef SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_
 #define SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_
 
+#include <lib/zx/status.h>
+
 #include "src/ui/tools/print-input-report/printer.h"
 
 namespace print_input_report {
 
-zx_status_t PrintInputDescriptor(Printer* printer,
-                                 fuchsia_input_report::InputDevice::SyncClient* client);
-int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncClient* client,
-                     size_t num_reads);
+zx::status<fidl::Client<llcpp::fuchsia::input::report::InputReportsReader>> GetReaderClient(
+    fidl::Client<fuchsia_input_report::InputDevice>* client, async_dispatcher_t* dispatcher);
+
+zx_status_t PrintInputDescriptor(
+    Printer* printer, fidl::Client<fuchsia_input_report::InputDevice>* client,
+    fit::closure callback = [] {});
+void PrintInputReports(
+    Printer* printer, fidl::Client<fuchsia_input_report::InputReportsReader>* reader,
+    size_t num_reads, fit::closure callback = [] {});
 
 void PrintMouseDesc(Printer* printer, const fuchsia_input_report::MouseInputDescriptor& mouse_desc);
 void PrintMouseInputReport(Printer* printer,

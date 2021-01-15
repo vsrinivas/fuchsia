@@ -47,8 +47,8 @@ zx_status_t ParseUintArg(const char* arg, uint32_t min, uint32_t max, uint32_t* 
   return ZX_OK;
 }
 
-std::optional<fuchsia_input_report::InputDevice::SyncClient> GetClientFromPath(
-    Printer* printer, const std::string& path) {
+std::optional<fidl::Client<fuchsia_input_report::InputDevice>> GetClientFromPath(
+    Printer* printer, const std::string& path, async_dispatcher_t* dispatcher) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     printer->Print("could not open %s\n", path.c_str());
@@ -62,14 +62,14 @@ std::optional<fuchsia_input_report::InputDevice::SyncClient> GetClientFromPath(
     return std::nullopt;
   }
 
-  return fuchsia_input_report::InputDevice::SyncClient(std::move(chan));
+  return fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), dispatcher);
 }
 
 }  // namespace print_input_report
 
 int main(int argc, const char** argv) {
   // Register with tracing.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   zx_status_t status = loop.StartThread();
   if (status != ZX_OK) {
     printf("Error setting up tracing: %s\n", zx_status_get_string(status));
@@ -106,13 +106,21 @@ int main(int argc, const char** argv) {
     }
 
     const std::string& device_path = args[1].c_str();
-    auto sync_client = print_input_report::GetClientFromPath(&printer, device_path);
-    if (!sync_client) {
+    auto client = print_input_report::GetClientFromPath(&printer, device_path, loop.dispatcher());
+    if (!client) {
       return -1;
     }
 
+    auto res = print_input_report::GetReaderClient(&client.value(), loop.dispatcher());
+    if (!res.is_ok()) {
+      return res.status_value();
+    }
+    auto reader = std::move(res.value());
+
     printer.Print("Reading reports from %s:\n", device_path.c_str());
-    return print_input_report::PrintInputReport(&printer, &sync_client.value(), num_reads);
+    print_input_report::PrintInputReports(&printer, &reader, num_reads,
+                                          [&loop]() { loop.Shutdown(); });
+    loop.Run();
 
     // The "descriptor" command.
   } else if (args[0] == "descriptor") {
@@ -123,13 +131,20 @@ int main(int argc, const char** argv) {
     }
 
     const std::string& device_path = args[1].c_str();
-    auto sync_client = print_input_report::GetClientFromPath(&printer, device_path);
-    if (!sync_client) {
+    auto client = print_input_report::GetClientFromPath(&printer, device_path, loop.dispatcher());
+    if (!client) {
       return -1;
     }
-    return print_input_report::PrintInputDescriptor(&printer, &sync_client.value());
+    zx_status_t status = print_input_report::PrintInputDescriptor(&printer, &client.value(),
+                                                                  [&loop]() { loop.Shutdown(); });
+    if (status != ZX_OK) {
+      return 1;
+    }
+
+    loop.Run();
+  } else {
+    print_input_report::PrintHelp(&printer);
   };
 
-  print_input_report::PrintHelp(&printer);
   return 0;
 }
