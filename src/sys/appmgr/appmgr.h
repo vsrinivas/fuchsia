@@ -58,11 +58,14 @@ class Appmgr {
   // Called as part of the process lifecycle allowing appmgr to cleanly shutdown child components
   // that support the process lifecycle protocol.
   // Calls |callback| when this is complete.
-  void Shutdown(fit::function<void(zx_status_t)> callback);
+  // Returns lifecycle pointers for safe keeping. They should be kept alive until |callback| is
+  // called.
+  std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> Shutdown(
+      fit::function<void(zx_status_t)> callback);
 
   Realm* RootRealm() { return root_realm_.get(); }
 
-  bool is_sysmgr_running() { return sysmgr_running_; }
+  bool is_sysmgr_running() const { return sysmgr_running_; }
 
  private:
   // Initialize recording of appmgr's own CPU usage in the CpuWatcher.

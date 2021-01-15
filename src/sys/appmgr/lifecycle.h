@@ -10,6 +10,11 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
 
+#include <memory>
+#include <vector>
+
+#include "fuchsia/process/lifecycle/cpp/fidl.h"
+
 namespace component {
 
 class Appmgr;
@@ -32,6 +37,9 @@ class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecyc
   Appmgr* appmgr_;
   fit::function<void(zx_status_t)> stop_callback_;
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::process::lifecycle::Lifecycle>> lifecycle_;
+
+  // For safe-keeping until appmgr shutsdown.
+  std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> child_lifecycles_;
 };
 
 }  // namespace component

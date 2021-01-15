@@ -33,8 +33,9 @@ void LifecycleServer::Close(zx_status_t status) {
 
 void LifecycleServer::Stop(StopCompleter::Sync& completer) {
   FX_LOGS(INFO) << "appmgr: received shutdown command over lifecycle interface";
-  appmgr_->Shutdown([this](zx_status_t status) mutable {
+  child_lifecycles_ = appmgr_->Shutdown([this](zx_status_t status) mutable {
     FX_LOGS(INFO) << "Lifecycle Server complete callback";
+    child_lifecycles_.clear();
     Close(status);
     stop_callback_(status);
   });

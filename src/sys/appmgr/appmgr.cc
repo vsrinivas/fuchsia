@@ -19,6 +19,9 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <memory>
+#include <vector>
+
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
@@ -235,13 +238,13 @@ void Appmgr::FindLifecycleComponentsInRealm(Realm* realm,
 struct ShutdownCountdown {
   int component_count;
   fit::function<void(zx_status_t)> complete_callback;
-  std::vector<fuchsia::process::lifecycle::LifecyclePtr> lifecycle_ptrs;
 
   ShutdownCountdown(int component_count, fit::function<void(zx_status_t)> complete_callback)
       : component_count(component_count), complete_callback(std::move(complete_callback)) {}
 };
 
-void Appmgr::Shutdown(fit::function<void(zx_status_t)> callback) {
+std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> Appmgr::Shutdown(
+    fit::function<void(zx_status_t)> callback) {
   FX_LOGS(INFO) << "appmgr shutdown called.";
 
   std::vector<LifecycleComponent> lifecycle_components;
@@ -250,45 +253,49 @@ void Appmgr::Shutdown(fit::function<void(zx_status_t)> callback) {
   auto components_remaining =
       std::make_shared<ShutdownCountdown>(lifecycle_components.size(), std::move(callback));
 
-  if (components_remaining.get()->component_count == 0) {
+  std::vector<std::shared_ptr<fuchsia::process::lifecycle::LifecyclePtr>> child_lifecycles;
+
+  if (components_remaining->component_count == 0) {
     FX_LOGS(INFO) << "No components expose lifecycle, continuing appmgr shutdown.";
-    components_remaining.get()->complete_callback(ZX_OK);
-    return;
+    components_remaining->complete_callback(ZX_OK);
+    return child_lifecycles;
   }
 
   // Schedule tasks to shutdown the running lifecycle components. These tasks will be performed
   // concurrently.
-  for (auto component : lifecycle_components) {
+  for (auto& component : lifecycle_components) {
+    auto lifecycle = std::make_shared<fuchsia::process::lifecycle::LifecyclePtr>();
+    child_lifecycles.push_back(lifecycle);
     // Connect to its lifecycle service and tell it to shutdown.
     lifecycle_executor_.schedule_task(component.controller->GetServiceDir().and_then(
-        [components_remaining, component](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
+        [components_remaining, component = std::move(component),
+         lifecycle](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
           // The lifecycle_allowlist_ contains v1 components which expose their services over svc/
           // instead of the PA_LIFECYCLE channel.
-          fuchsia::process::lifecycle::LifecyclePtr lifecycle;
+
           zx_status_t status = fdio_service_connect_at(
               dir.TakeChannel().release(), "fuchsia.process.lifecycle.Lifecycle",
-              lifecycle.NewRequest().TakeChannel().release());
+              lifecycle->NewRequest().TakeChannel().release());
           if (status != ZX_OK) {
             FX_LOGS(ERROR) << "Failed to connect to fuchsia.process.lifecycle.Lifecycle for "
                            << component.moniker.url << ".";
             return;
           }
 
-          lifecycle.set_error_handler(
+          lifecycle->set_error_handler(
               [components_remaining, url = component.moniker.url](zx_status_t status) {
-                components_remaining.get()->component_count--;
-                if (components_remaining.get()->component_count == 0) {
+                components_remaining->component_count--;
+                if (components_remaining->component_count == 0) {
                   FX_LOGS(INFO) << "All lifecycle components shut down.";
-                  components_remaining.get()->complete_callback(ZX_OK);
+                  components_remaining->complete_callback(ZX_OK);
                 }
               });
-
-          lifecycle->Stop();
+          lifecycle->get()->Stop();
 
           // Keep the lifecycle from being destroyed to ensure the channel stays open.
-          components_remaining->lifecycle_ptrs.push_back(std::move(lifecycle));
         }));
   }
+  return child_lifecycles;
 }
 
 void Appmgr::RecordSelfCpuStats() {
