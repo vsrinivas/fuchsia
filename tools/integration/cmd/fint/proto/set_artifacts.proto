@@ -17,4 +17,9 @@ message SetArtifacts {
 
     // The path to the `gn gen` tracelog.
     string gn_trace_path = 2;
+
+    // Whether the caller can skip calling `fint build`, based on the changed
+    // files included in the context spec. Will always be false unless the
+    // static spec's `skip_if_unaffected` field is set.
+    bool skip_build = 3;
 }

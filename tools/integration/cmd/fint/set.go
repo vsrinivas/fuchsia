@@ -151,15 +151,29 @@ func runSteps(
 	contextSpec *fintpb.Context,
 	platform string,
 ) (*fintpb.SetArtifacts, error) {
+	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	artifacts := &fintpb.SetArtifacts{}
 	genArgs, err := genArgs(staticSpec, contextSpec, platform)
 	if err != nil {
 		return nil, err
 	}
 	artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
-	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
+	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, gnPath, artifacts.GnTracePath, genArgs)
 	if err != nil {
 		artifacts.FailureSummary = genStdout
+		return artifacts, err
+	}
+	if staticSpec.SkipIfUnaffected {
+		var changedFiles []string
+		for _, f := range contextSpec.ChangedFiles {
+			changedFiles = append(changedFiles, f.Path)
+		}
+		buildGraphAffected, err := isBuildGraphAffected(
+			ctx, runner, contextSpec.BuildDir, contextSpec.CheckoutDir, gnPath, changedFiles)
+		if err != nil {
+			return artifacts, err
+		}
+		artifacts.SkipBuild = !buildGraphAffected
 	}
 	return artifacts, err
 }
@@ -169,11 +183,10 @@ func runGen(
 	runner subprocessRunner,
 	staticSpec *fintpb.Static,
 	contextSpec *fintpb.Context,
-	platform string,
+	gnPath string,
 	gnTracePath string,
 	args []string,
 ) (genStdout string, err error) {
-	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	genCmd := []string{
 		gnPath, "gen",
 		contextSpec.BuildDir,
@@ -398,4 +411,15 @@ func contains(items []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func isBuildGraphAffected(
+	_ context.Context,
+	_ subprocessRunner,
+	_ string,
+	_ string,
+	_ string,
+	_ []string,
+) (bool, error) {
+	return true, nil
 }

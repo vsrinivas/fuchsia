@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -140,8 +139,8 @@ func TestRunGen(t *testing.T) {
 				mockStdout: []byte("some stdout"),
 			}
 
-			platform := "mac-x64"
-			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, gnTracePath, []string{"arg1", "arg2"})
+			gnPath := "/bin/gn"
+			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, gnPath, gnTracePath, []string{"arg1", "arg2"})
 			if err != nil {
 				t.Fatalf("Unexpected error from runGen: %v", err)
 			}
@@ -160,13 +159,8 @@ func TestRunGen(t *testing.T) {
 
 			exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
 			otherOptions := cmd[3 : len(cmd)-1]
-			// Intentionally flexible about the path within the checkout to the gn dir
-			// in case it's every intentionally changed.
-			expectedExePattern := regexp.MustCompile(
-				fmt.Sprintf(`^%s(/\w+)+/%s/gn$`, contextSpec.CheckoutDir, platform),
-			)
-			if !expectedExePattern.MatchString(exe) {
-				t.Errorf("runGen ran wrong GN executable: %s, expected a match of %s", exe, expectedExePattern)
+			if exe != gnPath {
+				t.Errorf("runGen ran wrong GN executable: want %q, got %q", gnPath, exe)
 			}
 			if subcommand != "gen" {
 				t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)
