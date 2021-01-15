@@ -16,7 +16,6 @@ namespace camera {
 namespace {
 
 constexpr size_t kTestSize = 5;
-// constexpr const char* kFilepath = "/data/0.raw";
 constexpr std::array<uint8_t, kTestSize> kTestData = {1, 2, 3, 4, 5};
 
 // Helper method to initialize an ImageIOUtil with one VmoBuffer filled with test data.

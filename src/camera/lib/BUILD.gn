@@ -20,3 +20,8 @@ group("lib") {
     "virtual_camera",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "stream_utils:tests" ]
+}

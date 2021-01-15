@@ -2,11 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
 group("stream_utils") {
-  public_deps = [ ":stream_utils_lib" ]
+  public_deps = [ ":lib" ]
 }
 
-source_set("stream_utils_lib") {
+group("tests") {
+  testonly = true
+  deps = [ ":camera_stream_utils_unittest" ]
+}
+
+source_set("lib") {
   sources = [ "image_io_util.cc" ]
 
   deps = [
@@ -24,10 +31,27 @@ source_set("stream_configs") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
-    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/image-format",
   ]
+}
+
+executable("image_io_util_test_bin") {
+  testonly = true
+  sources = [ "image_io_util_test.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("camera_stream_utils_unittest") {
+  manifest = "meta/image_io_util_test.cmx"
+  deps = [ ":image_io_util_test_bin" ]
 }

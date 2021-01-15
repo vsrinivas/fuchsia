@@ -23,7 +23,6 @@ camera_tests = {
     "//src/camera/lib/hanging_get_helper/test",
     "//src/camera/lib/image_utils/test",
     "//src/camera/lib/image_utils/test:algorithms_test",
-    "//src/camera/lib/stream_utils/test",
     "//src/camera/lib/virtual_camera/test",
   ]
 
@@ -76,11 +75,6 @@ camera_tests = {
     {
       name = "algorithms_test"
       manifest = "//src/camera/lib/image_utils/test/meta/algorithms_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "stream_utils_test"
-      manifest = "//src/camera/lib/stream_utils/test/meta/stream_utils_test.cmx"
       environments = basic_envs
     },
     {

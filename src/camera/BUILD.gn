@@ -63,6 +63,7 @@ group("tests") {
     ":camera_tests",
     "bin",
     "drivers:bind_tests",
+    "lib:tests",
   ]
 }
 
