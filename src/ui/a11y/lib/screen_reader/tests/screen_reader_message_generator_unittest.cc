@@ -260,5 +260,45 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeCheckBoxWithStates) {
   ASSERT_EQ(result[1].utterance.message(), "check box");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchOn) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::TOGGLE_SWITCH);
+  node.mutable_states()->set_toggled_state(fuchsia::accessibility::semantics::ToggledState::ON);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_SELECTED), "foo radio button selected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo radio button selected");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchOff) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::TOGGLE_SWITCH);
+  node.mutable_states()->set_toggled_state(fuchsia::accessibility::semantics::ToggledState::OFF);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_UNSELECTED), "foo radio button unselected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo radio button unselected");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchIndeterminate) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::TOGGLE_SWITCH);
+  node.mutable_states()->set_toggled_state(
+      fuchsia::accessibility::semantics::ToggledState::INDETERMINATE);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::RADIO_BUTTON_UNSELECTED), "foo radio button unselected");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo radio button unselected");
+}
+
 }  // namespace
 }  // namespace accessibility_test

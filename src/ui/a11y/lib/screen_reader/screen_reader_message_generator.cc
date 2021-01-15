@@ -4,6 +4,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/accessibility/semantics/cpp/fidl.h"
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_message_generator.h"
@@ -57,9 +58,13 @@ std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
   std::vector<UtteranceAndContext> description;
   {
-    // If this node is a radio button, the label is part of the whole message that describes it.
+    // If this node is a radio button or a toggle switch, the label is part of the whole message
+    // that describes it.
     if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
       description.emplace_back(DescribeRadioButton(node));
+    } else if (node->has_role() &&
+               node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
+      description.emplace_back(DescribeToggleSwitch(node));
     } else if (node->has_attributes() && node->attributes().has_label()) {
       Utterance utterance;
       utterance.set_message(node->attributes().label());
@@ -157,6 +162,24 @@ ScreenReaderMessageGenerator::DescribeCheckBox(
     description.emplace_back(GenerateUtteranceByMessageId(message_id));
   }
   return description;
+}
+
+ScreenReaderMessageGenerator::UtteranceAndContext
+ScreenReaderMessageGenerator::DescribeToggleSwitch(
+    const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() &&
+            node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
+  // TODO(fxb/67666): Update the following describe logic for toggle switch when the appropriate
+  // message string is supported.
+  const auto message_id =
+      node->has_states() && node->states().has_toggled_state() &&
+              node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
+          ? MessageIds::RADIO_BUTTON_SELECTED
+          : MessageIds::RADIO_BUTTON_UNSELECTED;
+  const auto name_value =
+      node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
+  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
+                                      {name_value});
 }
 
 }  // namespace a11y

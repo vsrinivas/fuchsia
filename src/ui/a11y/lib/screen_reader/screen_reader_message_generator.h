@@ -63,6 +63,9 @@ class ScreenReaderMessageGenerator {
   std::vector<UtteranceAndContext> DescribeCheckBox(
       const fuchsia::accessibility::semantics::Node* node);
 
+  // Helper method to describe a node that is a toggle switch.
+  UtteranceAndContext DescribeToggleSwitch(const fuchsia::accessibility::semantics::Node* node);
+
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 };
 
