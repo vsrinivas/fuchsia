@@ -153,10 +153,9 @@ pub(crate) async fn process_avrcp_requests(
         .expect("Failed to connect to Bluetooth AVRCP interface");
     let (target_client, request_stream) =
         create_request_stream::<TargetHandlerMarker>().expect("Error creating Controller endpoint");
-    let _status = avrcp_svc
-        .register_target_handler(target_client)
-        .await
-        .expect("Unable to register target handler");
+    if let Err(e) = avrcp_svc.register_target_handler(target_client).await? {
+        return Err(anyhow!("Error registering target handler: {:?}", e));
+    }
     // End AVRCP Service Setup
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");

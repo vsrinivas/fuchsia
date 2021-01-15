@@ -51,13 +51,6 @@ fuchsia_package("bt-profile-test-server") {
 
 fuchsia_unittest_package("bt-profile-test-server-tests") {
   manifest = "meta/bt-profile-test-server-tests.cmx"
-
-  # TODO(fxbug.dev/67461): Fix bt-a2dp to not error and remove this
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   deps = [ ":bin_test" ]
 }
 

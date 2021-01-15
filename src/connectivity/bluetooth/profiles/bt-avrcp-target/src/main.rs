@@ -38,5 +38,7 @@ async fn main() -> Result<(), Error> {
     let watch_media_sessions_fut = media_state.watch();
     let avrcp_requests_fut = process_avrcp_requests(media_state.clone(), lifecycle);
 
-    try_join!(watch_media_sessions_fut, avrcp_requests_fut).map(|_| ())
+    let result = try_join!(watch_media_sessions_fut, avrcp_requests_fut).map(|_| ());
+    log::info!("AVRCP-TG finished with result: {:?}", result);
+    result
 }
