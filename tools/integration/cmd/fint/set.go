@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/subcommands"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -28,9 +28,17 @@ import (
 const (
 	fuchsiaDirEnvVar = "FUCHSIA_DIR"
 
-	// Name of the file (in `contextSpec.ArtifactsDir`) that will expose
-	// manifest files and other metadata produced by this command to the caller.
-	artifactsManifest = "set_artifacts.textproto"
+	// artifactsManifest is the name of the file (in `contextSpec.ArtifactsDir`)
+	// that will expose manifest files and other metadata produced by this
+	// command to the caller. We use JSON instead of textproto for this message
+	// because it passes data from fint back to the caller, but the source of
+	// truth for the proto definition is in fint. Proto libraries don't have
+	// good support for deserializing unknown fields in textprotos (unlike JSON
+	// protos), so if we used textproto then we'd have to make two separate fint
+	// changes every time we want to start setting a new field: one to add the
+	// field, then another to set the field, which can only be landed after the
+	// updated proto definition has been propagated to all consumers.
+	artifactsManifest = "set_artifacts.json"
 )
 
 type subprocessRunner interface {
@@ -123,7 +131,8 @@ func (c *SetCommand) run(ctx context.Context) error {
 			return fmt.Errorf("failed to create artifacts file: %w", err)
 		}
 		defer f.Close()
-		if err := proto.MarshalText(f, artifacts); err != nil {
+		m := jsonpb.Marshaler{}
+		if err := m.Marshal(f, artifacts); err != nil {
 			return fmt.Errorf("failed to write artifacts file: %w", err)
 		}
 	}
