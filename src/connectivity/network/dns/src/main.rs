@@ -17,22 +17,26 @@ use {
     fuchsia_inspect, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
+        lock::Mutex,
         task::{Context, Poll},
         FutureExt as _, Sink, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
     },
     log::{debug, error, info, warn},
     net_declare::fidl_ip_v6,
     parking_lot::RwLock,
+    std::collections::VecDeque,
+    std::convert::TryFrom,
+    std::net::IpAddr,
     std::pin::Pin,
+    std::rc::Rc,
     std::sync::Arc,
-    std::{net::IpAddr, rc::Rc},
     trust_dns_proto::rr::{domain::IntoName, TryParseIp},
     trust_dns_resolver::{
         config::{
             LookupIpStrategy, NameServerConfig, NameServerConfigGroup, Protocol, ResolverConfig,
             ResolverOpts,
         },
-        error::ResolveError,
+        error::{ResolveError, ResolveErrorKind},
         lookup, lookup_ip,
     },
 };
@@ -50,6 +54,116 @@ impl<T> SharedResolver<T> {
 
     fn write(&self, other: Rc<T>) {
         *self.0.write() = other;
+    }
+}
+
+const STAT_WINDOW_DURATION: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(60);
+const STAT_WINDOW_COUNT: usize = 30;
+
+/// Stats about queries during the last `STAT_WINDOW_COUNT` windows of
+/// `STAT_WINDOW_DURATION` time.
+///
+/// For example, if `STAT_WINDOW_DURATION` == 1 minute, and
+/// `STAT_WINDOW_COUNT` == 30, `past_queries` contains information about, at
+/// most, 30 one-minute windows of completed queries.
+///
+/// NB: there is no guarantee that these windows are directly consecutive; only
+/// that each window begins at least `STAT_WINDOW_DURATION` after the previous
+/// window's start time.
+struct QueryStats {
+    inner: Mutex<VecDeque<QueryWindow>>,
+}
+
+impl QueryStats {
+    fn new() -> Self {
+        Self { inner: Mutex::new(VecDeque::new()) }
+    }
+
+    async fn finish_query(&self, start_time: fasync::Time, error: Option<&ResolveErrorKind>) {
+        let now = fasync::Time::now();
+        let past_queries = &mut *self.inner.lock().await;
+
+        let current_window = if let Some(window) = past_queries.back_mut() {
+            if now - window.start >= STAT_WINDOW_DURATION {
+                past_queries.push_back(QueryWindow::new(now));
+                if past_queries.len() > STAT_WINDOW_COUNT {
+                    // Remove the oldest window of query stats.
+                    past_queries.pop_front();
+                }
+                // This is safe because we've just pushed an element to `past_queries`.
+                past_queries.back_mut().unwrap()
+            } else {
+                window
+            }
+        } else {
+            past_queries.push_back(QueryWindow::new(now));
+            // This is safe because we've just pushed an element to `past_queries`.
+            past_queries.back_mut().unwrap()
+        };
+
+        let elapsed_time = now - start_time;
+        if let Some(e) = error {
+            current_window.fail(elapsed_time, e);
+        } else {
+            current_window.succeed(elapsed_time);
+        }
+    }
+}
+
+/// Stats about queries that failed due to an internal trust-dns error.
+/// These counters map to variants of
+/// [`trust_dns_resolver::error::ResolveErrorKind`].
+#[derive(Default, Debug, PartialEq)]
+struct FailureStats {
+    message: u64,
+    no_records_found: u64,
+    io: u64,
+    proto: u64,
+    timeout: u64,
+}
+
+impl FailureStats {
+    fn increment(&mut self, kind: &ResolveErrorKind) {
+        match kind {
+            ResolveErrorKind::Message(_) | ResolveErrorKind::Msg(_) => self.message += 1,
+            ResolveErrorKind::NoRecordsFound { .. } => self.no_records_found += 1,
+            ResolveErrorKind::Io(_) => self.io += 1,
+            ResolveErrorKind::Proto(_) => self.proto += 1,
+            ResolveErrorKind::Timeout => self.timeout += 1,
+        }
+    }
+}
+
+struct QueryWindow {
+    start: fasync::Time,
+    success_count: u64,
+    failure_count: u64,
+    success_elapsed_time: fuchsia_zircon::Duration,
+    failure_elapsed_time: fuchsia_zircon::Duration,
+    failure_stats: FailureStats,
+}
+
+impl QueryWindow {
+    fn new(start: fasync::Time) -> Self {
+        Self {
+            start,
+            success_count: 0,
+            failure_count: 0,
+            success_elapsed_time: fuchsia_zircon::Duration::from_nanos(0),
+            failure_elapsed_time: fuchsia_zircon::Duration::from_nanos(0),
+            failure_stats: FailureStats::default(),
+        }
+    }
+
+    fn succeed(&mut self, elapsed_time: fuchsia_zircon::Duration) {
+        self.success_count += 1;
+        self.success_elapsed_time += elapsed_time;
+    }
+
+    fn fail(&mut self, elapsed_time: fuchsia_zircon::Duration, error: &ResolveErrorKind) {
+        self.failure_count += 1;
+        self.failure_elapsed_time += elapsed_time;
+        self.failure_stats.increment(error);
     }
 }
 
@@ -208,7 +322,7 @@ impl ResolverLookup for Resolver {
 ///
 /// `source` is used for debugging information.
 fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
-    use {trust_dns_proto::error::ProtoErrorKind, trust_dns_resolver::error::ResolveErrorKind};
+    use trust_dns_proto::error::ProtoErrorKind;
 
     let (lookup_err, ioerr) = match err.kind() {
         // The following mapping is based on the analysis of `ResolveError` enumerations.
@@ -286,9 +400,11 @@ struct LookupMode {
 async fn lookup_ip_inner<T: ResolverLookup>(
     caller: &'static str,
     resolver: &SharedResolver<T>,
+    stats: Arc<QueryStats>,
     hostname: String,
     LookupMode { ipv4_lookup, ipv6_lookup }: LookupMode,
 ) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
+    let start_time = fasync::Time::now();
     let resolver = resolver.read();
     let result: Result<Vec<_>, _> = match (ipv4_lookup, ipv6_lookup) {
         (true, false) => resolver.ipv4_lookup(hostname).await.map(|addrs| {
@@ -305,6 +421,7 @@ async fn lookup_ip_inner<T: ResolverLookup>(
             return Err(fnet::LookupError::InvalidArgs);
         }
     };
+    stats.finish_query(start_time, result.as_ref().err().map(|e| e.kind())).await;
     result.map_err(|e| handle_err(caller, e)).and_then(|addrs| {
         if addrs.is_empty() {
             Err(fnet::LookupError::NotFound)
@@ -316,6 +433,7 @@ async fn lookup_ip_inner<T: ResolverLookup>(
 
 async fn handle_lookup_ip<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
+    stats: Arc<QueryStats>,
     hostname: String,
     options: fnet::LookupIpOptions,
 ) -> Result<fnet::IpAddressInfo, fnet::LookupError> {
@@ -323,7 +441,7 @@ async fn handle_lookup_ip<T: ResolverLookup>(
         ipv4_lookup: options.contains(fnet::LookupIpOptions::V4Addrs),
         ipv6_lookup: options.contains(fnet::LookupIpOptions::V6Addrs),
     };
-    let response = lookup_ip_inner("LookupIp", resolver, hostname, mode).await?;
+    let response = lookup_ip_inner("LookupIp", resolver, stats, hostname, mode).await?;
     let mut result =
         fnet::IpAddressInfo { ipv4_addrs: vec![], ipv6_addrs: vec![], canonical_name: None };
     for address in response.into_iter() {
@@ -341,6 +459,7 @@ async fn handle_lookup_ip<T: ResolverLookup>(
 
 async fn handle_lookup_ip2<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
+    stats: Arc<QueryStats>,
     routes: &fidl_fuchsia_net_routes::StateProxy,
     hostname: String,
     options: fnet::LookupIpOptions2,
@@ -350,7 +469,7 @@ async fn handle_lookup_ip2<T: ResolverLookup>(
         ipv4_lookup: ipv4_lookup.unwrap_or(false),
         ipv6_lookup: ipv6_lookup.unwrap_or(false),
     };
-    let addrs = lookup_ip_inner("LookupIp2", resolver, hostname, mode).await?;
+    let addrs = lookup_ip_inner("LookupIp2", resolver, stats, hostname, mode).await?;
     let addrs = if sort_addresses.unwrap_or(false) {
         sort_preferred_addresses(addrs, routes).await?
     } else {
@@ -487,7 +606,7 @@ struct DasCmpInfo {
 
 impl DasCmpInfo {
     /// Helper function to convert a FIDL IP address into
-    /// [`net_types::ip::Ipv6Addr`], using a mapped IPv4 when that's the case.  
+    /// [`net_types::ip::Ipv6Addr`], using a mapped IPv4 when that's the case.
     fn convert_addr(fidl: &fnet::IpAddress) -> net_types::ip::Ipv6Addr {
         match fidl {
             fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
@@ -616,18 +735,20 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
 
 async fn run_name_lookup<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
+    stats: Arc<QueryStats>,
     routes: &fidl_fuchsia_net_routes::StateProxy,
     stream: NameLookupRequestStream,
 ) -> Result<(), fidl::Error> {
-    // TODO(fxbug.dev/45035):Limit the number of parallel requests to 1000.
+    // TODO(fxbug.dev/45035): Limit the number of parallel requests to 1000.
     stream
         .try_for_each_concurrent(None, |request| async {
             match request {
-                NameLookupRequest::LookupIp { hostname, options, responder } => {
-                    responder.send(&mut handle_lookup_ip(resolver, hostname, options).await)
-                }
-                NameLookupRequest::LookupIp2 { hostname, options, responder } => responder
-                    .send(&mut handle_lookup_ip2(resolver, routes, hostname, options).await),
+                NameLookupRequest::LookupIp { hostname, options, responder } => responder
+                    .send(&mut handle_lookup_ip(resolver, stats.clone(), hostname, options).await),
+                NameLookupRequest::LookupIp2 { hostname, options, responder } => responder.send(
+                    &mut handle_lookup_ip2(resolver, stats.clone(), routes, hostname, options)
+                        .await,
+                ),
                 NameLookupRequest::LookupHostname { addr, responder } => {
                     responder.send(&mut handle_lookup_hostname(resolver, addr).await)
                 }
@@ -710,7 +831,7 @@ fn create_policy_fut<T: ResolverLookup>(
     (servers_config_sink, policy_fut)
 }
 
-/// Adds a [`dns::policy:::ServerConfigState`] inspection child node to
+/// Adds a [`dns::policy::ServerConfigState`] inspection child node to
 /// `parent`.
 fn add_config_state_inspect(
     parent: &fuchsia_inspect::Node,
@@ -728,6 +849,81 @@ fn add_config_state_inspect(
                 let () = srv.root().record(child);
             }
             Ok(srv)
+        }
+        .boxed()
+    })
+}
+
+/// Adds a [`QueryStats`] inspection child node to `parent`.
+fn add_query_stats_inspect(
+    parent: &fuchsia_inspect::Node,
+    stats: Arc<QueryStats>,
+) -> fuchsia_inspect::LazyNode {
+    parent.create_lazy_child("query_stats", move || {
+        let stats = stats.clone();
+        async move {
+            let past_queries = &*stats.inner.lock().await;
+            let node = fuchsia_inspect::Inspector::new();
+            for (
+                i,
+                QueryWindow {
+                    start,
+                    success_count,
+                    failure_count,
+                    success_elapsed_time,
+                    failure_elapsed_time,
+                    failure_stats,
+                },
+            ) in past_queries.iter().enumerate()
+            {
+                let child = node.root().create_child(format!("window {}", i + 1));
+
+                match u64::try_from(start.into_nanos()) {
+                    Ok(nanos) => {
+                        let () = child.record_uint("start_time_nanos", nanos);
+                    },
+                    Err(e) => warn!(
+                        "error computing `start_time_nanos`: {:?}.into_nanos() from i64 -> u64 failed: {}",
+                        start, e
+                    ),
+                }
+                let () = child.record_uint("successful_queries", *success_count);
+                let () = child.record_uint("failed_queries", *failure_count);
+                let record_average = |name: &str, total: fuchsia_zircon::Duration, count: u64| {
+                    // Don't record an average if there are no stats.
+                    if count == 0 {
+                        return;
+                    }
+                    match u64::try_from(total.into_micros()) {
+                        Ok(micros) => child.record_uint(name, micros / count),
+                        Err(e) => warn!(
+                            "error computing `{}`: {:?}.into_micros() from i64 -> u64 failed: {}",
+                            name, success_elapsed_time, e
+                        ),
+                    }
+                };
+                record_average(
+                    "average_success_duration_micros",
+                    *success_elapsed_time,
+                    *success_count,
+                );
+                record_average(
+                    "average_failure_duration_micros",
+                    *failure_elapsed_time,
+                    *failure_count,
+                );
+                let FailureStats { message, no_records_found, io, proto, timeout } = failure_stats;
+                let errors = child.create_child("errors");
+                let () = errors.record_uint("Message", *message);
+                let () = errors.record_uint("NoRecordsFound", *no_records_found);
+                let () = errors.record_uint("Io", *io);
+                let () = errors.record_uint("Proto", *proto);
+                let () = errors.record_uint("Timeout", *timeout);
+                let () = child.record(errors);
+
+                let () = node.root().record(child);
+            }
+            Ok(node)
         }
         .boxed()
     })
@@ -752,10 +948,13 @@ async fn main() -> Result<(), Error> {
     let config_state = Arc::new(dns::policy::ServerConfigState::new());
     let (servers_config_sink, policy_fut) = create_policy_fut(&resolver, config_state.clone());
 
+    let stats = Arc::new(QueryStats::new());
+
     let mut fs = ServiceFs::new_local();
 
     let inspector = fuchsia_inspect::component::inspector();
     let _state_inspect_node = add_config_state_inspect(inspector.root(), config_state.clone());
+    let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
     let () = inspector.serve(&mut fs)?;
 
     let routes =
@@ -783,14 +982,14 @@ async fn main() -> Result<(), Error> {
                         })
                 }
                 IncomingRequest::NameLookup(stream) => {
-                    run_name_lookup(&resolver, &routes, stream).await.unwrap_or_else(|e| match e {
-                        // Some clients will drop the channel when timing out
-                        // requests. Mute those errors to prevent log spamming.
-                        fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED) => {}
-                        e => {
-                            warn!("run_name_lookup finished with error: {}", e)
-                        }
-                    })
+                    run_name_lookup(&resolver, stats.clone(), &routes, stream).await.unwrap_or_else(
+                        |e| match e {
+                            // Some clients will drop the channel when timing out
+                            // requests. Mute those errors to prevent log spamming.
+                            fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED) => {}
+                            e => warn!("run_name_lookup finished with error: {}", e),
+                        },
+                    )
                 }
             }
         })
@@ -813,9 +1012,10 @@ mod tests {
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::{assert_inspect_tree, testing::NonZeroUintProperty, tree_assertion};
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
+    use pin_utils::pin_mut;
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -858,6 +1058,7 @@ mod tests {
                 .await
                 .expect("failed to create resolver"),
         );
+        let stats = Arc::new(QueryStats::new());
 
         let (routes_proxy, routes_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
@@ -872,7 +1073,7 @@ mod tests {
                 async move {
                     // We must move routes_proxy into this future so routes_fut will
                     // close.
-                    run_name_lookup(&resolver, &routes_proxy, stream).await
+                    run_name_lookup(&resolver, stats.clone(), &routes_proxy, stream).await
                 },
                 routes_fut,
             )
@@ -1067,6 +1268,7 @@ mod tests {
     struct TestEnvironment {
         shared_resolver: SharedResolver<MockResolver>,
         config_state: Arc<dns::policy::ServerConfigState>,
+        stats: Arc<QueryStats>,
     }
 
     impl TestEnvironment {
@@ -1082,6 +1284,7 @@ mod tests {
                     ),
                 }),
                 config_state: Arc::new(dns::policy::ServerConfigState::new()),
+                stats: Arc::new(QueryStats::new()),
             }
         }
 
@@ -1112,7 +1315,13 @@ mod tests {
 
             let ((), (), ()) = futures::future::try_join3(
                 async move {
-                    run_name_lookup(&self.shared_resolver, &routes_proxy, name_lookup_stream).await
+                    run_name_lookup(
+                        &self.shared_resolver,
+                        self.stats.clone(),
+                        &routes_proxy,
+                        name_lookup_stream,
+                    )
+                    .await
                 },
                 f(name_lookup_proxy).map(Ok),
                 routes_stream.try_for_each(|req| futures::future::ok(handle_routes(req))),
@@ -1409,6 +1618,269 @@ mod tests {
                 },
             }
         });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_stats_updated() {
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node =
+            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        assert_inspect_tree!(inspector, root:{
+            query_stats: {}
+        });
+
+        env.run_lookup(|proxy| async move {
+            // IP Lookup IPv4 for REMOTE_IPV4_HOST.
+            check_lookup_ip(
+                &proxy,
+                REMOTE_IPV4_HOST,
+                fnet::LookupIpOptions::V4Addrs,
+                Ok(fnet::IpAddressInfo {
+                    ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
+                    ipv6_addrs: vec![],
+                    canonical_name: None,
+                }),
+            )
+            .await;
+        })
+        .await;
+        env.run_lookup(|proxy| async move {
+            // IP Lookup IPv6 for REMOTE_IPV4_HOST.
+            check_lookup_ip(
+                &proxy,
+                REMOTE_IPV4_HOST,
+                fnet::LookupIpOptions::V6Addrs,
+                Err(fnet::LookupError::NotFound),
+            )
+            .await;
+        })
+        .await;
+        assert_inspect_tree!(inspector, root:{
+            query_stats: {
+                "window 1": {
+                    start_time_nanos: NonZeroUintProperty,
+                    successful_queries: 2u64,
+                    failed_queries: 0u64,
+                    average_success_duration_micros: NonZeroUintProperty,
+                    errors: {
+                        Message: 0u64,
+                        NoRecordsFound: 0u64,
+                        Io: 0u64,
+                        Proto: 0u64,
+                        Timeout: 0u64,
+                    },
+                },
+            }
+        });
+    }
+
+    fn run_fake_lookup(
+        exec: &mut fasync::Executor,
+        stats: Arc<QueryStats>,
+        error: Option<ResolveErrorKind>,
+        delay: fuchsia_zircon::Duration,
+    ) {
+        let start_time = fasync::Time::now();
+        exec.set_fake_time(fasync::Time::after(delay));
+        let update_stats = (|| async {
+            if let Some(error) = error {
+                stats.finish_query(start_time, Some(&error)).await;
+            } else {
+                stats.finish_query(start_time, None).await;
+            }
+        })();
+        pin_mut!(update_stats);
+        assert!(exec.run_until_stalled(&mut update_stats).is_ready());
+    }
+
+    #[test]
+    fn test_query_stats_inspect_average() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        const START_NANOS: i64 = 1_234_567;
+        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node =
+            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        const SUCCESSFUL_QUERY_COUNT: u64 = 10;
+        const SUCCESSFUL_QUERY_DURATION: fuchsia_zircon::Duration =
+            fuchsia_zircon::Duration::from_seconds(30);
+        for _ in 0..SUCCESSFUL_QUERY_COUNT / 2 {
+            run_fake_lookup(
+                &mut exec,
+                env.stats.clone(),
+                None,
+                fuchsia_zircon::Duration::from_nanos(0),
+            );
+            run_fake_lookup(&mut exec, env.stats.clone(), None, SUCCESSFUL_QUERY_DURATION);
+            exec.set_fake_time(fasync::Time::after(
+                STAT_WINDOW_DURATION - SUCCESSFUL_QUERY_DURATION,
+            ));
+        }
+        let mut expected = tree_assertion!(query_stats: {});
+        for i in 0..SUCCESSFUL_QUERY_COUNT / 2 {
+            let name = &format!("window {}", i + 1);
+            let child = tree_assertion!(var name: {
+                start_time_nanos: u64::try_from(
+                    START_NANOS + STAT_WINDOW_DURATION.into_nanos() * i64::try_from(i).unwrap()
+                ).unwrap(),
+                successful_queries: 2u64,
+                failed_queries: 0u64,
+                average_success_duration_micros: u64::try_from(
+                    SUCCESSFUL_QUERY_DURATION.into_micros()
+                ).unwrap() / 2,
+                errors: {
+                    Message: 0u64,
+                    NoRecordsFound: 0u64,
+                    Io: 0u64,
+                    Proto: 0u64,
+                    Timeout: 0u64,
+                },
+            });
+            expected.add_child_assertion(child);
+        }
+        assert_inspect_tree!(inspector, root: {
+            expected,
+        });
+    }
+
+    #[test]
+    fn test_query_stats_inspect_error_counters() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        const START_NANOS: i64 = 1_234_567;
+        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node =
+            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        const FAILED_QUERY_COUNT: u64 = 10;
+        const FAILED_QUERY_DURATION: fuchsia_zircon::Duration =
+            fuchsia_zircon::Duration::from_millis(500);
+        for _ in 0..FAILED_QUERY_COUNT {
+            run_fake_lookup(
+                &mut exec,
+                env.stats.clone(),
+                Some(ResolveErrorKind::Timeout),
+                FAILED_QUERY_DURATION,
+            );
+        }
+        assert_inspect_tree!(inspector, root:{
+            query_stats: {
+                "window 1": {
+                    start_time_nanos: u64::try_from(
+                        START_NANOS + FAILED_QUERY_DURATION.into_nanos()
+                    ).unwrap(),
+                    successful_queries: 0u64,
+                    failed_queries: FAILED_QUERY_COUNT,
+                    average_failure_duration_micros: u64::try_from(
+                        FAILED_QUERY_DURATION.into_micros()
+                    ).unwrap(),
+                    errors: {
+                        Message: 0u64,
+                        NoRecordsFound: 0u64,
+                        Io: 0u64,
+                        Proto: 0u64,
+                        Timeout: FAILED_QUERY_COUNT,
+                    },
+                },
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_stats_inspect_oldest_stats_erased() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        const START_NANOS: i64 = 1_234_567;
+        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node =
+            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        const DELAY: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_millis(100);
+        for _ in 0..STAT_WINDOW_COUNT {
+            run_fake_lookup(&mut exec, env.stats.clone(), Some(ResolveErrorKind::Timeout), DELAY);
+            exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
+        }
+        for _ in 0..STAT_WINDOW_COUNT {
+            run_fake_lookup(&mut exec, env.stats.clone(), None, DELAY);
+            exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
+        }
+        // All the failed queries should be erased from the stats as they are
+        // now out of date.
+        let mut expected = tree_assertion!(query_stats: {});
+        let start_offset = START_NANOS
+            + DELAY.into_nanos()
+            + STAT_WINDOW_DURATION.into_nanos() * i64::try_from(STAT_WINDOW_COUNT).unwrap();
+        for i in 0..STAT_WINDOW_COUNT {
+            let name = &format!("window {}", i + 1);
+            let child = tree_assertion!(var name: {
+                start_time_nanos: u64::try_from(
+                    start_offset + STAT_WINDOW_DURATION.into_nanos() * i64::try_from(i).unwrap()
+                ).unwrap(),
+                successful_queries: 1u64,
+                failed_queries: 0u64,
+                average_success_duration_micros: u64::try_from(DELAY.into_micros()).unwrap(),
+                errors: {
+                    Message: 0u64,
+                    NoRecordsFound: 0u64,
+                    Io: 0u64,
+                    Proto: 0u64,
+                    Timeout: 0u64,
+                },
+            });
+            expected.add_child_assertion(child);
+        }
+        assert_inspect_tree!(inspector, root: {
+            expected,
+        });
+    }
+
+    #[test]
+    fn test_failure_stats() {
+        use anyhow::anyhow;
+        use trust_dns_proto::{error::ProtoError, op::Query};
+
+        let mut stats = FailureStats::default();
+        for (error_kind, expected) in &[
+            (ResolveErrorKind::Message("foo"), FailureStats { message: 1, ..Default::default() }),
+            (
+                ResolveErrorKind::Msg("foo".to_string()),
+                FailureStats { message: 2, ..Default::default() },
+            ),
+            (
+                ResolveErrorKind::NoRecordsFound { query: Query::default(), valid_until: None },
+                FailureStats { message: 2, no_records_found: 1, ..Default::default() },
+            ),
+            (
+                ResolveErrorKind::Io(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    anyhow!("foo"),
+                )),
+                FailureStats { message: 2, no_records_found: 1, io: 1, ..Default::default() },
+            ),
+            (
+                ResolveErrorKind::Proto(ProtoError::from("foo")),
+                FailureStats {
+                    message: 2,
+                    no_records_found: 1,
+                    io: 1,
+                    proto: 1,
+                    ..Default::default()
+                },
+            ),
+            (
+                ResolveErrorKind::Timeout,
+                FailureStats { message: 2, no_records_found: 1, io: 1, proto: 1, timeout: 1 },
+            ),
+        ][..]
+        {
+            stats.increment(error_kind);
+            assert_eq!(&stats, expected, "invalid stats after incrementing with {:?}", error_kind);
+        }
     }
 
     fn test_das_helper(
