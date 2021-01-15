@@ -192,6 +192,11 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     let system_time = MonotonicTime::new();
     let mut delay_tracker = DelayTracker::new(&system_time, &mode);
 
+    // Wait 30 seconds before starting to file reports. This gives Feedback enough time to handle
+    // our upsert registration.
+    // TODO(fxbug.dev/67806): Remove this once Upsert returns when the operation is complete.
+    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
+
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
     let mut next_check_time = fasync::Time::INFINITE_PAST;
     loop {
