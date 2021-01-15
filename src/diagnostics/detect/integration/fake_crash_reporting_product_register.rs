@@ -107,6 +107,27 @@ impl ProtocolInjector for FakeCrashReportingProductRegister {
                         self.done_signaler.signal_done().await;
                     }
                 },
+                Some(Ok(fcrash::CrashReportingProductRegisterRequest::UpsertWithAck {
+                    component_url,
+                    product,
+                    responder,
+                    ..
+                })) => {
+                    match evaluate_registration(component_url, &product) {
+                        Ok(()) => {
+                            self.record_correct_registration();
+                        }
+                        Err(problem) => {
+                            error!("Problem in report: {}", problem);
+                            self.record_bad_registration();
+                            self.done_signaler.signal_done().await;
+                        }
+                    }
+                    match responder.send() {
+                        Ok(()) => (),
+                        Err(problem) => error!("Failed to send response: {}", problem),
+                    }
+                }
                 Some(Err(e)) => {
                     info!("Registration error: {}", e);
                     self.record_bad_registration();

@@ -70,6 +70,11 @@ class CrashRegisterTest : public UnitTestFixture {
     crash_register_->Upsert(component_url, std::move(product));
   }
 
+  void Upsert(const std::string& component_url, CrashReportingProduct product,
+              CrashRegister::UpsertWithAckCallback callback) {
+    crash_register_->UpsertWithAck(component_url, std::move(product), std::move(callback));
+  }
+
   Product GetProduct(const std::string& program_name) {
     const zx::duration timeout = zx::sec(1);
     auto promise = crash_register_->GetProduct(program_name, fit::Timeout(timeout));
@@ -116,6 +121,37 @@ TEST_F(CrashRegisterTest, Upsert_Basic) {
   product.set_version("some version");
   product.set_channel("some channel");
   Upsert(kComponentUrl, std::move(product));
+
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("crash_register")),
+                                 ChildrenMatch(Contains(AllOf(
+                                     NodeMatches(NameMatches("mappings")),
+                                     ChildrenMatch(UnorderedElementsAreArray({
+                                         NodeMatches(AllOf(NameMatches(kComponentUrl),
+                                                           PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("name", "some name"),
+                                                               StringIs("version", "some version"),
+                                                               StringIs("channel", "some channel"),
+                                                           })))),
+                                     })))))))));
+  EXPECT_EQ(ReadRegisterJson(), R"({
+    "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
+        "name": "some name",
+        "version": "some version",
+        "channel": "some channel"
+    }
+})");
+}
+
+TEST_F(CrashRegisterTest, UpsertWithAck_Basic) {
+  CrashReportingProduct product;
+  product.set_name("some name");
+  product.set_version("some version");
+  product.set_channel("some channel");
+
+  bool success{false};
+  Upsert(kComponentUrl, std::move(product), [&] { success = true; });
+  ASSERT_TRUE(success);
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
                                  NodeMatches(NameMatches("crash_register")),

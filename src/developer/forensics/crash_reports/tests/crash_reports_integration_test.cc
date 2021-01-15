@@ -53,6 +53,15 @@ class CrashReportsIntegrationTest : public testing::Test {
     EXPECT_EQ(crash_register_->Upsert("some/component/URL", std::move(product)), ZX_OK);
   }
 
+  void RegisterProductWithAck() {
+    fuchsia::feedback::CrashReportingProduct product;
+    product.set_name("some name");
+    product.set_version("some version");
+    product.set_channel("some channel");
+
+    EXPECT_EQ(crash_register_->UpsertWithAck("some/component/URL", std::move(product)), ZX_OK);
+  }
+
  private:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
   fuchsia::feedback::CrashReportingProductRegisterSyncPtr crash_register_;
@@ -64,7 +73,10 @@ class CrashReportsIntegrationTest : public testing::Test {
 
 // Smoke-tests the actual service for fuchsia.feedback.CrashReportingProductRegister, connecting
 // through FIDL.
-TEST_F(CrashReportsIntegrationTest, CrashRegister_SmokeTest) { RegisterProduct(); }
+TEST_F(CrashReportsIntegrationTest, CrashRegister_SmokeTest) {
+  RegisterProduct();
+  RegisterProductWithAck();
+}
 
 // Smoke-tests the actual service for fuchsia.feedback.CrashReporter, connecting through FIDL.
 TEST_F(CrashReportsIntegrationTest, CrashReporter_SmokeTest) {

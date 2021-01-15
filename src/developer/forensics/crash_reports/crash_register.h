@@ -34,6 +34,8 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
 
   // |fuchsia::feedback::CrashReportingProductRegister|
   void Upsert(std::string component_url, fuchsia::feedback::CrashReportingProduct product) override;
+  void UpsertWithAck(std::string component_url, fuchsia::feedback::CrashReportingProduct product,
+                    UpsertWithAckCallback callback) override;
 
   // Returns the Product registered by clients for a given component URL, otherwise the default
   // Product for the platform.

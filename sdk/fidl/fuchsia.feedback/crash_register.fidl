@@ -19,7 +19,19 @@ protocol CrashReportingProductRegister {
     /// Upsert() may be called multiple times for the same `component_url`, e.g., once for each
     /// launch of the component, in which case only the most recent call's product information
     /// will be used in crash reports.
+    ///
+    /// UpsertWithAck should be preferred if the client manually files crash reports because a
+    /// fire-and-forget is racy and client cannot know if their crash reports will successfully be
+    /// attributed to the product they specify.
     Upsert(fuchsia.sys.component_url component_url, CrashReportingProduct product);
+
+    /// Upsert and notify the client when the operation is complete.
+    ///
+    /// This allows clients to prevent races between filing crash reports and calls to Upsert.
+    /// Otherwise if a crash report is filed before the upsert completes, the crash report will be
+    /// attriburted to the wrong product, leading to potentially incorrect crash data.
+    [Transitional]
+    UpsertWithAck(fuchsia.sys.component_url component_url, CrashReportingProduct product) -> ();
 };
 
 /// Product release information to report to the crash server.

@@ -60,6 +60,13 @@ void CrashRegister::Upsert(std::string component_url,
   component_to_products_.insert_or_assign(component_url, std::move(internal_product));
 }
 
+void CrashRegister::UpsertWithAck(std::string component_url,
+                                 fuchsia::feedback::CrashReportingProduct product,
+                                 UpsertWithAckCallback callback) {
+  Upsert(std::move(component_url), std::move(product));
+  callback();
+}
+
 ::fit::promise<Product> CrashRegister::GetProduct(const std::string& program_name,
                                                   fit::Timeout timeout) {
   if (component_to_products_.find(program_name) != component_to_products_.end()) {
