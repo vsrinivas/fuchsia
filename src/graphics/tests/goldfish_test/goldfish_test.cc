@@ -17,6 +17,30 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
+namespace {
+llcpp::fuchsia::sysmem::Allocator::SyncClient CreateSysmemAllocator() {
+  zx::channel allocator_client;
+  zx::channel allocator_server;
+  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
+  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
+            ZX_OK);
+
+  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+
+  allocator.SetDebugClientInfo(fidl::unowned_str(fsl::GetCurrentProcessName()),
+                               fsl::GetCurrentProcessKoid());
+  return allocator;
+}
+
+void SetDefaultCollectionName(llcpp::fuchsia::sysmem::BufferCollection::SyncClient& collection) {
+  constexpr uint32_t kTestNamePriority = 1000u;
+  std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+  EXPECT_TRUE(collection.SetName(kTestNamePriority, fidl::unowned_str(test_name)).ok());
+}
+}  // namespace
+
 TEST(GoldfishPipeTests, GoldfishPipeTest) {
   int fd = open("/dev/class/goldfish-pipe/000", O_RDWR);
   EXPECT_GE(fd, 0);
@@ -131,13 +155,8 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -166,6 +185,8 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -245,13 +266,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -299,6 +315,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
   };
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -350,13 +367,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -388,6 +400,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
   constraints.image_format_constraints_count = 0;
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -439,13 +452,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -475,6 +483,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -624,13 +633,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
 
   // ----------------------------------------------------------------------//
   // Setup sysmem allocator and buffer collection.
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -662,6 +666,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -777,13 +782,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
 
   // ----------------------------------------------------------------------//
   // Setup sysmem allocator and buffer collection.
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -815,6 +815,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -884,13 +885,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -919,6 +915,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_GetNotCreatedColorBuffer) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -1106,13 +1103,8 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
 
   // ----------------------------------------------------------------------//
   // Setup sysmem allocator and buffer collection.
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -1188,6 +1180,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
@@ -1282,13 +1275,8 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   zx::channel channel;
   EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
 
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  EXPECT_EQ(zx::channel::create(0, &allocator_client, &allocator_server), ZX_OK);
-  EXPECT_EQ(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator_server.release()),
-            ZX_OK);
-
-  llcpp::fuchsia::sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
 
   zx::channel token_client;
   zx::channel token_server;
@@ -1317,6 +1305,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
       .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_DEVICE_LOCAL}};
 
   llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  SetDefaultCollectionName(collection);
   EXPECT_TRUE(collection.SetConstraints(true, std::move(constraints)).ok());
 
   llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
