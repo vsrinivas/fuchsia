@@ -127,19 +127,27 @@ A short list of some pros and cons of the two approaches might look something
 like this:
 
 Non-intrusive:
-* Pro: Can be used to track simple objects by value, even primitive data types
+
+- Pros
+
+  - Can be used to track simple objects by value, even primitive data types
   like `int` or `float`
-* Pro: Does not require changing the definition of the object itself in order to
+
+  - Does not require changing the definition of the object itself in order to
   manage it in a different container. This is especially helpful when an object
   `O` is defined in Library A, but a user wishes to create a collection of
   `A::O`s in their own program and cannot reasonably re-define `O`.
-* Pro: Objects tracked by reference can easily exist in multiple containers
+
+  - Objects tracked by reference can easily exist in multiple containers
   independently.
-* Con: Requires independent allocation management of the bookkeeping, usually on
-  every add/remove operation. This management frequently implies hidden heap
+
+- Cons
+  - Requires independent allocation management of the bookkeeping, usually on
+  every add or remove operation. This management frequently implies hidden heap
   interactions which can introduce overhead, timing uncertainty, and additional
   complexity as users need to manage potential failure paths.
-* Con: Finding the location of an object in container A provides no information
+
+  - Finding the location of an object in container A provides no information
   about the location of the object in container B. For example, finding an
   object which is contained in a `std::map` with an O(log n) operation does not
   help me to locate the same object which is simultaneously contained in a
@@ -147,19 +155,28 @@ Non-intrusive:
   it there with a separate O(n) operation first.
 
 Intrusive:
-* Pro: Minimal overhead to join or leave a container, and no chance of failure
+
+- Pros
+
+  - Minimal overhead to join or leave a container, and no chance of failure
   or involuntary yielding due to lock contention as the bookkeeping overhead was
   paid up-front during object creation.
-* Pro: Finding an instance of an object implicitly finds the instance of the
+
+  - Finding an instance of an object implicitly finds the instance of the
   object in all of the containers it can exist in.
-* Pro: Knowledge of whether an object is currently container in container type A
+
+  - Knowledge of whether an object is currently container in container type A
   is a property of the object and can always be tested (from the object) in O(1)
   time.
-* Con: The ability to be contained is a fundamental property of the object. In
+
+- Cons
+
+  - The ability to be contained is a fundamental property of the object. In
   order to change the number or types of the containers an object may exist in,
   the definition of the object itself must be changed and all of the code which
   depends on that definition must be re-compiled.
-* Con: Only objects themselves can be tracked. Primitive data types do not have
+
+  - Only objects themselves can be tracked. Primitive data types do not have
   any place to store extra bookkeeping information and cannot be tracked in an
   intrusive fashion.
 
