@@ -30,7 +30,7 @@ struct packed_struct {
     int32_t foo;
     int32_t bar;
     int32_t baz;
-} __PACKED;
+} __attribute__ ((packed));
 
 union none_union {
     int32_t foo;
@@ -42,7 +42,7 @@ union packed_union {
     int32_t foo;
     int32_t bar;
     int32_t baz;
-} __PACKED;
+} __attribute__ ((packed));
 
 
 __END_CDECLS

@@ -24,21 +24,21 @@ struct packing_0 {
     int16_t i16_0;
     int32_t i32_0;
     int16_t i16_1;
-} __PACKED;
+} __attribute__ ((packed));
 
 struct packing_1 {
     int16_t i16_0;
     int8_t i8_0;
     int16_t i16_1;
     int8_t i8_1;
-} __PACKED;
+} __attribute__ ((packed));
 
 struct packing_2 {
     int16_t i16_0;
     int8_t i8_0;
     int8_t i8_1;
     int16_t i16_1;
-} __PACKED;
+} __attribute__ ((packed));
 
 struct packing_3 {
     int32_t i32_0;
@@ -46,7 +46,7 @@ struct packing_3 {
     int16_t i16_0;
     int32_t i32_1;
     int16_t i16_1;
-} __PACKED;
+} __attribute__ ((packed));
 
 
 __END_CDECLS

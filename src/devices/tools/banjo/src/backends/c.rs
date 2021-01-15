@@ -164,7 +164,7 @@ fn struct_attrs_to_c_str(attributes: &Attrs) -> String {
         .0
         .iter()
         .filter_map(|a| match a.key.as_ref() {
-            "Packed" => Some("__PACKED"),
+            "Packed" => Some("__attribute__ ((packed))"),
             _ => None,
         })
         .collect::<Vec<_>>()

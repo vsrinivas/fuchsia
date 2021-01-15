@@ -1092,7 +1092,9 @@ impl BanjoAst {
             })
         {
             let Constant(string) = constant;
-            if string.len() > 2 && string.get(0..2) == Some("0x") {
+            if string.len() > 2
+                && (string.get(0..2) == Some("0x") || string.get(0..2) == Some("0b"))
+            {
                 // TODO(bwb): validate constants if hex as well
                 return Ok(());
             }
