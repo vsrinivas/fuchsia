@@ -30,6 +30,7 @@ namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
+using fuchsia::feedback::DataProviderControllerSyncPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using inspect::testing::ChildrenMatch;
@@ -164,27 +165,33 @@ TEST_F(MainServiceTest, NoMovesPreviousIdAfterFirstInstance) {
 
 TEST_F(MainServiceTest, CheckInspect) {
   CreateMainService(/*is_first_instance=*/true);
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(UnorderedElementsAreArray({
-                  AllOf(NodeMatches(NameMatches("fidl")),
-                        ChildrenMatch(UnorderedElementsAreArray({
-                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  UintIs("total_num_connections", 0u),
-                                                  UintIs("current_num_connections", 0u),
-                                              })))),
-                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  UintIs("total_num_connections", 0u),
-                                                  UintIs("current_num_connections", 0u),
-                                              })))),
-                            NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  UintIs("total_num_connections", 0u),
-                                                  UintIs("current_num_connections", 0u),
-                                              })))),
-                        }))),
-              })));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(UnorderedElementsAreArray({
+          AllOf(NodeMatches(NameMatches("fidl")),
+                ChildrenMatch(UnorderedElementsAreArray({
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.ComponentDataRegister"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProvider"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.DeviceIdProvider"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                }))),
+      })));
 }
 
 TEST_F(MainServiceTest, ComponentDataRegister_CheckInspect) {
@@ -313,6 +320,70 @@ TEST_F(MainServiceTest, DataProvider_CheckInspect) {
                                                        UintIs("total_num_connections", 3u),
                                                        UintIs("current_num_connections", 0u),
                                                    }))))))))));
+}
+
+TEST_F(MainServiceTest, DataProviderController_CheckInspect) {
+  CreateMainService(/*is_first_instance=*/true);
+  DataProviderControllerSyncPtr data_provider_controller_1;
+  main_service_->HandleDataProviderControllerRequest(data_provider_controller_1.NewRequest());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 1u),
+                                                 UintIs("current_num_connections", 1u),
+                                             }))))))))));
+
+  DataProviderControllerSyncPtr data_provider_controller_2;
+  main_service_->HandleDataProviderControllerRequest(data_provider_controller_2.NewRequest());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 2u),
+                                                 UintIs("current_num_connections", 2u),
+                                             }))))))))));
+
+  data_provider_controller_1.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 2u),
+                                                 UintIs("current_num_connections", 1u),
+                                             }))))))))));
+
+  DataProviderControllerSyncPtr data_provider_controller_3;
+  main_service_->HandleDataProviderControllerRequest(data_provider_controller_3.NewRequest());
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 3u),
+                                                 UintIs("current_num_connections", 2u),
+                                             }))))))))));
+
+  data_provider_controller_2.Unbind();
+  data_provider_controller_3.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("fidl")),
+                                   ChildrenMatch(Contains(NodeMatches(
+                                       AllOf(NameMatches("fuchsia.feedback.DataProviderController"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("total_num_connections", 3u),
+                                                 UintIs("current_num_connections", 0u),
+                                             }))))))))));
 }
 
 TEST_F(MainServiceTest, DeviceIdProvider_CheckInspect) {

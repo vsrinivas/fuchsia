@@ -15,6 +15,7 @@
 #include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
+#include "src/developer/forensics/feedback_data/data_provider_controller.h"
 #include "src/developer/forensics/feedback_data/data_register.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
@@ -48,6 +49,9 @@ class MainService {
       ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request);
   // fuchsia.feedback.DataProvider
   void HandleDataProviderRequest(::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
+  // fuchsia.feedback.DataProviderController
+  void HandleDataProviderControllerRequest(
+      ::fidl::InterfaceRequest<fuchsia::feedback::DataProviderController> request);
   // fuchsia.feedback.DeviceIdProvider
   void HandleDeviceIdProviderRequest(
       ::fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
@@ -69,6 +73,10 @@ class MainService {
 
   DataProvider data_provider_;
   ::fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
+
+  DataProviderController data_provider_controller_;
+  ::fidl::BindingSet<fuchsia::feedback::DataProviderController>
+      data_provider_controller_connections_;
 
   DataRegister data_register_;
   ::fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;

@@ -12,6 +12,8 @@ InspectManager::InspectManager(inspect::Node* root_node)
       component_data_register_stats_(&node_manager_,
                                      "/fidl/fuchsia.feedback.ComponentDataRegister"),
       data_provider_stats_(&node_manager_, "/fidl/fuchsia.feedback.DataProvider"),
+      data_provider_controller_stats_(&node_manager_,
+                                      "/fidl/fuchsia.feedback.DataProviderController"),
       device_id_provider_stats_(&node_manager_, "/fidl/fuchsia.feedback.DeviceIdProvider") {}
 
 void InspectManager::UpdateComponentDataRegisterProtocolStats(InspectProtocolStatsUpdateFn update) {
@@ -20,6 +22,11 @@ void InspectManager::UpdateComponentDataRegisterProtocolStats(InspectProtocolSta
 
 void InspectManager::UpdateDataProviderProtocolStats(InspectProtocolStatsUpdateFn update) {
   std::invoke(update, data_provider_stats_);
+}
+
+void InspectManager::UpdateDataProviderControllerProtocolStats(
+    InspectProtocolStatsUpdateFn update) {
+  std::invoke(update, data_provider_controller_stats_);
 }
 
 void InspectManager::UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpdateFn update) {

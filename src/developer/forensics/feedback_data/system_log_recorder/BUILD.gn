@@ -28,9 +28,14 @@ source_set("main") {
 }
 
 source_set("src") {
-  public = [ "system_log_recorder.h" ]
+  public = [
+    "controller.h",
+    "system_log_recorder.h",
+  ]
 
   sources = [
+    "controller.cc",
+    "controller.h",
     "log_message_store.cc",
     "log_message_store.h",
     "system_log_recorder.cc",
@@ -41,9 +46,11 @@ source_set("src") {
 
   public_deps = [
     "encoding:encoder",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   deps = [
@@ -51,6 +58,7 @@ source_set("src") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/lib/diagnostics/stream/cpp",
+    "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/trace",

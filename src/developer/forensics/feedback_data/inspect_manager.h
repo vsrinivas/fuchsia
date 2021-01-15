@@ -27,6 +27,9 @@ class InspectManager {
   // Register creating or closing a connection to DataProvider.
   void UpdateDataProviderProtocolStats(InspectProtocolStatsUpdateFn update);
 
+  // Register creating or closing a connection to DataProviderController.
+  void UpdateDataProviderControllerProtocolStats(InspectProtocolStatsUpdateFn update);
+
   // Register creating or closing a connection to DeviceIdProvider.
   void UpdateDeviceIdProviderProtocolStats(InspectProtocolStatsUpdateFn update);
 
@@ -35,6 +38,7 @@ class InspectManager {
 
   InspectProtocolStats component_data_register_stats_;
   InspectProtocolStats data_provider_stats_;
+  InspectProtocolStats data_provider_controller_stats_;
   InspectProtocolStats device_id_provider_stats_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);

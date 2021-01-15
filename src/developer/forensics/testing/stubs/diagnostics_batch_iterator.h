@@ -21,9 +21,10 @@ using DiagnosticsBatchIteratorBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::di
 
 class DiagnosticsBatchIterator : public DiagnosticsBatchIteratorBase {
  public:
-  DiagnosticsBatchIterator() : json_batches_({}) {}
-  DiagnosticsBatchIterator(const std::vector<std::vector<std::string>>& json_batches)
-      : json_batches_(json_batches) {
+  DiagnosticsBatchIterator() : json_batches_({}), strict_(true) {}
+  explicit DiagnosticsBatchIterator(const std::vector<std::vector<std::string>>& json_batches,
+                                    bool strict = true)
+      : json_batches_(json_batches), strict_(strict) {
     next_json_batch_ = json_batches_.cbegin();
   }
 
@@ -37,6 +38,9 @@ class DiagnosticsBatchIterator : public DiagnosticsBatchIteratorBase {
  protected:
   const std::vector<std::vector<std::string>> json_batches_;
   decltype(json_batches_)::const_iterator next_json_batch_;
+
+ private:
+  const bool strict_;
 };
 
 class DiagnosticsBatchIteratorNeverRespondsAfterOneBatch : public DiagnosticsBatchIteratorBase {
@@ -72,8 +76,8 @@ class DiagnosticsBatchIteratorDelayedBatches : public DiagnosticsBatchIterator {
  public:
   DiagnosticsBatchIteratorDelayedBatches(async_dispatcher_t* dispatcher,
                                          const std::vector<std::vector<std::string>>& json_batches,
-                                         zx::duration delay_between_batches)
-      : DiagnosticsBatchIterator(json_batches),
+                                         zx::duration delay_between_batches, bool strict = true)
+      : DiagnosticsBatchIterator(json_batches, strict),
         dispatcher_(dispatcher),
         delay_between_batches_(delay_between_batches) {}
 

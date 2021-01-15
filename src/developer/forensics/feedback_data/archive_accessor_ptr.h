@@ -40,6 +40,8 @@ class ArchiveAccessor {
 
   void Collect(std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content);
 
+  void StopCollect();
+
   ::fit::promise<void, Error> WaitForDone(fit::Timeout timeout);
 
  private:

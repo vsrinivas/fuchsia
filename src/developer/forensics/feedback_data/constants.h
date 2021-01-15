@@ -132,6 +132,10 @@ struct SnapshotVersion {
   static constexpr const char* kString = "1";
 };
 
+// Use this file to determine whether or not a previous instance of the component was instructed to
+// terminated system log recording.
+constexpr char kDoNotLaunchSystemLogRecorder[] = "/tmp/do_not_launch_system_log_recorder.txt";
+
 }  // namespace feedback_data
 }  // namespace forensics
 

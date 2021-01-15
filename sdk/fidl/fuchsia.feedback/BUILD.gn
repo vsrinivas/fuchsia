@@ -13,6 +13,7 @@ fidl("fuchsia.feedback") {
     "crash_register.fidl",
     "crash_reporter.fidl",
     "data_provider.fidl",
+    "data_provider_controller.fidl",
     "data_register.fidl",
     "device_id_provider.fidl",
     "last_reboot_info.fidl",

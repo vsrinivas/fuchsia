@@ -4,13 +4,16 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
+#include <zircon/processargs.h>
 
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/controller.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
 
@@ -22,6 +25,14 @@ constexpr zx::duration kWritePeriod = zx::sec(1);
 
 int main() {
   syslog::SetTags({"forensics", "feedback"});
+
+  // We receive a channel that we interpret as a fuchsia.feedback.DataProviderController
+  // connection.
+  zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+  if (!channel.is_valid()) {
+    FX_LOGS(FATAL) << "Received invalid channel";
+    return EXIT_FAILURE;
+  }
 
   async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop write_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -43,9 +54,17 @@ int main() {
                                  .total_log_size_bytes = kPersistentLogsMaxSizeInKb * 1024,
                              },
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
+
+  // Set up the controller to shut down the system log recorder when it gets the signal to do so.
+  Controller controller(&main_loop, &write_loop, &recorder);
+  ::fidl::Binding<fuchsia::feedback::DataProviderController> controller_binding(
+      &controller, std::move(channel), main_loop.dispatcher());
+
   recorder.Start();
 
   main_loop.Run();
+
+  FX_LOGS(INFO) << "Shutting down the system log recorder";
 
   return EXIT_SUCCESS;
 }

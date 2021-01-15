@@ -33,10 +33,12 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
 }  // namespace
 
 DiagnosticsBatchIterator::~DiagnosticsBatchIterator() {
-  FX_CHECK(!ExpectCall()) << fxl::StringPrintf(
-      "Expected %ld more calls to GetNext() (%ld/%lu calls made)",
-      std::distance(next_json_batch_, json_batches_.cend()),
-      std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
+  if (strict_) {
+    FX_CHECK(!ExpectCall()) << fxl::StringPrintf(
+        "Expected %ld more calls to GetNext() (%ld/%lu calls made)",
+        std::distance(next_json_batch_, json_batches_.cend()),
+        std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
+  }
 }
 
 void DiagnosticsBatchIterator::GetNext(GetNextCallback callback) {

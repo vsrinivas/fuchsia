@@ -9,6 +9,7 @@
 #include <zircon/processargs.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <cinttypes>
 #include <filesystem>
 #include <memory>
@@ -100,19 +101,44 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
                      config.attachment_allowlist, cobalt_.get(), &datastore_,
                      &inspect_data_budget_),
+      data_provider_controller_(),
       data_register_(&datastore_, kDataRegisterPath) {}
 
 void MainService::SpawnSystemLogRecorder() {
-  zx_handle_t process;
-  const char* argv[] = {
+  zx::channel client, server;
+  if (const auto status = zx::channel::create(0, &client, &server); status != ZX_OK) {
+    FX_PLOGS(ERROR, status)
+        << "Failed to create system log recorder controller channel, logs will not be persisted";
+    return;
+  }
+
+  const std::array<const char*, 2> argv = {
       "system_log_recorder" /* process name */,
       nullptr,
   };
-  if (const zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                            "/pkg/bin/system_log_recorder", argv, &process);
+  const std::array actions = {
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h =
+              {
+                  .id = PA_HND(PA_USER0, 0),
+                  .handle = server.release(),
+              },
+      },
+  };
+
+  zx_handle_t process;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
+  if (const zx_status_t status = fdio_spawn_etc(
+          ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/pkg/bin/system_log_recorder", argv.data(),
+          /*environ=*/nullptr, actions.size(), actions.data(), &process, err_msg);
       status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to spawn system log recorder, logs will not be persisted";
+    FX_PLOGS(ERROR, status) << "Failed to spawn system log recorder, logs will not be persisted: "
+                            << err_msg;
+    return;
   }
+
+  data_provider_controller_.BindSystemLogRecorderController(std::move(client), dispatcher_);
 }
 
 void MainService::HandleComponentDataRegisterRequest(
@@ -132,6 +158,16 @@ void MainService::HandleDataProviderRequest(
         inspect_manager_.UpdateDataProviderProtocolStats(&InspectProtocolStats::CloseConnection);
       });
   inspect_manager_.UpdateDataProviderProtocolStats(&InspectProtocolStats::NewConnection);
+}
+
+void MainService::HandleDataProviderControllerRequest(
+    ::fidl::InterfaceRequest<fuchsia::feedback::DataProviderController> request) {
+  data_provider_controller_connections_.AddBinding(
+      &data_provider_controller_, std::move(request), dispatcher_, [this](const zx_status_t) {
+        inspect_manager_.UpdateDataProviderControllerProtocolStats(
+            &InspectProtocolStats::CloseConnection);
+      });
+  inspect_manager_.UpdateDataProviderControllerProtocolStats(&InspectProtocolStats::NewConnection);
 }
 
 void MainService::HandleDeviceIdProviderRequest(

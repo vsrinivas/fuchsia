@@ -56,6 +56,8 @@ void ArchiveAccessor::Collect(
   AppendNextBatch(std::move(write_formatted_content));
 }
 
+void ArchiveAccessor::StopCollect() { snapshot_iterator_.Unbind(); }
+
 ::fit::promise<void, Error> ArchiveAccessor::WaitForDone(fit::Timeout timeout) {
   return archive_.WaitForDone(std::move(timeout));
 }

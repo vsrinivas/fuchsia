@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_SYSTEM_LOG_RECORDER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_SYSTEM_LOG_RECORDER_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include "lib/zx/time.h"
@@ -32,15 +33,21 @@ class SystemLogRecorder {
                     WriteParameters write_parameters, std::unique_ptr<Encoder> encoder);
   void Start();
 
+  void StopAndDeleteLogs();
+
  private:
   void PeriodicWriteTask();
 
   async_dispatcher_t* write_dispatcher_;
   const zx::duration write_period_;
+  const std::string logs_dir_;
 
   LogMessageStore store_;
   ArchiveAccessor archive_accessor_;
   SystemLogWriter writer_;
+
+  async::TaskClosureMethod<SystemLogRecorder, &SystemLogRecorder::PeriodicWriteTask>
+      periodic_write_task_{this};
 };
 
 }  // namespace system_log_recorder

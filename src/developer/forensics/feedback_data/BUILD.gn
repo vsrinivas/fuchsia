@@ -105,6 +105,23 @@ source_set("data_provider") {
   ]
 }
 
+source_set("data_provider_controller") {
+  sources = [
+    "data_provider_controller.cc",
+    "data_provider_controller.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/lib/files",
+  ]
+}
+
 source_set("datastore") {
   sources = [
     "datastore.cc",
@@ -194,6 +211,7 @@ source_set("main_service") {
   public_deps = [
     ":config",
     ":data_provider",
+    ":data_provider_controller",
     ":data_register",
     ":datastore",
     ":device_id_provider",
