@@ -31,7 +31,11 @@ use {
 };
 
 const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
-const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_seconds(10); // TODO(61992) Tweak duration
+
+// TODO(fxbug.dev/67791) Remove code or rework cache to be useful
+// TODO(fxbug.dev/61992) Tweak duration
+const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
+
 /// Above or at this RSSI, we'll give 5G networks a preference
 const RSSI_CUTOFF_5G_PREFERENCE: i8 = -58;
 /// The score boost for 5G networks that we are giving preference to.
@@ -1300,7 +1304,7 @@ mod tests {
 
         // Set the scan result cache to be fresher than STALE_SCAN_AGE
         let mut scan_result_guard = network_selector.scan_result_cache.lock().await;
-        let last_scan_age = zx::Duration::from_seconds(1);
+        let last_scan_age = zx::Duration::from_millis(1);
         assert!(last_scan_age < STALE_SCAN_AGE);
         scan_result_guard.updated_at = zx::Time::get_monotonic() - last_scan_age;
         drop(scan_result_guard);
