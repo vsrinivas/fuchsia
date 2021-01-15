@@ -29,6 +29,7 @@ use {
     crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::handler::setting_proxy::SettingProxy,
     crate::input::input_controller::InputController,
+    crate::input::types::InputInfoSources,
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
@@ -44,8 +45,7 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::switchboard::base::{
-        DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources, NightModeInfo,
-        PrivacyInfo, SetupInfo,
+        DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,

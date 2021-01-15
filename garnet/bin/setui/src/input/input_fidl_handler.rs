@@ -7,11 +7,9 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process_custom,
     crate::fidl_processor::settings::RequestContext,
+    crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
     crate::request_respond,
     crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
-    crate::switchboard::input_types::{
-        DeviceState, DeviceStateSource, InputDevice, InputDeviceType,
-    },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,

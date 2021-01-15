@@ -7,4 +7,6 @@ pub use self::input_fidl_handler::fidl_io;
 pub mod common;
 pub mod input_controller;
 pub mod input_device_configuration;
+pub mod types;
+
 mod input_fidl_handler;

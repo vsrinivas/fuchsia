@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::switchboard::input_types::{DeviceStateSource, InputDeviceType};
+use crate::input::types::{DeviceStateSource, InputDeviceType};
 use serde::Deserialize;
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]

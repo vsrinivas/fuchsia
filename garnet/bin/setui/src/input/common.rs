@@ -4,6 +4,7 @@
 use {
     crate::call,
     crate::service_context::ServiceContextHandle,
+    crate::switchboard::base::SettingRequest,
     anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
@@ -85,6 +86,18 @@ pub enum VolumeGain {
     Neutral,
     Up,
     Down,
+}
+
+impl From<ButtonType> for SettingRequest {
+    fn from(button_type: ButtonType) -> Self {
+        SettingRequest::OnButton(button_type)
+    }
+}
+
+impl From<VolumeGain> for SettingRequest {
+    fn from(volume_gain: VolumeGain) -> Self {
+        SettingRequest::OnVolume(volume_gain)
+    }
 }
 
 /// Method for listening to media button changes. Changes will be reported back

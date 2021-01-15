@@ -38,6 +38,24 @@ impl From<SettingInfo> for FidlInputSettings {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct InputInfo {
+    pub microphone: Microphone,
+    pub input_device_state: InputState,
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct InputInfoSources {
+    pub sw_microphone: Microphone,
+    pub hw_microphone: Microphone,
+    pub input_device_state: InputState,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Microphone {
+    pub muted: bool,
+}
+
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 /// The top-level struct for the input state. It categorizes the input devices
 /// by their device type.
@@ -470,7 +488,7 @@ mod tests {
         }
     }
 
-    /// Helper to create an `input_types::InputDevice`.
+    /// Helper to create an [`InputDevice`].
     fn create_input_device(
         device_name: &str,
         device_type: InputDeviceType,

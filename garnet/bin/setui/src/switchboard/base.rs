@@ -13,8 +13,8 @@ use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
+use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
-use crate::switchboard::input_types::{InputDevice, InputState};
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightState;
 use bitflags::bitflags;
@@ -242,36 +242,6 @@ impl SettingRequest {
             SettingRequest::SetTheme(_) => "SetTheme",
         }
     }
-}
-
-impl From<ButtonType> for SettingRequest {
-    fn from(button_type: ButtonType) -> Self {
-        SettingRequest::OnButton(button_type)
-    }
-}
-
-impl From<VolumeGain> for SettingRequest {
-    fn from(volume_gain: VolumeGain) -> Self {
-        SettingRequest::OnVolume(volume_gain)
-    }
-}
-
-#[derive(PartialEq, Debug, Clone)]
-pub struct InputInfo {
-    pub microphone: Microphone,
-    pub input_device_state: InputState,
-}
-
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct InputInfoSources {
-    pub sw_microphone: Microphone,
-    pub hw_microphone: Microphone,
-    pub input_device_state: InputState,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Microphone {
-    pub muted: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

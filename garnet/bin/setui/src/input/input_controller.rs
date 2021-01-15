@@ -11,13 +11,12 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::input_device_configuration::InputConfiguration;
+use crate::input::types::{
+    DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputInfo, InputInfoSources,
+    InputState, Microphone,
+};
 use crate::input::ButtonType;
-use crate::switchboard::base::{
-    ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
-};
-use crate::switchboard::input_types::{
-    DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputState,
-};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest};
 
 use async_trait::async_trait;
 use futures::lock::Mutex;

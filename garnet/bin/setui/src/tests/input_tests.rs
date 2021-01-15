@@ -10,11 +10,11 @@ use {
         InputConfiguration, InputDeviceConfiguration, SourceState,
     },
     crate::input::monitor_media_buttons,
-    crate::service_context::ServiceContext,
-    crate::switchboard::base::{InputInfoSources, Microphone},
-    crate::switchboard::input_types::{
-        DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputState,
+    crate::input::types::{
+        DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources,
+        InputState, Microphone,
     },
+    crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnvironmentBuilder},
