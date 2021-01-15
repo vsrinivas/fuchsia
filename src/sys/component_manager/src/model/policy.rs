@@ -53,7 +53,7 @@ impl PolicyError {
 
     /// Convert this error into its approximate `zx::Status` equivalent.
     pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::UNAVAILABLE
+        zx::Status::ACCESS_DENIED
     }
 }
 

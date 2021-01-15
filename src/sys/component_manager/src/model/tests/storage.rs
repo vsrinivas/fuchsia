@@ -1495,7 +1495,7 @@ async fn storage_dir_from_cm_namespace_prevented_by_policy() {
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
             from_cm_namespace: true,
             storage_subdir: Some("cache".to_string()),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await;

@@ -3776,7 +3776,7 @@ async fn use_protocol_denied_by_capability_policy() {
         vec!["b:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await;
@@ -3834,7 +3834,7 @@ async fn use_directory_with_alias_denied_by_capability_policy() {
         .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::ACCESS_DENIED)),
     )
     .await;
 }
@@ -3921,7 +3921,7 @@ async fn use_protocol_partial_chain_allowed_by_capability_policy() {
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await;
@@ -3961,6 +3961,13 @@ async fn use_protocol_component_provided_capability_policy() {
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("d".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
@@ -4016,7 +4023,7 @@ async fn use_protocol_component_provided_capability_policy() {
         vec!["b:0", "d:0"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await;
@@ -4120,7 +4127,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
         vec!["b:0"].into(),
         CheckUse::Event {
             requests: vec![EventSubscription::new("started".into(), EventMode::Async)],
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await
@@ -4165,7 +4172,7 @@ async fn use_from_component_manager_namespace_denied_by_policy() {
         vec![].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )
     .await;
