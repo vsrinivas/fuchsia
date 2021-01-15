@@ -7,7 +7,6 @@
 #include <string.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
