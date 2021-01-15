@@ -108,6 +108,15 @@ async fn interface_discovery(
             }
         }
 
+        // As some operating systems will not error sendmsg/recvmsg for UDP
+        // sockets bound to addresses that no longer exist, they must be removed
+        // by ensuring that they still exist, otherwise we may be sending out
+        // unanswerable queries.
+        let mut to_delete = HashSet::<IpAddr>::new();
+        for ip in socket_tasks.lock().await.keys() {
+            to_delete.insert(ip.clone());
+        }
+
         for iface in net::get_mcast_interfaces().unwrap_or(Vec::new()) {
             match iface.id() {
                 Ok(id) => {
@@ -121,6 +130,8 @@ async fn interface_discovery(
             }
 
             for addr in iface.addrs.iter() {
+                to_delete.remove(&addr.ip());
+
                 let mut addr = addr.clone();
                 addr.set_port(0);
 
@@ -160,6 +171,17 @@ async fn interface_discovery(
                 }
             }
         }
+
+        // Drop tasks for IP addresses no longer found on the system.
+        {
+            let mut tasks = socket_tasks.lock().await;
+            for ip in to_delete {
+                if let Some(handle) = tasks.remove(&ip) {
+                    handle.cancel().await;
+                }
+            }
+        }
+
         Timer::new(discovery_interval).await;
     }
 }
