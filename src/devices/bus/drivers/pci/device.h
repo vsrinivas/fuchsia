@@ -17,6 +17,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
+#include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
@@ -42,6 +43,9 @@ namespace pci {
 class UpstreamNode;
 class BusDeviceInterface;
 
+struct DownstreamListTag {};
+struct SharedIrqListTag {};
+
 // A pci::Device represents a given PCI(e) device on a bus. It can be used
 // standalone for a regular PCI(e) device on the bus, or as the base class for a
 // Bridge. Most work a pci::Device does is limited to its own registers in
@@ -52,11 +56,15 @@ class BusDeviceInterface;
 class Device;
 using PciDeviceType = ddk::Device<pci::Device, ddk::Rxrpcable>;
 class Device : public PciDeviceType,
-               public fbl::DoublyLinkedListable<Device*>,
-               public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>> {
+               public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
+               public fbl::ContainableBaseClasses<
+                   fbl::TaggedDoublyLinkedListable<Device*, DownstreamListTag>,
+                   fbl::TaggedDoublyLinkedListable<Device*, SharedIrqListTag>>
+
+{
  public:
   // These traits are used for the WAVL tree implementation. They allow device objects
-  // to be sorted and found in trees by composite bdf address.
+  // to be sorted and found in trees by composite bdf address in the Bus.
   struct KeyTraitsSortByBdf {
     static const pci_bdf_t& GetKey(pci::Device& dev) { return dev.cfg_->bdf(); }
 

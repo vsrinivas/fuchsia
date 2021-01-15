@@ -28,6 +28,7 @@ class FakeBusDriver;
 class PciAllocator;
 class UpstreamNode {
  public:
+  using DownstreamList = fbl::TaggedDoublyLinkedList<Device*, DownstreamListTag>;
   enum class Type { ROOT, BRIDGE };
   // UpstreamNode must have refcounting implemented by its derived classes Root or Bridge
   PCI_REQUIRE_REFCOUNTED;
@@ -52,6 +53,7 @@ class UpstreamNode {
  protected:
   friend FakeBusDriver;
   UpstreamNode(Type type, uint32_t mbus_id) : type_(type), managed_bus_id_(mbus_id) {}
+
   virtual ~UpstreamNode() = default;
 
   // Configure / late-initialization any devices downstream of this node.
@@ -60,10 +62,11 @@ class UpstreamNode {
   virtual void DisableDownstream();
   // Unplug all devices directly connected to this bridge.
   virtual void UnplugDownstream();
-  // The list of all devices immediately under this root/bridge.
-  fbl::DoublyLinkedList<pci::Device*> downstream_;
+  DownstreamList& downstream() { return downstream_; }
 
  private:
+  // The list of all devices immediately under this root/bridge.
+  DownstreamList downstream_;
   const Type type_;
   const uint32_t managed_bus_id_;  // The ID of the downstream bus which this node manages.
 };

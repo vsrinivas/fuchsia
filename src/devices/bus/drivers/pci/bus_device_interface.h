@@ -33,6 +33,9 @@ class BusDeviceInterface {
   virtual zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
   // Remove a device from the Bus device tree.
   virtual zx_status_t UnlinkDevice(pci::Device* device) = 0;
+  // Add a device to the shared irq handler list for its legacy IRQ vector.
+  virtual zx_status_t AddToSharedIrqList(pci::Device* device, uint32_t vector) = 0;
+  virtual zx_status_t RemoveFromSharedIrqList(pci::Device* device, uint32_t vector) = 0;
 };
 
 }  // namespace pci
