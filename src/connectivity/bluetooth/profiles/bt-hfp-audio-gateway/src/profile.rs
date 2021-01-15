@@ -199,27 +199,11 @@ impl FusedStream for Profile {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::error::{AdvertisementTerminated, ProfileResource};
-    use {
-        fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_bredr::ProfileRequest,
-        fuchsia_async as fasync, futures::StreamExt, matches::assert_matches,
-    };
+pub(crate) mod test_server {
+    use {super::*, fidl_fuchsia_bluetooth_bredr as bredr};
 
-    /// Holds all the server side resources associated with a `Profile`'s connection to
-    /// fuchsia.bluetooth.bredr.Profile. Fields are optional as different tests hold onto different
-    /// resources.
-    struct ProfileServerData {
-        _responder: Option<bredr::ProfileAdvertiseResponder>,
-        _channel: Option<Channel>,
-        _receiver: Option<bredr::ConnectionReceiverProxy>,
-        _results: Option<bredr::SearchResultsProxy>,
-    }
-
-    /// Helper function to make a future that resolves to a Profile and a ProfileRequestStream that
-    /// is connected to the Profile.
-    fn test_profile_and_stream() -> (Profile, bredr::ProfileRequestStream) {
+    /// Register a new Profile object, and create an associated test server.
+    pub(crate) fn setup_profile_and_test_server() -> (Profile, LocalProfileTestServer) {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Create new profile connection");
 
@@ -229,85 +213,122 @@ mod tests {
             bredr::ServiceClassProfileIdentifier::Handsfree,
         )
         .expect("register profile");
-
-        (profile, stream)
+        (profile, stream.into())
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn registration_causes_advertisement_and_search_request() {
-        let (_profile, mut stream) = test_profile_and_stream();
+    /// Holds all the server side resources associated with a `Profile`'s connection to
+    /// fuchsia.bluetooth.bredr.Profile. Provides helper methods for common test related tasks.
+    /// Some fields are optional because they are not populated until the Profile has completed
+    /// registration.
+    pub(crate) struct LocalProfileTestServer {
+        pub stream: bredr::ProfileRequestStream,
+        pub responder: Option<bredr::ProfileAdvertiseResponder>,
+        pub receiver: Option<bredr::ConnectionReceiverProxy>,
+        pub results: Option<bredr::SearchResultsProxy>,
+    }
 
-        let profile_server = fasync::Task::local(async move {
-            // Exactly one advertise request and one search request must be registered.
-            let mut valid_advert_request_received_count = 0;
-            let mut valid_search_request_received_count = 0;
+    impl From<bredr::ProfileRequestStream> for LocalProfileTestServer {
+        fn from(stream: bredr::ProfileRequestStream) -> Self {
+            Self { stream, responder: None, receiver: None, results: None }
+        }
+    }
 
-            while let Some(request) = stream.next().await {
+    impl LocalProfileTestServer {
+        pub fn receiver(&self) -> &bredr::ConnectionReceiverProxy {
+            self.receiver.as_ref().expect("receiver to be present")
+        }
+
+        pub fn results(&self) -> &bredr::SearchResultsProxy {
+            self.results.as_ref().expect("results to be present")
+        }
+
+        /// Returns true if the `Profile` has registered an `Advertise` and `Search` request.
+        fn is_registration_complete(&self) -> bool {
+            self.responder.is_some() && self.receiver.is_some() && self.results.is_some()
+        }
+
+        /// Run through the registration process of a new `Profile`.
+        pub async fn complete_registration(&mut self) {
+            while let Some(request) = self.stream.next().await {
                 match request {
-                    Ok(ProfileRequest::Advertise { .. }) => {
-                        valid_advert_request_received_count += 1
+                    Ok(bredr::ProfileRequest::Advertise { receiver, responder, .. }) => {
+                        if self.is_registration_complete() {
+                            panic!("unexpected second advertise request");
+                        }
+                        self.responder = Some(responder);
+                        self.receiver = Some(receiver.into_proxy().unwrap());
+                        if self.is_registration_complete() {
+                            break;
+                        }
                     }
-                    Ok(ProfileRequest::Search { .. }) => valid_search_request_received_count += 1,
+                    Ok(bredr::ProfileRequest::Search { results, .. }) => {
+                        if self.is_registration_complete() {
+                            panic!("unexpected second search request");
+                        }
+                        self.results = Some(results.into_proxy().unwrap());
+                        if self.is_registration_complete() {
+                            break;
+                        }
+                    }
                     _ => panic!("unexpected result on profile request stream: {:?}", request),
                 }
             }
+        }
+    }
+}
 
-            assert_eq!(valid_advert_request_received_count, 1);
-            assert_eq!(valid_search_request_received_count, 1);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::{AdvertisementTerminated, ProfileResource};
+    use {
+        fidl_fuchsia_bluetooth as bt, fuchsia_async as fasync, futures::StreamExt,
+        matches::assert_matches,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn registration_causes_advertisement_and_search_request() {
+        let (_profile, mut server) = test_server::setup_profile_and_test_server();
+
+        let server = fasync::Task::local(async move {
+            server.complete_registration().await;
+            assert!(server.responder.is_some());
+            assert!(server.receiver.is_some());
+            assert!(server.results.is_some());
         });
 
-        profile_server.await;
+        server.await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn stream_returns_events() {
-        let (mut profile, mut stream) = test_profile_and_stream();
+        let (mut profile, mut server) = test_server::setup_profile_and_test_server();
 
         let _server = fasync::Task::local(async move {
-            // resources lifted out of while loop scope to keep them alive.
-            let mut data = vec![];
+            // First, register the profile.
+            server.complete_registration().await;
 
-            while let Some(request) = stream.next().await {
-                match request {
-                    Ok(bredr::ProfileRequest::Advertise { receiver, responder, .. }) => {
-                        // Make a request to the connection receiver to test that it is received by
-                        // `Profile`
-                        let (left, right) = fuchsia_bluetooth::types::Channel::create();
-                        let receiver = receiver.into_proxy().unwrap();
-                        receiver
-                            .connected(
-                                &mut bt::PeerId { value: 1 },
-                                right.try_into().expect("valid channel"),
-                                &mut vec![].iter_mut(),
-                            )
-                            .expect("successful request to connection receiver");
-                        data.push(ProfileServerData {
-                            _responder: Some(responder),
-                            _channel: Some(left),
-                            _receiver: Some(receiver),
-                            _results: None,
-                        });
-                    }
-                    Ok(bredr::ProfileRequest::Search { results, .. }) => {
-                        let results = results.into_proxy().unwrap();
-                        results
-                            .service_found(
-                                &mut bt::PeerId { value: 1 },
-                                None,
-                                &mut vec![].iter_mut(),
-                            )
-                            .await
-                            .expect("successful request to search results receiver");
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: None,
-                            _receiver: None,
-                            _results: Some(results),
-                        });
-                    }
-                    _ => panic!("unexpected result on profile request stream: {:?}", request),
-                }
-            }
+            // Second, send a search results event.
+            server
+                .results()
+                .service_found(&mut bt::PeerId { value: 1 }, None, &mut vec![].iter_mut())
+                .await
+                .expect("successful request to search results receiver");
+
+            // Third, send a connection request event.
+            let (_left, right) = fuchsia_bluetooth::types::Channel::create();
+            server
+                .receiver()
+                .connected(
+                    &mut bt::PeerId { value: 1 },
+                    right.try_into().expect("valid channel"),
+                    &mut vec![].iter_mut(),
+                )
+                .expect("successful request to connection receiver");
+
+            // This will be pending forever since the server does not expect any further messages in
+            // this test.
+            server.stream.next().await;
         });
 
         // The profile server task first sends a search result.
@@ -325,61 +346,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn stream_end_of_advertise_returns_error() {
-        let (mut profile, mut stream) = test_profile_and_stream();
+        let (mut profile, mut server) = test_server::setup_profile_and_test_server();
 
-        let _profile_server = fasync::Task::local(async move {
-            // resources lifted out of while loop scope to keep them alive.
-            let mut data = vec![];
-
-            while let Some(request) = stream.next().await {
-                match request {
-                    Ok(bredr::ProfileRequest::Advertise { receiver, responder, .. }) => {
-                        // Make a request to the connection receiver to test that it is received by
-                        // `Profile`
-                        let (left, right) = fuchsia_bluetooth::types::Channel::create();
-                        let receiver = receiver.into_proxy().unwrap();
-                        receiver
-                            .connected(
-                                &mut bt::PeerId { value: 1 },
-                                right.try_into().expect("valid channel"),
-                                &mut vec![].iter_mut(),
-                            )
-                            .expect("successful request to connection receiver");
-                        responder.send(&mut Ok(())).unwrap();
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: Some(left),
-                            _receiver: Some(receiver),
-                            _results: None,
-                        });
-                    }
-                    Ok(bredr::ProfileRequest::Search { results, .. }) => {
-                        // Make a request to the search results receiver to test that it is received
-                        // by `Profile`
-                        let results = results.into_proxy().unwrap();
-                        results
-                            .service_found(
-                                &mut bt::PeerId { value: 1 },
-                                None,
-                                &mut vec![].iter_mut(),
-                            )
-                            .await
-                            .expect("successful request to search results receiver");
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: None,
-                            _receiver: None,
-                            _results: Some(results),
-                        });
-                    }
-                    _ => panic!("unexpected result on profile request stream: {:?}", request),
-                }
-            }
+        let _server = fasync::Task::local(async move {
+            server.complete_registration().await;
+            server.responder.take().expect("responder to be present").send(&mut Ok(())).unwrap();
         });
-
-        // The profile server task first sends a search result.
-        let event = profile.next().await;
-        assert_matches!(event, Some(Ok(ProfileEvent::SearchResult { .. })));
 
         // The profile server task then sends a connection request.
         let event = profile.next().await;
@@ -405,63 +377,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn stream_advertise_error_returns_error() {
-        let (mut profile, mut stream) = test_profile_and_stream();
+        let (mut profile, mut server) = test_server::setup_profile_and_test_server();
 
-        let _profile_server = fasync::Task::local(async move {
-            // resources lifted out of while loop scope to keep them alive.
-            let mut data = vec![];
-
-            while let Some(request) = stream.next().await {
-                match request {
-                    Ok(bredr::ProfileRequest::Advertise { receiver, responder, .. }) => {
-                        // Make a request to the connection receiver to test that it is received by
-                        // `Profile`
-                        let (left, right) = fuchsia_bluetooth::types::Channel::create();
-                        let receiver = receiver.into_proxy().unwrap();
-                        receiver
-                            .connected(
-                                &mut bt::PeerId { value: 1 },
-                                right.try_into().expect("valid channel"),
-                                &mut vec![].iter_mut(),
-                            )
-                            .expect("successful request to connection receiver");
-
-                        // Respond with an error
-                        responder.send(&mut Err(bt::ErrorCode::Already)).unwrap();
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: Some(left),
-                            _receiver: Some(receiver),
-                            _results: None,
-                        });
-                    }
-                    Ok(bredr::ProfileRequest::Search { results, .. }) => {
-                        // Make a request to the search results receier to test that it is received
-                        // by `Profile`
-                        let results = results.into_proxy().unwrap();
-                        results
-                            .service_found(
-                                &mut bt::PeerId { value: 1 },
-                                None,
-                                &mut vec![].iter_mut(),
-                            )
-                            .await
-                            .expect("successful request to search results receiver");
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: None,
-                            _receiver: None,
-                            _results: Some(results),
-                        });
-                    }
-                    _ => panic!("unexpected result on profile request stream: {:?}", request),
-                }
-            }
+        let _server = fasync::Task::local(async move {
+            server.complete_registration().await;
+            server
+                .responder
+                .take()
+                .expect("responder to be present")
+                .send(&mut Err(bt::ErrorCode::Already))
+                .unwrap();
         });
-
-        // The profile server task first sends a search result.
-        let event = profile.next().await;
-        assert_matches!(event, Some(Ok(ProfileEvent::SearchResult { .. })));
 
         // The profile server task then sends a connection request.
         let event = profile.next().await;
@@ -484,62 +410,22 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn stream_terminates_on_server_disconnect() {
-        let (mut profile, mut stream) = test_profile_and_stream();
+        let (mut profile, mut server) = test_server::setup_profile_and_test_server();
 
         let server = fasync::Task::local(async move {
-            // resources lifted out of while loop scope to keep them alive.
-            let mut data = vec![];
+            server.complete_registration().await;
 
-            while let Some(request) = stream.next().await {
-                match request {
-                    Ok(bredr::ProfileRequest::Advertise { receiver, responder, .. }) => {
-                        // Make a request to the connection receiver to test that it is received by
-                        // `Profile`
-                        let (left, right) = fuchsia_bluetooth::types::Channel::create();
-                        let receiver = receiver.into_proxy().unwrap();
-                        receiver
-                            .connected(
-                                &mut bt::PeerId { value: 1 },
-                                right.try_into().expect("valid channel"),
-                                &mut vec![].iter_mut(),
-                            )
-                            .expect("successful request to connection receiver");
-                        data.push(ProfileServerData {
-                            _responder: Some(responder),
-                            _channel: Some(left),
-                            _receiver: Some(receiver),
-                            _results: None,
-                        });
-                    }
-                    Ok(bredr::ProfileRequest::Search { results, .. }) => {
-                        let results = results.into_proxy().unwrap();
-                        results
-                            .service_found(
-                                &mut bt::PeerId { value: 1 },
-                                None,
-                                &mut vec![].iter_mut(),
-                            )
-                            .await
-                            .expect("successful request to search results receiver");
-                        data.push(ProfileServerData {
-                            _responder: None,
-                            _channel: None,
-                            _receiver: None,
-                            _results: Some(results),
-                        });
-                    }
-                    _ => panic!("unexpected result on profile request stream: {:?}", request),
-                }
-            }
+            // Send an event to check that the profile is receiving events at this point
+            server
+                .results()
+                .service_found(&mut bt::PeerId { value: 1 }, None, &mut vec![].iter_mut())
+                .await
+                .expect("successful request to search results receiver");
         });
 
         // The profile server task first sends a search result.
         let event = profile.next().await;
         assert_matches!(event, Some(Ok(ProfileEvent::SearchResult { .. })));
-
-        // The profile server task then sends a connection request.
-        let event = profile.next().await;
-        assert_matches!(event, Some(Ok(ProfileEvent::ConnectionRequest { .. })));
 
         assert!(!profile.is_terminated());
 
