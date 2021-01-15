@@ -24,6 +24,12 @@ mod c {
     codegen_test!(example_8, CBackend, ["banjo/example-8.test.banjo"], "c/example-8.h");
     codegen_test!(example_9, CBackend, ["banjo/example-9.test.banjo"], "c/example-9.h");
     codegen_test!(point, CBackend, ["banjo/point.test.banjo"], "c/point.h");
+    codegen_test!(
+        preserve_names,
+        CBackend,
+        ["banjo/preserve_names.test.banjo"],
+        "c/preserve_names.h"
+    );
     codegen_test!(table, CBackend, ["banjo/tables.test.banjo"], "c/tables.h");
     codegen_test!(simple, CBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");

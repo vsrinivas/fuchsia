@@ -176,11 +176,13 @@ fn field_to_c_str(
     ty: &ast::Ty,
     ident: &Ident,
     indent: &str,
+    preserve_names: bool,
     ast: &ast::BanjoAst,
 ) -> Result<String, Error> {
     let mut accum = String::new();
     accum.push_str(get_doc_comment(attrs, 1).as_str());
     let prefix = if ty.is_reference() { "" } else { "const " };
+    let c_name = if preserve_names { String::from(ident.name()) } else { to_c_name(ident.name()) };
     match ty {
         ast::Ty::Vector { ty: ref inner_ty, .. } => {
             let ty_name = ty_to_c_str(ast, &ty)?;
@@ -193,7 +195,7 @@ fn field_to_c_str(
                     indent = indent,
                     buffer = name_buffer(&ty_name),
                     size = name_size(&ty_name),
-                    c_name = to_c_name(ident.name()),
+                    c_name = c_name,
                     prefix = prefix,
                     ty = ty_name,
                     ptr = ptr,
@@ -207,7 +209,7 @@ fn field_to_c_str(
                 format!(
                     "{indent}{ty} {c_name}{bounds};",
                     indent = indent,
-                    c_name = to_c_name(ident.name()),
+                    c_name = c_name,
                     bounds = bounds,
                     ty = ty_to_c_str(ast, &ty)?
                 )
@@ -220,7 +222,7 @@ fn field_to_c_str(
                     format!(
                         "{indent}char {c_name}[{size}];",
                         indent = indent,
-                        c_name = to_c_name(ident.name()),
+                        c_name = c_name,
                         size = size,
                     )
                     .as_str(),
@@ -230,7 +232,7 @@ fn field_to_c_str(
                     format!(
                         "{indent}{prefix}{ty} {c_name};",
                         indent = indent,
-                        c_name = to_c_name(ident.name()),
+                        c_name = c_name,
                         prefix = prefix,
                         ty = ty_to_c_str(ast, &ty)?
                     )
@@ -243,7 +245,7 @@ fn field_to_c_str(
                 format!(
                     "{indent}{ty} {c_name};",
                     indent = indent,
-                    c_name = to_c_name(ident.name()),
+                    c_name = c_name,
                     ty = ty_to_c_str(ast, &ty)?
                 )
                 .as_str(),
@@ -563,7 +565,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .iter()
             .map(|f| match f.ty {
                 ast::Ty::Vector { .. } => Err(format_err!("unsupported for UnionField: {:?}", f)),
-                _ => field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", &ast),
+                _ => field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", false, &ast),
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -608,9 +610,10 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             return Ok("".to_string());
         }
         let attrs = struct_attrs_to_c_str(attributes);
+        let preserve_names = attributes.has_attribute("PreserveCNames");
         let members = fields
             .iter()
-            .map(|f| field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", &ast))
+            .map(|f| field_to_c_str(&f.attributes, &f.ty, &f.ident, "    ", preserve_names, &ast))
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
         let mut accum = String::new();

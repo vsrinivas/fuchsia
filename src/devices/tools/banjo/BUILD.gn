@@ -178,6 +178,8 @@ if (host_toolchain == current_toolchain) {
     ]
 
     inputs = [
+      "test/banjo/preserve_names.test.banjo",
+      "test/c/preserve_names.h",
       "test/ast/alias.test.ast",
       "test/banjo/alias.test.banjo",
       "test/c/alias.h",
