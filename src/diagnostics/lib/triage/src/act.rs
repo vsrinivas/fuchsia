@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[cfg(target_os = "fuchsia")]
-use log::error;
+use log::{error, warn};
 
 use {
     super::{
@@ -279,7 +279,7 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => false,
             MetricValue::Missing(reason) => {
                 #[cfg(target_os = "fuchsia")]
-                error!("Snapshot trigger was missing: {}", reason);
+                warn!("Snapshot trigger was missing: {}", reason);
                 self.action_results
                     .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
                 false
