@@ -18,6 +18,18 @@ go_library("proto_lib") {
   deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
 }
 
+go_library("filetype_lib") {
+  sources = [
+    "filetype/filetype.go",
+    "filetype/filetype_test.go",
+  ]
+}
+
+go_test("filetype_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/filetype" ]
+  deps = [ ":filetype_lib" ]
+}
+
 go_library("fint_lib") {
   sources = [
     "fint_test.go",
@@ -28,6 +40,7 @@ go_library("fint_lib") {
   ]
 
   deps = [
+    ":filetype_lib",
     ":proto_lib",
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:github.com/google/subcommands",
@@ -114,6 +127,7 @@ group("tests") {
   deps = [
     # The diff rules aren't really tests, but we want to ensure they're run in CQ.
     ":context_pb_go_diff",
+    ":filetype_tests",
     ":fint_tests",
     ":set_artifacts_pb_go_diff",
     ":static_desc_pb_diff",
