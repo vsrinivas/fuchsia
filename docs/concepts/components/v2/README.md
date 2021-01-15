@@ -57,6 +57,10 @@ the transition to the new architecture is complete.
 - [Component URLs][doc-component-urls] are URLs that identify components.
 - [Components vs. processes](components_vs_processes.md): how the concepts differ
 
+## Meta
+
+- [State of the Components v2 migration](migration.md): a work in progress.
+
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
