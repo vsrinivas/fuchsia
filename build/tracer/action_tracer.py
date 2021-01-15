@@ -7,6 +7,41 @@ import argparse
 import os
 import subprocess
 import sys
+from typing import FrozenSet, Sequence, Tuple
+
+
+def check_access_line(
+        op: str, path: str, allowed_reads: FrozenSet[str],
+        allowed_writes: FrozenSet[str]) -> Sequence[Tuple[str, str]]:
+    """Validates a file system access against a set of allowed accesses.
+
+    Args:
+      op: operation code in [rwdtm]
+	See: https://github.com/jacereda/fsatrace#output-format
+      path: file(s) accessed.
+        Only the 'm' move operation contains two paths: "destination|source".
+      allowed_reads: set of allowed read paths.
+      allowed_writes: set of allowed write paths.
+
+    Returns:
+      0 to 2 access violations in the form (op, path).
+    """
+    # Verify the filesystem access trace of the inner action
+    # See: https://github.com/jacereda/fsatrace#output-format
+    if op == "r":
+        if path not in allowed_reads:
+            return [("read", path)]
+    elif op in {"w", "d", "t"}:
+        if path not in allowed_writes:
+            return [("write", path)]
+    elif op == "m":
+        # path: "destination|source" (both are considered writes)
+        return [
+            ("write", path)
+            for path in path.split("|")
+            if path not in allowed_writes
+        ]
+    return []
 
 
 def main():
@@ -75,23 +110,23 @@ def main():
             return 0
 
     # Paths that the action is allowed to access
-    allowed_write = {os.path.abspath(path) for path in args.outputs}
+    allowed_writes = {os.path.abspath(path) for path in args.outputs}
 
     depfile_deps = []
     if args.depfile:
-        allowed_write.add(os.path.abspath(args.depfile))
+        allowed_writes.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
             depfile_deps += [
                 line.partition(":")[0]
                 for line in f.read().strip().splitlines()
             ]
 
-    allowed_read = {
+    allowed_reads = {
         os.path.abspath(path)
         for path in [args.script] + args.inputs + args.sources + depfile_deps
-    } | allowed_write
+    } | allowed_writes
     if args.response_file_name:
-        allowed_read.add(os.path.abspath(response_file_name))
+        allowed_reads.add(os.path.abspath(response_file_name))
 
     # Paths that are ignored
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))
@@ -128,17 +163,8 @@ def main():
             continue
         if any(path.endswith(ignored) for ignored in ignored_postfix):
             continue
-        if op == "r":
-            if path not in allowed_read:
-                unexpected_accesses.append(("read", path))
-        elif op in {"w", "d", "t"}:
-            if path not in allowed_write:
-                unexpected_accesses.append(("write", path))
-        elif op == "m":
-            unexpected_accesses.extend(
-                ("write", path)
-                for path in path.split("|")
-                if path not in allowed_write)
+        unexpected_accesses.extend(
+            check_access_line(op, path, allowed_reads, allowed_writes))
 
     if not unexpected_accesses:
         return 0
