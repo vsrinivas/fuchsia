@@ -17,6 +17,7 @@
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -199,6 +200,7 @@ bool VulkanExtensionTest::InitSysmemAllocator() {
   if (status != ZX_OK) {
     RTN_MSG(false, "Fdio_service_connect failed: %d\n", status);
   }
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
   return true;
 }
 
