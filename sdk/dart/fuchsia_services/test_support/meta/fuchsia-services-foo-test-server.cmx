@@ -7,8 +7,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.sys.Launcher"
         ]
     }
 }
