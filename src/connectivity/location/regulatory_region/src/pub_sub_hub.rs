@@ -4,14 +4,12 @@
 
 //! A simple publish-and-subscribe facility.
 
-use {
-    std::{
-        cell::RefCell,
-        collections::BTreeMap,
-        future::Future,
-        pin::Pin,
-        task::{Context, Waker, Poll},
-    },
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll, Waker},
 };
 
 /// A rendezvous point for publishers and subscribers.
@@ -71,6 +69,11 @@ impl PubSubHub {
         let id = hub.borrow().next_future_id;
         hub.borrow_mut().next_future_id = id.checked_add(1).expect("`id` is impossibly large");
         PubSubFuture { hub, id, last_value: last_value.map(|s| s.into()) }
+    }
+
+    pub fn get_value(&self) -> Option<String> {
+        let hub = &self.inner;
+        hub.borrow().get_value()
     }
 }
 
@@ -338,5 +341,18 @@ mod tests {
         hub.publish("US");
         assert_eq!(0, wake_count_a.get());
         assert_eq!(1, wake_count_b.get());
+    }
+
+    #[test]
+    fn get_value_is_none() {
+        let hub = PubSubHub::new();
+        assert_eq!(None, hub.get_value());
+    }
+
+    #[test]
+    fn get_value_is_some() {
+        let hub = PubSubHub::new();
+        hub.publish("US");
+        assert_eq!(Some("US".to_string()), hub.get_value());
     }
 }

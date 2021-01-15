@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_location_namedplace::{
         RegulatoryRegionConfiguratorRequest as ConfigRequest,
         RegulatoryRegionConfiguratorRequestStream as ConfigRequestStream,
+        RegulatoryRegionWatcherGetUpdateResponder as WatchUpdateResponder,
         RegulatoryRegionWatcherRequest as WatchRequest,
         RegulatoryRegionWatcherRequestStream as WatchRequestStream,
     },
@@ -66,21 +67,131 @@ async fn process_config_requests(
     Ok(())
 }
 
+/// Watch for requests from either GetRegionUpdate or deprecated GetUpdate. A `None` response to
+/// a GetRegionUpdate means that the region code is not set.
 async fn process_watch_requests(
     region_tracker: &PubSubHub,
     mut stream: WatchRequestStream,
 ) -> Result<(), Error> {
-    let mut last_read_value = None;
-    while let Some(WatchRequest::GetUpdate { responder }) =
-        stream.try_next().await.context("Failed to read Watcher request")?
-    {
-        match region_tracker.watch_for_change(last_read_value).await {
-            Some(v) => {
-                responder.send(v.as_ref()).context("Failed to write response")?;
-                last_read_value = Some(v);
+    // If an update is requested with GetUpdate, the first value will be sent after the value has
+    // been set. If it is a GetRegionUpdate, the first value will always be sent immediately.
+    let mut last_read_value =
+        if let Some(request) = stream.try_next().await.context("Failed to read Watcher request")? {
+            match request {
+                WatchRequest::GetUpdate { responder } => {
+                    respond_to_get_update(None, region_tracker, responder).await?
+                }
+                WatchRequest::GetRegionUpdate { responder } => {
+                    let val = region_tracker.get_value();
+                    responder
+                        .send(val.as_ref().map(|s| s.as_ref()))
+                        .context("Failed to write response")?;
+                    val
+                }
             }
-            None => panic!("Internal error: new value is None"),
+        } else {
+            return Ok(());
+        };
+
+    while let Some(request) = stream.try_next().await.context("Failed to read Watcher request")? {
+        match request {
+            WatchRequest::GetUpdate { responder } => {
+                last_read_value =
+                    respond_to_get_update(last_read_value, region_tracker, responder).await?;
+            }
+            WatchRequest::GetRegionUpdate { responder } => {
+                let val = region_tracker.watch_for_change(last_read_value).await;
+                responder
+                    .send(val.as_ref().map(|s| s.as_ref()))
+                    .context("Failed to write response")?;
+                last_read_value = val;
+            }
         }
     }
     Ok(())
+}
+
+/// Wait for an update and handle responding to the GetUpdate request. Returns the new value.
+async fn respond_to_get_update(
+    last_read_value: Option<String>,
+    region_tracker: &PubSubHub,
+    responder: WatchUpdateResponder,
+) -> Result<Option<String>, Error> {
+    match region_tracker.watch_for_change(last_read_value).await {
+        Some(val) => {
+            fx_log_info!("Sending regulatory region update (get_update) {:?}", val.clone());
+            responder.send(val.as_ref()).context("Failed to write response")?;
+            Ok(Some(val))
+        }
+        None => panic!("Internal error: new value is None"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
+        fuchsia_async as fasync, matches::assert_matches, pin_utils::pin_mut, std::task::Poll,
+    };
+
+    #[test]
+    fn process_watch_requests_sends_first_none() {
+        let mut exec = fasync::Executor::new().expect("Failed to create executor");
+        let hub = PubSubHub::new();
+        let (client, requests) = fidl::endpoints::create_proxy::<RegulatoryRegionWatcherMarker>()
+            .expect("Failed to connect to Watcher protocol");
+        let update_stream = requests.into_stream().expect("Failed to create stream");
+
+        let watch_fut = process_watch_requests(&hub, update_stream);
+        pin_mut!(watch_fut);
+
+        // Request an update.
+        let get_update_fut = client.get_region_update();
+        pin_mut!(get_update_fut);
+
+        // After running process_watch_requests the initial PubSubHub value should be sent.
+        assert!(exec.run_until_stalled(&mut watch_fut).is_pending());
+        assert_matches!(exec.run_until_stalled(&mut get_update_fut), Poll::Ready(Ok(None)));
+
+        // Subsequent update requests should resolve after there is a changed value.
+        let get_update_fut = client.get_region_update();
+        pin_mut!(get_update_fut);
+        assert!(exec.run_until_stalled(&mut watch_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut get_update_fut).is_pending());
+
+        // Change the internal value and check that we get an update.
+        hub.publish("US");
+        assert!(exec.run_until_stalled(&mut watch_fut).is_pending());
+
+        assert_matches!(
+            exec.run_until_stalled(&mut get_update_fut),
+            Poll::Ready(Ok(Some(region))) if region.as_str() == "US"
+        );
+    }
+
+    #[test]
+    fn first_update_is_current_value() {
+        let mut exec = fasync::Executor::new().expect("Failed to create executor");
+        let hub = PubSubHub::new();
+        let (client, requests) = fidl::endpoints::create_proxy::<RegulatoryRegionWatcherMarker>()
+            .expect("Failed to connect to Watcher protocol");
+        let update_stream = requests.into_stream().expect("Failed to create stream");
+
+        // Start processing update requests.
+        let watch_fut = process_watch_requests(&hub, update_stream);
+        pin_mut!(watch_fut);
+
+        // Change the internal value before requesting first update.
+        hub.publish("US");
+
+        // The first update should be the current value, not the initial value.
+        let get_update_fut = client.get_region_update();
+        pin_mut!(get_update_fut);
+
+        assert!(exec.run_until_stalled(&mut watch_fut).is_pending());
+        assert_matches!(
+            exec.run_until_stalled(&mut get_update_fut),
+            Poll::Ready(Ok(Some(region))) if region.as_str() == "US"
+        );
+    }
 }

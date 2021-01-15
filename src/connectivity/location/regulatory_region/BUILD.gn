@@ -20,6 +20,11 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pin-utils",
+  ]
+  with_unit_tests = true
 
   sources = [ "src/main.rs" ]
 }
@@ -52,6 +57,17 @@ fuchsia_package_with_single_component("regulatory_region") {
   manifest = "meta/regulatory_region.cmx"
 }
 
-fuchsia_unittest_package("regulatory-region-tests") {
+fuchsia_unittest_component("regulatory-region-test") {
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_unittest_component("regulatory-region-lib-test") {
   deps = [ ":lib_test" ]
+}
+
+fuchsia_test_package("regulatory-region-tests") {
+  test_components = [
+    ":regulatory-region-test",
+    ":regulatory-region-lib-test",
+  ]
 }

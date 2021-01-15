@@ -39,8 +39,17 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
 
     pub async fn run(&self) -> Result<(), Error> {
         loop {
-            let region_string =
-                self.regulatory_service.get_update().await.context("failed to get_update()")?;
+            let region_update = self
+                .regulatory_service
+                .get_region_update()
+                .await
+                .context("failed to get_update()")?;
+            let region_string = match region_update {
+                Some(region_string) => region_string,
+                None => {
+                    continue;
+                }
+            };
 
             let mut region_array = [0u8; REGION_CODE_LEN];
             if region_string.len() != region_array.len() {
@@ -178,9 +187,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        responder.send("U").expect("failed to send response");
+        responder.send(Some("U")).expect("failed to send response");
         assert_variant!(
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
@@ -198,9 +207,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        responder.send("USA").expect("failed to send response");
+        responder.send(Some("USA")).expect("failed to send response");
         assert_variant!(
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
@@ -218,9 +227,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
         let device_service_request_fut = &mut context.device_service_requests.next();
@@ -244,14 +253,39 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("U").expect("failed to send region response");
+        region_responder.send(Some("U")).expect("failed to send region response");
 
         // Drive the RegulatoryManager until stalled, then verify that RegulatoryManager did not
         // send a request to the DeviceService. Note that we deliberately ignore the state of
         // `regulatory_fut`, as that is validated in the `returns_error_on_*` tests above.
         let _ = context.executor.run_until_stalled(&mut regulatory_fut);
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Pending
+        );
+    }
+
+    #[test]
+    fn does_not_propogate_null_update() {
+        let mut context =
+            TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
+        );
+        region_responder.send(None).expect("failed to send region response");
+        // Run RegulatoryManager until stalled. Getting a null update should not cause an error.
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        // Verify that no region change is sent down for the null update.
         let device_service_request_fut = &mut context.device_service_requests.next();
         assert_variant!(
             context.executor.run_until_stalled(device_service_request_fut),
@@ -270,9 +304,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // Drive the RegulatoryManager until stalled, then reply to the `DeviceServiceRequest`, and
         // validate handling of the reply. Note that we deliberately ignore the state of
@@ -308,9 +342,9 @@ mod tests {
             let region_responder = assert_variant!(
                 context.executor.run_until_stalled(region_request_fut),
                 Poll::Ready(Some(Ok(
-                    RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+                    RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
             );
-            region_responder.send("US").expect("failed to send region response");
+            region_responder.send(Some("US")).expect("failed to send region response");
             assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
             let device_service_request_fut = &mut context.device_service_requests.next();
@@ -331,9 +365,9 @@ mod tests {
             let region_responder = assert_variant!(
                 context.executor.run_until_stalled(region_request_fut),
                 Poll::Ready(Some(Ok(
-                    RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+                    RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
             );
-            region_responder.send("CA").expect("failed to send region response");
+            region_responder.send(Some("CA")).expect("failed to send region response");
             assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
             let device_service_request_fut = &mut context.device_service_requests.next();
@@ -360,9 +394,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
         let device_service_request_fut = &mut context.device_service_requests.next();
@@ -398,9 +432,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
     }
 
@@ -417,9 +451,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // Drive the RegulatoryManager until stalled, then verify that RegulatoryManager did not
         // send a request to the DeviceService. Note that we deliberately ignore the status of
@@ -447,9 +481,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
         let device_service_request_fut = &mut context.device_service_requests.next();
@@ -503,9 +537,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
         // Verify that no requests have been sent to `DeviceService`.
@@ -554,9 +588,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
         // Verify that no requests have been sent to `DeviceService`.
@@ -592,9 +626,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // Verify that RegulatoryManager has _not_ requested client connections be started yet.
         // Verify this up front since the regulatory manager future is about to grab the
@@ -662,9 +696,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // After receiving the RegulatoryRegion update, the RegulatoryManager should call
         // `IfaceManager.stop_client_connections()`. That call should fail, and RegulatoryManager
@@ -704,9 +738,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // Drive the RegulatoryManager to issue the `DeviceService.SetCountry()` request,
         // and respond to that request.
@@ -756,9 +790,9 @@ mod tests {
         let region_request_fut = &mut context.regulatory_region_requests.next();
         let region_responder = assert_variant!(
             context.executor.run_until_stalled(region_request_fut),
-            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetRegionUpdate{responder}))) => responder
         );
-        region_responder.send("US").expect("failed to send region response");
+        region_responder.send(Some("US")).expect("failed to send region response");
 
         // After receiving the RegulatoryRegion update, the RegulatoryManager should call
         // `IfaceManager.stop_all_aps()`. That call should fail, and RegulatoryManager should
