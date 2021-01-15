@@ -1,0 +1,107 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.usb.hubdescriptor;
+
+// Hub request types.
+const uint32 USB_RECIP_HUB  = 0b0000000000100000;  // USB_TYPE_CLASS | USB_RECIP_DEVICE
+const uint32 USB_RECIP_PORT = 0b0000000000100011;  // USB_TYPE_CLASS | USB_RECIP_OTHER
+
+// Hub requests.
+const uint32 USB_HUB_SET_DEPTH = 12;
+
+// Hub descriptor types.
+const uint32 USB_HUB_DESC_TYPE = 0x29;
+const uint32 USB_HUB_DESC_TYPE_SS = 0x2A;  // for superspeed hubs
+
+// Hub Class Feature Selectors (USB 2.0 spec Table 11.17)
+const uint32 USB_FEATURE_C_HUB_LOCAL_POWER     = 0;
+const uint32 USB_FEATURE_C_HUB_OVER_CURRENT    = 1;
+const uint32 USB_FEATURE_PORT_CONNECTION       = 0;
+const uint32 USB_FEATURE_PORT_ENABLE           = 1;
+const uint32 USB_FEATURE_PORT_SUSPEND          = 2;
+const uint32 USB_FEATURE_PORT_OVER_CURRENT     = 3;
+const uint32 USB_FEATURE_PORT_RESET            = 4;
+const uint32 USB_FEATURE_PORT_LINK_STATE       = 5;
+const uint32 USB_FEATURE_PORT_POWER            = 8;
+const uint32 USB_FEATURE_PORT_LOW_SPEED        = 9;
+const uint32 USB_FEATURE_C_PORT_CONNECTION     = 16;
+const uint32 USB_FEATURE_C_PORT_ENABLE         = 17;
+const uint32 USB_FEATURE_C_PORT_SUSPEND        = 18;
+const uint32 USB_FEATURE_C_PORT_OVER_CURRENT   = 19;
+const uint32 USB_FEATURE_C_PORT_RESET          = 20;
+const uint32 USB_FEATURE_PORT_TEST             = 21;
+const uint32 USB_FEATURE_PORT_INDICATOR        = 22;
+const uint32 USB_FEATURE_PORT_INDICATOR        = 22;
+const uint32 USB_FEATURE_PORT_U1_TIMEOUT       = 23;
+const uint32 USB_FEATURE_PORT_U2_TIMEOUT       = 24;
+const uint32 USB_FEATURE_C_PORT_LINK_STATE     = 25;
+const uint32 USB_FEATURE_C_PORT_CONFIG_ERROR   = 26;
+const uint32 USB_FEATURE_PORT_REMOTE_WAKE_MASK = 27;
+const uint32 USB_FEATURE_BH_PORT_RESET         = 28;
+const uint32 USB_FEATURE_C_BH_PORT_RESET       = 29;
+const uint32 USB_FEATURE_FORCE_LINKPM_ACCEPT   = 30;
+
+[Packed, PreserveCNames]
+struct Usb2Payload {
+    array<uint8>:4 DeviceRemovable;
+    array<uint8>:4 PortPwrCtrlMask;
+};
+
+[Packed, PreserveCNames]
+struct Usb3Payload {
+    uint8 bHubHdrDecLat;
+    uint16 wHubDelay;
+    uint16 DeviceRemovable;
+};
+
+[Packed]
+union UsbHubDescriptorPayload {
+  Usb2Payload hs;
+  Usb3Payload ss;
+};
+
+[Packed, PreserveCNames]
+struct UsbHubDescriptor {
+    uint8 bDescLength;
+    uint8 bDescriptorType;
+    uint8 bNbrPorts;
+    uint16 wHubCharacteristics;
+    uint8 bPowerOn2PwrGood;
+    uint8 bHubContrCurrent;
+    UsbHubDescriptorPayload payload;
+};
+
+[Packed, PreserveCNames]
+struct UsbPortStatus {
+  uint16 wPortStatus;
+  uint16 wPortChange;
+};
+
+// Port Status bits.
+const uint32 USB_PORT_CONNECTION          = 0b0000000000000001;  // 1 << 0
+const uint32 USB_PORT_ENABLE              = 0b0000000000000010;  // 1 << 1
+const uint32 USB_PORT_SUSPEND             = 0b0000000000000100;  // 1 << 2  // USB 2.0 only
+const uint32 USB_PORT_OVER_CURRENT        = 0b0000000000001000;  // 1 << 3
+const uint32 USB_PORT_RESET               = 0b0000000000010000;  // 1 << 4
+const uint32 USB_PORT_POWER               = 0b0000000100000000;  // 1 << 8  // USB 2.0 only
+const uint32 USB_PORT_LOW_SPEED           = 0b0000001000000000;  // 1 << 9  // USB 2.0 only
+const uint32 USB_PORT_HIGH_SPEED          = 0b0000010000000000;  // 1 << 10 // USB 2.0 only
+const uint32 USB_PORT_TEST_MODE           = 0b0000100000000000;  // 1 << 11 // USB 2.0 only
+const uint32 USB_PORT_INDICATOR_CONTROL   = 0b0001000000000000;  // 1 << 12 // USB 2.0 only
+
+// Port Status Changed bits.
+const uint32 USB_C_PORT_CONNECTION        = 0b0000000000000001;  // 1 << 0
+const uint32 USB_C_PORT_ENABLE            = 0b0000000000000010;  // 1 << 1  // USB 2.0 only
+const uint32 USB_C_PORT_SUSPEND           = 0b0000000000000100;  // 1 << 2  // USB 2.0 only
+const uint32 USB_C_PORT_OVER_CURRENT      = 0b0000000000001000;  // 1 << 3
+const uint32 USB_C_PORT_RESET             = 0b0000000000010000;  // 1 << 4
+const uint32 USB_C_BH_PORT_RESET          = 0b0000000000100000;  // 1 << 5  // USB 3.0 only
+const uint32 USB_C_PORT_LINK_STATE        = 0b0000000001000000;  // 1 << 6  // USB 3.0 only
+const uint32 USB_C_PORT_CONFIG_ERROR      = 0b0000000010000000;  // 1 << 7  // USB 3.0 only
+const uint32 USB_C_PORT_POWER             = 0b0000000100000000;  // 1 << 8  // USB 2.0 only
+const uint32 USB_C_PORT_LOW_SPEED         = 0b0000001000000000;  // 1 << 9  // USB 2.0 only
+const uint32 USB_C_PORT_HIGH_SPEED        = 0b0000010000000000;  // 1 << 10 // USB 2.0 only
+const uint32 USB_C_PORT_TEST_MODE         = 0b0000100000000000;  // 1 << 11 // USB 2.0 only
+const uint32 USB_C_PORT_INDICATOR_CONTROL = 0b0001000000000000;  // 1 << 12 // USB 2.0 only

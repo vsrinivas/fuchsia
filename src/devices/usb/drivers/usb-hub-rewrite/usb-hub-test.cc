@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hub/c/banjo.h>
 #include <fuchsia/hardware/usb/hub/cpp/banjo.h>
+#include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
@@ -24,7 +25,6 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 

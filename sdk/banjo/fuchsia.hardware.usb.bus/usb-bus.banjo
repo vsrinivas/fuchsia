@@ -7,8 +7,8 @@ library fuchsia.hardware.usb.bus;
 using zx;
 using ddk.driver;
 using fuchsia.hardware.usb.hub;
+using fuchsia.hardware.usb.hubdescriptor;
 using zircon.hw.usb;
-using zircon.hw.usb.hub;
 
 enum UsbSpeed : uint32 {
 };
@@ -17,7 +17,7 @@ enum UsbSpeed : uint32 {
 protocol UsbBus {
     /// Configures a new hub based on its USB hub descriptor.
     ConfigureHub(ddk.driver.ZxDevice? hub_device, UsbSpeed speed,
-                 zircon.hw.usb.hub.UsbHubDescriptor desc, bool multi_tt) -> (zx.status s);
+                 fuchsia.hardware.usb.hubdescriptor.UsbHubDescriptor desc, bool multi_tt) -> (zx.status s);
     /// Informs the USB bus that a new device has been added.
     DeviceAdded(ddk.driver.ZxDevice? hub_device, uint32 port, UsbSpeed speed) -> (zx.status s);
     /// Informs the USB bus that a device has been removed.

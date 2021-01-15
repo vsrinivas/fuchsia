@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
 
+#include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/listnode.h>
 
 #include <fbl/array.h>

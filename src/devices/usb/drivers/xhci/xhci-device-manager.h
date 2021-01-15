@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_DEVICE_MANAGER_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_DEVICE_MANAGER_H_
 
+#include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <stdbool.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/types.h>
 
 namespace usb_xhci {

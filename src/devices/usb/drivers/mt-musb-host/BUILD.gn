@@ -45,6 +45,7 @@ source_set("common") {
     ":mt_musb_host_bind",
     "//sdk/banjo/fuchsia.hardware.usb.bus",
     "//sdk/banjo/fuchsia.hardware.usb.hci",
+    "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",

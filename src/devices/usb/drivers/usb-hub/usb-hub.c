@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/usb/bus/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/hub/c/banjo.h>
+#include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -12,7 +13,6 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/listnode.h>
 
 #include <ddk/binding.h>

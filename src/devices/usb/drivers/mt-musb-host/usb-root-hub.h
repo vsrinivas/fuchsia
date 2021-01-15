@@ -6,11 +6,11 @@
 #define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_ROOT_HUB_H_
 
 #include <endian.h>
+#include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -257,12 +257,14 @@ class UsbRootHub : public UsbDevice {
       .wHubCharacteristics = 0,
       .bPowerOn2PwrGood = 1,
       .bHubContrCurrent = 0,
-      .hs =
-          {
-              .DeviceRemovable = {0, 0, 0, 0},
-              .PortPwrCtrlMask = {0, 0, 0, 0},
-          },
-  };
+      .payload = {
+
+          .hs =
+              {
+                  .DeviceRemovable = {0, 0, 0, 0},
+                  .PortPwrCtrlMask = {0, 0, 0, 0},
+              },
+      }};
 };
 
 }  // namespace mt_usb_hci
