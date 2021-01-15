@@ -17,6 +17,7 @@ use {
         sync::RwLock,
     },
     async_trait::async_trait,
+    bridge::DaemonError,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
@@ -606,6 +607,17 @@ impl Target {
     }
 
     #[cfg(test)]
+    pub async fn new_autoconnected(ascendd: Arc<Ascendd>, n: &str) -> Self {
+        let s = Self::new(ascendd, n);
+        s.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
+        s
+    }
+
+    #[cfg(test)]
     pub(crate) async fn addrs_insert_entry(&self, t: TargetAddrEntry) {
         self.inner.addrs.write().await.replace(t);
     }
@@ -1129,7 +1141,7 @@ impl TargetCollection {
     ///
     /// Ignores any targets that do not have the state of "connected" at the
     /// time the command is invoked, so can cause some raciness.
-    pub async fn get_default(&self, n: Option<String>) -> Result<Target> {
+    pub async fn get_default(&self, n: Option<String>) -> Result<Target, DaemonError> {
         // The "get the mapped targets for filtering connected ones" step has
         // to be separate from the actual `filter_map()` statement on account of
         // the compiler claiming a temporary value is borrowed whilst still in
@@ -1154,12 +1166,12 @@ impl TargetCollection {
             .filter_map(|(n, t, connected)| if *connected { Some((n, t)) } else { None })
             .collect::<Vec<_>>();
         match (targets.len(), n) {
-            (0, None) => Err(anyhow!("no targets connected - is your device plugged in?")),
+            (0, None) => Err(DaemonError::TargetCacheEmpty),
             (1, None) => {
                 let res = targets
                     .iter()
                     .next()
-                    .ok_or(anyhow!("no targets in cache"))
+                    .ok_or(DaemonError::TargetCacheEmpty)
                     .map(|(_, t)| (*t).clone())?;
                 log::debug!(
                     "No default target selected, returning only target - {:?}",
@@ -1169,7 +1181,7 @@ impl TargetCollection {
             }
             (_, None) => {
                 // n > 1 case (0 and 1 are covered, and this is an unsigned integer).
-                Err(anyhow!("more than one target - specify a default target"))
+                Err(DaemonError::TargetAmbiguous)
             }
             (_, Some(nodename)) => {
                 // TODO(fxb/66152) Use target query instead.
@@ -1182,7 +1194,7 @@ impl TargetCollection {
                             None
                         }
                     })
-                    .ok_or(anyhow!("no targets found"))
+                    .ok_or(DaemonError::TargetNotFound)
             }
         }
     }
@@ -1607,32 +1619,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_event_synthesis_all_connected() {
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let now = Utc::now();
-        let t = Target::new(ascendd.clone(), "clam-chowder-is-tasty");
-        t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
-        })
-        .await;
-        let t2 = Target::new(ascendd.clone(), "this-is-a-crunchy-falafel");
-        t2.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
-        })
-        .await;
-        let t3 = Target::new(ascendd.clone(), "i-should-probably-eat-lunch");
-        t3.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
-        })
-        .await;
-        let t4 = Target::new(ascendd.clone(), "i-should-probably-eat-lunch");
-        t4.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
-        })
-        .await;
-
+        let t = Target::new_autoconnected(ascendd.clone(), "clam-chowder-is-tasty").await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let t3 = Target::new_autoconnected(ascendd.clone(), "i-should-probably-eat-lunch").await;
+        let t4 = Target::new_autoconnected(ascendd.clone(), "i-should-probably-eat-lunch").await;
         let tc = TargetCollection::new();
         tc.merge_insert(t).await;
         tc.merge_insert(t2).await;
@@ -1809,18 +1799,8 @@ mod test {
     async fn test_target_get_default() {
         let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new(ascendd.clone(), default);
-        t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
-        })
-        .await;
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
-        t2.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
-        })
-        .await;
+        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1836,18 +1816,8 @@ mod test {
     async fn test_target_get_default_matches_contains() {
         let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new(ascendd.clone(), default);
-        t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
-        })
-        .await;
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
-        t2.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
-        })
-        .await;
+        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
@@ -2012,5 +1982,53 @@ mod test {
         assert!(addrs.next().is_none());
         assert_eq!(addr.ip, ip);
         assert_eq!(addr.scope_id, 0xbadf00d);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default_empty() {
+        let tc = TargetCollection::new();
+        assert_eq!(Err(DaemonError::TargetCacheEmpty), tc.get_default(None).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default_successful() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let default = "clam-chowder-is-tasty";
+        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let tc = TargetCollection::new();
+        tc.merge_insert(clone_target(&t).await).await;
+        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default_ambiguous() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let default = "clam-chowder-is-tasty";
+        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let tc = TargetCollection::new();
+        tc.merge_insert(clone_target(&t).await).await;
+        tc.merge_insert(t2).await;
+        assert_eq!(Err(DaemonError::TargetAmbiguous), tc.get_default(None).await);
+
+        assert_eq!(
+            Err(DaemonError::TargetNotFound),
+            tc.get_default(Some("not_in_here".to_owned())).await
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default_not_found() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let default = "clam-chowder-is-tasty";
+        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let tc = TargetCollection::new();
+        tc.merge_insert(clone_target(&t).await).await;
+        tc.merge_insert(t2).await;
+        assert_eq!(
+            Err(DaemonError::TargetNotFound),
+            tc.get_default(Some("not_in_here".to_owned())).await
+        );
     }
 }

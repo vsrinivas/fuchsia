@@ -210,19 +210,6 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
     }
 }
 
-macro_rules! default_target_or_err {
-    ($s:ident, $t:ident, $responder:ident, $e:expr $(,)?) => {
-        match $s.get_default_target($t).await {
-            Ok(t) => t,
-            Err(e) => {
-                log::warn!("{}", e);
-                $responder.send(&mut Err($e)).context("sending error response")?;
-                return Ok(());
-            }
-        }
-    };
-}
-
 impl Daemon {
     pub async fn new() -> Result<Daemon> {
         log::info!("Starting daemon overnet server");
@@ -246,7 +233,7 @@ impl Daemon {
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue, ascendd })
     }
 
-    pub async fn get_default_target(&self, n: Option<String>) -> Result<Target> {
+    pub async fn get_default_target(&self, n: Option<String>) -> Result<Target, DaemonError> {
         let n_clone = n.clone();
         // Infinite timeout here is fine, as the client dropping connection
         // will lead to this being cleaned up eventually. It is the client's
@@ -261,7 +248,11 @@ impl Daemon {
                     false
                 }
             })
-            .await?;
+            .await
+            .map_err(|e| {
+                log::warn!("{}", e);
+                DaemonError::TargetStateError
+            })?;
 
         // TODO(awdavies): It's possible something might happen between the new
         // target event and now, so it would make sense to give the
@@ -384,8 +375,14 @@ impl Daemon {
                     .context("error sending response")?;
             }
             DaemonRequest::GetRemoteControl { target, remote, responder } => {
-                let target =
-                    default_target_or_err!(self, target, responder, DaemonError::TargetCacheError);
+                let target = match self.get_default_target(target).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        responder.send(&mut Err(e)).context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+
                 // Ensure auto-connect has at least started.
                 target.run_host_pipe().await;
                 match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
@@ -414,8 +411,16 @@ impl Daemon {
                 responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::GetFastboot { target, fastboot, responder } => {
-                let target =
-                    default_target_or_err!(self, target, responder, FastbootError::TargetError);
+                let target = match self.get_default_target(target).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        log::warn!("{:?}", e);
+                        responder
+                            .send(&mut Err(FastbootError::TargetError))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {
@@ -462,14 +467,7 @@ impl Daemon {
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
                 let fut = async move {
-                    let target = match self.get_default_target(target).await {
-                        Ok(t) => t,
-                        Err(e) => {
-                            log::warn!("{}", e);
-                            return Err(DaemonError::TargetCacheError);
-                        }
-                    };
-
+                    let target = self.get_default_target(target).await?;
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
                         let addrs = target.addrs().await;
@@ -902,5 +900,44 @@ mod test {
         assert!(target.nodename.is_none());
         assert_eq!(target.addresses.as_ref().unwrap().len(), 1);
         assert_eq!(target.addresses.unwrap()[0], info);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_default_target_empty() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let d = Daemon::new_for_test().await;
+        let nodename = "where-is-my-hasenpfeffer";
+        let t = Target::new_autoconnected(ascendd.clone(), nodename).await;
+        d.target_collection.merge_insert(t.clone()).await;
+        assert_eq!(nodename, d.get_default_target(None).await.unwrap().nodename().await.unwrap());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_default_target_query() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let d = Daemon::new_for_test().await;
+        let nodename = "where-is-my-hasenpfeffer";
+        let t = Target::new_autoconnected(ascendd.clone(), nodename).await;
+        d.target_collection.merge_insert(t.clone()).await;
+        assert_eq!(
+            nodename,
+            d.get_default_target(Some(nodename.to_string()))
+                .await
+                .unwrap()
+                .nodename()
+                .await
+                .unwrap()
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_default_target_ambiguous() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let d = Daemon::new_for_test().await;
+        let t = Target::new_autoconnected(ascendd.clone(), "where-is-my-hasenpfeffer").await;
+        let t2 = Target::new_autoconnected(ascendd.clone(), "it-is-rabbit-season").await;
+        d.target_collection.merge_insert(t.clone()).await;
+        d.target_collection.merge_insert(t2.clone()).await;
+        assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_default_target(None).await);
     }
 }

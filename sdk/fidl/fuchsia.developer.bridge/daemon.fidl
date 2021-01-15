@@ -13,6 +13,15 @@ enum DaemonError {
     RCS_CONNECTION_ERROR = 3;
     /// A generic timeout error.
     TIMEOUT = 4;
+
+    /// When querying for an unspecified target, the cache was empty.
+    TARGET_CACHE_EMPTY = 5;
+    /// When querying for a target (specified or not), there were
+    /// too many matches to be clear on which target was the intent
+    /// of the query.
+    TARGET_AMBIGUOUS = 6;
+    /// When querying for a target, no matches were found.
+    TARGET_NOT_FOUND = 7;
 };
 
 [Discoverable]
