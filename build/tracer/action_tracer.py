@@ -4,10 +4,11 @@
 # found in the LICENSE file.
 
 import argparse
+import dataclasses
 import os
 import subprocess
 import sys
-from typing import FrozenSet, Sequence, Tuple
+from typing import FrozenSet, Iterable, Sequence, Tuple
 
 
 def check_access_line(
@@ -17,7 +18,7 @@ def check_access_line(
 
     Args:
       op: operation code in [rwdtm]
-	See: https://github.com/jacereda/fsatrace#output-format
+        See: https://github.com/jacereda/fsatrace#output-format
       path: file(s) accessed.
         Only the 'm' move operation contains two paths: "destination|source".
       allowed_reads: set of allowed read paths.
@@ -26,8 +27,6 @@ def check_access_line(
     Returns:
       0 to 2 access violations in the form (op, path).
     """
-    # Verify the filesystem access trace of the inner action
-    # See: https://github.com/jacereda/fsatrace#output-format
     if op == "r":
         if path not in allowed_reads:
             return [("read", path)]
@@ -42,6 +41,63 @@ def check_access_line(
             if path not in allowed_writes
         ]
     return []
+
+
+@dataclasses.dataclass
+class AccessTraceChecker(object):
+    """Validates a sequence of file system accesses against constraints.
+    """
+
+    # Accesses outside of this path prefix are not checked.
+    # An empty string will cause the checker to validate all accesses.
+    required_path_prefix: str = ""
+
+    # These affixes will be ignored for read/write checks.
+    ignored_prefixes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    ignored_suffixes: FrozenSet[str] = dataclasses.field(default_factory=set)
+
+    # These are explicitly allowed accesses that are checked once the
+    # above criteria are met.
+    allowed_reads: FrozenSet[str] = dataclasses.field(default_factory=set)
+    allowed_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
+
+    def check_accesses(self,
+                       accesses: Iterable[str]) -> Sequence[Tuple[str, str]]:
+        """Checks a sequence of access against constraints.
+
+        Accesses outside of required_path_prefix are ignored.
+        Accesses to paths that match any of the ignored_* properties will be ignored.
+        All other accesses are checked against allowed_reads and allowed_writes.
+
+        Args:
+          accesses: lines in fsatrace output format.
+            See: https://github.com/jacereda/fsatrace#output-format
+            The sequence of accesses matters when tracking moves.
+
+        Returns:
+          access violations (in the order they were encountered)
+        """
+        unexpected_accesses = []
+        for access in accesses:
+            op, sep, path = access.partition("|")
+            if not sep == "|":
+                # Not a trace line, ignore
+                continue
+            if not path.startswith(self.required_path_prefix):
+                # Outside of root, ignore
+                continue
+            if any(path.startswith(ignored)
+                   for ignored in self.ignored_prefixes):
+                continue
+            if any(path.endswith(ignored) for ignored in self.ignored_suffixes):
+                continue
+            unexpected_accesses.extend(
+                check_access_line(
+                    op, path, self.allowed_reads, self.allowed_writes))
+
+        # TODO(fangism): check for missing must_write accesses
+        # TODO(fangism): track state of files across moves
+        return unexpected_accesses
 
 
 def main():
@@ -125,46 +181,46 @@ def main():
         os.path.abspath(path)
         for path in [args.script] + args.inputs + args.sources + depfile_deps
     } | allowed_writes
+    # TODO(fangism): prevent inputs from being written/touched/moved.
+    # Changes to the input may confuse any timestamp-based build system,
+    # and introduce race conditions among multiple reader rules.
+
     if args.response_file_name:
         allowed_reads.add(os.path.abspath(response_file_name))
 
-    # Paths that are ignored
+    # Limit most access checks to files under src_root.
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))
-    ignored_prefix = {
+
+    # Paths that are ignored
+    ignored_prefixes = {
         # Allow actions to access prebuilts that are not declared as inputs
         # (until we fix all instances of this)
         os.path.join(src_root, "prebuilt"),
     }
-    ignored_postfix = {
+    ignored_suffixes = {
         # Allow actions to access Python code such as via imports
+        # TODO(fangism): validate python imports under source control more precisely
         ".py",
         # Allow actions to access Python compiled bytecode
         ".pyc",
         # TODO(shayba): remove hack below for response files
         #".rsp",
     }
+    # TODO(fangism): for suffixes that we always ignore for writing, such as safe
+    # or intended side-effect byproducts, make sure no declared inputs ever match them.
 
     raw_trace = ""
     with open(args.trace_output, "r") as trace:
         raw_trace = trace.read()
 
     # Verify the filesystem access trace of the inner action
-    # See: https://github.com/jacereda/fsatrace#output-format
-    unexpected_accesses = []
-    for line in raw_trace.splitlines():
-        op, sep, path = line.partition("|")
-        if not sep == "|":
-            # Not a trace line, ignore
-            continue
-        if not path.startswith(src_root):
-            # Outside of root, ignore
-            continue
-        if any(path.startswith(ignored) for ignored in ignored_prefix):
-            continue
-        if any(path.endswith(ignored) for ignored in ignored_postfix):
-            continue
-        unexpected_accesses.extend(
-            check_access_line(op, path, allowed_reads, allowed_writes))
+    checker = AccessTraceChecker(
+        required_path_prefix=src_root,
+        ignored_prefixes=ignored_prefixes,
+        ignored_suffixes=ignored_suffixes,
+        allowed_reads=allowed_reads,
+        allowed_writes=allowed_writes)
+    unexpected_accesses = checker.check_accesses(raw_trace.splitlines())
 
     if not unexpected_accesses:
         return 0
