@@ -17,6 +17,11 @@ struct instantiate_templated_tag {
   static constexpr Tag storage;
 };
 
+template <typename T, typename ValueType, ValueType Value>
+struct inline_storage {
+  static constexpr const ValueType storage{Value};
+};
+
 // Utility to return the first type in a parameter pack.
 template <typename... Ts>
 struct first;

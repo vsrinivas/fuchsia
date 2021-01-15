@@ -6,7 +6,7 @@
     program: {
         binary: "test/stdcompat-unit-test",
     },
-    capabilities: [
+    use: [
         {
             protocol: [ "fuchsia.process.Launcher" ],
         },

@@ -19,6 +19,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/optional.h",
     "lib/stdcompat/type_traits.h",
     "lib/stdcompat/utility.h",
+    "lib/stdcompat/variant.h",
     "lib/stdcompat/version.h",
   ]
   sources = [

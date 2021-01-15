@@ -2,23 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_STDCOMPAT_VARIANT_H_
+#define LIB_STDCOMPAT_VARIANT_H_
+
+#include "utility.h"
+#include "version.h"
+
+#if __cpp_lib_variant >= 2016L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#include <variant>
+
+namespace cpp17 {
+
+using std::get;
+using std::holds_alternative;
+using std::monostate;
+using std::variant;
+using std::variant_alternative;
+using std::variant_alternative_t;
+using std::variant_size;
+using std::variant_size_v;
+
+};  // namespace cpp17
+
+#else  // Provide polyfill for std::variant and related constructs.
 
 #include <exception>
 #include <new>
-#include <type_traits>
-#include <utility>
 
-#include "constructors_internal.h"
-#include "in_place_internal.h"
-#include "storage_internal.h"
-#include "traits.h"
-#include "utility_internal.h"
+#include "internal/constructors.h"
+#include "internal/storage.h"
+#include "internal/utility.h"
+#include "type_traits.h"
 
-namespace fit {
+namespace cpp17 {
 
 // A default-constructible type that may be used as the first variant type to
-// make fit::variant default-constructible when other variants are not. This
+// make cpp17::variant default-constructible when other variants are not. This
 // type may also be used as an alternative representing an empty value.
 struct monostate final {
   constexpr bool operator==(const monostate& other) const { return true; }
@@ -67,7 +87,7 @@ struct variant_alternative;
 
 template <size_t Index, typename... Ts>
 struct variant_alternative<Index, variant<Ts...>>
-    : ::fit::internal::variant_alternative<Index, ::fit::internal::variant_list<Ts...>> {};
+    : ::cpp17::internal::variant_alternative<Index, ::cpp17::internal::variant_list<Ts...>> {};
 
 template <size_t index, typename Variant>
 using variant_alternative_t = typename variant_alternative<index, Variant>::type;
@@ -87,25 +107,18 @@ struct variant_size<volatile T> : variant_size<T> {};
 template <typename T>
 struct variant_size<const volatile T> : variant_size<T> {};
 
-#ifdef __cpp_inline_variables
+#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 inline constexpr size_t variant_size_v = variant_size<T>::value;
 
-#else
+#else  // Provide storage for static class variable.
 
 template <typename T>
-struct variant_size_holder {
-  static constexpr size_t value{variant_size<T>::value};
-};
+static constexpr const size_t& variant_size_v =
+    internal::inline_storage<T, size_t, variant_size<T>::value>::storage;
 
-template <typename T>
-constexpr size_t variant_size_holder<T>::value;
-
-template <typename T>
-static constexpr const size_t& variant_size_v = variant_size_holder<T>::value;
-
-#endif
+#endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 // Exception type to report bad accesses to variant.
 class bad_variant_access : public std::exception {
@@ -134,11 +147,11 @@ struct check_narrow {
 };
 
 // Builds a check(Ti) function for each alternative Ti. This trait is evaluated
-// for each element of fit::variant<Ts...>. Essentially: for (Index, Ti) in Ts.
+// for each element of cpp17::variant<Ts...>. Essentially: for (Index, Ti) in Ts.
 //
 // Index is the zero-based index of the corresponding element Ti in the pack Ts.
 // T is the type deduced from the converting constructor or assignment operator
-// of fit::variant for which we want to find an appropriately convertible
+// of cpp17::variant for which we want to find an appropriately convertible
 // element.
 //
 // The specializations below match the element Ti that passes the conversion
@@ -167,7 +180,7 @@ struct check_valid_option<Index, T, Ti, true,
 };
 
 // Mixes in instantiations of check_valid_option for each element in
-// fit::variant<Ts...>, creating a set of check(Ti) functions that might match
+// cpp17::variant<Ts...>, creating a set of check(Ti) functions that might match
 // T following the conversion rules.
 template <typename T, typename VariantList,
           typename = std::make_index_sequence<variant_list_size<VariantList>::value>>
@@ -193,7 +206,7 @@ struct find_valid_option<T, variant_list<Ti, Ts...>, std::index_sequence<Index, 
 };
 
 // Evaluates to the index of the valid target type Ti selected from
-// fit::variant<Ts...>. The type expression is well formed IFF a single valid
+// cpp17::variant<Ts...>. The type expression is well formed IFF a single valid
 // target type is available that converts from T.
 template <typename T, typename VariantList>
 using valid_option_index = decltype(find_valid_option<T, VariantList>::check(std::declval<T>()));
@@ -201,7 +214,7 @@ using valid_option_index = decltype(find_valid_option<T, VariantList>::check(std
 // Evaluates to the index of the valid target Ti that converts from T or the
 // reserved empty index when no uniquely suitable option is available.
 template <typename T, typename Variant, typename = void>
-struct selected_index : std::integral_constant<size_t, ::fit::internal::empty_index> {};
+struct selected_index : std::integral_constant<size_t, ::cpp17::internal::empty_index> {};
 
 template <typename T, typename... Ts>
 struct selected_index<T, variant<Ts...>, void_t<valid_option_index<T, variant_list<Ts...>>>>
@@ -212,45 +225,45 @@ struct selected_index<T, variant<Ts...>, void_t<valid_option_index<T, variant_li
 // A resonably complete implementation of std::variant compatible with C++14.
 template <typename... Ts>
 class variant
-    : private ::fit::internal::modulate_default_constructor<::fit::internal::first_t<Ts...>>,
-      private ::fit::internal::modulate_copy_and_move<Ts...> {
+    : private ::cpp17::internal::modulate_default_constructor<::cpp17::internal::first_t<Ts...>>,
+      private ::cpp17::internal::modulate_copy_and_move<Ts...> {
  private:
   static_assert(sizeof...(Ts) > 0, "Variant must have at least one type!");
 
   static constexpr bool nothrow_default_constructible =
-      std::is_nothrow_default_constructible<::fit::internal::first_t<Ts...>>::value;
+      std::is_nothrow_default_constructible<::cpp17::internal::first_t<Ts...>>::value;
 
   static constexpr bool nothrow_move_constructible =
       conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
 
-  static constexpr auto default_init_v = ::fit::internal::default_init_v;
-  static constexpr auto trivial_init_v = ::fit::internal::trivial_init_v;
+  static constexpr auto default_init_v = ::cpp17::internal::default_init_v;
+  static constexpr auto trivial_init_v = ::cpp17::internal::trivial_init_v;
 
   template <typename T>
-  using type_tag = ::fit::internal::type_tag<T>;
+  using type_tag = ::cpp17::internal::type_tag<T>;
   template <size_t Index>
-  using index_tag = ::fit::internal::index_tag<Index>;
+  using index_tag = ::cpp17::internal::index_tag<Index>;
 
   template <typename T>
-  using not_self_type = ::fit::internal::not_same_type<variant, T>;
+  using not_self_type = ::cpp17::internal::not_same_type<variant, T>;
 
   template <typename T>
-  using not_in_place = ::fit::internal::not_same_type<in_place_t, T>;
+  using not_in_place = ::cpp17::internal::not_same_type<in_place_t, T>;
 
   template <typename T>
   struct occurs_once
-      : std::integral_constant<bool, ::fit::internal::occurences_of_v<T, Ts...> == 1> {};
+      : std::integral_constant<bool, ::cpp17::internal::occurences_of_v<T, Ts...> == 1> {};
 
   template <typename... Conditions>
-  using requires_conditions = ::fit::internal::requires_conditions<Conditions...>;
+  using requires_conditions = ::cpp17::internal::requires_conditions<Conditions...>;
 
   template <typename... Conditions>
   using assignment_requires_conditions =
-      ::fit::internal::assignment_requires_conditions<variant&, Conditions...>;
+      ::cpp17::internal::assignment_requires_conditions<variant&, Conditions...>;
 
   template <typename T, typename... Args>
   using emplace_constructible_by_type =
-      std::enable_if_t<(::fit::internal::occurences_of_v<T, Ts...> == 1 &&
+      std::enable_if_t<(::cpp17::internal::occurences_of_v<T, Ts...> == 1 &&
                         std::is_constructible<T, Args...>::value),
                        std::add_lvalue_reference_t<T>>;
 
@@ -263,7 +276,7 @@ class variant
                        std::add_lvalue_reference_t<alternative_t<Index>>>;
 
   template <typename T>
-  static constexpr size_t selected_index = ::fit::internal::selected_index<T, variant>::value;
+  static constexpr size_t selected_index = ::cpp17::internal::selected_index<T, variant>::value;
 
   template <typename T, typename = std::enable_if<not_self_type<T>::value>>
   using selected_t = alternative_t<selected_index<T>>;
@@ -558,7 +571,7 @@ class variant
   }
 
  private:
-  ::fit::internal::storage_type<Ts...> storage_;
+  ::cpp17::internal::storage_type<Ts...> storage_;
 };
 
 // Swaps variants.
@@ -572,9 +585,9 @@ void swap(variant<Ts...>& a, variant<Ts...>& b) {
 // Accesses should use ADL, similar to the pattern for std::swap:
 //
 //  using std::get;
-//  get<some_index>(some_fit_variant);
+//  get<some_index>(some_cpp17_variant);
 //
-// This makes code adaptable to substituting std::variant for fit::variant on
+// This makes code adaptable to substituting std::variant for cpp17::variant on
 // newer compilers.
 template <size_t Index, typename... Ts>
 constexpr auto& get(variant<Ts...>& value) {
@@ -614,17 +627,20 @@ constexpr const auto&& get(const variant<Ts...>&& value) {
 // Checks if the variant holds type T. See note above about ADL.
 template <typename T, typename... Ts>
 constexpr bool holds_alternative(const variant<Ts...>& value) {
-  constexpr auto index = ::fit::internal::selected_index<T, variant<Ts...>>::value;
+  constexpr auto index = ::cpp17::internal::selected_index<T, variant<Ts...>>::value;
   return value.index() == index;
 }
 
-// TODO(eieio): Remove once the old ::fit::internal spellings of these types is
+// TODO(eieio): Remove once the old ::cpp17::internal spellings of these types is
 // removed from FIDL.
 namespace internal {
 
-using ::fit::monostate;
-using ::fit::variant;
+using ::cpp17::monostate;
+using ::cpp17::variant;
 
 }  // namespace internal
+}  // namespace cpp17
 
-}  // namespace fit
+#endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#endif  // LIB_STDCOMPAT_VARIANT_H_
