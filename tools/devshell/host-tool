@@ -124,5 +124,5 @@ fi
 if $print_only; then
   echo "${FUCHSIA_BUILD_DIR}/${toolpath}"
 else
-  "${FUCHSIA_BUILD_DIR}/${toolpath}" "$@"
+  exec "${FUCHSIA_BUILD_DIR}/${toolpath}" "$@"
 fi

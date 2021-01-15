@@ -163,7 +163,7 @@ if [[ "${auto_config}" == false ]]; then
   fx-command-exec host-tool pm "${pm_serve_args[@]}"
 fi
 
-fx-command-run host-tool pm "${pm_serve_args[@]}" &
+fx-command-exec host-tool pm "${pm_serve_args[@]}" &
 pm_srv_pid=$!
 
 # Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
