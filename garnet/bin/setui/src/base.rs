@@ -14,8 +14,9 @@
 //! a common base mod underneath the parent setting mod.
 
 use crate::accessibility::types::AccessibilityInfo;
+use crate::device::types::DeviceInfo;
 use crate::switchboard::base::{
-    AudioInfo, DeviceInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, LightData,
+    AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, LightData,
     NightModeInfo, PrivacyInfo, SetupInfo,
 };
 use crate::switchboard::intl_types::IntlInfo;

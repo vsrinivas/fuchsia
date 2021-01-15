@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
+use crate::device::types::DeviceInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{DeviceInfo, SettingRequest};
+use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 use std::fs;
 

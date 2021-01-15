@@ -256,17 +256,6 @@ impl From<VolumeGain> for SettingRequest {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceInfo {
-    pub build_tag: String,
-}
-
-impl DeviceInfo {
-    pub const fn new(build_tag: String) -> DeviceInfo {
-        DeviceInfo { build_tag }
-    }
-}
-
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AudioSettingSource {
     User,

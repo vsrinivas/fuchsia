@@ -5,4 +5,6 @@
 pub use self::device_fidl_handler::fidl_io;
 
 pub mod device_controller;
+pub mod types;
+
 mod device_fidl_handler;
