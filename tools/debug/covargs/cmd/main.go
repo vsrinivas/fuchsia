@@ -53,6 +53,7 @@ var (
 	basePath          string
 	diffMappingFile   string
 	pathRemapping     flagmisc.StringsValue
+	srcFiles          flagmisc.StringsValue
 )
 
 func init() {
@@ -77,6 +78,8 @@ func init() {
 	flag.StringVar(&basePath, "base", "", "base path for source tree")
 	flag.StringVar(&diffMappingFile, "diff-mapping", "", "path to diff mapping file")
 	flag.Var(&pathRemapping, "path-equivalence", "<from>,<to> remapping of source file paths passed through to llvm-cov")
+	flag.Var(&srcFiles, "src-file", "path to a source file to generate coverage for. If provided, only coverage for these files will be generated.\n"+
+		"Multiple files can be specified with multiple instances of this flag.")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -288,8 +291,19 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	if err != nil {
 		return fmt.Errorf("creating llvm-cov.rsp file: %w", err)
 	}
-	for _, module := range modules {
-		fmt.Fprintf(covFile, "-object %s\n", module.String())
+	for i, module := range modules {
+		// llvm-cov expects a positional arg representing the first
+		// object file before it processes the rest of the positional
+		// args as source files, so we don't use an -object flag with
+		// the first file.
+		if i == 0 {
+			fmt.Fprintf(covFile, "%s\n", module.String())
+		} else {
+			fmt.Fprintf(covFile, "-object %s\n", module.String())
+		}
+	}
+	for _, srcFile := range srcFiles {
+		fmt.Fprintf(covFile, "%s\n", srcFile)
 	}
 	covFile.Close()
 
