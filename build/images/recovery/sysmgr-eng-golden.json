@@ -5,6 +5,7 @@
     "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
   ],
   "critical_components": [
+    "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
   ],
