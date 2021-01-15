@@ -376,73 +376,6 @@ class variant
 
   constexpr size_t index() const noexcept { return storage_.index(); }
 
-  // TODO(eieio): Remove uses of these in favor of non-member get.
-  template <size_t Index>
-  constexpr auto& get() & {
-    if (storage_.has_value(index_tag<Index>{})) {
-      return storage_.get(index_tag<Index>{});
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <size_t Index>
-  constexpr const auto& get() const& {
-    if (storage_.has_value(index_tag<Index>{})) {
-      return storage_.get(index_tag<Index>{});
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <size_t Index>
-  constexpr auto&& get() && {
-    if (storage_.has_value(index_tag<Index>{})) {
-      return std::move(storage_.get(index_tag<Index>{}));
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <size_t Index>
-  constexpr const auto&& get() const&& {
-    if (storage_.has_value(index_tag<Index>{})) {
-      return std::move(storage_.get(index_tag<Index>{}));
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-
-  template <typename T>
-  constexpr auto& get() & {
-    if (storage_.has_value(type_tag<T>{})) {
-      return storage_.get(type_tag<T>{});
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <typename T>
-  constexpr const auto& get() const& {
-    if (storage_.has_value(type_tag<T>{})) {
-      return storage_.get(type_tag<T>{});
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <typename T>
-  constexpr auto&& get() && {
-    if (storage_.has_value(type_tag<T>{})) {
-      return std::move(storage_.get(type_tag<T>{}));
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-  template <typename T>
-  constexpr const auto&& get() const&& {
-    if (storage_.has_value(type_tag<T>{})) {
-      return std::move(storage_.get(type_tag<T>{}));
-    } else {
-      throw_bad_variant_access("Bad get<>() from variant!");
-    }
-  }
-
   // Emplacement.
 
   template <typename T, typename... Args>
@@ -571,7 +504,40 @@ class variant
   }
 
  private:
+  [[noreturn]] static constexpr void exception_invalid_index() {
+    throw_bad_variant_access("Invalid variant index for cpp17::get<>");
+  }
+
+  [[noreturn]] static constexpr void exception_invalid_type() {
+    throw_bad_variant_access("Invalid variant type for cpp17::get<>");
+  }
+
   ::cpp17::internal::storage_type<Ts...> storage_;
+
+  // Friend for cpp17::get.
+  template <size_t, typename... Args>
+  friend constexpr auto& get(variant<Args...>& value);
+
+  template <size_t, typename... Args>
+  friend constexpr const auto& get(const variant<Args...>& value);
+
+  template <size_t, typename... Args>
+  friend constexpr auto&& get(variant<Args...>&& value);
+
+  template <size_t, typename... Args>
+  friend constexpr const auto&& get(const variant<Args...>&& value);
+
+  template <typename T, typename... Args>
+  friend constexpr auto& get(variant<Args...>& value);
+
+  template <typename T, typename... Args>
+  friend constexpr const auto& get(const variant<Args...>& value);
+
+  template <typename T, typename... Args>
+  friend constexpr auto&& get(variant<Args...>&& value);
+
+  template <typename T, typename... Args>
+  friend constexpr const auto&& get(const variant<Args...>&& value);
 };
 
 // Swaps variants.
@@ -591,37 +557,62 @@ void swap(variant<Ts...>& a, variant<Ts...>& b) {
 // newer compilers.
 template <size_t Index, typename... Ts>
 constexpr auto& get(variant<Ts...>& value) {
-  return value.template get<Index>();
+  if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
+    return value.storage_.get(::cpp17::internal::index_tag<Index>{});
+  }
+  value.exception_invalid_index();
 }
+
 template <size_t Index, typename... Ts>
 constexpr auto&& get(variant<Ts...>&& value) {
-  return std::move(value).template get<Index>();
+  if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
+    return value.storage_.get(::cpp17::internal::index_tag<Index>{});
+  }
+  value.exception_invalid_index();
 }
 template <size_t Index, typename... Ts>
 constexpr const auto& get(const variant<Ts...>& value) {
-  return value.template get<Index>();
+  if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
+    return value.storage_.get(::cpp17::internal::index_tag<Index>{});
+  }
+  value.exception_invalid_index();
 }
 template <size_t Index, typename... Ts>
 constexpr const auto&& get(const variant<Ts...>&& value) {
-  return std::move(value).template get<Index>();
+  if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
+    return value.storage_.get(::cpp17::internal::index_tag<Index>{});
+  }
+  value.exception_invalid_index();
 }
 
 // Accesses the variant by unique type. See note above about ADL.
 template <typename T, typename... Ts>
 constexpr auto& get(variant<Ts...>& value) {
-  return value.template get<T>();
+  if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
+    return value.storage_.get(::cpp17::internal::type_tag<T>{});
+  }
+  value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
 constexpr auto&& get(variant<Ts...>&& value) {
-  return std::move(value).template get<T>();
+  if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
+    return value.storage_.get(::cpp17::internal::type_tag<T>{});
+  }
+  value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
 constexpr const auto& get(const variant<Ts...>& value) {
-  return value.template get<T>();
+  if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
+    return value.storage_.get(::cpp17::internal::type_tag<T>{});
+  }
+  value.exception_invalid_type();
 }
 template <typename T, typename... Ts>
 constexpr const auto&& get(const variant<Ts...>&& value) {
-  return std::move(value).template get<T>();
+  if (value.storage_.has_value(::cpp17::internal::type_tag<T>{})) {
+    return value.storage_.get(::cpp17::internal::type_tag<T>{});
+  }
+  value.exception_invalid_type();
 }
 
 // Checks if the variant holds type T. See note above about ADL.
@@ -631,14 +622,6 @@ constexpr bool holds_alternative(const variant<Ts...>& value) {
   return value.index() == index;
 }
 
-// TODO(eieio): Remove once the old ::cpp17::internal spellings of these types is
-// removed from FIDL.
-namespace internal {
-
-using ::cpp17::monostate;
-using ::cpp17::variant;
-
-}  // namespace internal
 }  // namespace cpp17
 
 #endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
