@@ -4,9 +4,11 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Device discovery
-### list all nearby devices
+### list all nearby devices (excluding those on zedboot)
 
 ## usage: fx list-devices
+##
+## Note: Does not include devices on zedboot.
 
 set -e
 
