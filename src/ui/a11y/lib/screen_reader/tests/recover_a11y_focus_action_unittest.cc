@@ -100,9 +100,7 @@ TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   ASSERT_TRUE(focus);
   EXPECT_EQ(semantic_provider_.koid(), focus->view_ref_koid);
   EXPECT_EQ(focus->node_id, 1u);
-
-  EXPECT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
-  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], 1u);
+  EXPECT_TRUE(mock_speaker_ptr_->node_ids().empty());
 }
 
 }  // namespace

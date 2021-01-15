@@ -55,8 +55,7 @@ void RecoverA11YFocusAction::Run(ActionData process_data) {
     return;
   }
 
-  // Now, put in focus a node that is describable and speak it to the user, to inform where the
-  // Screen Reader navigated.
+  // Now, put in focus a node that is describable.
   if (!NodeIsDescribable(focused_node)) {
     focused_node = action_context_->semantics_source->GetNextNode(
         a11y_focus->view_ref_koid, starting_id,
@@ -76,9 +75,6 @@ void RecoverA11YFocusAction::Run(ActionData process_data) {
                                         fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN)
           .and_then([this, focused_node_id, a11y_focus]() mutable {
             return SetA11yFocusPromise(focused_node_id, a11y_focus->view_ref_koid);
-          })
-          .and_then([this, a11y_focus, focused_node_id]() mutable {
-            return BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, focused_node_id);
           })
           // Cancel any promises if this class goes out of scope.
           .wrap_with(scope_);
