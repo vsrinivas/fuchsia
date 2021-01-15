@@ -2360,7 +2360,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
     /* Detect queueing to unconfigured precedence */
     if (eprec == prec) {
       // TODO(fxbug.dev/42151): Remove once bug resolved
-      BRCMF_ERR("Expected to evict from and queue to same queue %d", prec);
+      BRCMF_ERR_THROTTLE("Expected to evict from and queue to same queue %d", prec);
       return false; /* refuse newer (incoming) packet */
     }
     /* Evict packet according to discard policy */
@@ -2407,7 +2407,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   sdiodev->drvr->irq_callback_lock.lock();
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
-    BRCMF_ERR("out of bus->txq !!!");
+    BRCMF_ERR_THROTTLE("out of bus->txq !!!");
     ret = ZX_ERR_NO_RESOURCES;
 
     // TODO(fxbug.dev/42151): Remove once bug resolved
