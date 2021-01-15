@@ -5,12 +5,12 @@
 import("//build/dev.gni")
 
 group("bootfs_labels") {
-  testonly = fuchsia_zbi_testonly
+  testonly = true
   deps = dev_bootfs_labels
 }
 
 group("build_only_deps") {
-  testonly = fuchsia_zbi_testonly
+  testonly = true
   deps = dev_build_only_deps
 }
 
@@ -20,7 +20,7 @@ group("recovery_bootfs_labels") {
 }
 
 group("system_image_deps") {
-  testonly = fuchsia_zbi_testonly
+  testonly = true
   deps = dev_system_image_deps
 }
 

@@ -37,8 +37,6 @@ group("zedboot") {
 }
 
 group("debugging") {
-  testonly = true
-
   deps = [
     "//src/bringup/bin/dlog",
     "//src/bringup/bin/trace-benchmark",

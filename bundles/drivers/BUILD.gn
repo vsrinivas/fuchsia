@@ -40,8 +40,6 @@ group("usb-peripheral-stack") {
 }
 
 group("utils") {
-  testonly = true
-
   deps = [
     "//src/devices/bundles:utils",
     "//src/graphics/display/bin/dsiutil",

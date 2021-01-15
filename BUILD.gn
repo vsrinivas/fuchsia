@@ -5,7 +5,6 @@
 import("//build/board.gni")
 import("//build/config/compiler.gni")
 import("//build/config/fuchsia/zircon.gni")
-import("//build/dev.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
@@ -1042,19 +1041,23 @@ group("default") {
 # These groups exist at the root of the build so relative labels specified
 # through GN args are interpreted as if they were absolute.
 group("additional_base_packages") {
-  testonly = base_cache_packages_testonly
+  if (base_cache_packages_allow_testonly) {
+    testonly = true
+  }
   visibility = [ "//build/images:base_packages" ]
   public_deps = base_package_labels + board_package_labels
 }
 
 group("additional_cache_packages") {
-  testonly = base_cache_packages_testonly
+  if (base_cache_packages_allow_testonly) {
+    testonly = true
+  }
   visibility = [ "//build/images:cache_packages" ]
   public_deps = cache_package_labels
 }
 
 group("additional_universe_packages") {
-  testonly = fuchsia_zbi_testonly
+  testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
 }
