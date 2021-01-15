@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::audio::types::{
+        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
+    },
     crate::base::SettingInfo,
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::DeviceStorageCompatible,
-    crate::switchboard::base::{
-        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
-    },
     lazy_static::lazy_static,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,

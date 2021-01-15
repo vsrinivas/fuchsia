@@ -12,8 +12,8 @@ use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
 
 use bitflags::bitflags;
 
+use crate::audio::types::AudioStreamType;
 use crate::handler::device_storage::DeviceStorageCompatible;
-use crate::switchboard::base::AudioStreamType;
 
 pub mod audio_policy_handler;
 pub mod volume_policy_fidl_handler;
@@ -327,7 +327,7 @@ mod tests {
     use crate::audio::policy::{
         PolicyId, Property, PropertyTarget, StateBuilder, Transform, TransformFlags,
     };
-    use crate::switchboard::base::AudioStreamType;
+    use crate::audio::types::AudioStreamType;
     use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
     use matches::assert_matches;
     use std::collections::{HashMap, HashSet};

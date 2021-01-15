@@ -5,13 +5,14 @@
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
+use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::base::{SettingInfo, SettingType};
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
-use crate::switchboard::base::{AudioInfo, AudioStream, AudioStreamType, SettingRequest};
+use crate::switchboard::base::SettingRequest;
 
 use anyhow::Error;
 use fuchsia_async as fasync;

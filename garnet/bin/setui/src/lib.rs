@@ -14,6 +14,7 @@ use {
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::audio::policy::State,
+    crate::audio::types::AudioInfo,
     crate::base::SettingType,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
@@ -43,8 +44,8 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::switchboard::base::{
-        AudioInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources,
-        NightModeInfo, PrivacyInfo, SetupInfo,
+        DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfoSources, NightModeInfo,
+        PrivacyInfo, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,

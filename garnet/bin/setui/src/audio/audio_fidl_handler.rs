@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
     crate::base::{SettingInfo, SettingType},
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
-    crate::switchboard::base::{
-        AudioSettingSource, AudioStream, AudioStreamType, FidlResponseErrorLogger, SettingRequest,
-    },
+    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{

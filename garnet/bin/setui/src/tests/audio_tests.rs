@@ -4,14 +4,14 @@
 
 use {
     crate::agent::restore_agent,
+    crate::audio::types::{
+        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
+    },
     crate::audio::{create_default_modified_counters, default_audio_info},
     crate::base::SettingType,
     crate::handler::device_storage::testing::*,
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
-    crate::switchboard::base::{
-        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
-    },
     crate::tests::fakes::audio_core_service::{self, AudioCoreService},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,

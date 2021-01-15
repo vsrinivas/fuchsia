@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::accessibility::types::AccessibilityInfo;
-use crate::audio::ModifiedCounters;
+use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
@@ -256,29 +256,6 @@ impl From<VolumeGain> for SettingRequest {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum AudioSettingSource {
-    User,
-    System,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq)]
-pub enum AudioStreamType {
-    Background,
-    Media,
-    Interruption,
-    SystemAgent,
-    Communication,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct AudioStream {
-    pub stream_type: AudioStreamType,
-    pub source: AudioSettingSource,
-    pub user_volume_level: f32,
-    pub user_volume_muted: bool,
-}
-
 #[derive(PartialEq, Debug, Clone)]
 pub struct InputInfo {
     pub microphone: Microphone,
@@ -295,29 +272,6 @@ pub struct InputInfoSources {
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Microphone {
     pub muted: bool,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct AudioInputInfo {
-    pub mic_mute: bool,
-}
-
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct AudioInfo {
-    pub streams: [AudioStream; 5],
-    pub input: AudioInputInfo,
-    pub modified_counters: Option<ModifiedCounters>,
-}
-
-impl AudioInfo {
-    /// Selectively replaces an existing stream of the same type with the one
-    /// provided. The `AudioInfo` is left intact if that stream type does not
-    /// exist.
-    pub fn replace_stream(&mut self, stream: AudioStream) {
-        if let Some(s) = self.streams.iter_mut().find(|s| s.stream_type == stream.stream_type) {
-            *s = stream;
-        }
-    }
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

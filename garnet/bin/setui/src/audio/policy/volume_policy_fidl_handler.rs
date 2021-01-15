@@ -124,7 +124,7 @@ async fn process_request(
 #[cfg(test)]
 mod tests {
     use crate::audio::policy::{Property, PropertyTarget, Response, State, TransformFlags};
-    use crate::switchboard::base::AudioStreamType;
+    use crate::audio::types::AudioStreamType;
     use std::collections::HashMap;
 
     /// Verifies that converting a policy response containing an empty `State` into a vector of

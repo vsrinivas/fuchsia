@@ -6,11 +6,11 @@ use crate::audio::default_audio_info;
 use crate::audio::policy::{
     Request as AudioRequest, Response as AudioResponse, StateBuilder, TransformFlags,
 };
+use crate::audio::types::AudioStreamType;
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base::{response::Payload, Request};
-use crate::switchboard::base::AudioStreamType;
 use crate::{internal, EnvironmentBuilder};
 use fidl_fuchsia_settings_policy::{
     self as fidl, VolumePolicyControllerMarker, VolumePolicyControllerProxy,

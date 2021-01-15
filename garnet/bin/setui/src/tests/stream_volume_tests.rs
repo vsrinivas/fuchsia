@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::audio::types::AudioStreamType;
 #[cfg(test)]
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
 use crate::internal::event;
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::service_context::ServiceContext;
-use crate::switchboard::base::AudioStreamType;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;

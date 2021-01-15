@@ -11,6 +11,7 @@ pub use self::stream_volume_control::StreamVolumeControl;
 
 pub mod audio_controller;
 pub mod policy;
+pub mod types;
 
 mod audio_default_settings;
 mod audio_fidl_handler;
