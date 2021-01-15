@@ -185,6 +185,7 @@ rustc_library("lib") {
     "src/night_mode.rs",
     "src/night_mode/night_mode_controller.rs",
     "src/night_mode/night_mode_fidl_handler.rs",
+    "src/night_mode/types.rs",
     "src/policy.rs",
     "src/policy/base.rs",
     "src/policy/policy_handler.rs",

@@ -17,6 +17,7 @@ use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
+use crate::night_mode::types::NightModeInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightState;
 use bitflags::bitflags;
@@ -263,20 +264,6 @@ pub struct FactoryResetInfo {
 impl FactoryResetInfo {
     pub const fn new(is_local_reset_allowed: bool) -> Self {
         Self { is_local_reset_allowed }
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct NightModeInfo {
-    pub night_mode_enabled: Option<bool>,
-}
-
-impl NightModeInfo {
-    pub const fn empty() -> NightModeInfo {
-        NightModeInfo { night_mode_enabled: None }
-    }
-    pub const fn new(user_night_mode_enabled: bool) -> NightModeInfo {
-        NightModeInfo { night_mode_enabled: Some(user_night_mode_enabled) }
     }
 }
 

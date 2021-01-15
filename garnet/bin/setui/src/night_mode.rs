@@ -5,3 +5,4 @@ pub use self::night_mode_fidl_handler::fidl_io;
 
 pub mod night_mode_controller;
 pub mod night_mode_fidl_handler;
+pub mod types;

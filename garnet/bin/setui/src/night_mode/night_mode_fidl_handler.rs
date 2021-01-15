@@ -11,8 +11,9 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
+use crate::night_mode::types::NightModeInfo;
 use crate::request_respond;
-use crate::switchboard::base::{NightModeInfo, SettingRequest};
+use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchResponder,);
 
