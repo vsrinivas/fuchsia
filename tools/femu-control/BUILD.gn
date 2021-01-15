@@ -1,0 +1,49 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+go_library("femu-control_lib") {
+  sources = [
+    "keyboard.go",
+    "main.go",
+    "main_test.go",
+    "record_audio.go",
+    "record_screen.go",
+  ]
+
+  deps = [
+    "femu-grpc:femu-grpc_lib",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/lib/logger",
+  ]
+}
+
+go_binary("femu-control") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/femu-control"
+
+  deps = [ ":femu-control_lib" ]
+}
+
+if (is_linux || is_mac) {
+  go_test("femu-control_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/femu-control" ]
+
+    deps = [ ":femu-control_lib" ]
+  }
+}
+
+install_host_tools("host") {
+  deps = [ ":femu-control" ]
+  outputs = [ "femu-control" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":femu-control_tests($host_toolchain)" ]
+}

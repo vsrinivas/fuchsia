@@ -31,7 +31,7 @@ require (
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/api v0.30.0 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
-	google.golang.org/grpc v1.31.1 // indirect
+	google.golang.org/grpc v1.31.1
 	google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
@@ -51,5 +51,6 @@ replace (
 	golang.org/x/net => ../third_party/golibs/golang.org/x/net
 	golang.org/x/sync => ../third_party/golibs/golang.org/x/sync
 	golang.org/x/sys => ../third_party/golibs/golang.org/x/sys
+	google.golang.org/grpc => ../third_party/golibs/github.com/grpc/grpc-go
 	google.golang.org/protobuf => ../third_party/golibs/github.com/protocolbuffers/protobuf-go
 )

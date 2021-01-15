@@ -121,6 +121,7 @@ group("tests") {
     "//tools/debug:tests($host_toolchain)",
     "//tools/devshell:tests($host_toolchain)",
     "//tools/doc_checker:tests",
+    "//tools/femu-control:tests",
     "//tools/fidl:tests",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat/tests",
