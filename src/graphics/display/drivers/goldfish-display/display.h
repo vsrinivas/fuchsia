@@ -91,6 +91,11 @@ class Display : public DisplayType,
 
  private:
   struct ColorBuffer {
+    ~ColorBuffer() {
+      if (pmt)
+        pmt.unpin();
+    }
+
     uint32_t id = 0;
     zx_paddr_t paddr = 0;
     size_t size = 0;
