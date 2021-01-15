@@ -12,8 +12,7 @@ use {
     futures::{stream::StreamExt, TryFutureExt},
 };
 
-const A2DP_SOURCE_URL: &str =
-    fuchsia_component::fuchsia_single_component_package_url!("bt-a2dp-source");
+const A2DP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("bt-a2dp");
 
 /// Make the SDP definition for an A2DP sink service.
 fn a2dp_sink_service_definition() -> ServiceDefinition {
@@ -38,6 +37,15 @@ fn a2dp_sink_service_definition() -> ServiceDefinition {
     }
 }
 
+/// The launch arguments required to launch A2DP Source.
+fn a2dp_source_launch_info() -> LaunchInfo {
+    LaunchInfo {
+        component_url: Some(A2DP_URL.to_string()),
+        arguments: Some(vec!["--enable-sink".to_string(), "false".to_string()]),
+        ..LaunchInfo::EMPTY
+    }
+}
+
 /// Tests that A2DP source correctly advertises it's services and can be
 /// discovered by another peer in the mock piconet.
 #[fasync::run_singlethreaded(test)]
@@ -56,9 +64,10 @@ async fn test_a2dp_source_service_advertisement() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: A2DP Source.
     let id2 = PeerId(8);
     let mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info =
-        LaunchInfo { component_url: Some(A2DP_SOURCE_URL.to_string()), ..LaunchInfo::EMPTY };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
+    mock_peer2
+        .launch_profile(a2dp_source_launch_info())
+        .await
+        .expect("launch profile should be ok");
 
     // We expect Peer #1 to discover A2DP Source's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
@@ -86,9 +95,10 @@ async fn test_a2dp_source_search_and_connect() -> Result<(), Error> {
     // MockPeer #2 is the profile-under-test: A2DP Source.
     let id2 = PeerId(20);
     let mut mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info =
-        LaunchInfo { component_url: Some(A2DP_SOURCE_URL.to_string()), ..LaunchInfo::EMPTY };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
+    mock_peer2
+        .launch_profile(a2dp_source_launch_info())
+        .await
+        .expect("launch profile should be ok");
 
     // We expect A2DP Source to discover Peer #1's service advertisement.
     if let PeerObserverRequest::ServiceFound { peer_id, responder, .. } =

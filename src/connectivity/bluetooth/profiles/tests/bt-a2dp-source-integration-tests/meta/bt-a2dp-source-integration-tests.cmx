@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
             }
@@ -15,6 +16,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
