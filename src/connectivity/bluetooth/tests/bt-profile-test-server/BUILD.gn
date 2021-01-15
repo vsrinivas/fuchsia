@@ -63,5 +63,10 @@ fuchsia_unittest_package("bt-profile-test-server-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-profile-test-server-tests" ]
+  deps = [
+    ":bt-profile-test-server-tests",
+
+    # Packages for components that are injected into the tests.
+    "//src/cobalt/bin/testing/mock_cobalt",
+  ]
 }
