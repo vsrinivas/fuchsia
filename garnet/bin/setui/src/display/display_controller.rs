@@ -10,6 +10,7 @@ use crate::config::default_settings::DefaultSetting;
 use crate::display::display_configuration::{
     ConfigurationThemeMode, ConfigurationThemeType, DisplayConfiguration,
 };
+use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -17,9 +18,7 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, Theme, ThemeBuilder, ThemeMode, ThemeType,
-};
+use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,

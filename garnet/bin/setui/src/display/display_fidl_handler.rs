@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 use {
     crate::base::{SettingInfo, SettingType},
+    crate::display::types::{LowLightMode, Theme, ThemeMode, ThemeType},
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
-    crate::switchboard::base::{
-        FidlResponseErrorLogger, LowLightMode, SettingRequest, Theme, ThemeMode, ThemeType,
-    },
+    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,

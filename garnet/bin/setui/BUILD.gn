@@ -125,6 +125,7 @@ rustc_library("lib") {
     "src/display/light_sensor.rs",
     "src/display/light_sensor_config.rs",
     "src/display/light_sensor_controller.rs",
+    "src/display/types.rs",
     "src/do_not_disturb.rs",
     "src/do_not_disturb/do_not_disturb_controller.rs",
     "src/do_not_disturb/do_not_disturb_fidl_handler.rs",

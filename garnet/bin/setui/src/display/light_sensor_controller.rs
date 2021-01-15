@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 use crate::base::SettingInfo;
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
+use crate::display::types::LightData;
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{ControllerStateResult, LightData, SettingRequest};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest};
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::InputDeviceMarker;
 use fuchsia_async::{self as fasync, DurationExt};

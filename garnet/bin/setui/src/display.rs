@@ -11,6 +11,7 @@ mod display_fidl_handler;
 mod light_sensor;
 mod light_sensor_config;
 pub mod light_sensor_controller;
+pub mod types;
 
 pub use light_sensor_config::LightSensorConfig;
 

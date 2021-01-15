@@ -16,10 +16,10 @@
 use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::types::AudioInfo;
 use crate::device::types::DeviceInfo;
+use crate::display::types::{DisplayInfo, LightData};
 use crate::input::types::InputInfo;
 use crate::switchboard::base::{
-    DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, LightData, NightModeInfo, PrivacyInfo,
-    SetupInfo,
+    DoNotDisturbInfo, FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo,
 };
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightInfo;

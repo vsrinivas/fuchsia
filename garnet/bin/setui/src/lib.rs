@@ -20,6 +20,7 @@ use {
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
+    crate::display::types::DisplayInfo,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::factory_reset::factory_reset_controller::FactoryResetController,
     crate::handler::base::GenerateHandler,
@@ -45,7 +46,7 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::switchboard::base::{
-        DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo,
+        DoNotDisturbInfo, FactoryResetInfo, NightModeInfo, PrivacyInfo, SetupInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::light_types::LightInfo,
