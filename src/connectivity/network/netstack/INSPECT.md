@@ -8,12 +8,12 @@ In this document we list useful example queries into the inspect data that
 netstack exposes.
 
 We'll use the [`jq`] tool throughout, all queries can be used from an
-`inspect.json` or `fx iquery --format=json` by piping either into `jq`, e.g.:
+`inspect.json` or `fx iquery --format json` by piping either into `jq`, e.g.:
 ```
 cat snapshot/inspect.json | fx jq '...'
 ```
 ```
-fx iquery --format=json show netstack.cmx | fx jq '...'
+fx iquery --format json show netstack.cmx | fx jq '...'
 ```
 ## Inspect data
 
@@ -110,6 +110,27 @@ fx jq '.[] | select(.moniker == "netstack.cmx")
 ```
 You can append `| .TCP `, or `| .UDP` to look at only the subset of interest if
 needed.
+
+### Routes
+`Routes` contains information about all the routes in the routing table, e.g.:
+```json
+{
+  "0": {
+    "Destination": "127.0.0.0/8",
+    "Dynamic": "false",
+    "Enabled": "true",
+    "Gateway": "",
+    "Metric": "100",
+    "MetricTracksInterface": "true",
+    "NIC": "1"
+  },
+}
+```
+
+To retrieve all routes from inspect data use:
+```
+fx jq '.[] | select(.moniker == "netstack.cmx") | .payload."Routes" | .[]?'
+```
 
 ## pprof
 
