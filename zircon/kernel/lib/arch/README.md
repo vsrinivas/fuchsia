@@ -233,6 +233,8 @@ The shorthands of "\[\<archicture ID\>/\<manual ID\>\]: \<chapter/verse/page/fig
 extensively to reference official architecture documentation. In particular,
 the identifiers are expected to be one of the following:
 
+**\[arm/v8\]** ~ [Arm Architecture Reference Manual Armv8, for Armv8-A architecture profile](https://developer.arm.com/documentation/ddi0487/fc), July 17 2020
+
 **\[intel/vol1\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-software-developers-manual-volume-1-basic-architecture.html), May 2020
 
 **\[intel/vol2\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Combined Volumes 2A, 2B, 2C, and 2D: Instruction Set Reference, A-Z](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-2a-2b-2c-and-2d-instruction-set-reference-a-z.html), May 2020
@@ -250,6 +252,9 @@ the identifiers are expected to be one of the following:
 **\[amd/vol4\]** ~ [AMD64 Architecture Programmer’s Manual Volume 4: 128-bit and 256 bit media instructions](https://www.amd.com/system/files/TechDocs/26568.pdf), May 2020
 
 **\[amd/vol5\]** ~ [AMD64 Architecture Programmer’s Manual Volume 5: 64-Bit Media and x87 Floating-Point Instructions](https://www.amd.com/system/files/TechDocs/26569_APM_V5.pdf), May 2018
+
+**\[amd/sog/0x17\]** ~ [Software Optimization Guide for AMD Family 17h Processors](https://developer.amd.com/resources/developer-guides-manuals/), June 2017
+
 
 ## Testing
 

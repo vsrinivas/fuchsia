@@ -18,6 +18,7 @@ if (is_host) {
       "cpuid-corpus-tests.cc",
       "fake-cpuid-tests.cc",
       "lbr-tests.cc",
+      "nop-tests.cc",
     ]
     deps = [
       "//zircon/kernel/lib/arch",
