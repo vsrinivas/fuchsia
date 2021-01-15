@@ -43,3 +43,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0014_relax_fifo_create_constraints.md
 - title: "RFC-0015: Compatibility Test Suite"
   path: /docs/contribute/governance/rfcs/0015_cts.md
+- title: "RFC-0016 - Boot time page sizes"
+  path: /docs/contribute/governance/rfcs/0016_boot_time_page_sizes.md

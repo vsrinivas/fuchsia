@@ -197,3 +197,15 @@
   submitted: '2020-11-13'
   reviewed: '2020-12-09'
 
+- name: 'RFC-0016'
+  title: 'Boot time page sizes'
+  short_description: 'Replace PAGE_SIZE constant with a vdsocall.'
+  authors: ['adanis@google.com']
+  file: '0016_boot_time_page_sizes.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: ['457076']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com']
+  submitted: '2020-12-02'
+  reviewed: '2021-01-12'
