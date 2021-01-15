@@ -290,7 +290,6 @@ impl SavedNetworksManager {
     }
 
     /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
-    #[cfg(test)]
     pub async fn clear(&self) -> Result<(), anyhow::Error> {
         self.saved_networks.lock().await.clear();
         self.stash.lock().await.clear().await?;
@@ -1396,8 +1395,9 @@ mod tests {
 
         // Verify that storing the network does not complete until stash responds.
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue{..})))
+        assert_variant!(
+            exec.run_until_stalled(&mut stash_server.try_next()),
+            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
         );
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),

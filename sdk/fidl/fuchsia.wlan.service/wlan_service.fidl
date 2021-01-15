@@ -1,0 +1,90 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.service;
+
+using fuchsia.wlan.common;
+using fuchsia.wlan.stats;
+
+enum ErrCode {
+    OK = 0;
+    INTERNAL = 1;
+    NOT_FOUND = 2;
+    NOT_SUPPORTED = 3;
+    INVALID_ARGS = 4;
+};
+
+struct Error {
+    ErrCode code;
+    string description;
+};
+
+struct AP {
+    bytes bssid;
+    string ssid; // TODO(fxbug.dev/28699, fxbug.dev/28913): Make this as vector<uint8:32>
+    int8 rssi_dbm;
+    bool is_secure;
+    bool is_compatible; // with respect to Fuchsia
+    fuchsia.wlan.common.WlanChan chan;
+};
+
+struct ScanRequest {
+    uint8 timeout; // seconds
+    // TODO: more parameters here
+};
+
+struct ScanResult {
+    Error error;
+    vector<AP>? aps;
+};
+
+struct ConnectConfig {
+    string ssid;
+    string passPhrase;
+    uint8 scanInterval; // seconds
+    string bssid;
+};
+
+enum State {
+    UNKNOWN = 0;
+    BSS = 1;
+    QUERYING = 2;
+    SCANNING = 3;
+    JOINING = 4;
+    AUTHENTICATING = 5;
+    ASSOCIATING = 6;
+    ASSOCIATED = 7;
+};
+
+struct WlanStatus {
+    Error error;
+    State state;
+    AP? current_ap;
+};
+
+struct BssConfig {
+    string ssid;
+    int32 beaconPeriod;
+    int32 dtimPeriod;
+    uint8 channel;
+};
+
+struct WlanStats {
+    Error error;
+    fuchsia.wlan.stats.IfaceStats stats;
+};
+
+/// Stub interface; eventually to be replaced by something based on the 802.11
+/// SME / MSGCF.
+[Discoverable]
+protocol Wlan {
+    Scan(ScanRequest req) -> (ScanResult result);
+    Connect(ConnectConfig req) -> (Error error);
+    Disconnect() -> (Error error);
+    Status() -> (WlanStatus status);
+    StartBss(BssConfig cfg) -> (Error error);
+    StopBss() -> (Error error);
+    Stats() -> (WlanStats stats);
+    ClearSavedNetworks() -> ();
+};

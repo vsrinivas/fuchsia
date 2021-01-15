@@ -117,6 +117,8 @@ sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.policy
 sdk://fidl/fuchsia.wlan.product.deprecatedclient
 sdk://fidl/fuchsia.wlan.product.deprecatedconfiguration
+sdk://fidl/fuchsia.wlan.service
+sdk://fidl/fuchsia.wlan.stats
 sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp

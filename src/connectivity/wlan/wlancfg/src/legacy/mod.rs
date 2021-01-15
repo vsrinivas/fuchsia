@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    crate::mode_management::iface_manager_api::IfaceManagerApi,
+    fidl_fuchsia_wlan_device_service as wlan_service, fidl_fuchsia_wlan_service as legacy,
     fidl_fuchsia_wlan_sme as fidl_sme,
+    futures::lock::Mutex as FutureMutex,
     std::sync::{Arc, Mutex},
 };
 
@@ -12,9 +14,12 @@ pub mod deprecated_client;
 pub mod deprecated_configuration;
 pub mod device;
 pub mod known_ess_store;
+pub mod shim;
 
 #[derive(Clone)]
 pub(crate) struct Iface {
+    pub service: wlan_service::DeviceServiceProxy,
+    pub iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
     pub sme: fidl_sme::ClientSmeProxy,
     pub iface_id: u16,
 }
@@ -41,7 +46,10 @@ impl IfaceRef {
             *c = None;
         }
     }
-    pub fn get(&self) -> Result<Iface, Error> {
-        self.0.lock().unwrap().clone().ok_or_else(|| format_err!("no available client interfaces"))
+    pub fn get(&self) -> Result<Iface, legacy::Error> {
+        self.0.lock().unwrap().clone().ok_or_else(|| legacy::Error {
+            code: legacy::ErrCode::NotFound,
+            description: "No wireless interface found".to_string(),
+        })
     }
 }
