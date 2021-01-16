@@ -24,6 +24,7 @@
 #include <ddktl/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -40,6 +41,7 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
   // State accessors.
   brcmf_pub* drvr();
   const brcmf_pub* drvr() const;
+  inspect::Inspector get_inspector() { return inspect_.GetInspector(); }
 
   // ::ddk::Device implementation.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -61,13 +63,21 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
   virtual zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen,
                                         size_t* actual) = 0;
 
+  // This is not implemented as an unique_ptr with a Create() since the inspect's VMO is needed
+  // during DdkAdd, which is very early on in the init process.
+  DeviceInspect inspect_;
+
  protected:
   explicit Device(zx_device_t* parent);
 
   // Initialize the device-agnostic bits of the device
   zx_status_t Init();
 
-  void DisableDispatcher();
+  // Start activities such as timers, once initialization is complete.
+  zx_status_t Start();
+
+  // Stop activities such as timer, prior to destruction.
+  void Stop();
 
   std::unique_ptr<brcmf_pub> brcmf_pub_;
 

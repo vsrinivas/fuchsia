@@ -37,6 +37,7 @@
 #include "bus.h"
 #include "fweh.h"
 #include "fwil_types.h"
+#include "inspect/device_inspect.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "workqueue.h"
@@ -121,6 +122,7 @@ struct brcmf_pub {
   zx_device_t* zxdev;
   async_dispatcher_t* dispatcher;
   std::recursive_mutex irq_callback_lock;
+  wlan::brcmfmac::DeviceInspect* inspect;
 
   /* Linkage ponters */
   struct brcmf_bus* bus_if;
@@ -244,8 +246,8 @@ struct net_device {
   bool initialized_for_ap;
   bool multicast_promisc;
   bool is_up;
-  uint64_t scan_txn_id; // The txn_id provided by SME to identify the scan
-  uint16_t scan_sync_id; // The sync_id in the FW request to identify the scan
+  uint64_t scan_txn_id;   // The txn_id provided by SME to identify the scan
+  uint16_t scan_sync_id;  // The sync_id in the FW request to identify the scan
   uint32_t scan_num_results;
   std::shared_mutex if_proto_lock;  // Used as RW-lock for if_proto.
   wlanif_impl_ifc_protocol_t if_proto;

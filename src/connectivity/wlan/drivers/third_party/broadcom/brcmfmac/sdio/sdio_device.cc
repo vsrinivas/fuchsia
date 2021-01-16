@@ -34,7 +34,10 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   const auto ddk_remover = [](SdioDevice* device) { device->DdkAsyncRemove(); };
   std::unique_ptr<SdioDevice, decltype(ddk_remover)> device(new SdioDevice(parent_device),
                                                             ddk_remover);
-  if ((status = device->DdkAdd("brcmfmac-wlanphy", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+
+  if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
+                                   .set_flags(DEVICE_ADD_INVISIBLE)
+                                   .set_inspect_vmo(device->inspect_.GetVmo()))) != ZX_OK) {
     delete device.release();
     return status;
   }
@@ -97,6 +100,10 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
+  if ((status = device->brcmfmac::Device::Start()) != ZX_OK) {
+    return status;
+  }
+
   device->brcmf_bus_ = std::move(bus);
 
   device->DdkMakeVisible();
@@ -121,7 +128,7 @@ zx_status_t SdioDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t bufle
 SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
 
 SdioDevice::~SdioDevice() {
-  DisableDispatcher();
+  Stop();
   if (brcmf_bus_) {
     brcmf_sdio_exit(brcmf_bus_.get());
   }

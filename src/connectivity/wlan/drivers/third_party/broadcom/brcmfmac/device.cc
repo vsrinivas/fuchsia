@@ -21,6 +21,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
@@ -88,6 +89,7 @@ zx_status_t Device::Init() {
   auto pub = std::make_unique<brcmf_pub>();
   pub->zxdev = parent();
   pub->dispatcher = dispatcher->dispatcher();
+  pub->inspect = &inspect_;
   for (auto& entry : pub->if2bss) {
     entry = BRCMF_BSSIDX_INVALID;
   }
@@ -95,6 +97,23 @@ zx_status_t Device::Init() {
   brcmf_pub_ = std::move(pub);
   dispatcher_ = std::move(dispatcher);
   return ZX_OK;
+}
+
+zx_status_t Device::Start() {
+  zx_status_t status = ZX_OK;
+  if ((status = inspect_.Start(brcmf_pub_->bus_if, brcmf_pub_->dispatcher)) != ZX_OK) {
+    return status;
+  }
+
+  return status;
+}
+
+void Device::Stop() {
+  inspect_.Stop();
+
+  if (dispatcher_ != nullptr) {
+    dispatcher_->Shutdown();
+  }
 }
 
 brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }
@@ -265,12 +284,6 @@ zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
     return ZX_ERR_INVALID_ARGS;
   }
   return WlanInterface::GetCountry(brcmf_pub_.get(), out_country);
-}
-
-void Device::DisableDispatcher() {
-  if (dispatcher_ != nullptr) {
-    dispatcher_->Shutdown();
-  }
 }
 
 }  // namespace brcmfmac

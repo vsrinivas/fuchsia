@@ -2408,6 +2408,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
     BRCMF_ERR_THROTTLE("out of bus->txq !!!");
+    sdiodev->drvr->inspect->LogTxQueueFull();
     ret = ZX_ERR_NO_RESOURCES;
 
     // TODO(fxbug.dev/42151): Remove once bug resolved

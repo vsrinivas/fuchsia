@@ -19,7 +19,7 @@ PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
 PcieDevice::~PcieDevice() {
   brcmf_detach(drvr());
-  DisableDispatcher();
+  Stop();
 }
 
 // static
@@ -29,7 +29,9 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   const auto ddk_remover = [](PcieDevice* device) { device->DdkAsyncRemove(); };
   std::unique_ptr<PcieDevice, decltype(ddk_remover)> device(new PcieDevice(parent_device),
                                                             ddk_remover);
-  if ((status = device->DdkAdd("brcmfmac-wlanphy", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+  if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
+                                   .set_flags(DEVICE_ADD_INVISIBLE)
+                                   .set_inspect_vmo(device->inspect_.GetVmo()))) != ZX_OK) {
     delete device.release();
     return status;
   }
@@ -60,6 +62,10 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
 
   if ((status = brcmf_bus_started(device->drvr())) != ZX_OK) {
     BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if ((status = device->brcmfmac::Device::Start()) != ZX_OK) {
     return status;
   }
 
