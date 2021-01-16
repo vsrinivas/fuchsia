@@ -38,21 +38,21 @@ var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
 func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
+	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
 }
 
 // OnNeighborChanged implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
+	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
 }
 
 // OnNeighborRemoved implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, entry stack.NeighborEntry) {
 	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
 	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%s LinkAddress=%s %s", entry.Addr, d.ns.name(nicID), entry.LinkAddr, entry.State)
+	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
 }
 
 type neighborImpl struct {
