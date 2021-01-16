@@ -257,7 +257,7 @@ impl BssDescription {
 
         if suite_filter::WPA3_PERSONAL.is_satisfied(&rsne) {
             if suite_filter::WPA2_PERSONAL.is_satisfied(&rsne) {
-                if mfp_cap && !mfp_req {
+                if mfp_cap {
                     return Protection::Wpa2Wpa3Personal;
                 }
             } else if mfp_cap && mfp_req {
@@ -521,8 +521,9 @@ mod tests {
             ie::IeType,
             test_utils::{
                 fake_frames::{
-                    fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_rsne, invalid_wpa2_wpa3_rsne,
-                    invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
+                    fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_mfpc_rsne, fake_wpa2_mfpr_rsne,
+                    fake_wpa2_rsne, fake_wpa2_wpa3_mfpr_rsne, invalid_wpa3_enterprise_192_bit_rsne,
+                    invalid_wpa3_rsne,
                 },
                 fake_stas::IesOverrides,
             },
@@ -548,16 +549,31 @@ mod tests {
     }
 
     #[test]
+    fn test_pmf_configs_supported() {
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, fake_wpa2_mfpc_rsne()[2..].to_vec())
+        );
+        assert_eq!(Protection::Wpa2Personal, bss.protection());
+
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, fake_wpa2_mfpr_rsne()[2..].to_vec())
+        );
+        assert_eq!(Protection::Wpa2Personal, bss.protection());
+
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, fake_wpa2_wpa3_mfpr_rsne()[2..].to_vec())
+        );
+        assert_eq!(Protection::Wpa2Wpa3Personal, bss.protection());
+    }
+
+    #[test]
     fn test_unknown_protection() {
         let bss = fake_bss!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_unknown_rsne()[2..].to_vec())
-        );
-        assert_eq!(Protection::Unknown, bss.protection());
-
-        let bss = fake_bss!(Wpa2,
-            ies_overrides: IesOverrides::new()
-                .set(IeType::RSNE, invalid_wpa2_wpa3_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Unknown, bss.protection());
 

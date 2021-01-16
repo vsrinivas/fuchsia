@@ -267,6 +267,26 @@ pub fn fake_wpa2_rsne() -> Vec<u8> {
     ])
 }
 
+pub fn fake_wpa2_mfpc_rsne() -> Vec<u8> {
+    attach_rsne_header(&[
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+        0x8C, 0x00, // RSN capabilities: MFP capable, 16 PTKSA replay counters
+    ])
+}
+
+pub fn fake_wpa2_mfpr_rsne() -> Vec<u8> {
+    attach_rsne_header(&[
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+        0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
+    ])
+}
+
 pub fn fake_wpa2_tkip_only_rsne() -> Vec<u8> {
     attach_rsne_header(&[
         1, 0, // Version
@@ -295,8 +315,8 @@ pub fn fake_wpa2_wpa3_rsne() -> Vec<u8> {
     ])
 }
 
-// Valid except for management frame protection (MFP) required flag being set to true
-pub fn invalid_wpa2_wpa3_rsne() -> Vec<u8> {
+// Wpa2/Wpa3 with management frame protection (MFP) required flag set to true
+pub fn fake_wpa2_wpa3_mfpr_rsne() -> Vec<u8> {
     attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128

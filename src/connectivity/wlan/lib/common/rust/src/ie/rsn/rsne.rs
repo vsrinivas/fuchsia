@@ -107,7 +107,7 @@ pub struct RsnCapabilities(pub u16);
 
 impl RsnCapabilities {
     pub fn is_wpa2_compatible(&self) -> bool {
-        !self.mgmt_frame_protection_req() && !self.contains_unsupported_capability()
+        !self.contains_unsupported_capability()
     }
 
     pub fn is_wpa3_compatible(&self, is_mixed: bool) -> bool {
@@ -212,6 +212,18 @@ impl Rsne {
             return Err(Error::CannotDeriveWpa2Rsne);
         }
 
+        // Enable management frame protection if supported.
+        let rsn_capabilities = match self.rsn_capabilities.clone() {
+            Some(cap) => {
+                if cap.mgmt_frame_protection_cap() {
+                    Some(cap.with_mgmt_frame_protection_req(true))
+                } else {
+                    Some(cap)
+                }
+            }
+            None => None,
+        };
+
         // CCMP-128 is better than TKIP
         let pairwise_cipher_suites =
             vec![match self.pairwise_cipher_suites.iter().max_by_key(|cipher_suite| {
@@ -228,7 +240,7 @@ impl Rsne {
             group_data_cipher_suite: self.group_data_cipher_suite.clone(),
             pairwise_cipher_suites,
             akm_suites: vec![AKM_PSK],
-            rsn_capabilities: self.rsn_capabilities.clone(),
+            rsn_capabilities,
             ..Default::default()
         })
     }
@@ -688,9 +700,6 @@ mod tests {
     fn test_invalid_wpa2_caps() {
         assert!(RsnCapabilities(0).is_wpa2_compatible());
 
-        let caps = RsnCapabilities(0).with_mgmt_frame_protection_req(true);
-        assert!(!caps.is_wpa2_compatible());
-
         let caps = RsnCapabilities(0).with_joint_multiband(true);
         assert!(!caps.is_wpa2_compatible());
 
@@ -705,6 +714,20 @@ mod tests {
 
         let caps = RsnCapabilities(0).with_extended_key_id(true);
         assert!(!caps.is_wpa2_compatible());
+    }
+
+    #[test]
+    fn test_wpa2_enables_pmf() {
+        let a_rsne =
+            Rsne::wpa2_rsne_with_caps(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
+        assert!(a_rsne.is_wpa2_rsn_compatible());
+
+        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("Should be able to derive s_rsne with PMF");
+        assert!(s_rsne.is_wpa2_rsn_compatible());
+        assert!(s_rsne
+            .rsn_capabilities
+            .expect("PMF RSNE should have RSN capabilities")
+            .mgmt_frame_protection_req());
     }
 
     #[test]
@@ -1139,7 +1162,7 @@ mod tests {
 
         let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes =
-            vec![48, 20, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2, 128, 0];
+            vec![48, 20, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2, 192, 0];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
 
         let s_rsne = a_rsne.derive_wpa3_s_rsne().expect("could not derive WPA3 Supplicant RSNE");

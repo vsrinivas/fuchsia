@@ -1556,8 +1556,8 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
           goto exit;
         }
       }
-    } else if (wpa_auth & WPA3_AUTH_SAE_PSK) {
-      // Set mfp to capable if it's a wpa3 assocation.
+    } else if (wpa_auth & (WPA3_AUTH_SAE_PSK | WPA2_AUTH_PSK)) {
+      // Set mfp to capable if it's a wpa2 or wpa3 assocation.
       mfp = BRCMF_MFP_CAPABLE;
     }
   }
