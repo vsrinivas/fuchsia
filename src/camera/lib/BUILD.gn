@@ -23,5 +23,8 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  deps = [ "stream_utils:tests" ]
+  deps = [
+    "hanging_get_helper:tests",
+    "stream_utils:tests",
+  ]
 }

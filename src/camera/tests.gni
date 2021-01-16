@@ -20,7 +20,6 @@ camera_tests = {
     "//src/camera/lib/fake_camera/test",
     "//src/camera/lib/fake_legacy_stream/test",
     "//src/camera/lib/fake_stream/test",
-    "//src/camera/lib/hanging_get_helper/test",
     "//src/camera/lib/image_utils/test",
     "//src/camera/lib/image_utils/test:algorithms_test",
     "//src/camera/lib/virtual_camera/test",
@@ -111,12 +110,6 @@ camera_tests = {
     {
       name = "virtual_camera_test"
       manifest = "//src/camera/lib/virtual_camera/test/virtual_camera_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "hanging_get_helper_test"
-      manifest =
-          "//src/camera/lib/hanging_get_helper/test/hanging_get_helper_test.cmx"
       environments = basic_envs
     },
     {

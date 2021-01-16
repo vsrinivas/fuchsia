@@ -2,14 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
 group("hanging_get_helper") {
   public_deps = [ ":lib" ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":hanging_get_helper_unittest" ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
-
   public = [ "hanging_get_helper.h" ]
-
   public_deps = [ "//zircon/public/lib/fit" ]
+}
+
+executable("hanging_get_helper_unittest_bin") {
+  testonly = true
+  sources = [ "hanging_get_helper_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("hanging_get_helper_unittest") {
+  deps = [ ":hanging_get_helper_unittest_bin" ]
 }
