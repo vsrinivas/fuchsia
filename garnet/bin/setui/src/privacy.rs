@@ -5,3 +5,4 @@ pub use self::privacy_fidl_handler::fidl_io;
 
 pub mod privacy_controller;
 pub mod privacy_fidl_handler;
+pub mod types;

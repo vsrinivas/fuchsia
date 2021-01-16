@@ -6,7 +6,7 @@
 use {
     crate::base::SettingType,
     crate::handler::device_storage::{testing::*, DeviceStorage},
-    crate::switchboard::base::PrivacyInfo,
+    crate::privacy::types::PrivacyInfo,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,

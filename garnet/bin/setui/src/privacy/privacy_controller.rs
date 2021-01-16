@@ -9,7 +9,8 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{PrivacyInfo, SettingRequest};
+use crate::privacy::types::PrivacyInfo;
+use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for PrivacyInfo {

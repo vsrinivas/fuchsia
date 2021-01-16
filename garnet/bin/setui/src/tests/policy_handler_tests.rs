@@ -16,7 +16,8 @@ use crate::policy::base::Request;
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
-use crate::switchboard::base::{PrivacyInfo, SettingEvent, SettingRequest};
+use crate::privacy::types::PrivacyInfo;
+use crate::switchboard::base::{SettingEvent, SettingRequest};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;

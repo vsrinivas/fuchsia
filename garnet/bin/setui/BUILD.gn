@@ -197,6 +197,7 @@ rustc_library("lib") {
     "src/privacy.rs",
     "src/privacy/privacy_controller.rs",
     "src/privacy/privacy_fidl_handler.rs",
+    "src/privacy/types.rs",
     "src/service.rs",
     "src/service_context.rs",
     "src/setup.rs",

@@ -5,7 +5,6 @@
 use std::collections::HashSet;
 
 use fuchsia_syslog::fx_log_warn;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::accessibility::types::AccessibilityInfo;
@@ -245,11 +244,6 @@ impl SettingRequest {
             SettingRequest::SetTheme(_) => "SetTheme",
         }
     }
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct PrivacyInfo {
-    pub user_data_sharing_consent: Option<bool>,
 }
 
 /// Description of an action request on a setting. This wraps a

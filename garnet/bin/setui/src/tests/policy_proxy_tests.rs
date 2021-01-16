@@ -15,9 +15,8 @@ use crate::policy::base::{BoxedHandler, PolicyHandlerFactory};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
-use crate::switchboard::base::{
-    PrivacyInfo, SettingAction, SettingActionData, SettingEvent, SettingRequest,
-};
+use crate::privacy::types::PrivacyInfo;
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
