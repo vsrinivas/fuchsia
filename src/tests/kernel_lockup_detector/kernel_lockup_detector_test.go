@@ -23,7 +23,10 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestKernelLockupDetectorCriticalSection(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +74,10 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 }
 
 func TestKernelLockupDetectorHeartbeat(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,4 +120,13 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 	// one responsible for the lockup.
 	d.WaitForLogMessage("lockup-spin")
 	d.WaitForLogMessage("done")
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

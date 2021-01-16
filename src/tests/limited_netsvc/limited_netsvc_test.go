@@ -191,7 +191,10 @@ func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
 }
 
 func setupQemu(t *testing.T, appendCmdline string, modeString string) (*emulator.Instance, func()) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,4 +267,13 @@ func TestNetsvcLimited(t *testing.T) {
 	attemptNetls(t, i, true)
 	attemptNetruncmd(t, i, false)
 	attemptTftp(t, i, false)
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

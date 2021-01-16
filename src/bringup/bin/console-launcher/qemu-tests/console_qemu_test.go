@@ -25,7 +25,10 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestConsoleIsLaunched(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,4 +80,13 @@ func TestConsoleIsLaunched(t *testing.T) {
 	// See that it succeeded.
 	i.WaitForLogMessage("[runtests][PASSED]")
 
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

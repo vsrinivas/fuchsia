@@ -5,6 +5,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,7 +15,10 @@ import (
 )
 
 func TestKtraceWorksWhenEnabled(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,4 +53,13 @@ func ensureDoesNotContain(t *testing.T, output, lookFor string) {
 	if strings.Contains(output, lookFor) {
 		t.Fatalf("output contains '%s'", lookFor)
 	}
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

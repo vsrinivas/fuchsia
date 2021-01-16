@@ -5,6 +5,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
@@ -12,7 +14,10 @@ import (
 )
 
 func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,4 +54,13 @@ func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
 	if stderr != "" {
 		t.Fatal(stderr)
 	}
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

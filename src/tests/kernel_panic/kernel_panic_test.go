@@ -26,7 +26,10 @@ func zbiPath(t *testing.T) string {
 
 // See that `k crash` crashes the kernel.
 func TestBasicCrash(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +64,10 @@ func TestBasicCrash(t *testing.T) {
 
 // See that an SMAP violation is fatal.
 func TestSMAPViolation(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +109,10 @@ func TestSMAPViolation(t *testing.T) {
 //
 // Verify both oops and panic actions.
 func TestPmmCheckerOopsAndPanic(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +186,10 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 
 // See that `k crash_assert` crashes the kernel.
 func TestCrashAssert(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,4 +223,13 @@ func TestCrashAssert(t *testing.T) {
 	// See that it was an assert failure and that the assert message was printed.
 	i.WaitForLogMessage("ASSERT FAILED")
 	i.WaitForLogMessage("value 42")
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }

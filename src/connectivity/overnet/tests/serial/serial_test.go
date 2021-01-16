@@ -15,13 +15,17 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T) string {
+func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 		return ""
 	}
-	exPath := filepath.Dir(ex)
+	return filepath.Dir(ex)
+}
+
+func zbiPath(t *testing.T) string {
+	exPath := execDir(t)
 	return filepath.Join(exPath, "../obj/build/images/overnet/overnet.zbi")
 }
 
@@ -44,7 +48,10 @@ func startAscendd(t *testing.T) *exec.Cmd {
 
 // Test that ascendd can connect to overnetstack via serial.
 func TestOvernetSerial(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +79,10 @@ func TestOvernetSerial(t *testing.T) {
 
 // Test that ascendd can connect to overnetstack via serial.
 func TestNoSpinningIfNoSerial(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

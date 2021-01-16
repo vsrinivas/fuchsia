@@ -35,7 +35,10 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 }
 
 func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
-	distro, err := emulator.Unpack()
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,4 +85,13 @@ func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, 
 
 	// See that the target comes back up.
 	i.WaitForLogMessage("welcome to Zircon")
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	return filepath.Dir(ex)
 }
