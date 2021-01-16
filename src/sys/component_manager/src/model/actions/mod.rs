@@ -66,7 +66,7 @@ use {
     fuchsia_async as fasync,
     futures::{
         channel::oneshot,
-        future::{join_all, BoxFuture, FutureExt, Shared},
+        future::{join_all, pending, BoxFuture, FutureExt, Shared},
         Future,
     },
     moniker::ChildMoniker,
@@ -399,9 +399,16 @@ impl ActionSet {
             let (tx, rx) = oneshot::channel();
             let task = ActionTask::new(tx, fut);
             let rx = async move {
-                let res = rx.await;
-                // This should never crash because the task is spawned
-                res.expect("action snder was dropped")
+                match rx.await {
+                    Ok(res) => res,
+                    Err(_) => {
+                    // Normally we won't get here but this can happen if the sender's task is
+                    // cancelled because, for example, component manager exited and the executor
+                    // was torn down.
+                        let () = pending().await;
+                        unreachable!();
+                    }
+                }
             }
             .boxed()
             .shared();
