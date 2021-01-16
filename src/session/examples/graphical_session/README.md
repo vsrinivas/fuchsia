@@ -49,7 +49,7 @@ To see a list of possible boards, run: `fx list-boards`.
 
 The tests are available in the `graphical_session_tests` package. To run the tests, use:
 ```
-$ fx run-test graphical_session_tests
+$ fx test graphical_session_tests
 ```
 
 ## Source Layout

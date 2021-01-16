@@ -19,32 +19,5 @@
             rights: [ "r*" ],
             path: "/dev/class/input-report",
         },
-        {
-            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
-        },
-        {
-            protocol: [ "fuchsia.sys2.Realm" ],
-            from: "framework",
-        },
-        {
-            event: [
-                "capability_routed",
-                "resolved",
-                "started",
-            ],
-            from: "framework",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [ "#session" ],
-        },
-        {
-            directory: "dev-input-report",
-            from: "parent",
-            to: [ "#session" ],
-        },
     ],
 }

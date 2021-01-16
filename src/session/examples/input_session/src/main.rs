@@ -62,56 +62,9 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        fuchsia_async as fasync, session_manager_lib,
-        test_utils_lib::events::{
-            CapabilityRouted, EventMatcher, EventSource, Ordering, Resolved, Started,
-        },
-    };
-
-    async fn run_input_session(ordering: Ordering, expected_events: Vec<EventMatcher>) {
-        let event_source = EventSource::new_sync().unwrap();
-        event_source.start_component_tree().await.unwrap();
-
-        let expectation = event_source.expect_events(ordering, expected_events).await.unwrap();
-
-        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
-        session_manager_lib::startup::launch_session(&session_url)
-            .await
-            .expect("Failed starting input session");
-
-        expectation.await.unwrap();
-    }
-
-    /// Verifies that the session is routed the expected capabilities.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_capability_routing() {
-        let expected_events = vec![
-            EventMatcher::new()
-                .expect_type::<CapabilityRouted>()
-                .expect_moniker("./session:session:*")
-                .expect_capability_id("elf"),
-            EventMatcher::new()
-                .expect_type::<CapabilityRouted>()
-                .expect_moniker("./session:session:*")
-                .expect_capability_id("/svc/fuchsia.logger.LogSink"),
-            EventMatcher::new()
-                .expect_type::<CapabilityRouted>()
-                .expect_moniker("./session:session:*")
-                .expect_capability_id("/dev/class/input-report"),
-        ];
-
-        run_input_session(Ordering::Unordered, expected_events).await;
-    }
-
-    /// Verifies that the session is correctly resolved and launched with out errors.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_session_lifecycle() {
-        let expected_events = vec![
-            EventMatcher::new().expect_type::<Resolved>().expect_moniker("./session:session:*"),
-            EventMatcher::new().expect_type::<Started>().expect_moniker("./session:session:*"),
-        ];
-
-        run_input_session(Ordering::Ordered, expected_events).await;
+    #[test]
+    fn noop_test() {
+        // Note, this test replaces the invalid tests mentioned in fxbug.dev/67160
+        println!("Don't panic!(), you've got this!");
     }
 }

@@ -39,12 +39,12 @@ fx set core.x64 --with-base=//src/session,//src/session/bin/session_manager:sess
 Note: use `--with` for the tests, otherwise each `run-test` invocation will
 trigger an OTA.
 
-### `fx run-test`
+### `fx test`
 
 Run the following command to build and execute the tests for a given area:
 
 ```
-fx run-test <test>
+fx test <test>
 ```
 
 To find the name to substitute for `<test>`:

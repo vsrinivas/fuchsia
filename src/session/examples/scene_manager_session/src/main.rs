@@ -87,7 +87,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn dummy_test() {
+    fn noop_test() {
         println!("Don't panic!(), you've got this!");
     }
 }

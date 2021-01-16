@@ -54,7 +54,7 @@ To see a list of possible boards, run: `fx list-boards`.
 
 The tests are available in the `input_session_tests` package. To run the tests, use:
 ```
-$ fx run-test input_session_tests
+$ fx test input_session_tests
 ```
 
 ## Source Layout

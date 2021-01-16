@@ -19,7 +19,7 @@ To see a list of possible boards, run: `fx list-boards`
 `session_manager` integration tests are available in the `session_manager_integration_tests`
 package.
 ```
-$ fx run-test session_manager_integration_tests
+$ fx test session_manager_integration_tests
 ```
 
 ## Source layout

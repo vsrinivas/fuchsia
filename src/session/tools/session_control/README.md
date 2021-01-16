@@ -24,7 +24,7 @@ $ fx shell session_control --help
 Unit tests for `session_control` are included in the `session_control_tests` package.
 
 ```
-$ fx run-test session_control_tests
+$ fx test session_control_tests
 ```
 
 ## Source layout

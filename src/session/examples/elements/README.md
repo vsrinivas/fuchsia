@@ -91,9 +91,9 @@ To see a list of possible boards, run: `fx list-boards`.
 
 The tests are available in the `element_session_tests`, `element_proposer_tests`, and `simple_element_tests` packages.
 ```
-$ fx run-test element_session_tests
-$ fx run-test element_proposer_tests
-$ fx run-test simple_element_tests
+$ fx test element_session_tests
+$ fx test element_proposer_tests
+$ fx test simple_element_tests
 ```
 
 ## Source Layout

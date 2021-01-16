@@ -73,8 +73,8 @@ Unit tests for `session_manager` are included in the `session_manager_tests` pac
 Both can be included in your build by adding `--with //src/session:tests` to your `fx set`.
 
 ```
-$ fx run-test session_manager_tests
-$ fx run-test session_manager_integration_tests
+$ fx test session_manager_tests
+$ fx test session_manager_integration_tests
 ```
 
 ## Source layout
