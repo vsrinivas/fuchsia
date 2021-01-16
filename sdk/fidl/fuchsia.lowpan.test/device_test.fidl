@@ -5,6 +5,9 @@
 library fuchsia.lowpan.test;
 
 using fuchsia.lowpan;
+using zx;
+
+const uint32 MAX_NEIGHBORS = 1024;
 
 protocol DeviceTest {
     /// Resets this network interface, returning
@@ -50,6 +53,9 @@ protocol DeviceTest {
 
     /// Returns the current address filter settings.
     GetMacAddressFilterSettings() -> (MacAddressFilterSettings settings);
+
+    /// Returns a snapshot of the current neighbor table.
+    GetNeighborTable() -> (vector<NeighborInfo>:MAX_NEIGHBORS neighbor_table);
 };
 
 /// LoWPAN MAC address
@@ -105,4 +111,63 @@ enum MacAddressFilterMode : int32 {
     /// All packets from addresses in the filter list will be
     /// dropped.
     DENY = 2;
+};
+
+/// Neighbor Table Entry
+///
+/// See also: https://github.com/openthread/wpantund/blob/8db2a71c9597e08949dfc38d8c10f830e3de565c/third_party/openthread/src/ncp/spinel.h#L2356-L2373
+table NeighborInfo {
+    /// The MAC address of the neighbor.
+    ///
+    /// Note that this is the only field guaranteed to be present.
+    1: MacAddress mac_address;
+
+    /// 802.15.4 short address of neighbor.
+    ///
+    /// On Thread networks, this is also the RLOC16.
+    2: uint16 short_address;
+
+    /// The age of this entry in the neighbor table.
+    ///
+    /// Roughly (+/- 1sec) describes how long this device has been a neighbor.
+    ///
+    3: zx.duration age;
+
+    /// True if this neighbor is considered a child and is thus
+    /// entirely dependent on this device for routing.
+    ///
+    /// If absent, assumed to be false.
+    4: bool is_child;
+
+    /// The number of link (non-management) frames received from this neighbor.
+    5: uint32 link_frame_count;
+
+    /// The number of management (MLE, etc) frames received from this neighbor.
+    6: uint32 mgmt_frame_count;
+
+    /// RSSI of the most recent packet received from the neighbor.
+    7: int32 last_rssi_in;
+
+    /// Average/typical RSSI of packets received from the neighbor.
+    8: int8 avg_rssi_in;
+
+    /// LQI of the most recent packet received from the neighbor.
+    ///
+    /// Value is between 1 and 255, with 1 being the worst possible
+    /// link quality (any worse and it would not have been decoded)
+    /// and 255 being perfect reception. All values in between
+    /// are a roughly linear (but not well defined) extrapolation
+    /// between these two extremes.
+    ///
+    /// Zero values must not be encoded, but if encountered should be
+    /// interpreted as if the LQI field were absent.
+    ///
+    /// In 802.15.4 networks, LQI is typically determined by the number of
+    /// "chip errors" when decoding the packets.
+    9: uint8 lqi_in;
+
+    /// Thread Mode TLV. Only present on Thread networks.
+    ///
+    /// Defined by section 4.5.2 of the Thread 1.1.1 specification ("Mode TLV").
+    10: uint8 thread_mode;
 };

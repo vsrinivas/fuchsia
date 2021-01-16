@@ -414,4 +414,8 @@ impl Driver for DummyDevice {
             ..MacAddressFilterSettings::EMPTY
         })
     }
+
+    async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
+        return Ok(vec![]);
+    }
 }

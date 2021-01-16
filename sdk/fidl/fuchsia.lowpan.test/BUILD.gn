@@ -9,5 +9,8 @@ fidl("fuchsia.lowpan.test") {
 
   sources = [ "device_test.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.lowpan" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.lowpan",
+    "//zircon/vdso/zx",
+  ]
 }

@@ -192,6 +192,8 @@ pub trait Driver: Send + Sync {
         settings: MacAddressFilterSettings,
     ) -> ZxResult<()>;
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings>;
+
+    async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>>;
 }
 
 #[async_trait()]
@@ -587,6 +589,15 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                         .and_then(|x| ready(responder.send(x).map_err(Error::from)))
                         .await
                         .context("error in get_address_filter_settings request")?;
+                }
+                DeviceTestRequest::GetNeighborTable { responder, .. } => {
+                    self.get_neighbor_table()
+                        .err_into::<Error>()
+                        .and_then(|x| {
+                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                        })
+                        .await
+                        .context("error in get_neighbor_table_snapshot request")?;
                 }
             }
             Result::<(), Error>::Ok(())

@@ -805,6 +805,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             ..MacAddressFilterSettings::EMPTY
         })
     }
+
+    async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
+        // TODO: Implement.
+        return Ok(vec![]);
+    }
 }
 
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
