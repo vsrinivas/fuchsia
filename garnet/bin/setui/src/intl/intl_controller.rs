@@ -10,8 +10,8 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
+use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use crate::switchboard::base::{Merge, SettingRequest};
-use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use std::collections::HashSet;
 

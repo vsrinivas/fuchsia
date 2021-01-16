@@ -181,7 +181,7 @@ mod tests {
     use crate::base::SettingInfo;
     use crate::internal::handler::message::{create_hub, Receptor};
     use crate::internal::handler::Address;
-    use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
+    use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
 
     use super::*;
 

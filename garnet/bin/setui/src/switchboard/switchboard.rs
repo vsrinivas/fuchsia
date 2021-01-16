@@ -511,8 +511,8 @@ impl Switchboard {
 mod tests {
     use super::*;
     use crate::internal::core;
+    use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::message::base::Audience;
-    use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
     use fuchsia_inspect::{
         assert_inspect_tree,
         testing::{AnyProperty, TreeAssertion},

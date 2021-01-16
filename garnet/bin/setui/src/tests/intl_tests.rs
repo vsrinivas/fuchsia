@@ -21,7 +21,7 @@ use {
     std::sync::Arc,
 };
 
-use crate::switchboard::intl_types::IntlInfo;
+use crate::intl::types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 const CONTEXT_ID: u64 = 0;

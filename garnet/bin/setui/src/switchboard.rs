@@ -12,6 +12,3 @@ pub mod switchboard;
 
 /// This mod provides a standard way to handle a hanging get in a mod
 pub mod hanging_get_handler;
-
-/// This mod provides the service's internal representations of internationalization info.
-pub mod intl_types;

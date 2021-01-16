@@ -16,10 +16,10 @@ use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
+use crate::intl::types::IntlInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
 use crate::setup::types::ConfigurationInterfaceFlags;
-use crate::switchboard::intl_types::IntlInfo;
 use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.

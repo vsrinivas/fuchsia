@@ -96,7 +96,7 @@ async fn process_request_2(
 
 #[cfg(test)]
 mod tests {
-    use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
+    use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 
     use super::*;
 

@@ -5,3 +5,4 @@ pub use self::intl_fidl_handler::fidl_io;
 
 pub mod intl_controller;
 pub mod intl_fidl_handler;
+pub mod types;

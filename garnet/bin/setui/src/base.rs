@@ -20,11 +20,11 @@ use crate::display::types::{DisplayInfo, LightData};
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::input::types::InputInfo;
+use crate::intl::types::IntlInfo;
 use crate::light::types::LightInfo;
 use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
-use crate::switchboard::intl_types::IntlInfo;
 use serde::{Deserialize, Serialize};
 
 /// The setting types supported by the service.
