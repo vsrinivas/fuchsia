@@ -247,17 +247,6 @@ impl SettingRequest {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FactoryResetInfo {
-    pub is_local_reset_allowed: bool,
-}
-
-impl FactoryResetInfo {
-    pub const fn new(is_local_reset_allowed: bool) -> Self {
-        Self { is_local_reset_allowed }
-    }
-}
-
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,

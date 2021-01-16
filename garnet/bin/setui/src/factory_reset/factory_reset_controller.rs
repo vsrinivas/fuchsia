@@ -4,13 +4,14 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
+use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::{SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::ControllerError;
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{ControllerStateResult, FactoryResetInfo, SettingRequest};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest};
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
 use fuchsia_syslog::fx_log_err;
