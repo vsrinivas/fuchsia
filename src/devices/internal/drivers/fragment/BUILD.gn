@@ -27,6 +27,7 @@ driver_module("fragment") {
     "//sdk/banjo/fuchsia.hardware.ge2d",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.goldfish.sync",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.isp",

@@ -167,6 +167,31 @@ driver_module("test-goldfish-pipe") {
   ]
 }
 
+bind_rules("test-goldfish-sync-bind") {
+  rules = "test/test-goldfish-sync.bind"
+  output = "test-goldfish-sync-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/test.platform",
+  ]
+}
+
+driver_module("test-goldfish-sync") {
+  configs += [ "//build/config:all_source" ]
+  sources = [ "test/goldfish_sync.cc" ]
+  deps = [
+    ":test-goldfish-sync-bind",
+    "//sdk/banjo/fuchsia.hardware.goldfish.sync",
+    "//sdk/banjo/fuchsia.hardware.platform.bus",
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 bind_rules("test-clock-bind") {
   rules = "test/test-clock.bind"
   output = "test-clock-bind.h"
@@ -339,6 +364,7 @@ driver_module("test-composite") {
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
+    "//sdk/banjo/fuchsia.hardware.goldfish.sync",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -411,6 +437,7 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-composite",
     ":test-goldfish-address-space",
     ":test-goldfish-pipe",
+    ":test-goldfish-sync",
     ":test-gpio",
     ":test-i2c",
     ":test-power",

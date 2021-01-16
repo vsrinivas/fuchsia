@@ -393,6 +393,20 @@ struct GoldfishPipeProxyResponse {
   int32_t id;
 };
 
+// ZX_PROTOCOL_GOLDFISH_SYNC proxy support.
+enum class GoldfishSyncOp {
+  CREATE_TIMELINE,
+};
+
+struct GoldfishSyncProxyRequest {
+  ProxyRequest header;
+  GoldfishSyncOp op;
+};
+
+struct GoldfishSyncProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE proxy support.
 enum class GoldfishAddressSpaceOp {
   OPEN_CHILD_DRIVER,

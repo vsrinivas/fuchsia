@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/composite/c/banjo.h>
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
+#include <fuchsia/hardware/goldfish/sync/c/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
@@ -61,6 +62,7 @@ enum Fragments_GoldfishControl {
   FRAGMENT_PDEV_GOLDFISH_CTRL, /* Should be 1st fragment */
   FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL,
   FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL,
+  FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL,
   FRAGMENT_COUNT_GOLDFISH_CTRL,
 };
 
@@ -196,6 +198,24 @@ static zx_status_t test_goldfish_pipe(goldfish_pipe_protocol_t* pipe) {
 
   // Test |GoldfishPipe.Destroy|.
   goldfish_pipe_destroy(pipe, id);
+
+  return ZX_OK;
+}
+
+static zx_status_t test_goldfish_sync(goldfish_sync_protocol_t* sync) {
+  zx_status_t status;
+
+  zx_handle_t timeline_client, timeline_server;
+  if ((status = zx_channel_create(0u, &timeline_client, &timeline_server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_channel_create failed: %d", DRIVER_NAME, status);
+    return status;
+  }
+
+  // Test |GoldfishSync.CreateTimeline|.
+  if ((status = goldfish_sync_create_timeline(sync, timeline_server)) != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish_sync_create_timeline failed: %d", DRIVER_NAME, status);
+    return status;
+  }
 
   return ZX_OK;
 }
@@ -553,6 +573,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   vreg_protocol_t vreg;
   goldfish_address_space_protocol_t goldfish_address_space;
   goldfish_pipe_protocol_t goldfish_pipe;
+  goldfish_sync_protocol_t goldfish_sync;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
@@ -747,12 +768,27 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GOLDFISH_PIPE", DRIVER_NAME);
       return status;
     }
+    if (strncmp(fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].name, "goldfish-sync", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME,
+             fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_SYNC_GOLDFISH_CTRL].device,
+                                 ZX_PROTOCOL_GOLDFISH_SYNC, &goldfish_sync);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GOLDFISH_SYNC", DRIVER_NAME);
+      return status;
+    }
     if ((status = test_goldfish_address_space(&goldfish_address_space)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_goldfish_address_space failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_goldfish_pipe(&goldfish_pipe)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_goldfish_pipe failed: %d", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_goldfish_sync(&goldfish_sync)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_goldfish_sync failed: %d", DRIVER_NAME, status);
       return status;
     }
   }

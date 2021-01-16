@@ -45,4 +45,20 @@ zx_status_t TestBoard::GoldfishPipeInit() {
   return ZX_OK;
 }
 
+zx_status_t TestBoard::GoldfishSyncInit() {
+  pbus_dev_t goldfish_sync_dev = {};
+  goldfish_sync_dev.name = "goldfish_sync";
+  goldfish_sync_dev.vid = PDEV_VID_TEST;
+  goldfish_sync_dev.pid = PDEV_PID_PBUS_TEST;
+  goldfish_sync_dev.did = PDEV_DID_TEST_GOLDFISH_SYNC;
+
+  zx_status_t status = pbus_.DeviceAdd(&goldfish_sync_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace board_test

@@ -13,6 +13,7 @@
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
@@ -60,7 +61,8 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::VregProtocol<FragmentProxy>,
                       public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
                       public ddk::GoldfishPipeProtocol<FragmentProxy>,
-                      public ddk::DsiProtocol<FragmentProxy> {
+                      public ddk::DsiProtocol<FragmentProxy>,
+                      public ddk::GoldfishSyncProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -105,6 +107,7 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t GoldfishPipeGetBti(zx::bti* out_bti);
   zx_status_t GoldfishPipeConnectSysmem(zx::channel connection);
   zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection);
+  zx_status_t GoldfishSyncCreateTimeline(zx::channel request);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);
   zx_status_t GpioSetAltFunction(uint64_t function);

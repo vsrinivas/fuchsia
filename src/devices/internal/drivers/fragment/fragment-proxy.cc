@@ -54,6 +54,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_GOLDFISH_PIPE:
       proto->ops = &goldfish_pipe_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_GOLDFISH_SYNC:
+      proto->ops = &goldfish_sync_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_GPIO:
       proto->ops = &gpio_protocol_ops_;
       return ZX_OK;
@@ -439,6 +442,17 @@ zx_status_t FragmentProxy::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::cha
   req.heap = heap;
 
   zx_handle_t channel = connection.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
+             nullptr);
+}
+
+zx_status_t FragmentProxy::GoldfishSyncCreateTimeline(zx::channel request) {
+  GoldfishSyncProxyRequest req = {};
+  GoldfishSyncProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GOLDFISH_SYNC;
+  req.op = GoldfishSyncOp::CREATE_TIMELINE;
+
+  zx_handle_t channel = request.release();
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
              nullptr);
 }
