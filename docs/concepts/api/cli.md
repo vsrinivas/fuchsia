@@ -43,15 +43,23 @@ determine if the tool is a good fit for Fuchsia or the Fuchsia SDK.
 > a good addition. However a tool that verifies Fuchsia `.cmx` files, which
 > happen to use the JSON format, would be okay.
 
+> **ffx**
+>
+> [ffx](/docs/development/tools/ffx/overview.md) is Fuchsia's unified CLI
+> tool platform for host to target interactions. It provides a logical
+> subcommand based grouping that maps to high-level Fuchsia workflows.
+> It also provides a plugin framework to allow contributors to expand the
+> `ffx` command surface. `ffx` is distributed as part of the Fuchsia IDK.
+
 ### Audience
 
 Tools may be used for different development tasks. On a large team these roles
 may be separate people. Some categories are:
 
-- Component development (mods/agents)
+- Component development
 - Driver development (DDK)
 - Fuchsia development (SDK)
-- Build integration (GN, Bazel, etc.)
+- Build integration (GN, etc.)
 - Quality assurance (QA)
 - System integrators (e.g., on-device network tools)
 - Publishing (from dev host to server)
@@ -66,8 +74,10 @@ a script.
 
 ### Grouping Related Tools
 
-Prefer to put related commands under a common tool, i.e. like `git` and `fx` do.
-This helps encourage the team toward a shared workflow and provides a point of
+Prefer to put related commands under a common tool, such as `ffx`.
+As an example, `git`, `ffx`, or `fx` present many features (or,
+"sub-tools") under a single user-facing command. This helps encourage
+the team toward a shared workflow and provides a single point of
 discovery.
 
 Prefer subcommands to multiple tools. E.g. don't create tools with hyphenated
@@ -107,6 +117,17 @@ argument to ask the C++ compiler to only run the preprocessor).
 > The build integrators will learn each and piece them together to make a
 > working system.
 
+> **ffx**
+>
+> `ffx` introduces many subgroupings and related subcommands.
+> In general for tools that fall in the categories such as host to target
+> interaction, system integration, and publishing, prefer extending the
+> existing `ffx` service instead of a new standalone tool. This can be accomplished
+> by extending `ffx` via additional flags, options or subcommands to take
+> advantage of shared code and functionality. For considerations and
+> additional details refer to the `ffx` development
+> [overview](/docs/development/tools/ffx/overview.md).
+
 #### Sharing common functionality
 
 If a small step of a task will be needed by several tools, it doesn't make sense
@@ -127,6 +148,11 @@ needed.
 Here is some guidance for the nuts and bolts of creating a tool. We'll cover
 which language to write the tool in, what style to use in that language, and so
 on.
+
+> **ffx**
+>
+> `ffx` follows the rubric and conventions laid out below and provides
+> a reference implementation for the outlined recommendations.
 
 ### Naming
 
@@ -168,7 +194,7 @@ languages is up to the author of the tool.
 
 > **IDK**
 >
-> If a SDK that is an intergation of the Fuchsia IDK includes a specific language
+> If a SDK that is an integration of the Fuchsia IDK includes a specific language
 > (e.g. Dart), that language may be used for tools that are distributed with
 > that SDK. In other words, do not include a Dart tool in a SDK that
 > wouldn't otherwise include the Dart runtime, but if it's already there,
@@ -625,6 +651,12 @@ integration.
 > It's especially important that IDK tools imported from the Fuchsia build (pm,
 > etc.) have tests that run in Fuchsia continuous integration because the IDK
 > bot does not currently prevent breaking changes.
+
+> **ffx**
+> The `ffx` platform provides a framework for introducing tests that are
+> run automatically in Fuchsia continuous integration. Contributors can
+> see examples of plugin tests and end-to-end self-tests in the `ffx`
+> [source](/src/developer/ffx).
 
 ## Documentation
 
