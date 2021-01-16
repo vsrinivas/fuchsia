@@ -101,6 +101,7 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "Movement x: 00000100\n",
       "Movement y: 00000200\n",
       "Position x: 00000300\n",
@@ -116,7 +117,7 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -151,14 +152,30 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
-      "Mouse Descriptor:\n",  "  Movement X:\n", "    Unit:   METERS\n", "    Min:      -100\n",
-      "    Max:      -100\n", "  Movement Y:\n", "    Unit:     NONE\n", "    Min:      -200\n",
-      "    Max:      -200\n", "  Position X:\n", "    Unit:     NONE\n", "    Min:       300\n",
-      "    Max:       300\n", "  Position Y:\n", "    Unit:     NONE\n", "    Min:       400\n",
-      "    Max:       400\n", "  Button: 1\n",   "  Button: 10\n",       "  Button: 5\n",
+      "Descriptor from file: test\n",
+      "Mouse Descriptor:\n",
+      "  Movement X:\n",
+      "    Unit:   METERS\n",
+      "    Min:      -100\n",
+      "    Max:      -100\n",
+      "  Movement Y:\n",
+      "    Unit:     NONE\n",
+      "    Min:      -200\n",
+      "    Max:      -200\n",
+      "  Position X:\n",
+      "    Unit:     NONE\n",
+      "    Min:       300\n",
+      "    Max:       300\n",
+      "  Position Y:\n",
+      "    Unit:     NONE\n",
+      "    Min:       400\n",
+      "    Max:       400\n",
+      "  Button: 1\n",
+      "  Button: 10\n",
+      "  Button: 5\n",
   });
 
-  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
 
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
@@ -186,6 +203,7 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Descriptor from file: test\n",
       "Sensor Descriptor:\n",
       "  Value 00:\n",
       "    SensorType: ACCELEROMETER_X\n",
@@ -199,7 +217,7 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
       "    Max:      1000\n",
   });
 
-  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
   loop_->RunUntilIdle();
 }
 
@@ -213,6 +231,7 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "Sensor[00]: 00000100\n",
       "Sensor[01]: -0000100\n",
       "\n",
@@ -222,7 +241,7 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -254,6 +273,7 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Descriptor from file: test\n",
       "Touch Descriptor:\n",
       "  Touch Type: TOUCHSCREEN\n",
       "  Max Contacts: 100\n",
@@ -272,7 +292,7 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
       "      Max:       100\n",
   });
 
-  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
   loop_->RunUntilIdle();
 }
 
@@ -295,6 +315,7 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "Contact ID: 10\n",
       "  Position X:     00000123\n",
       "  Position Y:     00000234\n",
@@ -308,7 +329,7 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -325,6 +346,7 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Descriptor from file: test\n",
       "Keyboard Descriptor:\n",
       "Input Report:\n",
       "  Key:        1\n",
@@ -335,7 +357,7 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
       "  Led: SCROLL_LOCK\n",
   });
 
-  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
   loop_->RunUntilIdle();
 }
 
@@ -351,6 +373,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "Keyboard Report\n",
       "  Key:        1\n",
       "  Key:       79\n",
@@ -362,7 +385,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -377,6 +400,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "Keyboard Report\n",
       "  No keys pressed\n",
       "\n",
@@ -386,7 +410,7 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }
@@ -402,6 +426,7 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Descriptor from file: test\n",
       "ConsumerControl Descriptor:\n",
       "Input Report:\n",
       "  Button:        VOLUME_UP\n",
@@ -409,7 +434,7 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
       "  Button:           REBOOT\n",
   });
 
-  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, &client_.value());
 
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
@@ -428,6 +453,7 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
       "ConsumerControl Report\n",
       "  Button:        VOLUME_UP\n",
       "  Button:      VOLUME_DOWN\n",
@@ -439,7 +465,7 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
   ASSERT_EQ(res.status_value(), ZX_OK);
   auto reader = std::move(res.value());
 
-  print_input_report::PrintInputReports(&printer, &reader, 1);
+  print_input_report::PrintInputReports("test", &printer, &reader, 1);
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }

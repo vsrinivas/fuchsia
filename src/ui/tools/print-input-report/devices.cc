@@ -12,12 +12,13 @@
 
 namespace print_input_report {
 
-zx_status_t PrintInputDescriptor(Printer* printer,
+zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
                                  fidl::Client<fuchsia_input_report::InputDevice>* client,
                                  fit::closure callback) {
-  (*client)->GetDescriptor([printer, callback = std::move(callback)](
+  (*client)->GetDescriptor([filename, printer, callback = std::move(callback)](
                                fuchsia_input_report::InputDevice::GetDescriptorResponse* result) {
     printer->SetIndent(0);
+    printer->Print("Descriptor from file: %s\n", filename.c_str());
     if (result->descriptor.has_mouse()) {
       if (result->descriptor.mouse().has_input()) {
         PrintMouseDesc(printer, result->descriptor.mouse().input());
@@ -178,7 +179,7 @@ void PrintConsumerControlDesc(Printer* printer,
   }
 }
 
-void PrintInputReports(Printer* printer,
+void PrintInputReports(std::string filename, Printer* printer,
                        fidl::Client<fuchsia_input_report::InputReportsReader>* reader,
                        size_t num_reads, fit::closure callback) {
   if (num_reads == 0) {
@@ -205,6 +206,7 @@ void PrintInputReports(Printer* printer,
           }
           reads_left -= 1;
           printer->SetIndent(0);
+          printer->Print("Report from file: %s\n", filename.c_str());
           if (report.has_event_time()) {
             printer->Print("EventTime: 0x%016lx\n", report.event_time());
           }
@@ -229,7 +231,7 @@ void PrintInputReports(Printer* printer,
           }
           printer->Print("\n");
         }
-        PrintInputReports(printer, reader, reads_left, std::move(callback));
+        PrintInputReports(filename, printer, reader, reads_left, std::move(callback));
       });
 }
 

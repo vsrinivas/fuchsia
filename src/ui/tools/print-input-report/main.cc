@@ -99,7 +99,8 @@ int ReadAllDevices(async::Loop* loop, Printer* printer) {
         }
         readers.push_back(std::make_unique<fidl::Client<fuchsia_input_report::InputReportsReader>>(
             std::move(res.value())));
-        print_input_report::PrintInputReports(printer, readers.back().get(), UINT32_MAX);
+        print_input_report::PrintInputReports(filename, printer, readers[readers.size() - 1].get(),
+                                              UINT32_MAX);
       });
 
   loop->Run();
@@ -131,7 +132,7 @@ int ReadAllDescriptors(async::Loop* loop, Printer* printer) {
 
         auto device = std::make_unique<fidl::Client<fuchsia_input_report::InputDevice>>(
             std::move(chan), loop->dispatcher());
-        status = print_input_report::PrintInputDescriptor(printer, device.get());
+        status = print_input_report::PrintInputDescriptor(filename, printer, device.get());
         if (status != 0) {
           printer->Print("Failed to PrintInputReports\n");
           return;
@@ -195,7 +196,7 @@ int main(int argc, const char** argv) {
     auto reader = std::move(res.value());
 
     printer.Print("Reading reports from %s:\n", device_path.c_str());
-    print_input_report::PrintInputReports(&printer, &reader, num_reads,
+    print_input_report::PrintInputReports(device_path, &printer, &reader, num_reads,
                                           [&loop]() { loop.Shutdown(); });
     loop.Run();
 
@@ -211,11 +212,8 @@ int main(int argc, const char** argv) {
     if (!client) {
       return -1;
     }
-    zx_status_t status = print_input_report::PrintInputDescriptor(&printer, &client.value(),
-                                                                  [&loop]() { loop.Shutdown(); });
-    if (status != ZX_OK) {
-      return 1;
-    }
+    print_input_report::PrintInputDescriptor(device_path, &printer, &client.value(),
+                                             [&loop]() { loop.Shutdown(); });
 
     loop.Run();
   } else {
