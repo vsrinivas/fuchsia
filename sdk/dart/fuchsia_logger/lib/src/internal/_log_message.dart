@@ -17,6 +17,7 @@ const int _maxTagLength = 63;
 const int _socketBufferLength = 2032;
 const int _unexpectedLoggingLevel = 100;
 
+const int _zxClockMonotonic = 0;
 final Map<Level, int> _enumToFuchsiaLevelMap = <Level, int>{
   Level.FINEST: fidl_log.LogLevelFilter.trace.$value,
   Level.FINER: fidl_log.LogLevelFilter.trace.$value,
@@ -56,7 +57,7 @@ class LogMessage {
 
   /// The time that this message was created
   final int systemTime = Platform.isFuchsia
-      ? System.clockGetMonotonic()
+      ? System.clockGet(_zxClockMonotonic)
       : DateTime.now().microsecondsSinceEpoch * 1000;
 
   /// The default constructor

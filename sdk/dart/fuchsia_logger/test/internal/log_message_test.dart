@@ -16,6 +16,7 @@ import 'package:zircon/zircon.dart';
 // 15 sec in nanoseconds
 const int _lookBackTimeGap = 15 * 1000 * 1000 * 1000;
 const int _socketBufferLength = 2032;
+const int _zxClockMonotonic = 0;
 
 void main() {
   /// the following tests are taken from the initial logging implementation.
@@ -220,7 +221,7 @@ void _validateFixedBlock(
 
   // Log time should be within the last 30 seconds
   int nowNanos = Platform.isFuchsia
-      ? System.clockGetMonotonic()
+      ? System.clockGet(_zxClockMonotonic)
       : DateTime.now().microsecondsSinceEpoch * 1000;
   int logNanos = _bytesToUint64(data.sublist(16, 24));
 
