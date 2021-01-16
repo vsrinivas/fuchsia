@@ -24,6 +24,7 @@ import (
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 	"time"
+	"unsafe"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -73,6 +74,39 @@ func (w *socketWriter) Write(p []byte) (int, error) {
 	}
 	w.lastError = err
 	return n, err
+}
+
+var _ tcpip.Payloader = (*socketReader)(nil)
+
+type socketReader struct {
+	socket    zx.Socket
+	lastError error
+	lastWrite int
+}
+
+func (*socketReader) FullPayload() ([]byte, *tcpip.Error) {
+	panic("FullPayload not available for socketIOAdapter")
+}
+
+func (r *socketReader) Payload(size int) ([]byte, *tcpip.Error) {
+	var sockInfo zx.InfoSocket
+	if err := r.socket.Handle().GetInfo(zx.ObjectInfoSocket, unsafe.Pointer(&sockInfo), uint(unsafe.Sizeof(sockInfo))); err != nil {
+		r.lastError = err
+		r.lastWrite = 0
+		return nil, tcpip.ErrBadBuffer
+	}
+	// Limit how many bytes we'll read to what's available on the socket in order
+	// to limit memory consumption since the returned slice will sit on the tx
+	// buffer of the TCP socket.
+	if sockInfo.RXBufAvailable < size {
+		size = sockInfo.RXBufAvailable
+	}
+	v := make([]byte, size)
+	r.lastWrite, r.lastError = r.socket.Read(v, 0)
+	if r.lastError != nil {
+		return nil, tcpip.ErrBadBuffer
+	}
+	return v[:r.lastWrite], nil
 }
 
 type hardError struct {
@@ -767,13 +801,30 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 	eps.wq.EventRegister(&waitEntry, waiter.EventOut)
 	defer eps.wq.EventUnregister(&waitEntry)
 
+	reader := socketReader{
+		socket: eps.local,
+	}
 	for {
-		// TODO: obviously allocating for each read is silly. A quick hack we can
-		// do is store these in a ring buffer, as the lifecycle of this buffer.View
-		// starts here, and ends in nearby code we control in link.go.
-		v := make([]byte, 0, 2048)
-		n, err := eps.local.Read(v[:cap(v)], 0)
-		if err != nil {
+		reader.lastError = nil
+		reader.lastWrite = 0
+
+		// Acquire hard error lock across ep calls to avoid races and store the
+		// hard error deterministically.
+		eps.hardError.mu.Lock()
+		n, err := eps.ep.Write(&reader, tcpip.WriteOptions{
+			// We must write atomically in order to guarantee all the data fetched
+			// from the zircon socket is consumed by the endpoint.
+			Atomic: true,
+		})
+		hardError := eps.hardError.storeAndRetrieveLocked(err)
+		eps.hardError.mu.Unlock()
+		if n != int64(reader.lastWrite) {
+			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastWrite))
+		}
+		// TODO(https://fxbug.dev/35006): Handle all transport write errors.
+		switch err {
+		case tcpip.ErrBadBuffer:
+			err := reader.lastError
 			if err, ok := err.(*zx.Error); ok {
 				switch err.Status {
 				case zx.ErrBadState:
@@ -807,64 +858,51 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 				}
 			}
 			panic(err)
-		}
-		v = v[:n]
-
-		for {
-			// Acquire hard error lock across ep calls to avoid races and store the
-			// hard error deterministically.
-			eps.hardError.mu.Lock()
-			n, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
-			hardError := eps.hardError.storeAndRetrieveLocked(err)
-			eps.hardError.mu.Unlock()
-
-			// TODO(https://fxbug.dev/35006): Handle all transport write errors.
-			switch err {
-			case tcpip.ErrNotConnected:
-				// Write never returns ErrNotConnected except for endpoints that were
-				// never connected. Such endpoints should never reach this loop.
-				panic(fmt.Sprintf("connected endpoint returned %s", err))
-			case nil:
-				v = v[n:]
-				if len(v) != 0 {
-					continue
-				}
-			case tcpip.ErrWouldBlock:
-				// NB: we can't select on closing here because the client may have
-				// written some data into the buffer and then immediately closed the
-				// socket.
-				//
-				// We must wait until the linger timeout.
-				select {
-				case <-eps.linger:
-					return
-				case <-notifyCh:
-					continue
-				}
-			case tcpip.ErrClosedForSend:
-				// Closed for send can be issued when the endpoint is in an error state,
-				// which is encoded by the presence of a hard error having been
-				// observed.
-				// To avoid racing signals with the closing caused by a hard error,
-				// we won't signal here if a hard error is already observed.
-				if hardError == nil {
-					if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
-						panic(err)
-					}
-				}
+		case tcpip.ErrNotConnected:
+			// Write never returns ErrNotConnected except for endpoints that were
+			// never connected. Such endpoints should never reach this loop.
+			panic(fmt.Sprintf("connected endpoint returned %s", err))
+		case nil:
+		case tcpip.ErrWouldBlock:
+			// NB: we can't select on closing here because the client may have
+			// written some data into the buffer and then immediately closed the
+			// socket.
+			//
+			// We must wait until the linger timeout.
+			select {
+			case <-eps.linger:
 				return
-			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
-				triggerClose = true
-				return
-			case tcpip.ErrTimeout:
-				// The maximum duration of missing ACKs was reached, or the maximum
-				// number of unacknowledged keepalives was reached.
-				triggerClose = true
-				return
-			default:
-				syslog.Errorf("TCP Endpoint.Write(): %s", err)
+			case <-notifyCh:
+				continue
 			}
-			break
+		case tcpip.ErrConnectionRefused:
+			// Connection refused is a "hard error" that may be observed on either the
+			// read or write loops.
+			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
+			// another connection attempt to match Linux.
+			return
+		case tcpip.ErrClosedForSend:
+			// Closed for send can be issued when the endpoint is in an error state,
+			// which is encoded by the presence of a hard error having been
+			// observed.
+			// To avoid racing signals with the closing caused by a hard error,
+			// we won't signal here if a hard error is already observed.
+			if hardError == nil {
+				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
+					panic(err)
+				}
+			}
+			return
+		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+			triggerClose = true
+			return
+		case tcpip.ErrTimeout:
+			// The maximum duration of missing ACKs was reached, or the maximum
+			// number of unacknowledged keepalives was reached.
+			triggerClose = true
+			return
+		default:
+			syslog.Errorf("TCP Endpoint.Write(): %s", err)
 		}
 	}
 }
@@ -917,6 +955,8 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			triggerClose = true
 			return
 		case tcpip.ErrConnectionRefused:
+			// Connection refused is a "hard error" that may be observed on either the
+			// read or write loops.
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
