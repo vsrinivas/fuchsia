@@ -6,7 +6,7 @@
 use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
+    crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::hardware_power_statecontrol_service::{
         Action, HardwarePowerStatecontrolService,
     },

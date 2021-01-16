@@ -18,9 +18,9 @@ use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
 use crate::night_mode::types::NightModeInfo;
+use crate::setup::types::ConfigurationInterfaceFlags;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightState;
-use bitflags::bitflags;
 use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
@@ -247,15 +247,6 @@ impl SettingRequest {
     }
 }
 
-bitflags! {
-    #[derive(Serialize, Deserialize)]
-    pub struct ConfigurationInterfaceFlags: u32 {
-        const ETHERNET = 1 << 0;
-        const WIFI = 1 << 1;
-        const DEFAULT = Self::WIFI.bits;
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FactoryResetInfo {
     pub is_local_reset_allowed: bool,
@@ -270,11 +261,6 @@ impl FactoryResetInfo {
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Deserialize, Serialize)]
-pub struct SetupInfo {
-    pub configuration_interfaces: ConfigurationInterfaceFlags,
 }
 
 /// Description of an action request on a setting. This wraps a

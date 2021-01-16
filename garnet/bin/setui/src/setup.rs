@@ -5,3 +5,4 @@ pub use self::setup_fidl_handler::fidl_io;
 
 pub mod setup_controller;
 pub mod setup_fidl_handler;
+pub mod types;

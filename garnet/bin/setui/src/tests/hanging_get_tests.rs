@@ -5,7 +5,7 @@
 #[cfg(test)]
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
-use crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo};
+use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;

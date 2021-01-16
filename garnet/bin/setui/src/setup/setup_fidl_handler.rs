@@ -7,7 +7,8 @@ use crate::fidl_process;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::settings::RequestContext;
-use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingRequest, SetupInfo};
+use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
+use crate::switchboard::base::SettingRequest;
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
 use std::convert::TryFrom;
 
