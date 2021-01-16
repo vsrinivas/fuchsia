@@ -115,8 +115,8 @@ impl Diagnostics for CobaltDiagnostics {
                 Some(
                     CobaltEvent::builder(HTTPSDATE_POLL_OFFSET_METRIC_ID)
                         .with_event_codes([
-                            direction_code as u32,
                             Self::poll_offset_rtt_bucket(round_trip_time),
+                            direction_code as u32,
                         ])
                         .as_count_event(0, offset.into_micros().abs()),
                 )
@@ -349,8 +349,8 @@ mod test {
                 CobaltEvent {
                     metric_id: HTTPSDATE_POLL_OFFSET_METRIC_ID,
                     event_codes: vec![
+                        *TEST_RTT_OFFSET_BUCKET,
                         TimeMetricDimensionDirection::Positive as u32,
-                        *TEST_RTT_OFFSET_BUCKET
                     ],
                     component: None,
                     payload: EventPayload::EventCount(CountEvent {
@@ -361,8 +361,8 @@ mod test {
                 CobaltEvent {
                     metric_id: HTTPSDATE_POLL_OFFSET_METRIC_ID,
                     event_codes: vec![
+                        *TEST_RTT_2_OFFSET_BUCKET,
                         TimeMetricDimensionDirection::Negative as u32,
-                        *TEST_RTT_2_OFFSET_BUCKET
                     ],
                     component: None,
                     payload: EventPayload::EventCount(CountEvent {
@@ -411,8 +411,8 @@ mod test {
                 CobaltEvent {
                     metric_id: HTTPSDATE_POLL_OFFSET_METRIC_ID,
                     event_codes: vec![
+                        TimeMetricDimensionRttBucket::Overflow as u32,
                         TimeMetricDimensionDirection::Positive as u32,
-                        TimeMetricDimensionRttBucket::Overflow as u32
                     ],
                     component: None,
                     payload: EventPayload::EventCount(CountEvent {
