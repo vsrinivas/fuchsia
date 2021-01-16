@@ -194,6 +194,13 @@ pub trait Driver: Send + Sync {
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings>;
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>>;
+
+    /// Returns a snapshot of the counters without resetting the counters.
+    async fn get_counters(&self) -> ZxResult<Counters>;
+
+    /// Resets all of the counters to zero returning the counter values
+    /// immediately prior.
+    async fn reset_counters(&self) -> ZxResult<Counters>;
 }
 
 #[async_trait()]
@@ -598,6 +605,20 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                         })
                         .await
                         .context("error in get_neighbor_table_snapshot request")?;
+                }
+                DeviceTestRequest::GetCounters { responder, .. } => {
+                    self.get_counters()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in get_counters request")?;
+                }
+                DeviceTestRequest::ResetCounters { responder, .. } => {
+                    self.reset_counters()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in reset_counters request")?;
                 }
             }
             Result::<(), Error>::Ok(())

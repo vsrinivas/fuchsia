@@ -810,6 +810,16 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         // TODO: Implement.
         return Ok(vec![]);
     }
+
+    async fn get_counters(&self) -> ZxResult<Counters> {
+        // TODO: Implement.
+        return Ok(Counters::EMPTY);
+    }
+
+    async fn reset_counters(&self) -> ZxResult<Counters> {
+        // TODO: Implement.
+        return Ok(Counters::EMPTY);
+    }
 }
 
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {

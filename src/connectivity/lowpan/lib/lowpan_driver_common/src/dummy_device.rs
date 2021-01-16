@@ -418,4 +418,12 @@ impl Driver for DummyDevice {
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
         return Ok(vec![]);
     }
+
+    async fn get_counters(&self) -> ZxResult<Counters> {
+        return Ok(Counters::EMPTY);
+    }
+
+    async fn reset_counters(&self) -> ZxResult<Counters> {
+        return Ok(Counters::EMPTY);
+    }
 }
