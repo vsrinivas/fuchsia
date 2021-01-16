@@ -36,6 +36,7 @@ detect_files = [
   "detect/omaha-client-detect.triage",
   "detect/sysmem-detect.triage",
   "detect/wlan-detect.triage",
+  "detect/brcmfmac-detect.triage",
 ]
 
 triage_files += detect_files

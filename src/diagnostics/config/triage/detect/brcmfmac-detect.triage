@@ -1,0 +1,33 @@
+{
+    select: {
+        tx_qfull_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:tx_qfull_24hrs",
+    },
+    act: {
+        excessive_tx_qfull: {
+            type: "Snapshot",
+            trigger: "tx_qfull_24hrs > 512",
+            repeat: "Hours(24)",
+            signature: "excessive-tx-qfull-in-24hrs",
+        },
+    },
+    test: {
+        excessive_tx_qfull: {
+            yes: [
+                "excessive_tx_qfull",
+            ],
+            no: [],
+            values: {
+                tx_qfull_24hrs: 768,
+            },
+        },
+        acceptable_tx_qfull: {
+            yes: [],
+            no: [
+                "excessive_tx_qfull",
+            ],
+            values: {
+                tx_qfull_24hrs: 256,
+            },
+        },
+    },
+}
