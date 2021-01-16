@@ -7,7 +7,6 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/image-format/image_format.h>
 
 namespace camera {
 
@@ -25,6 +24,8 @@ void ConvertToCTypeBufferCollectionInfo2(
 fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
     const fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, uint32_t coded_width,
     uint32_t coded_height);
+
+fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFormat format);
 
 }  // namespace camera
 

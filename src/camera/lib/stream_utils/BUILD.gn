@@ -15,7 +15,6 @@ group("tests") {
 
 source_set("lib") {
   sources = [ "image_io_util.cc" ]
-
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/syslog/cpp",
@@ -29,10 +28,10 @@ source_set("stream_configs") {
     "stream_constraints.cc",
     "stream_constraints.h",
   ]
-
   deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//src/camera/lib/format_conversion",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/image-format",

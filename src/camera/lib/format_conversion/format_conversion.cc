@@ -4,6 +4,8 @@
 
 #include "format_conversion.h"
 
+#include <lib/image-format/image_format.h>
+
 namespace camera {
 
 fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
@@ -118,6 +120,17 @@ fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
           .display_height = coded_height,
           .layers = 1,
           .color_space = constraints.color_space[0]};
+}
+
+fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFormat format) {
+  fuchsia_sysmem_PixelFormat ret;
+  ret.has_format_modifier = format.has_format_modifier;
+  // HLCPP and C enum values should always match. Spot-check a single one.
+  static_assert(static_cast<fuchsia_sysmem_PixelFormatType>(
+                    fuchsia::sysmem::PixelFormatType::YUY2) == fuchsia_sysmem_PixelFormatType_YUY2,
+                "HLCPP and C pixel format types don't match.");
+  ret.type = static_cast<fuchsia_sysmem_PixelFormatType>(format.type);
+  return ret;
 }
 
 }  // namespace camera

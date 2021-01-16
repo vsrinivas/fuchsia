@@ -6,7 +6,6 @@
 #define SRC_CAMERA_LIB_FAKE_CAMERA_FAKE_CAMERA_H_
 
 #include <fuchsia/camera3/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <zircon/types.h>
 

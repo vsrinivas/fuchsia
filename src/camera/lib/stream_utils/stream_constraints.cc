@@ -6,28 +6,14 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/affine/ratio.h>
 #include <lib/image-format/image_format.h>
 
-#include <algorithm>
-#include <vector>
-
 #include <fbl/algorithm.h>
 
-namespace camera {
+#include "src/camera/lib/format_conversion/format_conversion.h"
 
-static fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFormat format) {
-  fuchsia_sysmem_PixelFormat ret;
-  ret.has_format_modifier = format.has_format_modifier;
-  // HLCPP and C enum values should always match. Spot-check a single one.
-  static_assert(static_cast<fuchsia_sysmem_PixelFormatType>(
-                    fuchsia::sysmem::PixelFormatType::YUY2) == fuchsia_sysmem_PixelFormatType_YUY2,
-                "HLCPP and C pixel format types don't match.");
-  ret.type = static_cast<fuchsia_sysmem_PixelFormatType>(format.type);
-  return ret;
-}
+namespace camera {
 
 // Make an ImageFormat_2 struct with default values except for width, height and format.
 fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
