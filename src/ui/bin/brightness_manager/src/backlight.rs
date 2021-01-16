@@ -10,7 +10,7 @@ use fidl_fuchsia_hardware_backlight::{
 };
 use fuchsia_syslog::fx_log_info;
 
-const AUTO_MINIMUM_BRIGHTNESS: f64 = 0.004;
+const MINIMUM_BRIGHTNESS: f64 = 0.0004;
 
 fn open_backlight() -> Result<BacklightProxy, Error> {
     fx_log_info!("Opening backlight");
@@ -54,7 +54,7 @@ impl Backlight {
 
     fn set(&mut self, value: f64) -> Result<(), Error> {
         // TODO(fxbug.dev/36302): Handle error here as well, similar to get_brightness above. Might involve
-        let regulated_value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
+        let regulated_value = num_traits::clamp(value, MINIMUM_BRIGHTNESS, 1.0);
         let _result = self.proxy.set_state_normalized(&mut BacklightCommand {
             backlight_on: value > 0.0,
             brightness: regulated_value,
