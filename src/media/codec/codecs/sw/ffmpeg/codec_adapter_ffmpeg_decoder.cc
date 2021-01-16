@@ -39,6 +39,12 @@ static constexpr uint32_t kMaxOutputBufferCount = 34;
 // Arbitrary limit.
 static constexpr uint32_t kMaxInputBufferCount = 256;
 
+// FFMPEG requires at least this many padding bytes after each output frame, to allow for optimized
+// code to do less bounds checking (an understandable tradeoff).  Without this, FFMPEG can sometimes
+// read (and maybe sometimes write though I haven't personally observed that) beyond the end of the
+// output buffer which can crash the isolate process.
+static constexpr uint32_t kFfmpegOutputFramePaddingBytes = 16;
+
 }  // namespace
 
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(std::mutex& lock,
@@ -281,7 +287,8 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
     ZX_DEBUG_ASSERT(port == kOutputPort);
     // NV12, based on min stride.
     per_packet_buffer_bytes_min = uncompressed_format.primary_line_stride_bytes *
-                                  uncompressed_format.primary_height_pixels * 3 / 2;
+                                      uncompressed_format.primary_height_pixels * 3 / 2 +
+                                  kFfmpegOutputFramePaddingBytes;
     // At least for now, don't cap the per-packet buffer size for output.  The
     // HW only cares about the portion we set up for output anyway, and the
     // client has no way to force output to occur into portions of the output

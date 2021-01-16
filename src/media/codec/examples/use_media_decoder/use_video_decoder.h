@@ -98,6 +98,10 @@ struct UseVideoDecoderTestParams final {
       printf("per_frame_debug_output: %u", per_frame_debug_output);
     }
 
+    if (require_sw != kDefaultRequireSw) {
+      printf("require_sw: %u\n", require_sw);
+    }
+
     magic_validated_ = kPrivateMagicValidated;
   }
 
@@ -178,6 +182,9 @@ struct UseVideoDecoderTestParams final {
 
   static constexpr bool kDefaultPerFrameDebugOutput = true;
   bool per_frame_debug_output = kDefaultPerFrameDebugOutput;
+
+  static constexpr bool kDefaultRequireSw = false;
+  bool require_sw = kDefaultRequireSw;
 
  private:
   // Client code should not exploit knowledge of this value, and should not directly initialize or

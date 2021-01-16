@@ -112,6 +112,39 @@ package("use_h264_decoder_test") {
   ]
 }
 
+# Force SW decode.  Only run in environments where we include a SW h264 decoder.
+package("use-h264-sw-decoder-test") {
+  testonly = true
+
+  deps = [
+    "//src/media/codec/examples/use_media_decoder:use_h264_sw_decoder_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_h264_sw_decoder_test.cmx")
+      dest = "use_h264_sw_decoder_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on QEMU.
+      name = "use_h264_sw_decoder_test"
+
+      environments = [ emu_env ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/1080p_10_frames.h264")
+      dest = "1080p_10_frames.h264"
+    },
+  ]
+}
+
 package("use-h264-multi-decoder-test") {
   testonly = true
 

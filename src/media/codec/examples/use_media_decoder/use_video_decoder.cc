@@ -73,6 +73,8 @@ constexpr uint32_t kInputMinBufferSizeVp9 = kInputLargeFrameSizeVp9;
 
 constexpr uint32_t kInputMinBufferSize = std::max(kInputMinBufferSizeH264, kInputMinBufferSizeVp9);
 
+constexpr uint32_t kFfmpegOutputFramePaddingBytes = 16;
+
 // If readable_bytes is 0, that's considered a "start code", to allow the caller
 // to terminate a NAL the same way regardless of whether another start code is
 // found or the end of the buffer is found.
@@ -639,6 +641,9 @@ void VideoDecoderRunner::Run() {
         if (params_.is_secure_input) {
           decoder_params.set_secure_input_mode(fuchsia::mediacodec::SecureMemoryMode::ON);
         }
+        if (params_.test_params->require_sw) {
+          decoder_params.set_require_sw(true);
+        }
         // Bind the fuchsia::media::CodecFactoryHandle to a CodecFactoryPtr so we can send a
         // CreateDecoder message. This unbinds params_.codec_factory.
         auto codec_factory_ptr = params_.codec_factory.Bind();
@@ -824,6 +829,21 @@ void VideoDecoderRunner::Run() {
       }
 
       // We have a non-empty packet of the stream.
+
+      if (params_.test_params->require_sw) {
+        if ((packet.start_offset() + packet.valid_length_bytes()) % ZX_PAGE_SIZE == 0) {
+          // If this doesn't print, then it means the check for padding below isn't really checking
+          // whether we force an extra 16 bytes after the output frame, since buffers are always
+          // aligned up to 4KiB anyway.  Only when the frame size is 4KiB aligned will we see the
+          // 16 bytes of padding really change the buffer size.  When using ffmpeg sw decode on the
+          // 1080p_10_frames.h264 test file, this does print.
+          printf("test is really checking for padding\n");
+        }
+        if (buffer.size_bytes() - packet.valid_length_bytes() - packet.start_offset() <
+            kFfmpegOutputFramePaddingBytes) {
+          Exit("require_sw true decoder didn't pad as required by FFMPEG");
+        }
+      }
 
       if (packet.has_timestamp_ish()) {
         uint64_t timestamp_ish = packet.timestamp_ish();
