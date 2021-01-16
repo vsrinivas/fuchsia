@@ -2272,6 +2272,9 @@ foreach(_target_type,
         ]
 
         args = [
+          # Speed up startup by not looking for site packages.
+          "-S",
+
           # This wraps actions with a filesystem activity tracer.
           rebase_path("//build/tracer/action_tracer.py", root_build_dir),
           "--label",
