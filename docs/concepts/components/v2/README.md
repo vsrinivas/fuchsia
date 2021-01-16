@@ -45,6 +45,24 @@ the transition to the new architecture is complete.
 - [Hub](hub.md): A live view of the component topology at runtime.
 - [OpaqueTest](opaque_test.md): Hermetic testing framework.
 
+## Components (either version)
+
+- [Component URLs][doc-component-urls] are URLs that identify components.
+- [Components vs. processes](components_vs_processes.md): how the concepts differ
+
+## testing
+- [Test components][test-components]:
+  defining components that implement tests and running them.
+- [Test Runner Framework][trf]:
+  writing idiomatic tests in different languages that use common testing frameworks.
+- [Complex topologies and integration testing][integration-testing]:
+  testing interactions between multiple components in isolation from the rest of the
+  system.
+
+## Meta
+
+- [State of the Components v2 migration](migration.md): a work in progress.
+
 ## Internals
 
 - [Design principles](design_principles.md): Guidelines for arriving at
@@ -52,16 +70,9 @@ the transition to the new architecture is complete.
 - [Life of a protocol open](life_of_a_protocol_open.md): How components connect
   to protocols in their namespaces.
 
-## Components (either version)
-
-- [Component URLs][doc-component-urls] are URLs that identify components.
-- [Components vs. processes](components_vs_processes.md): how the concepts differ
-
-## Meta
-
-- [State of the Components v2 migration](migration.md): a work in progress.
-
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
-
+[test-components]: /docs/concepts/testing/v2_test_component.md
+[trf]: /docs/concepts/testing/test_runner_framework.md
+[integration-testing]: /docs/concepts/testing/v2_integration_testing.md
