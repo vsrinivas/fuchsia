@@ -813,6 +813,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/acpi/goldfish",
       "sys/platform/acpi/goldfish/goldfish-pipe",
+      "sys/platform/acpi/goldfish-sync",
+      "sys/platform/acpi/goldfish-sync/goldfish-sync",
 
       "goldfish-control-2",
       "goldfish-control-2/goldfish-control",

@@ -7,6 +7,7 @@ group("misc") {
     "goldfish",
     "goldfish_address_space",
     "goldfish_control",
+    "goldfish_sync",
   ]
 }
 
@@ -16,5 +17,6 @@ group("tests") {
     "goldfish:tests",
     "goldfish_address_space:tests",
     "goldfish_control:tests",
+    "goldfish_sync:tests",
   ]
 }

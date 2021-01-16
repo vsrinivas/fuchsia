@@ -694,6 +694,8 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
           PublishAcpiDevice(acpi_root, platform_bus, "rtc", object, info.get());
         } else if (hid == GOLDFISH_PIPE_HID_STRING) {
           PublishAcpiDevice(acpi_root, platform_bus, "goldfish", object, info.get());
+        } else if (hid == GOLDFISH_SYNC_HID_STRING) {
+          PublishAcpiDevice(acpi_root, platform_bus, "goldfish-sync", object, info.get());
         } else if (hid == SERIAL_HID_STRING) {
           PublishAcpiDevice(acpi_root, platform_bus, "serial", object, info.get());
         }

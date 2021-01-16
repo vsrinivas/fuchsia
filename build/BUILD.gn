@@ -329,6 +329,7 @@ group("deprecated_package") {
     "//src/graphics/drivers/misc/goldfish/*",
     "//src/graphics/drivers/misc/goldfish_address_space/*",
     "//src/graphics/drivers/misc/goldfish_control/*",
+    "//src/graphics/drivers/misc/goldfish_sync/*",
     "//src/graphics/drivers/msd-img-rgx/tests/integration/*",
     "//src/graphics/drivers/msd-img-rgx/tests/unit_tests/*",
     "//src/graphics/drivers/msd-vsi-vip/*",

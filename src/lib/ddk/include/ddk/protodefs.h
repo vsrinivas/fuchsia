@@ -173,5 +173,6 @@ DDK_PROTOCOL_DEF(DSI_BASE,                150, "dsi-base", 0)
 DDK_PROTOCOL_DEF(POWER_SENSOR,            151, "power-sensor", 0)
 DDK_PROTOCOL_DEF(REGISTERS,               152, "registers", 0)
 DDK_PROTOCOL_DEF(DAI,                     153, "dai", 0)
+DDK_PROTOCOL_DEF(GOLDFISH_SYNC,           154, "goldfish-sync", 0)
 #undef DDK_PROTOCOL_DEF
 #endif
