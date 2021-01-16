@@ -516,6 +516,10 @@ impl Daemon {
                     .await;
                 responder.send(&mut Ok(())).context("error sending response")?;
             }
+            DaemonRequest::RemoveTarget { target_id, responder } => {
+                let result = self.target_collection.remove_target(target_id.clone()).await;
+                responder.send(&mut Ok(result)).context("error sending response")?;
+            }
         }
         Ok(())
     }

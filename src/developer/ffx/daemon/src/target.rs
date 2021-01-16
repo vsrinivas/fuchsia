@@ -1052,6 +1052,46 @@ impl TargetCollection {
         inner.named.values().chain(inner.unnamed.iter()).cloned().collect()
     }
 
+    pub async fn remove_target(&self, target_id: String) -> bool {
+        let mut inner = self.inner.write().await;
+
+        if inner.named.remove(&target_id).is_none() {
+            let mut found = None;
+            'unnamed: for (index, target) in inner.unnamed.iter().enumerate() {
+                for addr in target.addrs().await.into_iter() {
+                    if format!("{}", addr.ip) == target_id {
+                        found = Some(index);
+                        break 'unnamed;
+                    }
+                }
+            }
+
+            if let Some(found) = found {
+                inner.unnamed.remove(found);
+                true
+            } else {
+                let mut found = None;
+                'named: for (index, target) in inner.named.iter() {
+                    for addr in target.addrs().await.into_iter() {
+                        if format!("{}", addr.ip) == target_id {
+                            found = Some(index.clone());
+                            break 'named;
+                        }
+                    }
+                }
+
+                if let Some(found) = found {
+                    inner.named.remove(&found);
+                    true
+                } else {
+                    false
+                }
+            }
+        } else {
+            true
+        }
+    }
+
     pub async fn merge_insert(&self, t: Target) -> Target {
         let mut inner = self.inner.write().await;
 
@@ -2030,5 +2070,83 @@ mod test {
             Err(DaemonError::TargetNotFound),
             tc.get_default(Some("not_in_here".to_owned())).await
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_remove_unnamed_by_addr() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let ip1 = "f111::3".parse().unwrap();
+        let ip2 = "f111::4".parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
+        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+        let mut targets = tc.targets().await.into_iter();
+        let target1 = targets.next().expect("Merging resulted in no targets.");
+        let target2 = targets.next().expect("Merging resulted in only one target.");
+        assert!(targets.next().is_none());
+        assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
+        assert_eq!(target2.nodename().await, None);
+        assert!(tc.remove_target("f111::3".to_owned()).await);
+        let mut targets = tc.targets().await.into_iter();
+        let target = targets.next().expect("Merging resulted in no targets.");
+        assert!(targets.next().is_none());
+        assert_eq!(target.nodename_str().await, "this-is-a-crunchy-falafel");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_remove_named_by_addr() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let ip1 = "f111::3".parse().unwrap();
+        let ip2 = "f111::4".parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
+        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+        let mut targets = tc.targets().await.into_iter();
+        let target1 = targets.next().expect("Merging resulted in no targets.");
+        let target2 = targets.next().expect("Merging resulted in only one target.");
+        assert!(targets.next().is_none());
+        assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
+        assert_eq!(target2.nodename().await, None);
+        assert!(tc.remove_target("f111::4".to_owned()).await);
+        let mut targets = tc.targets().await.into_iter();
+        let target = targets.next().expect("Merging resulted in no targets.");
+        assert!(targets.next().is_none());
+        assert_eq!(target.nodename().await, None);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_remove_by_name() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let ip1 = "f111::3".parse().unwrap();
+        let ip2 = "f111::4".parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
+        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+        let mut targets = tc.targets().await.into_iter();
+        let target1 = targets.next().expect("Merging resulted in no targets.");
+        let target2 = targets.next().expect("Merging resulted in only one target.");
+        assert!(targets.next().is_none());
+        assert_eq!(target1.nodename_str().await, "this-is-a-crunchy-falafel");
+        assert_eq!(target2.nodename().await, None);
+        assert!(tc.remove_target("this-is-a-crunchy-falafel".to_owned()).await);
+        let mut targets = tc.targets().await.into_iter();
+        let target = targets.next().expect("Merging resulted in no targets.");
+        assert!(targets.next().is_none());
+        assert_eq!(target.nodename().await, None);
     }
 }
