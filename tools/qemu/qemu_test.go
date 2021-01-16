@@ -5,7 +5,7 @@
 package qemu
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,46 +29,60 @@ func check(t *testing.T, e expected, cmd []string, err error) {
 }
 
 func TestQEMUCommandBuilder(t *testing.T) {
-	b := &QEMUCommandBuilder{}
-
 	// Invalid Target
-	target := Target("badtarget")
-	if err := b.SetTarget(target, false); err == nil {
-		t.Errorf("SetTarget(%q, false) expected an error but got nil", target)
-	}
-
-	// No binary set.
+	b := &QEMUCommandBuilder{}
+	b.SetTarget(Target("badtarget"), false)
 	cmd, err := b.Build()
 	check(t, expected{
 		cmd: []string{},
-		err: fmt.Errorf("QEMU binary path must be set."),
+		err: errors.New("invalid target: \"badtarget\""),
 	}, cmd, err)
 
-	b.SetBinary("./bin/qemu")
-
-	// No kernel set.
+	// No binary set.
+	b = &QEMUCommandBuilder{}
 	cmd, err = b.Build()
 	check(t, expected{
 		cmd: []string{},
-		err: fmt.Errorf("QEMU kernel path must be set."),
+		err: errors.New("QEMU binary path must be set."),
+	}, cmd, err)
+
+	// No kernel set.
+	b = &QEMUCommandBuilder{}
+	b.SetBinary("./bin/qemu")
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{},
+		err: errors.New("QEMU kernel path must be set."),
 	}, cmd, err)
 
 	b.SetKernel("./data/qemu-kernel")
 
 	// No initrd set.
+	b = &QEMUCommandBuilder{}
+	b.SetBinary("./bin/qemu")
+	b.SetKernel("./data/qemu-kernel")
 	cmd, err = b.Build()
 	check(t, expected{
 		cmd: []string{},
-		err: fmt.Errorf("QEMU initrd path must be set."),
+		err: errors.New("QEMU initrd path must be set."),
 	}, cmd, err)
 
 	// Invalid HCI
-	if err := b.AddHCI("invalid"); err == nil {
-		t.Errorf("SetHCI(invalid) got nil but wanted an error")
-	}
-
+	b = &QEMUCommandBuilder{}
+	b.SetBinary("./bin/qemu")
+	b.SetKernel("./data/qemu-kernel")
 	b.SetInitrd("./data/zircon-a")
+	b.AddHCI("invalid")
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{},
+		err: errors.New("unimplemented host controller interface: \"invalid\""),
+	}, cmd, err)
 
+	b = &QEMUCommandBuilder{}
+	b.SetBinary("./bin/qemu")
+	b.SetKernel("./data/qemu-kernel")
+	b.SetInitrd("./data/zircon-a")
 	cmd, err = b.Build()
 	check(t, expected{
 		cmd: []string{

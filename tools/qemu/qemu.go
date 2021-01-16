@@ -5,6 +5,7 @@
 package qemu
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -140,6 +141,9 @@ type QEMUCommandBuilder struct {
 	initrd     string
 	kernel     string
 	kernelArgs []string
+
+	// Any errors encountered while building the command.
+	errs []string
 }
 
 func (q *QEMUCommandBuilder) SetFlag(args ...string) {
@@ -158,7 +162,7 @@ func (q *QEMUCommandBuilder) SetInitrd(initrd string) {
 	q.initrd = initrd
 }
 
-func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) error {
+func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 	switch target {
 	case TargetEnum.AArch64:
 		if kvm {
@@ -178,9 +182,8 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) error {
 			q.SetFlag("-cpu", "Haswell,+smap,-check,-fsgsbase")
 		}
 	default:
-		return fmt.Errorf("invalid target: %q", target)
+		q.recordError(fmt.Errorf("invalid target: %q", target))
 	}
-	return nil
 }
 
 func (q *QEMUCommandBuilder) SetMemory(memoryBytes int) {
@@ -208,12 +211,12 @@ func (q *QEMUCommandBuilder) AddUSBDrive(d Drive) {
 }
 
 // AddHCI adds an host-controller-interface.
-func (q *QEMUCommandBuilder) AddHCI(hci HCI) error {
+func (q *QEMUCommandBuilder) AddHCI(hci HCI) {
 	if hci != XHCI {
-		return fmt.Errorf("unimplemented host controller interface: %q", hci)
+		q.recordError(fmt.Errorf("unimplemented host controller interface: %q", hci))
+		return
 	}
 	q.SetFlag("-device", "qemu-xhci,id=xhci")
-	return nil
 }
 
 func (q *QEMUCommandBuilder) AddSerial(c Chardev) {
@@ -266,6 +269,12 @@ func (q *QEMUCommandBuilder) AddKernelArg(kernelArg string) {
 }
 
 func (q *QEMUCommandBuilder) validate() error {
+	if len(q.errs) == 1 {
+		return errors.New(q.errs[0])
+	}
+	if len(q.errs) > 0 {
+		return fmt.Errorf("multiple errors: [\n%s\n]", strings.Join(q.errs, ",\n"))
+	}
 	if q.qemuPath == "" {
 		return fmt.Errorf("QEMU binary path must be set.")
 	}
@@ -302,4 +311,8 @@ func (q *QEMUCommandBuilder) Build() ([]string, error) {
 	}
 
 	return cmd, nil
+}
+
+func (q *QEMUCommandBuilder) recordError(err error) {
+	q.errs = append(q.errs, err.Error())
 }

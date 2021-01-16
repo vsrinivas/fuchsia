@@ -131,11 +131,11 @@ type commandBuilder interface {
 	SetBinary(string)
 	SetKernel(string)
 	SetInitrd(string)
-	SetTarget(qemu.Target, bool) error
+	SetTarget(qemu.Target, bool)
 	SetFlag(...string)
 	SetMemory(bytes int)
 	AddNetwork(qemu.Netdev)
-	AddHCI(qemu.HCI) error
+	AddHCI(qemu.HCI)
 	AddKernelArg(string)
 	AddUSBDrive(qemu.Drive)
 	AddVirtioBlkPciDrive(qemu.Drive)

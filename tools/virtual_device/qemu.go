@@ -106,9 +106,7 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 
 	// The call to Validate() above guarantees the target is in this map.
 	target := qemuTargets[fvd.Hw.Arch]
-	if err := b.SetTarget(target, fvd.Hw.EnableKvm); err != nil {
-		return err
-	}
+	b.SetTarget(target, fvd.Hw.EnableKvm)
 
 	for _, d := range fvd.Hw.NetworkDevices {
 		// TODO(kjharland): Switch all tests to -nic, which is newer than -netdev.
