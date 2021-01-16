@@ -2982,7 +2982,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
 
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    BRCMF_ERR(
+    BRCMF_INFO(
         "Scanning in progress when AP start request comes, scan status (%lu), aborting scan to "
         "continue AP start request.\n",
         cfg->scan_status.load());
