@@ -23,6 +23,7 @@ rustc_binary("bin") {
   test_deps = [
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:tempfile",
   ]
   with_unit_tests = true
 
@@ -34,8 +35,16 @@ rustc_library("lib") {
   edition = "2018"
   deps = [
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:futures-test",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
+  test_deps = [
+    "//third_party/rust_crates:futures-test",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:tempfile",
+  ]
+
   with_unit_tests = true
 
   sources = [
@@ -58,10 +67,12 @@ fuchsia_package_with_single_component("regulatory_region") {
 }
 
 fuchsia_unittest_component("regulatory-region-test") {
+  manifest = "meta/regulatory_region_test.cmx"
   deps = [ ":bin_test" ]
 }
 
 fuchsia_unittest_component("regulatory-region-lib-test") {
+  manifest = "meta/regulatory_region_lib_lib_test.cmx"
   deps = [ ":lib_test" ]
 }
 

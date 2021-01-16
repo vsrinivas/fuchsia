@@ -16,9 +16,11 @@ use {
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     regulatory_region_lib::pub_sub_hub::PubSubHub,
+    std::path::Path,
 };
 
 const CONCURRENCY_LIMIT: Option<usize> = None;
+const REGION_CODE_PATH: &str = "/cache/regulatory_region.json";
 
 enum IncomingService {
     ConfigRequest(ConfigRequestStream),
@@ -29,7 +31,8 @@ enum IncomingService {
 async fn main() -> Result<(), Error> {
     syslog::init().context("Failed to initialize logging")?;
     let mut fs = ServiceFs::new_local();
-    let region_tracker = PubSubHub::new();
+    let storage_path = Path::new(REGION_CODE_PATH);
+    let region_tracker = PubSubHub::new(storage_path.into());
     fs.dir("svc").add_fidl_service(IncomingService::ConfigRequest);
     fs.dir("svc").add_fidl_service(IncomingService::WatchRequest);
     fs.take_and_serve_directory_handle().context("Failed to start serving")?;
@@ -119,7 +122,6 @@ async fn respond_to_get_update(
 ) -> Result<Option<String>, Error> {
     match region_tracker.watch_for_change(last_read_value).await {
         Some(val) => {
-            fx_log_info!("Sending regulatory region update (get_update) {:?}", val.clone());
             responder.send(val.as_ref()).context("Failed to write response")?;
             Ok(Some(val))
         }
@@ -132,12 +134,15 @@ mod tests {
     use {
         super::*, fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
         fuchsia_async as fasync, matches::assert_matches, pin_utils::pin_mut, std::task::Poll,
+        tempfile::TempDir,
     };
 
     #[test]
     fn process_watch_requests_sends_first_none() {
         let mut exec = fasync::Executor::new().expect("Failed to create executor");
-        let hub = PubSubHub::new();
+        let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");
+        let path = temp_dir.path().join("regulatory_region.json");
+        let hub = PubSubHub::new(path);
         let (client, requests) = fidl::endpoints::create_proxy::<RegulatoryRegionWatcherMarker>()
             .expect("Failed to connect to Watcher protocol");
         let update_stream = requests.into_stream().expect("Failed to create stream");
@@ -172,7 +177,9 @@ mod tests {
     #[test]
     fn first_update_is_current_value() {
         let mut exec = fasync::Executor::new().expect("Failed to create executor");
-        let hub = PubSubHub::new();
+        let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");
+        let path = temp_dir.path().join("regulatory_region.json");
+        let hub = PubSubHub::new(path);
         let (client, requests) = fidl::endpoints::create_proxy::<RegulatoryRegionWatcherMarker>()
             .expect("Failed to connect to Watcher protocol");
         let update_stream = requests.into_stream().expect("Failed to create stream");

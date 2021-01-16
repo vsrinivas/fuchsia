@@ -9,9 +9,9 @@ use {
         RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherProxy as WatcherProxy,
     },
     fidl_fuchsia_sys::LauncherProxy,
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
     fuchsia_component::{
-        client::{launch, launcher, App},
+        client::{connect_to_service, launch, launcher, App},
         fuchsia_single_component_package_url,
     },
 };
@@ -21,7 +21,7 @@ const COMPONENT_URL: &str = fuchsia_single_component_package_url!("regulatory_re
 #[fasync::run_singlethreaded(test)]
 async fn from_none_state_sending_get_region_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Get the initial value so that it doesn't matter whether set or get is handled first in the
@@ -50,7 +50,7 @@ async fn from_none_state_sending_get_region_then_set_yields_expected_region() ->
 #[fasync::run_singlethreaded(test)]
 async fn from_none_state_sending_set_then_get_region_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Get the initial value so that it doesn't matter whether set or get is handled first in the
@@ -75,7 +75,7 @@ async fn from_none_state_sending_set_then_get_region_yields_expected_region() ->
 #[fasync::run_singlethreaded(test)]
 async fn from_some_state_sending_get_region_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Get the initial value so that it doesn't matter whether set or get is handled first in the
@@ -109,7 +109,7 @@ async fn from_some_state_sending_get_region_then_set_yields_expected_region() ->
 #[fasync::run_singlethreaded(test)]
 async fn from_some_state_sending_set_then_get_region_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Get the initial value so that it doesn't matter whether set or get is handled first in the
@@ -139,11 +139,32 @@ async fn from_some_state_sending_set_then_get_region_yields_expected_region() ->
 #[fasync::run_singlethreaded(test)]
 async fn from_none_state_sending_get_region_yields_none() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (_configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // The initial update before setting anything should be None.
     assert_eq!(None, watcher.get_region_update().await?);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn from_some_state_reloading_service_yields_expected_region() -> Result<(), Error> {
+    // Set up handles.
+    let test_context = new_test_context().await?;
+    let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
+
+    // Get the initial value so that it doesn't matter whether set or get is handled first in the
+    // rest of the test. Ignore the value because it depends on what ran previously.
+    watcher.get_region_update().await?;
+
+    const SECOND_REGION: &'static str = "CC";
+    configurator.set_region(SECOND_REGION)?;
+    assert_eq!(Some(SECOND_REGION.to_string()), watcher.get_region_update().await?);
+
+    // Restart the service backing the protocols so that it will read the cached value.
+    let test_context = new_test_context_without_clear()?;
+    let watcher = &test_context.watcher;
+    assert_eq!(Some(SECOND_REGION.to_string()), watcher.get_region_update().await?);
     Ok(())
 }
 
@@ -158,7 +179,16 @@ struct TestContext {
     watcher: WatcherProxy,
 }
 
-fn new_test_context() -> Result<TestContext, Error> {
+async fn new_test_context() -> Result<TestContext, Error> {
+    // NOTE: this clears isolated-cache-storage in order to clear the regulatory region cache, but
+    // it will also clear everything in cache.
+    let cache_control = connect_to_service::<systest::CacheControlMarker>()?;
+    cache_control.clear().await.context("Failed to clear cache")?;
+    new_test_context_without_clear()
+}
+
+/// Set up the protocol services for the without clearing the regulatory region cache.
+fn new_test_context_without_clear() -> Result<TestContext, Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
     let region_service = launch(&launcher, COMPONENT_URL.to_string(), None)
         .context("Failed to launch region service")?;
@@ -176,7 +206,7 @@ fn new_test_context() -> Result<TestContext, Error> {
 #[fasync::run_singlethreaded(test)]
 async fn from_none_state_sending_get_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // **Caution**
@@ -201,7 +231,7 @@ async fn from_none_state_sending_get_then_set_yields_expected_region() -> Result
 #[fasync::run_singlethreaded(test)]
 async fn from_none_state_sending_set_then_get_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // **Caution**
@@ -222,7 +252,7 @@ async fn from_none_state_sending_set_then_get_yields_expected_region() -> Result
 #[fasync::run_singlethreaded(test)]
 async fn from_some_state_sending_get_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Move the service from the None state to the Some state.
@@ -252,7 +282,7 @@ async fn from_some_state_sending_get_then_set_yields_expected_region() -> Result
 #[fasync::run_singlethreaded(test)]
 async fn from_some_state_sending_set_then_get_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
-    let test_context = new_test_context()?;
+    let test_context = new_test_context().await?;
     let (configurator, watcher) = (&test_context.configurator, &test_context.watcher);
 
     // Move the service from the None state to the Some state.
