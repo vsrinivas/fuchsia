@@ -326,6 +326,16 @@ pub fn fake_wpa2_wpa3_mfpr_rsne() -> Vec<u8> {
     ])
 }
 
+// Wpa2/Wpa3 without any management frame protection flags set.
+pub fn fake_wpa2_wpa3_no_mfp_rsne() -> Vec<u8> {
+    attach_rsne_header(&[
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+        2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2, // 2 AKM: SAE, PSK
+    ])
+}
+
 pub fn fake_wpa3_rsne() -> Vec<u8> {
     attach_rsne_header(&[
         1, 0, // Version

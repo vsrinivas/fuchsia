@@ -263,25 +263,30 @@ impl BssDescription {
             } else if mfp_cap && mfp_req {
                 return Protection::Wpa3Personal;
             }
-        } else if suite_filter::WPA2_PERSONAL.is_satisfied(&rsne) {
+        }
+        if suite_filter::WPA2_PERSONAL.is_satisfied(&rsne) {
             if supports_wpa_1 {
                 return Protection::Wpa1Wpa2Personal;
             } else {
                 return Protection::Wpa2Personal;
             }
-        } else if suite_filter::WPA2_PERSONAL_TKIP_ONLY.is_satisfied(&rsne) {
+        }
+        if suite_filter::WPA2_PERSONAL_TKIP_ONLY.is_satisfied(&rsne) {
             if supports_wpa_1 {
                 return Protection::Wpa1Wpa2PersonalTkipOnly;
             } else {
                 return Protection::Wpa2PersonalTkipOnly;
             }
-        } else if supports_wpa_1 {
+        }
+        if supports_wpa_1 {
             return Protection::Wpa1;
-        } else if suite_filter::WPA3_ENTERPRISE_192_BIT.is_satisfied(&rsne) {
+        }
+        if suite_filter::WPA3_ENTERPRISE_192_BIT.is_satisfied(&rsne) {
             if mfp_cap && mfp_req {
                 return Protection::Wpa3Enterprise;
             }
-        } else if suite_filter::WPA2_ENTERPRISE.is_satisfied(&rsne) {
+        }
+        if suite_filter::WPA2_ENTERPRISE.is_satisfied(&rsne) {
             return Protection::Wpa2Enterprise;
         }
         Protection::Unknown
@@ -522,8 +527,8 @@ mod tests {
             test_utils::{
                 fake_frames::{
                     fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_mfpc_rsne, fake_wpa2_mfpr_rsne,
-                    fake_wpa2_rsne, fake_wpa2_wpa3_mfpr_rsne, invalid_wpa3_enterprise_192_bit_rsne,
-                    invalid_wpa3_rsne,
+                    fake_wpa2_rsne, fake_wpa2_wpa3_mfpr_rsne, fake_wpa2_wpa3_no_mfp_rsne,
+                    invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
                 },
                 fake_stas::IesOverrides,
             },
@@ -567,6 +572,23 @@ mod tests {
                 .set(IeType::RSNE, fake_wpa2_wpa3_mfpr_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Wpa2Wpa3Personal, bss.protection());
+    }
+
+    #[test]
+    fn test_downgrade() {
+        // If Wpa3 doesn't use MFP, ignore it and use Wpa2 instead.
+        let bss = fake_bss!(Wpa2,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, fake_wpa2_wpa3_no_mfp_rsne()[2..].to_vec())
+        );
+        assert_eq!(Protection::Wpa2Personal, bss.protection());
+
+        // Downgrade to Wpa1 as well.
+        let bss = fake_bss!(Wpa1,
+            ies_overrides: IesOverrides::new()
+                .set(IeType::RSNE, invalid_wpa3_rsne()[2..].to_vec())
+        );
+        assert_eq!(Protection::Wpa1, bss.protection());
     }
 
     #[test]
