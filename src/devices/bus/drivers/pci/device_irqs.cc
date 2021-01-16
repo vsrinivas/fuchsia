@@ -7,6 +7,7 @@
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <fbl/algorithm.h>
 
@@ -20,7 +21,10 @@ zx::status<uint32_t> Device::QueryIrqMode(pci_irq_mode_t mode) {
   fbl::AutoLock dev_lock(&dev_lock_);
   switch (mode) {
     case PCI_IRQ_MODE_LEGACY:
-      return zx::error(ZX_ERR_NOT_SUPPORTED);
+      if (cfg_->Read(Config::kInterruptLine) != 0) {
+        return zx::ok(PCI_LEGACY_INT_COUNT);
+      }
+      break;
     case PCI_IRQ_MODE_MSI:
       if (caps_.msi) {
         return zx::ok(caps_.msi->vectors_avail());
@@ -63,6 +67,8 @@ zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
   }
 
   switch (mode) {
+    case PCI_IRQ_MODE_LEGACY:
+      return EnableLegacy();
     case PCI_IRQ_MODE_MSI:
       if (caps_.msi) {
         return EnableMsi(irq_cnt);
@@ -78,11 +84,13 @@ zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
 }
 
 zx_status_t Device::DisableInterrupts() {
-  zxlogf(DEBUG, "[%s] disabling IRQ mode %u", cfg_->addr(), irqs_.mode);
   zx_status_t st = ZX_OK;
   switch (irqs_.mode) {
     case PCI_IRQ_MODE_DISABLED:
-      zxlogf(DEBUG, "[%s] disabling interrupts when interrupts are already disabled", cfg_->addr());
+      zxlogf(TRACE, "[%s] disabling interrupts when interrupts are already disabled", cfg_->addr());
+      break;
+    case PCI_IRQ_MODE_LEGACY:
+      st = DisableLegacy();
       break;
     case PCI_IRQ_MODE_MSI:
       st = DisableMsi();
@@ -93,6 +101,7 @@ zx_status_t Device::DisableInterrupts() {
   }
 
   if (st == ZX_OK) {
+    zxlogf(DEBUG, "[%s] disabled IRQ mode %u", cfg_->addr(), irqs_.mode);
     irqs_.mode = PCI_IRQ_MODE_DISABLED;
   }
   return st;
@@ -108,13 +117,16 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
-  if (irqs_.mode == PCI_IRQ_MODE_LEGACY) {
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
   zx::interrupt interrupt = {};
   zx_status_t status = ZX_OK;
   switch (irqs_.mode) {
+    case PCI_IRQ_MODE_LEGACY: {
+      if (which_irq != 0) {
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+      status = irqs_.legacy.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt);
+      break;
+    }
     case PCI_IRQ_MODE_MSI: {
       zx::status<ddk::MmioView> view_res = cfg_->get_view();
       if (!view_res.is_ok()) {
@@ -148,6 +160,10 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
   return zx::ok(std::move(interrupt));
 }
 
+zx_status_t Device::SignalLegacyIrq(zx_time_t timestamp) const {
+  return irqs_.legacy.trigger(/*options=*/0, zx::time(timestamp));
+}
+
 zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
   zx::msi msi;
   zx_status_t st = bdi_->AllocateMsi(irq_cnt, &msi);
@@ -164,6 +180,24 @@ zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_c
   ZX_DEBUG_ASSERT(msi_info.interrupt_count == 0);
 
   return zx::ok(std::make_pair(std::move(msi), msi_info));
+}
+
+zx_status_t Device::EnableLegacy() {
+  irqs_.legacy_vector = cfg_->Read(Config::kInterruptLine);
+  if (irqs_.legacy_vector == 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = bdi_->AddToSharedIrqList(this, irqs_.legacy_vector);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] failed to add legacy irq to shared handler list %#x: %s", cfg_->addr(),
+           irqs_.legacy_vector, zx_status_get_string(status));
+    return status;
+  }
+
+  ModifyCmdLocked(/*clr_bits=*/PCIE_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
+  irqs_.mode = PCI_IRQ_MODE_LEGACY;
+  return ZX_OK;
 }
 
 zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
@@ -218,6 +252,19 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
   return result.status_value();
 }
 
+zx_status_t Device::DisableLegacy() {
+  zx_status_t status = bdi_->RemoveFromSharedIrqList(this, irqs_.legacy_vector);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "[%s] failed to remove legacy irq to shared handler list %#x: %s", cfg_->addr(),
+           irqs_.legacy_vector, zx_status_get_string(status));
+    return status;
+  }
+
+  ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCIE_CFG_COMMAND_INT_DISABLE);
+  irqs_.legacy_vector = 0;
+  return ZX_OK;
+}
+
 // In general, if a device driver tries to disable an interrupt mode while
 // holding handles to individual interrupts then it's considered a bad state.
 // TODO(fxbug.dev/32978): Are there cases where the bus driver would want to hard disable
@@ -225,8 +272,11 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 // crash the handles will be released, but in a hard disable path they would still
 // exist.
 zx_status_t Device::VerifyAllMsisFreed() {
-  ZX_DEBUG_ASSERT(irqs_.msi_allocation);
-  zx_info_msi_t info;
+  if (!irqs_.msi_allocation) {
+    return ZX_OK;
+  }
+
+  zx_info_msi_t info = {};
   zx_status_t st =
       irqs_.msi_allocation.get_info(ZX_INFO_MSI, &info, sizeof(info), nullptr, nullptr);
   if (st != ZX_OK) {
@@ -241,7 +291,6 @@ zx_status_t Device::VerifyAllMsisFreed() {
 }
 
 zx_status_t Device::DisableMsi() {
-  ZX_DEBUG_ASSERT(irqs_.mode == PCI_IRQ_MODE_MSI);
   ZX_DEBUG_ASSERT(caps_.msi);
   if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
@@ -252,12 +301,10 @@ zx_status_t Device::DisableMsi() {
   cfg_->Write(caps_.msi->ctrl(), ctrl.value);
 
   irqs_.msi_allocation.reset();
-  irqs_.mode = PCI_IRQ_MODE_DISABLED;
   return ZX_OK;
 }
 
 zx_status_t Device::DisableMsix() {
-  ZX_DEBUG_ASSERT(irqs_.mode == PCI_IRQ_MODE_MSI_X);
   ZX_DEBUG_ASSERT(caps_.msix);
   if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
@@ -269,7 +316,6 @@ zx_status_t Device::DisableMsix() {
   cfg_->Write(caps_.msix->ctrl(), ctrl.value);
 
   irqs_.msi_allocation.reset();
-  irqs_.mode = PCI_IRQ_MODE_DISABLED;
   return ZX_OK;
 }
 

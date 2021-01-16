@@ -11,6 +11,10 @@
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
 
+#include <vector>
+
+#include <fbl/array.h>
+
 #include "fake_ecam.h"
 
 // This FakePciroot class for the moment is a stub and test files
@@ -30,7 +34,11 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
             .ecam_vmo = ecam_.vmo()->get(),
         } {
     ZX_ASSERT(fake_bti_create(bti_.reset_and_get_address()) == ZX_OK);
+    sysmem_.reset(0x5359534D);  // SYSM
   }
+
+  auto& legacy_irqs() { return legacy_irqs_; }
+  auto& routing_entries() { return routing_entries_; }
 
   // Allow move.
   FakePciroot(FakePciroot&&) = default;
@@ -40,7 +48,13 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   FakePciroot& operator=(const FakePciroot&) = delete;
 
   pciroot_protocol_t* proto() { return &proto_; }
-  pci_platform_info_t info() { return info_; }
+  pci_platform_info_t info() {
+    info_.legacy_irqs_list = legacy_irqs_.data();
+    info_.legacy_irqs_count = legacy_irqs_.size();
+    info_.irq_routing_list = routing_entries_.data();
+    info_.irq_routing_count = routing_entries_.size();
+    return info_;
+  }
   FakeEcam& ecam() { return ecam_; }
   uint8_t bus_start() { return info_.start_bus_num; }
   uint8_t bus_end() { return info_.end_bus_num; }
@@ -53,8 +67,8 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   }
 
   zx_status_t PcirootConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
-    *info = info_;
+  zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* out_info) {
+    *out_info = info();
     return ZX_OK;
   }
 
@@ -123,6 +137,9 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   FakeEcam ecam_;
   pci_platform_info_t info_;
   zx::bti bti_;
+  zx::channel sysmem_;
+  std::vector<pci_legacy_irq_t> legacy_irqs_;
+  std::vector<pci_irq_routing_entry_t> routing_entries_;
   int32_t allocation_cnt_ = 0;
 };
 

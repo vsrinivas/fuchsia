@@ -9,10 +9,13 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
+#include <lib/zx/thread.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/port.h>
 
 #include <list>
 #include <memory>
+#include <thread>
 #include <unordered_map>
 
 #include <ddk/device.h>
@@ -66,11 +69,10 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
         info_(info),
         ecam_(std::move(ecam)) {}
   ~Bus() override;
-  zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
   // Map an ecam VMO for Bus and Config use.
   static zx::status<ddk::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
-  void DdkRelease();
 
+  zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
   // Bus Device Interface implementation
   zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final;
   zx_status_t UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final;
@@ -83,31 +85,40 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   zx_status_t RemoveFromSharedIrqList(pci::Device* device, uint32_t vector)
       __TA_EXCLUDES(devices_lock_) final;
 
-  // All methods related to the fuchsia.hardware.pci service.
+  // All methods related to the fuchsia.hardware.pci service and the DDK.
+  void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void GetDevices(GetDevicesCompleter::Sync& completer) final;
   void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
 
  protected:
-  // These are used for derived test classes.
+  // These are used by the derived TestBus class.
   fbl::Mutex* devices_lock() __TA_RETURN_CAPABILITY(devices_lock_) { return &devices_lock_; }
   pci::DeviceTree& devices() { return devices_; }
   SharedIrqMap& shared_irqs() { return shared_irqs_; }
   LegacyIrqs& legacy_irqs() { return legacy_irqs_; }
 
  private:
-  // bus values given to the Bus driver through Pciroot.
+  // Map an ecam VMO for Bus and Config use.
+  zx_status_t MapEcam();
   // Creates a Config object for accessing the config space of the device at |bdf|.
   zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
   // Scan all buses downstream from the root within the start and end
+  // bus values given to the Bus driver through Pciroot.
   zx_status_t ScanDownstream();
   ddk::PcirootProtocolClient& pciroot() { return pciroot_; }
   // Scan a specific bus
   void ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list);
 
-  // All methods related to shared IRQ handling around legacy interrupts.
   // Creates interrupts corresponding to legacy IRQ vectors and configures devices accordingly.
-  zx_status_t ConfigureLegacyIrqs();
+  zx_status_t ConfigureLegacyIrqs() __TA_EXCLUDES(devices_lock_);
+  // Creates and binds interrupts to the irq port and sets up Shared IRQ handler lists.
+  zx_status_t SetUpLegacyIrqHandlers() __TA_REQUIRES(devices_lock_);
+  static void LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* shared_irq_map);
+  // Creates and starts the legacy IRQ worker thread.
+  void StartIrqWorker();
+  // Queues a packet informing the IRQ worker that it should exit.
+  zx_status_t StopIrqWorker();
 
   // members
   ddk::PcirootProtocolClient pciroot_;
@@ -118,6 +129,7 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   fbl::Mutex devices_lock_;
   // A port all legacy IRQs are bound to.
   zx::port legacy_irq_port_;
+  std::thread irq_thread_;
 
   // All devices downstream of this bus are held here. Devices are keyed by
   // BDF so they will not experience any collisions.

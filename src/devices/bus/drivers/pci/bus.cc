@@ -5,10 +5,13 @@
 #include "bus.h"
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <lib/zx/time.h>
 #include <zircon/hw/pci.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/port.h>
 
 #include <list>
+#include <thread>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -91,8 +94,8 @@ zx_status_t Bus::Initialize() {
     return status;
   }
   root_->ConfigureDownstreamDevices();
+  StartIrqWorker();
 
-  zxlogf(DEBUG, "%s init done.", info_.name);
   return ZX_OK;
 }
 
@@ -238,7 +241,7 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
   }
 }
 
-zx_status_t Bus::ConfigureLegacyIrqs() {
+zx_status_t Bus::SetUpLegacyIrqHandlers() {
   zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &legacy_irq_port_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to create IRQ port: %s", zx_status_get_string(status));
@@ -248,13 +251,30 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   // most cases they'll be using MSI / MSI-X anyway so a warning is sufficient.
   fbl::Span<const pci_legacy_irq> irqs(info_.legacy_irqs_list, info_.legacy_irqs_count);
   for (auto& irq : irqs) {
-    zx::unowned_interrupt interrupt(irq.interrupt);
-    status = interrupt->bind(legacy_irq_port_, irq.vector, ZX_INTERRUPT_BIND);
+    zx::interrupt interrupt(irq.interrupt);
+    status = interrupt.bind(legacy_irq_port_, irq.vector, ZX_INTERRUPT_BIND);
     if (status != ZX_OK) {
+      // In most cases a function will use MSI or MSI-X so a warning is sufficient.
       zxlogf(WARNING, "failed to bind irq %#x to port: %s", irq.vector,
              zx_status_get_string(status));
       return status;
     }
+
+    auto shared_vector = std::make_unique<SharedVector>();
+    shared_vector->interrupt = std::move(interrupt);
+
+    // Every vector has a list of devices associated with it that are wired to that IRQ.
+    shared_irqs_[irq.vector] = std::move(shared_vector);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Bus::ConfigureLegacyIrqs() {
+  fbl::AutoLock devices_lock(&devices_lock_);
+  zx_status_t status = SetUpLegacyIrqHandlers();
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Scan all the devices found and figure out their interrupt pin based on the
@@ -263,7 +283,6 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   // upstream paths and config accesses.
   fbl::Span<const pci_irq_routing_entry_t> routing_entries(info_.irq_routing_list,
                                                            info_.irq_routing_count);
-  fbl::AutoLock devices_lock(&devices_lock_);
   for (auto& device : devices_) {
     uint8_t pin = device.config()->Read(Config::kInterruptPin);
     // If a device has no pin configured in the InterruptPin register then it
@@ -324,8 +343,73 @@ Bus::~Bus() {
   ZX_DEBUG_ASSERT(root_);
   root_->DisableDownstream();
   root_->UnplugDownstream();
+  zx_status_t status = StopIrqWorker();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to stop the irq thread: %s", zx_status_get_string(status));
+  }
+  irq_thread_.join();
 }
 
-void Bus::DdkRelease() { delete this; }
+void Bus::StartIrqWorker() {
+  std::thread worker(LegacyIrqWorker, std::ref(legacy_irq_port_), &devices_lock_, &shared_irqs_);
+  irq_thread_ = std::move(worker);
+}
+
+zx_status_t Bus::StopIrqWorker() {
+  zx_port_packet_t packet = {.type = ZX_PKT_TYPE_USER};
+  return legacy_irq_port_.queue(&packet);
+}
+
+void Bus::LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* shared_irq_map) {
+  zxlogf(TRACE, "IRQ worker started");
+  zx_port_packet_t packet = {};
+  zx_status_t status = ZX_OK;
+  do {
+    status = port.wait(zx::time::infinite(), &packet);
+    if (status == ZX_OK && packet.status == ZX_OK) {
+      // Signal to exit the IRQ thread
+      if (packet.type == ZX_PKT_TYPE_USER) {
+        return;
+      }
+
+      ZX_DEBUG_ASSERT(packet.type == ZX_PKT_TYPE_INTERRUPT);
+      // This is effectively our 'fast path'. We've received an interrupt packet
+      // and we need to scan the list for devices mapped to that vector to see
+      // which ones have an interrupt asserted in their status register. In a
+      // typical situation a bus driver is required to check if a driver has
+      // interrupts enabled and if the status bit is asserted. However, in our
+      // case if a device exists in this list it was only through enabling
+      // legacy IRQs, ensuring that interrupts are enabled. We can save a config
+      // read and just check status thanks to this.
+      fbl::AutoLock devices_lock(lock);
+      auto& vector = packet.key;
+      auto result = shared_irq_map->find(vector);
+      auto& [interrupt, list] = *result->second;
+      ZX_DEBUG_ASSERT(result != shared_irq_map->end());
+      for (auto& device : list) {
+        fbl::AutoLock device_lock(device.dev_lock());
+        config::Status status = {.value = device.config()->Read(Config::kStatus)};
+        if (status.interrupt_status()) {
+          // Trigger the virtual interrupt the device driver is using by proxy.
+          zx_status_t signal_status = device.SignalLegacyIrq(packet.interrupt.timestamp);
+          if (signal_status != ZX_OK) {
+            zxlogf(ERROR, "failed to signal vector %#lx for device %s: %s\n", vector,
+                   device.config()->addr(), zx_status_get_string(signal_status));
+          }
+        }
+      }
+
+      // Re-arm the given interrupt now that all the devices have been checked.
+      status = interrupt.ack();
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to ack vector %#lx after servicing device: %s", vector,
+               zx_status_get_string(status));
+      }
+    } else {
+      zxlogf(ERROR, "Unexpected error in IRQ handling, status = %s, pkt status = %s\n",
+             zx_status_get_string(status), zx_status_get_string(packet.status));
+    }
+  } while (status == ZX_OK && packet.status == ZX_OK);
+}
 
 }  // namespace pci

@@ -10,6 +10,7 @@
 #include <lib/zx/interrupt.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -138,22 +139,31 @@ zx_status_t Device::Init() {
 }
 
 zx_status_t Device::InitInterrupts() {
-  // Disable all interrupt modes, they will be re-enabled by device drivers.
+  zx_status_t status = zx::interrupt::create(*zx::unowned_resource(ZX_HANDLE_INVALID), 0,
+                                             ZX_INTERRUPT_VIRTUAL, &irqs_.legacy);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "device %s could not create its legacy interrupt: %s", cfg_->addr(),
+           zx_status_get_string(status));
+    return status;
+  }
+
+  // Disable all interrupt modes until a driver enables the preferred method.
+  // The legacy interrupt is disabled by hand because our Enable/Disable methods
+  // for doing so need to interact with the Shared IRQ lists in Bus.
   ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCIE_CFG_COMMAND_INT_DISABLE);
+  irqs_.legacy_vector = 0;
+
+  if (caps_.msi && (status = DisableMsi()) != ZX_OK) {
+    zxlogf(ERROR, "failed to disable MSI: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (caps_.msix && (status = DisableMsix()) != ZX_OK) {
+    zxlogf(ERROR, "failed to disable MSI-X: %s", zx_status_get_string(status));
+    return status;
+  }
+
   irqs_.mode = PCI_IRQ_MODE_DISABLED;
-
-  if (caps_.msi) {
-    MsiControlReg ctrl = {.value = cfg_->Read(caps_.msi->ctrl())};
-    ctrl.set_enable(false);
-    cfg_->Write(caps_.msi->ctrl(), ctrl.value);
-  }
-
-  if (caps_.msix) {
-    MsixControlReg ctrl = {.value = cfg_->Read(caps_.msix->ctrl())};
-    ctrl.set_enable(false);
-    cfg_->Write(caps_.msix->ctrl(), ctrl.value);
-  }
-
   return ZX_OK;
 }
 

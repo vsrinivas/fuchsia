@@ -36,6 +36,23 @@ struct Command {
   DEF_SUBBIT(value, 0, io_space);
 };
 
+struct Status {
+  uint16_t value;
+  DEF_SUBBIT(value, 15, detected_parity_error);
+  DEF_SUBBIT(value, 14, signaled_system_error);
+  DEF_SUBBIT(value, 13, received_master_abort);
+  DEF_SUBBIT(value, 12, received_target_abort);
+  DEF_SUBBIT(value, 11, signaled_target_abort);
+  DEF_SUBFIELD(value, 10, 9, devsel_timing);
+  DEF_SUBBIT(value, 8, master_data_parity_error);
+  DEF_SUBBIT(value, 7, fast_b2b_capable);
+  // 6 is reserved preserve.
+  DEF_SUBBIT(value, 5, capable_66mhz);
+  DEF_SUBBIT(value, 4, has_capabilities_list);
+  DEF_SUBBIT(value, 3, interrupt_status);
+  // 2-0 are reserved preserve.
+};
+
 // The layout of a Base Address Register changes based on its type.
 // PCI Local Bus Spec section 6.2.5.1.
 struct IoBaseAddress;

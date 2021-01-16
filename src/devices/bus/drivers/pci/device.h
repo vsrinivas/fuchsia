@@ -86,6 +86,8 @@ class Device : public PciDeviceType,
   struct Irqs {
     pci_irq_mode_t mode;     // The mode currently configured.
     zx::msi msi_allocation;  // The MSI allocation object for MSI & MSI-X
+    zx::interrupt legacy;
+    uint32_t legacy_vector;
   };
 
   struct Capabilities {
@@ -200,6 +202,11 @@ class Device : public PciDeviceType,
     return out_bar;
   }
 
+  uint32_t legacy_vector() const __TA_EXCLUDES(dev_lock_) {
+    fbl::AutoLock dev_lock(&dev_lock_);
+    return irqs_.legacy_vector;
+  }
+
   // A packed version of the BDF addr used for BTI identifiers by the IOMMU implementation.
   uint32_t packed_addr() const {
     auto bdf = cfg_->bdf();
@@ -213,10 +220,14 @@ class Device : public PciDeviceType,
   zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
   zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
+  zx_status_t EnableLegacy() __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsix(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
+  zx_status_t DisableLegacy() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsi() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsix() __TA_REQUIRES(dev_lock_);
+  // Signals the device's zx::interrupt, effectively triggering an interrupt for the device driver.
+  zx_status_t SignalLegacyIrq(zx_time_t timestamp) const __TA_REQUIRES(dev_lock_);
 
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These

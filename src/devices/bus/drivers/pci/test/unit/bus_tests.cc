@@ -58,6 +58,7 @@ class PciBusTests : public zxtest::Test {
   fake_ddk::Bind bind_;
 };
 
+// An encapsulated pci::Bus to allow inspection of some internal state.
 class TestBus : public pci::Bus {
  public:
   TestBus(zx_device_t* parent, const pciroot_protocol_t* pciroot, const pci_platform_info_t info,
@@ -159,6 +160,35 @@ TEST_F(PciBusTests, BdiLinkUnlinkDevice) {
   // lifecycle runs. Otherwise, the normal teardown path of Device will assert
   // that it was never disabled.
   ASSERT_OK(bus->LinkDevice(fbl::RefPtr(device)));
+  ASSERT_EQ(bus->GetDeviceCount(), 1);
+}
+
+TEST_F(PciBusTests, IrqRoutingEntries) {
+  // Add |int_cnt| interrupts, but make them share vectors based on |int_mod|. This ensures that we
+  // handle duplicate IRQ entries properly.
+  const size_t int_cnt = 5;
+  const uint32_t int_mod = 3;
+  zx::interrupt interrupt = {};
+  for (uint32_t i = 0; i < int_cnt; i++) {
+    ASSERT_OK(zx::interrupt::create(*zx::unowned_resource(ZX_HANDLE_INVALID), i,
+                                    ZX_INTERRUPT_VIRTUAL, &interrupt));
+    pciroot().legacy_irqs().push_back(
+        pci_legacy_irq_t{.interrupt = interrupt.get(), .vector = i % int_mod});
+    // The bus will take ownership of this.
+    (void)interrupt.release();
+  }
+  pciroot().ecam().get(pci_bdf_t{}).device.set_vendor_id(1).set_device_id(2).set_interrupt_pin(1);
+
+  pciroot().routing_entries().push_back(
+      pci_irq_routing_entry_t{.port_device_id = PCI_IRQ_ROUTING_NO_PARENT,
+                              .port_function_id = PCI_IRQ_ROUTING_NO_PARENT,
+                              .device_id = 0,
+                              .pins = {1, 2, 3, 4}});
+
+  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
+                                       pciroot().ecam().CopyEcam());
+  ASSERT_OK(bus->Initialize());
+  ASSERT_EQ(bus->GetSharedIrqCount(), int_mod);
 }
 
 }  // namespace pci

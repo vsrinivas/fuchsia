@@ -454,7 +454,8 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   };
 
   uint32_t max_irqs;
-  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(pci().QueryIrqMode(PCI_IRQ_MODE_LEGACY, &max_irqs), ZX_OK);
+  EXPECT_EQ(max_irqs, PCI_LEGACY_INT_COUNT);
   ASSERT_OK(pci().QueryIrqMode(PCI_IRQ_MODE_MSI, &max_irqs));
   ASSERT_EQ(max_irqs, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));

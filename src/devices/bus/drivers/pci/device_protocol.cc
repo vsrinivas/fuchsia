@@ -317,7 +317,7 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
 
 zx_status_t Device::RpcConfigureIrqMode(const zx::unowned_channel& ch) {
   uint32_t irq_cnt = request_.irq.requested_irqs;
-  std::array<pci_irq_mode_t, 2> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI};
+  std::array<pci_irq_mode_t, 3> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI, PCI_IRQ_MODE_LEGACY};
   for (auto& mode : modes) {
     if (auto result = QueryIrqMode(mode); result.is_ok() && result.value() >= irq_cnt) {
       zx_status_t st = SetIrqMode(mode, irq_cnt);
