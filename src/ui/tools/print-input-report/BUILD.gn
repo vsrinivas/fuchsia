@@ -19,6 +19,7 @@ executable("bin") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

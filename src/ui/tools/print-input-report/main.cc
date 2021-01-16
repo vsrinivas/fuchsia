@@ -17,6 +17,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/lib/fsl/io/device_watcher.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
@@ -58,12 +59,89 @@ std::optional<fidl::Client<fuchsia_input_report::InputDevice>> GetClientFromPath
   zx::channel chan;
   zx_status_t status = fdio_get_service_handle(fd.release(), chan.reset_and_get_address());
   if (status != ZX_OK) {
-    printer->Print("Ftdio get handle failed with %s\n", zx_status_get_string(status));
+    printer->Print("fdio_get_service_handle failed with %s\n", zx_status_get_string(status));
     return std::nullopt;
   }
 
   return fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), dispatcher);
 }
+
+int ReadAllDevices(async::Loop* loop, Printer* printer) {
+  // We need to store the list of readers because if they go out of scope it will close the
+  // connection. We need this to be a vector of unique_ptrs because std::vector moves memory
+  // around as it resizes.
+  std::vector<std::unique_ptr<fidl::Client<fuchsia_input_report::InputReportsReader>>> readers;
+
+  // Start watching the directory and read all of the input reports for each.
+  auto watcher = fsl::DeviceWatcher::Create(
+      "/dev/class/input-report/", [&](int dir_fd, const std::string& filename) {
+        printer->Print("Reading reports from %s:\n", filename.c_str());
+        fbl::unique_fd fd(openat(dir_fd, filename.c_str(), O_RDWR));
+        if (!fd.is_valid()) {
+          printer->Print("could not open %s\n", filename.c_str());
+          return;
+        }
+
+        zx::channel chan;
+        zx_status_t status = fdio_get_service_handle(fd.release(), chan.reset_and_get_address());
+        if (status != ZX_OK) {
+          printer->Print("fdio_get_service_handle failed with %s\n", zx_status_get_string(status));
+          return;
+        }
+
+        auto device =
+            fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), loop->dispatcher());
+
+        auto res = print_input_report::GetReaderClient(&device, loop->dispatcher());
+        if (!res.is_ok()) {
+          printer->Print("Failed to GetReaderClient\n");
+          return;
+        }
+        readers.push_back(std::make_unique<fidl::Client<fuchsia_input_report::InputReportsReader>>(
+            std::move(res.value())));
+        print_input_report::PrintInputReports(printer, readers.back().get(), UINT32_MAX);
+      });
+
+  loop->Run();
+  return 0;
+}
+
+int ReadAllDescriptors(async::Loop* loop, Printer* printer) {
+  // We need to store the list of devices because if they go out of scope it will close the
+  // connection. We need this to be a vector of unique_ptrs because std::vector moves memory
+  // around as it resizes.
+  std::vector<std::unique_ptr<fidl::Client<fuchsia_input_report::InputDevice>>> devices;
+
+  // Start watching the directory and read all of the input reports for each.
+  auto watcher = fsl::DeviceWatcher::Create(
+      "/dev/class/input-report/", [&](int dir_fd, const std::string& filename) {
+        printer->Print("Reading descriptor from %s:\n", filename.c_str());
+        fbl::unique_fd fd(openat(dir_fd, filename.c_str(), O_RDWR));
+        if (!fd.is_valid()) {
+          printer->Print("could not open %s\n", filename.c_str());
+          return;
+        }
+
+        zx::channel chan;
+        zx_status_t status = fdio_get_service_handle(fd.release(), chan.reset_and_get_address());
+        if (status != ZX_OK) {
+          printer->Print("Ftdio get handle failed with %s\n", zx_status_get_string(status));
+          return;
+        }
+
+        auto device = std::make_unique<fidl::Client<fuchsia_input_report::InputDevice>>(
+            std::move(chan), loop->dispatcher());
+        status = print_input_report::PrintInputDescriptor(printer, device.get());
+        if (status != 0) {
+          printer->Print("Failed to PrintInputReports\n");
+          return;
+        }
+        devices.push_back(std::move(device));
+      });
+
+  loop->Run();
+  return 0;
+};
 
 }  // namespace print_input_report
 
@@ -88,10 +166,9 @@ int main(int argc, const char** argv) {
   // The "read" command.
   if (args[0] == "read") {
     uint32_t num_reads = UINT32_MAX;
-    // Parse "device_path.
+    // If we don't have a device path then read all devices.
     if (args.size() < 2) {
-      PrintHelp(&printer);
-      return 1;
+      return print_input_report::ReadAllDevices(&loop, &printer);
     }
 
     // Parse "num_reads".
@@ -124,10 +201,9 @@ int main(int argc, const char** argv) {
 
     // The "descriptor" command.
   } else if (args[0] == "descriptor") {
-    // Parse "device_path.
+    // If we don't have a device path then read all of the descriptors.
     if (args.size() < 2) {
-      PrintHelp(&printer);
-      return 1;
+      return ReadAllDescriptors(&loop, &printer);
     }
 
     const std::string& device_path = args[1].c_str();
