@@ -76,20 +76,33 @@ TEST(StringViewTest, CreateFromStringViewLiteral) {
 
     EXPECT_EQ(5u, kLiteral.size());
     EXPECT_EQ(5u, kLiteral.length());
+
+    constexpr cpp17::wstring_view kWLiteral = L"12345"_sv;
+
+    EXPECT_EQ(5u, kWLiteral.size());
+    EXPECT_EQ(5u, kWLiteral.length());
+
+    constexpr cpp17::u16string_view ku16Literal = u"12345"_sv;
+    EXPECT_EQ(5u, ku16Literal.size());
+    EXPECT_EQ(5u, ku16Literal.length());
+
+    constexpr cpp17::u16string_view ku32Literal = u"12345"_sv;
+    EXPECT_EQ(5u, ku32Literal.size());
+    EXPECT_EQ(5u, ku32Literal.length());
   }
   {
     using namespace cpp17::string_view_literals;
-    constexpr cpp17::string_view kLiteral = "12345"_sv;
-
-    EXPECT_EQ(5u, kLiteral.size());
-    EXPECT_EQ(5u, kLiteral.length());
+    constexpr cpp17::string_view kLiteral __attribute__((unused)) = "12345"_sv;
+    constexpr cpp17::wstring_view kWLiteral __attribute__((unused)) = L"12345"_sv;
+    constexpr cpp17::u16string_view ku16Literal __attribute__((unused)) = u"12345"_sv;
+    constexpr cpp17::u16string_view ku32Literal __attribute__((unused)) = u"12345"_sv;
   }
   {
-    using namespace cpp17;
-    constexpr cpp17::string_view kLiteral = "12345"_sv;
-
-    EXPECT_EQ(5u, kLiteral.size());
-    EXPECT_EQ(5u, kLiteral.length());
+    using namespace cpp17::literals::string_view_literals;
+    constexpr cpp17::string_view kLiteral __attribute__((unused)) = "12345"_sv;
+    constexpr cpp17::wstring_view kWLiteral __attribute__((unused)) = L"12345"_sv;
+    constexpr cpp17::u16string_view ku16Literal __attribute__((unused)) = u"12345"_sv;
+    constexpr cpp17::u16string_view ku32Literal __attribute__((unused)) = u"12345"_sv;
   }
 }
 
@@ -175,7 +188,7 @@ TEST(StringViewTest, AtThrowsExceptionWhenIndexIsOOR) {
   ASSERT_DEATH(
       {
         constexpr cpp17::string_view kFitLiteral("12345");
-        kFitLiteral.at(6);
+        kFitLiteral.at(1000);
       },
       ".*");
 }
@@ -405,8 +418,8 @@ TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
   ASSERT_DEATH(
       {
         constexpr cpp17::string_view v_str = "Base";
-        cpp17::string_view::value_type dest[v_str.length() + 2] = {};
-        memset(dest, '\0', v_str.length() + 1);
+        cpp17::string_view::value_type dest[v_str.length()] = {};
+        memset(dest, '\0', v_str.length());
 
         v_str.copy(dest, v_str.length(), v_str.length() + 1);
       },
@@ -508,7 +521,7 @@ TEST(StringViewTest, FindReturnsNposWhenNeedleIsBiggerThanHaystack) {
   EXPECT_EQ(cpp17::string_view::npos, kString.find("1234"));
 }
 
-TEST(StringViewTest, RrfindReturnsFirstCharTypeMatch) {
+TEST(StringViewTest, RfindReturnsFirstCharTypeMatch) {
   constexpr cpp17::string_view kString = "12345678901234567890";
 
   EXPECT_EQ(10u, kString.rfind('1'));
@@ -523,31 +536,31 @@ TEST(StringViewTest, RrfindReturnsFirstCharTypeMatch) {
   EXPECT_EQ(19u, kString.rfind('0'));
 }
 
-TEST(StringViewTest, RrfindWithPosReturnsFirstCharTypeMatch) {
+TEST(StringViewTest, RfindWithPosReturnsFirstCharTypeMatch) {
   constexpr cpp17::string_view kString = "12345678901234567890";
 
   EXPECT_EQ(10u, kString.rfind('1', 10));
-  EXPECT_EQ(11u, kString.rfind('2', 10));
-  EXPECT_EQ(12u, kString.rfind('3', 10));
-  EXPECT_EQ(13u, kString.rfind('4', 10));
-  EXPECT_EQ(14u, kString.rfind('5', 10));
-  EXPECT_EQ(15u, kString.rfind('6', 10));
-  EXPECT_EQ(16u, kString.rfind('7', 10));
-  EXPECT_EQ(17u, kString.rfind('8', 10));
-  EXPECT_EQ(18u, kString.rfind('9', 10));
-  EXPECT_EQ(19u, kString.rfind('0', 10));
+  EXPECT_EQ(1u, kString.rfind('2', 10));
+  EXPECT_EQ(2u, kString.rfind('3', 10));
+  EXPECT_EQ(3u, kString.rfind('4', 10));
+  EXPECT_EQ(4u, kString.rfind('5', 10));
+  EXPECT_EQ(5u, kString.rfind('6', 10));
+  EXPECT_EQ(6u, kString.rfind('7', 10));
+  EXPECT_EQ(7u, kString.rfind('8', 10));
+  EXPECT_EQ(8u, kString.rfind('9', 10));
+  EXPECT_EQ(9u, kString.rfind('0', 10));
 }
 
-TEST(StringViewTest, RrfindReturnsNposWhenNoCharTypeMatch) {
+TEST(StringViewTest, RfindReturnsNposWhenNoCharTypeMatch) {
   constexpr cpp17::string_view kString = "123456789123456789";
 
   EXPECT_EQ(cpp17::string_view::npos, kString.rfind('0'));
 }
 
-TEST(StringViewTest, RrfindReturnsFirstMatch) {
+TEST(StringViewTest, RfindReturnsFirstMatch) {
   constexpr cpp17::string_view kString = "12345678901234567890";
 
-  EXPECT_EQ(19u, kString.rfind(""));
+  EXPECT_EQ(20u, kString.rfind(""));
   EXPECT_EQ(10u, kString.rfind("12"));
   EXPECT_EQ(11u, kString.rfind("23"));
   EXPECT_EQ(12u, kString.rfind("34"));
@@ -562,26 +575,26 @@ TEST(StringViewTest, RrfindReturnsFirstMatch) {
   EXPECT_EQ(9u, kString.rfind("01234"));
 }
 
-TEST(StringViewTest, RrfindWithPosReturnsFirstMatch) {
+TEST(StringViewTest, RfindWithPosReturnsFirstMatch) {
   constexpr cpp17::string_view kString = "12345678901234567890";
 
-  EXPECT_EQ(19u, kString.rfind("", 10));
+  EXPECT_EQ(10u, kString.rfind("", 10));
   EXPECT_EQ(10u, kString.rfind("1", 10));
-  EXPECT_EQ(11u, kString.rfind("2", 10));
-  EXPECT_EQ(12u, kString.rfind("3", 10));
-  EXPECT_EQ(13u, kString.rfind("4", 10));
-  EXPECT_EQ(14u, kString.rfind("5", 10));
-  EXPECT_EQ(15u, kString.rfind("6", 10));
-  EXPECT_EQ(16u, kString.rfind("7", 10));
-  EXPECT_EQ(17u, kString.rfind("8", 10));
-  EXPECT_EQ(18u, kString.rfind("9", 10));
-  EXPECT_EQ(19u, kString.rfind("0", 10));
+  EXPECT_EQ(1u, kString.rfind("2", 10));
+  EXPECT_EQ(2u, kString.rfind("3", 10));
+  EXPECT_EQ(3u, kString.rfind("4", 10));
+  EXPECT_EQ(4u, kString.rfind("5", 10));
+  EXPECT_EQ(5u, kString.rfind("6", 10));
+  EXPECT_EQ(6u, kString.rfind("7", 10));
+  EXPECT_EQ(7u, kString.rfind("8", 10));
+  EXPECT_EQ(8u, kString.rfind("9", 10));
+  EXPECT_EQ(9u, kString.rfind("0", 10));
 
   // String of size > 1.
-  EXPECT_EQ(13u, kString.rfind("456", 10));
+  EXPECT_EQ(3u, kString.rfind("456", 10));
 }
 
-TEST(StringViewTest, RrfindReturnsNposWhenNoMatch) {
+TEST(StringViewTest, RfindReturnsNposWhenNoMatch) {
   constexpr cpp17::string_view kString = "12345678901234567890";
 
   EXPECT_EQ(cpp17::string_view::npos, kString.rfind("A"));
@@ -646,7 +659,7 @@ TEST(StringViewTest, FindFirstOfReturnsNposWhenNoMatch) {
 }
 
 TEST(StringViewTest, FindLastOfReturnsLastMatch) {
-  constexpr cpp17::string_view kString = "ABCDE1234ABCDE1234";
+  constexpr cpp17::string_view kString = "ABCDE1234ABCDE1234F";
   constexpr cpp17::string_view kMatchers = "123";
 
   // Verify that order of chartacters in |s| does not change last match.
@@ -654,13 +667,15 @@ TEST(StringViewTest, FindLastOfReturnsLastMatch) {
   EXPECT_EQ(16u, kString.find_last_of("123"));
   EXPECT_EQ(16u, kString.find_last_of("231"));
   EXPECT_EQ(16u, kString.find_last_of("213"));
+  EXPECT_EQ(18u, kString.find_last_of("F"));
 
   EXPECT_EQ(16u, kString.find_last_of(kMatchers));
   EXPECT_EQ(15u, kString.find_last_of('2'));
+  EXPECT_EQ(18u, kString.find_last_of('F'));
 }
 
 TEST(StringViewTest, FindLastOfWithPosReturnsLastMatch) {
-  constexpr cpp17::string_view kString = "ABCDE1234ABCDE1234";
+  constexpr cpp17::string_view kString = "ABCDE1234ABCDE1234F";
   constexpr cpp17::string_view kMatchers = "123";
 
   // Verify that order of chartacters in |s| does not change last match.
@@ -668,6 +683,9 @@ TEST(StringViewTest, FindLastOfWithPosReturnsLastMatch) {
   EXPECT_EQ(7u, kString.find_last_of("123", 9));
   EXPECT_EQ(7u, kString.find_last_of("231", 9));
   EXPECT_EQ(7u, kString.find_last_of("213", 9));
+
+  EXPECT_EQ(0u, kString.find_last_of("A", 0));
+  EXPECT_EQ(18u, kString.find_last_of("F", kString.length() + 1));
 
   EXPECT_EQ(7u, kString.find_last_of(kMatchers, 9));
   EXPECT_EQ(5u, kString.find_last_of('1', 9));
@@ -690,9 +708,10 @@ TEST(StringViewTest, FindLastOfReturnsNposWhenNoMatch) {
   EXPECT_EQ(cpp17::string_view::npos, kString.find_last_of("GHIJK"));
   EXPECT_EQ(cpp17::string_view::npos, kString.find_last_of("G"));
   EXPECT_EQ(cpp17::string_view::npos, kString.find_last_of('G'));
+  EXPECT_EQ(cpp17::string_view::npos, kString.find_last_of('H', 0));
 }
 
-TEST(StringViewTest, FindFirstNofOfReturnsFirstNonMatch) {
+TEST(StringViewTest, FindFirstNotOfReturnsFirstNonMatch) {
   constexpr cpp17::string_view kString = "123ABC123";
   constexpr cpp17::string_view kMatchers = "123";
 
@@ -707,7 +726,7 @@ TEST(StringViewTest, FindFirstNofOfReturnsFirstNonMatch) {
   EXPECT_EQ(1u, kString.find_first_not_of('1'));
 }
 
-TEST(StringViewTest, FindFirstNofOfWithPosReturnsFirstNonMatch) {
+TEST(StringViewTest, FindFirstNotOfWithPosReturnsFirstNonMatch) {
   constexpr cpp17::string_view kString = "123ABC123A";
   constexpr cpp17::string_view kMatchers = "123";
 
@@ -722,7 +741,7 @@ TEST(StringViewTest, FindFirstNofOfWithPosReturnsFirstNonMatch) {
   EXPECT_EQ(7u, kString.find_first_not_of('1', 6));
 }
 
-TEST(StringViewTest, FindFirstNofOfWithPosAndCountReturnsFirstNofMatch) {
+TEST(StringViewTest, FindFirstNotOfWithPosAndCountReturnsFirstNonMatch) {
   constexpr cpp17::string_view kString = "123ABC123A";
 
   // Verify that order of chartacters in |s| does not change first match.
@@ -732,7 +751,7 @@ TEST(StringViewTest, FindFirstNofOfWithPosAndCountReturnsFirstNofMatch) {
   EXPECT_EQ(6u, kString.find_first_not_of("321", 6, 1));
 }
 
-TEST(StringViewTest, FindFirstNofOfReturnsNposWhenNoMatch) {
+TEST(StringViewTest, FindFirstNotOfReturnsNposWhenNoMatch) {
   constexpr cpp17::string_view kString = "GGGGGGGGGGGGG";
 
   // Verify that order of chartacters in |s| does not change first match.
@@ -828,14 +847,15 @@ TEST(StringViewTest, OutputStreamOperatorFitsWithinWidth) {
   EXPECT_EQ(oss.str(), kStringView);
 }
 
-TEST(StringViewTest, OutputStreamOperatorDoesNotFitInWidth) {
+TEST(StringViewTest, OutputStreamOperatorExpandsToStringViewWidth) {
   constexpr cpp17::string_view kStringView = "1234";
   std::ostringstream oss;
   oss.width(kStringView.length() - 1);
 
   oss << kStringView;
 
-  EXPECT_EQ(oss.str(), kStringView.substr(0, kStringView.length() - 1));
+  EXPECT_EQ(oss.str(), kStringView);
+  EXPECT_EQ(oss.width(), 0);
 }
 
 TEST(StringViewTest, OutputStreamOperatorFillsExtraSpaceToTheRight) {

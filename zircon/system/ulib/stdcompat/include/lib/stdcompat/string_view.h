@@ -5,6 +5,24 @@
 #ifndef LIB_STDCOMPAT_STRING_VIEW_H_
 #define LIB_STDCOMPAT_STRING_VIEW_H_
 
+#include "version.h"
+
+#if __cpp_lib_string_view >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#include <string_view>
+
+namespace cpp17 {
+
+using std::basic_string_view;
+using std::string_view;
+using std::u16string_view;
+using std::u32string_view;
+using std::wstring_view;
+
+}  // namespace cpp17
+
+#else  // Provide polyfills for the types provided by <string_view>.
+
 #include <cassert>
 #include <cstdlib>
 #include <ios>
@@ -30,128 +48,6 @@ constexpr void constexpr_swap(T& a, T& b) noexcept {
 template <typename T>
 constexpr T* addressof(T& arg) {
   return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(arg)));
-}
-
-// Filler for char_traits<CharT>::compare
-template <typename CharT>
-constexpr int compare(const CharT* s1, const CharT* s2, std::size_t count) {
-  for (std::size_t curr = 0; curr < count; ++curr) {
-    // Exit as soon as we find a different character.
-    if (std::char_traits<CharT>::lt(s1[curr], s2[curr])) {
-      return -1;
-    } else if (!std::char_traits<CharT>::eq(s1[curr], s2[curr])) {
-      return 1;
-    }
-  }
-  // If all characters within [s1, s1+count) and [s2, s2+count) are equal
-  // return 0.
-  return 0;
-}
-
-// Returns the distance from |begin| to first character in [|it|, |end|) that is equal to
-// |needle.front()|.
-// Returns |StringViewType::npos| if no such character is found.
-//
-// Complexity: O(|std::distance(it, end)|).
-template <typename StringViewType, typename Iterator>
-typename StringViewType::size_type find_char(Iterator it, Iterator begin, Iterator end,
-                                             StringViewType needle) {
-  // Look starting point.
-  while (it != end && !StringViewType::traits_type::eq(*it, needle.front())) {
-    ++it;
-  }
-
-  if (it == end) {
-    return StringViewType::npos;
-  }
-  return static_cast<typename StringViewType::size_type>(std::distance(begin, it));
-}
-
-// Returns the distance from the first character starting from |begin| that matches
-// any characters in |matchers|.
-// Returns |StringViewType::npos| if no characters are within |matchers|.
-//
-// Complexity: O(|std::distance(begin, end)|*|matchers.length()|).
-template <typename StringViewType, typename Iterator>
-constexpr typename StringViewType::size_type find_first_of(Iterator begin, Iterator end,
-                                                           StringViewType matchers) {
-  typename StringViewType::size_type curr = 0;
-  for (Iterator it = begin; it < end; ++it) {
-    for (const auto& matcher : matchers) {
-      if (StringViewType::traits_type::eq(*it, matcher)) {
-        return curr;
-      }
-    }
-    ++curr;
-  }
-
-  return StringViewType::npos;
-}
-
-// Returns the distance from the first character starting from |begin| that does not match
-// any characters in |matchers|.
-// Returns |StringViewType::npos| if all characters are within |matchers|.
-//
-// Complexity: O(|std::distance(begin, end)|*|matchers.length()|).
-template <typename StringViewType, typename Iterator>
-constexpr typename StringViewType::size_type find_first_not_of(Iterator begin, Iterator end,
-                                                               StringViewType matchers) {
-  typename StringViewType::size_type curr = 0;
-
-  for (Iterator it = begin; it < end; ++it) {
-    bool matched = false;
-    for (const auto& matcher : matchers) {
-      if (StringViewType::traits_type::eq(*it, matcher)) {
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      return curr;
-    }
-    ++curr;
-  }
-
-  return StringViewType::npos;
-}
-
-// Returns the starting point of |needle| within |haystack|.
-// If no match is found, return |StringViewType::npos|.
-//
-// Complexity: O(|std::distance(begin, end)| * |needle.length()|)
-template <typename StringViewType, typename Iterator>
-constexpr typename StringViewType::size_type find(Iterator begin, Iterator end,
-                                                  const StringViewType needle) {
-  // If the needle does not fit in the haystack, there is no possible match.
-  if (static_cast<typename StringViewType::size_type>(std::distance(begin, end)) <
-      needle.length()) {
-    return StringViewType::npos;
-  }
-
-  if (needle.empty()) {
-    return 0;
-  }
-
-  Iterator it = begin;
-
-  while (it < end) {
-    typename StringViewType::size_type offset = find_char(it, begin, end, needle);
-    // If no match discard.
-    if (offset == StringViewType::npos) {
-      return StringViewType::npos;
-    }
-    it = begin + offset;
-
-    if (internal::compare<typename StringViewType::value_type>(&(*it), needle.data(),
-                                                               needle.size()) == 0) {
-      return std::distance(begin, it);
-    }
-    ++it;
-  }
-
-  // We did not find the substring in the haystack.
-  return StringViewType::npos;
 }
 
 }  // namespace internal
@@ -225,7 +121,7 @@ class basic_string_view {
   }
 
   size_type copy(CharT* dest, size_type count, size_type pos = 0) const {
-    assert(pos < size());
+    assert(pos <= size());
     Traits::copy(dest, data() + pos, calculate_length(pos, count));
     return count;
   }
@@ -235,11 +131,20 @@ class basic_string_view {
   }
 
   constexpr int compare(basic_string_view v) const {
-    const int result = internal::compare(data(), v.data(), std::min(size(), v.size()));
-    if (result == 0) {
-      return static_cast<int>(size() - v.size());
+    const size_type count = std::min(length(), v.length());
+    for (std::size_t curr = 0; curr < count; ++curr) {
+      // Exit as soon as we find a different character.
+      if (std::char_traits<CharT>::lt(at(curr), v[curr])) {
+        return -1;
+      }
+
+      if (!std::char_traits<CharT>::eq(at(curr), v[curr])) {
+        return 1;
+      }
     }
-    return result;
+
+    // All characters in the range match.
+    return static_cast<int>(length() - v.length());
   }
 
   constexpr int compare(size_type pos1, size_type count1, basic_string_view v) const {
@@ -262,8 +167,31 @@ class basic_string_view {
   }
 
   constexpr size_type find(basic_string_view v, size_type pos = 0) const noexcept {
-    auto tmp = internal::find(substr(pos).begin(), substr(pos).end(), v);
-    return (tmp == npos) ? npos : pos + tmp;
+    pos = std::min(pos, length());
+    if (v.empty()) {
+      return pos;
+    }
+
+    if (length() - pos < v.length()) {
+      return npos;
+    }
+
+    auto target_haystack = substr(pos);
+    const auto max_search_length = target_haystack.length() - v.length() + 1;
+    for (size_type i = 0; i < max_search_length; ++i) {
+      // Look for the needle front before comparing the full string.
+      while (!Traits::eq(target_haystack[i], v[0])) {
+        ++i;
+        if (i >= max_search_length) {
+          return npos;
+        }
+      }
+      if (target_haystack.compare(i, v.length(), v) == 0) {
+        return pos + i;
+      }
+    }
+
+    return npos;
   }
 
   constexpr size_type find(CharT ch, size_type pos = 0) const {
@@ -278,12 +206,35 @@ class basic_string_view {
     return find(basic_string_view(s), pos);
   }
 
-  constexpr size_type rfind(basic_string_view v, size_type pos = 0) const noexcept {
-    auto tmp = internal::find(substr(pos).rbegin(), substr(pos).rend(), v);
-    return (tmp == npos) ? npos : length() - 1 - tmp;
+  constexpr size_type rfind(basic_string_view v, size_type pos = npos) const noexcept {
+    pos = std::min(pos, length());
+    if (v.empty()) {
+      return pos;
+    }
+
+    if (length() < v.length()) {
+      return npos;
+    }
+
+    auto target_haystack = substr(0, (pos + 1) - (v.length() - 1));
+    for (size_type i = 0; i < target_haystack.length(); ++i) {
+      auto reverse_i = target_haystack.length() - i - 1;
+      while (!Traits::eq(target_haystack[reverse_i], v[0])) {
+        ++i;
+        --reverse_i;
+        if (i >= target_haystack.length()) {
+          return npos;
+        }
+      }
+      if (compare(reverse_i, v.length(), v) == 0) {
+        return reverse_i;
+      }
+    }
+
+    return npos;
   }
 
-  constexpr size_type rfind(CharT ch, size_type pos = 0) const {
+  constexpr size_type rfind(CharT ch, size_type pos = npos) const {
     return rfind(basic_string_view(internal::addressof(ch), 1), pos);
   }
 
@@ -296,8 +247,14 @@ class basic_string_view {
   }
 
   constexpr size_type find_first_of(basic_string_view v, size_type pos = 0) const noexcept {
-    auto tmp = internal::find_first_of(substr(pos).begin(), substr(pos).end(), v);
-    return tmp == npos ? npos : pos + tmp;
+    pos = std::min(length(), pos);
+    for (auto it = begin() + pos; it != end(); ++it) {
+      if (v.find(*it) != npos) {
+        return std::distance(begin(), it);
+      }
+    }
+
+    return npos;
   }
 
   constexpr size_type find_first_of(CharT c, size_type pos = 0) const noexcept {
@@ -314,10 +271,18 @@ class basic_string_view {
 
   constexpr size_type find_last_of(basic_string_view v,
                                    size_type pos = basic_string_view::npos) const noexcept {
-    const size_type fixed_length = (pos == npos) ? size() : pos + 1;
-    const size_type tmp = internal::find_first_of(substr(0, fixed_length).rbegin(),
-                                                  substr(0, fixed_length).rend(), v);
-    return tmp == npos ? npos : fixed_length - 1 - tmp;
+    if (empty()) {
+      return npos;
+    }
+
+    pos = length() - std::min(pos, length() - 1) - 1;
+    for (auto it = rbegin() + pos; it != rend(); ++it) {
+      if (v.find(*it) != npos) {
+        return length() - 1 - std::distance(rbegin(), it);
+      }
+    }
+
+    return npos;
   }
 
   constexpr size_type find_last_of(CharT c,
@@ -334,8 +299,13 @@ class basic_string_view {
   }
 
   constexpr size_type find_first_not_of(basic_string_view v, size_type pos = 0) const noexcept {
-    const auto tmp = internal::find_first_not_of(substr(pos).begin(), substr(pos).end(), v);
-    return tmp == npos ? npos : pos + tmp;
+    pos = std::min(pos, length());
+    for (auto it = begin() + pos; it != end(); ++it) {
+      if (v.find(*it) == npos) {
+        return std::distance(begin(), it);
+      }
+    }
+    return npos;
   }
 
   constexpr size_type find_first_not_of(CharT c, size_type pos = 0) const noexcept {
@@ -352,10 +322,17 @@ class basic_string_view {
 
   constexpr size_type find_last_not_of(basic_string_view v,
                                        size_type pos = basic_string_view::npos) const noexcept {
-    const size_type fixed_length = (pos == npos) ? size() : pos + 1;
-    auto tmp = internal::find_first_not_of(substr(0, fixed_length).rbegin(),
-                                           substr(0, fixed_length).rend(), v);
-    return tmp == npos ? npos : fixed_length - 1 - tmp;
+    if (empty()) {
+      return npos;
+    }
+
+    pos = length() - std::min(pos, length() - 1) - 1;
+    for (auto it = rbegin() + pos; it != rend(); ++it) {
+      if (v.find(*it) == npos) {
+        return length() - 1 - std::distance(rbegin(), it);
+      }
+    }
+    return npos;
   }
 
   constexpr size_type find_last_not_of(CharT c,
@@ -380,8 +357,8 @@ class basic_string_view {
     return std::min(count, size() - pos);
   }
 
-  const_pointer data_;
-  size_type length_;
+  const_pointer data_ = nullptr;
+  size_type length_ = 0;
 };
 
 // Operators and overloads to satisfy all conversions.
@@ -491,19 +468,9 @@ constexpr bool operator>=(cpp17::basic_string_view<CharT, Traits> lhs, RawType r
 
 // Specializations.
 using string_view = cpp17::basic_string_view<char>;
-
-// Constructs a string_view from ""_sv literal.
-// Literals with no leading underscore are reserved for the standard library.
-// https://en.cppreference.com/w/cpp/string/basic_string_view/operator%22%22sv
-inline namespace literals {
-inline namespace string_view_literals {
-
-constexpr cpp17::string_view operator"" _sv(typename cpp17::string_view::const_pointer str,
-                                            typename cpp17::string_view::size_type len) noexcept {
-  return cpp17::string_view(str, len);
-}
-}  // namespace string_view_literals
-}  // namespace literals
+using wstring_view = cpp17::basic_string_view<wchar_t>;
+using u16string_view = cpp17::basic_string_view<char16_t>;
+using u32string_view = cpp17::basic_string_view<char32_t>;
 
 }  // namespace cpp17
 
@@ -525,26 +492,26 @@ template <class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
                                               cpp17::basic_string_view<CharT, Traits> v) {
   using size_type = typename cpp17::basic_string_view<CharT, Traits>::size_type;
-  const size_type fixed_length = std::min(static_cast<size_type>(os.width()), v.length());
-  const size_type fill_length =
+  const size_type sequence_length = std::max(static_cast<size_type>(os.width()), v.length());
+  const size_type fill_sequence =
       (static_cast<size_type>(os.width()) > v.length()) ? os.width() - v.length() : 0;
-
+  os.width(sequence_length);
   auto fill_space = [](std::basic_ostream<CharT, Traits>& os, size_type fill_length) {
     for (std::size_t i = 0; i < fill_length; ++i) {
       os.put(os.fill());
     }
   };
 
-  bool fill_left = (os.flags() & std::ios_base::adjustfield) == std::ios_base::left;
+  bool should_fill_left = (os.flags() & std::ios_base::adjustfield) == std::ios_base::left;
 
-  if (!fill_left) {
-    fill_space(os, fill_length);
+  if (!should_fill_left) {
+    fill_space(os, fill_sequence);
   }
 
-  os.write(v.data(), fixed_length);
+  os.write(v.data(), v.length());
 
-  if (fill_left) {
-    fill_space(os, fill_length);
+  if (should_fill_left) {
+    fill_space(os, fill_sequence);
   }
 
   os.width(0);
@@ -553,5 +520,42 @@ std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>&
 }
 
 }  // namespace std
+#endif  // __cpp_lib_string_view >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+namespace cpp17 {
+// Constructs a string_view from ""_sv literal.
+// Literals with no leading underscore are reserved for the standard library.
+// https://en.cppreference.com/w/cpp/string/basic_string_view/operator%22%22sv
+//
+// This is unconditionally defined in this header, so '_sv' is available independently whether the
+// polyfills are being used or just aliasing the std ones.
+inline namespace literals {
+inline namespace string_view_literals {
+
+constexpr cpp17::string_view operator"" _sv(typename cpp17::string_view::const_pointer str,
+                                            typename cpp17::string_view::size_type len) noexcept {
+  return cpp17::string_view(str, len);
+}
+
+constexpr cpp17::wstring_view operator"" _sv(typename cpp17::wstring_view::const_pointer str,
+                                             typename cpp17::wstring_view::size_type len) noexcept {
+  return cpp17::wstring_view(str, len);
+}
+
+constexpr cpp17::u16string_view operator"" _sv(
+    typename cpp17::u16string_view::const_pointer str,
+    typename cpp17::u16string_view::size_type len) noexcept {
+  return cpp17::u16string_view(str, len);
+}
+
+constexpr cpp17::u32string_view operator"" _sv(
+    typename cpp17::u32string_view::const_pointer str,
+    typename cpp17::u32string_view::size_type len) noexcept {
+  return cpp17::u32string_view(str, len);
+}
+
+}  // namespace string_view_literals
+}  // namespace literals
+}  // namespace cpp17
 
 #endif  // LIB_STDCOMPAT_STRING_VIEW_H_
