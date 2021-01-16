@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # items included in bootfs
-group("debugging") {
+group("bootstrap") {
   deps = [ "//src/diagnostics/archivist:bootfs" ]
 }
 

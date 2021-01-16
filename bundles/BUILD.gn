@@ -133,6 +133,7 @@ group("bootstrap") {
   deps = [
     "//src/bringup/bundles:bootstrap",
     "//src/devices/bundles:bootstrap-bin",
+    "//src/diagnostics/bundles:bootstrap",
     "//src/power/bundles:bootstrap",
     "//src/storage/bundles:bootstrap",
     "//src/sys/bundles:bootstrap",
@@ -159,7 +160,6 @@ group("debugging") {
     "//src/connectivity/bundles:debugging",
     "//src/developer/bundles:debugging",
     "//src/devices/bundles:debugging",
-    "//src/diagnostics/bundles:debugging",
     "//src/storage/bundles:debugging",
     "//src/sys/bundles:debugging",
     "//src/zircon/bundles:debugging",
