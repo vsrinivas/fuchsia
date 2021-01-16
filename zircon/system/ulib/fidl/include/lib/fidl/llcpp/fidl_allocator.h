@@ -133,7 +133,7 @@ class AnyAllocator {
 };
 
 // Class which allows the allocation of data for the views (ObjectView, StringView, VectorView).
-template <size_t initial_capacity>
+template <size_t initial_capacity = 512>
 class FidlAllocator : public AnyAllocator {
  public:
   FidlAllocator() : AnyAllocator(initial_buffer_, initial_capacity) {}

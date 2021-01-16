@@ -5,16 +5,16 @@
 #ifndef LIB_FIDL_LLCPP_TRACKING_PTR_H_
 #define LIB_FIDL_LLCPP_TRACKING_PTR_H_
 
+#include <lib/fidl/llcpp/aligned.h>
+#include <lib/fidl/llcpp/array.h>
+#include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fidl/walker.h>
 
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <type_traits>
-
-#include "aligned.h"
-#include "array.h"
-#include "unowned_ptr.h"
 
 namespace fidl {
 
@@ -116,6 +116,7 @@ class tracking_ptr final {
                   "An insufficiently aligned value can be aligned with fidl::aligned");
     set_unowned(other.get());
   }
+  tracking_ptr(const ObjectView<T>& view) { set_unowned(view.get()); }  // NOLINT
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
   tracking_ptr(unowned_ptr_t<aligned<T>> other) { set_unowned(&other->value); }
   tracking_ptr(const tracking_ptr&) = delete;
@@ -127,6 +128,11 @@ class tracking_ptr final {
     return *this;
   }
   tracking_ptr& operator=(const tracking_ptr&) = delete;
+  tracking_ptr& operator=(const ObjectView<T>& view) noexcept {
+    reset_marked(kNullMarkedPtr);
+    set_unowned(view.get());
+    return *this;
+  }
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   U& operator*() const {

@@ -6,7 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/object.h>
@@ -19,42 +21,12 @@
 
 #include <gtest/gtest.h>
 #include <llcpptest/handles/test/llcpp/fidl.h>
+#include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
 namespace test = ::llcpp::llcpptest::handles::test;
 
 // All the tests in this file check that when a result is freed, all the handles inside the result
 // are closed.
-
-namespace {
-
-class HandleChecker {
- public:
-  HandleChecker() = default;
-
-  size_t size() const { return events_.size(); }
-
-  void AddEvent(const zx::event& event) {
-    ASSERT_TRUE(event.is_valid());
-    zx::event new_event;
-    ASSERT_EQ(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &new_event), ZX_OK);
-    events_.emplace_back(std::move(new_event));
-  }
-
-  void CheckEvents() {
-    for (size_t i = 0; i < events_.size(); ++i) {
-      zx_info_handle_count_t info = {};
-      auto status =
-          events_[i].get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
-      ZX_ASSERT(status == ZX_OK);
-      EXPECT_EQ(info.handle_count, 1U) << "Handle not freed " << (i + 1) << '/' << events_.size();
-    }
-  }
-
- private:
-  std::vector<zx::event> events_;
-};
-
-}  // namespace
 
 class HandleCloseProviderServer : public test::HandleProvider::Interface {
  public:
@@ -90,12 +62,13 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(h1), std::move(s), std::move(h2));
   }
   void GetVectorStruct(uint32_t count, GetVectorStructCompleter::Sync& completer) override {
-    std::vector<test::HandleStruct> v(count);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<test::HandleStruct> v(allocator, count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
     }
     test::VectorStruct s;
-    s.v = fidl::unowned_vec(v);
+    s.v = std::move(v);
     completer.Reply(std::move(s));
   }
   void GetArrayStruct(GetArrayStructCompleter::Sync& completer) override {
@@ -106,59 +79,63 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(s));
   }
   void GetHandleUnion(int32_t field, GetHandleUnionCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     test::HandleUnion u;
-    test::HandleStruct s;
-    zx::event e;
-    zx::event::create(0, &e);
     if (field == 1) {
-      u = test::HandleUnion::WithH1(fidl::unowned_ptr(&e));
+      fidl::ObjectView<zx::event> e(allocator);
+      zx::event::create(0, e.get());
+      u = test::HandleUnion::WithH1(e);
     } else if (field == 2) {
-      s.h = std::move(e);
-      u = test::HandleUnion::WithH2(fidl::unowned_ptr(&s));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      u = test::HandleUnion::WithH2(s);
     }
     completer.Reply(std::move(u));
   }
   void GetHandleUnionStruct(int32_t field,
                             GetHandleUnionStructCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     test::HandleUnionStruct u;
-    test::HandleStruct s;
-    zx::event e;
-    zx::event::create(0, &e);
     if (field == 1) {
-      u.u = test::HandleUnion::WithH1(fidl::unowned_ptr(&e));
+      fidl::ObjectView<zx::event> e(allocator);
+      zx::event::create(0, e.get());
+      u.u = test::HandleUnion::WithH1(e);
     } else if (field == 2) {
-      s.h = std::move(e);
-      u.u = test::HandleUnion::WithH2(fidl::unowned_ptr(&s));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      u.u = test::HandleUnion::WithH2(s);
     }
     completer.Reply(std::move(u));
   }
   void GetHandleTable(uint32_t fields, GetHandleTableCompleter::Sync& completer) override {
-    zx::event e;
-    test::HandleStruct s;
+    fidl::FidlAllocator allocator;
     test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
     if ((fields & 1) != 0) {
-      zx::event::create(0, &e);
-      builder.set_h1(std::make_unique<zx::event>(std::move(e)));
+      fidl::ObjectView<zx::event> e(allocator);
+      zx::event::create(0, e.get());
+      builder.set_h1(e);
     }
     if ((fields & 2) != 0) {
-      zx::event::create(0, &s.h);
-      builder.set_h2(std::make_unique<test::HandleStruct>(std::move(s)));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      builder.set_h2(s);
     }
     test::HandleTable t = builder.build();
     completer.Reply(std::move(t));
   }
   void GetHandleTableStruct(uint32_t fields,
                             GetHandleTableStructCompleter::Sync& completer) override {
-    zx::event e;
-    test::HandleStruct s;
+    fidl::FidlAllocator allocator;
     test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
     if ((fields & 1) != 0) {
-      zx::event::create(0, &e);
-      builder.set_h1(std::make_unique<zx::event>(std::move(e)));
+      fidl::ObjectView<zx::event> e(allocator);
+      zx::event::create(0, e.get());
+      builder.set_h1(e);
     }
     if ((fields & 2) != 0) {
-      zx::event::create(0, &s.h);
-      builder.set_h2(std::make_unique<test::HandleStruct>(std::move(s)));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      builder.set_h2(s);
     }
     test::HandleTableStruct reply;
     reply.t = builder.build();
@@ -166,25 +143,27 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetOptionalHandleStruct(bool defined,
                                GetOptionalHandleStructCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     if (defined) {
-      test::HandleStruct s;
-      zx::event::create(0, &s.h);
-      completer.Reply(fidl::unowned_ptr(&s));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      completer.Reply(s);
     } else {
       completer.Reply(nullptr);
     }
   }
   void GetOptionalHandleUnion(int32_t field,
                               GetOptionalHandleUnionCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     test::HandleUnion u;
-    test::HandleStruct s;
-    zx::event e;
-    zx::event::create(0, &e);
     if (field == 1) {
-      u = test::HandleUnion::WithH1(fidl::unowned_ptr(&e));
+      fidl::ObjectView<zx::event> e(allocator);
+      zx::event::create(0, e.get());
+      u = test::HandleUnion::WithH1(e);
     } else if (field == 2) {
-      s.h = std::move(e);
-      u = test::HandleUnion::WithH2(fidl::unowned_ptr(&s));
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      u = test::HandleUnion::WithH2(s);
     }
     completer.Reply(std::move(u));
   }
@@ -192,17 +171,18 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       bool defined, int32_t field,
       GetOptionalHandleUnionStructCompleter::Sync& completer) override {
     if (defined) {
-      test::HandleUnionStruct u;
-      test::HandleStruct s;
-      zx::event e;
-      zx::event::create(0, &e);
+      fidl::FidlAllocator allocator;
+      fidl::ObjectView<test::HandleUnionStruct> u(allocator);
       if (field == 1) {
-        u.u = test::HandleUnion::WithH1(fidl::unowned_ptr(&e));
+        fidl::ObjectView<zx::event> e(allocator);
+        zx::event::create(0, e.get());
+        u->u = test::HandleUnion::WithH1(e);
       } else if (field == 2) {
-        s.h = std::move(e);
-        u.u = test::HandleUnion::WithH2(fidl::unowned_ptr(&s));
+        fidl::ObjectView<test::HandleStruct> s(allocator);
+        zx::event::create(0, &s->h);
+        u->u = test::HandleUnion::WithH2(s);
       }
-      completer.Reply(fidl::unowned_ptr(&u));
+      completer.Reply(u);
     } else {
       completer.Reply(nullptr);
     }
@@ -211,131 +191,127 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       bool defined, uint32_t fields,
       GetOptionalHandleTableStructCompleter::Sync& completer) override {
     if (defined) {
-      zx::event e;
-      test::HandleStruct s;
+      fidl::FidlAllocator allocator;
       test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
       if ((fields & 1) != 0) {
-        zx::event::create(0, &e);
-        builder.set_h1(std::make_unique<zx::event>(std::move(e)));
+        fidl::ObjectView<zx::event> e(allocator);
+        zx::event::create(0, e.get());
+        builder.set_h1(e);
       }
       if ((fields & 2) != 0) {
-        zx::event::create(0, &s.h);
-        builder.set_h2(std::make_unique<test::HandleStruct>(std::move(s)));
+        fidl::ObjectView<test::HandleStruct> s(allocator);
+        zx::event::create(0, &s->h);
+        builder.set_h2(s);
       }
-      test::HandleTableStruct reply;
-      reply.t = builder.build();
-      completer.Reply(fidl::unowned_ptr(&reply));
+      fidl::ObjectView<test::HandleTableStruct> reply(allocator);
+      reply->t = builder.build();
+      completer.Reply(reply);
     } else {
       completer.Reply(nullptr);
     }
   }
   void GetHandleStructOptionalStruct(
       bool defined, GetHandleStructOptionalStructCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     test::HandleStructOptionalStruct reply;
-    test::HandleStruct s;
     if (defined) {
-      zx::event::create(0, &s.h);
-      reply.s = fidl::unowned_ptr(&s);
+      fidl::ObjectView<test::HandleStruct> s(allocator);
+      zx::event::create(0, &s->h);
+      reply.s = s;
     }
     completer.Reply(std::move(reply));
   }
   void GetHandleUnionOptionalStruct(
       bool defined, int32_t field,
       GetHandleUnionOptionalStructCompleter::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     test::HandleUnionOptionalStruct reply;
-    test::HandleUnion u;
-    test::HandleStruct s;
-    zx::event e;
     if (defined) {
-      zx::event::create(0, &e);
       if (field == 1) {
-        u = test::HandleUnion::WithH1(fidl::unowned_ptr(&e));
+        fidl::ObjectView<zx::event> e(allocator);
+        zx::event::create(0, e.get());
+        reply.u = test::HandleUnion::WithH1(e);
       } else if (field == 2) {
-        s.h = std::move(e);
-        u = test::HandleUnion::WithH2(fidl::unowned_ptr(&s));
+        fidl::ObjectView<test::HandleStruct> s(allocator);
+        zx::event::create(0, &s->h);
+        reply.u = test::HandleUnion::WithH2(s);
       }
-      reply.u = std::move(u);
     }
     completer.Reply(std::move(reply));
   }
   void GetVectorOfHandle(uint32_t count, GetVectorOfHandleCompleter::Sync& completer) override {
-    std::vector<zx::event> v(count);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<zx::event> v(allocator, count);
     for (auto& item : v) {
       zx::event::create(0, &item);
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfHandle(uint32_t count1, uint32_t count2,
                                  GetVectorOfVectorOfHandleCompleter::Sync& completer) override {
-    std::vector<fidl::VectorView<zx::event>> v(count1);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<fidl::VectorView<zx::event>> v(allocator, count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1] = fidl::VectorView(
-          fidl::tracking_ptr<zx::event[]>(std::make_unique<zx::event[]>(count2)), count2);
+      v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
         zx::event::create(0, &v[i1][i2]);
       }
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfVectorOfHandle(
       uint32_t count1, uint32_t count2, uint32_t count3,
       GetVectorOfVectorOfVectorOfHandleCompleter::Sync& completer) override {
-    std::vector<fidl::VectorView<fidl::VectorView<zx::event>>> v(count1);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<fidl::VectorView<fidl::VectorView<zx::event>>> v(allocator, count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1] = fidl::VectorView(fidl::tracking_ptr<fidl::VectorView<zx::event>[]>(
-                                   std::make_unique<fidl::VectorView<zx::event>[]>(count2)),
-                               count2);
+      v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
-        v[i1][i2] = fidl::VectorView(
-            fidl::tracking_ptr<zx::event[]>(std::make_unique<zx::event[]>(count3)), count3);
+        v[i1][i2].Allocate(allocator, count3);
         for (uint32_t i3 = 0; i3 < count3; ++i3) {
           zx::event::create(0, &v[i1][i2][i3]);
         }
       }
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetVectorOfHandleStruct(uint32_t count,
                                GetVectorOfHandleStructCompleter::Sync& completer) override {
-    std::vector<test::HandleStruct> v(count);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<test::HandleStruct> v(allocator, count);
     for (auto& item : v) {
       zx::event::create(0, &item.h);
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfHandleStruct(
       uint32_t count1, uint32_t count2,
       GetVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
-    std::vector<fidl::VectorView<test::HandleStruct>> v(count1);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<fidl::VectorView<test::HandleStruct>> v(allocator, count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1] = fidl::VectorView(
-          fidl::tracking_ptr<test::HandleStruct[]>(std::make_unique<test::HandleStruct[]>(count2)),
-          count2);
+      v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
         zx::event::create(0, &v[i1][i2].h);
       }
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetVectorOfVectorOfVectorOfHandleStruct(
       uint32_t count1, uint32_t count2, uint32_t count3,
       GetVectorOfVectorOfVectorOfHandleStructCompleter::Sync& completer) override {
-    std::vector<fidl::VectorView<fidl::VectorView<test::HandleStruct>>> v(count1);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<fidl::VectorView<fidl::VectorView<test::HandleStruct>>> v(allocator, count1);
     for (uint32_t i1 = 0; i1 < count1; ++i1) {
-      v[i1] =
-          fidl::VectorView(fidl::tracking_ptr<fidl::VectorView<test::HandleStruct>[]>(
-                               std::make_unique<fidl::VectorView<test::HandleStruct>[]>(count2)),
-                           count2);
+      v[i1].Allocate(allocator, count2);
       for (uint32_t i2 = 0; i2 < count2; ++i2) {
-        v[i1][i2] = fidl::VectorView(fidl::tracking_ptr<test::HandleStruct[]>(
-                                         std::make_unique<test::HandleStruct[]>(count3)),
-                                     count3);
+        v[i1][i2].Allocate(allocator, count3);
         for (uint32_t i3 = 0; i3 < count3; ++i3) {
           zx::event::create(0, &v[i1][i2][i3].h);
         }
       }
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
   void GetArrayOfHandle(GetArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<zx::event, 2> a;
@@ -395,10 +371,10 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(a));
   }
   void GetMixed1(uint32_t count, GetMixed1Completer::Sync& completer) override {
+    fidl::FidlAllocator allocator;
     fidl::Array<fidl::VectorView<zx::event>, 2> a;
     for (auto& item1 : a) {
-      item1 = fidl::VectorView(
-          fidl::tracking_ptr<zx::event[]>(std::make_unique<zx::event[]>(count)), count);
+      item1.Allocate(allocator, count);
       for (auto& item2 : item1) {
         zx::event::create(0, &item2);
       }
@@ -406,13 +382,14 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     completer.Reply(std::move(a));
   }
   void GetMixed2(uint32_t count, GetMixed2Completer::Sync& completer) override {
-    std::vector<fidl::Array<zx::event, 2>> v(count);
+    fidl::FidlAllocator allocator;
+    fidl::VectorView<fidl::Array<zx::event, 2>> v(allocator, count);
     for (auto& item1 : v) {
       for (auto& item2 : item1) {
         zx::event::create(0, &item2);
       }
     }
-    completer.Reply(fidl::unowned_vec(v));
+    completer.Reply(std::move(v));
   }
 };
 
@@ -441,7 +418,7 @@ class HandleCloseTest : public ::testing::Test {
 };
 
 TEST_F(HandleCloseTest, Handle) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandle();
@@ -456,7 +433,7 @@ TEST_F(HandleCloseTest, Handle) {
 }
 
 TEST_F(HandleCloseTest, HandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleStruct();
@@ -471,7 +448,7 @@ TEST_F(HandleCloseTest, HandleStruct) {
 }
 
 TEST_F(HandleCloseTest, HandleStructStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleStructStruct();
@@ -486,7 +463,7 @@ TEST_F(HandleCloseTest, HandleStructStruct) {
 }
 
 TEST_F(HandleCloseTest, MultiFieldStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetMultiFieldStruct();
@@ -503,7 +480,7 @@ TEST_F(HandleCloseTest, MultiFieldStruct) {
 }
 
 TEST_F(HandleCloseTest, MultiArgs) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetMultiArgs();
@@ -520,7 +497,7 @@ TEST_F(HandleCloseTest, MultiArgs) {
 }
 
 TEST_F(HandleCloseTest, VectorStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorStruct(4);
@@ -537,7 +514,7 @@ TEST_F(HandleCloseTest, VectorStruct) {
 }
 
 TEST_F(HandleCloseTest, ArrayStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayStruct();
@@ -554,7 +531,7 @@ TEST_F(HandleCloseTest, ArrayStruct) {
 }
 
 TEST_F(HandleCloseTest, HandleUnion1) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnion(1);
@@ -570,7 +547,7 @@ TEST_F(HandleCloseTest, HandleUnion1) {
 }
 
 TEST_F(HandleCloseTest, HandleUnion2) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnion(2);
@@ -586,7 +563,7 @@ TEST_F(HandleCloseTest, HandleUnion2) {
 }
 
 TEST_F(HandleCloseTest, HandleUnionStruct1) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnionStruct(1);
@@ -602,7 +579,7 @@ TEST_F(HandleCloseTest, HandleUnionStruct1) {
 }
 
 TEST_F(HandleCloseTest, HandleUnionStruct2) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnionStruct(2);
@@ -628,7 +605,7 @@ TEST_F(HandleCloseTest, HandleTableNone) {
 }
 
 TEST_F(HandleCloseTest, HandleTableEvent) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTable(1);
@@ -643,7 +620,7 @@ TEST_F(HandleCloseTest, HandleTableEvent) {
 }
 
 TEST_F(HandleCloseTest, HandleTableHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTable(2);
@@ -658,7 +635,7 @@ TEST_F(HandleCloseTest, HandleTableHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, HandleTableAll) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTable(3);
@@ -684,7 +661,7 @@ TEST_F(HandleCloseTest, HandleTableStructNone) {
 }
 
 TEST_F(HandleCloseTest, HandleTableStructEvent) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTableStruct(1);
@@ -699,7 +676,7 @@ TEST_F(HandleCloseTest, HandleTableStructEvent) {
 }
 
 TEST_F(HandleCloseTest, HandleTableStructHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTableStruct(2);
@@ -714,7 +691,7 @@ TEST_F(HandleCloseTest, HandleTableStructHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, HandleTableStructAll) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleTableStruct(3);
@@ -740,7 +717,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructNotDefined) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleStructDefined) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleStruct(true);
@@ -765,7 +742,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionNone) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleUnion1) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleUnion(1);
@@ -781,7 +758,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnion1) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleUnion2) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleUnion(2);
@@ -807,7 +784,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStructNotDefined) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleUnionStruct1) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleUnionStruct(true, 1);
@@ -823,7 +800,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct1) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleUnionStruct2) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleUnionStruct(true, 2);
@@ -859,7 +836,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructNone) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleTableStructEvent) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleTableStruct(true, 1);
@@ -874,7 +851,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructEvent) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleTableStructHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleTableStruct(true, 2);
@@ -889,7 +866,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, OptionalHandleTableStructAll) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetOptionalHandleTableStruct(true, 3);
@@ -915,7 +892,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructNotDefined) {
 }
 
 TEST_F(HandleCloseTest, HandleStructOptionalStructDefined) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleStructOptionalStruct(true);
@@ -940,7 +917,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStructNotDefined) {
 }
 
 TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnionOptionalStruct(true, 1);
@@ -956,7 +933,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
 }
 
 TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetHandleUnionOptionalStruct(true, 2);
@@ -973,7 +950,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
 
 TEST_F(HandleCloseTest, VectorOfHandle) {
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorOfHandle(kNumHandle);
@@ -993,7 +970,7 @@ TEST_F(HandleCloseTest, VectorOfHandle) {
 TEST_F(HandleCloseTest, VectorOfVectorOfHandle) {
   constexpr size_t kNumVector = 4;
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorOfVectorOfHandle(kNumVector, kNumHandle);
@@ -1016,7 +993,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandle) {
   constexpr size_t kNumVector1 = 3;
   constexpr size_t kNumVector2 = 4;
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorOfVectorOfVectorOfHandle(kNumVector1, kNumVector2, kNumHandle);
@@ -1039,7 +1016,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandle) {
 
 TEST_F(HandleCloseTest, VectorOfHandleStruct) {
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorOfHandleStruct(kNumHandle);
@@ -1059,7 +1036,7 @@ TEST_F(HandleCloseTest, VectorOfHandleStruct) {
 TEST_F(HandleCloseTest, VectorOfVectorOfHandleStruct) {
   constexpr size_t kNumVector = 4;
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetVectorOfVectorOfHandleStruct(kNumVector, kNumHandle);
@@ -1082,7 +1059,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandleStruct) {
   constexpr size_t kNumVector1 = 3;
   constexpr size_t kNumVector2 = 4;
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result =
@@ -1105,7 +1082,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfHandle) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfHandle();
@@ -1122,7 +1099,7 @@ TEST_F(HandleCloseTest, ArrayOfHandle) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfArrayOfHandle) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfArrayOfHandle();
@@ -1141,7 +1118,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandle) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandle) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfArrayOfArrayOfHandle();
@@ -1162,7 +1139,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandle) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfHandleStruct();
@@ -1179,7 +1156,7 @@ TEST_F(HandleCloseTest, ArrayOfHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfArrayOfHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfArrayOfHandleStruct();
@@ -1198,7 +1175,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandleStruct) {
 }
 
 TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandleStruct) {
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetArrayOfArrayOfArrayOfHandleStruct();
@@ -1220,7 +1197,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandleStruct) {
 
 TEST_F(HandleCloseTest, Mixed1) {
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetMixed1(kNumHandle);
@@ -1241,7 +1218,7 @@ TEST_F(HandleCloseTest, Mixed1) {
 
 TEST_F(HandleCloseTest, Mixed2) {
   constexpr size_t kNumHandle = 5;
-  HandleChecker checker;
+  llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
     auto result = client.GetMixed2(kNumHandle);

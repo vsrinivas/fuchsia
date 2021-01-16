@@ -13,7 +13,7 @@
 
 // Tests the allocation of a uint32 vector which fits inside the initial buffer.
 TEST(FidlAllocator, Uint32VectorConstructed) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
   constexpr int kCount = 10;
   fidl::VectorView<uint32_t> vector(allocator, kCount);
   for (int i = 0; i < kCount; ++i) {
@@ -23,7 +23,7 @@ TEST(FidlAllocator, Uint32VectorConstructed) {
 
 // Tests that trivially destructible objects don't create deallocation data.
 TEST(FidlAllocator, Uint32VectorDeallocation) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
   constexpr int kCount = 10;
   fidl::VectorView<uint32_t> vector1(allocator, kCount);
   fidl::VectorView<uint32_t> vector2(allocator, kCount);
@@ -64,7 +64,7 @@ TEST(FidlAllocator, HugeUint32VectorConstructed) {
 TEST(FidlAllocator, EventVectorConstructed) {
   llcpp_types_test_utils::HandleChecker handle_checker;
   {
-    fidl::FidlAllocator<256> allocator;
+    fidl::FidlAllocator allocator;
     constexpr int kCount = 10;
     fidl::VectorView<zx::event> vector(allocator, kCount);
     for (int i = 0; i < kCount; ++i) {
@@ -80,7 +80,7 @@ TEST(FidlAllocator, EventVectorConstructed) {
 TEST(FidlAllocator, EventVectorAllocated) {
   llcpp_types_test_utils::HandleChecker handle_checker;
   {
-    fidl::FidlAllocator<256> allocator;
+    fidl::FidlAllocator allocator;
     constexpr int kCount = 10;
     fidl::VectorView<zx::event> vector;
     vector.Allocate(allocator, kCount);
@@ -112,7 +112,7 @@ TEST(FidlAllocator, LargeEventVectorConstructed) {
 TEST(FidlAllocator, MixedVectorConstructed) {
   llcpp_types_test_utils::HandleChecker handle_checker;
   {
-    fidl::FidlAllocator<256> allocator;
+    fidl::FidlAllocator allocator;
     constexpr int kCountUint32 = 4000;
     constexpr int kCountEvent = 10;
     // Needs an extra block.
@@ -135,7 +135,7 @@ TEST(FidlAllocator, MixedVectorConstructed) {
 
 // Tests the allocation of strings.
 TEST(FidlAllocator, StringConstructed) {
-  fidl::FidlAllocator<2048> allocator;
+  fidl::FidlAllocator allocator;
 
   char buffer[100];
   strcpy(buffer, "hello");
@@ -163,7 +163,7 @@ TEST(FidlAllocator, StringConstructed) {
 
 // Tests the allocation of strings.
 TEST(FidlAllocator, StringSet) {
-  fidl::FidlAllocator<2048> allocator;
+  fidl::FidlAllocator allocator;
 
   char buffer[100];
   strcpy(buffer, "hello");
@@ -196,7 +196,7 @@ TEST(FidlAllocator, StringSet) {
 
 // Tests the allocation of a uint32 instance.
 TEST(FidlAllocator, Uint32InstanceConstructedThenInitialized) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
   fidl::ObjectView<uint32_t> instance_1(allocator);
   *instance_1 = 10;
   fidl::ObjectView<uint32_t> instance_2(allocator);
@@ -207,7 +207,7 @@ TEST(FidlAllocator, Uint32InstanceConstructedThenInitialized) {
 
 // Tests the allocation of a uint32 instance.
 TEST(FidlAllocator, Uint32InstanceDirectlyConstructed) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
   fidl::ObjectView<uint32_t> instance_1(allocator, 10);
   fidl::ObjectView<uint32_t> instance_2(allocator, 20);
   EXPECT_EQ(*instance_1, 10U);
@@ -218,7 +218,7 @@ TEST(FidlAllocator, Uint32InstanceDirectlyConstructed) {
 TEST(FidlAllocator, EventInstanceConstructed) {
   llcpp_types_test_utils::HandleChecker handle_checker;
   {
-    fidl::FidlAllocator<256> allocator;
+    fidl::FidlAllocator allocator;
     fidl::ObjectView<zx::event> instance_1(allocator);
     zx::event::create(0, instance_1.get());
     handle_checker.AddEvent(*instance_1);
@@ -232,7 +232,7 @@ TEST(FidlAllocator, EventInstanceConstructed) {
 
 // Tests the allocation of a uint32 instance.
 TEST(FidlAllocator, Uint32InstanceAllocatedThenInitialized) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
 
   fidl::ObjectView<uint32_t> instance_1;
   fidl::ObjectView<uint32_t> instance_2;
@@ -248,7 +248,7 @@ TEST(FidlAllocator, Uint32InstanceAllocatedThenInitialized) {
 
 // Tests the allocation of a uint32 instance.
 TEST(FidlAllocator, Uint32InstanceDirectlyAllocated) {
-  fidl::FidlAllocator<256> allocator;
+  fidl::FidlAllocator allocator;
 
   fidl::ObjectView<uint32_t> instance_1;
   fidl::ObjectView<uint32_t> instance_2;
@@ -264,7 +264,7 @@ TEST(FidlAllocator, Uint32InstanceDirectlyAllocated) {
 TEST(FidlAllocator, EventInstanceAllocated) {
   llcpp_types_test_utils::HandleChecker handle_checker;
   {
-    fidl::FidlAllocator<256> allocator;
+    fidl::FidlAllocator allocator;
 
     fidl::ObjectView<zx::event> instance_1;
     fidl::ObjectView<zx::event> instance_2;
