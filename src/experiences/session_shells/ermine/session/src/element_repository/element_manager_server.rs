@@ -5,10 +5,13 @@
 use {
     crate::element_repository::{propose_element, ElementEvent},
     anyhow::{Context as _, Error},
-    fidl_fuchsia_session::{ElementManagerRequest, ElementManagerRequestStream},
+    fidl_fuchsia_session::{
+        Annotation, Annotations, ElementManagerRequest, ElementManagerRequestStream, Value,
+    },
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
     legacy_element_management::ElementManager,
     std::rc::Rc,
+    uuid::Uuid,
 };
 
 /// A struct which can handle many incoming requests.
@@ -53,7 +56,51 @@ impl<T: ElementManager> ElementManagerServer<T> {
             stream.try_next().await.context("Error handling element manager request stream")?
         {
             match request {
-                ElementManagerRequest::ProposeElement { spec, element_controller, responder } => {
+                ElementManagerRequest::ProposeElement {
+                    mut spec,
+                    element_controller,
+                    responder,
+                } => {
+                    // Add the component url and an id annotation, if missing.
+                    if let Some(ref url) = spec.component_url {
+                        if let Some(Annotations {
+                            custom_annotations: Some(ref mut annotations),
+                            ..
+                        }) = spec.annotations
+                        {
+                            if !annotations.iter().any(|annotation| annotation.key == "url") {
+                                annotations.push(Annotation {
+                                    key: "url".to_string(),
+                                    value: Some(Box::new(Value::Text(url.to_string()))),
+                                });
+                            }
+
+                            if !annotations.iter().any(|annotation| annotation.key == "id") {
+                                annotations.push(Annotation {
+                                    key: "id".to_string(),
+                                    value: Some(Box::new(Value::Text(Uuid::new_v4().to_string()))),
+                                });
+                            }
+                        } else {
+                            // Spec is missing annotations, add url and id annotation.
+                            spec.annotations = Some(Annotations {
+                                custom_annotations: Some(vec![
+                                    Annotation {
+                                        key: "url".to_string(),
+                                        value: Some(Box::new(Value::Text(url.to_string()))),
+                                    },
+                                    Annotation {
+                                        key: "id".to_string(),
+                                        value: Some(Box::new(Value::Text(
+                                            Uuid::new_v4().to_string(),
+                                        ))),
+                                    },
+                                ]),
+                                ..Annotations::EMPTY
+                            });
+                        }
+                    }
+
                     let mut result =
                         match propose_element(&element_manager, spec, element_controller).await {
                             Ok((element, element_controller_stream)) => {
