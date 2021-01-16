@@ -9,12 +9,16 @@
 
 namespace sysmem_util {
 using GlobalBufferCollectionId = uint64_t;
+using GlobalImageId = uint64_t;
 
 // Used to indicate an invalid buffer collection.
 extern const GlobalBufferCollectionId kInvalidId;
 
 // Atomically produces a new id that can be used to reference a buffer collection.
 GlobalBufferCollectionId GenerateUniqueBufferCollectionId();
+
+// Atomically produce a new id that can be used to reference a buffer collection's image.
+GlobalImageId GenerateUniqueImageId();
 
 }  // namespace sysmem_util
 

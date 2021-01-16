@@ -5,12 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
 
-#include <fuchsia/hardware/display/cpp/fidl.h>
-
+#include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
-#include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
-#include "src/ui/scenic/lib/flatland/uber_struct_system.h"
+#include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 
 namespace flatland {
 
@@ -25,8 +22,7 @@ class Engine final : public BufferCollectionImporter {
   // other display-controller clients could be accessing the same functions and/or state at
   // the same time as the engine without making use of locks.
   Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-         const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
-         const std::shared_ptr<UberStructSystem>& uber_struct_system);
+         const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func);
 
   ~Engine() override;
 
@@ -43,71 +39,89 @@ class Engine final : public BufferCollectionImporter {
   bool ImportImage(const ImageMetadata& meta_data) override;
 
   // |BufferCollectionImporter|
-  void ReleaseImage(GlobalImageId image_id) override;
+  void ReleaseImage(sysmem_util::GlobalImageId image_id) override;
 
   // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
   // the data is processed correctly.
   void RenderFrame();
 
-  // Register a new display to the engine. The display_id is a unique display to reference the
-  // display object by, and can be retrieved by calling display_id() on a display object. The
-  // TransformHandle must be the root transform of the root Flatland instance. The pixel scale is
-  // the display's width/height.
+  // Register a new display to the engine, which also generates the render targets to be presented
+  // on the display when compositing on the GPU. If num_vmos is 0, this function will not create
+  // any render targets for GPU composition for that display. Returns the ID for the buffer
+  // collection of the render targets. The buffer collection info is also returned back to the
+  // caller via an output parameter.
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
-  void AddDisplay(uint64_t display_id, TransformHandle transform, glm::uvec2 pixel_scale);
-
-  // Registers a sysmem buffer collection with the engine, causing it to register with both
-  // the display controller and the renderer. A valid display must have already been added
-  // to the Engine via |AddDisplay| before this is called with the same display_id.
-  // The result is a GlobalBufferCollectionId which references the collection for both the
-  // renderer and the display. If the collection failed to allocate, the id will be 0.
-  sysmem_util::GlobalBufferCollectionId RegisterTargetCollection(
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos);
+  sysmem_util::GlobalBufferCollectionId AddDisplay(
+      uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
 
  private:
-  // The data that gets forwarded either to the display or the software renderer. The lengths
-  // of |rectangles| and |images| must be the same, and each rectangle/image pair for a given
-  // index represents a single renderable object.
-  struct RenderData {
-    std::vector<Rectangle2D> rectangles;
-    std::vector<ImageMetadata> images;
-    uint64_t display_id;
-  };
-
-  // Struct to represent the display's flatland info. The TransformHandle must be the root
-  // transform of the root Flatland instance. The pixel scale is the display's width/height.
-  // A new DisplayInfo struct is added to the display_map_ when a client calls AddDisplay().
-  struct DisplayInfo {
-    TransformHandle transform;
-    glm::uvec2 pixel_scale;
-  };
-
-  // Struct containing the data returned from the display controller upon calling CheckConfig().
   struct DisplayConfigResponse {
+    // Whether or not the config can be successfully applied or not.
     fuchsia::hardware::display::ConfigResult result;
+    // If the config is invalid, this vector will list all the operations
+    // that need to be performed to make the config valid again.
     std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   };
 
-  // Gathers all of the flatland data and converts it all into a format that can be
-  // directly converted into the data required by the display and the 2D renderer.
-  // This is done per-display, so the result is a vector of per-display render data.
-  std::vector<RenderData> ComputeRenderData();
+  struct FrameEventData {
+    scenic_impl::DisplayEventId wait_id;
+    scenic_impl::DisplayEventId signal_id;
+    zx::event wait_event;
+    zx::event signal_event;
+  };
 
-  // Sets the required number of layers on the display, depending on how many images
-  // are in the RenderData struct. Returns false if there are not enough layers for
-  // the amount of images provided.
-  bool SetLayers(const RenderData& data);
+  struct DisplayEngineData {
+    // The hardware layers we've created to use on this display.
+    std::vector<uint64_t> layers;
+
+    // The number of vmos we are using in the case of software composition
+    // (1 for each render target).
+    uint32_t vmo_count = 0;
+
+    // The current target that is being rendererd to by the software renderer.
+    uint32_t curr_vmo = 0;
+
+    // The information used to create images for each render target from the vmo data.
+    std::vector<ImageMetadata> targets;
+
+    // Used to synchronize buffer rendering with setting the buffer on the display.
+    std::vector<FrameEventData> frame_event_datas;
+  };
+
+  // Generates a new FrameEventData struct to be used with a render target on a display.
+  FrameEventData NewFrameEventData();
+
+  // Generates a hardware layer for direct compositing on the display. Returns the ID used
+  // to reference that layer in the display controller API.
+  uint64_t CreateDisplayLayer();
+
+  // Does all the setup for applying the render data, which includes images and rectangles,
+  // onto the display via the display controller interface. Returns false if this cannot
+  // be completed.
+  bool SetRenderDataOnDisplay(const RenderData& data);
+
+  // Sets the provided layers onto the display referenced by the given display_id.
+  void SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers);
 
   // Takes an image and directly composites it to a hardware layer on the display.
-  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image);
+  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image,
+                       scenic_impl::DisplayEventId wait_id, scenic_impl::DisplayEventId signal_id);
 
-  DisplayConfigResponse CheckConfig(bool discard);
+  // Checks if the display controller is capable of applying the configuration settings that
+  // have been set up until that point
+  DisplayConfigResponse CheckConfig();
 
+  // Erases the configuration that has been set on the display controller.
+  void DiscardConfig();
+
+  // Applies the config to the display controller. This should only be called after CheckConfig
+  // has verified that the config is okay, since ApplyConfig does not return any errors.
   void ApplyConfig();
 
   // Returns the image id used by the display controller.
-  uint64_t InternalImageId(GlobalImageId image_id) const;
+  uint64_t InternalImageId(sysmem_util::GlobalImageId image_id) const;
 
   // This mutex protects access to |display_controller_| and |image_id_map_|.
   //
@@ -121,20 +135,21 @@ class Engine final : public BufferCollectionImporter {
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
 
   // Maps the flatland global image id to the image id used by the display controller.
-  std::unordered_map<GlobalImageId, uint64_t> image_id_map_;
+  std::unordered_map<sysmem_util::GlobalImageId, uint64_t> image_id_map_;
 
   // Software renderer used when render data cannot be directly composited to the display.
   std::shared_ptr<Renderer> renderer_;
 
-  // The link system and uberstruct system are used to extract flatland render data.
-  std::shared_ptr<LinkSystem> link_system_;
-  std::shared_ptr<UberStructSystem> uber_struct_system_;
+  // Function used to get render data.
+  RenderDataFunc render_data_func_;
 
-  // Maps display unique ids to the displays' flatland specific data.
-  std::unordered_map<uint64_t, DisplayInfo> display_map_;
+  // Maps a display ID to the the DisplayInfo struct. This is kept separate from the
+  // display_engine_data_map_ since this only this data is needed for the render_data_func_.
+  std::unordered_map<uint64_t, DisplayInfo> display_info_map_;
 
-  // Maps a display to a vector of layers for that display.
-  std::unordered_map<uint64_t, std::vector<uint64_t>> display_layer_map_;
+  // Maps a display ID to a struct of all the information needed to properly render to
+  // that display in both the hardware and software composition paths.
+  std::unordered_map<uint64_t, DisplayEngineData> display_engine_data_map_;
 };
 
 }  // namespace flatland

@@ -28,17 +28,6 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
-namespace {
-
-GlobalImageId GenerateUniqueImageId() {
-  // This function will be called from multiple threads, and thus needs an atomic
-  // incrementor for the id.
-  static std::atomic<GlobalImageId> image_id = 0;
-  return ++image_id;
-}
-
-}  // namespace
-
 Flatland::Flatland(
     async_dispatcher_t* dispatcher,
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
@@ -99,7 +88,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
 
     // Cleanup released resources. Here we also collect the list of unused images so they can be
     // released by the buffer collection importers.
-    std::vector<GlobalImageId> images_to_release;
+    std::vector<sysmem_util::GlobalImageId> images_to_release;
     for (const auto& dead_handle : data.dead_transforms) {
       matrices_.erase(dead_handle);
 
@@ -684,7 +673,7 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
   }
 
   ImageMetadata metadata;
-  metadata.identifier = GenerateUniqueImageId();
+  metadata.identifier = sysmem_util::GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
   metadata.vmo_idx = vmo_index;
   metadata.width = properties.width();

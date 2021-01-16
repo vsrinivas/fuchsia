@@ -115,7 +115,7 @@ bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
   return true;
 }
 
-void NullRenderer::ReleaseImage(GlobalImageId image_id) {}
+void NullRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {}
 
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.

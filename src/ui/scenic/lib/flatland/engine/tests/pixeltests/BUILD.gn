@@ -24,12 +24,14 @@ executable("unittests") {
     "//src/ui/scenic/lib/flatland/engine/tests/common.cc",
     "//src/ui/scenic/lib/flatland/engine/tests/common.h",
     "engine_pixeltest.cc",
+
+    # Registers a global Escher environment for testing.
+    "run_all_unittests.cc",
   ]
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/scenic/lib/display:display",

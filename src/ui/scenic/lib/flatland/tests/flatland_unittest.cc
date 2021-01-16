@@ -84,7 +84,7 @@ struct PresentArgs {
 
 struct GlobalIdPair {
   sysmem_util::GlobalBufferCollectionId collection_id;
-  flatland::GlobalImageId image_id;
+  sysmem_util::GlobalImageId image_id;
 };
 
 }  // namespace
@@ -427,7 +427,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     FX_DCHECK(properties.has_width());
     FX_DCHECK(properties.has_height());
 
-    flatland::GlobalImageId global_image_id;
+    sysmem_util::GlobalImageId global_image_id;
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_))
         .WillOnce(testing::Invoke([&global_image_id](const ImageMetadata& meta_data) {
           global_image_id = meta_data.identifier;

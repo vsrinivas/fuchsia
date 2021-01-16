@@ -16,6 +16,7 @@
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
+#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 using ::testing::_;
 using ::testing::Return;
@@ -63,19 +64,12 @@ class EnginePixelTest : public EngineTestBase {
         }));
 
     RunLoopUntil([this] { return display_manager_->default_display() != nullptr; });
-
-    // By using the null renderer, we can demonstrate that the rendering is being done directly
-    // by the display controller hardware, and not the software renderer.
-    renderer_ = std::make_shared<flatland::NullRenderer>();
-
-    engine_ = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
-                                                 renderer_, link_system(), uber_struct_system());
   }
 
   void TearDown() override {
-    renderer_.reset();
-    engine_.reset();
-
+    RunLoopUntilIdle();
+    executor_.reset();
+    display_manager_.reset();
     EngineTestBase::TearDown();
   }
 
@@ -83,8 +77,17 @@ class EnginePixelTest : public EngineTestBase {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<display::DisplayManager> display_manager_;
-  std::unique_ptr<flatland::Engine> engine_;
-  std::shared_ptr<flatland::Renderer> renderer_;
+
+  std::shared_ptr<flatland::VkRenderer> NewVkRenderer() const {
+    auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+    auto unique_escher = std::make_unique<escher::Escher>(
+        env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+    return std::make_shared<flatland::VkRenderer>(std::move(unique_escher));
+  }
+
+  std::shared_ptr<flatland::NullRenderer> NewNullRenderer() const {
+    return std::make_shared<flatland::NullRenderer>();
+  }
 
   // Set up the buffer collections and images to be used for capturing the diplay controller's
   // output. The only devices which currently implement the capture functionality on their
@@ -176,13 +179,26 @@ class EnginePixelTest : public EngineTestBase {
   // Sets up the buffer collection information for collections that will be imported
   // into the engine.
   fuchsia::sysmem::BufferCollectionSyncPtr SetupTextures(
-      sysmem_util::GlobalBufferCollectionId collection_id, uint32_t width, uint32_t height,
-      uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
+      Engine* engine, Renderer* renderer, sysmem_util::GlobalBufferCollectionId collection_id,
+      uint32_t width, uint32_t height, uint32_t num_vmos,
+      fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
     auto texture_tokens = SysmemTokens::Create(sysmem_allocator_.get());
-    auto result = engine_->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                  std::move(texture_tokens.dup_token));
+
+    // Make a third token for the renderer.
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
+    zx_status_t status = texture_tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                               renderer_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+
+    auto result = engine->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
+                                                 std::move(texture_tokens.dup_token));
     EXPECT_TRUE(result);
+
+    result = renderer->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
+                                              std::move(renderer_token));
+    EXPECT_TRUE(result);
+
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
     fuchsia::sysmem::BufferCollectionSyncPtr texture_collection =
         CreateClientPointerWithConstraints(sysmem_allocator_.get(),
@@ -220,7 +236,7 @@ class EnginePixelTest : public EngineTestBase {
     fuchsia::hardware::display::Controller_StartCapture_Result start_capture_result;
     (*display_controller.get())
         ->StartCapture(capture_signal_fence_id, capture_image_id, &start_capture_result);
-    EXPECT_TRUE(start_capture_result.is_response());
+    EXPECT_TRUE(start_capture_result.is_response()) << start_capture_result.err();
 
     // We must wait for the capture to finish before we can proceed. Time out after 3 seconds.
     status = capture_signal_fence.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(3000)),
@@ -257,8 +273,8 @@ class EnginePixelTest : public EngineTestBase {
     }
 
     uint32_t capture_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), 64);
-    uint32_t buffer_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888), 64);
-    uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
+    uint32_t buffer_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888), 64);
+    uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
     uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
     size_t buf_idx = 0;
 
@@ -313,6 +329,12 @@ class EnginePixelTest : public EngineTestBase {
 // to be composited directly in hardware. The Astro display controller
 // only handles full screen rects.
 TEST_F(EnginePixelTest, FullscreenRectangleTest) {
+  // By using the null renderer, we can demonstrate that the rendering is being done directly
+  // by the display controller hardware, and not the software renderer.
+  auto renderer = NewNullRenderer();
+  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
+                                                   renderer, render_data_func());
+
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -330,8 +352,9 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const uint32_t kRectWidth = display->width_in_px(), kTextureWidth = display->width_in_px();
   const uint32_t kRectHeight = display->height_in_px(), kTextureHeight = display->height_in_px();
   fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
-  auto texture_collection = SetupTextures(kTextureCollectionId, kTextureWidth, kTextureHeight, 1,
-                                          &texture_collection_info);
+  auto texture_collection =
+      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
+                    kTextureHeight, 1, &texture_collection_info);
 
   // Get a raw pointer for the texture's vmo and make it green. DC uses ARGB format.
   uint32_t col = (255U << 24) | (255U << 8);
@@ -349,7 +372,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
                                       .vmo_idx = 0,
                                       .width = kTextureWidth,
                                       .height = kTextureHeight};
-  auto result = engine_->ImportImage(image_metadata);
+  auto result = engine->ImportImage(image_metadata);
   EXPECT_TRUE(result);
 
   // Create a flatland session with a root and image handle. Import to the engine as display root.
@@ -357,8 +380,9 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   const TransformHandle root_handle = session.graph().CreateTransform();
   const TransformHandle image_handle = session.graph().CreateTransform();
   session.graph().AddChild(root_handle, image_handle);
-  engine_->AddDisplay(display->display_id(), root_handle,
-                      glm::uvec2(display->width_in_px(), display->height_in_px()));
+  engine->AddDisplay(display->display_id(),
+                     {root_handle, glm::uvec2(display->width_in_px(), display->height_in_px())},
+                     sysmem_allocator_.get(), /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
@@ -368,7 +392,7 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  engine_->RenderFrame();
+  engine->RenderFrame();
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -381,6 +405,127 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
       AmlogicCaptureCompare(read_values.data(), write_values.data(), read_values.size(),
                             display->height_in_px(), display->width_in_px());
   EXPECT_TRUE(images_are_same);
+}
+
+// Test the software path of the engine. Render 2 rectangles, each taking up half of the
+// display's screen, so that the left half is blue and the right half is red.
+VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
+  auto display = display_manager_->default_display();
+  auto display_controller = display_manager_->default_display_controller();
+
+  const uint64_t kTextureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  // Set up buffer collection and image for display_controller capture.
+  uint64_t capture_image_id;
+  fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
+  auto capture_collection = SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+
+  // Setup the collection for the textures. Since we're rendering in software, we don't have to
+  // deal with display limitations.
+  const uint32_t kRectWidth = 300, kTextureWidth = 1;
+  const uint32_t kRectHeight = 200, kTextureHeight = 1;
+  fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
+
+  // Create the image metadatas.
+  ImageMetadata image_metadatas[2];
+  for (uint32_t i = 0; i < 2; i++) {
+    image_metadatas[i] = {.collection_id = kTextureCollectionId,
+                          .identifier = sysmem_util::GenerateUniqueImageId(),
+                          .vmo_idx = i,
+                          .width = kTextureWidth,
+                          .height = kTextureHeight};
+  }
+
+  // Curate the data we want so we don't need to go through flatland.
+  auto data_func =
+      [&](std::unordered_map<uint64_t, DisplayInfo> display_map) -> std::vector<RenderData> {
+    RenderData result;
+    uint32_t width = display->width_in_px() / 2;
+    uint32_t height = display->height_in_px();
+
+    result.display_id = display->display_id();
+    result.rectangles.push_back({glm::vec2(0), glm::vec2(width, height)});
+    result.rectangles.push_back({glm::vec2(width, 0), glm::vec2(width, height)});
+
+    result.images.push_back(image_metadatas[0]);
+    result.images.push_back(image_metadatas[1]);
+    return {result};
+  };
+
+  // Use the VK renderer here so we can make use of software rendering.
+  auto renderer = NewVkRenderer();
+  auto engine = std::make_unique<flatland::Engine>(display_manager_->default_display_controller(),
+                                                   renderer, std::move(data_func));
+
+  auto texture_collection =
+      SetupTextures(engine.get(), renderer.get(), kTextureCollectionId, kTextureWidth,
+                    kTextureHeight, /*num_vmos*/ 2, &texture_collection_info);
+
+  // Write to the two textures. Make the first blue and the second red. Format is ARGB.
+  uint32_t cols[] = {(255 << 24) | (255U << 0), (255U << 24) | (255U << 16)};
+  for (uint32_t i = 0; i < 2; i++) {
+    std::vector<uint32_t> write_values;
+    write_values.assign(kTextureWidth * kTextureHeight, cols[i]);
+    MapHostPointer(texture_collection_info, /*vmo_idx*/ i,
+                   [write_values](uint8_t* vmo_host, uint32_t num_bytes) {
+                     EXPECT_TRUE(num_bytes >= sizeof(uint32_t) * write_values.size());
+                     memcpy(vmo_host, write_values.data(), sizeof(uint32_t) * write_values.size());
+                   });
+  }
+
+  // We now have to import the textures to the engine and the renderer.
+  for (uint32_t i = 0; i < 2; i++) {
+    auto result = engine->ImportImage(image_metadatas[i]);
+    renderer->ImportImage(image_metadatas[i]);
+    EXPECT_TRUE(result);
+  }
+
+  fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
+  auto render_target_collection_id = engine->AddDisplay(
+      display->display_id(),
+      {TransformHandle(), glm::vec2(display->width_in_px(), display->height_in_px())},
+      sysmem_allocator_.get(),
+      /*num_vmos*/ 2, &render_target_info);
+  EXPECT_NE(render_target_collection_id, 0U);
+
+  // Now we can finally render.
+  engine->RenderFrame();
+  renderer->WaitIdle();
+
+  // Make sure the render target has the same data as what's being put on the display.
+  MapHostPointer(render_target_info, /*vmo_idx*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
+    // Grab the capture vmo data.
+    std::vector<uint8_t> read_values;
+    CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
+
+    // Compare the capture vmo data to the values we are expecting.
+    bool images_are_same = AmlogicCaptureCompare(read_values.data(), vmo_host, read_values.size(),
+                                                 display->height_in_px(), display->width_in_px());
+    EXPECT_TRUE(images_are_same);
+
+    // Make sure that the vmo_host has the right amount of blue and red colors, so
+    // that we know that even if the display matches the render target, that its not
+    // just because both are black or some other wrong colors.
+    uint32_t num_blue = 0, num_red = 0;
+    uint32_t num_pixels = num_bytes / 4;
+    uint32_t* host_ptr = reinterpret_cast<uint32_t*>(vmo_host);
+    for (uint32_t i = 0; i < num_pixels; i++) {
+      uint32_t curr_col = host_ptr[i];
+      if (curr_col == cols[0]) {
+        num_blue++;
+      } else if (curr_col == cols[1]) {
+        num_red++;
+      }
+    }
+
+    // Due to image formating, the number of "pixels" in the image above might not be the same as
+    // the number of pixels that are actually on the screen. So here we make sure that exactly
+    // half the screen is blue, and the other half is red.
+    uint32_t num_screen_pixels = display->width_in_px() * display->height_in_px();
+    EXPECT_EQ(num_blue, num_screen_pixels / 2);
+    EXPECT_EQ(num_red, num_screen_pixels / 2);
+  });
 }
 
 }  // namespace test

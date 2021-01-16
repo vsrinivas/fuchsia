@@ -4,98 +4,41 @@
 
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
 
+#include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <zircon/pixelformat.h>
 
 #include <vector>
 
-#include "src/ui/scenic/lib/display/util.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 
 namespace flatland {
 
-namespace {
-
 const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
 
-// Struct to combine the source and destination frames used to set a layer's
-// position on the display. The src frame represents the (cropped) UV coordinates
-// of the image and the dst frame represents the position in screen space that
-// the layer will be placed.
-struct DisplayFrameData {
-  fuchsia::hardware::display::Frame src;
-  fuchsia::hardware::display::Frame dst;
-};
-
-uint64_t InitializeDisplayLayer(fuchsia::hardware::display::ControllerSyncPtr& display_controller) {
-  uint64_t layer_id;
-  zx_status_t create_layer_status;
-  zx_status_t transport_status = display_controller->CreateLayer(&create_layer_status, &layer_id);
-  if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
-    return 0;
-  }
-  return layer_id;
-}
-
-void SetDisplayLayers(fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-                      uint64_t display_id, const std::vector<uint64_t>& layers) {
-  // Set all of the layers for each of the images on the display.
-  auto status = display_controller->SetDisplayLayers(display_id, layers);
-  FX_DCHECK(status == ZX_OK);
-}
-
-// When setting an image on a layer in the display, you have to specify the "source"
-// and "destination", where the source represents the pixel offsets and dimensions to
-// use from the image and the destination represents where on the display the (cropped)
-// image will go in pixel coordinates. This exactly mirrors the setup we have in the
-// Rectangle2D struct and ImageMetadata struct, so we just need to convert that over to
-// the proper display controller readable format.
-DisplayFrameData RectangleDataToDisplayFrames(escher::Rectangle2D rectangle, ImageMetadata image) {
-  fuchsia::hardware::display::Frame src_frame = {
-      .x_pos = static_cast<uint32_t>(rectangle.clockwise_uvs[0].x * image.width),
-      .y_pos = static_cast<uint32_t>(rectangle.clockwise_uvs[0].y * image.height),
-      .width = static_cast<uint32_t>((rectangle.clockwise_uvs[2].x - rectangle.clockwise_uvs[0].x) *
-                                     image.width),
-      .height = static_cast<uint32_t>(
-          (rectangle.clockwise_uvs[2].y - rectangle.clockwise_uvs[0].y) * image.height),
-  };
-
-  fuchsia::hardware::display::Frame dst_frame = {
-      .x_pos = static_cast<uint32_t>(rectangle.origin.x),
-      .y_pos = static_cast<uint32_t>(rectangle.origin.y),
-      .width = static_cast<uint32_t>(rectangle.extent.x),
-      .height = static_cast<uint32_t>(rectangle.extent.y),
-  };
-  return {.src = src_frame, .dst = dst_frame};
-}
-
-}  // namespace
-
 Engine::Engine(std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-               const std::shared_ptr<Renderer>& renderer,
-               const std::shared_ptr<LinkSystem>& link_system,
-               const std::shared_ptr<UberStructSystem>& uber_struct_system)
+               const std::shared_ptr<Renderer>& renderer, RenderDataFunc render_data_func)
     : display_controller_(std::move(display_controller)),
       renderer_(renderer),
-      link_system_(link_system),
-      uber_struct_system_(uber_struct_system) {
+      render_data_func_(render_data_func) {
   FX_DCHECK(renderer_);
-  FX_DCHECK(link_system_);
-  FX_DCHECK(uber_struct_system_);
+  FX_DCHECK(render_data_func_);
 }
 
 Engine::~Engine() {
   // Destroy all of the display layers.
-  for (const auto& [_, layers] : display_layer_map_) {
-    for (const auto& layer : layers) {
+  DiscardConfig();
+  for (const auto& [_, data] : display_engine_data_map_) {
+    for (const auto& layer : data.layers) {
       (*display_controller_.get())->DestroyLayer(layer);
     }
+    for (const auto& event_data : data.frame_event_datas) {
+      (*display_controller_.get())->ReleaseEvent(event_data.wait_id);
+      (*display_controller_.get())->ReleaseEvent(event_data.signal_id);
+    }
   }
-
-  uber_struct_system_.reset();
-  link_system_.reset();
 }
 
 bool Engine::ImportBufferCollection(
@@ -106,16 +49,13 @@ bool Engine::ImportBufferCollection(
   auto sync_token = token.BindSync();
 
   // TODO(fxbug.dev/61974): Find a way to query what formats are compatible with a particular
-  // display. Right now we hardcode ARGB_8888 to match the format used in tests for textures.
+  // display.
   fuchsia::hardware::display::ImageConfig image_config = {.pixel_format = kDefaultImageFormat};
 
-  // Scope the lock.
-  {
-    std::unique_lock<std::mutex> lock(lock_);
-    auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                      std::move(sync_token), image_config);
-    return result;
-  }
+  std::unique_lock<std::mutex> lock(lock_);
+  auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
+                                                    std::move(sync_token), image_config);
+  return result;
 }
 
 void Engine::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
@@ -171,7 +111,7 @@ bool Engine::ImportImage(const ImageMetadata& meta_data) {
   }
 }
 
-void Engine::ReleaseImage(GlobalImageId image_id) {
+void Engine::ReleaseImage(sysmem_util::GlobalImageId image_id) {
   auto display_image_id = InternalImageId(image_id);
 
   // Locks the rest of the function.
@@ -180,40 +120,27 @@ void Engine::ReleaseImage(GlobalImageId image_id) {
   (*display_controller_.get())->ReleaseImage(display_image_id);
 }
 
-std::vector<Engine::RenderData> Engine::ComputeRenderData() {
-  const auto snapshot = uber_struct_system_->Snapshot();
-  const auto links = link_system_->GetResolvedTopologyLinks();
-  const auto link_system_id = link_system_->GetInstanceId();
-
-  // Gather the flatland data into a vector of rectangle and image data that can be passed to
-  // either the display controller directly or to the software renderer.
-  std::vector<RenderData> image_list_per_display;
-  for (const auto& [display_id, display_info] : display_map_) {
-    const auto& transform = display_info.transform;
-    const auto& resolution = display_info.pixel_scale;
-
-    const auto topology_data =
-        GlobalTopologyData::ComputeGlobalTopologyData(snapshot, links, link_system_id, transform);
-    const auto global_matrices = ComputeGlobalMatrices(topology_data.topology_vector,
-                                                       topology_data.parent_indices, snapshot);
-    const auto [image_indices, images] =
-        ComputeGlobalImageData(topology_data.topology_vector, snapshot);
-
-    const auto image_rectangles =
-        ComputeGlobalRectangles(SelectMatrices(global_matrices, image_indices));
-
-    link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
-                              global_matrices, resolution, snapshot);
-
-    FX_DCHECK(image_rectangles.size() == images.size());
-    image_list_per_display.push_back({.rectangles = std::move(image_rectangles),
-                                      .images = std::move(images),
-                                      .display_id = display_id});
+uint64_t Engine::CreateDisplayLayer() {
+  std::unique_lock<std::mutex> lock(lock_);
+  uint64_t layer_id;
+  zx_status_t create_layer_status;
+  zx_status_t transport_status =
+      (*display_controller_.get())->CreateLayer(&create_layer_status, &layer_id);
+  if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
+    return 0;
   }
-  return image_list_per_display;
+  return layer_id;
 }
 
-bool Engine::SetLayers(const RenderData& data) {
+void Engine::SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers) {
+  // Set all of the layers for each of the images on the display.
+  std::unique_lock<std::mutex> lock(lock_);
+  auto status = (*display_controller_.get())->SetDisplayLayers(display_id, layers);
+  FX_DCHECK(status == ZX_OK);
+}
+
+bool Engine::SetRenderDataOnDisplay(const RenderData& data) {
   // Every rectangle should have an associated image.
   uint32_t num_images = data.images.size();
 
@@ -222,27 +149,28 @@ bool Engine::SetLayers(const RenderData& data) {
   std::vector<uint64_t> layers;
   {
     std::unique_lock<std::mutex> lock(lock_);
-    layers = display_layer_map_[data.display_id];
+    layers = display_engine_data_map_[data.display_id].layers;
     if (layers.size() < num_images) {
       return false;
     }
-
-    // We only set as many layers as needed for the images we have.
-    SetDisplayLayers(*display_controller_.get(), data.display_id,
-                     std::vector<uint64_t>(layers.begin(), layers.begin() + num_images));
   }
 
+  // We only set as many layers as needed for the images we have.
+  SetDisplayLayers(data.display_id,
+                   std::vector<uint64_t>(layers.begin(), layers.begin() + num_images));
+
   for (uint32_t i = 0; i < num_images; i++) {
-    ApplyLayerImage(layers[i], data.rectangles[i], data.images[i]);
+    ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0, /*signal_id*/ 0);
   }
 
   return true;
 }
 
-void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
-                             ImageMetadata image) {
+void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image,
+                             scenic_impl::DisplayEventId wait_id,
+                             scenic_impl::DisplayEventId signal_id) {
   auto display_image_id = InternalImageId(image.identifier);
-  auto [src, dst] = RectangleDataToDisplayFrames(rectangle, image);
+  auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
   std::unique_lock<std::mutex> lock(lock_);
 
@@ -264,88 +192,145 @@ void Engine::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
 
   // Set the imported image on the layer.
   // TODO(fxbug.dev/59646): Add wait and signal events.
-  (*display_controller_.get())
-      ->SetLayerImage(layer_id, display_image_id,
-                      /*wait_event*/ 0, /*signal_event*/ 0);
+  (*display_controller_.get())->SetLayerImage(layer_id, display_image_id, wait_id, signal_id);
 }
 
-Engine::DisplayConfigResponse Engine::CheckConfig(bool discard) {
+Engine::DisplayConfigResponse Engine::CheckConfig() {
+  TRACE_DURATION("flatland", "EngineRenderer::CheckConfig");
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   std::unique_lock<std::mutex> lock(lock_);
-  (*display_controller_.get())->CheckConfig(discard, &result, &ops);
+  (*display_controller_.get())->CheckConfig(/*discard*/ false, &result, &ops);
   return {.result = result, .ops = ops};
 }
 
+void Engine::DiscardConfig() {
+  TRACE_DURATION("flatland", "EngineRenderer::DiscardConfig");
+  fuchsia::hardware::display::ConfigResult result;
+  std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+  std::unique_lock<std::mutex> lock(lock_);
+  (*display_controller_.get())->CheckConfig(/*discard*/ true, &result, &ops);
+}
+
 void Engine::ApplyConfig() {
+  TRACE_DURATION("flatland", "EngineRenderer::ApplyConfig");
   std::unique_lock<std::mutex> lock(lock_);
   auto status = (*display_controller_.get())->ApplyConfig();
   FX_DCHECK(status == ZX_OK);
 }
 
 void Engine::RenderFrame() {
-  auto render_data_list = ComputeRenderData();
+  TRACE_DURATION("flatland", "EngineRenderer::RenderFrame");
+  auto render_data_list = render_data_func_(display_info_map_);
+
+  // Config should be reset before doing anything new.
+  DiscardConfig();
 
   // Create and set layers, one per image/rectangle, set the layer images and the
   // layer transforms. Afterwards we check the config, if it fails for whatever reason,
   // such as there being too many layers, then we fall back to software composition.
   bool hardware_fail = false;
   for (auto& data : render_data_list) {
-    if (!SetLayers(data)) {
+    if (!SetRenderDataOnDisplay(data)) {
       hardware_fail = true;
       break;
     }
   }
 
-  auto [result, ops] = CheckConfig(/*discard*/ false);
+  auto [result, ops] = CheckConfig();
 
   // If the results are not okay, we have to not do gpu composition using the renderer.
   if (hardware_fail || result != fuchsia::hardware::display::ConfigResult::OK) {
-    // TODO(fxbug.dev/59646): Here is where we'd actually have to render using the 2D renderer.
-    // This involves discarding the above config, redoing the config for the software rendering
-    // path and then calling CheckConfig() once more.
-    for (auto op : ops) {
-      FX_LOGS(INFO) << "Op display id: " << op.display_id;
-      FX_LOGS(INFO) << "Op layer id: " << op.layer_id;
-      FX_LOGS(INFO) << "Op Code: " << static_cast<uint32_t>(op.opcode);
-    }
+    DiscardConfig();
 
-    FX_LOGS(ERROR) << "Engine hit unimplemented software rendering path. This should not happen "
-                      "in current test environments.";
-    FX_DCHECK(false);
+    for (const auto& data : render_data_list) {
+      auto& display_engine_data = display_engine_data_map_[data.display_id];
+      const auto& pixel_scale = display_info_map_[data.display_id].pixel_scale;
+      auto& curr_vmo = display_engine_data.curr_vmo;
+      const auto& render_target = display_engine_data.targets[curr_vmo];
+
+      // Reset the event data.
+      auto& event_data = display_engine_data.frame_event_datas[curr_vmo];
+
+      // We expect the retired event to already have been signaled.  Verify this without waiting.
+      if (event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
+        FX_LOGS(ERROR) << "flatland::Engine::RenderFrame rendering into in-use backbuffer";
+      }
+
+      event_data.wait_event.signal(ZX_EVENT_SIGNALED, 0);
+      event_data.signal_event.signal(ZX_EVENT_SIGNALED, 0);
+
+      std::vector<zx::event> render_fences;
+      render_fences.push_back(std::move(event_data.wait_event));
+      renderer_->Render(render_target, data.rectangles, data.images, render_fences);
+      curr_vmo = (curr_vmo + 1) % display_engine_data.vmo_count;
+      event_data.wait_event = std::move(render_fences[0]);
+
+      auto layer = display_engine_data.layers[0];
+      SetDisplayLayers(data.display_id, {layer});
+      ApplyLayerImage(layer, {glm::vec2(0), pixel_scale}, render_target, event_data.wait_id,
+                      event_data.signal_id);
+
+      auto [result, /*ops*/ _] = CheckConfig();
+      if (result != fuchsia::hardware::display::ConfigResult::OK) {
+        FX_LOGS(ERROR) << "Both display hardware composition and GPU rendering have failed.";
+
+        // TODO(fxbug.dev/59646): Figure out how we really want to handle this case here.
+        return;
+      }
+    }
   }
 
   ApplyConfig();
 }
 
-void Engine::AddDisplay(uint64_t display_id, TransformHandle transform, glm::uvec2 pixel_scale) {
-  display_map_[display_id] = {.transform = std::move(transform),
-                              .pixel_scale = std::move(pixel_scale)};
+Engine::FrameEventData Engine::NewFrameEventData() {
+  FrameEventData result;
 
-  // When we add in a new display, we create a couple of layers for that display upfront to be used
-  // when we directly composite render data in hardware via the display controller.
-  // TODO(fx.dev/66499): Right now we're just hardcoding the number of layers per display uniformly,
-  // but this should probably be handled more dynamically in the future when we're dealing with
-  // displays that can potentially handle many more layers. Although Astro can only handle 1 layer
-  // right now, we create 2 layers in order to do more complicated unit testing with the mock
-  // display controller.
-  for (uint32_t i = 0; i < 2; i++) {
-    display_layer_map_[display_id].push_back(InitializeDisplayLayer(*display_controller_.get()));
-  }
+  std::unique_lock<std::mutex> lock(lock_);
+
+  // The DC waits on this to be signaled by the renderer.
+  auto status = zx::event::create(0, &result.wait_event);
+  FX_DCHECK(status == ZX_OK);
+  result.wait_id = scenic_impl::ImportEvent(*display_controller_.get(), result.wait_event);
+  FX_DCHECK(result.wait_id != fuchsia::hardware::display::INVALID_DISP_ID);
+
+  // The DC signals this once it has set the layer image.
+  status = zx::event::create(0, &result.signal_event);
+  FX_DCHECK(status == ZX_OK);
+  result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
+  FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
+
+  return result;
 }
 
-sysmem_util::GlobalBufferCollectionId Engine::RegisterTargetCollection(
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos) {
+sysmem_util::GlobalBufferCollectionId Engine::AddDisplay(
+    uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
   FX_DCHECK(sysmem_allocator);
-  auto iter = display_map_.find(display_id);
-  if (iter == display_map_.end() || num_vmos == 0) {
-    return sysmem_util::kInvalidId;
+  const uint32_t kWidth = info.pixel_scale.x;
+  const uint32_t kHeight = info.pixel_scale.y;
+
+  display_info_map_[display_id] = std::move(info);
+  auto& display_engine_data = display_engine_data_map_[display_id];
+
+  // When we add in a new display, we create a couple of layers for that display upfront to be
+  // used when we directly composite render data in hardware via the display controller.
+  // TODO(fx.dev/66499): Right now we're just hardcoding the number of layers per display
+  // uniformly, but this should probably be handled more dynamically in the future when we're
+  // dealing with displays that can potentially handle many more layers. Although Astro can only
+  // handle 1 layer right now, we create 2 layers in order to do more complicated unit testing
+  // with the mock display controller.
+  for (uint32_t i = 0; i < 2; i++) {
+    display_engine_data.layers.push_back(CreateDisplayLayer());
   }
 
-  auto display_info = iter->second;
+  // Exit early if there are no vmos to create.
+  if (num_vmos == 0) {
+    return 0;
+  }
 
-  const uint32_t width = display_info.pixel_scale.x;
-  const uint32_t height = display_info.pixel_scale.y;
+  FX_DCHECK(collection_info);
 
   // Create the buffer collection token to be used for frame buffers.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr engine_token;
@@ -354,39 +339,67 @@ sysmem_util::GlobalBufferCollectionId Engine::RegisterTargetCollection(
 
   // Dup the token for the renderer.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-  {
-    status =
-        engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-  }
+  status =
+      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
 
   // Dup the token for the display.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  {
-    status =
-        engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-  }
+  status =
+      engine_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
 
   // Register the buffer collection with the renderer
-  auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto result = renderer_->RegisterRenderTargetCollection(renderer_collection_id, sysmem_allocator,
+  auto renderer_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer_->RegisterRenderTargetCollection(renderer_id, sysmem_allocator,
                                                           std::move(renderer_token));
   FX_DCHECK(result);
 
   // Register the buffer collection with the display controller.
-  result =
-      ImportBufferCollection(renderer_collection_id, sysmem_allocator, std::move(display_token));
+  result = ImportBufferCollection(renderer_id, sysmem_allocator, std::move(display_token));
   FX_DCHECK(result);
 
   // Finally set the engine constraints.
-  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(engine_token), num_vmos,
-                                          width, height, kNoneUsage, std::nullopt);
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
+      CreateClientPointerWithConstraints(sysmem_allocator, std::move(engine_token), num_vmos,
+                                         kWidth, kHeight, buffer_usage, memory_constraints);
 
-  return renderer_collection_id;
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = collection_ptr->WaitForBuffersAllocated(&allocation_status, collection_info);
+    FX_DCHECK(status == ZX_OK);
+    FX_DCHECK(allocation_status == ZX_OK);
+
+    status = collection_ptr->Close();
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  // Import the images as well.
+  for (uint32_t i = 0; i < num_vmos; i++) {
+    ImageMetadata target = {.collection_id = renderer_id,
+                            .identifier = sysmem_util::GenerateUniqueImageId(),
+                            .vmo_idx = i,
+                            .width = kWidth,
+                            .height = kHeight};
+
+    display_engine_data.frame_event_datas.push_back(NewFrameEventData());
+    display_engine_data.targets.push_back(target);
+    bool res = ImportImage(target);
+    FX_DCHECK(res);
+
+    res = renderer_->ImportImage(target);
+    FX_DCHECK(res);
+  }
+
+  display_engine_data.vmo_count = num_vmos;
+  display_engine_data.curr_vmo = 0;
+  return renderer_id;
 }
 
-uint64_t Engine::InternalImageId(GlobalImageId image_id) const {
+uint64_t Engine::InternalImageId(sysmem_util::GlobalImageId image_id) const {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
   auto itr = image_id_map_.find(image_id);

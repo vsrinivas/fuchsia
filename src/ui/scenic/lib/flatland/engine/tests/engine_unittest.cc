@@ -33,6 +33,11 @@ class EngineTest : public EngineTestBase {
   void SetUp() override {
     EngineTestBase::SetUp();
 
+    // Create the SysmemAllocator.
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
+    EXPECT_EQ(status, ZX_OK);
+
     renderer_ = std::make_shared<flatland::NullRenderer>();
 
     zx::channel device_channel_server;
@@ -52,7 +57,7 @@ class EngineTest : public EngineTestBase {
     shared_display_controller->Bind(std::move(controller_channel_client));
 
     engine_ = std::make_unique<flatland::Engine>(std::move(shared_display_controller), renderer_,
-                                                 link_system(), uber_struct_system());
+                                                 render_data_func());
   }
 
   void TearDown() override {
@@ -67,6 +72,7 @@ class EngineTest : public EngineTestBase {
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
   std::shared_ptr<flatland::NullRenderer> renderer_;
   std::unique_ptr<flatland::Engine> engine_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
 TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
@@ -74,8 +80,9 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
     // Wait once for call to ImportBufferCollection, once for setting the
-    // constraints, and once for call to ReleaseBufferCollection
-    for (uint32_t i = 0; i < 3; i++) {
+    // constraints, and once for call to ReleaseBufferCollection. Finally
+    // one call for the deleter.
+    for (uint32_t i = 0; i < 4; i++) {
       mock->WaitForMessage();
     }
   });
@@ -100,12 +107,21 @@ TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
       .WillOnce(Return());
   engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
 
+  EXPECT_CALL(*mock_display_controller_, CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+
+  engine_.reset();
   server.join();
 }
 
 TEST_F(EngineTest, ImportImageErrorCases) {
   const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 30;
-  const flatland::GlobalImageId kImageId = 50;
+  const sysmem_util::GlobalImageId kImageId = 50;
   const uint32_t kVmoCount = 2;
   const uint32_t kVmoIdx = 1;
   const uint32_t kMaxWidth = 100;
@@ -135,8 +151,8 @@ TEST_F(EngineTest, ImportImageErrorCases) {
     // call to ReleaseImage(). Although there are more than three
     // invalid calls to ImportImage() below, only 3 of them make it
     // all the way to the display controller, which is why we only
-    // have to wait 3 times.
-    for (uint32_t i = 0; i < 5; i++) {
+    // have to wait 3 times. Finally add one call for the deleter.
+    for (uint32_t i = 0; i < 6; i++) {
       mock->WaitForMessage();
     }
   });
@@ -211,6 +227,16 @@ TEST_F(EngineTest, ImportImageErrorCases) {
   copy_metadata.height = 0;
   result = engine_->ImportImage(copy_metadata);
   EXPECT_FALSE(result);
+
+  EXPECT_CALL(*mock_display_controller_, CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+
+  engine_.reset();
 
   server.join();
 }
@@ -306,13 +332,16 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
     // - 2 calls to import the images
     // - 2 calls to initialize layers
     // - 1 call to set the layers on the display
+    // - 1 call to discard the config.
     // - 2 calls to set each layer image
     // - 2 calls to set the layer primary config
     // - 2 calls to set the layer primary alpha.
     // - 2 calls to set the layer primary positions
     // - 1 call to check the config
     // - 1 call to apply the config
-    for (uint32_t i = 0; i < 17; i++) {
+    // - 1 call to DiscardConfig
+    // -2 calls to destroy layer.
+    for (uint32_t i = 0; i < 21; i++) {
       mock->WaitForMessage();
     }
   });
@@ -345,6 +374,15 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
         callback(ZX_OK, kChildDisplayImageId);
       }));
   engine_->ImportImage(child_image_metadata);
+
+  // We start the frame by clearing the config.
+  EXPECT_CALL(*mock, CheckConfig(true, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
 
   // Setup the EXPECT_CALLs for gmock.
   uint64_t layer_id = 1;
@@ -383,8 +421,23 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
-  engine_->AddDisplay(display_id, parent_root_handle, resolution);
+  engine_->AddDisplay(display_id, {parent_root_handle, resolution}, sysmem_allocator_.get(),
+                      /*num_vmos*/ 0);
   engine_->RenderFrame();
+
+  for (uint32_t i = 0; i < 2; i++) {
+    EXPECT_CALL(*mock, DestroyLayer(layers[i]));
+  }
+
+  EXPECT_CALL(*mock_display_controller_, CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+
+  engine_.reset();
 
   server.join();
 }

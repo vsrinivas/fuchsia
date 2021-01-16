@@ -23,6 +23,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
+#include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
@@ -50,6 +51,40 @@ class EngineTestBase : public gtest::RealLoopFixture {
     uber_struct_system_ = std::make_shared<UberStructSystem>();
     link_system_ = std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId());
     async_set_default_dispatcher(dispatcher());
+
+    render_data_func_ =
+        [&](std::unordered_map<uint64_t, DisplayInfo> display_map) -> std::vector<RenderData> {
+      const auto snapshot = uber_struct_system_->Snapshot();
+      const auto links = link_system_->GetResolvedTopologyLinks();
+      const auto link_system_id = link_system_->GetInstanceId();
+
+      // Gather the flatland data into a vector of rectangle and image data that can be passed to
+      // either the display controller directly or to the software renderer.
+      std::vector<RenderData> image_list_per_display;
+      for (const auto& [display_id, display_info] : display_map) {
+        const auto& transform = display_info.transform;
+        const auto& pixel_scale = display_info.pixel_scale;
+
+        const auto topology_data = GlobalTopologyData::ComputeGlobalTopologyData(
+            snapshot, links, link_system_id, transform);
+        const auto global_matrices = ComputeGlobalMatrices(topology_data.topology_vector,
+                                                           topology_data.parent_indices, snapshot);
+        const auto [image_indices, images] =
+            ComputeGlobalImageData(topology_data.topology_vector, snapshot);
+
+        const auto image_rectangles =
+            ComputeGlobalRectangles(SelectMatrices(global_matrices, image_indices));
+
+        link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
+                                  global_matrices, pixel_scale, snapshot);
+
+        FX_DCHECK(image_rectangles.size() == images.size());
+        image_list_per_display.push_back({.rectangles = std::move(image_rectangles),
+                                          .images = std::move(images),
+                                          .display_id = display_id});
+      }
+      return image_list_per_display;
+    };
   }
 
   void TearDown() override {
@@ -144,10 +179,13 @@ class EngineTestBase : public gtest::RealLoopFixture {
 
   const std::shared_ptr<LinkSystem>& link_system() const { return link_system_; }
 
+  RenderDataFunc render_data_func() { return render_data_func_; }
+
  private:
   // Systems that are populated with data from Flatland instances.
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
+  RenderDataFunc render_data_func_;
   zx::channel local_;
 };
 

@@ -22,7 +22,7 @@ class MockBufferCollectionImporter : public BufferCollectionImporter {
 
   MOCK_METHOD1(ImportImage, bool(const ImageMetadata&));
 
-  MOCK_METHOD1(ReleaseImage, void(GlobalImageId));
+  MOCK_METHOD1(ReleaseImage, void(sysmem_util::GlobalImageId));
 };
 
 }  // namespace flatland

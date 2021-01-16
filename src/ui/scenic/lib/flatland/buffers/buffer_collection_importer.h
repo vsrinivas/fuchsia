@@ -11,9 +11,6 @@
 
 namespace flatland {
 
-// Used to reference a particular flatland image.
-using GlobalImageId = uint64_t;
-
 // Struct representing the data needed to extract an image from a buffer collection.
 // All pixel information is stored within the Vmo of the collection so this struct
 // only needs information regarding which collection and which vmo to point to, and
@@ -24,7 +21,7 @@ struct ImageMetadata {
   sysmem_util::GlobalBufferCollectionId collection_id;
 
   // The unique ID for this particular image.
-  GlobalImageId identifier;
+  sysmem_util::GlobalImageId identifier;
 
   // A single buffer collection may have several vmos. This tells the importer
   // which vmo in the collection specified by |collection_id| to use as the memory
@@ -69,7 +66,7 @@ class BufferCollectionImporter {
   virtual bool ImportImage(const ImageMetadata& meta_data) = 0;
 
   // Deregisters the provided image from the service.
-  virtual void ReleaseImage(GlobalImageId image_id) = 0;
+  virtual void ReleaseImage(sysmem_util::GlobalImageId image_id) = 0;
 
   virtual ~BufferCollectionImporter() = default;
 };

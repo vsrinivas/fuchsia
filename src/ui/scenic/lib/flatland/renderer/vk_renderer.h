@@ -33,7 +33,7 @@ class VkRenderer final : public Renderer {
   bool ImportImage(const ImageMetadata& meta_data) override;
 
   // |BufferCollectionImporter|
-  void ReleaseImage(GlobalImageId image_id) override;
+  void ReleaseImage(sysmem_util::GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(

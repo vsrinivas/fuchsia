@@ -6,9 +6,12 @@ source_set("engine") {
   sources = [
     "engine.cc",
     "engine.h",
+    "engine_types.cc",
+    "engine_types.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/flatland/renderer",

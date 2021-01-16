@@ -183,7 +183,7 @@ bool VkRenderer::ImportImage(const ImageMetadata& meta_data) {
   return true;
 }
 
-void VkRenderer::ReleaseImage(GlobalImageId image_id) {
+void VkRenderer::ReleaseImage(sysmem_util::GlobalImageId image_id) {
   // TODO(46708): Fill out this function once we actually start caching images. Currently
   // we just recreate them every time |RenderFrame| is called, and let them go out
   // of scope afterwards, so there is nothing here to release.

@@ -17,4 +17,10 @@ GlobalBufferCollectionId GenerateUniqueBufferCollectionId() {
   return ++buffer_collection_id;
 }
 
+GlobalImageId GenerateUniqueImageId() {
+  // This function will be called from multiple threads, and thus needs an atomic
+  // incrementor for the id.
+  static std::atomic<GlobalImageId> image_id = 0;
+  return ++image_id;
+}
 }  // namespace sysmem_util
