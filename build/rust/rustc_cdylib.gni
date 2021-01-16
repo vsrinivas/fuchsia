@@ -97,12 +97,22 @@ template("rustc_cdylib") {
     source_root = invoker.source_root
   }
 
+  if (!defined(invoker.output_name)) {
+    _lib_output_name = "${target_name}"
+  } else {
+    _lib_output_name = invoker.output_name
+  }
+
   shared_library(rustc_target) {
+    crate_type = "cdylib"
     crate_root = source_root
-    output_name = output_name
+    output_name = _lib_output_name
     if (defined(invoker.non_rust_deps)) {
       data_deps = invoker.non_rust_deps
     }
+
+    configs = []
+    configs = invoker.configs
 
     if (defined(invoker.edition) && invoker.edition == "2015") {
       configs -= [ "//build/config:rust_edition_2018" ]
@@ -123,7 +133,7 @@ template("rustc_cdylib") {
     public_hdrs += invoker.public
   }
 
-  header_target = "_${output_name}_cdylib_headers"
+  header_target = "_${_lib_output_name}_cdylib_headers"
 
   source_set(header_target) {
     public = public_hdrs
