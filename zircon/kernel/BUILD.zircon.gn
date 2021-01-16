@@ -21,6 +21,11 @@ if (zx == "/") {
 }
 import("params.gni")
 
+import("//src/devices/bus/drivers/pci/pci.gni")
+if (platform_enable_user_pci) {
+  disable_kernel_pci = true
+}
+
 if (current_toolchain == default_toolchain) {
   # In the default toolchain, just define the kernel toolchains.
   foreach(cpu, standard_fuchsia_cpus) {
