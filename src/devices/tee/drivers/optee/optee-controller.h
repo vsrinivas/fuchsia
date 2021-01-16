@@ -26,6 +26,7 @@
 
 #include "optee-message.h"
 #include "optee-smc.h"
+#include "optee-util.h"
 #include "shared-memory.h"
 
 namespace optee {
@@ -70,8 +71,13 @@ class OpteeController : public OpteeControllerBase,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // fuchsia.hardware.Tee
+  // TODO(44664): Once all clients are transitioned off of the old TEE connection model, remove this
+  // function.
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
+
+  // fuchsia.hardware.Tee
+  zx_status_t TeeConnectToApplication(const uuid_t* application_uuid, zx::channel tee_app_request,
+                                      zx::channel service_provider);
 
   // `DeviceConnector` FIDL protocol
   void ConnectTee(zx::channel service_provider, zx::channel tee_request,
@@ -123,6 +129,9 @@ class OpteeController : public OpteeControllerBase,
   zx_status_t ExchangeCapabilities();
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
+
+  zx_status_t ConnectToApplicationInternal(Uuid application_uuid, zx::channel service_provider,
+                                           zx::channel application_request);
 
   ddk::PDev pdev_;
   ddk::SysmemProtocolClient sysmem_;

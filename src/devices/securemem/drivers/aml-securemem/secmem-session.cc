@@ -16,10 +16,6 @@
 
 namespace {
 
-// UUID of the TA.
-const fuchsia::tee::Uuid kSecmemUuid = {
-    0x2c1a33c0, 0x44cc, 0x11e5, {0xbc, 0x3b, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}};
-
 // Some secmem-specific marshaling definitions.
 
 enum TeeParamType {
@@ -108,8 +104,8 @@ bool IsExpectedSecmemCommandResult(const fuchsia::tee::OpResult& result) {
 
 }  // namespace
 
-fit::result<SecmemSession, fuchsia::tee::DeviceSyncPtr> SecmemSession::TryOpen(
-    fuchsia::tee::DeviceSyncPtr tee_connection) {
+fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> SecmemSession::TryOpen(
+    fuchsia::tee::ApplicationSyncPtr tee_connection) {
   if (!tee_connection.is_bound()) {
     return fit::error(std::move(tee_connection));
   }
@@ -118,8 +114,7 @@ fit::result<SecmemSession, fuchsia::tee::DeviceSyncPtr> SecmemSession::TryOpen(
   uint32_t session_id = 0;
   auto params = std::vector<fuchsia::tee::Parameter>();
 
-  if (zx_status_t status =
-          tee_connection->OpenSession(kSecmemUuid, std::move(params), &session_id, &result);
+  if (zx_status_t status = tee_connection->OpenSession2(std::move(params), &session_id, &result);
       status != ZX_OK) {
     LOG(ERROR, "OpenSession channel call failed - status: %d", status);
     return fit::error(std::move(tee_connection));

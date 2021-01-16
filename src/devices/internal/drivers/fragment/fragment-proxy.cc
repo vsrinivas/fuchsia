@@ -1059,13 +1059,15 @@ zx_status_t FragmentProxy::SysmemUnregisterSecureMem() {
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
 }
 
-zx_status_t FragmentProxy::TeeConnect(zx::channel tee_device_request,
-                                      zx::channel service_provider) {
+zx_status_t FragmentProxy::TeeConnectToApplication(const uuid_t* application_uuid,
+                                                   zx::channel tee_app_request,
+                                                   zx::channel service_provider) {
   TeeProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_TEE;
-  req.op = TeeOp::CONNECT;
-  zx_handle_t handles[2] = {tee_device_request.release(), service_provider.release()};
+  req.op = TeeOp::CONNECT_TO_APPLICATION;
+  req.application_uuid = *application_uuid;
+  zx_handle_t handles[2] = {tee_app_request.release(), service_provider.release()};
 
   // service_provider is allowed to be ZX_HANDLE_INVALID
   uint32_t handle_count = 1;

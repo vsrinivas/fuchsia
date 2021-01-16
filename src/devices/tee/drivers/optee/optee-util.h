@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
 
+#include <fuchsia/hardware/tee/c/banjo.h>
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 
 #include <cinttypes>
@@ -30,10 +31,14 @@ constexpr std::string_view kDeviceName = "optee";
 struct Uuid final {
  public:
   explicit Uuid(const fuchsia_tee::Uuid& zx_uuid);
+  explicit Uuid(const uuid_t& uuid);
 
   void ToUint64Pair(uint64_t* out_hi, uint64_t* out_low) const;
 
  private:
+  template <typename T>
+  void UuidInternal(const T&);
+
   static constexpr size_t kUuidSize = 16;
   uint8_t data_[kUuidSize];
 };

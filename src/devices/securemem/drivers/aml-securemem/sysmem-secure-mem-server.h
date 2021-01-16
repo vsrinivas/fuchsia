@@ -54,7 +54,7 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
   zx_status_t ProtectMemoryRange(uint64_t physical_address, uint64_t size_bytes);
 
   thrd_t ddk_dispatcher_thread_ = {};
-  fuchsia::tee::DeviceSyncPtr tee_connection_ = {};
+  fuchsia::tee::ApplicationSyncPtr tee_connection_ = {};
   async::Loop loop_;
   thrd_t loop_thread_ = {};
   bool was_thread_started_ = {};

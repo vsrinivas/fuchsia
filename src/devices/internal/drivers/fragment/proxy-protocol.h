@@ -231,12 +231,13 @@ struct SysmemProxyRequest {
 
 // ZX_PROTOCOL_TEE proxy support.
 enum class TeeOp {
-  CONNECT,
+  CONNECT_TO_APPLICATION,
 };
 
 struct TeeProxyRequest {
   ProxyRequest header;
   TeeOp op;
+  uuid_t application_uuid;
 };
 
 // ZX_PROTOCOL_VREG proxy support.

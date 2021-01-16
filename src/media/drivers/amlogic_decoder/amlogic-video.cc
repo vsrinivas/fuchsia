@@ -205,7 +205,9 @@ zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t si
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee) {
+zx_status_t AmlogicVideo::ConnectToTrustedApp(const uuid_t* application_uuid,
+                                              fuchsia::tee::ApplicationSyncPtr* tee) {
+  ZX_DEBUG_ASSERT(application_uuid);
   ZX_DEBUG_ASSERT(tee);
 
   zx::channel tee_client;
@@ -216,7 +218,8 @@ zx_status_t AmlogicVideo::ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee) {
     return status;
   }
 
-  status = tee_.Connect(std::move(tee_server), /*service_provider=*/zx::channel());
+  status = tee_.ConnectToApplication(application_uuid, std::move(tee_server),
+                                     /*service_provider=*/zx::channel());
   if (status != ZX_OK) {
     LOG(ERROR, "tee_connect() failed - status: %d", status);
     return status;
@@ -231,10 +234,12 @@ zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
     return ZX_OK;
   }
 
-  fuchsia::tee::DeviceSyncPtr tee_connection;
-  zx_status_t status = ConnectToTee(&tee_connection);
+  fuchsia::tee::ApplicationSyncPtr tee_connection;
+  const uuid_t kSecmemUuid = {
+      0x2c1a33c0, 0x44cc, 0x11e5, {0xbc, 0x3b, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}};
+  zx_status_t status = ConnectToTrustedApp(&kSecmemUuid, &tee_connection);
   if (status != ZX_OK) {
-    LOG(ERROR, "ConnectToTee() failed - status: %d", status);
+    LOG(ERROR, "ConnectToTrustedApp() failed - status: %d", status);
     return status;
   }
 
@@ -916,10 +921,12 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
   zx_status_t status = ZX_OK;
   constexpr uint32_t kRetryCount = 10;
   for (uint32_t i = 0; i < kRetryCount; i++) {
-    fuchsia::tee::DeviceSyncPtr tee_connection;
-    status = ConnectToTee(&tee_connection);
+    fuchsia::tee::ApplicationSyncPtr tee_connection;
+    const uuid_t kVideoFirmwareUuid = {
+        0x526fc4fc, 0x7ee6, 0x4a12, {0x96, 0xe3, 0x83, 0xda, 0x95, 0x65, 0xbc, 0xe8}};
+    status = ConnectToTrustedApp(&kVideoFirmwareUuid, &tee_connection);
     if (status != ZX_OK) {
-      LOG(ERROR, "ConnectToTee() failed - status: %d", status);
+      LOG(ERROR, "ConnectToTrustedApp() failed - status: %d", status);
       continue;
     }
 

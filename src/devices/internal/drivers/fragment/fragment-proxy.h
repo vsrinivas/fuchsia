@@ -151,7 +151,8 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
   zx_status_t SysmemUnregisterSecureMem();
-  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
+  zx_status_t TeeConnectToApplication(const uuid_t* application_uuid, zx::channel tee_app_request,
+                                      zx::channel service_provider);
   zx_status_t VregSetVoltageStep(uint32_t step);
   uint32_t VregGetVoltageStep();
   void VregGetRegulatorParams(vreg_params_t* out_params);

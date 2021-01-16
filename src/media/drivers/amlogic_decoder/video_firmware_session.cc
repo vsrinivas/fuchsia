@@ -15,10 +15,6 @@
 
 namespace {
 
-// UUID of the TA.
-const fuchsia::tee::Uuid kVideoFirmwareUuid = {
-    0x526fc4fc, 0x7ee6, 0x4a12, {0x96, 0xe3, 0x83, 0xda, 0x95, 0x65, 0xbc, 0xe8}};
-
 // Defined by video_firmware TA.
 enum VideoFirmwareCommandIds {
   // Firmware for video decode HW.
@@ -56,8 +52,8 @@ fit::result<fuchsia::tee::Buffer, zx_status_t> CreateBufferParameter(
 
 }  // namespace
 
-fit::result<VideoFirmwareSession, fuchsia::tee::DeviceSyncPtr> VideoFirmwareSession::TryOpen(
-    fuchsia::tee::DeviceSyncPtr tee_connection) {
+fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> VideoFirmwareSession::TryOpen(
+    fuchsia::tee::ApplicationSyncPtr tee_connection) {
   if (!tee_connection.is_bound()) {
     return fit::error(std::move(tee_connection));
   }
@@ -66,8 +62,7 @@ fit::result<VideoFirmwareSession, fuchsia::tee::DeviceSyncPtr> VideoFirmwareSess
   uint32_t session_id = 0;
   auto params = std::vector<fuchsia::tee::Parameter>();
 
-  if (zx_status_t status =
-          tee_connection->OpenSession(kVideoFirmwareUuid, std::move(params), &session_id, &result);
+  if (zx_status_t status = tee_connection->OpenSession2(std::move(params), &session_id, &result);
       status != ZX_OK) {
     LOG(ERROR, "OpenSession channel call failed (status: %d)", status);
     return fit::error(std::move(tee_connection));

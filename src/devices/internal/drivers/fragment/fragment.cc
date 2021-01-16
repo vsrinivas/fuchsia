@@ -698,14 +698,14 @@ zx_status_t Fragment::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   *out_resp_size = sizeof(ProxyResponse);
 
   switch (req->op) {
-    case TeeOp::CONNECT: {
+    case TeeOp::CONNECT_TO_APPLICATION: {
       zx::channel tee_device_request(std::move(req_handles[0]));
       zx::channel service_provider;
       if (req_handle_count == 2) {
         service_provider.reset(req_handles[1].release());
       }
-      return tee_client_.proto_client().Connect(std::move(tee_device_request),
-                                                std::move(service_provider));
+      return tee_client_.proto_client().ConnectToApplication(
+          &req->application_uuid, std::move(tee_device_request), std::move(service_provider));
     }
     default:
       zxlogf(ERROR, "%s: unknown sysmem op %u", __func__, static_cast<uint32_t>(req->op));

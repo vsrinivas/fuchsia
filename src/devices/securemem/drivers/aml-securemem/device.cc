@@ -190,13 +190,16 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
   zx::channel tee_device_server;
   zx_status_t status = zx::channel::create(0, &tee_device_client, &tee_device_server);
   if (status != ZX_OK) {
-    LOG(ERROR, "optee: failed to create fuchsia.tee.Device channels - status: %d", status);
+    LOG(ERROR, "optee: failed to create fuchsia.tee.Application channels - status: %d", status);
     return status;
   }
   constexpr zx_handle_t kNoServiceProvider = ZX_HANDLE_INVALID;
-  status = tee_proto_client_.Connect(std::move(tee_device_server), zx::channel(kNoServiceProvider));
+  const uuid_t kSecmemUuid = {
+      0x2c1a33c0, 0x44cc, 0x11e5, {0xbc, 0x3b, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}};
+  status = tee_proto_client_.ConnectToApplication(&kSecmemUuid, std::move(tee_device_server),
+                                                  zx::channel(kNoServiceProvider));
   if (status != ZX_OK) {
-    LOG(ERROR, "optee: tee_client_.Connect() failed - status: %d", status);
+    LOG(ERROR, "optee: tee_client_.ConnectToApplication() failed - status: %d", status);
     return status;
   }
   sysmem_secure_mem_server_.emplace(ddk_dispatcher_thread_, std::move(tee_device_client));

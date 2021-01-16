@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_SECMEM_SESSION_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_SECMEM_SESSION_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_SECMEM_SESSION_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_SECMEM_SESSION_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
 #include <lib/fit/result.h>
@@ -17,8 +17,8 @@
 
 class SecmemSession {
  public:
-  static fit::result<SecmemSession, fuchsia::tee::DeviceSyncPtr> TryOpen(
-      fuchsia::tee::DeviceSyncPtr tee_connection);
+  static fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
+      fuchsia::tee::ApplicationSyncPtr tee_connection);
 
   SecmemSession(SecmemSession&&) = default;
   SecmemSession& operator=(SecmemSession&&) = default;
@@ -40,7 +40,7 @@ class SecmemSession {
   static fit::result<uint32_t> UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
                                                      size_t* offset_in_out);
 
-  explicit SecmemSession(uint32_t session_id, fuchsia::tee::DeviceSyncPtr tee_connection)
+  explicit SecmemSession(uint32_t session_id, fuchsia::tee::ApplicationSyncPtr tee_connection)
       : session_id_(session_id), tee_connection_(std::move(tee_connection)) {}
 
   void OpenSession();
@@ -48,7 +48,7 @@ class SecmemSession {
                                                 std::vector<uint8_t>* cmd_buffer_vec);
 
   uint32_t session_id_;
-  fuchsia::tee::DeviceSyncPtr tee_connection_;
+  fuchsia::tee::ApplicationSyncPtr tee_connection_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_SECMEM_SESSION_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_SECMEM_SESSION_H_

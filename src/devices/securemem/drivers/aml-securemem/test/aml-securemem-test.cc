@@ -143,11 +143,12 @@ class FakeTee : public ddk::TeeProtocol<FakeTee> {
 
   const tee_protocol_t* proto() const { return &proto_; }
 
-  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider) {
+  zx_status_t TeeConnectToApplication(const uuid_t* application_uuid, zx::channel tee_app_request,
+                                      zx::channel service_provider) {
     // Currently, do nothing
     //
-    // We don't rely on the tee_device_request channel sticking around for these tests.  See
-    // sysmem-test for a test that exercises the tee_device_request channel.
+    // We don't rely on the tee_app_request channel sticking around for these tests.  See
+    // sysmem-test for a test that exercises the tee_app_request channel.
     return ZX_OK;
   }
 

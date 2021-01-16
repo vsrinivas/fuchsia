@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
 #include <lib/fit/result.h>
@@ -14,8 +14,8 @@
 
 class VideoFirmwareSession {
  public:
-  static fit::result<VideoFirmwareSession, fuchsia::tee::DeviceSyncPtr> TryOpen(
-      fuchsia::tee::DeviceSyncPtr tee_connection);
+  static fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
+      fuchsia::tee::ApplicationSyncPtr tee_connection);
 
   VideoFirmwareSession(VideoFirmwareSession&&) = default;
   VideoFirmwareSession& operator=(VideoFirmwareSession&&) = default;
@@ -28,11 +28,12 @@ class VideoFirmwareSession {
   [[nodiscard]] zx_status_t LoadVideoFirmwareEncoder(uint8_t* data, uint32_t size);
 
  private:
-  explicit VideoFirmwareSession(uint32_t session_id, fuchsia::tee::DeviceSyncPtr tee_connection)
+  explicit VideoFirmwareSession(uint32_t session_id,
+                                fuchsia::tee::ApplicationSyncPtr tee_connection)
       : session_id_(session_id), tee_connection_(std::move(tee_connection)) {}
 
   uint32_t session_id_;
-  fuchsia::tee::DeviceSyncPtr tee_connection_;
+  fuchsia::tee::ApplicationSyncPtr tee_connection_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_

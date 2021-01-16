@@ -11,6 +11,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -384,6 +385,15 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
   return ZX_OK;
 }
 
+zx_status_t OpteeController::TeeConnectToApplication(const uuid_t* application_uuid,
+                                                     zx::channel tee_app_request,
+                                                     zx::channel service_provider) {
+  ZX_DEBUG_ASSERT(application_uuid);
+  ZX_DEBUG_ASSERT(tee_app_request.is_valid());
+  return ConnectToApplicationInternal(Uuid(*application_uuid), std::move(service_provider),
+                                      std::move(tee_app_request));
+}
+
 void OpteeController::ConnectTee(zx::channel service_provider, zx::channel tee_request,
                                  [[maybe_unused]] ConnectTeeCompleter::Sync& _completer) {
   TeeConnect(std::move(tee_request), std::move(service_provider));
@@ -415,11 +425,18 @@ void OpteeController::ConnectToApplication(
     llcpp::fuchsia::tee::Uuid application_uuid, zx::channel service_provider,
     zx::channel application_request,
     [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
+  ConnectToApplicationInternal(Uuid(application_uuid), std::move(service_provider),
+                               std::move(application_request));
+}
+
+zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
+                                                          zx::channel service_provider,
+                                                          zx::channel application_request) {
   ZX_DEBUG_ASSERT(application_request.is_valid());
 
   // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider),
-                                              Uuid(application_uuid), false /* use_old_api */);
+  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid,
+                                              false /* use_old_api */);
 
   // Add a child `OpteeClient` device instance and have it immediately start serving
   // `device_request`
@@ -428,11 +445,12 @@ void OpteeController::ConnectToApplication(
                                           .set_client_remote(std::move(application_request)));
   if (status != ZX_OK) {
     LOG(ERROR, "failed to create device info child (status: %d)", status);
-    return;
+    return status;
   }
 
   // devmgr is now in charge of the memory for `client`
   [[maybe_unused]] auto client_ptr = client.release();
+  return ZX_OK;
 }
 
 OsInfo OpteeController::GetOsInfo() const {

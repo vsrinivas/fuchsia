@@ -179,7 +179,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestVP9;
   friend class TestFrameProvider;
 
-  zx_status_t ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee);
+  zx_status_t ConnectToTrustedApp(const uuid_t* uuid, fuchsia::tee::ApplicationSyncPtr* tee);
 
   zx_status_t EnsureSecmemSessionIsConnected();
 

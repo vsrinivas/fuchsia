@@ -6,15 +6,25 @@ library fuchsia.hardware.tee;
 
 using zx;
 
+struct Uuid {
+    uint32 time_low;
+    uint16 time_mid;
+    uint16 time_hi_and_version;
+    array<uint8>:8 clock_seq_and_node;
+};
+
 [Layout = "ddk-protocol"]
 protocol Tee {
-    /// Takes the server end of a FIDL connection that'll serve fuchsia.tee.Device.
+    /// Takes the server end of a FIDL connection that'll serve fuchsia.tee.Application for the
+    /// given application_uuid.
     ///
-    /// If the connection fails, |s| will be a failing status and tee_device_request and
+    /// If the connection fails, |s| will be a failing status and tee_app_request and
     /// service_provider (if valid) will both be closed.
     ///
     /// The service_provider can be ZX_HANDLE_INVALID if the connection won't be used for any
     /// requests that'll result in filesystem requests from the TEE.  If not ZX_HANDLE_INVALID, the
     /// service provider will be used in serving filesystem requests from the TEE.
-    Connect(handle<channel> tee_device_request, handle<channel> service_provider) -> (zx.status s);
+    ConnectToApplication(Uuid application_uuid,
+                         handle<channel> tee_app_request,
+                         handle<channel> service_provider) -> (zx.status s);
 };

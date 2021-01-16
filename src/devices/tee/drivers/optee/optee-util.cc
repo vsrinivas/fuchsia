@@ -9,7 +9,13 @@
 
 namespace optee {
 
-Uuid::Uuid(const fuchsia_tee::Uuid& uuid) {
+Uuid::Uuid(const fuchsia_tee::Uuid& uuid) { UuidInternal(uuid); }
+
+Uuid::Uuid(const uuid_t& uuid) { UuidInternal(uuid); }
+
+template <typename T>
+void Uuid::UuidInternal(const T& uuid) {
+  static_assert(std::is_same_v<T, fuchsia_tee::Uuid> || std::is_same_v<T, uuid_t>);
   data_[0] = static_cast<uint8_t>(uuid.time_low >> 24);
   data_[1] = static_cast<uint8_t>(uuid.time_low >> 16);
   data_[2] = static_cast<uint8_t>(uuid.time_low >> 8);
