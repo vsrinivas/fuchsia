@@ -1,8 +1,8 @@
 # State of the Components v2 migration
 
-The Component Framework is one of the key foundations for Fuchsia's unsermode
-runtime environment. The original incarnation of components date back to the
-inception of Fuchsia OS and the initial commits in 2016. The framework has
+The Component Framework is one of the key foundations for Fuchsia's usermode
+runtime environment. The original incarnation of components dates back to the
+inception of the Fuchsia OS and the initial commits in 2016. The framework has
 steadily evolved since then.
 
 ## Components v1 vs. v2
@@ -28,8 +28,8 @@ developing [Component Framework v2][intro].
 Components v2 is largely comprised of:
 
 *   [Component manager][component_manager], a program that manages the runtime
-    environment for v2 components. Component manager is also responsible for
-    launching `appmgr`. `appmgr` has since become a v2 component itself,
+    environment for v2 components. Component manager is now responsible for
+    launching `appmgr`. `appmgr` has become a v2 component itself,
     which serves as the parent of all v1 components still present in the
     system.
 *   The [`.cml`][cml] file format for v2 component manifests.
