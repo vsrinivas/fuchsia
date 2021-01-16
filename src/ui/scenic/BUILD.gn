@@ -93,7 +93,10 @@ test_package("scenic_tests") {
       # to display controller image capture features
       # can run this test suite.
       name = "flatland_engine_pixeltests"
-      environments = [ astro_env ]
+      environments = [
+        astro_env,
+        sherlock_env,
+      ]
     },
     {
       log_settings = {

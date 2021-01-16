@@ -262,6 +262,7 @@ class EnginePixelTest : public EngineTestBase {
     uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
     size_t buf_idx = 0;
 
+#ifdef PLATFORM_ASTRO
     // For Astro only:
     // Ignore last column. Has junk (hardware bug)
     // Ignoring last column, means there is a shift by one pixel.
@@ -269,6 +270,7 @@ class EnginePixelTest : public EngineTestBase {
     // capture_buffer should end at width - 3 (i.e. 888)
     capture_width_bytes -= ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
     buf_idx = ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
+#endif  // PLATFORM_ASTRO
 
     size_t cap_idx = 0;
     // Ignore first line. It <sometimes> contains junk (hardware bug).
