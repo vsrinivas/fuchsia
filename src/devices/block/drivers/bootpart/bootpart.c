@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
