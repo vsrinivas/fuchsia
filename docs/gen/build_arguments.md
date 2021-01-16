@@ -2834,7 +2834,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/BUILD.gn:154
+From //src/ui/scenic/BUILD.gn:157
 
 ### scenic_ignore_vsync
 
@@ -3409,11 +3409,15 @@ case, ffmpeg is always built from source so as to be built with the
 selected variant's config.  When this is false (either explicitly or in
 a variant build) then //third_party/ffmpeg must be in the source tree,
 which requires:
-`jiri import -name integration third_party/ffmpeg https://fuchsia.googlesource.com/integration`
+`jiri import -name third_party/ffmpeg -revision HEAD third_party/ffmpeg http://fuchsia.googlesource.com/integration`
+or, if already importing a different manifest from there, resulting in errors from jiri update,
+it can work to just git clone (but jiri update won't manage third_party/ffmpeg in this case):
+mkdir third_party/ffmpeg
+git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:14
+From //src/media/lib/ffmpeg/BUILD.gn:18
 
 ### use_swiftshader_vulkan_icd_on_host
 
