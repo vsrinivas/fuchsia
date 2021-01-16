@@ -12,9 +12,11 @@ use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
     fuchsia_zircon::ok as zx_ok,
     futures::{
+        channel::oneshot,
         lock::Mutex,
         stream::{self, StreamExt, TryStreamExt},
     },
+    log::info,
     std::sync::Arc,
 };
 
@@ -37,7 +39,8 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
         RegulatoryManager { regulatory_service, device_service, phy_manager, iface_manager }
     }
 
-    pub async fn run(&self) -> Result<(), Error> {
+    pub async fn run(&self, policy_notifier: oneshot::Sender<()>) -> Result<(), Error> {
+        let mut policy_notifier = Some(policy_notifier);
         loop {
             let region_update = self
                 .regulatory_service
@@ -47,6 +50,13 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             let region_string = match region_update {
                 Some(region_string) => region_string,
                 None => {
+                    info!("No cached regulatory region is available.");
+                    if let Some(notifier) = policy_notifier.take() {
+                        if notifier.send(()).is_err() {
+                            info!("Could not notify policy layer of initial region setting");
+                        }
+                    };
+
                     continue;
                 }
             };
@@ -78,6 +88,12 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
                         })
                 })
                 .await?;
+
+            if let Some(notifier) = policy_notifier.take() {
+                if notifier.send(()).is_err() {
+                    info!("Could not notify policy layer of initial region setting");
+                }
+            };
 
             // TODO(fxbug.dev/49632): Respect the initial state of client connections, instead of
             // restarting them unconditionally.
@@ -131,6 +147,8 @@ mod tests {
         regulatory_manager: RegulatoryManager<StubIfaceManager<S, T, U>, StubPhyManager>,
         device_service_requests: DeviceServiceRequestStream,
         regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
+        regulatory_sender: oneshot::Sender<()>,
+        regulatory_receiver: oneshot::Receiver<()>,
     }
 
     impl<S, T, U> TestContext<S, T, U>
@@ -166,12 +184,16 @@ mod tests {
             let regulatory_region_requests = regulatory_region_server_channel
                 .into_stream()
                 .expect("failed to create RegulatoryRegionWatcher stream");
+
+            let (regulatory_sender, regulatory_receiver) = oneshot::channel();
             Self {
                 executor,
                 iface_manager,
                 regulatory_manager,
                 device_service_requests,
                 regulatory_region_requests,
+                regulatory_sender,
+                regulatory_receiver,
             }
         }
     }
@@ -180,7 +202,7 @@ mod tests {
     fn returns_error_on_short_region_code() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -194,13 +216,18 @@ mod tests {
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]
     fn returns_error_on_long_region_code() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -214,13 +241,18 @@ mod tests {
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]
     fn propagates_update_to_device_service_on_region_code_with_valid_length() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -246,7 +278,7 @@ mod tests {
     fn does_not_propagate_invalid_length_region_code_to_device_service() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -266,13 +298,18 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Pending
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]
     fn does_not_propogate_null_update() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -291,13 +328,19 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Pending
         );
+
+        // Verify that the policy API is instructed to begin serving.
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
     fn returns_error_when_region_code_with_valid_length_is_rejected_by_device_service() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -325,13 +368,18 @@ mod tests {
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]
     fn propagates_multiple_valid_region_code_updates_to_device_service() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
 
         // Receive first `RegulatoryRegionWatcher` update, and propagate it to `DeviceService`.
@@ -356,6 +404,12 @@ mod tests {
             assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"US" });
             device_service_responder.send(ZX_OK).expect("failed to send device service response");
         }
+
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
 
         // Receive second `RegulatoryRegionWatcher` update, and propagate it to `DeviceService`.
         {
@@ -387,7 +441,7 @@ mod tests {
             StubPhyManager { phy_ids: vec![0, 1] },
             make_default_stub_iface_manager(),
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -417,6 +471,12 @@ mod tests {
         );
         assert_eq!(request_params, SetCountryRequest { phy_id: 1, alpha2: *b"US" });
         device_service_responder.send(ZX_OK).expect("failed to send device service response");
+
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
@@ -425,7 +485,7 @@ mod tests {
             StubPhyManager { phy_ids: Vec::new() },
             make_default_stub_iface_manager(),
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -436,6 +496,11 @@ mod tests {
         );
         region_responder.send(Some("US")).expect("failed to send region response");
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
@@ -444,7 +509,7 @@ mod tests {
             StubPhyManager { phy_ids: Vec::new() },
             make_default_stub_iface_manager(),
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -465,6 +530,11 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Pending
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
@@ -474,7 +544,7 @@ mod tests {
             make_default_stub_iface_manager(),
         );
 
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -507,6 +577,11 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Pending
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]
@@ -528,7 +603,7 @@ mod tests {
                 .boxed(),
             },
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -559,6 +634,11 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry { .. })))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Pending
+        );
     }
 
     #[test]
@@ -579,7 +659,7 @@ mod tests {
                 stop_all_access_points_response_stream: stop_aps_response_stream,
             },
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -610,6 +690,11 @@ mod tests {
             context.executor.run_until_stalled(device_service_request_fut),
             Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry { .. })))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Pending
+        );
     }
 
     #[test]
@@ -618,7 +703,7 @@ mod tests {
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
 
         // Drive the RegulatoryManager to request an update from RegulatoryRegionWatcher.
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -665,6 +750,11 @@ mod tests {
             context.executor.run_until_stalled(&mut has_start_been_called_fut),
             Poll::Ready(true)
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
@@ -687,7 +777,7 @@ mod tests {
                 .boxed(),
             },
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -705,6 +795,11 @@ mod tests {
         // should propagate the error.
         assert_variant!(
             context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
             Poll::Ready(Err(_))
         );
     }
@@ -729,7 +824,7 @@ mod tests {
                 .boxed(),
             },
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -759,6 +854,11 @@ mod tests {
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
         );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
+            Poll::Ready(Ok(()))
+        );
     }
 
     #[test]
@@ -781,7 +881,7 @@ mod tests {
                 .boxed(),
             },
         );
-        let regulatory_fut = context.regulatory_manager.run();
+        let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -799,6 +899,11 @@ mod tests {
         // propagate the error.
         assert_variant!(
             context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+
+        assert_variant!(
+            &context.executor.run_until_stalled(&mut context.regulatory_receiver),
             Poll::Ready(Err(_))
         );
     }

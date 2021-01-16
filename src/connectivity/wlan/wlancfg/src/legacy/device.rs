@@ -75,19 +75,6 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) {
         info!("error adding new phy {}: {}", phy_id, e);
         phy_manager.log_phy_add_failure();
     }
-
-    if let Err(e) = phy_manager.create_all_client_ifaces().await {
-        info!("error starting client interfaces: {:?}", e);
-        return;
-    }
-
-    // When a new PHY is detected, attempt to get a client.  It is possible that the PHY does not
-    // support client or AP mode, so failing to get an interface for either role should not result
-    // in failure.
-    match phy_manager.get_client() {
-        Some(iface_id) => info!("created client iface {}", iface_id),
-        None => {}
-    }
 }
 
 /// Configured the interface that is used to service the legacy WLAN API.

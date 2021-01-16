@@ -33,18 +33,20 @@ use {
     fuchsia_zircon::prelude::*,
     futures::{
         self,
-        channel::mpsc,
+        channel::{mpsc, oneshot},
         future::{try_join, try_join5, BoxFuture},
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
     },
-    log::error,
+    log::{error, info},
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
     wlan_metrics_registry::{self as metrics},
 };
+
+const REGULATORY_LISTENER_TIMEOUT_SEC: i64 = 30;
 
 async fn serve_fidl(
     ap: access_point::AccessPoint,
@@ -56,7 +58,28 @@ async fn serve_fidl(
     client_sender: util::listener::ClientListenerMessageSender,
     client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
+    regulatory_receiver: oneshot::Receiver<()>,
 ) -> Result<Void, Error> {
+    // Wait a bit for the regulatory region to be set before serving the policy APIs.
+    let regulatory_listener_timeout =
+        fasync::Timer::new(REGULATORY_LISTENER_TIMEOUT_SEC.seconds().after_now());
+    select! {
+        _ = regulatory_listener_timeout.fuse() => {
+            info!(
+                "Regulatory region was not set after {} seconds.  Proceeding to serve policy API.",
+                REGULATORY_LISTENER_TIMEOUT_SEC,
+            );
+        },
+        result = regulatory_receiver.fuse() => {
+            match result {
+                Ok(()) => {
+                    info!("Regulatory region has been set.  Proceeding to serve policy API.");
+                },
+                Err(e) => info!("Waiting for initial regulatory region failed: {:?}", e),
+            }
+        }
+    }
+
     let mut fs = ServiceFs::new();
 
     component::inspector().serve(&mut fs)?;
@@ -169,13 +192,14 @@ fn run_regulatory_manager(
     wlan_svc: DeviceServiceProxy,
     phy_manager: Arc<Mutex<PhyManager>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    regulatory_sender: oneshot::Sender<()>,
 ) -> BoxFuture<'static, Result<(), Error>> {
     match fuchsia_component::client::connect_to_service::<RegulatoryRegionWatcherMarker>() {
         Ok(regulatory_svc) => {
             let regulatory_manager =
                 RegulatoryManager::new(regulatory_svc, wlan_svc, phy_manager, iface_manager);
             let regulatory_fut = async move {
-                regulatory_manager.run().await.unwrap_or_else(|e| {
+                regulatory_manager.run(regulatory_sender).await.unwrap_or_else(|e| {
                     error!("regulatory manager failed: {:?}", e);
                 });
                 Ok(())
@@ -235,6 +259,7 @@ fn main() -> Result<(), Error> {
         iface_manager.clone(),
     );
 
+    let (regulatory_sender, regulatory_receiver) = oneshot::channel();
     let ap =
         access_point::AccessPoint::new(iface_manager.clone(), ap_sender, Arc::new(Mutex::new(())));
     let fidl_fut = serve_fidl(
@@ -247,6 +272,7 @@ fn main() -> Result<(), Error> {
         client_sender,
         client_receiver,
         ap_receiver,
+        regulatory_receiver,
     );
 
     let dev_watcher_fut = watcher_proxy
@@ -256,8 +282,12 @@ fn main() -> Result<(), Error> {
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
-    let regulatory_fut =
-        run_regulatory_manager(wlan_svc.clone(), phy_manager.clone(), iface_manager.clone());
+    let regulatory_fut = run_regulatory_manager(
+        wlan_svc.clone(),
+        phy_manager.clone(),
+        iface_manager.clone(),
+        regulatory_sender,
+    );
 
     executor
         .run_singlethreaded(try_join5(
