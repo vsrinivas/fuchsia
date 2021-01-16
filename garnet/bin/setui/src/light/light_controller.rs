@@ -15,9 +15,9 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
+use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{ControllerStateResult, SettingRequest};
-use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -294,7 +294,7 @@ impl LightController {
     /// Restores the light information when no hardware configuration is specified by reading from
     /// the underlying fuchsia.hardware.Light API and turning each light into a [`LightGroup`].
     ///
-    /// [`LightGroup`]: ../../switchboard/light_types/struct.LightGroup.html
+    /// [`LightGroup`]: ../../light/types/struct.LightGroup.html
     async fn restore_from_hardware(&self) -> SettingHandlerResult {
         let num_lights =
             self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {

@@ -210,7 +210,7 @@ impl TryFrom<ColorRgb> for fidl_fuchsia_hardware_light::Rgb {
 
 #[cfg(test)]
 mod tests {
-    use crate::switchboard::light_types::ColorRgb;
+    use crate::light::types::ColorRgb;
     use std::convert::TryFrom;
 
     #[test]

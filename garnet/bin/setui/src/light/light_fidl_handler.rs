@@ -187,9 +187,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::base::SettingInfo;
-    use crate::switchboard::light_types::{
-        LightGroup, LightInfo, LightState, LightType, LightValue,
-    };
+    use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 
     #[test]
     fn test_response_to_vector_empty() {
@@ -218,8 +216,7 @@ mod tests {
             disable_conditions: vec![],
         };
 
-        let mut light_groups: HashMap<String, crate::switchboard::light_types::LightGroup> =
-            HashMap::new();
+        let mut light_groups: HashMap<String, crate::light::types::LightGroup> = HashMap::new();
         light_groups.insert("test".to_string(), light_group_1.clone());
         light_groups.insert("test2".to_string(), light_group_2.clone());
 

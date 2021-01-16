@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::switchboard::light_types::{LightType, LightValue};
+use crate::light::types::{LightType, LightValue};
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
 use fidl::endpoints::ServerEnd;

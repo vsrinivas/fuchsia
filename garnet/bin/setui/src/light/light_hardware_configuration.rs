@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::switchboard::light_types::LightType;
+use crate::light::types::LightType;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]
