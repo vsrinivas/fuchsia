@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace fit {
+namespace cpp17 {
 
 namespace internal {
 
@@ -394,103 +394,103 @@ class basic_string_view {
 // When |RawType| is lhs: std::is_constructible<basic_string_view, RawType>::value must be true.
 // When |RawType| is rhs: There must be an overload of basic_string_view::compare for |RawType|.
 template <class CharT, class Traits>
-constexpr bool operator==(fit::basic_string_view<CharT, Traits> lhs,
-                          fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator==(cpp17::basic_string_view<CharT, Traits> lhs,
+                          cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) == 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator==(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) == 0;
+constexpr bool operator==(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) == 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator==(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator==(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) == 0;
 }
 
 template <class CharT, class Traits>
-constexpr bool operator!=(fit::basic_string_view<CharT, Traits> lhs,
-                          fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator!=(cpp17::basic_string_view<CharT, Traits> lhs,
+                          cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) != 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator!=(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) != 0;
+constexpr bool operator!=(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) != 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator!=(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator!=(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) != 0;
 }
 
 template <class CharT, class Traits>
-constexpr bool operator<(fit::basic_string_view<CharT, Traits> lhs,
-                         fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator<(cpp17::basic_string_view<CharT, Traits> lhs,
+                         cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) < 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator<(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) < 0;
+constexpr bool operator<(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) < 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator<(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator<(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) < 0;
 }
 
 template <class CharT, class Traits>
-constexpr bool operator>(fit::basic_string_view<CharT, Traits> lhs,
-                         fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator>(cpp17::basic_string_view<CharT, Traits> lhs,
+                         cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) > 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator>(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) > 0;
+constexpr bool operator>(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) > 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator>(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator>(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) > 0;
 }
 
 template <class CharT, class Traits>
-constexpr bool operator<=(fit::basic_string_view<CharT, Traits> lhs,
-                          fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator<=(cpp17::basic_string_view<CharT, Traits> lhs,
+                          cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) <= 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator<=(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) <= 0;
+constexpr bool operator<=(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) <= 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator<=(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator<=(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) <= 0;
 }
 
 template <class CharT, class Traits>
-constexpr bool operator>=(fit::basic_string_view<CharT, Traits> lhs,
-                          fit::basic_string_view<CharT, Traits> rhs) noexcept {
+constexpr bool operator>=(cpp17::basic_string_view<CharT, Traits> lhs,
+                          cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
   return lhs.compare(rhs) >= 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator>=(RawType lhs, fit::basic_string_view<CharT, Traits> rhs) noexcept {
-  return fit::basic_string_view<CharT, Traits>(lhs).compare(rhs) >= 0;
+constexpr bool operator>=(RawType lhs, cpp17::basic_string_view<CharT, Traits> rhs) noexcept {
+  return cpp17::basic_string_view<CharT, Traits>(lhs).compare(rhs) >= 0;
 }
 
 template <class CharT, class Traits, class RawType>
-constexpr bool operator>=(fit::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
+constexpr bool operator>=(cpp17::basic_string_view<CharT, Traits> lhs, RawType rhs) noexcept {
   return lhs.compare(rhs) >= 0;
 }
 
 // Specializations.
-using string_view = fit::basic_string_view<char>;
+using string_view = cpp17::basic_string_view<char>;
 
 // Constructs a string_view from ""_sv literal.
 // Literals with no leading underscore are reserved for the standard library.
@@ -498,33 +498,33 @@ using string_view = fit::basic_string_view<char>;
 inline namespace literals {
 inline namespace string_view_literals {
 
-constexpr fit::string_view operator"" _sv(typename fit::string_view::const_pointer str,
-                                          typename fit::string_view::size_type len) noexcept {
-  return fit::string_view(str, len);
+constexpr cpp17::string_view operator"" _sv(typename cpp17::string_view::const_pointer str,
+                                            typename cpp17::string_view::size_type len) noexcept {
+  return cpp17::string_view(str, len);
 }
 }  // namespace string_view_literals
 }  // namespace literals
 
-}  // namespace fit
+}  // namespace cpp17
 
 namespace std {
 // Hash needs to match basic_string view hash of the same string, so we need to rely on compiler
 // implementation.
 // https://en.cppreference.com/w/cpp/string/basic_string_view/hash
 template <class CharT>
-struct hash<fit::basic_string_view<CharT, std::char_traits<CharT>>> {
-  std::size_t operator()(const fit::basic_string_view<CharT, std::char_traits<CharT>> val) const {
+struct hash<cpp17::basic_string_view<CharT, std::char_traits<CharT>>> {
+  std::size_t operator()(cpp17::basic_string_view<CharT, std::char_traits<CharT>> val) const {
     return __do_string_hash(val.data(), val.data() + val.length());
   }
 };
 
-// Output stream specialization for fit::string_view.
+// Output stream specialization for cpp17::string_view.
 //
 // https://en.cppreference.com/w/cpp/string/basic_string_view/operator_ltlt
 template <class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
-                                              fit::basic_string_view<CharT, Traits> v) {
-  using size_type = typename fit::basic_string_view<CharT, Traits>::size_type;
+                                              cpp17::basic_string_view<CharT, Traits> v) {
+  using size_type = typename cpp17::basic_string_view<CharT, Traits>::size_type;
   const size_type fixed_length = std::min(static_cast<size_type>(os.width()), v.length());
   const size_type fill_length =
       (static_cast<size_type>(os.width()) > v.length()) ? os.width() - v.length() : 0;
