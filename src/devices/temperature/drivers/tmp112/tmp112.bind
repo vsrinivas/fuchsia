@@ -5,7 +5,7 @@
 using fuchsia.i2c;
 using fuchsia.ti.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C;
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TEMPERATURE;
 fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.TMP112;

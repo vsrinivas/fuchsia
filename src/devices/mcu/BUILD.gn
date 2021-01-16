@@ -6,3 +6,8 @@ group("drivers") {
   testonly = true
   deps = [ "drivers/vim3-mcu" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "drivers/vim3-mcu:tests" ]
+}

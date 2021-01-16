@@ -4,5 +4,5 @@
 
 using fuchsia.i2c;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C;
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_I2C_CLASS == fuchsia.i2c.BIND_I2C_CLASS.HID;

@@ -5,7 +5,7 @@
 using fuchsia.i2c;
 using fuchsia.maxim.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C;
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.maxim.platform.BIND_PLATFORM_DEV_VID.MAXIM;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
   fuchsia.maxim.platform.BIND_PLATFORM_DEV_DID.MAX98927,

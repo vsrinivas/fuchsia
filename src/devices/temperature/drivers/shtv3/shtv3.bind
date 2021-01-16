@@ -5,6 +5,6 @@
 using fuchsia.i2c;
 using fuchsia.sensirion.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C;
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.sensirion.platform.BIND_PLATFORM_DEV_VID.SENSIRION;
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.sensirion.platform.BIND_PLATFORM_DEV_DID.SHTV3;

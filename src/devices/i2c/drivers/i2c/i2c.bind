@@ -4,4 +4,4 @@
 
 using fuchsia.i2c;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C_IMPL;
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.IMPL;
