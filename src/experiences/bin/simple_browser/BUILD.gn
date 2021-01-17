@@ -36,6 +36,7 @@ dart_library("lib") {
     "src/widgets/navigation_bar.dart",
     "src/widgets/navigation_field.dart",
     "src/widgets/tabs_widget.dart",
+    "test_main.dart",
   ]
 
   deps = [
@@ -47,6 +48,7 @@ dart_library("lib") {
     "//src/experiences/bin/simple_browser_internationalization:internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
@@ -67,8 +69,12 @@ resource("keyboard-shortcuts") {
 }
 
 flutter_component("component") {
+  if (flutter_driver_enabled) {
+    main_dart = "test_main.dart"
+  } else {
+    main_dart = "main.dart"
+  }
   component_name = "simple-browser"
-  flutter_driver_extendable = flutter_driver_enabled
   manifest = "meta/simple_browser.cmx"
   deps = [
     ":keyboard-shortcuts",

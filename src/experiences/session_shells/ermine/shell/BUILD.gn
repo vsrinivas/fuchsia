@@ -21,12 +21,14 @@ group("shell") {
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 
 flutter_app("ermine") {
-  main_dart = "lib/main.dart"
+  if (flutter_driver_enabled) {
+    main_dart = "lib/test_main.dart"
+  } else {
+    main_dart = "lib/main.dart"
+  }
 
   fuchsia_package_name = "ermine"
   package_name = "ermine"
-
-  flutter_driver_extendable = flutter_driver_enabled
 
   meta = [
     {
@@ -84,6 +86,7 @@ flutter_app("ermine") {
     "src/widgets/support/recents.dart",
     "src/widgets/topbar/button.dart",
     "src/widgets/topbar/topbar.dart",
+    "test_main.dart",
   ]
 
   deps = [
@@ -111,6 +114,7 @@ flutter_app("ermine") {
     "//src/experiences/session_shells/ermine/tiler",
     "//src/sys/component_index/fidl:index",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/flutter_svg",
