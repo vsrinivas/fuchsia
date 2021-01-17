@@ -11,12 +11,7 @@
     [ ["all", "all"], ["ip_address", "dhcp"] ]
   ],
   "filter_config": {
-    "rules": [
-      "drop in proto tcp to range 1:65535;",
-      "pass in proto tcp to port 22;",
-      "pass in proto tcp to port 80;",
-      "pass in proto tcp to range 1024:65535;"
-    ],
+    "rules": [],
     "nat_rules": [],
     "rdr_rules": []
   },

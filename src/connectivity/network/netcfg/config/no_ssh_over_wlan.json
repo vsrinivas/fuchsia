@@ -12,8 +12,7 @@
   ],
   "filter_config": {
     "rules": [
-      "drop in proto tcp to range 1:65535;",
-      "pass in proto tcp to range 1024:65535;"
+        "drop in proto tcp to port 22;"
     ],
     "nat_rules": [],
     "rdr_rules": []
