@@ -165,7 +165,7 @@ func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *channelEndpoint) WritePacket(_ stack.RouteInfo, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
 	select {
 	case e.c <- pkt:
@@ -176,7 +176,7 @@ func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.Netw
 	return nil
 }
 
-func (e *channelEndpoint) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *channelEndpoint) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	i := 0
 	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
 		_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
@@ -254,7 +254,7 @@ func TestBridgeWritePackets(t *testing.T) {
 	t.Run("WritePacket", func(t *testing.T) {
 		// The bridge and channel endpoints do not care about the route, GSO
 		// or network protocol number when writing packets.
-		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, stack.NewPacketBuffer(stack.PacketBufferOptions{
+		err := bridgeEP.WritePacket(stack.RouteInfo{}, nil /* gso */, 0 /* protocol */, stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
 			Data:               buffer.View(data[0]).ToVectorisedView(),
 		}))
@@ -293,7 +293,7 @@ func TestBridgeWritePackets(t *testing.T) {
 
 			// The bridge and channel endpoints do not care about the route, GSO
 			// or network protocol number when writing packets.
-			n, err := bridgeEP.WritePackets(nil /* route */, nil /* gso */, pkts, 0 /* protocol */)
+			n, err := bridgeEP.WritePackets(stack.RouteInfo{}, nil /* gso */, pkts, 0 /* protocol */)
 			if err != nil {
 				t.Errorf("bridgeEP.WritePackets(nil, nil, _, 0): %s", err)
 			}
@@ -808,7 +808,7 @@ type endpoint struct {
 	onWritePacket func(*stack.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if fn := e.onWritePacket; fn != nil {
 		fn(pkt)
 	}
@@ -927,7 +927,7 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolNumbe
 		}
 
 		var recvd bytes.Buffer
-		if _, err := ep.Read(&recvd, len(payload)+1, tcpip.ReadOptions{}); err != nil {
+		if _, err := ep.Read(&recvd, tcpip.ReadOptions{}); err != nil {
 			return nil, fmt.Errorf("read failed: %s", err)
 		}
 		return recvd.Bytes(), nil

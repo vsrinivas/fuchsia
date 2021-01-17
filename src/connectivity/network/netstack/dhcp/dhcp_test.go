@@ -109,7 +109,7 @@ func (e *endpoint) IsAttached() bool {
 
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if protocol == ipv4.ProtocolNumber {
 		if fn := e.onWritePacket; fn != nil {
 			p := fn(pkt)
@@ -124,7 +124,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
 		}
 		// the "remote" address for `other` is our local address and vice versa.
-		remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, packetbuffer.OutboundToInbound(pkt))
+		remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	}
 	return nil
 }

@@ -278,7 +278,7 @@ func TestClient_WritePacket(t *testing.T) {
 		t.Fatalf("failed to start client %s", err)
 	}
 
-	if err := linkEndpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+	if err := linkEndpoint.WritePacket(stack.RouteInfo{}, nil, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 		ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 	})); err != nil {
 		t.Fatalf("WritePacket failed: %s", err)
@@ -318,11 +318,11 @@ func TestWritePacket(t *testing.T) {
 	otherMac := getOtherMac()
 	const protocol = tcpip.NetworkProtocolNumber(45)
 	const pktBody = "bar"
-	var route stack.Route
-	route.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
-	route.ResolveWith(tcpip.LinkAddress(otherMac.Octets[:]))
+	var r stack.RouteInfo
+	r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
+	r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
 	if err := linkEndpoint.WritePacket(
-		&route,
+		r,
 		nil,
 		protocol,
 		stack.NewPacketBuffer(stack.PacketBufferOptions{
@@ -729,7 +729,7 @@ func TestPairExchangePackets(t *testing.T) {
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
 		for i := uint16(0); i < packetCount; i++ {
-			if err := endpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
+			if err := endpoint.WritePacket(stack.RouteInfo{}, nil, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
 				errs <- fmt.Errorf("WritePacket error: %v", err)
 				return
 			}

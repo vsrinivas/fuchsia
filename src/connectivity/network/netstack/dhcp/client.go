@@ -742,36 +742,39 @@ func (c *Client) send(
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
-	attemptedResolution := false
-	for {
-		linkAddress, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
-		switch err {
-		case nil:
-			if err := c.stack.WritePacketToRemote(
-				writeTo.NIC,
-				linkAddress,
-				header.IPv4ProtocolNumber,
-				b.View().ToVectorisedView(),
-			); err != nil {
-				return fmt.Errorf("failed to write packet: %s", err)
-			}
-			return nil
-		case tcpip.ErrWouldBlock:
-			if !attemptedResolution {
-				attemptedResolution = true
-				select {
-				case <-ch:
-					continue
-				case <-ctx.Done():
-					return fmt.Errorf("client address resolution: %w", ctx.Err())
+	linkAddress, ok := c.stack.NetworkProtocolInstance(header.ARPProtocolNumber).(stack.LinkAddressResolver).ResolveStaticAddress(writeTo.Addr)
+	if !ok {
+		attemptedResolution := false
+		for {
+			resolved, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
+			if err == tcpip.ErrWouldBlock {
+				if !attemptedResolution {
+					attemptedResolution = true
+					select {
+					case <-ch:
+						continue
+					case <-ctx.Done():
+						return fmt.Errorf("client address resolution: %w", ctx.Err())
+					}
 				}
+				err = tcpip.ErrTimeout
 			}
-			err = tcpip.ErrTimeout
-			fallthrough
-		default:
-			return fmt.Errorf("failed to resolve link address: %s", err)
+			if err != nil {
+				return fmt.Errorf("failed to resolve link address: %s", err)
+			}
+			linkAddress = resolved
+			break
 		}
 	}
+	if err := c.stack.WritePacketToRemote(
+		writeTo.NIC,
+		linkAddress,
+		header.IPv4ProtocolNumber,
+		b.View().ToVectorisedView(),
+	); err != nil {
+		return fmt.Errorf("failed to write packet: %s", err)
+	}
+	return nil
 }
 
 type recvResult struct {
@@ -780,8 +783,6 @@ type recvResult struct {
 	options options
 	typ     dhcpMsgType
 }
-
-const maxInt = int(^uint(0) >> 1)
 
 func (c *Client) recv(
 	ctx context.Context,
@@ -795,7 +796,7 @@ func (c *Client) recv(
 	for {
 		b.Reset()
 
-		res, err := ep.Read(&b, maxInt, tcpip.ReadOptions{
+		res, err := ep.Read(&b, tcpip.ReadOptions{
 			NeedRemoteAddr:     true,
 			NeedLinkPacketInfo: true,
 		})

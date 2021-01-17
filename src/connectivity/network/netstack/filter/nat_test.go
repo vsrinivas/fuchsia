@@ -27,8 +27,6 @@ import (
 
 // TODO: make these tests table-driven.
 
-const maxInt = int(^uint(0) >> 1)
-
 func makeSubnet(addr string, m tcpip.AddressMask) tcpip.Subnet {
 	subnet, err := tcpip.NewSubnet(util.Parse(addr), m)
 	if err != nil {
@@ -89,13 +87,13 @@ func (e *syncEndpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *syncEndpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *syncEndpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	for _, remote := range e.remote {
 		if !remote.IsAttached() {
 			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
 		}
 		// the "remote" address for `other` is our local address and vice versa.
-		remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, packetbuffer.OutboundToInbound(pkt))
+		remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	}
 	return nil
 }
@@ -269,7 +267,7 @@ func TestNATOneWayLANToWANUDP(t *testing.T) {
 	wqWAN.EventUnregister(&waitEntryWAN)
 
 	var recvd bytes.Buffer
-	res, err := epWANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+	res, err := epWANUDP.Read(&recvd, tcpip.ReadOptions{
 		NeedRemoteAddr: true,
 	})
 	if err != nil {
@@ -329,7 +327,7 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		res, err := epWANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+		res, err := epWANUDP.Read(&recvd, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
 		if err != nil {
@@ -360,7 +358,7 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		res, err := epLANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+		res, err := epLANUDP.Read(&recvd, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
 		if err != nil {
@@ -459,7 +457,7 @@ func TestNATLANToWANTCP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		if _, err := epWANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+		if _, err := epWANTCP.Read(&recvd, tcpip.ReadOptions{}); err != nil {
 			t.Fatalf("Read error: %s", err)
 		}
 		if got, want := recvd.String(), "hello"; got != want {
@@ -482,7 +480,7 @@ func TestNATLANToWANTCP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		if _, err := epLANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+		if _, err := epLANTCP.Read(&recvd, tcpip.ReadOptions{}); err != nil {
 			t.Fatalf("Read error: %s", err)
 		}
 		if got, want := recvd.String(), "hi"; got != want {

@@ -131,7 +131,7 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	for _, l := range ep.links {
 		// We need to clone the packet buffer because each bridged endpoint may try
 		// to set the packet buffer's link header, but the header may only be set
@@ -145,7 +145,7 @@ func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.N
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (ep *Endpoint) WritePackets(r stack.RouteInfo, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	if len(ep.links) == 0 {
 		return 0, nil
 	}
@@ -234,10 +234,10 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// underlying LinkEndpoint like MTU() will panic, but it would be
 	// extremely strange for the LinkEndpoint we're calling WritePacket on to
 	// access itself so indirectly.
-	var r stack.Route
+	var r stack.RouteInfo
 	r.LocalLinkAddress = srcLinkAddr
 	r.NetProto = protocol
-	r.ResolveWith(dstLinkAddr)
+	r.RemoteLinkAddress = dstLinkAddr
 
 	// TODO(fxbug.dev/20778): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {
@@ -250,7 +250,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 			// We need to clone the packet buffers because each bridged endpoint may try
 			// to set the packet buffers' link header, but the header may only be set
 			// once for the lifetime of a packet buffer.
-			l.WritePacket(&r, nil, protocol, pkt.Clone())
+			l.WritePacket(r, nil, protocol, pkt.Clone())
 		}
 	}
 }

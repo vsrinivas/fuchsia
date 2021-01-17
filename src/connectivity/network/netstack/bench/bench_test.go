@@ -35,10 +35,10 @@ func (*nullEndpoint) LinkAddress() tcpip.LinkAddress {
 	var l tcpip.LinkAddress
 	return l
 }
-func (*nullEndpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (*nullEndpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	return nil
 }
-func (*nullEndpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (*nullEndpoint) WritePackets(r stack.RouteInfo, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	return pkts.Len(), nil
 }
 func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher) {}

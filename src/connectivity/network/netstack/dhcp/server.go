@@ -82,7 +82,7 @@ func newEPConn(ctx context.Context, wq *waiter.Queue, ep tcpip.Endpoint) *epConn
 func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
 	var b bytes.Buffer
 	for {
-		res, err := c.ep.Read(&b, maxInt, tcpip.ReadOptions{
+		res, err := c.ep.Read(&b, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
 		if err == tcpip.ErrWouldBlock {

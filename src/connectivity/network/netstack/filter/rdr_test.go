@@ -126,7 +126,7 @@ func TestRDROneWayWANToLANUDP(t *testing.T) {
 	wqLAN.EventUnregister(&waitEntryLAN)
 
 	var recvd bytes.Buffer
-	res, err := epLANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+	res, err := epLANUDP.Read(&recvd, tcpip.ReadOptions{
 		NeedRemoteAddr: true,
 	})
 	if err != nil {
@@ -187,7 +187,7 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		res, err := epLANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+		res, err := epLANUDP.Read(&recvd, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
 		if err != nil {
@@ -220,7 +220,7 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		res, err := epWANUDP.Read(&recvd, maxInt, tcpip.ReadOptions{
+		res, err := epWANUDP.Read(&recvd, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
 		if err != nil {
@@ -320,7 +320,7 @@ func TestRDRWANToLANTCP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		if _, err := epLANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+		if _, err := epLANTCP.Read(&recvd, tcpip.ReadOptions{}); err != nil {
 			t.Fatalf("Read error: %s", err)
 		}
 		if got, want := recvd.String(), "hello"; got != want {
@@ -343,7 +343,7 @@ func TestRDRWANToLANTCP(t *testing.T) {
 
 	{
 		var recvd bytes.Buffer
-		if _, err := epWANTCP.Read(&recvd, maxInt, tcpip.ReadOptions{}); err != nil {
+		if _, err := epWANTCP.Read(&recvd, tcpip.ReadOptions{}); err != nil {
 			t.Fatalf("Read error: %s", err)
 		}
 		if got, want := recvd.String(), "hi"; got != want {

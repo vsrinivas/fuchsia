@@ -277,7 +277,7 @@ func TestClient(t *testing.T) {
 
 						// Use WritePackets to get deterministic batch sizes.
 						count, err := client.WritePackets(
-							&stack.Route{},
+							stack.RouteInfo{},
 							nil,
 							pkts,
 							1337,
@@ -355,7 +355,7 @@ func TestClient(t *testing.T) {
 					if n := copy(hdr, packetHeader); n != len(packetHeader) {
 						t.Fatalf("copied %d bytes, expected %d bytes", n, len(packetHeader))
 					}
-					if err := client.WritePacket(nil, nil, 1337, pkt); err != nil {
+					if err := client.WritePacket(stack.RouteInfo{}, nil, 1337, pkt); err != nil {
 						t.Fatal(err)
 					}
 

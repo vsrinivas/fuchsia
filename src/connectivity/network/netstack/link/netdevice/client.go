@@ -154,14 +154,14 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 	})
 }
 
-func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (c *Client) WritePacket(_ stack.RouteInfo, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	var pkts stack.PacketBufferList
 	pkts.PushBack(pkt)
 	_, err := c.write(pkts, proto)
 	return err
 }
 
-func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	return c.write(pkts, proto)
 }
 

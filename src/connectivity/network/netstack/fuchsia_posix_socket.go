@@ -930,8 +930,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 		// Acquire hard error lock across ep calls to avoid races and store the
 		// hard error deterministically.
 		eps.hardError.mu.Lock()
-		const maxInt = int(^uint(0) >> 1)
-		res, err := eps.ep.Read(&writer, maxInt, tcpip.ReadOptions{})
+		res, err := eps.ep.Read(&writer, tcpip.ReadOptions{})
 		var hardError *tcpip.Error
 		if err != tcpip.ErrBadBuffer {
 			hardError = eps.hardError.storeAndRetrieveLocked(err)
@@ -1109,11 +1108,18 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
 	var b bytes.Buffer
+	dst := tcpip.LimitedWriter{
+		W: &b,
+		N: int64(dataLen),
+	}
 	// TODO(https://fxbug.dev/21106): do something with control messages.
-	res, err := s.ep.Read(&b, int(dataLen), tcpip.ReadOptions{
+	res, err := s.ep.Read(&dst, tcpip.ReadOptions{
 		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
 		NeedRemoteAddr: wantAddr,
 	})
+	if err == tcpip.ErrBadBuffer && dataLen == 0 {
+		err = nil
+	}
 	if err != nil {
 		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
