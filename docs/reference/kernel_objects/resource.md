@@ -20,12 +20,18 @@ A resource object consists of a single resource *kind*, with *base* address and
 *len* parameters that define a range of address space the holder of the resource
 is granted access to. The range covers *base* up to but not including *base* +
 *len*.  These objects are immutable after creation. Valid *kind*  values are
-**ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_HYPERVISOR**, **ZX_RSRC_KIND_MMIO**,
-**ZX_RSRC_KIND_IOPORT**, **ZX_RSRC_KIND_IRQ**, **ZX_RSRC_KIND_VMEX**, and
-**ZX_RSRC_KIND_SMC**. New resources may be created with an appropriate parent
-resource by calling [`zx_resource_create()`]. An initial root
-resource is created by the kernel during boot and handed off to the first
-userspace process started by userboot.
+**ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_MMIO**, **ZX_RSRC_KIND_IOPORT**,
+**ZX_RSRC_KIND_IRQ**, **ZX_RSRC_KIND_SMC**, and **ZX_RSRC_KIND_SYSTEM**.
+
+The system resource is a special case which contains other resources which all have *len*
+one. These resources each have their own base within the system resource. Valid *base*
+values for the system resource are **ZX_RSRC_SYSTEM_HYPERVISOR_BASE**,
+**ZX_RSRC_SYSTEM_VMEX_BASE**, **ZX_RSRC_SYSTEM_DEBUG_BASE**,**ZX_RSRC_SYSTEM_INFO_BASE**,
+**ZX_RSRC_SYSTEM_POWERCTL_BASE**, and **ZX_RSRC_SYSTEM_MEXEC_BASE**.
+
+New resources may be created with an appropriate parent resource by calling
+[`zx_resource_create()`]. An initial resource of each *kind* is created by the kernel
+during boot and handed off to the first userspace process started by userboot.
 
 Appropriate parent resources are the root resource, or a resource whose own range
 from *base* to *base+len* contains the range requested for the new resource. The
