@@ -2029,9 +2029,6 @@ template("test_driver") {
 ### Unification kludges.
 ###
 
-# Make wrapper templates used for build unification universally available.
-import("//public/gn/unification/wrappers.gni")
-
 ###
 ### set_defaults()
 ###
@@ -2125,6 +2122,8 @@ foreach(target_type, _compile_target_types) {
   }
 }
 
+# For prebuilt_dir:
+import("$zx/public/gn/prebuilt.gni")
 # Variables used to refer to the in-tree python interpreter.
 python_version = "3.8"
 python_exe_src = "$prebuilt_dir/third_party/python3/${host_platform}/bin/python${python_version}"
