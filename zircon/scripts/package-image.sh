@@ -12,7 +12,6 @@ SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR="${SCRIPTS_DIR}/.."
 
 BOARD=
-ZIRCON_BUILD_DIR=
 ROOT_BUILD_DIR=
 CMDLINE=
 MKBOOTIMG_CMDLINE=
@@ -32,8 +31,7 @@ RAMDISK_TYPE="dummy"
 function HELP {
     echo "help:"
     echo "-b <board>                        : board name"
-    echo "-B <build-dir>                    : path to zircon build directory"
-    echo "-R <build-dir>                    : path to Fuchsia build directory"
+    echo "-B <build-dir>                    : path to build directory"
     echo "-c <cmd line>                     : Extra command line options for the ZBI"
     echo "-C <cmd line>                     : Extra command line options for mkbootimg"
     echo "-d <dtb-path>                     : path to device tree binary"
@@ -58,8 +56,7 @@ BOOT_PARTITION_SIZE=33554432
 while getopts "ab:B:c:C::d:D:ghK:lmM:o:r:v:z:" FLAG; do
     case $FLAG in
         b) BOARD="${OPTARG}";;
-        B) ZIRCON_BUILD_DIR="${OPTARG}";;
-        R) ROOT_BUILD_DIR="${OPTARG}";;
+        B) ROOT_BUILD_DIR="${OPTARG}";;
         c) CMDLINE+="${OPTARG}";;
         C) MKBOOTIMG_CMDLINE+="${OPTARG}";;
         d) DTB_PATH="${OPTARG}";;
@@ -87,13 +84,9 @@ if [[ -z "${BOARD}" ]]; then
     HELP
 fi
 
-if [[ -z "${ZIRCON_BUILD_DIR}" ]]; then
-    echo must specify a Zircon build directory
-    HELP
-fi
-
 if [[ -z "${ROOT_BUILD_DIR}" ]]; then
-    ROOT_BUILD_DIR="${ZIRCON_BUILD_DIR%%.zircon}"
+    echo must specific a Fuchsia build directory
+    HELP
 fi
 
 if [[ -n "${DTB_PATH}" ]] &&
@@ -131,7 +124,7 @@ ZBI="${HOST_TOOLS_DIR}/zbi"
 
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
-    ZIRCON_BOOTIMAGE="${ZIRCON_BUILD_DIR}/arm64.zbi"
+    ZIRCON_BOOTIMAGE="${ROOT_BUILD_DIR}/arm64.zbi"
 fi
 
 # boot shim for our board
@@ -194,7 +187,7 @@ if [[ "${RAMDISK_TYPE}" == "zbi" ]]; then
 elif [[ "${RAMDISK_TYPE}" == "none" ]]; then
     RAMDISK_OPTION=""
 else
-    RAMDISK="${ZIRCON_BUILD_DIR}/dummy-ramdisk"
+    RAMDISK="${ROOT_BUILD_DIR}/dummy-ramdisk"
     echo "foo" > "${RAMDISK}"
     RAMDISK_OPTION="--ramdisk ${RAMDISK}"
 fi
