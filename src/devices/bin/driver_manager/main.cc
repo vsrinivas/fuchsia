@@ -57,6 +57,7 @@ struct DriverManagerParams {
   bool require_system;
   bool suspend_timeout_fallback;
   bool verbose;
+  std::vector<fbl::String> eager_fallback_drivers;
 };
 
 DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
@@ -74,8 +75,27 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
   if (!bool_resp.ok()) {
     return {};
   }
-  return {bool_resp->values[0], bool_resp->values[1], bool_resp->values[2],
-          bool_resp->values[3], bool_resp->values[4], bool_resp->values[5]};
+
+  auto drivers = client.GetString("devmgr.bind-eager");
+  std::vector<fbl::String> eager_fallback_drivers;
+  if (drivers.ok() && !drivers->value.is_null() && !drivers->value.empty()) {
+    std::string list(drivers->value.data(), drivers->value.size());
+    size_t pos;
+    while ((pos = list.find(',')) != std::string::npos) {
+      eager_fallback_drivers.emplace_back(list.substr(0, pos));
+      list.erase(0, pos + 1);
+    }
+    eager_fallback_drivers.emplace_back(std::move(list));
+  }
+  return {
+      .driver_host_asan = bool_resp->values[0],
+      .driver_host_strict_linking = bool_resp->values[1],
+      .log_to_debuglog = bool_resp->values[2],
+      .require_system = bool_resp->values[3],
+      .suspend_timeout_fallback = bool_resp->values[4],
+      .verbose = bool_resp->values[5],
+      .eager_fallback_drivers = std::move(eager_fallback_drivers),
+  };
 }
 
 static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::kernel::RootJob::Name_);
@@ -253,6 +273,7 @@ int main(int argc, char** argv) {
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
   config.path_prefix = devmgr_args.path_prefix;
+  config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);

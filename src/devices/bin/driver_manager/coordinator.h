@@ -212,6 +212,7 @@ struct CoordinatorConfig {
   // The path prefix to find binaries, drivers, etc. Typically this is "/boot/", but in test
   // environments this might be different.
   std::string path_prefix = "/boot/";
+  std::vector<fbl::String> eager_fallback_drivers;
 };
 
 struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {

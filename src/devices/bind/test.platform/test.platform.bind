@@ -30,6 +30,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   INSPECT = 0x13,
   ENVIRONMENT = 0x14,
   FIRMWARE = 0x15,
+  FALLBACK = 0x16,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

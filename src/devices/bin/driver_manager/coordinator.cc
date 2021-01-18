@@ -1532,7 +1532,21 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     driver->never_autoselect = true;
   }
 
+  bool fallback = false;
   if (version[0] == '*') {
+    fallback = true;
+    // TODO(fxbug.dev/44586): remove this once a better solution for driver prioritisation is
+    // implemented.
+    for (auto& name : config_.eager_fallback_drivers) {
+      if (driver->name == name) {
+        LOGF(INFO, "Marking fallback driver '%s' as eager.", driver->name.c_str());
+        fallback = false;
+        break;
+      }
+    }
+  }
+
+  if (fallback) {
     // fallback driver, load only if all else fails
     fallback_drivers_.push_front(std::move(driver));
   } else if (version[0] == '!') {
@@ -1706,8 +1720,7 @@ zx_status_t Coordinator::ScanSystemDrivers() {
   // Scan/load system drivers are in a standalone thread created by ServiceStarter.
   // This avoids deadlocks between the driver_hosts hosting the block devices that
   // these drivers may be served from and the devcoordinator loading them.
-  find_loadable_drivers("/system/driver",
-                        fit::bind_member(this, &Coordinator::DriverAddedSys));
+  find_loadable_drivers("/system/driver", fit::bind_member(this, &Coordinator::DriverAddedSys));
   async::PostTask(dispatcher_, [this] { this->BindSystemDrivers(); });
   return ZX_OK;
 }

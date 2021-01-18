@@ -85,6 +85,12 @@ kernel.shell has not already been launched. Defaults to false.
 If this is false, it also disables the zircon.autorun.boot and
 zircon.autorun.system options.
 
+## devmgr.bind-eager=\<driver\>,\<driver\>...
+For each driver listed as an argument to this option, the driver manager will
+not wait for all other drivers to be loaded before attempting to bind it, even
+if the driver is marked as a fallback driver by including '*' at the start of
+its version string.
+
 ## devmgr\.require-system=\<bool\>
 
 Instructs the devmgr that a /system volume is required. Without this, devmgr

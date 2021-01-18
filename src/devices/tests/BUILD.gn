@@ -8,6 +8,7 @@ group("tests") {
     "bind-debugger-test",
     "bind-fail-test",
     "ddk-environment-test:tests",
+    "ddk-fallback-test:tests",
     "ddk-fidl-test:tests",
     "ddk-firmware-test:tests",
     "ddk-instance-lifecycle-test",
