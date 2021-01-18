@@ -15,7 +15,6 @@ if (zx == "/") {
   import("//build/config/zircon/standard.gni")
   import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
   import("//build/unification/global_variables.gni")
-  import("//build/unification/zx_executable.gni")
   import("//zircon/kernel/lib/version/version_string.gni")
   import("//zircon/public/gn/toolchain/c_utils.gni")
 }
@@ -394,7 +393,7 @@ if (is_kernel) {
 
   # This is the kernel proper, an ELF executable with full symbols.
   # It's the file to use with a debugger, for example.
-  zx_executable("zircon") {
+  executable("zircon") {
     visibility = [ ":*" ]
 
     # $zx/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
@@ -531,7 +530,7 @@ if (is_kernel) {
 
   # Link the final kernel image layout including the extracted raw binary
   # and the generated fixups.
-  zx_executable("image") {
+  executable("image") {
     visibility = [ ":*" ]
     configs += [
       ":image_config",
