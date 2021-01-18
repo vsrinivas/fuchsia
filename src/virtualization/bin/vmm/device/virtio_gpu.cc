@@ -378,6 +378,8 @@ int main(int argc, char** argv) {
   VirtioGpuImpl virtio_gpu(context.get(), &scanout);
 
   auto guest_view = [&scanout, &virtio_gpu](scenic::ViewContext view_context) {
+    // We enable IME so that keyboard input will be forwarded to this view.
+    view_context.enable_ime = true;
     return std::make_unique<GuestView>(std::move(view_context), &scanout,
                                        virtio_gpu.TakeKeyboardListener(),
                                        virtio_gpu.TakePointerListener());
