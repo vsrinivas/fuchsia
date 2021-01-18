@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/zircon/migrated_targets.gni")
 import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
-import("$zx_build/public/gn/migrated_targets.gni")
 
 # In the Zircon build, default_toolchain is used for the hwreg_asm_header()
 # generation action, but it cannot instantiate a compiling target like this.

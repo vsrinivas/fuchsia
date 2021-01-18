@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/zircon/migrated_targets.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx_build/public/gn/migrated_targets.gni")
 if (zx == "/") {
   import("$zx/public/gn/toolchain/environment_redirect.gni")
 }

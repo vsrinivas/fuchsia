@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/images/args.gni")
-import("$zx_build/public/gn/migrated_targets.gni")
+import("//build/zircon/migrated_targets.gni")
 multiboot_toolchain = "zircon_multiboot"
 
 # The Multiboot trampoline gets its own toolchain to build x86-32 code.
