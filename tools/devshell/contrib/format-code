@@ -236,7 +236,7 @@ for file in "${FILES[@]}"; do
   if [[ ${file} =~ .*\.fidl ]]; then
     if [[ ! -x "${FIDL_FORMAT_TOOL_ABS}" ]]; then
        fx-info "fidl-format not built; building now..."
-       fx-command-run build --no-zircon "${FIDL_FORMAT_TOOL}"
+       fx-command-run build "${FIDL_FORMAT_TOOL}"
        break
      fi
   fi
@@ -266,7 +266,7 @@ done
 if [[ -n "${HAS_MARKDOWN}" ]]; then
   if [[ ! -x "${MARKDOWN_FMT_TOOL_ABS}" ]] ; then
     fx-info "doc-checker not built; building now..."
-    fx-command-run build --no-zircon "${MARKDOWN_FMT_TOOL}"
+    fx-command-run build "${MARKDOWN_FMT_TOOL}"
   fi
   print-and-execute "${MARKDOWN_FMT_TOOL_ABS}" --local-links-only --root "${FUCHSIA_DIR}";
 fi

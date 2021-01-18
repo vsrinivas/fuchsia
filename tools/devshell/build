@@ -6,36 +6,24 @@
 #### CATEGORY=Build
 ### Run Ninja to build Fuchsia
 
-## usage: fx build [--log FILENAME] [-SWITCH...] [zircon/TARGET | TARGET ...]
+## usage: fx build [--log FILENAME] [-SWITCH...] | TARGET ...]
 ##
-## This runs Ninja, usually twice: once for Zircon and once for Fuchsia.
-## With no explicit targets, Zircon Ninja builds its default targets and
-## then Fuchsia Ninja builds its default targets.
-##
-## For each `zircon/TARGET` argument, `TARGET` is passed to Zircon Ninja.
-## For each other `TARGET` argument, `TARGET` is passed to Fuchsia Ninja.
-## If all the target arguments are `zircon/TARGET`, Fuchsia Ninja is not run.
+## This runs Ninja after performing a few sanity checks for the Fuchsia build.
 ##
 ## optional arguments:
 ##   --log LOGFILE     Print debug information to LOGFILE. Please attach the
 ##                     resulting file when reporting bugs.
-##   --no-zircon       Skip building zircon (ignoring any zircon targets that
-##                     may have been passed). This is useful for efficiently
-##                     building host-side targets that have no zircon
-##                     dependencies.
 ##
-## Other arguments are passed through to Ninja (same switches for both Zircon
-## and Fuchsia).
+## Other arguments are passed through to Ninja.
 ## Run `fx build -h` to see Ninja argument details.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 function main {
-  local switches=() zircon_targets=() fuchsia_targets=()
+  local switches=() fuchsia_targets=()
   local log_file is_logging continue_on_error
   is_logging=false
-  build_zircon=true
   continue_on_error=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -57,7 +45,7 @@ function main {
         shift
         ;;
       --no-zircon)
-        build_zircon=false
+        echo "WARNING: The --no-zircon argument is now obsolete and ignored!"
         ;;
       # These Ninja switches take an argument.
       -[Cfjkldtw])
@@ -69,9 +57,6 @@ function main {
         ;;
       -*)
         switches+=("$1")
-        ;;
-      zircon/*)
-        zircon_targets+=("${1#zircon/}")
         ;;
       *)
         fuchsia_targets+=("$1")
@@ -114,8 +99,7 @@ function main {
                      )
   local mine
   for mine in "${landmines[@]}"; do
-    if [[ "$mine" -nt "${ZIRCON_BUILDROOT}/build.ninja" || \
-         "$mine" -nt "${FUCHSIA_BUILD_DIR}/build.ninja" ]]; then
+    if [[ "$mine" -nt "${FUCHSIA_BUILD_DIR}/build.ninja" ]]; then
       if [[ "${is_logging}" = true ]]; then
         echo -e "\\n------ RUNNING gn gen ------"
       fi
@@ -125,51 +109,25 @@ function main {
     fi
   done
 
-  if [[ ! -d "$ZIRCON_BUILDROOT" ]]; then
+  if [[ ! -d "$FUCHSIA_BUILD_DIR" ]]; then
     if [[ "${is_logging}" = true ]]; then
       echo -e "\\n------ RUNNING gn gen ------"
     fi
-    echo >&2 "Re-running gn gen first (missing $ZIRCON_BUILDROOT)"
+    echo >&2 "Re-running gn gen first (missing $FUCHSIA_BUILD_DIR)"
     fx-gen || return
   fi
 
-  # Build requested Zircon targets.
-  # Add default if building any Fuchsia targets.
-  if [[ ${#fuchsia_targets[@]} -ne 0 ]]; then
-    zircon_targets+=(default)
-  fi
   local status
 
   if [[ "${is_logging}" = true ]]; then
     echo -e "\\n------ RUNNING ninja ------"
   fi
 
-  if $build_zircon ; then
-    (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${ZIRCON_BUILDROOT}" \
-      "${switches[@]}" "${zircon_targets[@]}")
-    status=$?
-    if [[ "${status}" -ne 0 && "$continue_on_error" = false ]]; then
-      goma-check
-      exit-with-message
-    fi
-  fi
-
-  # If there were explicit Zircon targets and no other explicit targets,
-  # the Zircon run was enough by itself.  Otherwise Zircon default is
-  # a prerequisite for any Fuchsia target (including implicit default).
-  if [[ ${#fuchsia_targets[@]} -ne 0 || ${#zircon_targets[@]} -eq 0 ]]; then
-    if [[ "${status}" -ne 0 ]]; then
-      fx-warn "Build outputs may be inconsistent and may remain so; a clean build is recommended."
-    fi
-    (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
-      "${switches[@]}" "${fuchsia_targets[@]}")
-    fuchsia_status=$?
-    if [[ "${status}" -eq 0 ]]; then
-      status="${fuchsia_status}"
-    fi
-    if [[ "${fuchsia_status}" -ne 0 ]]; then
-      goma-check
-    fi
+  (fx-run-ninja "${is_logging}" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
+    "${switches[@]}" "${fuchsia_targets[@]}")
+  status=$?
+  if [[ "${status}" -ne 0 ]]; then
+    goma-check
   fi
 
   exit-with-message

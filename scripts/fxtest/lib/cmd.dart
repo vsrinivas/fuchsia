@@ -156,11 +156,6 @@ class FuchsiaTestCommand {
     if (testsConfig.flags.shouldRebuild) {
       Set<String> buildArgs = TestBundle.calculateMinimalBuildTargets(
           testsConfig, parsedManifest.testBundles);
-      // if all tests in the bundle are host-based, skip zircon build.
-      if (buildArgs.isNotEmpty &&
-          !TestBundle.hasDeviceTests(parsedManifest.testBundles)) {
-        buildArgs.add('--no-zircon');
-      }
       emitEvent(TestInfo(testsConfig.wrapWith(
           '> fx build ${buildArgs?.join(' ') ?? ''}', [green, styleBold])));
       try {

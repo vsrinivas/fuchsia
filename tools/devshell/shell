@@ -71,7 +71,7 @@ if $check; then
   if [[ ! -f "${conffile}" ]] || ! grep -q "IdentityFile\s*$privkey" "$conffile"; then
     has_error=true
     fx-warn "ssh_config file doesn't exist or does not contain the correct private key, attempting to fix: ${conffile}"
-    fx build --no-zircon ssh-keys/ssh_config
+    fx build ssh-keys/ssh_config
     if [[ $? -ne 0 || ! -f "${conffile}" ]] || ! grep -q "IdentityFile\s*$privkey" "$conffile"; then
       fx-error "Unexpected error, cannot regenerate ssh_config: ${conffile}"
       exit 1

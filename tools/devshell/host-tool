@@ -112,7 +112,7 @@ if [[ ! -f "${FUCHSIA_BUILD_DIR}/${toolpath}" ]]; then
 
   {
     echo "Building required tool \"${toolpath}\"..."
-    fx-command-run build --no-zircon "${toolpath}" || exit $?
+    fx-command-run build "${toolpath}" || exit $?
   } 1>&2
 fi
 

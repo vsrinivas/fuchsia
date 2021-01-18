@@ -9,7 +9,7 @@
 ## Usage:
 ##     fx self-build
 ##        Executes some sanity checks and performs the equivalent of
-##        'fx build --no-zircon :host'
+##        'fx build :host'
 ##
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh \
@@ -21,4 +21,4 @@ if [[ $# -ne 0 ]]; then
   exit 0
 fi
 
-fx-command-exec build --no-zircon :host
+fx-command-exec build :host

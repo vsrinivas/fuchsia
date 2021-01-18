@@ -187,7 +187,7 @@ if $build && [[ ${#paths[@]} -ne 0 ]] ; then
   # For efficiency's sake, we avoid having to build zircon when building
   # host-side artifacts.
   if [[ ! -z "${os}" && "$os" != fuchsia ]]; then
-    fx-command-run build --no-zircon "${paths[@]}" >&2
+    fx-command-run build "${paths[@]}" >&2
   else
     fx-command-run build "${paths[@]}" >&2
   fi

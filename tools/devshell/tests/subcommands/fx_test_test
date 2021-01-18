@@ -246,7 +246,7 @@ EOF
 
   # expect "fx shell build"
   BT_EXPECT ${fx} test example_host_test >> "${out}"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test" "--no-zircon"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test"
 }
 
 # Test that "fx test" executes an e2e test with the proper env variables set

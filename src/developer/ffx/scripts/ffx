@@ -23,7 +23,7 @@ build_dir="${fuchsia_dir}/$(<"${fuchsia_dir}"/.fx-build-dir)" || exit $?
 
 if ! [[ -x "${build_dir}/host-tools/ffx" ]]; then
   echo >&2 "ffx is missing! Building ffx!"
-  "${fuchsia_dir}/.jiri_root/bin/fx" build --no-zircon ffx || exit $?
+  "${fuchsia_dir}/.jiri_root/bin/fx" build ffx || exit $?
 fi
 
 exec "${build_dir}"/host-tools/ffx "$@"
