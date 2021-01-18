@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/vdso/vdso.gni")
 
@@ -73,10 +74,9 @@ group("tests") {
   ]
 }
 
-zx_test("kazoo-unittests") {
+test("kazoo-unittests") {
   configs += [ ":kazoo_config" ]
   output_name = "kazoo-test"
-  sdk_migrated = true
 
   deps = [
     ":generate_test_files",

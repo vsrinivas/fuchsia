@@ -16,4 +16,3 @@
 import("//build/unification/global_variables.gni")
 import("//build/unification/zx_host_tool.gni")
 import("//build/unification/zx_library.gni")
-import("//build/unification/zx_test.gni")
