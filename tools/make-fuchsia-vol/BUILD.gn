@@ -4,12 +4,17 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("make-fuchsia-vol_lib") {
   name = "make-fuchsia-vol"
   deps = [ "//garnet/go/src/thinfs:thinfs_lib" ]
-  sources = [ "make-fuchsia-vol.go" ]
+  sources = [
+    "abr.go",
+    "abr_test.go",
+    "make-fuchsia-vol.go",
+  ]
 }
 
 go_binary("make-fuchsia-vol") {
@@ -18,7 +23,19 @@ go_binary("make-fuchsia-vol") {
   deps = [ ":make-fuchsia-vol_lib" ]
 }
 
+if (is_host) {
+  go_test("make-fuchsia-vol-tests") {
+    gopackages = [ "make-fuchsia-vol" ]
+    deps = [ ":make-fuchsia-vol_lib" ]
+  }
+}
+
 install_host_tools("host") {
   deps = [ ":make-fuchsia-vol" ]
   outputs = [ "make-fuchsia-vol" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":make-fuchsia-vol-tests($host_toolchain)" ]
 }

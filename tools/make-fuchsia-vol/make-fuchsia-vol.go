@@ -50,6 +50,7 @@ var (
 	vbmetaR    = flag.String("vbmetaR", "", "path to partition image for Vbmeta-R")
 	abrSize    = flag.Int64("abr-size", 256*1024*1024, "Kernel partition size for A/B/R")
 	vbmetaSize = flag.Int64("vbmeta-size", 8*1024, "partition size for vbmeta A/B/R")
+	abrBoot    = flag.String("abr-boot", "a", "A/B/R partition to boot by default")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
@@ -156,6 +157,7 @@ func main() {
 		}
 	}
 
+	bootMode := BOOT_A
 	if *abr {
 		if *zirconA == "" {
 			needFuchsiaBuildDir()
@@ -175,6 +177,17 @@ func main() {
 		}
 		if *vbmetaR == "" {
 			*vbmetaR = filepath.Join(*fuchsiaBuildDir, getImage("vbmeta_zircon-r"))
+		}
+
+		switch strings.ToLower(*abrBoot) {
+		case "a":
+			bootMode = BOOT_A
+		case "b":
+			bootMode = BOOT_B
+		case "r":
+			bootMode = BOOT_RECOVERY
+		default:
+			log.Fatalf("Invalid -abr-boot passed: expected 'a', 'b', or 'r'.")
 		}
 	}
 
@@ -472,6 +485,7 @@ func main() {
 	vbmetaBStart = vbmetaBStart * logical
 	rStart = rStart * logical
 	vbmetaRStart = vbmetaRStart * logical
+	miscStart = miscStart * logical
 	efiStart = efiStart * logical
 	fvmStart = fvmStart * logical
 
@@ -546,6 +560,13 @@ func main() {
 		partitionCopy(f, int64(vbmetaBStart), *vbmetaSize, *vbmetaB)
 		partitionCopy(f, int64(rStart), *abrSize, *zirconR)
 		partitionCopy(f, int64(vbmetaRStart), *vbmetaSize, *vbmetaR)
+		if _, err := f.Seek(int64(miscStart), os.SEEK_SET); err != nil {
+			log.Fatal(err)
+		}
+		if err := WriteAbr(bootMode, f); err != nil {
+			log.Fatal(err)
+		}
+
 	}
 
 	f.Sync()
