@@ -10,7 +10,6 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -18,6 +17,8 @@
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
+
+#include "src/media/audio/drivers/mt8167-tdm-output/mt8167_audio_out_bind.h"
 
 namespace {
 
@@ -316,11 +317,4 @@ static constexpr zx_driver_ops_t mt_audio_out_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167_audio_out, mt_audio_out_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_AUDIO_OUT),
-ZIRCON_DRIVER_END(mt8167_audio_out)
-    // clang-format on
+ZIRCON_DRIVER(mt8167_audio_out, mt_audio_out_driver_ops, "zircon", "0.1");
