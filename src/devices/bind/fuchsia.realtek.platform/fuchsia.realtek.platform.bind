@@ -9,7 +9,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
-  ETH_PHY = 0x11,
+  ETH_PHY = 0x03,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {

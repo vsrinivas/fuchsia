@@ -61,7 +61,7 @@ static const pbus_boot_metadata_t eth_mac_metadata[] = {
 static const eth_dev_metadata_t eth_phy_device = {
     .vid = PDEV_VID_REALTEK,
     .pid = PDEV_PID_RTL8211F,
-    .did = PDEV_DID_ETH_PHY,
+    .did = PDEV_DID_REALTEK_ETH_PHY,
 };
 
 static const pbus_metadata_t eth_mac_device_metadata[] = {

@@ -28,7 +28,8 @@ __BEGIN_CDECLS
 // 0x0D unused
 #define PDEV_DID_OPTEE                  0x0E  // OP-TEE OS Driver
 #define PDEV_DID_RTC_FALLBACK           0x0F  // Synthetic RTC device
-#define PDEV_DID_ETH_PHY                0x11  // Ethernet PHY
+// 0x10 unused
+// 0x11 unused
 #define PDEV_DID_CAMERA_SENSOR          0x12  // Camera Sensor
 #define PDEV_DID_HID_BUTTONS            0x13  // HID Buttons
 #define PDEV_DID_MUSB_PERIPHERAL        0x14  // MUSB in peripheral role
@@ -182,6 +183,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_RTL8211F           0x01
 #define PDEV_DID_ALC5663            0x01
 #define PDEV_DID_ALC5514            0x02
+#define PDEV_DID_REALTEK_ETH_PHY    0x03
 
 // Designware
 #define PDEV_VID_DESIGNWARE         0x0C
