@@ -2,18 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36139.                   #
-##########################################
-
 # for 'platform_enable_user_pci'
 import("//src/devices/bus/drivers/pci/pci.gni")
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 if (current_cpu == "x64") {
   zircon_cpu = "x86"
 } else if (current_cpu != "") {
