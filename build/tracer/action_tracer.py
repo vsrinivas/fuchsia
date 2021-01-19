@@ -175,11 +175,11 @@ def main():
 
     depfile_outs = []
     depfile_ins = []
-    if args.depfile:
+    if args.depfile and os.path.exists(args.depfile):
         allowed_writes.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
-            for line in f.read().strip().splitlines():
-                out, _, ins = line.partition(":")
+            for line in f:
+                out, _, ins = line.strip().partition(":")
                 depfile_outs.append(os.path.abspath(out))
                 depfile_ins.extend(os.path.abspath(p) for p in shlex.split(ins))
         allowed_writes.update(depfile_ins)
