@@ -517,6 +517,38 @@ impl Data<Logs> {
             })
             .flatten()
     }
+
+    /// Returns the file path associated with the message, if one exists.
+    pub fn file_path(&self) -> Option<&str> {
+        self.payload
+            .as_ref()
+            .map(|p| {
+                p.properties
+                    .iter()
+                    .filter_map(|property| match property {
+                        LogsProperty::String(LogsField::FilePath, msg) => Some(msg.as_str()),
+                        _ => None,
+                    })
+                    .next()
+            })
+            .flatten()
+    }
+
+    /// Returns the line number associated with the message, if one exists.
+    pub fn line_number(&self) -> Option<&u64> {
+        self.payload
+            .as_ref()
+            .map(|p| {
+                p.properties
+                    .iter()
+                    .filter_map(|property| match property {
+                        LogsProperty::Uint(LogsField::LineNumber, msg) => Some(msg),
+                        _ => None,
+                    })
+                    .next()
+            })
+            .flatten()
+    }
 }
 
 /// An enum containing well known argument names passed through logs, as well
@@ -533,6 +565,8 @@ pub enum LogsField {
     Tag,
     Verbosity,
     Msg,
+    FilePath,
+    LineNumber,
     Other(String),
 }
 
@@ -544,6 +578,8 @@ pub const DROPPED_LABEL: &str = "num_dropped";
 pub const TAG_LABEL: &str = "tag";
 pub const MESSAGE_LABEL: &str = "message";
 pub const VERBOSITY_LABEL: &str = "verbosity";
+pub const FILE_PATH_LABEL: &str = "file";
+pub const LINE_NUMBER_LABEL: &str = "line";
 
 impl LogsField {
     /// Whether the logs field is legacy or not.
@@ -569,6 +605,8 @@ impl AsRef<str> for LogsField {
             Self::Tag => TAG_LABEL,
             Self::Msg => MESSAGE_LABEL,
             Self::Verbosity => VERBOSITY_LABEL,
+            Self::FilePath => FILE_PATH_LABEL,
+            Self::LineNumber => LINE_NUMBER_LABEL,
             Self::Other(str) => str.as_str(),
         }
     }
@@ -587,6 +625,8 @@ where
             VERBOSITY_LABEL => Self::Verbosity,
             TAG_LABEL => Self::Tag,
             MESSAGE_LABEL => Self::Msg,
+            FILE_PATH_LABEL => Self::FilePath,
+            LINE_NUMBER_LABEL => Self::LineNumber,
             _ => Self::Other(s.to_string()),
         }
     }

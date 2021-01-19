@@ -160,6 +160,12 @@ impl TryFrom<&LogsData> for LogIdentifier {
     type Error = anyhow::Error;
 
     fn try_from(msg: &LogsData) -> Result<Self, Self::Error> {
+        // If the file path and line number fields exist in the hierarchy, the message was
+        // written using the structured backend. Otherwise, it was written using the legacy
+        // backend, and the file path and line number need to be parsed out of the message.
+        if let (Some(file), Some(line)) = (msg.file_path(), msg.line_number()) {
+            return Ok(LogIdentifier { file_path: file.to_string(), line_no: *line });
+        }
         let re = Regex::new(r"^\[([^\(\]:]+)\((\d+)\)\]").unwrap();
         let msg_str = msg.msg().ok_or_else(|| format_err!("No message"))?;
         let cap =
@@ -733,6 +739,126 @@ mod tests {
             }
           }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn structured_log() -> Result<(), anyhow::Error> {
+        let mut state = GranularTestState::new()?;
+
+        // Simple structured log
+        let msg = Message::new(
+            zx::Time::from_nanos(1),
+            Severity::Error,
+            0, // size
+            0, // dropped
+            &*TEST_IDENTITY,
+            LogsHierarchy::new(
+                "root",
+                vec![
+                    LogsProperty::String(LogsField::Msg, "[irrelevant_tag(32)] Hello".to_string()),
+                    LogsProperty::String(LogsField::FilePath, "path/to/file.cc".to_string()),
+                    LogsProperty::Uint(LogsField::LineNumber, 123),
+                ],
+                vec![],
+            ),
+        );
+
+        state.granular_stats.record_log(&msg);
+        assert_inspect_tree!(state.inspector,
+          root: {
+            granular_stats: {
+              "0": {
+                overflowed: false,
+                "0": {
+                    "file_path": "path/to/file.cc",
+                    "line_no": 123u64,
+                    "count": 1u64
+                }
+              }
+            }
+          }
+        );
+
+        // Line number field missing. Should parse the message instead.
+        let msg = Message::new(
+            zx::Time::from_nanos(1),
+            Severity::Error,
+            0, // size
+            0, // dropped
+            &*TEST_IDENTITY,
+            LogsHierarchy::new(
+                "root",
+                vec![
+                    LogsProperty::String(LogsField::Msg, "[tag(1)] Msg".to_string()),
+                    LogsProperty::String(LogsField::FilePath, "some/other/file.cc".to_string()),
+                ],
+                vec![],
+            ),
+        );
+        state.granular_stats.record_log(&msg);
+        assert_inspect_tree!(state.inspector,
+          root: {
+            granular_stats: {
+              "0": {
+                overflowed: false,
+                "0": {
+                    "file_path": "path/to/file.cc",
+                    "line_no": 123u64,
+                    "count": 1u64
+                },
+                "1": {
+                    "file_path": "tag",
+                    "line_no": 1u64,
+                    "count": 1u64
+                }
+              }
+            }
+          }
+        );
+
+        // No file field. Will parse the message instead.
+        let msg = Message::new(
+            zx::Time::from_nanos(1),
+            Severity::Error,
+            0, // size
+            0, // dropped
+            &*TEST_IDENTITY,
+            LogsHierarchy::new(
+                "root",
+                vec![
+                    LogsProperty::String(LogsField::Msg, "[file.rs(99)] Testing 1 2 3".to_string()),
+                    LogsProperty::Uint(LogsField::LineNumber, 931),
+                ],
+                vec![],
+            ),
+        );
+        state.granular_stats.record_log(&msg);
+        assert_inspect_tree!(state.inspector,
+          root: {
+            granular_stats: {
+              "0": {
+                overflowed: false,
+                "0": {
+                    "file_path": "path/to/file.cc",
+                    "line_no": 123u64,
+                    "count": 1u64
+                },
+                "1": {
+                    "file_path": "tag",
+                    "line_no": 1u64,
+                    "count": 1u64
+                },
+                "2": {
+                    "file_path": "file.rs",
+                    "line_no": 99u64,
+                    "count": 1u64
+                }
+              }
+            }
+          }
+        );
+
         Ok(())
     }
 
