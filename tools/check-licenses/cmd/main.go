@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -116,10 +117,27 @@ func mainImpl() error {
 		}
 	}
 
+	if *licenseAllowList != "" {
+		blob := []byte(*licenseAllowList)
+		result := make(map[string][]string)
+		err := json.Unmarshal(blob, &result)
+		if err != nil {
+			return fmt.Errorf("failed to initialize license allow list: %s", err)
+		}
+
+		for k, v := range result {
+			if _, ok := config.LicenseAllowList[k]; !ok {
+				config.LicenseAllowList[k] = []string{}
+			}
+			config.LicenseAllowList[k] = append(config.LicenseAllowList[k], v...)
+		}
+	}
+
 	// TODO(fxb/42986): Remove ExitOnProhibitedLicenseTypes and ExitOnUnlicensedFiles
 	// flags once fxb/42986 is completed.
 	config.ExitOnProhibitedLicenseTypes = *exitOnProhibitedLicenseTypes
 	config.ExitOnUnlicensedFiles = *exitOnUnlicensedFiles
+	config.ExitOnDirRestrictedLicense = *exitOnDirRestrictedLicense
 
 	config.OutputLicenseFile = *outputLicenseFile
 
