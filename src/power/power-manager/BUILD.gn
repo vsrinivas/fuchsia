@@ -184,9 +184,12 @@ component_manifest_resources("manifest") {
   sources = [ "meta/power-manager.cml" ]
 }
 
-# TODO(65893): remove after soft migration to move power-manager into the ZBI
 group("power-manager") {
-  deps = []
+  testonly = true
+  deps = [
+    ":bin",
+    ":tests",
+  ]
 }
 
 group("bootfs") {

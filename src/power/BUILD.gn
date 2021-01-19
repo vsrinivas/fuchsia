@@ -3,7 +3,15 @@
 # found in the LICENSE file.
 
 group("power") {
-  deps = [ ":battery" ]
+  testonly = true
+  deps = [
+    ":battery",
+    ":tests",
+    "power-manager",
+    "shutdown-shim",
+    "temperature-logger",
+    "thermd",
+  ]
 }
 
 group("battery") {
