@@ -137,10 +137,8 @@ fdio_t* fdio_get_reserved_io();
 zx_status_t fdio_zxio_close(fdio_t* io);
 zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
-                              int16_t* out_code);
-zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
-                              int16_t* out_code);
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
 
 Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);

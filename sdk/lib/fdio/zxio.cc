@@ -211,8 +211,16 @@ static constexpr fdio_ops_t fdio_zxio_ops = {
     .getpeername = fdio_default_getpeername,
     .getsockopt = fdio_default_getsockopt,
     .setsockopt = fdio_default_setsockopt,
-    .recvmsg = fdio_zxio_recvmsg,
-    .sendmsg = fdio_zxio_sendmsg,
+    .recvmsg =
+        [](fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+        },
+    .sendmsg =
+        [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+        },
     .shutdown = fdio_default_shutdown,
 };
 
@@ -338,8 +346,16 @@ static constexpr fdio_ops_t fdio_zxio_remote_ops = {
     .getpeername = fdio_default_getpeername,
     .getsockopt = fdio_default_getsockopt,
     .setsockopt = fdio_default_setsockopt,
-    .recvmsg = fdio_zxio_recvmsg,
-    .sendmsg = fdio_zxio_sendmsg,
+    .recvmsg =
+        [](fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+        },
+    .sendmsg =
+        [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+        },
     .shutdown = fdio_default_shutdown,
 };
 
@@ -543,8 +559,16 @@ static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
     .getpeername = fdio_default_getpeername,
     .getsockopt = fdio_default_getsockopt,
     .setsockopt = fdio_default_setsockopt,
-    .recvmsg = fdio_zxio_recvmsg,
-    .sendmsg = fdio_zxio_sendmsg,
+    .recvmsg =
+        [](fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+        },
+    .sendmsg =
+        [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+        },
     .shutdown = fdio_default_shutdown,
 };
 
@@ -594,8 +618,7 @@ static Errno fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
   return fdio_zx_socket_posix_ioctl(fdio_get_zxio_pipe(io)->socket, request, va);
 }
 
-zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
-                              int16_t* out_code) {
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual) {
   zxio_flags_t zxio_flags = 0;
   if (flags & MSG_PEEK) {
     zxio_flags |= ZXIO_PEEK;
@@ -606,8 +629,6 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  *out_code = 0;
-
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
   // io vector. Instead, we can ask to read zero entries with a null vector.
   if (msg->msg_iovlen == 0) {
@@ -616,24 +637,22 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
 
   zx_iovec_t zx_iov[msg->msg_iovlen];
   for (int i = 0; i < msg->msg_iovlen; ++i) {
+    auto const& iov = msg->msg_iov[i];
     zx_iov[i] = {
-        .buffer = msg->msg_iov[i].iov_base,
-        .capacity = msg->msg_iov[i].iov_len,
+        .buffer = iov.iov_base,
+        .capacity = iov.iov_len,
     };
   }
 
   return zxio_readv(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
 }
 
-zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
-                              int16_t* out_code) {
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual) {
   if (flags) {
     // TODO: support MSG_NOSIGNAL
     // TODO: support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }
-
-  *out_code = 0;
 
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
   // io vector. Instead, we can ask to write zero entries with a null vector.
@@ -703,8 +722,16 @@ static constexpr fdio_ops_t fdio_zxio_pipe_ops = {
     .getpeername = fdio_default_getpeername,
     .getsockopt = fdio_default_getsockopt,
     .setsockopt = fdio_default_setsockopt,
-    .recvmsg = fdio_zxio_recvmsg,
-    .sendmsg = fdio_zxio_sendmsg,
+    .recvmsg =
+        [](fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+        },
+    .sendmsg =
+        [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+          *out_code = 0;
+          return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+        },
     .shutdown = fdio_zxio_pipe_shutdown,
 };
 
