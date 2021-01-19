@@ -166,9 +166,6 @@ allowlisted as shown below:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/bin/run_test_component/test_metadata.cc" region_tag="allowed_system_services" adjust_indentation="auto" %}
 ```
 
-
-[here](/garnet/bin/run_test_component/test_metadata.cc).
-
 [component-manifest]: /docs/concepts/components/v1/component_manifests.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [glossary-component]: /docs/glossary.md#component
