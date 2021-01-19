@@ -160,6 +160,7 @@ void Queue::FreeResources(const Report& report) {
   snapshot_manager_->Release(report.SnapshotUuid());
   tags_->Unregister(report.Id());
   upload_attempts_.erase(report.Id());
+  store_.Remove(report.Id());
 }
 
 size_t Queue::UploadAll() {
