@@ -258,7 +258,9 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     // our upsert registration.
     // TODO(fxbug.dev/67806): Remove this once Upsert returns when the operation is complete.
     inspect::component::health().set_starting_up();
-    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
+    if mode == Mode::Production{
+        fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
+    }
     inspect::component::health().set_ok();
 
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
