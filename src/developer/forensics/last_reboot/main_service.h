@@ -35,7 +35,7 @@ class MainService {
   explicit MainService(Config config);
 
   void WatchForImminentGracefulReboot();
-  void Report(zx::duration crash_reporting_delay);
+  void Report(zx::duration oom_crash_reporting_delay);
 
   // fuchsia.feedback.LastRebootInfoProvider
   void HandleLastRebootInfoProviderRequest(

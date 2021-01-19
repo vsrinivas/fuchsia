@@ -69,7 +69,7 @@ int main() {
     // by the Feedback service. The memory_monitor Inspect data is critical to debug OOM crash
     // reports.
     // TODO(fxbug.dev/46216, fxbug.dev/48485): remove delay.
-    main_service.Report(/*crash_reporting_delay=*/zx::sec(90));
+    main_service.Report(/*oom_crash_reporting_delay=*/zx::sec(90));
   }
 
   component.RunLoop();

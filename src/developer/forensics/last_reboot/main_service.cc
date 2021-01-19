@@ -4,6 +4,8 @@
 
 #include "src/developer/forensics/last_reboot/main_service.h"
 
+#include <lib/zx/time.h>
+
 namespace forensics {
 namespace last_reboot {
 
@@ -19,8 +21,11 @@ MainService::MainService(Config config)
 
 void MainService::WatchForImminentGracefulReboot() { reboot_watcher_.Connect(); }
 
-void MainService::Report(const zx::duration crash_reporting_delay) {
-  reporter_.ReportOn(config_.reboot_log, crash_reporting_delay);
+void MainService::Report(const zx::duration oom_crash_reporting_delay) {
+  const zx::duration delay = (config_.reboot_log.RebootReason() == RebootReason::kOOM)
+                                 ? oom_crash_reporting_delay
+                                 : zx::sec(0);
+  reporter_.ReportOn(config_.reboot_log, delay);
 }
 
 void MainService::HandleLastRebootInfoProviderRequest(
