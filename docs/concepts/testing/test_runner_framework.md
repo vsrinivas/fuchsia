@@ -176,9 +176,16 @@ Components in the test realm may play various roles in the test, as follows:
     This may be identical to a component from production, or a component written
     specifically for the test intended to model production behavior.
 
+## Further reading
+
+- [Complex topologies and integration testing][integration-testing]: testing
+  interactions between multiple components in isolation from the rest of the
+  system.
+
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
+[integration-testing]: /docs/concepts/testing/v2_integration_testing.md
 [manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
