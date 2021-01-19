@@ -78,6 +78,7 @@ pub struct Custom {
 /// Path: /blobs/{merkle}
 #[derive(Deserialize)]
 pub struct ServicePackageDefinition {
+    /// Map of a service name to a provider (ie. component) of that service.
     pub services: Option<HashMap<String, Value>>,
     // FIXME: Other json structs are built such that unused fields are present but commented out.
     // This one omits the completely.

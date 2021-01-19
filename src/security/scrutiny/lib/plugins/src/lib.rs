@@ -5,5 +5,6 @@
 pub mod core;
 pub mod engine;
 pub mod search;
+pub mod sys_realm;
 pub mod toolkit;
 pub mod verify;

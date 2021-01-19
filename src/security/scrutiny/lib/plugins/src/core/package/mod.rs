@@ -6,3 +6,5 @@ pub mod artifact;
 pub mod collector;
 pub mod getter;
 pub mod reader;
+#[cfg(test)]
+pub mod test_utils;

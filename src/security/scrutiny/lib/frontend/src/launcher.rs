@@ -6,8 +6,8 @@ use {
     crate::{config::Config, scrutiny::Scrutiny},
     anyhow::Result,
     scrutiny_plugins::{
-        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
-        verify::VerifyPlugin,
+        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, sys_realm::SysRealmPlugin,
+        toolkit::ToolkitPlugin, verify::VerifyPlugin,
     },
 };
 
@@ -24,6 +24,7 @@ pub fn launch_from_config(config: Config) -> Result<()> {
     ))?;
     scrutiny.plugin(ToolkitPlugin::new())?;
     scrutiny.plugin(VerifyPlugin::new())?;
+    scrutiny.plugin(SysRealmPlugin::new())?;
     scrutiny.run()
 }
 

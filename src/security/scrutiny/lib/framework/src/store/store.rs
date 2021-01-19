@@ -18,6 +18,6 @@ pub trait Store: Send + Sync {
     fn set(&mut self, name: Uuid, collection: Value) -> Result<()>;
     /// Reads a collecction from storage and returns it.
     fn get(&mut self, name: &Uuid) -> Result<Value>;
-    /// Removes and deletes a colleection.
+    /// Removes and deletes a collection.
     fn remove(&mut self, name: &Uuid) -> Result<()>;
 }

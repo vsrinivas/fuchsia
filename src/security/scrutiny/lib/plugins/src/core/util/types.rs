@@ -51,7 +51,7 @@ impl From<Option<Manifest>> for ComponentManifest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ComponentV1Manifest {
     pub dev: Option<Vec<String>>,
     pub services: Option<Vec<String>>,

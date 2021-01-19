@@ -4,8 +4,8 @@
 
 pub mod collection;
 mod controller;
-mod package;
-mod util;
+pub mod package;
+pub mod util;
 
 use {
     crate::core::{

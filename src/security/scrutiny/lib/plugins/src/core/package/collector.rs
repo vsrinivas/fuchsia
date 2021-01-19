@@ -18,7 +18,7 @@ use {
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
     regex::Regex,
-    scrutiny::{model::collector::DataCollector, model::model::DataModel},
+    scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{bootfs::*, env, zbi::*},
     std::collections::HashMap,
     std::str,
@@ -73,6 +73,10 @@ impl PackageDataCollector {
                 &repository_path,
             )))),
         })
+    }
+
+    pub fn new_with_reader(reader: Box<dyn PackageReader>) -> Self {
+        Self { package_reader: reader }
     }
 
     /// Retrieves the set of packages from the current target build returning
@@ -536,157 +540,16 @@ impl DataCollector for PackageDataCollector {
 // As a result, the bulk of the testing is focused around the graph/model
 // building logic.
 #[cfg(test)]
-mod tests {
-    use {super::*, crate::core::util::jsons::*, std::sync::RwLock, tempfile::tempdir};
-
-    struct MockPackageReader {
-        targets: RwLock<Vec<TargetsJson>>,
-        package_defs: RwLock<Vec<PackageDefinition>>,
-        service_package_defs: RwLock<Vec<ServicePackageDefinition>>,
-    }
-
-    impl MockPackageReader {
-        fn new() -> Self {
-            Self {
-                targets: RwLock::new(Vec::new()),
-                package_defs: RwLock::new(Vec::new()),
-                service_package_defs: RwLock::new(Vec::new()),
-            }
-        }
-
-        // Adds values to the FIFO queue for targets
-        fn append_target(&self, target: TargetsJson) {
-            self.targets.write().unwrap().push(target);
-        }
-        // Adds values to the FIFO queue for package_defs
-        fn append_pkg_def(&self, package_def: PackageDefinition) {
-            self.package_defs.write().unwrap().push(package_def);
-        }
-        // Adds values to the FIFO queue for service_package_defs
-        fn append_service_pkg_def(&self, svc_pkg_def: ServicePackageDefinition) {
-            self.service_package_defs.write().unwrap().push(svc_pkg_def);
-        }
-    }
-
-    impl PackageReader for MockPackageReader {
-        fn read_targets(&self) -> Result<TargetsJson> {
-            let mut borrow = self.targets.write().unwrap();
-            {
-                if borrow.len() == 0 {
-                    return Err(anyhow!("No more targets left to return. Maybe append more?"));
-                }
-                Ok(borrow.remove(0))
-            }
-        }
-
-        fn read_package_definition(
-            &self,
-            _pkg_name: &str,
-            _merkle: &str,
-        ) -> Result<PackageDefinition> {
-            let mut borrow = self.package_defs.write().unwrap();
-            {
-                if borrow.len() == 0 {
-                    return Err(anyhow!("No more package_defs left to return. Maybe append more?"));
-                }
-                Ok(borrow.remove(0))
-            }
-        }
-
-        fn read_service_package_definition(
-            &self,
-            _data: String,
-        ) -> Result<ServicePackageDefinition> {
-            let mut borrow = self.service_package_defs.write().unwrap();
-            {
-                if borrow.len() == 0 {
-                    return Err(anyhow!(
-                        "No more service_package_defs left to return. Maybe append more?"
-                    ));
-                }
-                Ok(borrow.remove(0))
-            }
-        }
-    }
-
-    fn create_test_sandbox(uses: Vec<String>) -> ComponentV1Manifest {
-        ComponentV1Manifest {
-            dev: None,
-            services: Some(uses),
-            system: None,
-            pkgfs: None,
-            features: None,
-        }
-    }
-
-    /// Create component manifest v1 (cmx) entries.
-    fn create_test_cmx_map(
-        entries: Vec<(String, ComponentV1Manifest)>,
-    ) -> HashMap<String, ComponentManifest> {
-        entries.into_iter().map(|entry| (entry.0, ComponentManifest::Version1(entry.1))).collect()
-    }
-
-    /// Create component manifest v2 (cm) entries.
-    fn create_test_cm_map(entries: Vec<(String, Vec<u8>)>) -> HashMap<String, ComponentManifest> {
-        entries.into_iter().map(|entry| (entry.0, ComponentManifest::Version2(entry.1))).collect()
-    }
-
-    fn create_test_package_with_cms(
-        url: String,
-        cms: HashMap<String, ComponentManifest>,
-    ) -> PackageDefinition {
-        PackageDefinition {
-            url: url,
-            merkle: String::from("0"),
-            meta: HashMap::new(),
-            contents: HashMap::new(),
-            cms: cms,
-        }
-    }
-
-    fn create_test_package_with_contents(
-        url: String,
-        contents: HashMap<String, String>,
-    ) -> PackageDefinition {
-        PackageDefinition {
-            url: url,
-            merkle: String::from("0"),
-            meta: HashMap::new(),
-            contents: contents,
-            cms: HashMap::new(),
-        }
-    }
-
-    fn create_test_package_with_meta(
-        url: String,
-        meta: HashMap<String, String>,
-    ) -> PackageDefinition {
-        PackageDefinition {
-            url: url,
-            merkle: String::from("0"),
-            meta,
-            contents: HashMap::new(),
-            cms: HashMap::new(),
-        }
-    }
-
-    fn create_svc_pkg_def(entries: Vec<(String, String)>) -> ServicePackageDefinition {
-        ServicePackageDefinition {
-            services: Some(
-                entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
-            ),
-        }
-    }
-
-    fn create_svc_pkg_def_with_array(
-        entries: Vec<(String, Vec<String>)>,
-    ) -> ServicePackageDefinition {
-        ServicePackageDefinition {
-            services: Some(
-                entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
-            ),
-        }
-    }
+pub mod tests {
+    use {
+        super::*,
+        crate::core::package::test_utils::{
+            create_model, create_svc_pkg_def, create_svc_pkg_def_with_array, create_test_cm_map,
+            create_test_cmx_map, create_test_package_with_cms, create_test_package_with_contents,
+            create_test_package_with_meta, create_test_sandbox, MockPackageReader,
+        },
+        crate::core::util::jsons::*,
+    };
 
     fn count_defined_inferred(components: HashMap<String, Component>) -> (usize, usize) {
         let mut defined_count = 0;
@@ -970,13 +833,6 @@ mod tests {
     }
 
     // =-=-=-=-= collect() tests =-=-=-=-= //
-
-    fn create_model() -> (String, Arc<DataModel>) {
-        let store_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let uri_clone = uri.clone();
-        (uri, Arc::new(DataModel::connect(uri_clone).unwrap()))
-    }
 
     #[test]
     fn test_collect_clears_data_model_before_adding_new() {
