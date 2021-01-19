@@ -1,1 +1,29 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("topology") {
+  host = true
+  kernel = true
+  sources = [ "system-topology.cc" ]
+  deps = [
+    ":test",
+    "$zx/kernel/lib/ktl",
+    "$zx/system/ulib/fbl",
+  ]
+  public_deps = [
+    # <lib/system-topology.h> has #include <ktl/move.h>.
+    "$zx/kernel/lib/ktl:headers",
+  ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [ "system-topology_test.cc" ]
+  include_dirs = [ "include" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
+}

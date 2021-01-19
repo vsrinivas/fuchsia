@@ -1,1 +1,101 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("syscalls") {
+  visibility = [
+    "$zx/kernel/*",
+    "$zx/system/ulib/zircon:*",
+  ]
+
+  # This can be used for headers only by the vDSO and test code.
+  kernel = true
+  static = true
+  sources = []
+
+  # Depend on the files generated from the syscall IDL.
+  public_deps = [ "$zx/vdso:private($default_toolchain)" ]
+  if (zx != "/") {
+    # The line above does not work in the Fuchsia build because its default
+    # toolchain does not propagate configs (see `gn help toolchain` for details).
+    public_configs = [ "$zx/vdso:private.config($default_toolchain)" ]
+  }
+
+  if (is_kernel) {
+    deps = [ ":impl" ]
+  }
+}
+
+if (is_kernel) {
+  source_set("impl") {
+    visibility = [ ":*" ]
+    sources = [
+      "channel.cc",
+      "clock.cc",
+      "ddk.cc",
+      "ddk_${zircon_cpu}.cc",
+      "ddk_pci.cc",
+      "debug.cc",
+      "exceptions.cc",
+      "fifo.cc",
+      "futex.cc",
+      "handle_ops.cc",
+      "hypervisor.cc",
+      "object.cc",
+      "object_wait.cc",
+      "pager.cc",
+      "port.cc",
+      "priv.cc",
+      "profile.cc",
+      "resource.cc",
+      "socket.cc",
+      "stream.cc",
+      "system.cc",
+      "system_${zircon_cpu}.cc",
+      "task.cc",
+      "test.cc",
+      "timer.cc",
+      "vmar.cc",
+      "vmo.cc",
+      "zircon.cc",
+    ]
+    deps = [
+      ":dispatch",
+      ":headers",
+      "$zx/kernel/dev/udisplay",
+      "$zx/kernel/lib/cmdline",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crashlog",
+      "$zx/kernel/lib/crypto",
+      "$zx/kernel/lib/fbl",
+      "$zx/kernel/lib/gfxconsole",
+      "$zx/kernel/lib/kpci",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/ktrace",
+      "$zx/kernel/lib/mtrace",
+      "$zx/kernel/lib/user_copy",
+      "$zx/kernel/lib/userabi:headers",
+      "$zx/kernel/object",
+      "$zx/system/ulib/explicit-memory",
+      "$zx/system/ulib/region-alloc",
+      "$zx/system/ulib/zbitl",
+    ]
+    if (current_cpu == "x64") {
+      deps += [ "$zx/kernel/platform/pc" ]
+    }
+  }
+
+  # Only this file depends on vdso-valid-sysret.h.
+  source_set("dispatch") {
+    sources = [ "syscalls.cc" ]
+    deps = [
+      ":headers",
+      "$zx/kernel/lib/userabi:headers",
+    ]
+  }
+}

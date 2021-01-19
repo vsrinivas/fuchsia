@@ -1,1 +1,34 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+import("breakpad.gni")
+import("environment.gni")
+import("toolchain.gni")
+
+assert(current_toolchain == default_toolchain,
+       "Define toolchains only in `default_toolchain` $default_toolchain")
+
+# The stub toolchain is the $default_toolchain set by //gn/BUILDCONFIG.gn.
+# It has nothing but the standard stamp and copy tools, so it can only be
+# used for action and copy rules.
+toolchain_with_tools("stub") {
+  tools = []
+
+  # This is needed for $zx/vdso et al.
+  propagates_configs = true
+}
+
+# This defines user and host toolchains.
+standard_environments("") {
+}
+
+standard_host = false
+foreach(host, standard_build_hosts) {
+  if (host.cpu == host_cpu && host.os == host_os) {
+    standard_host = true
+  }
+}
+assert(standard_host,
+       "$host_cpu-$host_os is not a standard build host for Fuchsia")

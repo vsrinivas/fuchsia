@@ -1,1 +1,26 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+assert(is_kernel)
+
+zx_library("mtrace") {
+  kernel = true
+  sources = [
+    "mtrace-ipt.cc",
+    "mtrace-pmu.cc",
+    "mtrace.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/perfmon:headers",
+    "$zx/kernel/object",
+  ]
+  public_deps = [
+    # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
+    "$zx/kernel/lib/user_copy:headers",
+  ]
+}

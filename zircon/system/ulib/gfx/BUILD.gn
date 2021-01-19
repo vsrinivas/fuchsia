@@ -1,1 +1,30 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("gfx") {
+  if (zx != "/") {
+    # Required by the Fuchsia build, but the Zircon build doesn't support
+    # libraries with 'kernel = true' && 'sdk = "source"'.
+    kernel = true
+  }
+  sdk = "source"
+  sdk_headers = [ "gfx/gfx.h" ]
+  sdk_migrated = true
+  if (toolchain.environment != "efi") {
+    sources = [ "gfx.c" ]
+    deps = [ "$zx/system/ulib/zircon" ]
+  } else {
+    sources = []
+  }
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "$zx_build_config:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

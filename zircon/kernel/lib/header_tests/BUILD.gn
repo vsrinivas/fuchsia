@@ -1,1 +1,10 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("header_tests") {
+  sources = [ "pow2_tests.cc" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
+}

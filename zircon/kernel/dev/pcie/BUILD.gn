@@ -1,1 +1,53 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("pcie") {
+  kernel = true
+  sources = [
+    "address_provider/designware.cc",
+    "address_provider/ecam_region.cc",
+    "address_provider/mmio.cc",
+    "address_provider/pio.cc",
+    "debug.cc",
+    "pci_config.cc",
+    "pcie_bridge.cc",
+    "pcie_bus_driver.cc",
+    "pcie_caps.cc",
+    "pcie_device.cc",
+    "pcie_irqs.cc",
+    "pcie_quirks.cc",
+    "pcie_root.cc",
+    "pcie_upstream_node.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/kpci",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/vm:headers",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/region-alloc",
+  ]
+  public_deps = [
+    # <dev/address_provider/ecam_region.h> has #include <ktl/unique_ptr.h>.
+    "$zx/kernel/lib/ktl:headers",
+
+    # <dev/pcie_platform.h> has #include <dev/interrupt.h>.
+    "$zx/kernel/dev/interrupt:headers",
+
+    # <dev/pcie_bus_driver.h> has #include <region-alloc/region-alloc.h>.
+    "$zx/system/ulib/region-alloc:headers",
+
+    # <dev/pcie_bus_driver.h> has #include <arch/ops.h>.
+    "$zx/kernel/lib/arch:headers",
+  ]
+
+  # TODO(mcgrathr): Say why this is needed.
+  cflags_cc = [ "-Wno-invalid-offsetof" ]
+}

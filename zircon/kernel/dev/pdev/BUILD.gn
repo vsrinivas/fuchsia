@@ -1,1 +1,23 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("pdev") {
+  kernel = true
+  sources = [ "pdev.cc" ]
+  deps = [ "$zx/kernel/lib/init" ]
+  public_deps = [
+    # <pdev/driver.h> has #include <lib/special-sections/special-sections.h>.
+    "$zx/kernel/lib/special-sections:headers",
+
+    # <pdev/driver.h> has #include <lk/init.h>.
+    "$zx/kernel/lib/init",
+
+    # <pdev/interrupt.h> has #include <dev/interrupt.h>.
+    "$zx/kernel/dev/interrupt:headers",
+  ]
+}

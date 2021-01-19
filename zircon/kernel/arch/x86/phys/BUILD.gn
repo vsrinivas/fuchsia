@@ -1,1 +1,247 @@
-BUILD.zircon.gn
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(fxbug.dev/54160): Keep in sync with BUILD.gn
+
+if (zx == "/") {
+  import("$zx/public/gn/toolchain/clang.gni")
+  import("$zx/public/gn/toolchain/environment.gni")
+} else {
+  import("//build/toolchain/zircon/clang.gni")
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+  import("//build/unification/global_variables.gni")
+}
+import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
+
+if (current_toolchain == default_toolchain) {
+  if (zx == "/") {
+    # Default toolchain (current_cpu == "") just defines the phys32 environment.
+    # This largely matches $zx/kernel/phys:kernel.phys and should be kept up to
+    # date with changes.
+    environment("kernel.phys32") {
+      cpu = "x64"
+
+      globals = {
+        is_kernel = true
+      }
+
+      configs += standard_fuchsia_configs
+      configs += [
+        "$zx/kernel:standalone",
+        "$zx/kernel:warnings",
+        "$zx/kernel/arch/x86:abi",
+        "$zx/kernel/phys:defines",
+
+        # All physmem code is inherently sensitive and in a position for any
+        # bug to be unusually dangerous.  So compile with undefined behavior
+        # checking in all builds, regardless of variant.  This is only the
+        # basic support that requires no runtime code.
+        "$zx/public/gn/config/instrumentation:ubsan-trap",
+
+        # This overrides some of the common settings (like PIE) that aren't
+        # broken out into removable configs, so it must come last.
+        ":x86-32",
+      ]
+
+      # Always enable frame pointers.
+      configs -= [ "$zx_build_config:default_frame_pointers" ]
+      configs += [ "$zx_build_config:frame_pointers" ]
+
+      tags = [
+        "x86-32",
+        "physmem",
+        "standalone",
+      ]
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
+
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
+    }
+  } else {
+    zircon_toolchain_suite("kernel.phys32") {
+      cpu = "x64"
+      os = "fuchsia"
+      environment = "kernel.phys32"
+      with_shared = false
+
+      toolchain_tags = [ "kernel" ]
+
+      configs = [ "//zircon/kernel/arch/x86/phys:phys32_config" ]
+
+      # Always enable frame pointers.
+      # NOTE: This works because frame_pointers is added in the
+      # phys32_config definition below.
+      remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
+
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
+    }
+  }
+} else {
+  if (toolchain.environment == "kernel.phys") {
+    # All the code gets built here in the phys environment.
+
+    source_set("phys") {
+      sources = [ "start.S" ]
+      include_dirs = [ "$zx/.." ]
+      deps = [ "$zx/kernel/lib/arch" ]
+    }
+
+    config("zbi_executable.config") {
+      configs = [ ":load-1mb" ]
+    }
+  } else if (toolchain.environment == "kernel.phys32") {
+    # ... or here in the other phys environment.
+
+    if (zx != "/") {
+      config("phys32_config") {
+        configs = [
+          "$zx/kernel:standalone",
+          "$zx/kernel:warnings",
+          "$zx/kernel/arch/x86:abi",
+          "$zx/kernel/phys:defines",
+
+          # Don't emit extra code making static initializers thread-safe (we don't
+          # have threads or any of the corresponding library support.)
+          "$zx_build_config:no_threadsafe_statics",
+
+          # All physmem code is inherently sensitive and in a position for any
+          # bug to be unusually dangerous.  So compile with undefined behavior
+          # checking in all builds, regardless of variant.  This is only the
+          # basic support that requires no runtime code.
+          "$zx_build_config/instrumentation:ubsan-trap",
+
+          # This overrides some of the common settings (like PIE) that aren't
+          # broken out into removable configs, so it must come last.
+          ":x86-32",
+        ]
+
+        # NOTE: This works because default_frame_pointers is listed in
+        # remove_common_configs in the zircon_toolchain_suite() call above!
+        configs += [ "$zx_build_config:frame_pointers" ]
+      }
+
+      group("phys32_config_deps") {
+      }
+    }
+
+    # phys32 code is 32-bit (i686) and loaded at a fixed address.
+    config("x86-32") {
+      cflags = [
+        "-m32",
+        "-mcx16",
+        "-fno-pic",
+        "-fno-pie",
+      ]
+      ldflags = cflags + [ "-Wl,-m,elf_i386" ]
+
+      if (is_gcc) {
+        cflags += [ "-mpreferred-stack-boundary=4" ]  # log2, i.e. 16
+      } else {
+        cflags += [
+          "-mstack-alignment=16",  # Same as GCC's -mpreferred-stack-boundary=4.
+          "-fsanitize=safe-stack",  # Enable all available paranoia for phys.
+        ]
+
+        # Clang defaults to PIE but lld has a switch to reverse that.  GNU
+        # linkers have no such switch, but GCC doesn't pass -pie by default.
+        ldflags += [ "-Wl,--no-pie" ]
+      }
+
+      asmflags = cflags
+    }
+
+    # This is used by phys_executable(), but we put nothing here so that
+    # each target has explicit deps for multiboot for zero-page.
+    source_set("phys") {
+    }
+
+    # This is common to multiboot and zero-page.
+    source_set("phys32") {
+      sources = [
+        "gdt32.cc",
+        "start32.S",
+      ]
+      include_dirs = [ "$zx/.." ]
+      deps = [
+        ":phys32-header",
+        "$zx/kernel/lib/arch",
+        "$zx/kernel/lib/ktl",
+      ]
+
+      # Links use -nostdlib to avoid getting -lc et al.  But the "builtins"
+      # library (equivalent to the original libgcc) is needed for e.g. 64-bit
+      # division functions.  Note that though the normal x86-64 build is not
+      # usable for kernel due to lack of -mno-red-zone, the normal x86-32
+      # build is fine for phys32 both because x86-32 has no red zone to worry
+      # about and because the phys32 environment doesn't actually need to
+      # worry about interrupts at all; it's also OK if it happened to use SSE
+      # (though that won't come up in reality) because phys32 doesn't have
+      # that constraint either.  Note also that the need to use this library
+      # is the only reason the phys32 environment doesn't use -mregparm=3;
+      # that's a better calling convention, but the compiler-emitted library
+      # calls would expect that and the toolchain-supplied library is not
+      # compiled for it.
+      if (clang_tool_dir == "") {
+        clang_inputs = []
+        clang_exec = "clang++"
+      } else {
+        clang_inputs = [ "${clang_tool_dir}/clang++" ]
+        clang_exec = rebase_path(clang_inputs[0], root_build_dir)
+      }
+      clang_triple = string_replace(toolchain.target_tuple, "x86_64", "i386")
+      libs = rebase_path(exec_script("/usr/bin/env",
+                                     [
+                                       clang_exec,
+                                       "-no-canonical-prefixes",
+                                       "--target=${clang_triple}",
+                                       "-print-libgcc-file-name",
+                                     ],
+                                     "trim list lines",
+                                     clang_inputs),
+                         ".",
+                         root_build_dir)
+    }
+
+    source_set("multiboot") {
+      sources = [
+        "multiboot-header.S",
+        "multiboot-start.S",
+      ]
+      deps = [
+        ":phys32",
+        "$zx/kernel/lib/arch",
+      ]
+
+      public_configs = [ ":load-1mb" ]
+    }
+
+    # TODO(mcgrathr): Linux zero-page support parallel to multiboot
+  }
+
+  # This is where code is actually loaded both for the Multiboot spec and for
+  # the original/legacy x86 ZBI booting spec.
+  config("load-1mb") {
+    visibility = [ ":*" ]
+    ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0x100000" ]
+  }
+}
+
+# This is evaluated differently in different environments, so outside the if.
+hwreg_asm_header("phys32-header") {
+  output_name = "phys32.h"
+  sources = [ "gdt32.cc" ]
+  defines = [ "GENERATE" ]
+  deps = [ "$zx/kernel/lib/arch" ]
+}

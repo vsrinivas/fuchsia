@@ -1,1 +1,37 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("intel") {
+  kernel = true
+  sources = [
+    "context_table_state.cc",
+    "device_context.cc",
+    "domain_allocator.cc",
+    "intel_iommu.cc",
+    "iommu_impl.cc",
+    "iommu_page.cc",
+    "second_level_pt.cc",
+  ]
+  deps = [
+    "$zx/kernel/arch/x86/page_tables",
+    "$zx/kernel/dev/interrupt",
+    "$zx/kernel/dev/pcie",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/root_resource_filter",
+    "$zx/kernel/lib/user_copy",
+    "$zx/kernel/vm:headers",
+    "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/region-alloc",
+  ]
+  public_deps = [
+    # dev/iommu/intel.h has #include <fbl/ref_ptr.h>.
+    "$zx/kernel/lib/fbl:headers",
+  ]
+}

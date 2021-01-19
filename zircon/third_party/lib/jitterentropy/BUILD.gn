@@ -1,1 +1,33 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("jitterentropy") {
+  kernel = true
+  sources = [ "jitterentropy-base.c" ]
+  include_dirs = [ "arch/$zircon_cpu" ]
+  deps = [ "$zx/kernel/lib/arch" ]
+
+  # According to its documentation, jitterentropy must be compiled at
+  # optimization level -O0.
+  #
+  # TODO(fxbug.dev/24745): Test the code generated at various optimization
+  # levels. If there is a significant difference in entropy quality,
+  # replace the relevant C code by assembly code to protect against future
+  # compiler changes.
+  configs -= [ "$zx_build_config:default_optimize" ]
+  configs += [
+    ":config",
+    "$zx_build_config:optimize_none",
+  ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+  cflags = [
+    # The original Makefile also specifies -fwrapv.
+    "-fwrapv",
+  ]
+}

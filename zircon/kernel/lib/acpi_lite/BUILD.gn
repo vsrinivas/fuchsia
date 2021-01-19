@@ -1,1 +1,114 @@
-BUILD.zircon.gn
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+# Generic parts of acpi_lite.
+zx_library("acpi_lite") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/acpi_lite.h",
+    "lib/acpi_lite/numa.h",
+    "lib/acpi_lite/apic.h",
+    "lib/acpi_lite/debug_port.h",
+    "lib/acpi_lite/internal.h",
+    "lib/acpi_lite/structures.h",
+  ]
+  sdk_migrated = true
+  kernel = true
+  static = true
+
+  sources = [
+    "acpi_lite.cc",
+    "apic.cc",
+    "debug_port.cc",
+    "numa.cc",
+    "structures.cc",
+  ]
+
+  deps = [ "$zx/system/ulib/pretty" ]
+
+  public_deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zxc",
+  ]
+
+  # Zircon-specific parts of acpi_lite.
+  if (is_kernel) {
+    sdk_headers += [ "lib/acpi_lite/zircon.h" ]
+    sources += [
+      "zircon.cc",
+
+      # TODO: These should be test-only.
+      "test_data.cc",
+      "zircon_test.cc",
+    ]
+    deps += [ "$zx/kernel/lib/unittest" ]
+  }
+}
+
+if (!is_kernel) {
+  import("//build/fuzzing/fuzzer.gni")
+  import("//src/sys/build/fuchsia_unittest_package.gni")
+
+  executable("acpi_lite_test") {
+    testonly = true
+    sources = [
+      "acpi_lite_test.cc",
+      "apic_test.cc",
+      "binary_reader_test.cc",
+      "debug_port_test.cc",
+      "numa_test.cc",
+      "test_data.cc",
+    ]
+    deps = [
+      ":acpi_lite",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  fuchsia_unittest_package("acpi-lite-test") {
+    deps = [ ":acpi_lite_test" ]
+  }
+
+  fuzzer("acpi_lite_fuzztest") {
+    sources = [ "acpi_lite_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
+  fuzzer("apic_fuzztest") {
+    sources = [ "apic_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
+  fuzzer("numa_fuzztest") {
+    sources = [ "numa_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
+  fuzzer("debug_port_fuzztest") {
+    sources = [ "debug_port_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
+  fuzzers_package("acpi-lite-fuzzer") {
+    cpp_fuzzers = [
+      ":acpi_lite_fuzztest",
+      ":apic_fuzztest",
+      ":numa_fuzztest",
+      ":debug_port_fuzztest",
+    ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [
+      ":acpi-lite-fuzzer",
+      ":acpi-lite-test",
+    ]
+  }
+}

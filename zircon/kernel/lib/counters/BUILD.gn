@@ -1,1 +1,37 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("counters") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/counters.h",
+    "lib/counter-vmo-abi.h",
+  ]
+  sdk_migrated = true
+  visibility = [
+    "$zx/kernel/*",
+    "$zx/system/ulib/*",
+    "$zx/system/ulib/kcounter/*",
+    "//src/zircon/bin/kcounter:*",
+    "//src/zircon/tests/kcounter:*",
+  ]
+  kernel = true
+  static = true
+  sources = []
+  if (is_kernel) {
+    sources += [ "counters.cc" ]
+    deps = [
+      "$zx/kernel/lib/init",
+      "$zx/kernel/lib/special-sections",
+    ]
+    public_deps = [
+      # <lib/counters.h> has #include <lib/special-sections/special-sections.h>.
+      "$zx/kernel/lib/special-sections:headers",
+    ]
+  }
+}

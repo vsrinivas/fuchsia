@@ -1,1 +1,18 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("processargs") {
+  sdk = "source"
+  sdk_headers = [ "lib/processargs/processargs.h" ]
+  sources = [ "processargs.c" ]
+
+  deps = [ "$zx/system/ulib/zircon" ]
+
+  configs += [
+    # This code is used in early startup, where safe-stack is not ready yet.
+    "$zx_build_config:no_sanitizers",
+  ]
+}

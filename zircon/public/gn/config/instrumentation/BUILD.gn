@@ -1,1 +1,151 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxbug.dev/54160): Keep in sync with //build/config/zircon/instrumentation/BUILD.gn
+
+import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
+
+config("asan") {
+  compiler_flags = [ "-fsanitize=address" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+  if (is_kernel) {
+    configs = [ "$zx/kernel/lib/instrumentation/asan:kasan" ]
+  }
+}
+
+sanitizer_default_options("asan_default_options") {
+  # The asan runtime includes the lsan and ubsan runtimes, which parse their
+  # own options.
+  deps = [
+    ":lsan_default_options",
+    ":ubsan_default_options",
+  ]
+}
+
+sanitizer_default_options("lsan_default_options") {
+}
+
+# TODO(fxbug.dev/45047): Temporary while leaks are plugged.
+# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
+# and then add:
+# ```
+#   # TODO(nnnnn): Fix the leaks and remove this.
+#   deps += [ "$zx_build_config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+# ```
+# to the target that builds the leaky code.  When all leaky tests have been
+# marked that way, the asan_default_options default above will be removed.
+sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
+  visibility = [
+    "*",  # TODO(fxbug.dev/45047): constrain this and give each a TODO(nnnnn)
+          # comment
+  ]
+
+  args = [ "detect_leaks=0" ]
+  output_name = "lsan_default_options"
+  tags = [ "lsan" ]
+}
+
+# TODO(fxbug.dev/59214): Temporary while bugs are fixed.  As stack-use-after-return bugs
+# are found, file a bug #nnnnn for the buggy test/component, and then add:
+# ```
+#   # TODO(nnnnn): Fix the bugs and remove this.
+#   deps += [ "$zx_build_config/instrumentation:suppress-asan-stack-use-after-return" ]
+# ```
+sanitizer_extra_options("suppress-asan-stack-use-after-return") {
+  visibility = [
+    # TODO(fxbug.dev/59214): Allow only necessary third-party or TODO(bug-filed) cases.
+    # Playbook for suppression is to file bug #nnnnn for specific code
+    # reporting a violation, and add it to this visibility list with a comment
+    # at the end of the line: `# TODO(nnnnn): remove when fixed`.
+  ]
+
+  args = [ "detect_stack_use_after_return=0" ]
+  output_name = "asan_default_options"
+  tags = [ "asan" ]
+}
+
+config("ubsan") {
+  compiler_flags = [ "-fsanitize=undefined" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+sanitizer_default_options("ubsan_default_options") {
+}
+
+# ubsan-trap is pure instrumentation with no runtime.
+config("ubsan-trap") {
+  if (is_gcc) {
+    compiler_flags = [
+      "-fsanitize=undefined",
+      "-fsanitize-undefined-trap-on-error",
+    ]
+  } else {
+    compiler_flags = [ "-fsanitize-trap=undefined" ]
+  }
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+# NOTE: Every variant that includes any sancov configs must have "sancov"
+# in tags.  See $zx/system/ulib/c/sanitizers.  To make it harder to fail
+# to do this, only define the configs in toolchains with the tag.
+if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
+  config("sancov") {
+    compiler_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
+
+  # This enables all the different kinds of sancov callbacks, not just
+  # the basic ones actually implemented by the canonical runtime.
+  config("sancov-full") {
+    compiler_flags = [ "-fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep,trace-pc-guard,inline-8bit-counters,pc-table" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
+
+  # fuzzer instrumentation is a superset of the sancov instrumentation.
+  config("fuzzer") {
+    compiler_flags = [ "-fsanitize=fuzzer" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
+
+  group("fuzzer_deps") {
+    if (is_fuchsia) {
+      # The statically-linked libFuzzer runtime depends on libfdio and
+      # libzircon.
+      deps = [
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+      ]
+    }
+  }
+}
+
+config("profile") {
+  compiler_flags = [
+    "-fprofile-instr-generate",
+    "-fcoverage-mapping",
+  ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+  defines = [ "LLVM_PROFILE" ]
+}
+
+group("profile_deps") {
+  if (is_fuchsia && !is_kernel) {
+    # The statically-linked profiling runtime depends on libzircon.
+    deps = [ "$zx/system/ulib/zircon" ]
+  }
+}

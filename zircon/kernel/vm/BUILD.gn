@@ -1,1 +1,79 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("vm") {
+  kernel = true
+  sources = [
+    "bootalloc.cc",
+    "bootreserve.cc",
+    "kstack.cc",
+    "page.cc",
+    "page_queues.cc",
+    "page_source.cc",
+    "physmap.cc",
+    "pinned_vm_object.cc",
+    "pmm.cc",
+    "pmm_arena.cc",
+    "pmm_checker.cc",
+    "pmm_node.cc",
+    "scanner.cc",
+    "vm.cc",
+    "vm_address_region.cc",
+    "vm_address_region_or_mapping.cc",
+    "vm_aspace.cc",
+    "vm_cow_pages.cc",
+    "vm_mapping.cc",
+    "vm_object.cc",
+    "vm_object_paged.cc",
+    "vm_object_physical.cc",
+    "vm_page_list.cc",
+    "vmm.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/init",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/user_copy",
+    "$zx/kernel/lib/userabi",
+    "$zx/system/ulib/pretty",
+
+    # TODO: testonly
+    ":tests",
+  ]
+  public_deps = [
+    # <vm/vm_page_list.h> has #include <ktl/unique_ptr.h>.
+    "$zx/kernel/lib/ktl:headers",
+
+    # <vm/vm_object.h> has #include <fbl/name.h>.
+    "$zx/kernel/lib/fbl:headers",
+
+    # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
+    "$zx/kernel/lib/user_copy:headers",
+
+    # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
+    "$zx/kernel/lib/crypto:headers",
+
+    # "pmm_arena.h" has #include <lib/zx/status.h>.
+    "$zx/system/ulib/zxc:headers",
+  ]
+}
+
+source_set("tests") {
+  sources = [
+    "unittests/aspace_unittest.cc",
+    "unittests/pmm_unittest.cc",
+    "unittests/test_helper.cc",
+    "unittests/vmo_unittest.cc",
+    "unittests/vmpl_unittest.cc",
+  ]
+  deps = [ "$zx/kernel/lib/unittest" ]
+}

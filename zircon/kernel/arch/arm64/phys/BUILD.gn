@@ -1,1 +1,28 @@
-BUILD.zircon.gn
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+config("strict-align") {
+  cflags = [ "-mstrict-align" ]
+}
+
+source_set("phys") {
+  sources = [ "start.S" ]
+  include_dirs = [ "$zx/.." ]
+  deps = [
+    "$zx/kernel/lib/arch",
+    "$zx/system/ulib/static-pie",
+  ]
+}
+
+config("zbi_executable.config") {
+  # ZBI executables can be loaded anywhere, so they are linked at 0.
+  ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0" ]
+}
+
+config("qemu.config") {
+  # Direct QEMU phys executables are the same.
+  configs = [ ":zbi_executable.config" ]
+}

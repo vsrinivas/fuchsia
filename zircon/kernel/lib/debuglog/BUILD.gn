@@ -1,1 +1,32 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("debuglog") {
+  kernel = true
+  sources = [ "debuglog.cc" ]
+  deps = [
+    ":tests",
+    "$zx/kernel/dev/udisplay:headers",
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/crashlog",
+    "$zx/kernel/lib/init",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/version",
+  ]
+}
+
+source_set("tests") {
+  #TODO: testonly = true
+  visibility = [ ":*" ]
+  sources = [ "debuglog_tests.cc" ]
+
+  deps = [
+    ":headers",
+    "$zx/kernel/lib/unittest",
+  ]
+}

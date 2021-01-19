@@ -1,1 +1,28 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+source_set("arm64") {
+  if (toolchain.tags + [ "strict-align" ] - [ "strict-align" ] !=
+      toolchain.tags) {
+    # This environment can't handled unaligned accesses, which the
+    # optimized assembly routines do.
+    sources = [
+      "$zx/kernel/lib/libc/string/memcpy.c",
+      "$zx/kernel/lib/libc/string/memset.c",
+    ]
+    deps = [ "$zx/kernel/lib/libc:headers" ]
+  } else {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    # and '#include "third_party/lib/cortex-strings/no-neon/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
+    sources = [
+      "memcpy.S",
+      "memset.S",
+    ]
+  }
+}

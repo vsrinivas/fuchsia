@@ -1,1 +1,39 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/zircon/migrated_targets.gni")
+
+source_set("sanitizers") {
+  deps = [
+    "$zx/system/fidl:fuchsia-debugdata.c_header",
+    "$zx/system/fidl:fuchsia-io.c_header",
+    "$zx/system/ulib/zx",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "__asan_early_init.c",
+    "asan-stubs.c",
+    "debugdata.cc",
+    "hooks.c",
+    "log.c",
+    "memory-snapshot.cc",
+    "ubsan-stubs.cc",
+  ]
+
+  # There is no '#if __has_feature(coverage)', so this has to be excluded
+  # from the build entirely when not in use.  Each variant that includes
+  # some -fsanitize-coverage=... switches in its configs must use the
+  # "sancov" tag so this code can detect it.
+  if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
+    deps += [ ":sancov-stubs" ]
+  }
+}
+
+# This code is only needed when compiling for sancov, but the file itself
+# must be compiled without instrumentation of any kind.
+source_set("sancov-stubs") {
+  visibility = [ ":*" ]
+  sources = [ "sancov-stubs.cc" ]
+  configs += [ "$zx_build_config:no_sanitizers" ]
+}

@@ -1,1 +1,45 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/kernel/params.gni")
+
+source_set("generic-arm") {
+  sources = [ "platform.cc" ]
+  deps = [
+    "$zx/kernel/dev/hdcp/amlogic_s912",
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/dev/hw_rng/amlogic_rng",
+    "$zx/kernel/dev/hw_watchdog/generic32",
+    "$zx/kernel/dev/interrupt/arm_gic/common",
+    "$zx/kernel/dev/interrupt/arm_gic/v2",
+    "$zx/kernel/dev/interrupt/arm_gic/v3",
+    "$zx/kernel/dev/pcie",
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/dev/pdev/power",
+    "$zx/kernel/dev/power/as370",
+    "$zx/kernel/dev/power/msm",
+    "$zx/kernel/dev/psci",
+    "$zx/kernel/dev/timer/arm_generic",
+    "$zx/kernel/dev/uart/amlogic_s905",
+    "$zx/kernel/dev/uart/dw8250",
+    "$zx/kernel/dev/uart/msm",
+    "$zx/kernel/dev/uart/mt8167",
+    "$zx/kernel/dev/uart/nxp-imx",
+    "$zx/kernel/dev/uart/pl011",
+    "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/init",
+    "$zx/kernel/lib/lockdep",
+    "$zx/kernel/lib/memory_limit",
+    "$zx/kernel/lib/topology",
+    "$zx/kernel/object",
+    "$zx/kernel/vm",
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/zbitl",
+  ]
+}

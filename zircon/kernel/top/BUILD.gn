@@ -1,1 +1,32 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+if (zx != "/") {
+  # For zircon_cpu definition.
+  import("//build/unification/global_variables.gni")
+}
+
+source_set("top") {
+  sources = [
+    "debug.cc",
+    "init.cc",
+    "main.cc",
+  ]
+  deps = [
+    "$zx/kernel/arch/$zircon_cpu",
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/kernel",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/crashlog",
+    "$zx/kernel/lib/debuglog",
+    "$zx/kernel/lib/init",
+    "$zx/kernel/lib/io",
+    "$zx/kernel/lib/lockup_detector",
+    "$zx/kernel/lib/userabi",
+    "$zx/kernel/lib/version",
+    "$zx/kernel/platform",
+  ]
+}

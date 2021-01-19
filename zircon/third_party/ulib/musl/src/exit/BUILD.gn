@@ -1,1 +1,28 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("exit") {
+  sources = [
+    "__cxa_thread_atexit.c",
+    "assert.c",
+    "at_quick_exit.c",
+    "atexit.c",
+    "exit.c",
+    "quick_exit.c",
+  ]
+  deps = [
+    ":abort",
+    "$zx/system/ulib/zircon",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+
+  configs -= [ "$zx_build_config:visibility_hidden" ]
+}
+
+source_set("abort") {
+  sources = [ "abort.c" ]
+  deps = [ "$zx/system/ulib/zircon" ]
+
+  configs -= [ "$zx_build_config:visibility_hidden" ]
+}

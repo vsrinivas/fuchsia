@@ -1,1 +1,120 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+group("tests") {
+  deps = [ ":phys" ]
+  if (toolchain.environment == "kernel") {
+    deps += [ ":kernel" ]
+  } else {  # TODO(fxbug.dev/67010): testonly in kernel proper
+    testonly = true
+  }
+}
+
+# This is the subset that's compatible with the kernel.phys environment.
+source_set("phys") {
+  # TODO(fxbug.dev/67010): testonly = true
+  testonly = toolchain.environment != "kernel"
+  cflags = [ "-fno-builtin" ]
+  sources = [
+    "ktl_type_traits_tests.cc",
+    "popcount.cc",
+    "printf_tests.cc",
+    "relocation_tests.cc",
+    "string_view_tests.cc",
+    "unittest_tests.cc",
+  ]
+  deps = [
+    ":zbitl",
+    "$zx/kernel/lib/boot-options/tests:kernel-tests",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/libc",
+    "$zx/kernel/lib/unittest",
+    "$zx/system/ulib/fbl",
+  ]
+
+  if (toolchain.environment == "kernel") {
+    deps += [ "$zx/kernel/lib/console" ]
+  }
+}
+
+source_set("zbitl") {
+  # TODO(fxbug.dev/67010): testonly = true
+  testonly = toolchain.environment != "kernel"
+  sources = [ "zbitl_tests.cc" ]
+
+  deps = [
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/libc",
+    "$zx/kernel/lib/unittest",
+    "$zx/system/ulib/zbitl",
+  ]
+
+  if (toolchain.environment == "kernel") {
+    deps += [ "$zx/kernel/lib/console" ]
+  }
+}
+
+if (toolchain.environment == "kernel") {
+  # These are only for the kernel proper.
+  source_set("kernel") {
+    # TODO(fxbug.dev/67010): testonly = true
+    cflags = [ "-fno-builtin" ]
+    sources = [
+      "alloc_checker_tests.cc",
+      "benchmarks.cc",
+      "brwlock_tests.cc",
+      "cache_tests.cc",
+      "clock_tests.cc",
+      "cpu_search_tests.cc",
+      "dpc_tests.cc",
+      "event_tests.cc",
+      "fibo.cc",
+      "interrupt_disable_tests.cc",
+      "job_tests.cc",
+      "lock_dep_tests.cc",
+      "mem_tests.cc",
+      "mmu_tests.cc",
+      "mp_hotplug_tests.cc",
+      "mutex_spin_time_tests.cc",
+      "pi_tests.cc",
+      "pow2_tests.cc",
+      "preempt_disable_tests.cc",
+      "relaxed_atomic_tests.cc",
+      "relocation_tests.cc",
+      "resource_tests.cc",
+      "sleep_tests.cc",
+      "span_tests.cc",
+      "string_tests.cc",
+      "sync_ipi_tests.cc",
+      "tests.cc",
+      "thread_dispatcher_tests.cc",
+      "thread_tests.cc",
+      "timer_tests.cc",
+      "uart_tests.cc",
+      "userboot_tests.cc",
+      "variant_tests.cc",
+    ]
+    deps = [
+      "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/crypto",
+      "$zx/kernel/lib/debuglog",
+      "$zx/kernel/lib/fbl",
+      "$zx/kernel/lib/instrumentation/test:tests",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/root_resource_filter",
+      "$zx/kernel/lib/unittest",
+      "$zx/kernel/lib/userabi",
+      "$zx/kernel/lib/zxc",
+      "$zx/kernel/object",
+      "$zx/system/ulib/affine",
+      "$zx/system/ulib/pretty",
+    ]
+    public_deps = [ "$zx/system/ulib/zx:headers" ]
+  }
+}

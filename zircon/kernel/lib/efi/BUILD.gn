@@ -1,1 +1,42 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("efi") {
+  visibility = [
+    "$zx/kernel/*",
+    "$zx/system/ulib/zbitl/*",
+    "//src/firmware/gigaboot/*",
+  ]
+  kernel = true
+  host = true
+  sources = []
+  static = true
+  sdk = "source"
+  sdk_headers = [
+    "efi/boot-services.h",
+    "efi/runtime-services.h",
+    "efi/system-table.h",
+    "efi/types.h",
+    "efi/protocol/block-io.h",
+    "efi/protocol/device-path.h",
+    "efi/protocol/device-path-to-text.h",
+    "efi/protocol/disk-io.h",
+    "efi/protocol/driver-binding.h",
+    "efi/protocol/file.h",
+    "efi/protocol/graphics-output.h",
+    "efi/protocol/loaded-image.h",
+    "efi/protocol/managed-network.h",
+    "efi/protocol/pci-root-bridge-io.h",
+    "efi/protocol/simple-file-system.h",
+    "efi/protocol/simple-network.h",
+    "efi/protocol/simple-text-input.h",
+    "efi/protocol/simple-text-output.h",
+    "efi/protocol/usb-io.h",
+  ]
+  sdk_migrated = true
+}

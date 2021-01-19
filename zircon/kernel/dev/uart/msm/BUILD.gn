@@ -1,1 +1,16 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("msm") {
+  sources = [ "uart.cc" ]
+  deps = [
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/dev/pdev/uart",
+    "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/debuglog",
+    "$zx/kernel/lib/zxc",
+  ]
+}
