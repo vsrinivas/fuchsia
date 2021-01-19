@@ -36,10 +36,7 @@ use crate::{
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
     link::{new_link, LinkReceiver, LinkRouting, LinkSender},
-    peer::{
-        AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, MessageStats, Peer,
-        StreamProperties,
-    },
+    peer::{FramedStreamReader, FramedStreamWriter, MessageStats, Peer, PeerConnRef},
     proxy::{IntoProxied, ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
 };
 use anyhow::{bail, format_err, Context as _, Error};
@@ -103,13 +100,13 @@ type PendingTransferMap = BTreeMap<TransferKey, PendingTransfer>;
 #[derive(Debug)]
 pub(crate) enum FoundTransfer {
     Fused(Handle),
-    Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader),
+    Remote(FramedStreamWriter, FramedStreamReader),
 }
 
 #[derive(Debug)]
 pub(crate) enum OpenedTransfer {
     Fused,
-    Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader, Handle),
+    Remote(FramedStreamWriter, FramedStreamReader, Handle),
 }
 
 struct PeerMaps {
@@ -656,9 +653,9 @@ impl Router {
     // Prepare a handle to be sent to another machine.
     // Returns a ZirconHandle describing the established proxy.
     pub(crate) async fn send_proxied(
-        self: Arc<Self>,
+        self: &Arc<Self>,
         handle: Handle,
-        conn: AsyncConnection,
+        conn: PeerConnRef<'_>,
         stats: Arc<MessageStats>,
     ) -> Result<ZirconHandle, Error> {
         let raw_handle = handle.raw_handle(); // for debugging
@@ -757,9 +754,9 @@ impl Router {
     // Take a received handle description and construct a fidl::Handle that represents it
     // whilst establishing proxies as required
     pub(crate) async fn recv_proxied(
-        self: Arc<Self>,
+        self: &Arc<Self>,
         handle: ZirconHandle,
-        conn: AsyncConnection,
+        conn: PeerConnRef<'_>,
         stats: Arc<MessageStats>,
     ) -> Result<Handle, Error> {
         let (tx, rx) = futures::channel::oneshot::channel();
@@ -774,7 +771,7 @@ impl Router {
                     rights,
                     rx,
                     stream_ref,
-                    &conn,
+                    conn,
                     stats,
                     Arc::downgrade(&self),
                 )
@@ -801,7 +798,7 @@ impl Router {
                     rights,
                     rx,
                     stream_ref,
-                    &conn,
+                    conn,
                     stats,
                     Arc::downgrade(&self),
                 )

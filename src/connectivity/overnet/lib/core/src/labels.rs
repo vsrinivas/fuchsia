@@ -7,31 +7,7 @@ use rand::Rng;
 use std::array::TryFromSliceError;
 use std::convert::{TryFrom, TryInto};
 
-/// Labels the endpoint of a client/server connection.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub enum Endpoint {
-    /// Client endpoint.
-    Client,
-    /// Server endpoint.
-    Server,
-}
-
-impl Endpoint {
-    pub(crate) fn quic_id_bit(&self) -> u64 {
-        match self {
-            Endpoint::Client => 0,
-            Endpoint::Server => 1,
-        }
-    }
-
-    /// Returns the other end of this endpoint.
-    pub fn opposite(&self) -> Endpoint {
-        match self {
-            Endpoint::Client => Endpoint::Server,
-            Endpoint::Server => Endpoint::Client,
-        }
-    }
-}
+pub use quic::Endpoint;
 
 /// Labels a node with a mesh-unique address
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash, Debug)]
