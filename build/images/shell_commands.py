@@ -40,6 +40,7 @@ def main():
 
     input_dist = json.load(args.input_distribution_manifest)
     output_dist = []
+    shebang_files = []
 
     for dist in input_dist:
         dest = dist["destination"]
@@ -51,6 +52,7 @@ def main():
             # shebang files.
             continue
         shebang_file = os.path.join(args.output_directory, dest)
+        shebang_files.append(shebang_file)
         os.makedirs(os.path.dirname(shebang_file), exist_ok=True)
         with open(shebang_file, 'w') as f:
             f.write(
@@ -66,8 +68,8 @@ def main():
         separators=(',', ': '))
 
     args.depfile.write(
-        args.output_distribution_manifest.name + ": " +
-        ' '.join(dist['source'] for dist in output_dist) + '\n')
+        '{}: {}\n'.format(
+            args.output_distribution_manifest.name, ' '.join(shebang_files)))
 
     return 0
 
