@@ -1065,7 +1065,12 @@ static fdio_ops_t fdio_stream_socket_ops = {
               return ZX_ERR_SHOULD_WAIT;
           }
 
-          return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+          auto status = fdio_zxio_recvmsg(io, msg, flags, out_actual);
+          if (status == ZX_ERR_INVALID_ARGS) {
+            status = ZX_OK;
+            *out_code = EFAULT;
+          }
+          return status;
         },
     .sendmsg =
         [](fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
@@ -1080,7 +1085,12 @@ static fdio_ops_t fdio_stream_socket_ops = {
               return ZX_ERR_SHOULD_WAIT;
           }
 
-          return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+          auto status = fdio_zxio_sendmsg(io, msg, flags, out_actual);
+          if (status == ZX_ERR_INVALID_ARGS) {
+            status = ZX_OK;
+            *out_code = EFAULT;
+          }
+          return status;
         },
 
     .shutdown =

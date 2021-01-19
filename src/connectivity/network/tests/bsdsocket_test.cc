@@ -2224,28 +2224,8 @@ auto disableSIGPIPE(bool isWrite) {
 
 class IOMethodTest : public ::testing::TestWithParam<IOMethod> {};
 
-// TODO(tamird): do the same test with stream sockets.
-TEST_P(IOMethodTest, NullptrFault) {
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
-      << strerror(errno);
-
-  auto ioMethod = GetParam();
-
-  {
-    const struct sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_port = 1235,
-        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
-    };
-
-    ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-        << strerror(errno);
-
-    ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-        << strerror(errno);
-  }
-
+void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod ioMethod,
+                 bool datagram) {
   // A version of ioMethod::executeIO with special handling for vectorized operations: a 1-byte
   // buffer is prepended to the argument.
   auto executeIO = [ioMethod](int fd, char* buf, size_t len) {
@@ -2253,7 +2233,7 @@ TEST_P(IOMethodTest, NullptrFault) {
     struct iovec iov[] = {
         {
             .iov_base = buffer,
-            .iov_len = sizeof(buffer),
+            .iov_len = std::size(buffer),
         },
         {
             .iov_base = buf,
@@ -2284,11 +2264,8 @@ TEST_P(IOMethodTest, NullptrFault) {
     }
   };
 
-  // Receive some data so we can attempt to read it below.
-  if (!ioMethod.isWrite()) {
-    char buffer[] = {0x74, 0x75};
-    ASSERT_EQ(send(fd.get(), buffer, sizeof(buffer), 0), static_cast<ssize_t>(sizeof(buffer)))
-        << strerror(errno);
+  auto prepareForRead = [&](const char* buf, size_t len) {
+    ASSERT_EQ(send(other.get(), buf, len, 0), static_cast<ssize_t>(len)) << strerror(errno);
 
     // Wait for the packet to arrive since we are nonblocking.
     struct pollfd pfd = {
@@ -2300,74 +2277,234 @@ TEST_P(IOMethodTest, NullptrFault) {
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLIN);
+  };
+
+  auto confirmWrite = [&]() {
+    char buffer[1];
+#if defined(__Fuchsia__)
+    if (!datagram) {
+      switch (ioMethod.Op()) {
+        case IOMethod::Op::WRITE:
+        case IOMethod::Op::SEND:
+        case IOMethod::Op::SENDTO:
+          break;
+        case IOMethod::Op::WRITEV:
+        case IOMethod::Op::SENDMSG: {
+          // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
+          // operations, so these vector operations end up having sent the byte provided in the
+          // executeIO closure. See https://fxbug.dev/67928 for more details.
+          //
+          // Wait for the packet to arrive since we are nonblocking.
+          struct pollfd pfd = {
+              .fd = other.get(),
+              .events = POLLIN,
+          };
+          int n = poll(&pfd, 1, kTimeout);
+          ASSERT_GE(n, 0) << strerror(errno);
+          ASSERT_EQ(n, 1);
+          EXPECT_EQ(pfd.revents, POLLIN);
+          EXPECT_EQ(recv(other.get(), buffer, std::size(buffer), 0), 1) << strerror(errno);
+          return;
+        }
+        default:
+          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+      }
+    }
+#endif
+    // Nothing was sent. This is not obvious in the vectorized case.
+    EXPECT_EQ(recv(other.get(), buffer, std::size(buffer), 0), -1);
+    EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+  };
+
+  // Receive some data so we can attempt to read it below.
+  if (!ioMethod.isWrite()) {
+    char buffer[] = {0x74, 0x75};
+    prepareForRead(buffer, std::size(buffer));
   }
 
-  EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
-  EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  [&]() {
+#if defined(__Fuchsia__)
+    if (!datagram) {
+      switch (ioMethod.Op()) {
+        case IOMethod::Op::READ:
+        case IOMethod::Op::RECV:
+        case IOMethod::Op::RECVFROM:
+        case IOMethod::Op::WRITE:
+        case IOMethod::Op::SEND:
+        case IOMethod::Op::SENDTO:
+          break;
 
-  {
+        case IOMethod::Op::READV:
+        case IOMethod::Op::RECVMSG:
+        case IOMethod::Op::WRITEV:
+        case IOMethod::Op::SENDMSG:
+          // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
+          // operations, so these vector operations report success on the byte provided in the
+          // executeIO closure.
+          EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
+          return;
+      }
+    }
+#endif
+    EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
+    EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  }();
+
+  if (ioMethod.isWrite()) {
+    confirmWrite();
+  } else {
     char buffer[1];
-    if (ioMethod.isWrite()) {
-      // Nothing was sent. This is not obvious in the vectorized case.
-      EXPECT_EQ(recv(fd.get(), buffer, sizeof(buffer), 0), -1);
+    auto result = executeIO(fd.get(), buffer, std::size(buffer));
+    if (datagram) {
+      // The datagram was consumed in spite of the buffer being null.
+      EXPECT_EQ(result, -1);
       EXPECT_EQ(errno, EAGAIN) << strerror(errno);
     } else {
-      // The message was discarded in spite of the buffer being null.
-      EXPECT_EQ(executeIO(fd.get(), buffer, sizeof(buffer)), -1);
-      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+      ssize_t space = std::size(buffer);
+      switch (ioMethod.Op()) {
+        case IOMethod::Op::READ:
+        case IOMethod::Op::RECV:
+        case IOMethod::Op::RECVFROM:
+          break;
+        case IOMethod::Op::READV:
+        case IOMethod::Op::RECVMSG:
+#if defined(__Fuchsia__)
+          // Fuchsia consumed one byte above.
+#else
+          // An additional byte of space was provided in the executeIO closure.
+          space += 1;
+#endif
+          break;
+        default:
+          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+      }
+      EXPECT_EQ(result, space) << strerror(errno);
     }
   }
 
   // Do it again, but this time write less data so that vector operations can work normally.
   if (!ioMethod.isWrite()) {
     char buffer[] = {0x74};
-    ASSERT_EQ(send(fd.get(), buffer, sizeof(buffer), 0), static_cast<ssize_t>(sizeof(buffer)))
-        << strerror(errno);
-
-    // Wait for the packet to arrive since we are nonblocking.
-    struct pollfd pfd = {
-        .fd = fd.get(),
-        .events = POLLIN,
-    };
-
-    int n = poll(&pfd, 1, kTimeout);
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 1);
-    EXPECT_EQ(pfd.revents, POLLIN);
+    prepareForRead(buffer, std::size(buffer));
   }
 
   switch (ioMethod.Op()) {
+    case IOMethod::Op::WRITEV:
+    case IOMethod::Op::SENDMSG:
+#if defined(__Fuchsia__)
+      if (!datagram) {
+        // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
+        // operations, so these vector operations report success on the byte provided in the
+        // executeIO closure.
+        EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
+        break;
+      }
+#endif
     case IOMethod::Op::READ:
     case IOMethod::Op::RECV:
     case IOMethod::Op::RECVFROM:
     case IOMethod::Op::WRITE:
     case IOMethod::Op::SEND:
     case IOMethod::Op::SENDTO:
-    case IOMethod::Op::WRITEV:
-    case IOMethod::Op::SENDMSG:
       EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
       EXPECT_EQ(errno, EFAULT) << strerror(errno);
       break;
     case IOMethod::Op::READV:
     case IOMethod::Op::RECVMSG:
       // These vectorized operations never reach the faulty buffer, so they work normally.
-      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1);
-      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
       break;
   }
 
-  {
+  if (ioMethod.isWrite()) {
+    confirmWrite();
+  } else {
     char buffer[1];
-    if (ioMethod.isWrite()) {
-      // Nothing was sent. This is not obvious in the vectorized case.
-      EXPECT_EQ(recv(fd.get(), buffer, sizeof(buffer), 0), -1);
+    auto result = executeIO(fd.get(), buffer, std::size(buffer));
+    if (datagram) {
+      // The datagram was consumed in spite of the buffer being null.
+      EXPECT_EQ(result, -1);
       EXPECT_EQ(errno, EAGAIN) << strerror(errno);
     } else {
-      // The message was discarded in spite of the buffer being null.
-      EXPECT_EQ(executeIO(fd.get(), buffer, sizeof(buffer)), -1);
-      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+      switch (ioMethod.Op()) {
+        case IOMethod::Op::READ:
+        case IOMethod::Op::RECV:
+        case IOMethod::Op::RECVFROM:
+          EXPECT_EQ(result, static_cast<ssize_t>(std::size(buffer))) << strerror(errno);
+          break;
+        case IOMethod::Op::READV:
+        case IOMethod::Op::RECVMSG:
+          // The byte we sent was consumed in the executeIO closure.
+          EXPECT_EQ(result, -1);
+          EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+          break;
+        default:
+          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+      }
     }
   }
+}
+
+TEST_P(IOMethodTest, NullptrFaultDGRAM) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+  const struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_port = 1235,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+
+  ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  doNullPtrIO(fd, fd, GetParam(), true);
+}
+
+TEST_P(IOMethodTest, NullptrFaultSTREAM) {
+  fbl::unique_fd listener, client, server;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_ANY),
+  };
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+
+  ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+  int ret;
+  EXPECT_EQ(
+      ret = connect(client.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      -1);
+  if (ret == -1) {
+    ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
+
+    struct pollfd pfd = {
+        .fd = client.get(),
+        .events = POLLOUT,
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+  }
+
+  ASSERT_TRUE(server = fbl::unique_fd(accept4(listener.get(), nullptr, nullptr, SOCK_NONBLOCK)))
+      << strerror(errno);
+  ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+
+  doNullPtrIO(client, server, GetParam(), false);
 }
 
 // BeforeConnect tests the application behavior when we start to
