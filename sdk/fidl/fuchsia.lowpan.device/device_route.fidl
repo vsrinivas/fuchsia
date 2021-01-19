@@ -1,0 +1,169 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+using fuchsia.lowpan;
+
+const uint32 MAX_ON_MESH_PREFIXES = 32;
+const uint32 MAX_EXTERNAL_ROUTES = 32;
+
+/// Route preference, as described in RFC4191.
+enum RoutePreference : int8 {
+    /// Low route preference.
+    LOW = -1;
+
+    /// Medium route preference.
+    MEDIUM = 0;
+
+    /// High route preference.
+    HIGH = 1;
+};
+
+/// LoWPAN On-Mesh Prefix.
+///
+/// Informed by the Thread 1.1.1 Specification, section 5.13.2.
+table OnMeshPrefix {
+    /// Subnet to advertise for devices to use on the network. Required.
+    1: fuchsia.lowpan.Ipv6Subnet subnet;
+
+    /// If present, indicates that this device is offering a default route
+    /// as well as indicating the what preference this default
+    /// route should be given relative to other devices offering default
+    /// routes. If not present, no default route is advertised.
+    ///
+    /// Based on `P_default` and `P_preference` from Section 5.13.2 of the
+    /// Thread 1.1.1 Specification.
+    2: RoutePreference default_route_preference;
+
+    /// True if the route is expected to be available for at least Thread's
+    /// `MIN_STABLE_LIFETIME`; otherwise `false`. If not present, assumed to
+    /// be `false`.
+    ///
+    /// The Thread specification defines `MIN_STABLE_LIFETIME` as 168 hours.
+    ///
+    /// Based on `P_stable` from Section 5.13.2 of the
+    /// Thread 1.1.1 Specification.
+    3: bool stable;
+
+    /// True if network devices are allowed to use previously configured
+    /// addresses using this prefix. If not present, assumed to be `false`.
+    ///
+    /// "SLAAC" referrs to StateLess Address Auto Configuration, described in
+    /// [RFC4862](https://tools.ietf.org/html/rfc4862).
+    ///
+    /// Based on `P_slaac_preferred` from Section 5.13.2 of the
+    /// Thread 1.1.1 Specification.
+    4: bool slaac_preferred;
+
+    /// True if network devices are allowed to autoconfigure addresses using
+    /// this prefix. If not present, assumed to be `false`.
+    ///
+    /// "SLAAC" referrs to StateLess Address Auto Configuration, described in
+    /// [RFC4862](https://tools.ietf.org/html/rfc4862).
+    ///
+    /// Based on `P_slaac_valid` from Section 5.13.2 of the
+    /// Thread 1.1.1 Specification.
+    5: bool slaac_valid;
+};
+
+/// LoWPAN External Route.
+///
+/// Informed by the Thread 1.1.1 Specification, section 5.13.3.
+table ExternalRoute {
+    /// Subnet for route. Required.
+    1: fuchsia.lowpan.Ipv6Subnet subnet;
+
+    /// Indicates the what preference this route should be given relative
+    /// to other devices offering the same external route. If not present,
+    /// `MEDIUM` preference is assumed.
+    ///
+    /// Based on `R_preference` from Section 5.13.3 of the Thread 1.1.1
+    /// Specification.
+    2: RoutePreference route_preference;
+
+    /// True if the route is expected to be available for at least Thread's
+    /// `MIN_STABLE_LIFETIME`; otherwise, `false`. If not present, assumed to
+    /// be `false`.
+    ///
+    /// The Thread specification defines `MIN_STABLE_LIFETIME` as 168 hours.
+    ///
+    /// Based on `R_stable` from Section 5.13.3 of the Thread 1.1.1
+    /// Specification.
+    3: bool stable;
+};
+
+/// LoWPAN protocol for IPv6 route and prefix management methods that
+/// do not expose PII.
+///
+/// Note that methods that deal with PII are located in the
+/// `DeviceRouteExtra` protocol.
+protocol DeviceRoute {
+    /// Registers an on-mesh prefix to be advertised on the
+    /// current network.
+    ///
+    /// Subsequent calls with the same value for the `subnet` field will
+    /// update the properties associated with that on-mesh prefix.
+    ///
+    /// These changes persist like adding an IP address would,
+    /// and will stick around until explicitly removed or
+    /// the interface component is reset/restarted.
+    ///
+    /// If the given `OnMeshPrefix` structure is invalid for some reason
+    /// (missing required fields, invalid values, etc), the channel will be
+    /// closed with the epitaph `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// If registering a new on-mesh prefix and the maximum number of
+    /// on-mesh prefixes has already been registered, this channel will
+    /// be closed with the epitaph `ZX_ERR_NO_RESOURCES`.
+    RegisterOnMeshPrefix(OnMeshPrefix prefix) -> ();
+
+    /// Unregisters any on-mesh prefix that was previously registered with
+    /// `RegisterOnMeshPrefix`.  It returns once the on-mesh prefix has
+    /// been removed locally.
+    ///
+    /// If the given mesh prefix was not previously registered,
+    /// no action is taken.
+    UnregisterOnMeshPrefix(fuchsia.lowpan.Ipv6Subnet subnet) -> ();
+
+    /// Registers an external route to be advertised on the
+    /// current network.
+    ///
+    /// Subsequent calls with the same value for the `subnet` field will
+    /// update the properties associated with that route.
+    ///
+    /// These changes persist like adding an IP address would,
+    /// and will stick around until explicitly removed or
+    /// the interface component is reset/restarted.
+    ///
+    /// If the given `ExternalRoute` structure is invalid for some reason
+    /// (missing required fields, invalid values, etc), the channel will be
+    /// closed with the epitaph `ZX_ERR_INVALID_ARGUMENT`.
+    ///
+    /// If registering a new external route and the maximum number of
+    /// external routes has already been registered, this channel will
+    /// be closed with the epitaph `ZX_ERR_NO_RESOURCES`.
+    RegisterExternalRoute(ExternalRoute external_route) -> ();
+
+    /// Unregisters any external route that was previously registered with
+    /// `RegisterExternalRoute`. It returns once the external route has
+    /// been removed locally.
+    ///
+    /// If the given external route was not previously registered,
+    /// no action is taken.
+    UnregisterExternalRoute(fuchsia.lowpan.Ipv6Subnet subnet) -> ();
+};
+
+/// LoWPAN protocol for IPv6 route and prefix management methods that
+/// expose PII.
+///
+/// Note that methods that do not deal with PII are located in the
+/// `DeviceRoute` protocol.
+protocol DeviceRouteExtra {
+    /// Returns a vector containing all of the locally added on-mesh prefixes.
+    GetLocalOnMeshPrefixes() -> (vector<OnMeshPrefix>:MAX_ON_MESH_PREFIXES prefixes);
+
+    /// Returns a vector containing all of the locally added external routes.
+    GetLocalExternalRoutes() -> (vector<ExternalRoute>:MAX_EXTERNAL_ROUTES external_routes);
+};

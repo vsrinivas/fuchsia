@@ -9,6 +9,7 @@ fidl("fuchsia.lowpan.device") {
 
   sources = [
     "device.fidl",
+    "device_route.fidl",
     "energy_scanner.fidl",
     "misc.fidl",
     "network_scanner.fidl",
@@ -19,5 +20,6 @@ fidl("fuchsia.lowpan.device") {
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan",
     "//sdk/fidl/fuchsia.lowpan.test",
+    "//sdk/fidl/fuchsia.net",
   ]
 }
