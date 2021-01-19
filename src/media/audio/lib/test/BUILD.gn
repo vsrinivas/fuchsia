@@ -86,6 +86,7 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fxl",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

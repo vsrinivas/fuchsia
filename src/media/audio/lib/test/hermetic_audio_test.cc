@@ -5,6 +5,8 @@
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 #include <lib/inspect/cpp/hierarchy.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #include <sstream>
 #include <vector>
@@ -21,6 +23,21 @@
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/virtual_device.h"
 
+namespace {
+class TraceDispatcher {
+ public:
+  TraceDispatcher()
+      : trace_provider_(trace::TraceProviderWithFdio(loop_.dispatcher(), "trace_provider")) {
+    loop_.StartThread();
+  }
+
+ private:
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  trace::TraceProviderWithFdio trace_provider_;
+};
+static TraceDispatcher* const trace_dispatcher = new TraceDispatcher;
+}  // namespace
+
 namespace media::audio::test {
 
 std::optional<HermeticAudioEnvironment::Options> HermeticAudioTest::test_suite_options_;
@@ -33,21 +50,20 @@ void HermeticAudioTest::SetUpEnvironment() {
   auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
 
-  environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
-  virtual_audio_control_sync_->Enable();
+  {
+    TRACE_DURATION("audio", "HermeticAudioTest::ConnectToVAD");
+    environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
+    virtual_audio_control_sync_->Enable();
+  }
 
   environment_->ConnectToService(thermal_controller_.NewRequest());
   environment_->ConnectToService(thermal_test_control_sync_.NewRequest());
 }
 
-void HermeticAudioTest::TearDownEnvironment() {
-  if (virtual_audio_control_sync_.is_bound()) {
-    virtual_audio_control_sync_->Disable();
-  }
-  environment_ = nullptr;
-}
+void HermeticAudioTest::TearDownEnvironment() { environment_ = nullptr; }
 
 void HermeticAudioTest::SetUp() {
+  TRACE_DURATION_BEGIN("audio", "HermeticAudioTest::RunTest");
   SetUpEnvironment();
   TestFixture::SetUp();
 
@@ -61,6 +77,7 @@ void HermeticAudioTest::SetUp() {
   AddErrorHandler(audio_dev_enum_, "AudioDeviceEnumerator");
   WatchForDeviceArrivals();
 
+  TRACE_DURATION("audio", "HermeticAudioTest::WaitForAudioDeviceEnumerator");
   // A race can occur in which a device is added before the OnDeviceAdded callback is registered,
   // which causes the OnDefaultDeviceChanged callback to fail to recognize the default device.
   //
@@ -78,9 +95,13 @@ void HermeticAudioTest::SetUp() {
       pending_default_device_tokens_.pop();
     }
   });
+
+  TRACE_DURATION_BEGIN("audio", "HermeticAudioTest::RunTestBody");
 }
 
 void HermeticAudioTest::TearDown() {
+  TRACE_DURATION_END("audio", "HermeticAudioTest::RunTestBody");
+
   // Remove all components.
   for (auto& [_, device] : devices_) {
     device.output = nullptr;
@@ -95,6 +116,7 @@ void HermeticAudioTest::TearDown() {
 
   TestFixture::TearDown();
   TearDownEnvironment();
+  TRACE_DURATION_END("audio", "HermeticAudioTest::RunTest");
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

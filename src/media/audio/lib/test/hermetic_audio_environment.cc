@@ -16,6 +16,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
@@ -101,6 +102,8 @@ void HermeticAudioEnvironment::EnvironmentMain(HermeticAudioEnvironment* env) {
 }
 
 HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(options) {
+  TRACE_DURATION("audio", "HermeticAudioEnvironment::Create");
+
   // Create the thread here to ensure the rest of the class has fully initialized before starting
   // the new thread, which takes a reference to |this|.
   env_thread_ = std::thread(EnvironmentMain, this);
@@ -118,10 +121,16 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(o
   // because some test fixtures override these methods and include some asserts that will not
   // be valid when this is run.
   fuchsia::io::DirectorySyncPtr devfs_dir;
-  devmgr_services_->Connect(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
-  fuchsia::io::NodeInfo info;
-  zx_status_t status = devfs_dir->Describe(&info);
-  FX_CHECK(status == ZX_OK) << status;
+  {
+    TRACE_DURATION("audio", "HermeticAudioEnvironment::ConnectDevFS");
+    devmgr_services_->Connect(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
+  }
+  {
+    TRACE_DURATION("audio", "HermeticAudioEnvironment::DescribeDevFS");
+    fuchsia::io::NodeInfo info;
+    zx_status_t status = devfs_dir->Describe(&info);
+    FX_CHECK(status == ZX_OK) << status;
+  }
 }
 
 void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
