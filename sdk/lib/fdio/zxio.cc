@@ -294,7 +294,9 @@ static zxio_signals_t zxio_signals_to_poll_events(zxio_signals_t signals) {
   return events;
 }
 
-static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) { return (zxio_remote_t*)fdio_get_zxio(io); }
+static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
+  return reinterpret_cast<zxio_remote_t*>(fdio_get_zxio(io));
+}
 
 static zx_status_t fdio_zxio_remote_borrow_channel(fdio_t* io, zx_handle_t* out_borrowed) {
   zxio_remote_t* remote = fdio_get_zxio_remote(io);
@@ -423,14 +425,15 @@ Errno fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
         return Errno(ENOTTY);
       }
 
-      auto result = fpty::Device::Call::GetWindowSize(std::move(device));
+      auto result = fpty::Device::Call::GetWindowSize(device);
       if (result.status() != ZX_OK || result->status != ZX_OK) {
         return Errno(ENOTTY);
       }
 
-      struct winsize size = {};
-      size.ws_row = static_cast<unsigned short>(result->size.height);
-      size.ws_col = static_cast<unsigned short>(result->size.width);
+      struct winsize size = {
+          .ws_row = static_cast<uint16_t>(result->size.height),
+          .ws_col = static_cast<uint16_t>(result->size.width),
+      };
       struct winsize* out_size = va_arg(va, struct winsize*);
       *out_size = size;
       return Errno(Errno::Ok);
@@ -446,7 +449,7 @@ Errno fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
       size.width = in_size->ws_col;
       size.height = in_size->ws_row;
 
-      auto result = fpty::Device::Call::SetWindowSize(std::move(device), size);
+      auto result = fpty::Device::Call::SetWindowSize(device, size);
       if (result.status() != ZX_OK || result->status != ZX_OK) {
         return Errno(ENOTTY);
       }
@@ -589,7 +592,7 @@ fdio_t* fdio_vmofile_create(fio::File::SyncClient control, zx::vmo vmo, zx_off_t
 // Pipe ------------------------------------------------------------------------
 
 static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
-  return (zxio_pipe_t*)fdio_get_zxio(io);
+  return reinterpret_cast<zxio_pipe_t*>(fdio_get_zxio(io));
 }
 
 Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va) {
@@ -625,7 +628,7 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
     flags &= ~MSG_PEEK;
   }
   if (flags) {
-    // TODO: support MSG_OOB
+    // TODO(https://fxbug.dev/67925): support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -649,8 +652,8 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
 
 zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual) {
   if (flags) {
-    // TODO: support MSG_NOSIGNAL
-    // TODO: support MSG_OOB
+    // TODO(https://fxbug.dev/67925): support MSG_NOSIGNAL
+    // TODO(https://fxbug.dev/67925): support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }
 

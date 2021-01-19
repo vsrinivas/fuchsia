@@ -19,8 +19,8 @@
 
 zx_status_t fdio_get_socket_provider(::llcpp::fuchsia::posix::socket::Provider::SyncClient** out);
 
-typedef struct fdio fdio_t;
-typedef struct fdio_namespace fdio_ns_t;
+using fdio_t = struct fdio;
+using fdio_ns_t = struct fdio_namespace;
 
 // FDIO provides POSIX I/O functionality over various transports
 // via the fdio_t interface abstraction.
@@ -42,8 +42,7 @@ typedef struct fdio_namespace fdio_ns_t;
 // transport, the different transports should become an implementation detail
 // in zxio.
 
-typedef zx_status_t (*two_path_op)(fdio_t* io, const char* src, size_t srclen,
-                                   zx_handle_t dst_token, const char* dst, size_t dstlen);
+using two_path_op = zx_status_t (*)(fdio_t*, const char*, size_t, zx_handle_t, const char*, size_t);
 
 struct Errno {
   constexpr explicit Errno(int e) : e(e) {}
@@ -52,7 +51,7 @@ struct Errno {
   int e;
 };
 
-typedef struct fdio_ops {
+using fdio_ops_t = struct fdio_ops {
   zx_status_t (*close)(fdio_t* io);
   zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
   zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
@@ -111,7 +110,7 @@ typedef struct fdio_ops {
   zx_status_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
                          int16_t* out_code);
   zx_status_t (*shutdown)(fdio_t* io, int how, int16_t* out_code);
-} fdio_ops_t;
+};
 
 // fdio_t ioflag values
 #define IOFLAG_CLOEXEC (1 << 0)
@@ -124,8 +123,6 @@ typedef struct fdio_ops {
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
-
-typedef struct fdio fdio_t;
 
 // Acquire a reference to a globally shared "fdio_t" object
 // acts as a sentinel value for reservation.
@@ -197,8 +194,8 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
 
 // Wraps a channel with an fdio_t using remote io.
-// Takes ownership of |h| and |event|.
-fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
+// Takes ownership of |control| and |event|.
+fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event);
 
 // creates a fdio that wraps a log object
 // this will allocate a buffer (on demand) to assemble
@@ -388,7 +385,7 @@ zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const vo
 zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
 Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 
-typedef struct {
+using fdio_state_t = struct {
   mtx_t lock;
   mtx_t cwd_lock;
   mode_t umask;
@@ -400,7 +397,7 @@ typedef struct {
   fdio_t* fdtab[FDIO_MAX_FD];
   fdio_ns_t* ns;
   char cwd_path[PATH_MAX];
-} fdio_state_t;
+};
 
 extern fdio_state_t __fdio_global_state;
 
