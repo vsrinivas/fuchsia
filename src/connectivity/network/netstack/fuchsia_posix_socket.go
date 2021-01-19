@@ -931,10 +931,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 		// hard error deterministically.
 		eps.hardError.mu.Lock()
 		res, err := eps.ep.Read(&writer, tcpip.ReadOptions{})
-		var hardError *tcpip.Error
-		if err != tcpip.ErrBadBuffer {
-			hardError = eps.hardError.storeAndRetrieveLocked(err)
-		}
+		hardError := eps.hardError.storeAndRetrieveLocked(err)
 		eps.hardError.mu.Unlock()
 		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
 		switch err {
