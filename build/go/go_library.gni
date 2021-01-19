@@ -73,7 +73,6 @@ template("go_library") {
   }
 
   action(target_name) {
-    hermetic_deps = false
     script = "//build/go/gen_library_metadata.py"
 
     library_file = "$target_gen_dir/$target_name.go_deps"
@@ -105,6 +104,9 @@ template("go_library") {
     }
 
     inputs = dependent_libraries
+    if (defined(invoker.name_file)) {
+      inputs += [ invoker.name_file ]
+    }
 
     args = name_args + [
              "--source-dir",
