@@ -12,4 +12,7 @@ if [[ -d "${FUCHSIA_DIR}/.jiri_root/bin" ]]; then
 
   rm -f "${FUCHSIA_DIR}/.jiri_root/bin/ffx"
   ln -s "../../src/developer/ffx/scripts/ffx" "${FUCHSIA_DIR}/.jiri_root/bin/ffx"
+
+  rm -f "${FUCHSIA_DIR}/.jiri_root/bin/hermetic-env"
+  ln -s "../../scripts/hermetic-env" "${FUCHSIA_DIR}/.jiri_root/bin/hermetic-env"
 fi
