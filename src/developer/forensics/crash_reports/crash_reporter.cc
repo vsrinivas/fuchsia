@@ -225,7 +225,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                 auto product = std::get<2>(results).take_value();
 
                 std::optional<Report> final_report = MakeReport(
-                    std::move(report), report_id, snapshot_uuid, utc_provider_.CurrentTime(),
+                    std::move(report), report_id, snapshot_uuid,
+                    snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
                     device_id, build_version_, product, is_hourly_snapshot);
                 if (!final_report.has_value()) {
                   return ::fit::error(

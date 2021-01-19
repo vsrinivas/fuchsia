@@ -35,15 +35,14 @@ std::string Logname(std::string name);
 
 // Builds the final report to add to the queue.
 //
-// * Most annotations are shared across all crash reports, e.g., |snapshot|.annotations().
+// * Most annotations are shared across all crash reports, e.g. the device uptime.
 // * Some annotations are report-specific, e.g., Dart exception type.
 // * Adds any annotations from |report|.
 //
-// * Most attachments are shared across all crash reports, e.g., |snapshot|.archive().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
-                                 const SnapshotUuid& snapshot_uuid,
+                                 const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product,

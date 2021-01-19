@@ -55,6 +55,29 @@ TEST(Logname, MakesLognameCorrectly) {
   }
 }
 
+TEST(MakeReport, AddsSnapshotAnnotations) {
+  auto annotations = std::make_shared<Snapshot::Annotations>(Snapshot::Annotations({
+      {"snapshot_annotation_key", "snapshot_annotation_value"},
+  }));
+
+  fuchsia::feedback::CrashReport crash_report;
+  crash_report.set_program_name("program_name");
+
+  Product product{
+      .name = "product_name",
+      .version = ErrorOr<std::string>("product_version"),
+      .channel = ErrorOr<std::string>("product_channel"),
+  };
+
+  const auto report =
+      MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid", Snapshot(annotations),
+                 /*current_time=*/std::nullopt, ::fit::ok("device_id"),
+                 ErrorOr<std::string>("os_version"), product, /*is_hourly_report=*/false);
+  ASSERT_TRUE(report.has_value());
+  EXPECT_EQ(report.value().Annotations().at("snapshot_annotation_key"),
+            "snapshot_annotation_value");
+}
+
 }  // namespace
 }  // namespace crash_reports
 }  // namespace forensics
