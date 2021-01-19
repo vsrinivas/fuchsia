@@ -15,8 +15,6 @@ abstract class IFxEnv {
   String? get fuchsiaDir;
   String? get fuchsiaArch;
   String? get hostOutDir;
-  String? get zirconBuildRoot;
-  String? get zirconToolsDir;
   String get cwd;
 
   bool isFeatureEnabled(String featureName) => true;
@@ -89,12 +87,6 @@ class FxEnv extends IFxEnv {
   /// (usually $FUCHSIA_BUILD_DIR/host_$HOST_ARCH)
   @override
   String? get hostOutDir => _envReader.getEnv('HOST_OUT_DIR');
-
-  @override
-  String? get zirconBuildRoot => _envReader.getEnv('ZIRCON_BUILDROOT');
-
-  @override
-  String? get zirconToolsDir => _envReader.getEnv('ZIRCON_TOOLS_DIR');
 
   /// Current working directory. Pulled from the OS.
   @override

@@ -39,12 +39,6 @@ class FakeFxEnv extends IFxEnv {
   String get sshKey => p.join(fuchsiaDir, 'out/default/.ssh/pkey');
 
   @override
-  String get zirconBuildRoot => outputDir;
-
-  @override
-  String get zirconToolsDir => p.join(zirconBuildRoot, 'tools');
-
-  @override
   String getEnv(String variableName, [String defaultValue]) =>
       _envReader.getEnv(variableName, defaultValue);
 }

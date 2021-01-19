@@ -26,7 +26,6 @@ function symbol-index {
 function ensure-symbol-index-registered {
   symbol-index add-all <<EOF
 ${FUCHSIA_BUILD_DIR}/.build-id     ${FUCHSIA_BUILD_DIR}
-${ZIRCON_BUILDROOT}/.build-id      ${ZIRCON_BUILDROOT}
 ${FUCHSIA_DIR}/prebuilt/.build-id
 ${PREBUILT_CLANG_DIR}/lib/debug/.build-id
 ${PREBUILT_RUST_DIR}/lib/debug/.build-id
