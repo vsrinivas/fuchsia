@@ -120,6 +120,30 @@ zx_status_t MtkSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   return ZX_OK;
 }
 
+zx_status_t MtkSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                       uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                       uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSpi::SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                      uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSpi::SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSpi::SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+                                       uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t MtkSpi::Init() {
   // Reset
   CmdReg::Get().ReadFrom(&mmio_).set_reset(1).WriteTo(&mmio_);

@@ -8,6 +8,8 @@ using zx;
 
 [Layout = "ddk-protocol"]
 protocol Spi {
+    // TODO(67570): Remove these once all drivers have switched over to the FIDL protocol.
+
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     Transmit(vector<uint8> txdata) -> (zx.status status);
     /// Half-duplex receive data from a SPI device; always reads the full size requested.
@@ -15,4 +17,8 @@ protocol Spi {
     /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     /// buffer.
     Exchange(vector<uint8> txdata) -> (zx.status status, vector<uint8> rxdata);
+
+    /// Tells the SPI driver to start listening for fuchsia.hardware.spi messages on server.
+    /// See sdk/fidl/fuchsia.hardware.spi/spi.fidl.
+    ConnectServer(handle<channel> server) -> ();
 };

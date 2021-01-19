@@ -18,4 +18,13 @@ protocol Device {
     /// buffer.
     Exchange(vector<uint8>:MAX_TRANSFER_SIZE txdata) -> (zx.status status,
                                                          vector<uint8>:MAX_TRANSFER_SIZE rxdata);
+
+    RegisterVmo(uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size) -> (zx.status status);
+    UnregisterVmo(uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
+
+    /// See Transmit(), Receive(), and Exchange() above.
+    TransmitVmo(uint32 vmo_id, uint64 offset, uint64 size) -> (zx.status status);
+    ReceiveVmo(uint32 vmo_id, uint64 offset, uint64 size) -> (zx.status status);
+    ExchangeVmo(uint32 tx_vmo_id, uint64 tx_offset, uint32 rx_vmo_id, uint64 rx_offset, uint64 size)
+        -> (zx.status status);
 };

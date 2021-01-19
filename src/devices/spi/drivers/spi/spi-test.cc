@@ -140,6 +140,30 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return ZX_OK;
   }
 
+  zx_status_t SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                 uint64_t size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                 uint64_t size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                uint64_t size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+                                 uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   SpiDevice* bus_device_;
   fbl::Vector<SpiChild*> children_;
   fbl::Vector<fake_ddk::FidlMessenger*> fidl_clients_;

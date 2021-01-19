@@ -34,6 +34,31 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
   completer.Reply(ZX_OK, std::move(rx_vector));
 }
 
+void SpiChild::RegisterVmo(uint32_t vmo_id, ::zx::vmo vmo, uint64_t offset, uint64_t size,
+                 RegisterVmoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::vmo());
+}
+
+void SpiChild::TransmitVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
+                           TransmitVmoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void SpiChild::ReceiveVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
+                          ReceiveVmoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void SpiChild::ExchangeVmo(uint32_t tx_vmo_id, uint64_t tx_offset, uint32_t rx_vmo_id,
+                           uint64_t rx_offset, uint64_t size,
+                           ExchangeVmoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::spi::Device::Dispatch(this, msg, &transaction);
@@ -57,6 +82,9 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   spi_.Exchange(cs_, txdata_list, txdata_count, out_rxdata_list, rxdata_count, out_rxdata_actual);
   return ZX_OK;
 }
+
+// TODO(67570)
+void SpiChild::SpiConnectServer(zx::channel server) {}
 
 void SpiChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 

@@ -150,6 +150,7 @@ class FragmentProxy : public FragmentProxyBase,
                          size_t* out_rxdata_actual);
   zx_status_t SpiExchange(const uint8_t* txdata_list, size_t txdata_count, uint8_t* out_rxdata_list,
                           size_t rxdata_count, size_t* out_rxdata_actual);
+  void SpiConnectServer(zx::channel server);
   zx_status_t SysmemConnect(zx::channel allocator2_request);
   zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);

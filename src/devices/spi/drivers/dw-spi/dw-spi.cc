@@ -88,6 +88,30 @@ zx_status_t DwSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t tx
   return ZX_OK;
 }
 
+zx_status_t DwSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                      uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DwSpi::SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DwSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                      uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DwSpi::SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                     uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DwSpi::SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+                                      uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t DwSpi::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {

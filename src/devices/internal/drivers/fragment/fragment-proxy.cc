@@ -1033,6 +1033,9 @@ zx_status_t FragmentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata
   return ZX_OK;
 }
 
+// TODO(67570)
+void FragmentProxy::SpiConnectServer(zx::channel server) {}
+
 zx_status_t FragmentProxy::SysmemConnect(zx::channel allocator2_request) {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};

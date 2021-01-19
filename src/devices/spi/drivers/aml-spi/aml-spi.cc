@@ -131,6 +131,31 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   return ZX_OK;
 }
 
+// TODO(67570)
+zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                       uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                       uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSpi::SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                      uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+                                       uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, ddk::CompositeProtocolClient& composite) {
   for (uint32_t i = 0; i < map->cs_count; i++) {
     uint32_t index = map->cs[i];
