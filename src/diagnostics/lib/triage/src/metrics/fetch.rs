@@ -348,13 +348,20 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                         bail!("Neither 'payload' nor 'contents' found in Inspect component")
                     })
                 })?;
-                let processed_data: DiagnosticsHierarchy =
-                    serde_json::from_value(raw_contents.clone()).with_context(|| {
-                        format!(
-                            "Unable to deserialize Inspect contents for {} to node hierarchy",
-                            path
-                        )
-                    })?;
+                let processed_data: DiagnosticsHierarchy = match raw_contents {
+                    v if v.is_null() => {
+                        // If the payload is null, leave the hierarchy empty.
+                        DiagnosticsHierarchy::new_root()
+                    }
+                    raw_contents => {
+                        serde_json::from_value(raw_contents.clone()).with_context(|| {
+                            format!(
+                                "Unable to deserialize Inspect contents for {} to node hierarchy",
+                                path
+                            )
+                        })?
+                    }
+                };
                 Ok(ComponentInspectInfo { moniker, processed_data })
             })
             .collect::<Vec<_>>();
@@ -624,6 +631,8 @@ mod test {
         {"moniker":"zxcv/bar/hjkl",
          "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}},
         {"moniker":"fail_component",
+         "payload": ["a", "b"]},
+        {"moniker":"missing_component",
          "payload": null}
         ]"#,
             r#"[
@@ -632,6 +641,8 @@ mod test {
         {"path":"hub/r/zxcv/1/r/bar/2/c/hjkl.cmx/1",
          "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}},
         {"moniker":"fail_component",
+         "payload": ["a", "b"]},
+        {"moniker":"missing_component",
          "payload": null}
         ]"#,
         ];

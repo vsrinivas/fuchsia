@@ -17,7 +17,7 @@ pub(crate) mod plugins; // Plugins for additional analysis.
 pub(crate) mod result_format; // Formats the triage results.
 pub(crate) mod validate; // Check config - including that metrics/triggers work correctly.
 
-pub use act::{ActionResults, SnapshotTrigger};
+pub use act::{ActionResults, SnapshotTrigger, WarningVec};
 pub use config::{ActionTagDirective, DataFetcher, DiagnosticData, ParseResult, Source};
 pub use result_format::ActionResultFormatter;
 
@@ -61,7 +61,10 @@ pub fn analyze(
 }
 
 // Do not call this from WASM - WASM does not provde a monotonic clock.
-pub fn snapshots(data: &Vec<DiagnosticData>, parse_result: &ParseResult) -> Vec<SnapshotTrigger> {
+pub fn snapshots(
+    data: &Vec<DiagnosticData>,
+    parse_result: &ParseResult,
+) -> (Vec<SnapshotTrigger>, act::WarningVec) {
     let now = Some(MonotonicTime::new().now());
     let evaluator = ActionContext::new(&parse_result.metrics, &parse_result.actions, data, now);
     evaluator.into_snapshots()

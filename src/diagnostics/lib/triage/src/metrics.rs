@@ -826,9 +826,15 @@ pub(crate) mod test {
             let s = r#"[{"moniker": "abcd", "payload": null}]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
+        static ref BAD_PAYLOAD_F: Vec<DiagnosticData> = {
+            let s = r#"[{"moniker": "abcd", "payload": ["a", "b"]}]"#;
+            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
+        };
         static ref EMPTY_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&EMPTY_F);
         static ref NO_PAYLOAD_FETCHER: FileDataFetcher<'static> =
             FileDataFetcher::new(&NO_PAYLOAD_F);
+        static ref BAD_PAYLOAD_FETCHER: FileDataFetcher<'static> =
+            FileDataFetcher::new(&BAD_PAYLOAD_F);
     }
 
     #[test]
@@ -909,7 +915,9 @@ pub(crate) mod test {
 
     #[test]
     fn test_fetch_errors() {
-        assert_eq!(1, NO_PAYLOAD_FETCHER.errors().len());
+        // Do not show errors when there is simply no payload.
+        assert_eq!(0, NO_PAYLOAD_FETCHER.errors().len());
+        assert_eq!(1, BAD_PAYLOAD_FETCHER.errors().len());
     }
 
     // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested

@@ -193,6 +193,8 @@ impl Action {
     }
 }
 
+pub type WarningVec = Vec<String>;
+
 impl ActionContext<'_> {
     /// Processes all actions, acting on the ones that trigger.
     pub fn process(&mut self) -> &ActionResults {
@@ -218,7 +220,7 @@ impl ActionContext<'_> {
     }
 
     /// Evaluate and return snapshots. Consume self.
-    pub fn into_snapshots(mut self) -> Vec<SnapshotTrigger> {
+    pub fn into_snapshots(mut self) -> (Vec<SnapshotTrigger>, WarningVec) {
         for (namespace, actions) in self.actions.iter() {
             for (name, action) in actions.iter() {
                 if let Action::Snapshot(snapshot) = action {
@@ -226,7 +228,7 @@ impl ActionContext<'_> {
                 }
             }
         }
-        self.action_results.snapshots
+        (self.action_results.snapshots, self.action_results.warnings)
     }
 
     /// Update warnings if condition is met.
@@ -459,6 +461,10 @@ mod test {
                 },
                 {
                     "moniker": "abcd2",
+                    "payload": ["a", "b"]
+                },
+                {
+                    "moniker": "abcd3",
                     "payload": null
                 }
             ]
@@ -555,6 +561,9 @@ mod test {
         tester!(true_value, five_value, |s| s
             == &vec![snapshot_5_sig.clone(), snapshot_5_sig.clone()]);
         assert_eq!(action_context.action_results.warnings.len(), 7);
+        let (snapshots, warnings) = action_context.into_snapshots();
+        assert_eq!(snapshots.len(), 2);
+        assert_eq!(warnings.len(), 7);
         Ok(())
     }
 }

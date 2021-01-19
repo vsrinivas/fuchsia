@@ -14,7 +14,12 @@ use {
     argh::FromArgs,
     delay_tracker::DelayTracker,
     fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{self as inspect, health::Reporter, NumericProperty, Property},
+    fuchsia_inspect_derive::{Inspect, WithInspect},
+    fuchsia_zircon as zx,
+    futures::StreamExt,
     glob::glob,
     injectable_time::MonotonicTime,
     log::{error, info, warn},
@@ -168,7 +173,57 @@ macro_rules! on_error {
     };
 }
 
+#[derive(Inspect, Default)]
+struct Stats {
+    scan_count: inspect::UintProperty,
+    missed_deadlines: inspect::UintProperty,
+    triage_warnings: inspect::UintProperty,
+    issues_detected: inspect::UintProperty,
+    issues_throttled: inspect::UintProperty,
+    issues_send_count: inspect::UintProperty,
+    issues_send_errors: inspect::UintProperty,
+    inspect_node: fuchsia_inspect::Node,
+}
+
+impl Stats {
+    fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[derive(Inspect, Default)]
+struct Config {
+    check_every_seconds: inspect::IntProperty,
+    config_file_count: inspect::UintProperty,
+    inspect_node: fuchsia_inspect::Node,
+}
+
+impl Config {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn set(&self, values: ConfigValues) {
+        self.check_every_seconds.set(values.check_every.into_seconds());
+        self.config_file_count.set(values.config_file_count as u64);
+    }
+}
+
+struct ConfigValues {
+    check_every: zx::Duration,
+    config_file_count: usize,
+}
+
 pub async fn main(args: CommandLine) -> Result<(), Error> {
+    let mut service_fs = ServiceFs::new();
+    service_fs.take_and_serve_directory_handle()?;
+    inspect::component::inspector().serve(&mut service_fs)?;
+    fasync::Task::spawn(async move {
+        service_fs.collect::<()>().await;
+    })
+    .detach();
+
+    let stats = Stats::new().with_inspect(inspect::component::inspector().root(), "stats")?;
     let mode = match args.test_only {
         true => Mode::Test,
         false => Mode::Production,
@@ -181,11 +236,18 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     info!("Test mode: {:?}, program config: {:?}", mode, program_config);
     let configuration =
         on_error!(load_configuration_files(), "Error reading configuration files: {}")?;
+
+    let config_inspect =
+        Config::new().with_inspect(inspect::component::inspector().root(), "config")?;
+    config_inspect
+        .set(ConfigValues { check_every: check_every, config_file_count: configuration.len() });
+
     let triage_engine = on_error!(
         triage_shim::TriageLib::new(configuration),
         "Failed to parse Detect configuration files: {}"
     )?;
     info!("Loaded and parsed .triage files");
+
     let selectors = triage_engine.selectors();
     let mut diagnostic_source = diagnostics::DiagnosticFetcher::create(selectors)?;
     let snapshot_service = snapshot::CrashReportHandlerBuilder::new().build()?;
@@ -195,7 +257,9 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
     // Wait 30 seconds before starting to file reports. This gives Feedback enough time to handle
     // our upsert registration.
     // TODO(fxbug.dev/67806): Remove this once Upsert returns when the operation is complete.
+    inspect::component::health().set_starting_up();
     fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
+    inspect::component::health().set_ok();
 
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
     let mut next_check_time = fasync::Time::INFINITE_PAST;
@@ -204,6 +268,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
             // We missed a deadline, so don't wait at all; start the check. But first
             // schedule the next check time at now() + check_every.
             if next_check_time != fasync::Time::INFINITE_PAST {
+                stats.missed_deadlines.add(1);
                 warn!(
                     "Missed diagnostic check deadline {:?} by {:?} nanos",
                     next_check_time,
@@ -219,6 +284,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
             // next_check_time.
             next_check_time += check_every;
         }
+        stats.scan_count.add(1);
         let diagnostics = diagnostic_source.get_diagnostics().await;
         let diagnostics = match diagnostics {
             Ok(diagnostics) => diagnostics,
@@ -230,19 +296,27 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
                 continue;
             }
         };
-        let snapshot_requests = triage_engine.evaluate(diagnostics);
+
+        let (snapshot_requests, warnings) = triage_engine.evaluate(diagnostics);
+        stats.triage_warnings.add(warnings.len() as u64);
+
         for snapshot in snapshot_requests.into_iter() {
+            stats.issues_detected.add(1);
             if delay_tracker.ok_to_send(&snapshot) {
                 let signature = build_signature(snapshot, mode);
                 if program_config.enable_filing == Some(true) {
+                    stats.issues_send_count.add(1);
                     if let Err(e) =
                         snapshot_service.request_snapshot(SnapshotRequest::new(signature))
                     {
+                        stats.issues_send_errors.add(1);
                         error!("Snapshot request failed: {}", e);
                     }
                 } else {
                     warn!("Detect would have filed {}", signature);
                 }
+            } else {
+                stats.issues_throttled.add(1);
             }
         }
     }

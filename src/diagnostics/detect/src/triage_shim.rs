@@ -33,7 +33,10 @@ impl TriageLib {
         Selectors::new().with_inspect_selectors(triage::all_selectors(&self.triage_config))
     }
 
-    pub fn evaluate(&self, data: Vec<DiagnosticData>) -> Vec<SnapshotTrigger> {
+    pub fn evaluate(
+        &self,
+        data: Vec<DiagnosticData>,
+    ) -> (Vec<SnapshotTrigger>, triage::WarningVec) {
         triage::snapshots(&data, &self.triage_config)
     }
 }
@@ -81,7 +84,7 @@ mod test {
             lib.selectors().inspect_selectors,
             vec!["INSPECT:foo.cm:path/to:leaf".to_string()]
         );
-        assert_eq!(lib.evaluate(data), expected_trigger);
+        assert_eq!(lib.evaluate(data), (expected_trigger, vec![]));
         Ok(())
     }
 }

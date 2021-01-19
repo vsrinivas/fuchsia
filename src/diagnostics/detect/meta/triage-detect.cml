@@ -12,6 +12,11 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
         },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
     ],
     use: [
         { runner: "elf" },
@@ -37,6 +42,11 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
             from: "self",
+        },
+        {
+            directory: "diagnostics",
+            from: "self",
+            to: "framework",
         },
     ],
 }
