@@ -14,68 +14,27 @@ const PIP: char = '*';
 const BLANK: char = ' ';
 
 #[derive(Debug)]
-pub enum RollResult {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-}
+pub struct RollResult(u8);
 
 impl Distribution<RollResult> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RollResult {
-        match rng.gen_range(0, 6) {
-            0 => RollResult::One,
-            1 => RollResult::Two,
-            2 => RollResult::Three,
-            3 => RollResult::Four,
-            4 => RollResult::Five,
-            _ => RollResult::Six,
-        }
+        RollResult(rng.gen_range(1, 7))
     }
 }
 
 impl fmt::Display for RollResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let pips = match self {
-            RollResult::One => [
-                [BLANK, BLANK, BLANK],
-                [BLANK, (PIP), BLANK],
-                [BLANK, BLANK, BLANK],
-            ],
-            RollResult::Two => [
-                [BLANK, BLANK, (PIP)],
-                [BLANK, BLANK, BLANK],
-                [(PIP), BLANK, BLANK],
-            ],
-            RollResult::Three => [
-                [BLANK, BLANK, (PIP)],
-                [BLANK, (PIP), BLANK],
-                [(PIP), BLANK, BLANK],
-            ],
-            RollResult::Four => [
-                [(PIP), BLANK, (PIP)],
-                [BLANK, BLANK, BLANK],
-                [(PIP), BLANK, (PIP)],
-            ],
-            RollResult::Five => [
-                [(PIP), BLANK, (PIP)],
-                [BLANK, (PIP), BLANK],
-                [(PIP), BLANK, (PIP)],
-            ],
-            RollResult::Six => [
-                [(PIP), BLANK, (PIP)],
-                [(PIP), BLANK, (PIP)],
-                [(PIP), BLANK, (PIP)],
-            ],
-        };
+        let pips = [
+            [self.0 >= 4, false, self.0 >= 2],
+            [self.0 >= 6, self.0 % 2 == 1, self.0 >= 6],
+            [self.0 >= 2, false, self.0 >= 4],
+        ];
 
         writeln!(f, "{}{}{}{}{}", CORNER, HORIZ, HORIZ, HORIZ, CORNER)?;
         for row in &pips {
             write!(f, "{}", VERT)?;
-            for c in row {
-                write!(f, "{}", c)?;
+            for pip in row {
+                write!(f, "{}", if *pip { PIP } else { BLANK })?;
             }
             writeln!(f, "{}", VERT)?;
         }
@@ -120,7 +79,59 @@ mod tests {
 | * |
 |   |
 +---+";
-        assert_eq!(format!("{}", RollResult::One), expected);
+        assert_eq!(format!("{}", RollResult(1)), expected);
+    }
+
+    #[test]
+    fn format_die_two() {
+        let expected = "\
++---+
+|  *|
+|   |
+|*  |
++---+";
+        assert_eq!(format!("{}", RollResult(2)), expected);
+    }
+    #[test]
+    fn format_die_three() {
+        let expected = "\
++---+
+|  *|
+| * |
+|*  |
++---+";
+        assert_eq!(format!("{}", RollResult(3)), expected);
+    }
+    #[test]
+    fn format_die_four() {
+        let expected = "\
++---+
+|* *|
+|   |
+|* *|
++---+";
+        assert_eq!(format!("{}", RollResult(4)), expected);
+    }
+    #[test]
+    fn format_die_five() {
+        let expected = "\
++---+
+|* *|
+| * |
+|* *|
++---+";
+        assert_eq!(format!("{}", RollResult(5)), expected);
+    }
+
+    #[test]
+    fn format_die_six() {
+        let expected = "\
++---+
+|* *|
+|* *|
+|* *|
++---+";
+        assert_eq!(format!("{}", RollResult(6)), expected);
     }
 
     #[test]
