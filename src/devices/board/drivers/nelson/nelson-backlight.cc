@@ -12,6 +12,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "nelson.h"
+#include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace nelson {
 
@@ -43,33 +44,41 @@ constexpr device_fragment_t fragments[] = {
 
 constexpr double kMaxBrightnessInNits = 250.0;
 
-constexpr pbus_metadata_t backlight_metadata[] = {
-    {
-        .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-        .data_buffer = &kMaxBrightnessInNits,
-        .data_size = sizeof(kMaxBrightnessInNits),
-    },
-};
-
-constexpr pbus_dev_t backlight_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "backlight";
-  dev.vid = PDEV_VID_TI;
-  dev.pid = PDEV_PID_TI_LP8556;
-  dev.did = PDEV_DID_TI_BACKLIGHT;
-  dev.metadata_list = backlight_metadata;
-  dev.metadata_count = countof(backlight_metadata);
-  dev.mmio_list = backlight_mmios;
-  dev.mmio_count = countof(backlight_mmios);
-  return dev;
-}();
-
 zx_status_t Nelson::BacklightInit() {
+  TiLp8556Metadata kDeviceMetadata = {
+      .panel_id = uint8_t(GetDisplayId()),
+      .register_count = 0,
+  };
+
+  pbus_metadata_t backlight_metadata[] = {
+      {
+          .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
+          .data_buffer = &kMaxBrightnessInNits,
+          .data_size = sizeof(kMaxBrightnessInNits),
+      },
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data_buffer = &kDeviceMetadata,
+          .data_size = sizeof(kDeviceMetadata),
+      },
+  };
+
+  pbus_dev_t backlight_dev = {
+      .name = "backlight",
+      .vid = PDEV_VID_TI,
+      .pid = PDEV_PID_TI_LP8556,
+      .did = PDEV_DID_TI_BACKLIGHT,
+      .mmio_list = backlight_mmios,
+      .mmio_count = countof(backlight_mmios),
+      .metadata_list = backlight_metadata,
+      .metadata_count = countof(backlight_metadata),
+  };
+
   auto status = pbus_.CompositeDeviceAdd(&backlight_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }
   return status;
-}
+}  // namespace nelson
 
 }  // namespace nelson

@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
+#include <math.h>
 
 #include <algorithm>
 
@@ -17,8 +18,59 @@
 #include <fbl/alloc_checker.h>
 
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556-bind.h"
+#include "ti-lp8556Metadata.h"
 
 namespace ti {
+
+// Refer to <internal>/vendor/amlogic/video-common/ambient_temp/lp8556.cc
+// Lookup tables containing the slope and y-intercept for a linear equation used
+// to fit the (power / |brightness_to_current_scalar_|) per vendor for
+// brightness levels below |kMinTableBrightness|. The power can be calculated
+// from these scalars by:
+// (slope * brightness + intercept) * |brightness_to_current_scalar_|.
+constexpr std::array<double,
+                     static_cast<std::size_t>(Lp8556Device::PanelType::kNumTypes)>
+    kLowBrightnessSlopeTable = {
+        22.4,  // PanelType::kBoe
+        22.2,  // PanelType::kKd
+};
+constexpr std::array<double,
+                     static_cast<std::size_t>(Lp8556Device::PanelType::kNumTypes)>
+    kLowBrightnessInterceptTable = {
+        1236.0,  // PanelType::kBoe
+        1319.0,  // PanelType::kKd
+};
+
+// Lookup tables for backlight driver voltage as a function of the backlight
+// brightness. The index for each sub-table corresponds to a PanelType, and
+// allows for the backlight voltage to vary with panel vendor. Starting from a
+// brightness level of |kMinTableBrightness|, each index of each sub-table
+// corresponds to a jump of |kBrightnessStep| in brightness up to the maximum
+// value of |kMaxBrightnessSetting|.
+constexpr std::array<std::array<double, kTableSize>,
+                     static_cast<std::size_t>(Lp8556Device::PanelType::kNumTypes)>
+    kVoltageTable = {{
+        // PanelType::kBoe
+        {19.80, 19.80, 19.80, 19.80, 19.90, 20.00, 20.10, 20.20, 20.30, 20.40, 20.50, 20.53, 20.53,
+         20.53, 20.53, 20.53},
+        // PanelType::kKd
+        {19.67, 19.67, 19.67, 19.67, 19.77, 19.93, 20.03, 20.13, 20.20, 20.27, 20.37, 20.37, 20.37,
+         20.37, 20.37, 20.37},
+    }};
+
+// Lookup table for backlight driver efficiency as a function of the backlight
+// brightness. Starting from a brightness level of |kMinTableBrightness|, each
+// index of the table corresponds to a jump of |kBrightnessStep| in brightness
+// up to the maximum value of |kMaxBrightnessSetting|.
+constexpr std::array<double, kTableSize> kEfficiencyTable = {
+    0.6680, 0.7784, 0.8240, 0.8484, 0.8634, 0.8723, 0.8807, 0.8860,
+    0.8889, 0.8915, 0.8953, 0.8983, 0.9003, 0.9034, 0.9049, 0.9060};
+
+// The max current value in the table is determined by the value of the three
+// max current bits within the Lp8556 CFG1 register. The value of these bits can
+// be obtained from the max_current sysfs node exposed by the driver. The
+// current values in the table are expressed in mA.
+constexpr std::array<double, 8> kMaxCurrentTable = {5.0, 10.0, 15.0, 20.0, 23.0, 25.0, 30.0, 50.0};
 
 void Lp8556Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -33,10 +85,8 @@ zx_status_t Lp8556Device::GetBacklightState(bool* power, double* brightness) {
 zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   brightness = std::max(brightness, 0.0);
   brightness = std::min(brightness, 1.0);
-
+  uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
   if (brightness != brightness_) {
-    uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
-
     // LSB should be updated before MSB. Writing to MSB triggers the brightness change.
     uint8_t buf[2];
     buf[0] = kBacklightBrightnessLsbReg;
@@ -84,9 +134,9 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
     }
 
     if (power) {
-      for (size_t i = 0; i < init_registers_size_; i += 2) {
-        if ((status = i2c_.WriteSync(&init_registers_[i], 2)) != ZX_OK) {
-          LOG_ERROR("Failed to set register 0x%02x: %d\n", init_registers_[i], status);
+      for (size_t i = 0; i < metadata_.register_count; i += 2) {
+        if ((status = i2c_.WriteSync(&metadata_.registers[i], 2)) != ZX_OK) {
+          LOG_ERROR("Failed to set register 0x%02x: %d\n", metadata_.registers[i], status);
           return status;
         }
       }
@@ -106,6 +156,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   brightness_ = brightness;
   power_property_.Set(power_);
   brightness_property_.Set(brightness_);
+  backlight_power_ = GetBacklightPower(brightness_reg_value);
   return ZX_OK;
 }
 
@@ -214,24 +265,21 @@ zx_status_t Lp8556Device::Init() {
   if (status == ZX_OK && actual == sizeof(brightness_nits)) {
     SetMaxAbsoluteBrightnessNits(brightness_nits);
   }
-
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, init_registers_,
-                               sizeof(init_registers_), &actual);
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_, sizeof(metadata_),
+                               &actual);
   // Supplying this metadata is optional.
   if (status == ZX_OK) {
-    if (actual % (2 * sizeof(uint8_t)) != 0) {
+    if (metadata_.register_count % (2 * sizeof(uint8_t)) != 0) {
       LOG_ERROR("Register metadata is invalid\n");
       return ZX_ERR_INVALID_ARGS;
-    } else if (actual > sizeof(init_registers_)) {
+    } else if (actual != sizeof(metadata_)) {
       LOG_ERROR("Too many registers specified in metadata\n");
       return ZX_ERR_OUT_OF_RANGE;
     }
 
-    init_registers_size_ = actual;
-
-    for (size_t i = 0; i < init_registers_size_; i += 2) {
-      if ((status = i2c_.WriteSync(&init_registers_[i], 2)) != ZX_OK) {
-        LOG_ERROR("Failed to set register 0x%02x: %d\n", init_registers_[i], status);
+    for (size_t i = 0; i < metadata_.register_count; i += 2) {
+      if ((status = i2c_.WriteSync(&metadata_.registers[i], 2)) != ZX_OK) {
+        LOG_ERROR("Failed to set register 0x%02x: %d\n", metadata_.registers[i], status);
         return status;
       }
     }
@@ -269,6 +317,10 @@ zx_status_t Lp8556Device::Init() {
   calibrated_scale_property_ = root_.CreateUint("calibrated_scale", calibrated_scale_);
   power_property_ = root_.CreateBool("power", power_);
   // max_absolute_brightness_nits will be initialized in SetMaxAbsoluteBrightnessNits.
+  uint8_t max_current_idx;
+  i2c_.ReadSync(kCfgReg, &max_current_idx, sizeof(max_current_idx));
+  max_current_idx = (max_current_idx >> 4) & 0b111;
+  max_current_ = kMaxCurrentTable[max_current_idx];
 
   return ZX_OK;
 }
@@ -281,7 +333,7 @@ zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
   }
 
   uint8_t msb_reg_value;
-  zx_status_t status = i2c_.ReadSync(kCurrentMsbReg, &msb_reg_value, sizeof(msb_reg_value));
+  zx_status_t status = i2c_.ReadSync(kCfgReg, &msb_reg_value, sizeof(msb_reg_value));
   if (status != ZX_OK) {
     LOG_ERROR("Failed to get current scale register: %d", status);
     return status;
@@ -301,6 +353,92 @@ zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
   scale_ = scale;
   scale_property_.Set(scale);
   return ZX_OK;
+}
+
+double Lp8556Device::GetBacklightPower(double backlight_brightness) {
+  // For brightness values less than |kMinTableBrightness|, estimate the power
+  // on a per-vendor basis from a linear equation derived from validation data.
+  if (backlight_brightness < kMinTableBrightness) {
+    std::size_t panel_type_index = static_cast<std::size_t>(GetPanelType());
+    double slope = kLowBrightnessSlopeTable[panel_type_index];
+    double intercept = kLowBrightnessInterceptTable[panel_type_index];
+    return (slope * backlight_brightness + intercept) * GetBrightnesstoCurrentScalar();
+  }
+
+  // For brightness values in the range [|kMinTableBrightness|,
+  // |kMaxBrightnessSetting|], use the voltage and efficiency lookup tables
+  // derived from validation data to estimate the power.
+  double backlight_voltage = GetBacklightVoltage(backlight_brightness, GetPanelType());
+  double current_amp = GetBrightnesstoCurrentScalar() * backlight_brightness;
+  double driver_efficiency = GetDriverEfficiency(backlight_brightness);
+  return backlight_voltage * current_amp / driver_efficiency;
+}
+
+double Lp8556Device::GetBrightnesstoCurrentScalar() {
+  double setpoint_current_setting = scale_ / kMaxCurrentSetting;
+  double max_current_amp = max_current_ / kMilliampPerAmp;
+  // The setpoint current refers to the backlight current for a single driver
+  // channel, assuming that the backlight brightness setting is at its max value
+  // of 4095 (100%).
+  double setpoint_current_amp = (setpoint_current_setting / kMaxCurrentSetting) * max_current_amp;
+  // The scalar returned is equal to:
+  // 6 Driver Channels * Setpoint Current per Channel / Max Brightness Setting
+  // When this value is multiplied by the backlight brightness setting, it
+  // yields the backlight current in Amps.
+  return kNumBacklightDriverChannels * setpoint_current_amp / kMaxBrightnessSetting;
+}
+
+double Lp8556Device::GetBacklightVoltage(double backlight_brightness, PanelType panel_type) {
+  std::size_t panel_type_index = static_cast<std::size_t>(panel_type);
+
+  // Backlight is at max brightness
+  if (backlight_brightness == kMaxBrightnessSetting) {
+    return kVoltageTable[panel_type_index].back();
+  }
+
+  // Backlight is at |kMinTableBrightness|
+  if (backlight_brightness == kMinTableBrightness) {
+    return kVoltageTable[panel_type_index].front();
+  }
+
+  double integral;
+  double fractional = modf(backlight_brightness / kBrightnessStep, &integral);
+  std::size_t table_index = static_cast<std::size_t>(integral) - 1;
+  if (table_index + 1 >= kVoltageTable[panel_type_index].size()) {
+    LOG_ERROR("Invalid backlight brightness: %f", backlight_brightness);
+    return kVoltageTable[panel_type_index].back();
+  }
+  double lower_voltage = kVoltageTable[panel_type_index][table_index];
+  double upper_voltage = kVoltageTable[panel_type_index][table_index + 1];
+  return (upper_voltage - lower_voltage) * fractional + lower_voltage;
+}
+
+double Lp8556Device::GetDriverEfficiency(double backlight_brightness) {
+  // Backlight is at max brightness
+  if (backlight_brightness == kMaxBrightnessSetting) {
+    return kEfficiencyTable.back();
+  }
+  // Backlight is at |kMinTableBrightness|
+  if (backlight_brightness == kMinTableBrightness) {
+    return kEfficiencyTable.front();
+  }
+  double integral;
+  double fractional = modf(backlight_brightness / kBrightnessStep, &integral);
+  std::size_t table_index = static_cast<std::size_t>(integral) - 1;
+  if (table_index + 1 >= kEfficiencyTable.size()) {
+    LOG_ERROR("Invalid backlight brightness: %f", backlight_brightness);
+    return kEfficiencyTable.back();
+  }
+  double lower_efficiency = kEfficiencyTable[table_index];
+  double upper_efficiency = kEfficiencyTable[table_index + 1];
+  return (upper_efficiency - lower_efficiency) * fractional + lower_efficiency;
+}
+
+Lp8556Device::PanelType Lp8556Device::GetPanelType() {
+  if (metadata_.panel_id == 0 || metadata_.panel_id == 1) {
+    return Lp8556Device::PanelType::kKd;
+  }
+  return Lp8556Device::PanelType::kBoe;
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {

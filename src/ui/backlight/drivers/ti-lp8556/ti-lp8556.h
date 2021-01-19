@@ -17,6 +17,8 @@
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
 
+#include "ti-lp8556Metadata.h"
+
 namespace ti {
 
 #define LOG_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -28,7 +30,7 @@ constexpr uint8_t kBacklightBrightnessLsbReg = 0x10;
 constexpr uint8_t kBacklightBrightnessMsbReg = 0x11;
 constexpr uint8_t kDeviceControlReg = 0x1;
 constexpr uint8_t kCurrentLsbReg = 0xA0;
-constexpr uint8_t kCurrentMsbReg = 0xA1;
+constexpr uint8_t kCfgReg = 0xA1;
 constexpr uint8_t kCfg2Reg = 0xA2;
 constexpr uint32_t kAOBrightnessStickyReg = (0x04e << 2);
 
@@ -43,6 +45,17 @@ constexpr uint16_t kBrightnessMsbShift = 8;
 constexpr uint16_t kBrightnessLsbMask = 0xFF;
 constexpr uint8_t kBrightnessMsbByteMask = 0xF;
 constexpr uint16_t kBrightnessMsbMask = (kBrightnessMsbByteMask << kBrightnessMsbShift);
+
+constexpr int kTableSize = 16;
+constexpr int kBrightnessStep = 256;
+constexpr float kMinTableBrightness = 256;
+
+constexpr float kMaxCurrentSetting = 4095;
+constexpr float kMinBrightnessSetting = 0;
+constexpr float kMaxBrightnessSetting = 4095;
+constexpr int kNumBacklightDriverChannels = 6;
+
+constexpr int kMilliampPerAmp = 1000;
 
 class Lp8556Device;
 using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
@@ -81,7 +94,6 @@ class Lp8556Device : public DeviceType,
   double GetDeviceBrightness() { return brightness_; }
   bool GetDevicePower() { return power_; }
   uint8_t GetCfg2() { return cfg2_; }
-
   void SetMaxAbsoluteBrightnessNits(double brightness_nits) {
     max_absolute_brightness_nits_ = brightness_nits;
     if (max_absolute_brightness_nits_property_) {
@@ -93,6 +105,17 @@ class Lp8556Device : public DeviceType,
   }
 
   zx::vmo InspectVmo() { return inspector_.DuplicateVmo(); }
+  enum class PanelType {
+    kBoe = 0,
+    kKd = 1,
+    kNumTypes = 2,
+  };
+
+  double GetBacklightPower(double backlight_brightness);
+  double GetBrightnesstoCurrentScalar();
+  double GetBacklightVoltage(double backlight_brightness, PanelType panel_type);
+  double GetDriverEfficiency(double backlight_brightness);
+  PanelType GetPanelType();
 
   // FIDL calls
   void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
@@ -132,8 +155,6 @@ class Lp8556Device : public DeviceType,
   bool power_ = true;
   uint8_t cfg2_;
   std::optional<double> max_absolute_brightness_nits_;
-  uint8_t init_registers_[2 * (UINT8_MAX + 1)];  // 256 possible registers, plus values.
-  size_t init_registers_size_ = 0;
 
   inspect::DoubleProperty brightness_property_;
   inspect::UintProperty persistent_brightness_property_;
@@ -141,6 +162,9 @@ class Lp8556Device : public DeviceType,
   inspect::UintProperty calibrated_scale_property_;
   inspect::BoolProperty power_property_;
   inspect::DoubleProperty max_absolute_brightness_nits_property_;
+  TiLp8556Metadata metadata_ = {};
+  double backlight_power_ = 0;
+  double max_current_ = 0.0;
 };
 
 }  // namespace ti

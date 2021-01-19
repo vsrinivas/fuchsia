@@ -11,6 +11,7 @@
 #include <ddk/platform-defs.h>
 
 #include "sherlock.h"
+#include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace sherlock {
 
@@ -42,16 +43,21 @@ constexpr device_fragment_t fragments[] = {
 
 constexpr double kMaxBrightnessInNits = 350.0;
 
-constexpr uint8_t kInitialRegisterValues[] = {
-    // Registers
-    0x01, 0x85,  // Device Control
-    // EPROM
-    0xa2, 0x20,  // CFG2
-    0xa3, 0x32,  // CFG3
-    0xa5, 0x04,  // CFG5
-    0xa7, 0xf4,  // CFG7
-    0xa9, 0x60,  // CFG9
-    0xae, 0x09,  // CFGE
+TiLp8556Metadata kDeviceMetadata = {
+    .panel_id = 0,
+    .registers =
+        {
+            // Registers
+            0x01, 0x85,  // Device Control
+                         // EPROM
+            0xa2, 0x20,  // CFG2
+            0xa3, 0x32,  // CFG3
+            0xa5, 0x04,  // CFG5
+            0xa7, 0xf4,  // CFG7
+            0xa9, 0x60,  // CFG9
+            0xae, 0x09,  // CFGE
+        },
+    .register_count = 14,
 };
 
 constexpr pbus_metadata_t backlight_metadata[] = {
@@ -62,8 +68,8 @@ constexpr pbus_metadata_t backlight_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &kInitialRegisterValues,
-        .data_size = sizeof(kInitialRegisterValues),
+        .data_buffer = &kDeviceMetadata,
+        .data_size = sizeof(kDeviceMetadata),
     },
 };
 
