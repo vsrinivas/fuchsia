@@ -6,6 +6,7 @@
 import argparse
 import dataclasses
 import os
+import shlex
 import subprocess
 import sys
 from typing import FrozenSet, Iterable, Sequence, Tuple
@@ -172,18 +173,21 @@ def main():
     # Paths that the action is allowed to access
     allowed_writes = {os.path.abspath(path) for path in args.outputs}
 
-    depfile_deps = []
+    depfile_outs = []
+    depfile_ins = []
     if args.depfile:
         allowed_writes.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
-            depfile_deps += [
-                line.partition(":")[0]
-                for line in f.read().strip().splitlines()
-            ]
+            for line in f.read().strip().splitlines():
+                out, _, ins = line.partition(":")
+                depfile_outs.append(os.path.abspath(out))
+                depfile_ins.extend(os.path.abspath(p) for p in shlex.split(ins))
+        allowed_writes.update(depfile_ins)
+        allowed_writes.update(depfile_outs)
 
     allowed_reads = {
         os.path.abspath(path)
-        for path in [args.script] + args.inputs + args.sources + depfile_deps
+        for path in [args.script] + args.inputs + args.sources + depfile_ins
     } | allowed_writes
     # TODO(fangism): prevent inputs from being written/touched/moved.
     # Changes to the input may confuse any timestamp-based build system,
