@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/pkg/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -55,6 +56,7 @@
 #include "fidl_txn.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "lib/zx/time.h"
+#include "package_resolver.h"
 #include "src/devices/lib/log/log.h"
 #include "vmo_writer.h"
 
@@ -1812,6 +1814,35 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   completer.ReplySuccess(::fidl::unowned_vec(instructions));
 }
 
+void Coordinator::Register(::llcpp::fuchsia::pkg::PackageUrl driver_url,
+                           RegisterCompleter::Sync& completer) {
+  std::string driver_url_str(driver_url.url.data(), driver_url.url.size());
+  zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Could not load '%s'", driver_url_str.c_str());
+    completer.ReplyError(status);
+    return;
+  }
+  LOGF(INFO, "Loaded driver '%s'", driver_url_str.c_str());
+  completer.ReplySuccess();
+}
+
+zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
+                                             const std::string& package_url) {
+  ZX_ASSERT(config_.enable_ephemeral);
+
+  auto result = resolver->FetchDriverVmo(package_url);
+  if (!result.is_ok()) {
+    return result.status_value();
+  }
+  zx_status_t status = load_driver_vmo(result.value().libname, std::move(result.value().vmo),
+                                       fit::bind_member(this, &Coordinator::DriverAdded));
+  if (status != ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
                                       GetDevicePropertiesCompleter::Sync& completer) {
   fbl::RefPtr<Device> device;
@@ -1907,6 +1938,26 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                              fbl::MakeRefCounted<fs::Service>(bind_debugger));
   if (status != ZX_OK) {
     return status;
+  }
+
+  if (config_.enable_ephemeral) {
+    const auto driver_registrar = [this](zx::channel request) {
+      auto result = fidl::BindServer<llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface>(
+          dispatcher_, std::move(request), this);
+      if (!result.is_ok()) {
+        LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+             llcpp::fuchsia::driver::registrar::DriverRegistrar::Name,
+             zx_status_get_string(result.error()));
+        return result.error();
+      }
+      driver_registrar_binding_ = result.take_value();
+      return ZX_OK;
+    };
+    status = svc_dir->AddEntry(llcpp::fuchsia::driver::registrar::DriverRegistrar::Name,
+                               fbl::MakeRefCounted<fs::Service>(driver_registrar));
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   const auto debug = [this](zx::channel request) {

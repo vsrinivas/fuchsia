@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <new>
 #include <string>
@@ -28,6 +29,8 @@ namespace {
 struct AddContext {
   const char* libname;
   DriverLoadCallback func;
+  // This is optional. If present, holds the driver shared library that was loaded ephemerally.
+  zx::vmo vmo;
 };
 
 bool is_driver_disabled(const char* name) {
@@ -37,7 +40,7 @@ bool is_driver_disabled(const char* name) {
 }
 
 void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, void* cookie) {
-  auto context = static_cast<const AddContext*>(cookie);
+  auto context = static_cast<AddContext*>(cookie);
 
   // ensure strings are terminated
   note->name[sizeof(note->name) - 1] = 0;
@@ -66,6 +69,10 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
   drv->libname.Set(context->libname);
   drv->name.Set(note->name);
 
+  if (context->vmo.is_valid()) {
+    drv->dso_vmo = std::move(context->vmo);
+  }
+
   VLOGF(2, "Found driver: %s", (char*)cookie);
   VLOGF(2, "        name: %s", note->name);
   VLOGF(2, "      vendor: %s", note->vendor);
@@ -86,7 +93,7 @@ void find_loadable_drivers(const std::string& path, DriverLoadCallback func) {
   if (dir == nullptr) {
     return;
   }
-  AddContext context = {"", std::move(func)};
+  AddContext context = {"", std::move(func), zx::vmo{}};
 
   struct dirent* de;
   while ((de = readdir(dir)) != nullptr) {
@@ -116,6 +123,23 @@ void find_loadable_drivers(const std::string& path, DriverLoadCallback func) {
   closedir(dir);
 }
 
+zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCallback func) {
+  zx_handle_t vmo_handle = vmo.get();
+  AddContext context = {libname.data(), std::move(func), std::move(vmo)};
+
+  auto di_vmo_read = [](void* vmo, void* data, size_t len, size_t off) {
+    return zx_vmo_read(*((zx_handle_t*)vmo), data, off, len);
+  };
+  zx_status_t status = di_read_driver_info_etc(&vmo_handle, di_vmo_read, &context, found_driver);
+
+  if (status == ZX_ERR_NOT_FOUND) {
+    LOGF(INFO, "Missing info from driver '%s'", libname);
+  } else if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to read info from driver '%s': %s", libname, zx_status_get_string(status));
+  }
+  return status;
+}
+
 void load_driver(const char* path, DriverLoadCallback func) {
   // TODO: check for duplicate driver add
   int fd = open(path, O_RDONLY);
@@ -124,7 +148,7 @@ void load_driver(const char* path, DriverLoadCallback func) {
     return;
   }
 
-  AddContext context = {path, std::move(func)};
+  AddContext context = {path, std::move(func), zx::vmo{}};
   zx_status_t status = di_read_driver_info(fd, &context, found_driver);
   close(fd);
 

@@ -53,6 +53,7 @@ namespace {
 struct DriverManagerParams {
   bool driver_host_asan;
   bool driver_host_strict_linking;
+  bool enable_ephemeral;
   bool log_to_debuglog;
   bool require_system;
   bool suspend_timeout_fallback;
@@ -65,6 +66,7 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
       {"devmgr.devhost.strict-linking", false},
+      {"devmgr.enable-ephemeral", false},
       {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
       // Turn it on by default. See fxbug.dev/34577
@@ -90,10 +92,11 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
   return {
       .driver_host_asan = bool_resp->values[0],
       .driver_host_strict_linking = bool_resp->values[1],
-      .log_to_debuglog = bool_resp->values[2],
-      .require_system = bool_resp->values[3],
-      .suspend_timeout_fallback = bool_resp->values[4],
-      .verbose = bool_resp->values[5],
+      .enable_ephemeral = bool_resp->values[2],
+      .log_to_debuglog = bool_resp->values[3],
+      .require_system = bool_resp->values[4],
+      .suspend_timeout_fallback = bool_resp->values[5],
+      .verbose = bool_resp->values[6],
       .eager_fallback_drivers = std::move(eager_fallback_drivers),
   };
 }
@@ -274,6 +277,7 @@ int main(int argc, char** argv) {
   config.fs_provider = &system_instance;
   config.path_prefix = devmgr_args.path_prefix;
   config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
+  config.enable_ephemeral = driver_manager_params.enable_ephemeral;
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);

@@ -4,10 +4,10 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.power.manager") {
-  sources = [ "register.fidl" ]
+fidl("fuchsia.driver.registrar") {
+  sources = [ "driver-registrar.fidl" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.device.manager",
-    "//sdk/fidl/fuchsia.io",
+    "$zx/vdso/zx",
+    "//sdk/fidl/fuchsia.pkg",
   ]
 }

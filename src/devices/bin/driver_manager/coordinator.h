@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/driver/registrar/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -39,6 +40,7 @@
 #include "init_task.h"
 #include "inspect.h"
 #include "metadata.h"
+#include "package_resolver.h"
 #include "resume_task.h"
 #include "suspend_task.h"
 #include "system_state_manager.h"
@@ -199,6 +201,8 @@ struct CoordinatorConfig {
   bool log_to_debuglog = false;
   // Whether to enable verbose logging.
   bool verbose = false;
+  // Whether to allow loading drivers ephemerally. This should only be enabled on eng builds.
+  bool enable_ephemeral = false;
   // Timeout for system wide suspend
   zx::duration suspend_timeout = kDefaultSuspendTimeout;
   // Timeout for system wide resume
@@ -220,7 +224,8 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
   SuspendCallback callback;
 };
 
-class Coordinator : public device_manager_fidl::BindDebugger::Interface {
+class Coordinator : public device_manager_fidl::BindDebugger::Interface,
+                    public llcpp::fuchsia::driver::registrar::DriverRegistrar::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -381,6 +386,10 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 
+  // This method is public only for the LoadDriverPackageTest.
+  zx_status_t LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
+                                  const std::string& package_url);
+
   uint32_t GetSuspendFlagsFromSystemPowerState(power_fidl::statecontrol::SystemPowerState state);
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
@@ -445,6 +454,10 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
   void GetDeviceProperties(::fidl::StringView name,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 
+  // Driver registrar interface
+  void Register(::llcpp::fuchsia::pkg::PackageUrl driver_url,
+                RegisterCompleter::Sync& completer) override;
+
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
@@ -454,6 +467,10 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
   // Once the special fragment driver is loaded, this will refer to it.  This
   // driver is used for binding against fragments of composite devices
   const Driver* fragment_driver_ = nullptr;
+
+  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::registrar::DriverRegistrar>>
+      driver_registrar_binding_;
+  internal::PackageResolver package_resolver_;
 
   void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
   void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;

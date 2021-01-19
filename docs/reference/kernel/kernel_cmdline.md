@@ -91,6 +91,11 @@ not wait for all other drivers to be loaded before attempting to bind it, even
 if the driver is marked as a fallback driver by including '*' at the start of
 its version string.
 
+## devmgr\.enable-ephemeral=\<bool\>
+
+Enables loading drivers ephemerally. This should only be used on eng builds
+for development purposes.
+
 ## devmgr\.require-system=\<bool\>
 
 Instructs the devmgr that a /system volume is required. Without this, devmgr

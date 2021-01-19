@@ -36,6 +36,7 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
 
 void load_driver(const char* path, DriverLoadCallback func);
+zx_status_t load_driver_vmo(std::string_view libname, zx::vmo vmo, DriverLoadCallback func);
 void find_loadable_drivers(const std::string& path, DriverLoadCallback func);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_

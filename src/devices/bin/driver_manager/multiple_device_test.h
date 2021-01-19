@@ -87,6 +87,20 @@ struct DeviceState {
 
 class MultipleDeviceTestCase : public zxtest::Test {
  public:
+  static CoordinatorConfig CreateConfig(async_dispatcher_t* bootargs_dispatcher,
+                                        mock_boot_arguments::Server* boot_args,
+                                        llcpp::fuchsia::boot::Arguments::SyncClient* client,
+                                        bool enable_ephemeral) {
+    auto config = DefaultConfig(bootargs_dispatcher, boot_args, client);
+    config.enable_ephemeral = enable_ephemeral;
+    return config;
+  }
+
+  explicit MultipleDeviceTestCase(bool enable_ephemeral = false)
+      : coordinator_(CreateConfig(mock_server_loop_.dispatcher(), &boot_args_, &args_client_,
+                                  enable_ephemeral),
+                     coordinator_loop_.dispatcher()) {}
+
   ~MultipleDeviceTestCase() override = default;
 
   async::Loop* coordinator_loop() { return &coordinator_loop_; }
@@ -167,9 +181,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   // for itself to respond to its requests.
   async::Loop mock_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  CoordinatorForTest coordinator_{
-      DefaultConfig(mock_server_loop_.dispatcher(), &boot_args_, &args_client_),
-      coordinator_loop_.dispatcher()};
+  CoordinatorForTest coordinator_;
 
   // The fake driver_host that the platform bus is put into
   fbl::RefPtr<DriverHost> driver_host_;
