@@ -11,6 +11,7 @@ group("tests") {
   deps = [
     "aml-g12-pdm:tests",
     "aml-g12-tdm:tests",
+    "as370-pdm-input:tests",
     "as370-tdm-output:tests",
     "codecs:tests",
     "dai-test:tests",

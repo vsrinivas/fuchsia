@@ -10,10 +10,11 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/media/audio/drivers/as370-pdm-input/as370_audio_in_bind.h"
 
 namespace audio {
 namespace as370 {
@@ -220,11 +221,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace as370
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(as370_audio_in, audio::as370::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_AUDIO_IN),
-ZIRCON_DRIVER_END(as370_audio_in)
-    // clang-format on
+ZIRCON_DRIVER(as370_audio_in, audio::as370::driver_ops, "zircon", "0.1");
