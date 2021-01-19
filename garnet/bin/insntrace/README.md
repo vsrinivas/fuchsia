@@ -186,15 +186,13 @@ and so was never checked in. It's still a work-in-progress to add this feature.
 To obtain a dump of raw output:
 
 ```
-linux$ ZIRCON_BUILDROOT=out/build-zircon/build-x64
 linux$ FUCHSIA_BUILDROOT=out/debug-x64
 linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
-  --ids=$ZIRCON_BUILDROOT/ids.txt \
   --ids=$FUCHSIA_BUILDROOT/ids.txt \
-  --kernel=$ZIRCON_BUILDROOT/zircon.elf \
+  --kernel=$FUCHSIA_BUILDROOT/kernel_x64/zircon.elf \
   --output-format=raw \
   --output-file=ptout.raw
 ```
@@ -242,15 +240,13 @@ Note: The output looks way cooler with the disassembly. :-) In time.
 To obtain a dump of calls output:
 
 ```
-linux$ ZIRCON_BUILDROOT=out/build-zircon/build-x64
 linux$ FUCHSIA_BUILDROOT=out/debug-x64
 linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
   --map=loglistener.log \
-  --ids=$ZIRCON_BUILDROOT/ids.txt \
   --ids=$FUCHSIA_BUILDROOT/ids.txt \
-  --kernel=$ZIRCON_BUILDROOT/zircon.elf \
+  --kernel=$FUCHSIA_BUILDROOT/kernel_x64/zircon.elf \
   --output-format=calls \
   --output-file=ptout.calls
 ```

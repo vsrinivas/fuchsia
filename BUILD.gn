@@ -59,98 +59,8 @@ declare_args() {
   base_cache_packages_allow_testonly = true
 }
 
-zircon_variants = []
-foreach(selector, select_variant) {
-  if (selector == "$selector") {
-    zircon_variants += [ selector ]
-  }
-}
-
 if (host_os == "mac") {
   import("//build/config/mac/mac_sdk.gni")
-}
-
-# Separate block because zircon_* declared above are used in the default.
-declare_args() {
-  # [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
-  # The default passes through GOMA/ccache settings and
-  # [`select_variant`](#select_variant) shorthand selectors.
-  # **Only set this if you want to wipe out all the defaults that
-  # propagate from Fuchsia GN to Zircon GN.**  The default value
-  # folds in [`zircon_extra_args`](#zircon_extra_args), so usually
-  # it's better to just set `zircon_extra_args` and leave `zircon_args` alone.
-  # Any individual Zircon build argument set in `zircon_extra_args` will
-  # silently clobber the default value shown here.
-  zircon_args = {
-    use_ccache = use_ccache
-    use_goma = use_goma
-    output_gsym = output_gsym
-    goma_dir = rebase_path(goma_dir)
-    if (clang_prefix != default_clang_prefix) {
-      # Propagate a custom value to override Zircon's default.  But don't
-      # propagate the default because Zircon has proper incremental build
-      # dependencies on toolchain updates only if it knows it's using the
-      # prebuilt.
-      clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
-    }
-    if (rustc_prefix != default_rustc_prefix) {
-      rustc_tool_dir = rebase_path(rustc_prefix, "", root_build_dir)
-    }
-    if (host_os == "mac") {
-      mac_sdk_path = mac_sdk_path
-    }
-    variants = zircon_variants
-
-    # TODO(fxbug.dev/51585): Keep this in sync with the code in
-    # //build/toolchain/zircon/zircon_toolchain.gni
-    if (optimize == "none" || optimize == "sanitizer" ||
-        optimize == "profile" || optimize == "size") {
-      # TODO(fxbug.dev/51585): Only propagate none/sanitizer/profile for now.
-      # "Normal" Zircon builds use a different default than Fuchsia builds.
-      # These should be harmonized at some point so this is always passed
-      # through.
-      optimize = optimize
-    }
-    default_deps = [ "//:legacy_unification-$target_cpu" ] + zircon_extra_deps
-  }
-}
-
-###
-### Zircon build integration.
-###
-
-# The Zircon GN is completely a puppet of this build.  This gen runs that gen.
-# See also :zircon below.
-if (current_toolchain == default_toolchain) {
-  # The template scope makes invoker[build_argument] available.
-  template("_run_zircon_gn") {
-    assert(target_name == "zircon")
-
-    # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
-    # the first thing that happens at all and it's synchronous so after this
-    # point we can read in files written by this gen step.
-    gn_cmd = [
-      "gen",
-      "-q",
-      "--root=" + rebase_path("//zircon", root_build_dir),
-      "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
-          "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
-          "# zircon_extra_args = { ... } to override settings below.$0x0a" +
-          "forward_variables_from($zircon_args, \"*\")",
-      "--export-compile-commands=$zircon_compdb_filter",
-      rebase_path(zircon_root_build_dir, root_build_dir),
-    ]
-
-    if (zircon_tracelog != "") {
-      gn_cmd += [ "--tracelog=" + rebase_path(zircon_tracelog, root_build_dir) ]
-    }
-
-    exec_script("//prebuilt/third_party/gn/${host_platform}/gn", gn_cmd)
-
-    not_needed([ "invoker" ])
-  }
-  _run_zircon_gn("zircon") {
-  }
 }
 
 ###
@@ -210,7 +120,6 @@ build_api_module("api") {
     ":tool_paths",
     ":triage_sources",
     ":zbi_tests",
-    ":zircon",
   ]
 }
 
@@ -364,35 +273,7 @@ build_api_module("args") {
 build_api_module("binaries") {
   testonly = true
   data_keys = [ "binaries" ]
-  deps = [
-    ":binaries.zircon",
-    ":default",
-  ]
-}
-
-group("binaries.zircon") {
-  visibility = [ ":binaries" ]
-  script = "//build/zircon/read_zircon_binaries.py"
-  metadata = {
-    # This uses exec_script instead of read_file because the labels and paths
-    # need to be rebased to be valid in the Fuchsia build. Doing this in GN
-    # using a foreach loop takes 3 seconds, but the script takes 100ms. This
-    # should go away when the build is unified.
-    binaries = exec_script(
-            python_exe_src,
-            [
-              "-S",  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=62771
-              rebase_path(script, root_build_dir),
-              "--binaries-json",
-              rebase_path("$zircon_root_build_dir/binaries.json"),
-              "--root-build-dir",
-              rebase_path(root_build_dir),
-              "--zircon-root-build-dir",
-              rebase_path(zircon_root_build_dir),
-            ],
-            "json",
-            [ script ])
-  }
+  deps = [ ":default" ]
 }
 
 # Describes the configuration of the build in the file:
@@ -491,23 +372,9 @@ build_api_module("generated_sources") {
   testonly = true
   data_keys = [ "generated_sources" ]
   deps = [
-    ":generated_sources.zircon",
     "//build/images:packages",
     "//sdk",
   ]
-}
-
-group("generated_sources.zircon") {
-  visibility = [ ":generated_sources" ]
-  zircon_entries =
-      read_file("$zircon_root_build_dir/generated_sources.json", "json")
-  metadata = {
-    generated_sources = []
-    foreach(entry, zircon_entries) {
-      generated_sources +=
-          [ rebase_path(entry, root_build_dir, zircon_root_build_dir) ]
-    }
-  }
 }
 
 # Describes the "fuzzers" in the build, in the file:
@@ -1002,29 +869,6 @@ build_api_module("zbi_tests") {
     "build/unification/zbi:tests",
     "build/zircon/zbi_tests",
   ]
-}
-
-# Describes how to invoke Njnja for the Zircon build.
-# in file: "$root_build_dir/zircon.json"
-#
-# These instructions are a prerequisite for this build.
-#
-# Type: scope
-#
-#   dir
-#     Required: the zircon build directory root.
-#     Type: path relative to $root_build_dir
-#
-#   targets
-#     Required: the ninja targets to execute.
-#     Type: list of ninja targets
-#
-build_api_module("zircon") {
-  testonly = true
-  contents = {
-    dir = rebase_path(zircon_root_build_dir, root_build_dir)
-    targets = [ "default" ]
-  }
 }
 
 # Describes the paths to all the package manifests for packages in universe.

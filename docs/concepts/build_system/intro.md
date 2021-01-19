@@ -296,7 +296,7 @@ ways. In Zircon there will be several toolchains:
  - Multiboot for x86 (compiled with `-m32`)
  - UEFI for Gigaboot
  - Toolchains are also used in the ["variants"
-   scheme](/docs/gen/zircon_build_arguments.md#variants) that is how we allow selectively
+   scheme](/docs/gen/build_arguments.md#known_variants) that is how we allow selectively
    enabling ASan or the like for parts of userland.
 
 Each toolchain is identified by a GN label.  The full syntax for target labels
