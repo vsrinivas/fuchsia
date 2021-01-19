@@ -51,7 +51,7 @@ Last updated: **January 2021**
 
 A high-level diagram of the system's component topology is shown below:
 
-![Realms diagram](high_level_components_topology.png)
+![Realms diagram](images/high_level_components_topology.png)
 
 *   v2 components are shown in green.
 *   v1 components are shown in red.
@@ -79,6 +79,13 @@ order to manage all remaining v1 components in a dedicated sub-realm. As the
 migration continues, typically components will move from the v1 sub-realm to
 elsewhere in the component instance topology.
 
+Note: `component_manager_sfw` is currently included in build configurations that
+use the [Session Framework][session-framework]. This second instance of the
+`component_manager` facilitates interoperability between v2 components (required
+under Session Framework) and legacy v1 components. Once all v1 components have
+been migrated to v2, the `session_manager` will become a direct descendent of
+the root `component_manager`, and `component_manager_sfw` can be removed.
+
 ## Current areas of focus
 
 Last updated: **January 2021**
@@ -101,4 +108,5 @@ currently additional focus on:
 [fuchsia-sys2]: https://fuchsia.dev/reference/fidl/fuchsia.sys2
 [initial-processes]: /docs/concepts/booting/everything_between_power_on_and_your_component.md#initial-processes
 [intro]: /docs/concepts/components/v2/introduction.md
+[session-framework]: /docs/concepts/session/introduction.md
 [sysmgr]: /src/sys/sysmgr
