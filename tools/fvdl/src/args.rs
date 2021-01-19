@@ -124,9 +124,28 @@ pub struct StartCommand {
     #[argh(option)]
     pub image_name: Option<String>,
 
-    /// file path to store emulator log. Default is a temp file that is deleted after fvdl exits.
+    /// file path to store emulator log. Default is a temp file that is deleted after `fvdl` exits.
     #[argh(option, short = 'l')]
     pub emulator_log: Option<String>,
+
+    /// host port mapping for user-networking mode. This flag will be ignored if --tuntap is used.
+    /// If not specified, an ssh port on host will be randomly picked and forwarded.
+    /// ex: hostfwd=tcp::<host_port>-:<guest_port>,hostfwd=tcp::<host_port>-:<guest_port>
+    #[argh(option)]
+    pub port_map: Option<String>,
+
+    /// file destination to write `device_launcher` output.
+    /// Required for --nointeractive mode. Default is a temp file that is deleted after `fvdl` exits.
+    /// Specify this flag if you plan to use the `kill` subcommand.
+    #[argh(option)]
+    pub vdl_output: Option<String>,
+
+    /// bool, turn off interactive mode.
+    /// if turned off, fvdl will not land user in ssh console. A ssh port will still be forwarded.
+    /// User needs to specify --vdl-output flag with this mode, and manually call
+    /// the `kill` subcommand to perform clean shutdown.
+    #[argh(switch)]
+    pub nointeractive: bool,
 }
 
 fn default_window_height() -> usize {
@@ -144,7 +163,7 @@ pub struct KillCommand {
     /// device_launcher binary location. Defaults to looking in prebuilt/vdl/device_launcher
     #[argh(option, short = 'd')]
     pub vdl_path: Option<String>,
-    /// file containing device_launcher process artifact location.
+    /// required, file containing device_launcher process artifact location.
     #[argh(option)]
     pub launched_proto: Option<String>,
 }

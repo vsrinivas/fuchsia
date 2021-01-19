@@ -17,7 +17,9 @@ use std::os::unix;
 use std::path::PathBuf;
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
-    env::var_os(var).map(PathBuf::from).ok_or(anyhow!("{} contained invalid Unicode", var))
+    env::var_os(var)
+        .map(PathBuf::from)
+        .ok_or(anyhow!("{} is not a valid environment variable", var))
 }
 
 /// Returns GN SDK tools directory. This assumes that fvdl is located in
@@ -417,7 +419,7 @@ mod tests {
     use serial_test::serial;
     use std::fs::read_dir;
     use std::io::Write;
-    use tempfile::TempDir;
+    use tempfile::Builder;
 
     #[test]
     fn test_convert_start_cmd_to_vdl() {
@@ -445,6 +447,9 @@ mod tests {
             image_name: Some("qemu-x64".to_string()),
             vdl_version: None,
             emulator_log: None,
+            port_map: None,
+            vdl_output: None,
+            nointeractive: false,
         };
         let vdl_args: VDLArgs = start_command.into();
         assert_eq!(vdl_args.headless, false);
@@ -496,6 +501,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_image_files() -> Result<()> {
         env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
         env::set_var("IMAGE_ZIRCONA_ZBI", "zircona");
@@ -509,24 +515,25 @@ mod tests {
         assert_eq!(image_files.build_args.to_str().unwrap(), "/build/out/args.gn");
         assert_eq!(image_files.amber_files.to_str().unwrap(), "/build/out/amber-files");
 
-        let tmp_dir = TempDir::new()?.into_path();
-        image_files.stage_files(&tmp_dir)?;
-        assert_eq!(image_files.kernel.to_str(), tmp_dir.join("femu_kernel").to_str());
+        let tmp_dir = Builder::new().prefix("fvdl_test_images_").tempdir()?;
 
+        image_files.stage_files(&tmp_dir.path().to_owned())?;
+        assert_eq!(image_files.kernel.to_str(), tmp_dir.path().join("femu_kernel").to_str());
         Ok(())
     }
 
     #[test]
+    #[serial]
     fn test_ssh_files() -> Result<()> {
         let data = format!(
             "/usr/local/home/foo/.ssh/fuchsia_ed25519
 /usr/local/home/foo/.ssh/fuchsia_authorized_keys
 ",
         );
-        let tmp_dir = TempDir::new()?.into_path();
-        File::create(tmp_dir.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
+        let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;
+        File::create(tmp_dir.path().join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
 
-        env::set_var("FUCHSIA_DIR", tmp_dir.to_str().unwrap());
+        env::set_var("FUCHSIA_DIR", tmp_dir.path());
         env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
         let mut ssh_files = SSHKeys::from_tree_env()?;
         assert_eq!(
@@ -537,24 +544,26 @@ mod tests {
             ssh_files.auth_key.to_str().unwrap(),
             "/usr/local/home/foo/.ssh/fuchsia_authorized_keys"
         );
-        ssh_files.stage_files(&tmp_dir)?;
-        assert_eq!(ssh_files.private_key.to_str(), tmp_dir.join("id_ed25519").to_str());
+        ssh_files.stage_files(&tmp_dir.path().to_owned())?;
+        assert_eq!(ssh_files.private_key.to_str(), tmp_dir.path().join("id_ed25519").to_str());
         Ok(())
     }
 
     #[test]
+    #[serial]
     fn test_sdk_data_dir() -> Result<()> {
-        let tmp_dir = TempDir::new()?.into_path();
-        env::set_var("FUCHSIA_SDK_DATA_DIR", tmp_dir.to_str().unwrap());
+        let tmp_dir = Builder::new().prefix("fvdl_test_sdk_data_dir_").tempdir()?;
+        env::set_var("FUCHSIA_SDK_DATA_DIR", tmp_dir.path());
         let p = get_sdk_data_dir()?;
-        assert_eq!(p.to_str(), tmp_dir.to_str());
+        assert_eq!(p.to_str(), tmp_dir.path().to_str());
         Ok(())
     }
 
     #[test]
+    #[serial]
     fn test_download_and_extract() -> Result<()> {
-        let tmp_dir = TempDir::new()?.into_path();
-        env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.to_str().unwrap());
+        let tmp_dir = Builder::new().prefix("fvdl_test_download_").tempdir()?;
+        env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
         let host_tools = HostTools::from_sdk_env()?;
         let mut unzipped_root =
             host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
