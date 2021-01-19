@@ -53,8 +53,8 @@ A high-level diagram of the system's component topology is shown below:
 
 ![Realms diagram](images/high_level_components_topology.png)
 
-*   v2 components are shown in green.
-*   v1 components are shown in red.
+*   v2 components are shown in blue boxes.
+*   v1 components are shown in red boxes.
 *   Boxes with dashed lines represent components that are only present on some
     build configurations.
 
