@@ -60,7 +60,7 @@ pub fn merge_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        write_depfile(&depfile_path, output, &includes, &includepath)?;
+        write_depfile(depfile_path, output, &includes, includepath)?;
     }
 
     Ok(())
@@ -75,6 +75,8 @@ pub fn check_includes(
     mut expected_includes: Vec<String>,
     // If specified, this is a path to newline-delimited `expected_includes`
     fromfile: Option<&PathBuf>,
+    depfile: Option<&PathBuf>,
+    stamp: Option<&PathBuf>,
     includepath: &PathBuf,
 ) -> Result<(), Error> {
     if let Some(path) = fromfile {
@@ -87,7 +89,13 @@ pub fn check_includes(
         }
     }
     if expected_includes.is_empty() {
-        return Ok(()); // Nothing to do
+        if let Some(depfile_path) = depfile {
+            if depfile_path.exists() {
+                // Delete stale depfile
+                fs::remove_file(depfile_path)?;
+            }
+        }
+        return Ok(());
     }
 
     let actual = transitive_includes(&file, &includepath)?;
@@ -103,6 +111,12 @@ pub fn check_includes(
             });
         }
     }
+
+    // Write includes to depfile
+    if let Some(depfile_path) = depfile {
+        write_depfile(depfile_path, stamp, &actual, includepath)?;
+    }
+
     Ok(())
 }
 
@@ -543,7 +557,21 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(check_includes(&cmx1_path, vec![], None, &include_path), Ok(()));
+        let check_depfile_path = tmp_dir.path().join("check.d");
+        let stamp_path = tmp_dir.path().join("stamp");
+        assert_matches!(
+            check_includes(
+                &cmx1_path,
+                vec![],
+                None,
+                Some(&check_depfile_path),
+                Some(&stamp_path),
+                &include_path
+            ),
+            Ok(())
+        );
+        // Don't generate depfile (or delete existing) if no includes found
+        assert_eq!(false, check_depfile_path.exists());
 
         let cmx2_path = tmp_file(
             &tmp_dir,
@@ -555,7 +583,10 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(check_includes(&cmx2_path, vec![], None, &include_path), Ok(()));
+        assert_matches!(
+            check_includes(&cmx2_path, vec![], None, None, None, &include_path),
+            Ok(())
+        );
 
         let cmx3_path = tmp_file(
             &tmp_dir,
@@ -567,7 +598,10 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(check_includes(&cmx3_path, vec![], None, &include_path), Ok(()));
+        assert_matches!(
+            check_includes(&cmx3_path, vec![], None, None, None, &include_path),
+            Ok(())
+        );
     }
 
     #[test]
@@ -586,9 +620,24 @@ mod tests {
         );
         tmp_file(&tmp_dir, "foo.cmx", json!({}));
         tmp_file(&tmp_dir, "bar.cmx", json!({}));
+        let check_depfile_path = tmp_dir.path().join("check.d");
+        let stamp_path = tmp_dir.path().join("stamp");
         assert_matches!(
-            check_includes(&cmx_path, vec!["bar.cmx".into()], None, &include_path),
+            check_includes(
+                &cmx_path,
+                vec!["bar.cmx".into()],
+                None,
+                Some(&check_depfile_path),
+                Some(&stamp_path),
+                &include_path
+            ),
             Ok(())
+        );
+        let mut deps = String::new();
+        File::open(&check_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
+        assert_eq!(
+            deps,
+            format!("{tmp}/stamp: {tmp}/bar.cmx {tmp}/foo.cmx\n", tmp = tmp_dir.path().display())
         );
     }
 
@@ -608,7 +657,7 @@ mod tests {
         );
         tmp_file(&tmp_dir, "foo.cmx", json!({}));
         tmp_file(&tmp_dir, "bar.cmx", json!({}));
-        assert_matches!(check_includes(&cmx1_path, vec!["qux.cmx".into()], None, &include_path),
+        assert_matches!(check_includes(&cmx1_path, vec!["qux.cmx".into()], None, None, None, &include_path),
                         Err(Error::Validate { filename, .. }) if filename == cmx1_path.to_str().map(String::from));
 
         let cmx2_path = tmp_file(
@@ -621,7 +670,7 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(check_includes(&cmx2_path, vec!["qux.cmx".into()], None, &include_path),
+        assert_matches!(check_includes(&cmx2_path, vec!["qux.cmx".into()], None, None, None, &include_path),
                         Err(Error::Validate { filename, .. }) if filename == cmx2_path.to_str().map(String::from));
     }
 
@@ -642,7 +691,7 @@ mod tests {
         tmp_file(&tmp_dir, "foo.cmx", json!({"include": [ "bar.cmx" ]}));
         tmp_file(&tmp_dir, "bar.cmx", json!({}));
         assert_matches!(
-            check_includes(&cmx_path, vec!["bar.cmx".into()], None, &include_path),
+            check_includes(&cmx_path, vec!["bar.cmx".into()], None, None, None, &include_path),
             Ok(())
         );
     }
@@ -669,13 +718,13 @@ mod tests {
         writeln!(fromfile, "foo.cmx").unwrap();
         writeln!(fromfile, "bar.cmx").unwrap();
         assert_matches!(
-            check_includes(&cmx_path, vec![], Some(&fromfile_path), &include_path),
+            check_includes(&cmx_path, vec![], Some(&fromfile_path), None, None, &include_path),
             Ok(())
         );
 
         // Add another include that's missing
         writeln!(fromfile, "qux.cmx").unwrap();
-        assert_matches!(check_includes(&cmx_path, vec![], Some(&fromfile_path), &include_path),
+        assert_matches!(check_includes(&cmx_path, vec![], Some(&fromfile_path), None, None, &include_path),
                         Err(Error::Validate { filename, .. }) if filename == cmx_path.to_str().map(String::from));
     }
 }

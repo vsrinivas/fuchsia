@@ -136,6 +136,7 @@ compiled_action("generate_goldens") {
     args += [ rebase_path(json_ir, root_build_dir) ]
     outputs += [ "$target_gen_dir/goldens/${info.library}/README.md" ]
   }
+  hermetic_deps = false
 }
 
 golden_test("fidldoc_golden_tests") {

@@ -167,6 +167,7 @@ template("hotsort_target_internal") {
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(inputs, root_build_dir)
     deps = [ ":${_gen_spv_target_name}" ]
+    hermetic_deps = false
   }
 
   #
@@ -195,6 +196,7 @@ template("hotsort_target_internal") {
       outputs = [ "${_hs_output_dir}/hs_target.bin" ]
       args = rebase_path(outputs, root_build_dir)
       public_deps = [ ":$_hs_target_dump_name" ]
+      hermetic_deps = false
     }
 
     #

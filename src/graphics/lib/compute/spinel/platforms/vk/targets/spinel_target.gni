@@ -165,6 +165,7 @@ template("spinel_target") {
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
     public_deps = [ ":gen_spv" ]
+    hermetic_deps = false
   }
 
   #
@@ -193,6 +194,7 @@ template("spinel_target") {
       outputs = [ "$target_gen_dir/spn_target.bin" ]
       args = rebase_path(outputs, root_build_dir)
       public_deps = [ ":$_spn_target_dump_name" ]
+      hermetic_deps = false
     }
 
     #

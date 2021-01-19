@@ -75,5 +75,7 @@ template("static_icu_data") {
              command,
              "--output=${rebased_output_path}",
            ] + command_args
+
+    hermetic_deps = false
   }
 }

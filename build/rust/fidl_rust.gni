@@ -45,8 +45,8 @@ template("fidl_rust") {
 
     tool = "//tools/fidl/fidlgen_rust"
 
-    # This action depends on rustfmt and rustfmt.toml, but instead of listing
-    # them here we do so in //tools/fidl/fidlgen_rust/BUILD.gn.
+    sources = [ "//rustfmt.toml" ]
+
     inputs = [ json_representation ]
 
     outputs = [ filename ]

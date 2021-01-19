@@ -86,7 +86,7 @@ template("collect_expected_includes") {
                              "testonly",
                              "visibility",
                            ])
-    outputs = [ "${target_out_dir}/${target_name}_expected_includes" ]
+    outputs = [ "$target_out_dir/${target_name}_expected_includes" ]
     ext = get_path_info(manifest, "extension")
     if (ext == "cmx") {
       data_keys = [ "cmc_expected_includes_cmx" ]
@@ -135,7 +135,8 @@ template("cmc_check_includes") {
     deps += [ ":" + expected_includes_label ]
     inputs =
         [ invoker.manifest ] + get_target_outputs(":" + expected_includes_label)
-    outputs = [ "${target_out_dir}/${target_name}.gn_stamp" ]
+    outputs = [ "$target_out_dir/$target_name.gn_stamp" ]
+    depfile = "$target_gen_dir/$target_name.d"
 
     args = [
       "--stamp",
@@ -144,6 +145,8 @@ template("cmc_check_includes") {
       rebase_path(invoker.manifest, root_build_dir),
       "--fromfile",
       rebase_path(inputs[1], root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
       "--includepath",
       rebase_path("//", root_build_dir),
     ]

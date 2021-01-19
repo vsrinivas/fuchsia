@@ -68,9 +68,11 @@ template("validate_json") {
     }
 
     args += [
-      rebase_path(invoker.schema),
-      rebase_path(invoker.data),
-      rebase_path(stamp_file),
+      rebase_path(invoker.schema, root_build_dir),
+      rebase_path(invoker.data, root_build_dir),
+      rebase_path(stamp_file, root_build_dir),
     ]
+
+    hermetic_deps = false
   }
 }

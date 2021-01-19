@@ -159,6 +159,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       }
       deps += [ ":${_gen_debug_target_name}" ]
     }
+    hermetic_deps = false
   }
 
   #

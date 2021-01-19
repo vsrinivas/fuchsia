@@ -92,6 +92,12 @@ pub enum Commands {
         /// The input format is delimited by newlines.
         fromfile: Option<PathBuf>,
 
+        #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+        /// depfile for includes
+        ///
+        /// If specified, include paths will be listed here, delimited by newlines.
+        depfile: Option<PathBuf>,
+
         #[structopt(short = "i", long = "includepath", parse(from_os_str))]
         /// base path for resolving includes
         includepath: PathBuf,

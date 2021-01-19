@@ -47,6 +47,7 @@ compiled_action("basic_compute") {
     "--vn",
     "${target_name}_spirv",
   ]
+  hermetic_deps = false
 }
 
 group("drm_unit_tests_linux_arm64") {
