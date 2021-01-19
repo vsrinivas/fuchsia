@@ -20,7 +20,14 @@ template("zx_host_tool") {
                                "testonly",
                              ])
       forward_variables_from(invoker, [ "testonly" ])
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//build:deprecated_zx_wrapper_allowlist" ]
     }
+
+    # Uncomment the below to generate the allowlist
+    #print("\"" + get_label_info(":$target_name", "dir") + "/*\",")
 
     output_dir = root_out_dir
     if (defined(invoker.output_dir)) {

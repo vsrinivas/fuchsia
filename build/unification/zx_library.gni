@@ -377,8 +377,18 @@ template("zx_library") {
         defines = []
       }
       defines += [ "_ALL_SOURCE" ]
+
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+
+      # Add allowlist to data_deps rather than deps to not trigger SDK deps logic
+      data_deps += [ "//build:deprecated_zx_wrapper_allowlist" ]
     }
   }
+
+  # Uncomment the below to generate the allowlist
+  #print("\"" + get_label_info(":$target_name", "dir") + "/*\",")
 }
 
 set_defaults("zx_library") {
