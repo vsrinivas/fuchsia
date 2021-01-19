@@ -105,7 +105,7 @@
                         "Add `#[allow(unreachable_patterns)]` to the server's request stream match.",
                         "Add an underscore arm to the server's request stream match."
                     ],
-                    "source": "rust/step_01_during_1.rs",
+                    "source": "rust/step_01_during.rs",
                     "step_num": 1
                 },
                 {
@@ -114,22 +114,16 @@
                 },
                 {
                     "instructions": [
-                        "Add the new method to the protocol's `ProxyInterface` implementation."
+                        "Add the new method to the protocol's `ProxyInterface` implementation.",
+                        "Remove `#[allow(unreachable_patterns)]` from the server's request stream match.",
+                        "Replace the underscore arm in the server's request stream match with one that handles the new method."
                     ],
-                    "source": "rust/step_03_during_2.rs",
+                    "source": "rust/step_03_after.rs",
                     "step_num": 3
                 },
                 {
                     "fidl": "step_04_after",
                     "step_num": 4
-                },
-                {
-                    "instructions": [
-                        "Remove `#[allow(unreachable_patterns)]` from the server's request stream match.",
-                        "Replace the underscore arm in the server's request stream match with one that handles the new method."
-                    ],
-                    "source": "rust/step_05_after.rs",
-                    "step_num": 5
                 }
             ]
         }
