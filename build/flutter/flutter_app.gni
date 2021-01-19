@@ -36,12 +36,6 @@ import("//src/sys/build/components.gni")
 #     A boolean. Whether to build/run the app in a stripped-down Dart VM.
 #     Defaults to !is_debug.
 #
-#   flutter_driver_extendable (optional)
-#     A boolean. Determines if, in a debug build, this package will be built
-#     with a wrapper that auto-enables flutter driver extensions when running
-#     the application in a an environment that includes TestRunner. Does not
-#     affect AOT or release builds.
-#
 #   resources (optional)
 #     An optional list of resources.
 #
@@ -122,7 +116,6 @@ template("flutter_app") {
 
   flutter_component_gn_label = target_name + "_flutter_component"
   flutter_component(flutter_component_gn_label) {
-    forward_variables_from(invoker, [ "flutter_driver_extendable" ])
     main_package = _package_name
     component_name = string_replace(_fuchsia_package_name, "_", "-")
     main_dart = _main_dart

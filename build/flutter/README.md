@@ -32,10 +32,6 @@ The compilation mode can be set explicity as a gn arg by setting the
 
 Product mode can be set by setting the `flutter_force_product` variable to true.
 
-## Flutter Driver
-
-Flutter offers a tool called the flutter driver to help with automated testing. This tool can be enabled by setting the `flutter_driver_extendable` variable to `true` in JIT debug builds. When this is enabled a main method will be generated at compile time which sets up the driver and calls the original main method. The gen_debug_wrapper.py script is used to create the debug wrapper.
-
 ## Flutter Assets
 
 Flutter applications can define assets in their pubspec.yaml file [https://flutter.dev/docs/development/ui/assets-and-images]. The flutter_component target will look at the pubspec file during compilation and generate an AssetManifest.json file and ensure that all assets get included in the resulting package.

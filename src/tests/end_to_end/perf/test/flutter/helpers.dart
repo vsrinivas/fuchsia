@@ -81,26 +81,15 @@ class FlutterTestHelper {
   /// Connect [driver] to the given [appName].
   ///
   /// Using flutter_driver requires that the app is built with flutter_driver
-  /// support and run in an environment with flutter_driver. There are two ways
-  /// to do this:
-  /// 1) Require flutter_driver in the app. Note that according to the
-  ///    documentation for |enableFlutterDriverExtension|, "applications
-  ///    intended for release should never include this method." This call will
-  ///    not work in release builds of the Flutter app.
-  ///      import 'package:flutter_driver/driver_extension.dart';
-  ///      void main() { enableFlutterDriverExtension(); }
-  /// 2) Use |flutter_driver_extendable| in the app's BUILD file.
-  ///    This adds a wrapper around main to call enableFlutterDriverExtension()
-  ///    when flutter_driver is enabled in debug builds, so release builds will
-  ///    not include flutter_driver.
-  ///      import("//build/config.gni")
-  ///      import("//build/testing/flutter_driver.gni")
-  ///      import("//topaz/runtime/flutter_runner/flutter_app.gni")
-  ///      flutter_app("example") {
-  ///        flutter_driver_extendable = flutter_driver_enabled
-  ///      }
-  ///    Then use --args=is_debug=true --args=flutter_driver_enabled=true in
-  ///    fx set to enable flutter_driver.
+  /// support and run in an environment with flutter_driver. To do this, require
+  /// flutter_driver in the app. Note that according to the documentation for
+  /// |enableFlutterDriverExtension|, "applications intended for release should
+  /// never include this method." This call will not work in release builds of
+  /// the Flutter app.
+  ///   import 'package:flutter_driver/driver_extension.dart';
+  ///   void main() { enableFlutterDriverExtension(); }
+  /// Then use --args=is_debug=true --args=flutter_driver_enabled=true in fx set
+  /// to enable flutter_driver.
   Future<void> connectFlutterDriver(String appName) async {
     connector = FlutterDriverConnector(sl4f);
     await connector.initialize();

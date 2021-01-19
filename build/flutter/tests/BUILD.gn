@@ -13,8 +13,14 @@ group("tests") {
 
 dart_library("lib") {
   package_name = "build_flutter_test"
-  sources = [ "main.dart" ]
-  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+  sources = [
+    "main.dart",
+    "test_main.dart",
+  ]
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+  ]
 }
 
 resource("text-file") {
@@ -24,8 +30,7 @@ resource("text-file") {
 
 flutter_component("flutter-component-with-flutter-driver") {
   manifest = "meta/flutter-component-with-flutter-driver.cmx"
-
-  flutter_driver_extendable = true
+  main_dart = "test_main.dart"
   main_package = "build_flutter_test"
   deps = [
     ":lib",
@@ -35,7 +40,6 @@ flutter_component("flutter-component-with-flutter-driver") {
 
 flutter_component("flutter-component") {
   manifest = "meta/flutter-component.cmx"
-  flutter_driver_extendable = false
   main_package = "build_flutter_test"
   deps = [
     ":lib",
