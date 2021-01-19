@@ -17,6 +17,8 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 
+#include "src/devices/block/drivers/bootpart/bootpart_bind.h"
+
 #define GUID_STRLEN 40
 
 #define TXN_SIZE 0x4000  // 128 partition entries
