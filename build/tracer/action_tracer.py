@@ -209,8 +209,6 @@ def main():
         # Allow actions to access Python code such as via imports
         # TODO(fangism): validate python imports under source control more precisely
         ".py",
-        # TODO(shayba): remove hack below for response files
-        #".rsp",
     }
     # TODO(fangism): for suffixes that we always ignore for writing, such as safe
     # or intended side-effect byproducts, make sure no declared inputs ever match them.
