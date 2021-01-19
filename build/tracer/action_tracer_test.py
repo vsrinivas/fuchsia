@@ -111,65 +111,40 @@ class AccessTraceCheckerTests(unittest.TestCase):
 
     def test_ok_read(self):
         checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={"readable.txt"},
-            allowed_writes={})
+            allowed_reads={"readable.txt"})
         self.assertEqual(
-            checker.check_accesses([
-                "r|readable.txt",
-            ]),
+            checker.check_accesses(["r|readable.txt"]),
             [],
         )
 
     def test_forbidden_read(self):
         self.assertEqual(
-            _default_checker.check_accesses([
-                "r|unreadable.txt",
-            ]),
+            _default_checker.check_accesses(["r|unreadable.txt"]),
             [("read", "unreadable.txt")],
         )
 
     def test_ignore_read_outside_of_prefix(self):
         checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="/home/project",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={},
-            allowed_writes={})
+            required_path_prefix="/home/project")
         self.assertEqual(
-            checker.check_accesses([
-                "r|/elsewhere/file.txt",
-            ]),
+            checker.check_accesses(["r|/elsewhere/file.txt"]),
             [],
         )
 
     def test_ok_read_inside_of_prefix(self):
         checker = action_tracer.AccessTraceChecker(
             required_path_prefix="/home/project",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={"/home/project/file.txt"},
-            allowed_writes={})
+            allowed_reads={"/home/project/file.txt"})
         self.assertEqual(
-            checker.check_accesses([
-                "r|/home/project/file.txt",
-            ]),
+            checker.check_accesses(["r|/home/project/file.txt"]),
             [],
         )
 
     def test_ok_write(self):
         checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={},
             allowed_writes={"writeable.txt"})
         self.assertEqual(
-            checker.check_accesses([
-                "w|writeable.txt",
-            ]),
+            checker.check_accesses(["w|writeable.txt"]),
             [],
         )
 
@@ -189,29 +164,18 @@ class AccessTraceCheckerTests(unittest.TestCase):
 
     def test_ignore_write_outside_of_prefix(self):
         checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="/home/project",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={},
-            allowed_writes={})
+            required_path_prefix="/home/project")
         self.assertEqual(
-            checker.check_accesses([
-                "w|/elsewhere/file.txt",
-            ]),
+            checker.check_accesses(["w|/elsewhere/file.txt"]),
             [],
         )
 
     def test_ok_write_inside_of_prefix(self):
         checker = action_tracer.AccessTraceChecker(
             required_path_prefix="/home/project",
-            ignored_prefixes={},
-            ignored_suffixes={},
-            allowed_reads={},
             allowed_writes={"/home/project/file.out"})
         self.assertEqual(
-            checker.check_accesses([
-                "w|/home/project/file.out",
-            ]),
+            checker.check_accesses(["w|/home/project/file.out"]),
             [],
         )
 
@@ -219,24 +183,13 @@ class AccessTraceCheckerTests(unittest.TestCase):
         # Make sure this fails without an ignored_prefix.
         self.assertEqual(
             _default_checker.check_accesses(
-                [
-                    "w|/tmp/intermediate_calculation.txt",
-                ]),
-            [
-                ("write", "/tmp/intermediate_calculation.txt"),
-            ],
+                ["w|/tmp/intermediate_calculation.txt"]),
+            [("write", "/tmp/intermediate_calculation.txt")],
         )
         # Make sure this passes with an ignored_prefix.
-        checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="",
-            ignored_prefixes={"/tmp/"},
-            ignored_suffixes={},
-            allowed_reads={},
-            allowed_writes={})
+        checker = action_tracer.AccessTraceChecker(ignored_prefixes={"/tmp/"})
         self.assertEqual(
-            checker.check_accesses([
-                "w|/tmp/intermediate_calculation.txt",
-            ]),
+            checker.check_accesses(["w|/tmp/intermediate_calculation.txt"]),
             [],
         )
 
@@ -244,25 +197,32 @@ class AccessTraceCheckerTests(unittest.TestCase):
         # Make sure this fails without an ignored_prefix.
         self.assertEqual(
             _default_checker.check_accesses(
-                [
-                    "w|/home/project/out/preprocessed.ii",
-                ]),
-            [
-                ("write", "/home/project/out/preprocessed.ii"),
-            ],
+                ["w|/home/project/out/preprocessed.ii"]),
+            [("write", "/home/project/out/preprocessed.ii")],
         )
         # Make sure this passes with an ignored_prefix.
         checker = action_tracer.AccessTraceChecker(
-            required_path_prefix="",
-            ignored_prefixes={},
             # e.g. from compiling with --save-temps
-            ignored_suffixes={".ii"},
-            allowed_reads={},
-            allowed_writes={})
+            ignored_suffixes={".ii"})
         self.assertEqual(
-            checker.check_accesses([
-                "w|/home/project/out/preprocessed.ii",
-            ]),
+            checker.check_accesses(["w|/home/project/out/preprocessed.ii"]),
+            [],
+        )
+
+    def test_ignore_write_infix(self):
+        # Make sure this fails without ignored_path_parts.
+        self.assertEqual(
+            _default_checker.check_accesses(
+                ["w|/home/project/out/__tmp__/preprocessed.ii"]),
+            [("write", "/home/project/out/__tmp__/preprocessed.ii")],
+        )
+        # Make sure this passes with ignored_path_parts.
+        checker = action_tracer.AccessTraceChecker(
+            # e.g. from compiling with --save-temps
+            ignored_path_parts={"__tmp__"})
+        self.assertEqual(
+            checker.check_accesses(
+                ["w|/home/project/out/__tmp__/preprocessed.ii"]),
             [],
         )
 

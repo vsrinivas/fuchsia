@@ -55,6 +55,7 @@ class AccessTraceChecker(object):
     # These affixes will be ignored for read/write checks.
     ignored_prefixes: FrozenSet[str] = dataclasses.field(default_factory=set)
     ignored_suffixes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    ignored_path_parts: FrozenSet[str] = dataclasses.field(default_factory=set)
 
     # These are explicitly allowed accesses that are checked once the
     # above criteria are met.
@@ -90,6 +91,9 @@ class AccessTraceChecker(object):
                    for ignored in self.ignored_prefixes):
                 continue
             if any(path.endswith(ignored) for ignored in self.ignored_suffixes):
+                continue
+            if any(part for part in path.split(os.path.sep)
+                   if part in self.ignored_path_parts):
                 continue
             unexpected_accesses.extend(
                 check_access_line(
@@ -201,13 +205,15 @@ def main():
         # Allow actions to access Python code such as via imports
         # TODO(fangism): validate python imports under source control more precisely
         ".py",
-        # Allow actions to access Python compiled bytecode
-        ".pyc",
         # TODO(shayba): remove hack below for response files
         #".rsp",
     }
     # TODO(fangism): for suffixes that we always ignore for writing, such as safe
     # or intended side-effect byproducts, make sure no declared inputs ever match them.
+    ignored_path_parts = {
+        # Python creates these directories with bytecode caches
+        "__pycache__",
+    }
 
     raw_trace = ""
     with open(args.trace_output, "r") as trace:
@@ -218,6 +224,7 @@ def main():
         required_path_prefix=src_root,
         ignored_prefixes=ignored_prefixes,
         ignored_suffixes=ignored_suffixes,
+        ignored_path_parts=ignored_path_parts,
         allowed_reads=allowed_reads,
         allowed_writes=allowed_writes)
     unexpected_accesses = checker.check_accesses(raw_trace.splitlines())
