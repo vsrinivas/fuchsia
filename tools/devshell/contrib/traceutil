@@ -15,4 +15,4 @@ fx-config-read
 fx-export-device-address
 export TRACEUTIL_TARGET_HOST="${FX_DEVICE_ADDR}"
 export TRACEUTIL_TARGET_PORT="${FX_SSH_PORT}"
-exec "${FUCHSIA_BUILD_DIR}/host-tools/traceutil" "$@"
+fx-command-exec host-tool traceutil "$@"
