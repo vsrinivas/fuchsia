@@ -3630,31 +3630,6 @@ doesn't require the FVM or SSH keys.
 
 From //build/images/args.gni:69
 
-### zircon_args
-[Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
-The default passes through GOMA/ccache settings and
-[`select_variant`](#select_variant) shorthand selectors.
-**Only set this if you want to wipe out all the defaults that
-propagate from Fuchsia GN to Zircon GN.**  The default value
-folds in [`zircon_extra_args`](#zircon_extra_args), so usually
-it's better to just set `zircon_extra_args` and leave `zircon_args` alone.
-Any individual Zircon build argument set in `zircon_extra_args` will
-silently clobber the default value shown here.
-
-**Current value (from the default):**
-```
-{
-  default_deps = ["//:legacy_unification-arm64"]
-  goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
-  output_gsym = false
-  use_ccache = false
-  use_goma = false
-  variants = []
-}
-```
-
-From //BUILD.gn:84
-
 ### zircon_asserts
 
 **Current value (from the default):** `false`
