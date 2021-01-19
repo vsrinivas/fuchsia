@@ -25,6 +25,8 @@ group("tests") {
   testonly = true
   deps = [
     "hanging_get_helper:tests",
+    "image_utils:tests",
     "stream_utils:tests",
+    "virtual_camera:tests",
   ]
 }

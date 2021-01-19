@@ -6,11 +6,6 @@
 
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
-
-#include <array>
-#include <iostream>
 
 #include "src/camera/lib/image_utils/color_source.h"
 #include "src/camera/lib/image_utils/image_format_rgba.h"

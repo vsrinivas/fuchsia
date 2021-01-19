@@ -7,8 +7,6 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <stdint.h>
-#include <stdio.h>
 
 namespace camera {
 
@@ -61,6 +59,7 @@ std::vector<fuchsia::sysmem::PixelFormatType> GetSupportedFormats();
 
 fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFormat& format);
 fuchsia_sysmem_ImageFormat_2 ConvertImageFormatToC(const fuchsia::sysmem::ImageFormat_2& format);
+
 }  // namespace camera
 
 #endif  // SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_

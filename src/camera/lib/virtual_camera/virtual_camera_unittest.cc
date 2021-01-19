@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/lib/virtual_camera/virtual_camera.h"
+
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
-#include <zircon/types.h>
 
-#include "src/camera/lib/virtual_camera/virtual_camera.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class VirtualCameraTest : public gtest::RealLoopFixture {
  public:

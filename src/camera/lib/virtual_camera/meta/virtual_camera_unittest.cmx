@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/virtual_camera_test"
+        "binary": "bin/virtual_camera_unittest_bin"
     },
     "sandbox": {
         "services": [

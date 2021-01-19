@@ -3,35 +3,41 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("image_utils") {
   deps = [
-    ":algorithms",
+    ":blc",
     ":hsv_color_source",
     ":image_format_rgba",
-    ":image_writer",
+    ":raw12_writer",
   ]
 }
 
-source_set("algorithms") {
-  sources = [ "blc.cc" ]
-
-  public = [ "blc.h" ]
-
-  public_deps = [ "//src/camera/lib/image_utils:image_writer" ]
+group("tests") {
+  testonly = true
+  deps = [
+    ":blc_unittest",
+    ":hsv_generator_unittest",
+    ":image_format_rgba_unittest",
+    ":raw12_writer_unittest",
+  ]
 }
 
-source_set("image_writer") {
-  sources = [ "raw12_writer.cc" ]
+source_set("blc") {
+  sources = [ "blc.cc" ]
+  public = [ "blc.h" ]
+  public_deps = [ ":raw12_writer" ]
+}
 
+source_set("raw12_writer") {
+  sources = [ "raw12_writer.cc" ]
   public = [
     "image_writer.h",
     "raw12_writer.h",
   ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
@@ -43,16 +49,18 @@ source_set("hsv_color_source") {
     "color_source.cc",
     "hsv_generator.cc",
   ]
-
   public = [
     "color_source.h",
     "hsv_generator.h",
   ]
+  public_deps = [ ":image_format_rgba" ]
+}
 
-  deps = [
-    ":image_format_rgba",
+source_set("image_format_rgba") {
+  sources = [ "image_format_rgba.cc" ]
+  public = [ "image_format_rgba.h" ]
+  public_deps = [
     "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -61,18 +69,55 @@ source_set("hsv_color_source") {
   ]
 }
 
-source_set("image_format_rgba") {
-  sources = [ "image_format_rgba.cc" ]
-
-  public = [ "image_format_rgba.h" ]
-
+executable("blc_unittest_bin") {
+  testonly = true
+  sources = [ "blc_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/image-format",
+    ":blc",
+    "//src/lib/fxl/test:gtest_main",
   ]
+}
+
+executable("hsv_generator_unittest_bin") {
+  testonly = true
+  sources = [ "hsv_generator_test.cc" ]
+  deps = [
+    ":hsv_color_source",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+executable("image_format_rgba_unittest_bin") {
+  testonly = true
+  sources = [ "image_format_rgba_test.cc" ]
+  deps = [
+    ":hsv_color_source",
+    ":image_format_rgba",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+executable("raw12_writer_unittest_bin") {
+  testonly = true
+  sources = [ "raw12_writer_test.cc" ]
+  deps = [
+    ":raw12_writer",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("blc_unittest") {
+  deps = [ ":blc_unittest_bin" ]
+}
+
+fuchsia_unittest_package("hsv_generator_unittest") {
+  deps = [ ":hsv_generator_unittest_bin" ]
+}
+
+fuchsia_unittest_package("image_format_rgba_unittest") {
+  deps = [ ":image_format_rgba_unittest_bin" ]
+}
+
+fuchsia_unittest_package("raw12_writer_unittest") {
+  deps = [ ":raw12_writer_unittest_bin" ]
 }

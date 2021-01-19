@@ -6,8 +6,6 @@
 #define SRC_CAMERA_LIB_IMAGE_UTILS_HSV_GENERATOR_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <stdint.h>
-#include <stdio.h>
 
 namespace camera {
 

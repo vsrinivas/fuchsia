@@ -20,9 +20,6 @@ camera_tests = {
     "//src/camera/lib/fake_camera/test",
     "//src/camera/lib/fake_legacy_stream/test",
     "//src/camera/lib/fake_stream/test",
-    "//src/camera/lib/image_utils/test",
-    "//src/camera/lib/image_utils/test:algorithms_test",
-    "//src/camera/lib/virtual_camera/test",
   ]
 
   tests = [
@@ -67,16 +64,6 @@ camera_tests = {
       environments = basic_envs
     },
     {
-      name = "image_writer_test"
-      manifest = "//src/camera/lib/image_utils/test/meta/image_writer_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "algorithms_test"
-      manifest = "//src/camera/lib/image_utils/test/meta/algorithms_test.cmx"
-      environments = basic_envs
-    },
-    {
       name = "fake_legacy_stream_test"
       manifest =
           "//src/camera/lib/fake_legacy_stream/test/fake_legacy_stream_test.cmx"
@@ -105,11 +92,6 @@ camera_tests = {
     {
       name = "fake_camera_test"
       manifest = "//src/camera/lib/fake_camera/test/fake_camera_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "virtual_camera_test"
-      manifest = "//src/camera/lib/virtual_camera/test/virtual_camera_test.cmx"
       environments = basic_envs
     },
     {

@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <array>
-#include <cmath>
 #include <vector>
 
 namespace camera {

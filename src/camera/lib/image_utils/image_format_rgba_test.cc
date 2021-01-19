@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/image-format/image_format.h>
-#include <lib/syslog/cpp/macros.h>
+#include "src/camera/lib/image_utils/image_format_rgba.h"
 
 #include <gtest/gtest.h>
-
-#include "src/camera/lib/image_utils/hsv_generator.h"
-#include "src/camera/lib/image_utils/image_format_rgba.h"
 
 namespace camera {
 namespace {
