@@ -233,7 +233,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   RunLoopUntil([&] { return delete_called; });
 }
 
-TEST_F(SessionShellTest, AttachesAndDetachesView) {
+TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
   static constexpr char kStoryId[] = "my_story";
 
   RunHarnessAndInterceptSessionShell();
@@ -288,7 +288,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
                                    StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
+TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
   static constexpr char kStoryId[] = "my_story";
 
   RunHarnessAndInterceptSessionShell();
