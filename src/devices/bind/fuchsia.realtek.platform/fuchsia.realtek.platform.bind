@@ -9,6 +9,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  ALC5514 = 0x02,
   ETH_PHY = 0x03,
 };
 

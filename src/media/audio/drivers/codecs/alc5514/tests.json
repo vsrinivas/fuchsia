@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.realtek.platform.BIND_PLATFORM_DEV_DID.ALC5514",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.realtek.platform.BIND_PLATFORM_DEV_VID.REALTEK",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Match"
+    }
+]
