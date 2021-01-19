@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,6 +20,7 @@
 #include <hw/reg.h>
 #include <soc/aml-common/aml-g12-reset.h>
 
+#include "src/devices/usb/drivers/nelson-usb-phy/nelson_usb_phy_bind.h"
 #include "usb-phy-regs.h"
 
 namespace nelson_usb_phy {
@@ -502,8 +502,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace nelson_usb_phy
 
-ZIRCON_DRIVER_BEGIN(nelson_usb_phy, nelson_usb_phy::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_NELSON_USB_PHY),
-    ZIRCON_DRIVER_END(nelson_usb_phy)
+ZIRCON_DRIVER(nelson_usb_phy, nelson_usb_phy::driver_ops, "zircon", "0.1");

@@ -191,6 +191,7 @@ static const pbus_dev_t usb_phy_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-usb-phy-v2";
   dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_NELSON;
   dev.did = PDEV_DID_NELSON_USB_PHY;
   dev.mmio_list = usb_phy_mmios;
   dev.mmio_count = countof(usb_phy_mmios);

@@ -15,6 +15,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   T931 = 0x04,
   S905D3 = 0x05,
   A311D = 0x06,
+  NELSON = 0x0A,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
@@ -50,7 +51,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   CPU = 0x1E,
   PWM_INIT = 0x1F,
   NELSON_PDM = 0x20,
-  NELSON_USB_PHY = 0x21,
+  USB_PHY = 0x21,
   SM1_CLK = 0x22,
   VIDEO_ENC = 0x23,
   RAM_CTL = 0x24,
