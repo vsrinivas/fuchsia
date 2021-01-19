@@ -11,12 +11,22 @@ amount of byte data and some number of handles.
 
 ## DESCRIPTION
 
-Channels maintain an ordered queue of messages to be delivered in either
-direction. A message consists of some amount of data and some number of handles.
-A call to [`zx_channel_write()`] enqueues one message, and a call to
-[`zx_channel_read()`] dequeues one message (if any are queued). A thread can block
-until messages are pending via [`zx_object_wait_one()`] or other waiting
-mechanisms.
+Channels have two endpoints. Each endpoint, logically, maintains an ordered
+queue of messages to be read. Writing to an endpoint enqueues a message in the
+other endpoint's queue. When the last handle to an endpoint is closed the unread
+messages in that endpoint's queue are destroyed. Because destroying a message
+closes any handles contained by the message, closing a channel endpoint may have
+a recursive effect (e.g. channel contains a message, which contains a channel,
+which contains a message, and so on).
+
+Closing the last handle to a channel has no impact on the lifetime of messages
+previously written to that channel. This gives channels "fire and forget"
+semantics.
+
+A message consists of some amount of data and some number of handles. A call to
+[`zx_channel_write()`] enqueues one message, and a call to [`zx_channel_read()`]
+dequeues one message (if any are queued). A thread can block until messages are
+pending via [`zx_object_wait_one()`] or other waiting mechanisms.
 
 Alternatively, a call to [`zx_channel_call()`] enqueues a message in one
 direction of the channel, waits for a corresponding response, and
