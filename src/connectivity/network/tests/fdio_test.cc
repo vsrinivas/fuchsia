@@ -135,12 +135,13 @@ static const zx::eventpair& datagram_handle(const ::llcpp::fuchsia::io::NodeInfo
   return node_info.datagram_socket().event;
 }
 
-template <int Type, typename _Client, ::llcpp::fuchsia::io::NodeInfo::Tag Tag, typename _Handle,
-          const _Handle& (*GetHandle)(const ::llcpp::fuchsia::io::NodeInfo& node_info),
+template <int Type, typename ClientType, ::llcpp::fuchsia::io::NodeInfo::Tag Tag,
+          typename HandleType,
+          const HandleType& (*GetHandle)(const ::llcpp::fuchsia::io::NodeInfo& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
-  using Client = _Client;
-  using Handle = _Handle;
+  using Client = ClientType;
+  using Handle = HandleType;
 
   static int type() { return Type; };
   static ::llcpp::fuchsia::io::NodeInfo::Tag tag() { return Tag; }
@@ -151,7 +152,7 @@ struct SocketImpl {
 };
 
 template <typename Impl>
-class SocketTest : public ::testing::Test {
+class SocketTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_TRUE(fd_ = fbl::unique_fd(socket(AF_INET, Impl::type(), 0))) << strerror(errno);
@@ -166,6 +167,11 @@ class SocketTest : public ::testing::Test {
         << strerror(errno);
     ASSERT_EQ(addrlen, sizeof(addr_));
   }
+
+  const fbl::unique_fd& fd() { return fd_; }
+  fbl::unique_fd& mutable_fd() { return fd_; }
+
+ private:
   fbl::unique_fd fd_;
   struct sockaddr_in addr_;
 };
@@ -183,15 +189,15 @@ using DatagramSocketImpl =
 class SocketTestNames {
  public:
   template <typename T>
-  static std::string GetName(int) {
+  static std::string GetName(int i) {
     if (std::is_same<T, StreamSocketImpl>())
-      return "Stream";
+      return "Stream" + testing::PrintToString(i);
     if (std::is_same<T, DatagramSocketImpl>())
-      return "Datagram";
+      return "Datagram" + testing::PrintToString(i);
   }
 };
 
-using SocketTypes = ::testing::Types<StreamSocketImpl, DatagramSocketImpl>;
+using SocketTypes = testing::Types<StreamSocketImpl, DatagramSocketImpl>;
 TYPED_TEST_SUITE(SocketTest, SocketTypes, SocketTestNames);
 
 TYPED_TEST(SocketTest, CloseResourcesOnClose) {
@@ -199,11 +205,11 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   // Increase the reference count.
   zx::channel clone;
-  ASSERT_EQ(status = fdio_fd_clone(this->fd_.get(), clone.reset_and_get_address()), ZX_OK)
+  ASSERT_EQ(status = fdio_fd_clone(this->fd().get(), clone.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
   typename TypeParam::Client client;
-  ASSERT_EQ(status = fdio_fd_transfer(this->fd_.release(),
+  ASSERT_EQ(status = fdio_fd_transfer(this->mutable_fd().release(),
                                       client.mutable_channel()->reset_and_get_address()),
             ZX_OK)
       << zx_status_get_string(status);
@@ -350,17 +356,17 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   // read by the client should trigger a TCP RST.
   ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
 
-  std::vector<pollfd> pfd;
-  for (auto const& fd : connfds) {
-    pfd.push_back({
-        .fd = fd.get(),
+  std::array<pollfd, connfds.size()> pfds;
+  for (size_t i = 0; i < connfds.size(); ++i) {
+    pfds[i] = {
+        .fd = connfds[i].get(),
         .events = POLLOUT,
-    });
+    };
   }
-  int n = poll(pfd.data(), pfd.size(), kTimeout);
+  int n = poll(pfds.data(), pfds.size(), kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(static_cast<size_t>(n), pfd.size());
-  for (auto const& pfd : pfd) {
+  ASSERT_EQ(static_cast<size_t>(n), pfds.size());
+  for (auto const& pfd : pfds) {
     ASSERT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
   }
 
