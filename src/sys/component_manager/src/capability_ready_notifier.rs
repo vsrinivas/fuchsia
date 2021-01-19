@@ -10,7 +10,7 @@ use {
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
         model::Model,
-        realm::Realm,
+        realm::{Realm, RealmState},
         rights::{Rights, WRITE_RIGHTS},
     },
     async_trait::async_trait,
@@ -293,11 +293,10 @@ async fn clone_outgoing_root(
 #[async_trait]
 impl EventSynthesisProvider for CapabilityReadyNotifier {
     async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<Event> {
-        let decl = {
-            if let Some(state) = realm.lock_state().await.get_resolved() {
-                state.decl().clone()
-            } else {
-                return Vec::new();
+        let decl = match *realm.lock_state().await {
+            RealmState::Resolved(ref s) => s.decl().clone(),
+            RealmState::New | RealmState::Discovered | RealmState::Destroyed => {
+                return vec![];
             }
         };
         let matching_exposes = filter_matching_exposes(&decl, Some(&filter));

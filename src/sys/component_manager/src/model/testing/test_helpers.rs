@@ -10,7 +10,7 @@ use {
         model::{
             hooks::HooksRegistration,
             model::Model,
-            realm::{Realm, WeakRealm},
+            realm::{Realm, RealmState, WeakRealm},
             rights,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
@@ -108,48 +108,44 @@ pub async fn execution_is_shut_down(realm: &Realm) -> bool {
 
 /// Returns true if the given child realm (live or deleting) exists.
 pub async fn has_child<'a>(realm: &'a Realm, moniker: &'a str) -> bool {
-    realm
-        .lock_state()
-        .await
-        .get_resolved()
-        .expect("not resolved")
-        .all_child_realms()
-        .contains_key(&moniker.into())
+    match *realm.lock_state().await {
+        RealmState::Resolved(ref s) => s.all_child_realms().contains_key(&moniker.into()),
+        RealmState::Destroyed => false,
+        _ => {
+            panic!("not resolved")
+        }
+    }
 }
 
 /// Return the instance id of the given live child.
 pub async fn get_instance_id<'a>(realm: &'a Realm, moniker: &'a str) -> u32 {
-    realm
-        .lock_state()
-        .await
-        .get_resolved()
-        .expect("not resolved")
-        .get_live_child_instance_id(&moniker.into())
-        .unwrap()
+    match *realm.lock_state().await {
+        RealmState::Resolved(ref s) => s.get_live_child_instance_id(&moniker.into()).unwrap(),
+        _ => {
+            panic!("not resolved")
+        }
+    }
 }
 
 /// Return all monikers of the live children of the given `realm`.
 pub async fn get_live_children(realm: &Realm) -> HashSet<PartialMoniker> {
-    realm
-        .lock_state()
-        .await
-        .get_resolved()
-        .expect("not resolved")
-        .live_child_realms()
-        .map(|(m, _)| m.clone())
-        .collect()
+    match *realm.lock_state().await {
+        RealmState::Resolved(ref s) => s.live_child_realms().map(|(m, _)| m.clone()).collect(),
+        RealmState::Destroyed => HashSet::new(),
+        _ => {
+            panic!("not resolved")
+        }
+    }
 }
 
 /// Return the child realm of the given `realm` with moniker `child`.
 pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    realm
-        .lock_state()
-        .await
-        .get_resolved()
-        .expect("not resolved")
-        .get_live_child_realm(&child.into())
-        .unwrap()
-        .clone()
+    match *realm.lock_state().await {
+        RealmState::Resolved(ref s) => s.get_live_child_realm(&child.into()).unwrap().clone(),
+        _ => {
+            panic!("not resolved")
+        }
+    }
 }
 
 /// Returns an empty component decl for an executable component.

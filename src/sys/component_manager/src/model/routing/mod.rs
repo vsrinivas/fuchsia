@@ -1630,6 +1630,7 @@ fn routing_epitaph(err: &ModelError) -> zx::Status {
         ModelError::RoutingError { err } => err.as_zx_status(),
         ModelError::RightsError { err } => err.as_zx_status(),
         ModelError::PolicyError { err } => err.as_zx_status(),
+        ModelError::InstanceNotFound { .. } => zx::Status::UNAVAILABLE,
         ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
         // Any other type of error is not expected.
         _ => zx::Status::INTERNAL,

@@ -8,7 +8,7 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
-        realm::{BindReason, ExecutionState, Package, Realm, Runtime, WeakRealm},
+        realm::{BindReason, ExecutionState, Package, Realm, RealmState, Runtime, WeakRealm},
         runner::Runner,
     },
     cm_rust::data,
@@ -26,12 +26,13 @@ pub(super) async fn do_start(
     realm: &Arc<Realm>,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
-    // Pre-flight check: if the component is already started, return now. Note that `bind_at` also
-    // performs this check before scheduling the action; here, we do it again while the action is
-    // registered so we avoid the risk of invoking the BeforeStart hook twice.
+    // Pre-flight check: if the component is already started, or was shutd down, return now. Note
+    // that `bind_at` also performs this check before scheduling the action; here, we do it again
+    // while the action is registered so we avoid the risk of invoking the BeforeStart hook twice.
     {
+        let state = realm.lock_state().await;
         let execution = realm.lock_execution().await;
-        if let Some(res) = should_return_early(&execution, &realm.abs_moniker) {
+        if let Some(res) = should_return_early(&state, &execution, &realm.abs_moniker) {
             return res;
         }
     }
@@ -104,8 +105,9 @@ pub(super) async fn do_start(
     // Set the Runtime in the Execution. From component manager's perspective, this indicates
     // that the component has started. This may return early if the component is shut down.
     {
+        let state = realm.lock_state().await;
         let mut execution = realm.lock_execution().await;
-        if let Some(res) = should_return_early(&execution, &realm.abs_moniker) {
+        if let Some(res) = should_return_early(&state, &execution, &realm.abs_moniker) {
             return res;
         }
         start_context.pending_runtime.watch_for_exit(realm.as_weak());
@@ -121,12 +123,20 @@ pub(super) async fn do_start(
 }
 
 /// Returns `Some(Result)` if `bind` should return early based on either of the following:
+/// - The component instance is destroyed.
 /// - The component instance is shut down.
 /// - The component instance is already started.
 pub fn should_return_early(
+    realm: &RealmState,
     execution: &ExecutionState,
     abs_moniker: &AbsoluteMoniker,
 ) -> Option<Result<(), ModelError>> {
+    match realm {
+        RealmState::New | RealmState::Discovered | RealmState::Resolved(_) => {}
+        RealmState::Destroyed => {
+            return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
+        }
+    }
     if execution.is_shut_down() {
         Some(Err(ModelError::instance_shut_down(abs_moniker.clone())))
     } else if execution.runtime.is_some() {

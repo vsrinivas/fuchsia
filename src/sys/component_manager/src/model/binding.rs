@@ -7,7 +7,7 @@ use {
         actions::{start, ActionSet, StartAction},
         error::ModelError,
         model::Model,
-        realm::{BindReason, Realm},
+        realm::{BindReason, Realm, RealmState},
     },
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
@@ -86,23 +86,31 @@ pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), Model
     // Eager binding can cause `bind_at` to be re-entrant. It's important to bail out here so
     // we don't end up in an infinite loop of binding to the same eager child.
     {
+        let state = realm.lock_state().await;
         let execution = realm.lock_execution().await;
-        if let Some(res) = start::should_return_early(&execution, &realm.abs_moniker) {
+        if let Some(res) = start::should_return_early(&state, &execution, &realm.abs_moniker) {
             return res;
         }
     }
     ActionSet::register(realm.clone(), StartAction::new(reason.clone())).await?;
 
     let eager_children: Vec<_> = {
-        let mut state = realm.lock_state().await;
-        let state = state.get_resolved_mut().expect("bind_single_instance: not resolved");
-        state
-            .live_child_realms()
-            .filter_map(|(_, r)| match r.startup {
-                fsys::StartupMode::Eager => Some(r.clone()),
-                fsys::StartupMode::Lazy => None,
-            })
-            .collect()
+        let state = realm.lock_state().await;
+        match *state {
+            RealmState::Resolved(ref s) => s
+                .live_child_realms()
+                .filter_map(|(_, r)| match r.startup {
+                    fsys::StartupMode::Eager => Some(r.clone()),
+                    fsys::StartupMode::Lazy => None,
+                })
+                .collect(),
+            RealmState::Destroyed => {
+                return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+            }
+            RealmState::New | RealmState::Discovered => {
+                panic!("bind_at: not resoled")
+            }
+        }
     };
     bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
         ModelError::InstanceShutDown { .. } => Ok(()),
@@ -282,7 +290,7 @@ mod tests {
         let echo_realm = get_live_child(&*model.root_realm, "echo").await;
         let actual_children = get_live_children(&*system_realm).await;
         assert!(actual_children.is_empty());
-        assert!(echo_realm.lock_state().await.get_resolved().is_none());
+        assert_matches!(*echo_realm.lock_state().await, RealmState::New | RealmState::Discovered);
         // bind to echo
         let m: AbsoluteMoniker = vec!["echo:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
@@ -559,7 +567,10 @@ mod tests {
             let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
             {
                 let root_state = model.root_realm.lock_state().await;
-                let root_state = root_state.get_resolved().unwrap();
+                let root_state = match *root_state {
+                    RealmState::Resolved(ref s) => s,
+                    _ => panic!("not resolved"),
+                };
                 let realm = root_state.get_child_instance(&"system:0".into()).unwrap();
                 let actions = realm.lock_actions().await;
                 assert!(actions.contains(&ActionKey::Discover));

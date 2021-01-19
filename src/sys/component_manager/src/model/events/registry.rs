@@ -21,7 +21,7 @@ use {
                 HooksRegistration,
             },
             model::Model,
-            realm::Realm,
+            realm::{Realm, RealmState},
             routing,
         },
     },
@@ -346,7 +346,15 @@ impl EventRegistry {
         let realm = model.look_up_realm(&target_moniker).await?;
         let decl = {
             let state = realm.lock_state().await;
-            state.get_resolved().expect("route_events: not registered").decl().clone()
+            match *state {
+                RealmState::New | RealmState::Discovered => {
+                    panic!("route_events: not resolved");
+                }
+                RealmState::Resolved(ref s) => s.decl().clone(),
+                RealmState::Destroyed => {
+                    return Err(ModelError::instance_not_found(target_moniker.clone()));
+                }
+            }
         };
 
         let mut result = RouteEventsResult::new();

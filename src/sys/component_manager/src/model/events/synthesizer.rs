@@ -8,7 +8,7 @@ use {
         events::{dispatcher::EventDispatcherScope, event::Event, filter::EventFilter},
         hooks::{Event as HookEvent, EventType},
         model::Model,
-        realm::Realm,
+        realm::{Realm, RealmState},
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -179,9 +179,12 @@ fn get_subrealms(
                         continue;
                     }
                     let state_guard = curr_realm.lock_state().await;
-                    if let Some(state) = state_guard.get_resolved() {
-                        for (_, child_realm) in state.live_child_realms() {
-                            pending.push(child_realm.clone());
+                    match *state_guard {
+                        RealmState::New | RealmState::Discovered | RealmState::Destroyed => {}
+                        RealmState::Resolved(ref s) => {
+                            for (_, child_realm) in s.live_child_realms() {
+                                pending.push(child_realm.clone());
+                            }
                         }
                     }
                     drop(state_guard);

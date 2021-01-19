@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{ActionSet, ShutdownAction},
         error::ModelError,
-        realm::{Realm, ResolvedRealmState},
+        realm::{Realm, RealmState, ResolvedRealmState},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl,
@@ -225,17 +225,20 @@ impl ShutdownJob {
 
 pub async fn do_shutdown(realm: &Arc<Realm>) -> Result<(), ModelError> {
     {
-        let state_lock = realm.lock_state().await;
+        let state = realm.lock_state().await;
         {
             let exec_state = realm.lock_execution().await;
             if exec_state.is_shut_down() {
                 return Ok(());
             }
         }
-        if let Some(state) = state_lock.get_resolved() {
-            let mut shutdown_job = ShutdownJob::new(state).await;
-            drop(state_lock);
-            Box::pin(shutdown_job.execute()).await?;
+        match *state {
+            RealmState::Resolved(ref s) => {
+                let mut shutdown_job = ShutdownJob::new(s).await;
+                drop(state);
+                Box::pin(shutdown_job.execute()).await?;
+            }
+            RealmState::New | RealmState::Discovered | RealmState::Destroyed => {}
         }
     }
     // Now that all children have shut down, shut down the parent.

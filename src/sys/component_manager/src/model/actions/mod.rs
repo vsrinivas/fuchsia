@@ -67,6 +67,7 @@ use {
     futures::{
         channel::oneshot,
         future::{join_all, pending, BoxFuture, FutureExt, Shared},
+        task::{Context, Poll},
         Future,
     },
     moniker::ChildMoniker,
@@ -74,7 +75,11 @@ use {
     std::collections::HashMap,
     std::fmt::Debug,
     std::hash::Hash,
-    std::sync::Arc,
+    std::pin::Pin,
+    std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
 /// A action on a realm that must eventually be fulfilled.
@@ -273,7 +278,45 @@ pub struct ActionSet {
     rep: HashMap<ActionKey, Box<dyn Any + Send + Sync>>,
 }
 
-type ActionNotifier<Output> = Shared<BoxFuture<'static, Output>>;
+/// A future bound to a particular action that completes when that action completes.
+///
+/// Cloning this type will not duplicate the action, but generate another future that waits on the
+/// same action.
+#[derive(Debug)]
+pub struct ActionNotifier<Output: Send + Sync + Clone + Debug> {
+    /// The inner future.
+    fut: Shared<BoxFuture<'static, Output>>,
+    /// How many clones of this ActionNotifer are live, useful for testing.
+    refcount: Arc<AtomicUsize>,
+}
+
+impl<Output: Send + Sync + Clone + Debug> ActionNotifier<Output> {
+    /// Instantiate an `ActionNotifier` wrapping `fut`.
+    pub fn new(fut: BoxFuture<'static, Output>) -> Self {
+        Self { fut: fut.shared(), refcount: Arc::new(AtomicUsize::new(1)) }
+    }
+}
+
+impl<Output: Send + Sync + Clone + Debug> Clone for ActionNotifier<Output> {
+    fn clone(&self) -> Self {
+        let _ = self.refcount.fetch_add(1, Ordering::Relaxed);
+        Self { fut: self.fut.clone(), refcount: self.refcount.clone() }
+    }
+}
+
+impl<Output: Send + Sync + Clone + Debug> Drop for ActionNotifier<Output> {
+    fn drop(&mut self) {
+        let _ = self.refcount.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+impl<Output: Send + Sync + Clone + Debug> Future for ActionNotifier<Output> {
+    type Output = Output;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let fut = Pin::new(&mut self.fut);
+        fut.poll(cx)
+    }
+}
 
 /// Represents a task that implements an action.
 pub(crate) struct ActionTask<A>
@@ -343,6 +386,23 @@ impl ActionSet {
         rx
     }
 
+    /// Returns a future that waits for the given action to complete, if one exists.
+    pub fn wait<A>(&self, action: A) -> Option<impl Future<Output = A::Output>>
+    where
+        A: Action,
+    {
+        let key = action.key();
+        if let Some(rx) = self.rep.get(&key) {
+            let rx = rx
+                .downcast_ref::<ActionNotifier<A::Output>>()
+                .expect("action notifier has unexpected type");
+            let rx = rx.clone();
+            Some(rx)
+        } else {
+            None
+        }
+    }
+
     /// Removes an action from the set, completing it.
     async fn finish<'a>(realm: &Arc<Realm>, key: &'a ActionKey) {
         let mut action_set = realm.lock_actions().await;
@@ -398,20 +458,21 @@ impl ActionSet {
             };
             let (tx, rx) = oneshot::channel();
             let task = ActionTask::new(tx, fut);
-            let rx = async move {
-                match rx.await {
-                    Ok(res) => res,
-                    Err(_) => {
-                    // Normally we won't get here but this can happen if the sender's task is
-                    // cancelled because, for example, component manager exited and the executor
-                    // was torn down.
-                        let () = pending().await;
-                        unreachable!();
+            let rx = ActionNotifier::new(
+                async move {
+                    match rx.await {
+                        Ok(res) => res,
+                        Err(_) => {
+                            // Normally we won't get here but this can happen if the sender's task
+                            // is cancelled because, for example, component manager exited and the
+                            // executor was torn down.
+                            let () = pending().await;
+                            unreachable!();
+                        }
                     }
                 }
-            }
-            .boxed()
-            .shared();
+                .boxed(),
+            );
             self.rep.insert(key, Box::new(rx.clone()));
             (Some(task), rx)
         }
@@ -423,7 +484,11 @@ async fn do_discover(realm: &Arc<Realm>) -> Result<(), ModelError> {
         let state = realm.lock_state().await;
         match *state {
             RealmState::New => false,
-            _ => true,
+            RealmState::Discovered => true,
+            RealmState::Resolved(_) => true,
+            RealmState::Destroyed => {
+                return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+            }
         }
     };
     if is_discovered {
@@ -433,8 +498,24 @@ async fn do_discover(realm: &Arc<Realm>) -> Result<(), ModelError> {
     realm.hooks.dispatch(&event).await?;
     {
         let mut state = realm.lock_state().await;
-        assert!(matches!(*state, RealmState::New), "Realm in unexpected state after discover");
-        *state = RealmState::Discovered
+        assert!(
+            matches!(*state, RealmState::New | RealmState::Destroyed),
+            "Realm in unexpected state after discover"
+        );
+        match *state {
+            RealmState::Destroyed => {
+                // Nothing to do.
+            }
+            RealmState::Discovered | RealmState::Resolved(_) => {
+                panic!(
+                    "Realm was marked {:?} during Discover action, which shouldn't be possible",
+                    *state
+                );
+            }
+            RealmState::New => {
+                state.set(RealmState::Discovered);
+            }
+        }
     }
     Ok(())
 }
@@ -443,15 +524,29 @@ async fn do_mark_deleting(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<(
     let partial_moniker = moniker.to_partial();
     let child_realm = {
         let state = realm.lock_state().await;
-        let state = state.get_resolved().expect("do_mark_deleting: not resolved");
-        state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
+        match *state {
+            RealmState::Resolved(ref s) => {
+                s.get_live_child_realm(&partial_moniker).map(|r| r.clone())
+            }
+            RealmState::Destroyed => None,
+            RealmState::New | RealmState::Discovered => {
+                panic!("do_mark_deleting: not resolved");
+            }
+        }
     };
     if let Some(child_realm) = child_realm {
         let event = Event::new(&child_realm, Ok(EventPayload::MarkedForDestruction));
         child_realm.hooks.dispatch(&event).await?;
         let mut state = realm.lock_state().await;
-        let state = state.get_resolved_mut().expect("do_mark_deleting: not resolved");
-        state.mark_child_realm_deleting(&partial_moniker);
+        match *state {
+            RealmState::Resolved(ref mut s) => {
+                s.mark_child_realm_deleting(&partial_moniker);
+            }
+            RealmState::Destroyed => {}
+            RealmState::New | RealmState::Discovered => {
+                panic!("do_mark_deleting: not resolved");
+            }
+        }
     } else {
         // Child already marked deleting. Nothing to do.
     }
@@ -466,17 +561,27 @@ async fn do_delete_child(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<()
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child_realm = {
         let state = realm.lock_state().await;
-        let state = state.get_resolved().expect("do_delete_child: not resolved");
-        state.all_child_realms().get(&moniker).map(|r| r.clone())
+        match *state {
+            RealmState::Resolved(ref s) => s.all_child_realms().get(&moniker).map(|r| r.clone()),
+            RealmState::Destroyed => None,
+            RealmState::New | RealmState::Discovered => {
+                panic!("do_delete_child: not resolved");
+            }
+        }
     };
     if let Some(child_realm) = child_realm {
         ActionSet::register(child_realm.clone(), DestroyAction::new()).await?;
         {
             let mut state = realm.lock_state().await;
-            state
-                .get_resolved_mut()
-                .expect("do_delete_child: not resolved")
-                .remove_child_realm(&moniker);
+            match *state {
+                RealmState::Resolved(ref mut s) => {
+                    s.remove_child_realm(&moniker);
+                }
+                RealmState::Destroyed => {}
+                RealmState::New | RealmState::Discovered => {
+                    panic!("do_delete_child: not resolved");
+                }
+            }
         }
         let event = Event::new(&child_realm, Ok(EventPayload::Destroyed));
         child_realm.hooks.dispatch(&event).await?;
@@ -489,23 +594,53 @@ async fn do_destroy(realm: &Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
     ActionSet::register(realm.clone(), ShutdownAction::new()).await?;
 
-    let nfs = if let Some(state) = realm.lock_state().await.get_resolved() {
-        let mut nfs = vec![];
-        for (m, _) in state.all_child_realms().iter() {
-            let realm = realm.clone();
-            let nf = ActionSet::register(realm, DeleteChildAction::new(m.clone()));
-            nfs.push(nf);
+    let nfs = {
+        match *realm.lock_state().await {
+            RealmState::Resolved(ref s) => {
+                let mut nfs = vec![];
+                for (m, _) in s.all_child_realms().iter() {
+                    let realm = realm.clone();
+                    let nf = ActionSet::register(realm, DeleteChildAction::new(m.clone()));
+                    nfs.push(nf);
+                }
+                nfs
+            }
+            RealmState::New | RealmState::Discovered | RealmState::Destroyed => {
+                // Component was never resolved. No explicit cleanup is required for children.
+                vec![]
+            }
         }
-        nfs
-    } else {
-        // Component was never resolved. No explicit cleanup is required for children.
-        vec![]
     };
     let results = join_all(nfs).await;
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the parent.
     realm.destroy_instance().await?;
+
+    // Only consider the component fully destroyed once it's no longer executing any lifecycle
+    // transitions.
+    {
+        let mut state = realm.lock_state().await;
+        state.set(RealmState::Destroyed);
+    }
+    fn wait(nf: Option<impl Future + Send + 'static>) -> BoxFuture<'static, ()> {
+        Box::pin(async {
+            if let Some(nf) = nf {
+                let _ = nf.await;
+            }
+        })
+    }
+    let nfs = {
+        let actions = realm.lock_actions().await;
+        vec![
+            wait(actions.wait(DiscoverAction::new())),
+            wait(actions.wait(ResolveAction::new())),
+            wait(actions.wait(StartAction::new(BindReason::Unsupported))),
+        ]
+        .into_iter()
+    };
+    join_all(nfs).await;
+
     Ok(())
 }
 
@@ -519,7 +654,8 @@ pub mod tests {
     use {
         crate::model::{
             binding::Binder,
-            hooks::{EventType, Hook, HooksRegistration},
+            events::{event::EventMode, registry::EventSubscription, stream::EventStream},
+            hooks::{self, EventType, Hook, HooksRegistration},
             realm::BindReason,
             testing::{
                 test_helpers::{
@@ -535,7 +671,8 @@ pub mod tests {
             ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget,
             ProtocolDecl, UseDecl, UseProtocolDecl, UseSource,
         },
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::join,
         matches::assert_matches,
         moniker::{AbsoluteMoniker, PartialMoniker},
         std::{convert::TryFrom, sync::Weak},
@@ -624,8 +761,8 @@ pub mod tests {
         ActionSet::finish(&realm, &ActionKey::Shutdown).await;
 
         // nf2 should be blocked on task1 completing.
-        assert!(nf1.peek().is_none());
-        assert!(nf2.peek().is_none());
+        assert!(nf1.fut.peek().is_none());
+        assert!(nf2.fut.peek().is_none());
         task1.unwrap().tx.send(Ok(())).unwrap();
         task2.unwrap().spawn();
         nf1.await.unwrap();
@@ -650,8 +787,8 @@ pub mod tests {
         ActionSet::finish(&realm, &ActionKey::Shutdown).await;
 
         // nf2 and nf3 should be blocked on task1 completing.
-        assert!(nf1.peek().is_none());
-        assert!(nf2.peek().is_none());
+        assert!(nf1.fut.peek().is_none());
+        assert!(nf2.fut.peek().is_none());
         task1.unwrap().tx.send(Ok(())).unwrap();
         task2.unwrap().spawn();
         assert!(task3.is_none());
@@ -852,8 +989,12 @@ pub mod tests {
         // Get realm_b without resolving it.
         let realm_b = {
             let state = realm_a.lock_state().await;
-            let state = state.get_resolved().unwrap();
-            state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+            match *state {
+                RealmState::Resolved(ref s) => {
+                    s.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+                }
+                _ => panic!("not resolved"),
+            }
         };
         assert!(execution_is_shut_down(&realm_b).await);
         assert!(is_unresolved(&realm_b).await);
@@ -1699,7 +1840,7 @@ pub mod tests {
 
         #[async_trait]
         impl Hook for StopErrorHook {
-            async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+            async fn on(self: Arc<Self>, event: &hooks::Event) -> Result<(), ModelError> {
                 if let Ok(EventPayload::Stopped { .. }) = event.result {
                     self.on_shutdown_instance_async(&event.target_moniker).await?;
                 }
@@ -1917,7 +2058,7 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -1944,7 +2085,7 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1988,9 +2129,10 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("container:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm_root, &realm_container).await);
-        assert!(is_destroyed(&realm_container, &realm_a).await);
-        assert!(is_destroyed(&realm_container, &realm_b).await);
+        assert!(is_child_deleted(&realm_root, &realm_container).await);
+        assert!(is_destroyed(&realm_container).await);
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2015,8 +2157,8 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a, &realm_b).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_destroyed(&realm_a).await);
 
         // Check order of events.
         {
@@ -2039,6 +2181,157 @@ pub mod tests {
         }
     }
 
+    async fn setup_destroy_blocks_test(event_type: EventType) -> (ActionsTest, EventStream) {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let events = vec![event_type.into()];
+        let mut event_source = test
+            .builtin_environment
+            .event_source_factory
+            .create_for_debug(EventMode::Sync)
+            .await
+            .expect("create event source");
+        let event_stream = event_source
+            .subscribe(
+                events
+                    .into_iter()
+                    .map(|event| EventSubscription::new(event, EventMode::Sync))
+                    .collect(),
+            )
+            .await
+            .expect("subscribe to event stream");
+        event_source.start_component_tree().await;
+        let model = test.model.clone();
+        fasync::Task::spawn(async move { model.start().await }).detach();
+        (test, event_stream)
+    }
+
+    async fn run_destroy_blocks_test<A>(
+        test: &ActionsTest,
+        event_stream: &mut EventStream,
+        event_type: EventType,
+        action: A,
+        expected_ref_count: usize,
+    ) where
+        A: Action,
+    {
+        let event = event_stream.wait_until(event_type, vec!["a:0"].into()).await.unwrap();
+
+        // Register delete child action, while `action` is stalled.
+        let realm_root = test.look_up(vec![].into()).await;
+        let (f, delete_handle) = {
+            let realm_root = realm_root.clone();
+            async move {
+                ActionSet::register(realm_root, DeleteChildAction::new("a:0".into()))
+                    .await
+                    .expect("destroy failed");
+            }
+            .remote_handle()
+        };
+        fasync::Task::spawn(f).detach();
+
+        // Check that `action` is being waited on.
+        let realm_a = match *realm_root.lock_state().await {
+            RealmState::Resolved(ref s) => {
+                s.get_live_child_realm(&PartialMoniker::from("a")).expect("child a not found")
+            }
+            _ => panic!("not resolved"),
+        };
+        let action_key = action.key();
+        loop {
+            let actions = realm_a.lock_actions().await;
+            assert!(actions.contains(&action_key));
+            let rx = &actions.rep[&action_key];
+            let rx = rx
+                .downcast_ref::<ActionNotifier<A::Output>>()
+                .expect("action notifier has unexpected type");
+            let refcount = rx.refcount.load(Ordering::Relaxed);
+            if refcount == expected_ref_count {
+                assert!(actions.contains(&ActionKey::Destroy));
+                break;
+            }
+            drop(actions);
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(100))).await;
+        }
+
+        // Resuming the action should allow deletion to proceed.
+        event.resume();
+        delete_handle.await;
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_blocks_on_discover() {
+        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Discovered).await;
+        run_destroy_blocks_test(
+            &test,
+            &mut event_stream,
+            EventType::Discovered,
+            DiscoverAction::new(),
+            // expected_ref_count:
+            // - 1 for the ActionSet
+            // - 1 for DestroyAction to wait on the action
+            // (the task that registers the action does not wait on it
+            2,
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_blocks_on_resolve() {
+        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Resolved).await;
+        let event = event_stream.wait_until(EventType::Resolved, vec![].into()).await.unwrap();
+        event.resume();
+        // Cause `a` to resolve.
+        let look_up_a = async {
+            // This could fail if it races with deletion.
+            let _ = test.model.look_up_realm(&vec!["a:0"].into()).await;
+        };
+        join!(
+            look_up_a,
+            run_destroy_blocks_test(
+                &test,
+                &mut event_stream,
+                EventType::Resolved,
+                ResolveAction::new(),
+                // expected_ref_count:
+                // - 1 for the ActionSet
+                // - 1 for the task that registers the action
+                // - 1 for DestroyAction to wait on the action
+                3,
+            ),
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_blocks_on_start() {
+        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Started).await;
+        let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
+        event.resume();
+        // Cause `a` to start.
+        let bind_a = async {
+            // This could fail if it races with deletion.
+            let _ = test.model.bind(&vec!["a:0"].into(), &BindReason::Eager).await;
+        };
+        join!(
+            bind_a,
+            run_destroy_blocks_test(
+                &test,
+                &mut event_stream,
+                EventType::Started,
+                StartAction::new(BindReason::Eager),
+                // expected_ref_count:
+                // - 1 for the ActionSet
+                // - 1 for the task that registers the action
+                // - 1 for DestroyAction to wait on the action
+                3,
+            ),
+        );
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_not_resolved() {
         let components = vec![
@@ -2056,18 +2349,19 @@ pub mod tests {
             .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         // Get realm_b without resolving it.
-        let realm_b = {
-            let state = realm_a.lock_state().await;
-            let state = state.get_resolved().unwrap();
-            state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+        let realm_b = match *realm_a.lock_state().await {
+            RealmState::Resolved(ref s) => {
+                s.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+            }
+            _ => panic!("not resolved"),
         };
 
         // Register delete action on "a", and wait for it.
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
-        assert!(is_unresolved(&realm_b).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
 
         // Now "a" is destroyed. Expect destroy events for "a" and "b".
         {
@@ -2138,21 +2432,23 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a, &realm_b).await);
-        assert!(is_destroyed(&realm_b, &realm_c).await);
-        assert!(is_destroyed(&realm_b, &realm_d).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_c).await);
+        assert!(is_destroyed(&realm_d).await);
         assert!(is_executing(&realm_x).await);
         {
             // Expect only "x" as child of root.
             let state = realm_root.lock_state().await;
-            let children: Vec<_> = state
-                .get_resolved()
-                .unwrap()
-                .all_child_realms()
-                .keys()
-                .map(|m| m.clone())
-                .collect();
+            let children: Vec<_> = match *state {
+                RealmState::Resolved(ref s) => {
+                    s.all_child_realms().keys().map(|m| m.clone()).collect()
+                }
+                _ => {
+                    panic!("not resolved");
+                }
+            };
             assert_eq!(children, vec!["x:0".into()]);
         }
         {
@@ -2250,18 +2546,18 @@ pub mod tests {
         ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
-        assert!(is_destroyed(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a, &realm_b).await);
-        assert!(is_destroyed(&realm_b, &realm_b2).await);
+        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_b2).await);
         {
             let state = realm_root.lock_state().await;
-            let children: Vec<_> = state
-                .get_resolved()
-                .unwrap()
-                .all_child_realms()
-                .keys()
-                .map(|m| m.clone())
-                .collect();
+            let children: Vec<_> = match *state {
+                RealmState::Resolved(ref s) => {
+                    s.all_child_realms().keys().map(|m| m.clone()).collect()
+                }
+                _ => panic!("not resolved"),
+            };
             assert_eq!(children, Vec::<ChildMoniker>::new());
         }
         {
@@ -2332,7 +2628,7 @@ pub mod tests {
 
         #[async_trait]
         impl Hook for DestroyErrorHook {
-            async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+            async fn on(self: Arc<Self>, event: &hooks::Event) -> Result<(), ModelError> {
                 if let Ok(EventPayload::Destroyed) = event.result {
                     self.on_destroyed_async(&event.target_moniker).await?;
                 }
@@ -2374,9 +2670,11 @@ pub mod tests {
             .await
             .expect_err("destroy succeeded unexpectedly");
         assert!(has_child(&realm_root, "a:0").await);
-        assert!(is_destroyed(&realm_a, &realm_b).await);
-        assert!(is_destroyed(&realm_b, &realm_c).await);
-        assert!(is_destroyed(&realm_b, &realm_d).await);
+        assert!(!has_child(&realm_a, "b:0").await);
+        assert!(!is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_c).await);
+        assert!(is_destroyed(&realm_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -2404,9 +2702,10 @@ pub mod tests {
             .await
             .expect("destroy failed");
         assert!(!has_child(&realm_root, "a:0").await);
-        assert!(is_destroyed(&realm_a, &realm_b).await);
-        assert!(is_destroyed(&realm_b, &realm_c).await);
-        assert!(is_destroyed(&realm_b, &realm_d).await);
+        assert!(is_destroyed(&realm_a).await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_c).await);
+        assert!(is_destroyed(&realm_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -2441,15 +2740,21 @@ pub mod tests {
 
     async fn is_deleting(realm: &Realm, moniker: ChildMoniker) -> bool {
         let partial = moniker.to_partial();
-        let state = realm.lock_state().await;
-        let state = state.get_resolved().unwrap();
-        state.get_live_child_realm(&partial).is_none()
-            && state.get_child_instance(&moniker).is_some()
+        match *realm.lock_state().await {
+            RealmState::Resolved(ref s) => {
+                s.get_live_child_realm(&partial).is_none()
+                    && s.get_child_instance(&moniker).is_some()
+            }
+            RealmState::Destroyed => false,
+            RealmState::New | RealmState::Discovered => {
+                panic!("not resolved")
+            }
+        }
     }
 
-    /// Verifies that a child realm is deleted by checking its RealmState
-    /// and verifying that it does not exist in the RealmState of its parent
-    async fn is_destroyed(parent_realm: &Realm, child_realm: &Realm) -> bool {
+    /// Verifies that a child realm is deleted by checking its RealmState and verifying that it
+    /// does not exist in the RealmState of its parent. Assumes the parent is not destroyed yet.
+    async fn is_child_deleted(parent_realm: &Realm, child_realm: &Realm) -> bool {
         let child_moniker = child_realm.abs_moniker.leaf().expect("Root realm cannot be destroyed");
         let partial_moniker = child_moniker.to_partial();
 
@@ -2457,27 +2762,37 @@ pub mod tests {
         assert_eq!(parent_realm.abs_moniker.child(child_moniker.clone()), child_realm.abs_moniker);
 
         let parent_state = parent_realm.lock_state().await;
-        let parent_state = parent_state.get_resolved().unwrap();
+        let parent_resolved_state = match *parent_state {
+            RealmState::Resolved(ref s) => s,
+            _ => panic!("not resolved"),
+        };
 
         let child_state = child_realm.lock_state().await;
-        let child_state = child_state.get_resolved().unwrap();
         let child_execution = child_realm.lock_execution().await;
 
-        let found_partial_moniker = parent_state
+        let found_partial_moniker = parent_resolved_state
             .live_child_realms()
             .find(|(curr_partial_moniker, _)| **curr_partial_moniker == partial_moniker);
-        let found_child_moniker = parent_state.all_child_realms().get(child_moniker);
+        let found_child_moniker = parent_resolved_state.all_child_realms().get(child_moniker);
 
         found_partial_moniker.is_none()
             && found_child_moniker.is_none()
+            && matches!(*child_state, RealmState::Destroyed)
             && child_execution.runtime.is_none()
             && child_execution.is_shut_down()
-            && child_state.all_child_realms().is_empty()
+    }
+
+    async fn is_destroyed(realm: &Realm) -> bool {
+        let state = realm.lock_state().await;
+        let execution = realm.lock_execution().await;
+        matches!(*state, RealmState::Destroyed)
+            && execution.runtime.is_none()
+            && execution.is_shut_down()
     }
 
     async fn is_unresolved(realm: &Realm) -> bool {
         let state = realm.lock_state().await;
         let execution = realm.lock_execution().await;
-        execution.runtime.is_none() && state.get_resolved().is_none()
+        execution.runtime.is_none() && matches!(*state, RealmState::New | RealmState::Discovered)
     }
 }

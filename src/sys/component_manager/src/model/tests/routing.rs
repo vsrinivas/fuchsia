@@ -9,6 +9,7 @@ use {
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
         model::{
+            actions::{ActionSet, DestroyAction},
             error::ModelError,
             events::{event::EventMode, registry::EventSubscription},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -2596,6 +2597,69 @@ async fn use_with_destroyed_parent() {
         format!("{:?}", err),
         format!("{:?}", ModelError::instance_not_found(vec!["coll:b:1"].into()))
     );
+}
+
+///   a
+///  / \
+/// b   c
+///
+/// b: exposes directory /data/foo from self as /data/bar
+/// a: offers directory /data/bar from b as /data/baz to c, which was destroyed (but not removed
+///    from the tree yet)
+/// c: uses /data/baz as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_destroyed_but_not_removed() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Child("b".to_string()),
+                    source_name: "bar_svc".into(),
+                    target_name: "baz_svc".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo_svc".into(),
+                    target_name: "bar_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "baz_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    let realm_b =
+        test.model.look_up_realm(&vec!["b:0"].into()).await.expect("failed to look up realm b");
+    ActionSet::register(realm_b, DestroyAction::new()).await.expect("destroy failed");
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
 }
 
 ///   (cm)

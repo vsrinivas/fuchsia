@@ -302,11 +302,7 @@ impl Realm {
         WeakRealm { inner: Arc::downgrade(self), moniker: self.abs_moniker.clone() }
     }
 
-    /// Locks and returns the realm's mutable state. There is no guarantee that the realm
-    /// has a resolved `RealmState`. Use [`lock_resolved_state`] if the `RealmState` should
-    /// be resolved.
-    ///
-    /// [`lock_resolved_state`]: Realm::lock_resolved_state
+    /// Locks and returns the realm's mutable state.
     pub async fn lock_state(&self) -> MutexGuard<'_, RealmState> {
         self.state.lock().await
     }
@@ -333,25 +329,39 @@ impl Realm {
 
     /// Locks and returns a lazily resolved and populated `ResolvedRealmState`. Does not register a
     /// `Resolve` action unless the resolved state is not already populated, so this function can
-    /// be called re-entrantly from a Resolved hook.
+    /// be called re-entrantly from a Resolved hook. Returns an `InstanceNotFound` error if the
+    /// realm is destroyed.
     pub async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
     ) -> Result<MappedMutexGuard<'a, RealmState, ResolvedRealmState>, ModelError> {
+        fn get_resolved(s: &mut RealmState) -> &mut ResolvedRealmState {
+            match s {
+                RealmState::Resolved(s) => s,
+                _ => panic!("not resolved"),
+            }
+        }
         {
             let state = self.state.lock().await;
             match *state {
                 RealmState::Resolved(_) => {
-                    return Ok(MutexGuard::map(state, |s| s.get_resolved_mut().unwrap()));
+                    return Ok(MutexGuard::map(state, get_resolved));
                 }
-                _ => {}
+                RealmState::Destroyed => {
+                    return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+                }
+                RealmState::New | RealmState::Discovered => {}
             }
             // Drop the lock before doing the work to resolve the state.
         }
         self.resolve().await?;
-        Ok(MutexGuard::map(self.state.lock().await, |s| s.get_resolved_mut().unwrap()))
+        let state = self.state.lock().await;
+        if let RealmState::Destroyed = *state {
+            return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+        }
+        Ok(MutexGuard::map(state, get_resolved))
     }
 
-    /// Resolves the component declaration, populating `ResolvedRealmState` as necessary.  A
+    /// Resolves the component declaration, populating `ResolvedRealmState` as necessary. A
     /// `Resolved` event is dispatched if the realm was not previously resolved or an error occurs.
     pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
         ActionSet::register(self.clone(), ResolveAction::new()).await
@@ -373,7 +383,15 @@ impl Realm {
             // Fetch component declaration.
             let decl = {
                 let state = self.lock_state().await;
-                state.get_resolved().expect("resolve_runner: not resolved").decl().clone()
+                match *state {
+                    RealmState::Resolved(ref s) => s.decl.clone(),
+                    RealmState::Destroyed => {
+                        return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
+                    }
+                    _ => {
+                        panic!("resolve_runner: not resolved")
+                    }
+                }
             };
 
             // Find any explicit "use" runner declaration, resolve that.
@@ -525,12 +543,13 @@ impl Realm {
         // Clean up isolated storage.
         let decl = {
             let state = self.lock_state().await;
-            if let Some(state) = state.get_resolved() {
-                state.decl().clone()
-            } else {
-                // The instance was never resolved and therefore never ran, it can't possibly have
-                // storage to clean up.
-                return Ok(());
+            match *state {
+                RealmState::Resolved(ref s) => s.decl.clone(),
+                _ => {
+                    // The instance was never resolved and therefore never ran, it can't possibly
+                    // have storage to clean up.
+                    return Ok(());
+                }
             }
         };
         for use_ in decl.uses.iter() {
@@ -545,14 +564,13 @@ impl Realm {
     async fn destroy_transient_children(self: &Arc<Self>) -> Result<(), ModelError> {
         let (transient_colls, child_monikers) = {
             let state = self.lock_state().await;
-            match *state {
-                RealmState::Resolved(_) => {}
+            let state = match *state {
+                RealmState::Resolved(ref s) => s,
                 _ => {
                     // Component instance was not resolved, so no dynamic children.
                     return Ok(());
                 }
-            }
-            let state = state.get_resolved().unwrap();
+            };
             let transient_colls: HashSet<_> = state
                 .decl()
                 .collections
@@ -688,25 +706,40 @@ pub enum RealmState {
     Discovered,
     /// The realm has been resolved.
     Resolved(ResolvedRealmState),
+    /// The realm has been destroyed. It has no content and no further actions may be registered
+    /// on it.
+    Destroyed,
 }
 
 impl RealmState {
-    /// Convenience function to get a reference to the `ResolvedRealmState` if state is `Resolved`,
-    /// or `None` otherwise.
-    pub fn get_resolved(&self) -> Option<&ResolvedRealmState> {
-        match self {
-            Self::Resolved(s) => Some(&s),
-            _ => None,
+    /// Changes the state, checking invariants.
+    pub fn set(&mut self, next: Self) {
+        let invalid = match (&self, &next) {
+            (Self::New, Self::Resolved(_))
+            | (Self::Discovered, Self::New)
+            | (Self::Resolved(_), Self::Discovered)
+            | (Self::Resolved(_), Self::New)
+            | (Self::Destroyed, Self::New)
+            | (Self::Destroyed, Self::Discovered)
+            | (Self::Destroyed, Self::Resolved(_)) => true,
+            _ => false,
+        };
+        if invalid {
+            panic!("Invalid realm state transition from {:?} to {:?}", self, next);
         }
+        *self = next;
     }
+}
 
-    /// Convenience function to get a mutable reference to the `ResolvedRealmState` if state is
-    /// `Resolved`, or `None` otherwise.
-    pub fn get_resolved_mut(&mut self) -> Option<&mut ResolvedRealmState> {
-        match self {
-            Self::Resolved(s) => Some(s),
-            _ => None,
-        }
+impl fmt::Debug for RealmState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::New => "New",
+            Self::Discovered => "Discovered",
+            Self::Resolved(_) => "Resolved",
+            Self::Destroyed => "Destroyed",
+        };
+        f.write_str(s)
     }
 }
 
