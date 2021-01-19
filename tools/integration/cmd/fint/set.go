@@ -177,12 +177,11 @@ func runSteps(
 		for _, f := range contextSpec.ChangedFiles {
 			changedFiles = append(changedFiles, f.Path)
 		}
-		buildGraphAffected, err := isBuildGraphAffected(
-			ctx, runner, contextSpec.BuildDir, contextSpec.CheckoutDir, gnPath, changedFiles)
+		sb, err := shouldBuild(ctx, runner, contextSpec.BuildDir, contextSpec.CheckoutDir, gnPath, changedFiles)
 		if err != nil {
 			return artifacts, err
 		}
-		artifacts.SkipBuild = !buildGraphAffected
+		artifacts.SkipBuild = !sb
 	}
 	return artifacts, err
 }
@@ -420,15 +419,4 @@ func contains(items []string, target string) bool {
 		}
 	}
 	return false
-}
-
-func isBuildGraphAffected(
-	_ context.Context,
-	_ subprocessRunner,
-	_ string,
-	_ string,
-	_ string,
-	_ []string,
-) (bool, error) {
-	return true, nil
 }

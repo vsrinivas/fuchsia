@@ -37,15 +37,19 @@ go_library("fint_lib") {
     "parse.go",
     "set.go",
     "set_test.go",
+    "should_build.go",
+    "should_build_test.go",
   ]
 
   deps = [
     ":filetype_lib",
     ":proto_lib",
     "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/color",
     "//tools/lib/command",
+    "//tools/lib/jsonutil",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/runner",
