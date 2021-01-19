@@ -2,21 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Common entries, need to be kept in sync with arm64 version.
-_bootfs_deps = [
-  "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
-  "//src/devices/block/drivers/virtio:virtio_block",
-  "//src/devices/block/drivers/virtio:virtio_scsi",
-  "//src/devices/misc/drivers/virtio-rng:virtio_rng",
-  "//src/devices/misc/drivers/virtio-socket:virtio_socket",
-  "//src/devices/serial/drivers/virtio-console:virtio_console",
-  "//src/graphics/display/drivers/goldfish-display",
-  "//src/graphics/drivers/virtio:virtio_gpu",
-  "//src/ui/input/drivers/virtio:virtio_input",
-]
+_imports = {  # Import into hidden scope, to avoid importing into args.gn.
+  import("virtio_drivers.gni")
+}
 
-# x64 specifics
-_bootfs_deps +=
+# Drivers required for emulated x64.
+_bootfs_deps =
+    _imports.virtio_drivers +
     [ "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec" ]
 
 board_bootfs_labels = _bootfs_deps
