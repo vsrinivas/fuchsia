@@ -56,9 +56,9 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
   }
 
   uintptr_t io_addr;
-  status = zx::vmar::root_self()->map(
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, kVmoSize,
-      &io_addr);
+  status =
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+                                 0, vmo, 0, kVmoSize, &io_addr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map vmo: " << status;
     return status;
@@ -250,6 +250,23 @@ fit::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet)
   });
 }
 
+void FakeNetstack::GetInterfaces(GetInterfacesCallback callback) {
+  std::vector<fuchsia::netstack::NetInterface> interfaces;
+  interfaces.push_back({
+      .id = 0,
+      .flags = fuchsia::netstack::Flags::UP,
+      .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+      .netmask = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+      .broadaddr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
+  });
+  callback(std::move(interfaces));
+}
+
+void FakeNetstack::BridgeInterfaces(std::vector<uint32_t> nicids,
+                                    BridgeInterfacesCallback callback) {
+  callback(fuchsia::netstack::NetErr{.status = fuchsia::netstack::Status::OK}, nic_counter_++);
+}
+
 void FakeNetstack::AddEthernetDevice(
     std::string topological_path, fuchsia::netstack::InterfaceConfig interfaceConfig,
     fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> eth_device,
@@ -297,21 +314,6 @@ void FakeNetstack::AddEthernetDevice(
     completers_itr->second.back().complete_ok(itr->second.get());
     completers_itr->second.pop_back();
   }
-}
-
-void FakeNetstack::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
-                                       uint8_t prefixLen, SetInterfaceAddressCallback callback) {
-  fuchsia::netstack::NetErr err;
-
-  if (nicid >= nic_counter_) {
-    err.status = fuchsia::netstack::Status::UNKNOWN_INTERFACE;
-    err.message = "No such interface.";
-  } else {
-    err.status = fuchsia::netstack::Status::OK;
-    err.message = "";
-  }
-
-  callback(std::move(err));
 }
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {

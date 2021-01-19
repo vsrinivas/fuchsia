@@ -5,8 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 #define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 
-#include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -63,7 +62,7 @@ class Device {
   async::WaitMethod<Device, &Device::OnTransmit> tx_wait_{this};
 };
 
-class FakeNetstack : public fuchsia::netstack::Netstack {
+class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
  public:
   FakeNetstack() {
     // Start a thread for the Device waiters. We can't use the main test thread, because it will
@@ -77,36 +76,15 @@ class FakeNetstack : public fuchsia::netstack::Netstack {
     loop_.Shutdown();
   }
 
-  void GetInterfaces(GetInterfacesCallback callback) override {}
-  void GetInterfaces2(GetInterfaces2Callback callback) override {}
+  void NotImplemented_(const std::string& name) override {}
 
-  void GetRouteTable(GetRouteTableCallback callback) override {}
-  void GetRouteTable2(GetRouteTable2Callback callback) override {}
-
-  void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
-
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override;
-
-  void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                              RemoveInterfaceAddressCallback callback) override {}
-
-  void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
-                          SetInterfaceMetricCallback callback) override {}
-
-  void GetDhcpClient(uint32_t nicid, ::fidl::InterfaceRequest<::fuchsia::net::dhcp::Client> client,
-                     GetDhcpClientCallback callback) override {}
-
-  void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override {}
-
+  // fuchsia::netstack::testing::Netstack_TestBase
+  void GetInterfaces(GetInterfacesCallback callback) override;
+  void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override;
   void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,
                          ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
                          AddEthernetDeviceCallback callback) override;
-
-  void StartRouteTableTransaction(
-      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction> routeTableTransaction,
-      StartRouteTableTransactionCallback callback) override {}
 
   fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetHandler() {
     return bindings_.GetHandler(this);
@@ -148,7 +126,7 @@ class FakeNetstack : public fuchsia::netstack::Netstack {
 
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  uint8_t nic_counter_ = 0;
+  uint8_t nic_counter_ = 1;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_

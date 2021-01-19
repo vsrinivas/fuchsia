@@ -324,7 +324,7 @@ class RepeatedOptionHandler : public OptionHandler {
       FX_LOGS(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
-    T result;
+    T result{};
     auto status = parse(name, value, &result);
     if (status == ZX_OK) {
       mutable_field_(cfg)->emplace_back(result);
@@ -473,7 +473,10 @@ void SetDefaults(GuestConfig* cfg) {
   }
 
   if (cfg->default_net()) {
-    cfg->mutable_net_devices()->push_back({.mac_address = kGuestMacAddress});
+    cfg->mutable_net_devices()->push_back({
+        .mac_address = kGuestMacAddress,
+        .enable_bridge = true,
+    });
   }
 }
 

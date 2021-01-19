@@ -44,7 +44,7 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
     fuchsia::hardware::ethernet::MacAddress mac_address = {
         .octets = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     };
-    net_->Start(std::move(start_info), mac_address, [] {});
+    net_->Start(std::move(start_info), mac_address, true /* enable_bridge */, [] {});
 
     // Wait for the device to call AddEthernetDevice on the netstack.
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; }, zx::sec(5)));
@@ -81,18 +81,9 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
   }
 
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override {
-    fuchsia::netstack::NetErr err{
-        .status = fuchsia::netstack::Status::OK,
-        .message = "",
-    };
-    callback(err);
-  }
-
-  void AddEthernetDevice(::std::string topological_path,
+  void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,
-                         ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
+                         fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
                          AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;

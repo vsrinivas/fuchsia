@@ -72,8 +72,12 @@ resource struct BlockSpec {
     fuchsia.io.File file;
 };
 
+/// Properites describing a network device.
 struct NetSpec {
+    /// MAC address for the network device.
     fuchsia.hardware.ethernet.MacAddress mac_address;
+    /// Whether to bridge the network device with the host network device.
+    bool enable_bridge;
 };
 
 /// Protocol to receive channels for Wayland connections.

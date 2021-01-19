@@ -26,7 +26,7 @@ class VirtioNet
   explicit VirtioNet(const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest,
-                    const fuchsia::hardware::ethernet::MacAddress& mac_address,
+                    const fuchsia::hardware::ethernet::MacAddress& mac_address, bool enable_bridge,
                     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:

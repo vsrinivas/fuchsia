@@ -15,7 +15,8 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
 
 zx_status_t VirtioNet::Start(const zx::guest& guest,
                              const fuchsia::hardware::ethernet::MacAddress& mac_address,
-                             fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
+                             bool enable_bridge, fuchsia::sys::Launcher* launcher,
+                             async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioNetUrl;
   auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
@@ -27,7 +28,7 @@ zx_status_t VirtioNet::Start(const zx::guest& guest,
   if (status != ZX_OK) {
     return status;
   }
-  status = net_->Start(std::move(start_info), mac_address);
+  status = net_->Start(std::move(start_info), mac_address, enable_bridge);
   if (status != ZX_OK) {
     return status;
   }

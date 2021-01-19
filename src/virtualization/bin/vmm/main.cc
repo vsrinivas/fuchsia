@@ -256,23 +256,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Setup net device.
-  std::vector<std::unique_ptr<VirtioNet>> net_devices;
-  for (auto net_device : cfg.net_devices()) {
-    auto net = std::make_unique<VirtioNet>(guest.phys_mem());
-    status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = net->Start(guest.object(), net_device.mac_address, launcher.get(),
-                        device_loop.dispatcher());
-    if (status != ZX_OK) {
-      FX_LOGS(INFO) << "Could not open Ethernet device " << status;
-      return status;
-    }
-    net_devices.push_back(std::move(net));
-  }
-
   // Setup RNG device.
   VirtioRng rng(guest.phys_mem());
   if (cfg.virtio_rng()) {
@@ -370,6 +353,26 @@ int main(int argc, char** argv) {
       FX_PLOGS(INFO, status) << "Could not start magma device";
       return status;
     }
+  }
+
+  // Setup net device.
+  // We setup networking last, as this can cause a temporary loss of network
+  // access as we configure the bridge. If networking is lost while loading
+  // packages for devices, the VMM will fail.
+  std::vector<std::unique_ptr<VirtioNet>> net_devices;
+  for (auto net_device : cfg.net_devices()) {
+    auto net = std::make_unique<VirtioNet>(guest.phys_mem());
+    status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = net->Start(guest.object(), net_device.mac_address, net_device.enable_bridge,
+                        launcher.get(), device_loop.dispatcher());
+    if (status != ZX_OK) {
+      FX_LOGS(INFO) << "Could not open Ethernet device " << status;
+      return status;
+    }
+    net_devices.push_back(std::move(net));
   }
 
 #if __x86_64__

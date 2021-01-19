@@ -148,7 +148,8 @@ protocol VirtioNet {
     compose VirtioDevice;
 
     /// Start the net device.
-    Start(StartInfo start_info, fuchsia.hardware.ethernet.MacAddress mac_address) -> ();
+    Start(StartInfo start_info, fuchsia.hardware.ethernet.MacAddress mac_address,
+          bool enable_bridge) -> ();
 };
 
 [Discoverable]

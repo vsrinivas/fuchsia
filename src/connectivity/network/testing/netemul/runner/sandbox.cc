@@ -507,13 +507,14 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
 
            if (!guest.macs().empty()) {
              for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
-               fuchsia::virtualization::NetSpec out;
+               fuchsia::virtualization::NetSpec out{};
                uint32_t bytes[6];
                std::sscanf(mac_ethertap_mapping.first.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x",
                            &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
                for (size_t i = 0; i != 6; ++i) {
                  out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
                }
+               out.enable_bridge = false;
                cfg.mutable_net_devices()->push_back(out);
              }
 
