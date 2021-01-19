@@ -12,7 +12,7 @@
 ##                       same before paving.
 ##
 ##  HOST                 the hostname to connect to
-##  DIR                  defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
+##  DIR                  defaults to ${HOME}/fuchsia, the path to the FUCHSIA_DIR on HOST
 ##
 ##  --force              force writing to a non-usb target
 ##
@@ -86,10 +86,10 @@ if [[ -z "${host}" ]]; then
 fi
 
 if [[ -z "${dir}" ]]; then
-  if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
-    dir="~/fuchsia"
+  if ssh "$host" ls "\${HOME}/fuchsia/.jiri_root/bin/fx" > /dev/null; then
+    dir="\${HOME}/fuchsia"
   else
-    fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+    fx-error "failed to find \${HOME}/fuchsia on $host, please specify DIR"
     fx-command-help
     exit 1
   fi
@@ -113,10 +113,10 @@ image=""
 type=""
 
 # Try to get image for efi, if not found, try to get vboot image for cros
-image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --allow-empty --type blk mkzedboot")"
+image="$(ssh "${host}" "cd \"${dir}\" && .jiri_root/bin/fx list-build-artifacts --allow-empty --type blk mkzedboot")"
 type="efi"
 if [[ -z "${image}" ]]; then
-   image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --allow-empty --type zbi.signed mkzedboot")"
+   image="$(ssh "${host}" "cd \"${dir}\" && .jiri_root/bin/fx list-build-artifacts --allow-empty --type zbi.signed mkzedboot")"
    type="vboot"
 fi
 
