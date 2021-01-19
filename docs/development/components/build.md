@@ -1503,6 +1503,11 @@ templates. These unsupported features include:
     URL. Components can still be launched using their full launch URL. Tests
     can still be launched with `fx test` followed by the short name of the
     test. See [fxbug.dev/55739][fxb-55739] for more details.
+*   `__deprecated_system_image`: the legacy approach to including a package in
+    the system image is not supported moving forward. A solution is being
+    prepared and will be available later in 2021.
+    Nearly all existing uses of this legacy feature are done via the
+    `driver_package()` wrapper, which currently cannot be migrated.
 
 [cpp-syslog]: /docs/development/languages/c-cpp/logging.md#component_manifest_dependency
 [cml-format]: /docs/concepts/components/v2/component_manifests.md
