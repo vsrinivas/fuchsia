@@ -891,6 +891,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
 					panic(err)
 				}
+				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_READ", eps)
 			}
 			return
 		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
@@ -974,6 +975,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
 					panic(err)
 				}
+				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_WRITE", eps)
 			}
 			return
 		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:

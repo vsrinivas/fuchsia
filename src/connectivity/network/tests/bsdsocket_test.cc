@@ -2717,7 +2717,6 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   // Wait for the RST.
   struct pollfd pfd = {
       .fd = client().get(),
-      .events = POLLHUP,
   };
   int n = poll(&pfd, 1, kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
@@ -2780,7 +2779,6 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
   // Wait for the client to receive the RST and for the state to propagate through its fdio.
   struct pollfd pfd = {
       .fd = client().get(),
-      .events = POLLHUP,
   };
   int n = poll(&pfd, 1, kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
