@@ -1,0 +1,12 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.i2c;
+using fuchsia.realtek.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.realtek.platform.BIND_PLATFORM_DEV_VID.REALTEK;
+accept fuchsia.BIND_PLATFORM_DEV_DID {
+  fuchsia.realtek.platform.BIND_PLATFORM_DEV_DID.ALC5663
+}

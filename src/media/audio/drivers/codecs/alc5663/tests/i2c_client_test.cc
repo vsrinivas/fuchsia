@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/array.h>
 #include <hwreg/bitfields.h>

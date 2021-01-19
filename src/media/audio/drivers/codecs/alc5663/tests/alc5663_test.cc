@@ -13,7 +13,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/array.h>

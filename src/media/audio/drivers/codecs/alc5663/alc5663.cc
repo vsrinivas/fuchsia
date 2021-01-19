@@ -17,7 +17,6 @@
 #include <cmath>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -25,6 +24,7 @@
 #include <fbl/alloc_checker.h>
 
 #include "alc5663_registers.h"
+#include "src/media/audio/drivers/codecs/alc5663/alc5663_bind.h"
 
 namespace audio::alc5663 {
 
@@ -442,10 +442,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio::alc5663
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(alc5663, audio::alc5663::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_REALTEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ALC5663),
-ZIRCON_DRIVER_END(alc5663)
-    // clang-format on
+ZIRCON_DRIVER(alc5663, audio::alc5663::driver_ops, "zircon", "0.1");
