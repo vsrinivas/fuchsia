@@ -450,6 +450,10 @@ TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
               }));
+
+  // The reports should not be eligible for later upload.
+  InitQueue();
+  ASSERT_TRUE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_HourlyReportUploadedPeriodically) {
@@ -470,6 +474,10 @@ TEST_F(QueueTest, Check_HourlyReportUploadedPeriodically) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
               }));
+
+  // The report should not be eligible for later upload.
+  InitQueue();
+  ASSERT_TRUE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_ReportingPolicyChangesCancelUploadTask) {
@@ -525,6 +533,10 @@ TEST_F(QueueTest, Check_UploadOnNetworkReachable) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
               }));
+
+  // The report should not be eligible for later upload.
+  InitQueue();
+  ASSERT_TRUE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_ReportGarbageCollected) {
