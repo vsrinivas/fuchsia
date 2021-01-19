@@ -88,7 +88,9 @@ impl QueryStats {
                 past_queries.push_back(QueryWindow::new(now));
                 if past_queries.len() > STAT_WINDOW_COUNT {
                     // Remove the oldest window of query stats.
-                    past_queries.pop_front();
+                    let _: QueryWindow = past_queries
+                        .pop_front()
+                        .expect("there should be at least one element in `past_queries`");
                 }
                 // This is safe because we've just pushed an element to `past_queries`.
                 past_queries.back_mut().unwrap()
@@ -103,9 +105,9 @@ impl QueryStats {
 
         let elapsed_time = now - start_time;
         if let Some(e) = error {
-            current_window.fail(elapsed_time, e);
+            current_window.fail(elapsed_time, e)
         } else {
-            current_window.succeed(elapsed_time);
+            current_window.succeed(elapsed_time)
         }
     }
 }
@@ -124,12 +126,26 @@ struct FailureStats {
 
 impl FailureStats {
     fn increment(&mut self, kind: &ResolveErrorKind) {
+        let FailureStats { message, no_records_found, io, proto, timeout } = self;
         match kind {
-            ResolveErrorKind::Message(_) | ResolveErrorKind::Msg(_) => self.message += 1,
-            ResolveErrorKind::NoRecordsFound { .. } => self.no_records_found += 1,
-            ResolveErrorKind::Io(_) => self.io += 1,
-            ResolveErrorKind::Proto(_) => self.proto += 1,
-            ResolveErrorKind::Timeout => self.timeout += 1,
+            ResolveErrorKind::Message(error) => {
+                let _: &str = error;
+                *message += 1
+            }
+            ResolveErrorKind::Msg(error) => {
+                let _: &String = error;
+                *message += 1
+            }
+            ResolveErrorKind::NoRecordsFound { query: _, valid_until: _ } => *no_records_found += 1,
+            ResolveErrorKind::Io(error) => {
+                let _: &std::io::Error = error;
+                *io += 1
+            }
+            ResolveErrorKind::Proto(error) => {
+                let _: &trust_dns_proto::error::ProtoError = error;
+                *proto += 1
+            }
+            ResolveErrorKind::Timeout => *timeout += 1,
         }
     }
 }
@@ -156,14 +172,30 @@ impl QueryWindow {
     }
 
     fn succeed(&mut self, elapsed_time: fuchsia_zircon::Duration) {
-        self.success_count += 1;
-        self.success_elapsed_time += elapsed_time;
+        let QueryWindow {
+            success_count,
+            success_elapsed_time,
+            start: _,
+            failure_count: _,
+            failure_elapsed_time: _,
+            failure_stats: _,
+        } = self;
+        *success_count += 1;
+        *success_elapsed_time += elapsed_time;
     }
 
     fn fail(&mut self, elapsed_time: fuchsia_zircon::Duration, error: &ResolveErrorKind) {
-        self.failure_count += 1;
-        self.failure_elapsed_time += elapsed_time;
-        self.failure_stats.increment(error);
+        let QueryWindow {
+            failure_count,
+            failure_elapsed_time,
+            failure_stats,
+            start: _,
+            success_count: _,
+            success_elapsed_time: _,
+        } = self;
+        *failure_count += 1;
+        *failure_elapsed_time += elapsed_time;
+        failure_stats.increment(error)
     }
 }
 
@@ -421,7 +453,7 @@ async fn lookup_ip_inner<T: ResolverLookup>(
             return Err(fnet::LookupError::InvalidArgs);
         }
     };
-    stats.finish_query(start_time, result.as_ref().err().map(|e| e.kind())).await;
+    let () = stats.finish_query(start_time, result.as_ref().err().map(|e| e.kind())).await;
     result.map_err(|e| handle_err(caller, e)).and_then(|addrs| {
         if addrs.is_empty() {
             Err(fnet::LookupError::NotFound)
@@ -902,12 +934,12 @@ fn add_query_stats_inspect(
                         ),
                     }
                 };
-                record_average(
+                let () = record_average(
                     "average_success_duration_micros",
                     *success_elapsed_time,
                     *success_count,
                 );
-                record_average(
+                let () = record_average(
                     "average_failure_duration_micros",
                     *failure_elapsed_time,
                     *failure_count,
@@ -1630,32 +1662,34 @@ mod tests {
             query_stats: {}
         });
 
-        env.run_lookup(|proxy| async move {
-            // IP Lookup IPv4 for REMOTE_IPV4_HOST.
-            check_lookup_ip(
-                &proxy,
-                REMOTE_IPV4_HOST,
-                fnet::LookupIpOptions::V4Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
-                    ipv6_addrs: vec![],
-                    canonical_name: None,
-                }),
-            )
+        let () = env
+            .run_lookup(|proxy| async move {
+                // IP Lookup IPv4 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV4_HOST,
+                    fnet::LookupIpOptions::V4Addrs,
+                    Ok(fnet::IpAddressInfo {
+                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
+                        ipv6_addrs: vec![],
+                        canonical_name: None,
+                    }),
+                )
+                .await;
+            })
             .await;
-        })
-        .await;
-        env.run_lookup(|proxy| async move {
-            // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-            check_lookup_ip(
-                &proxy,
-                REMOTE_IPV4_HOST,
-                fnet::LookupIpOptions::V6Addrs,
-                Err(fnet::LookupError::NotFound),
-            )
+        let () = env
+            .run_lookup(|proxy| async move {
+                // IP Lookup IPv6 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV4_HOST,
+                    fnet::LookupIpOptions::V6Addrs,
+                    Err(fnet::LookupError::NotFound),
+                )
+                .await;
+            })
             .await;
-        })
-        .await;
         assert_inspect_tree!(inspector, root:{
             query_stats: {
                 "window 1": {
@@ -1682,12 +1716,12 @@ mod tests {
         delay: fuchsia_zircon::Duration,
     ) {
         let start_time = fasync::Time::now();
-        exec.set_fake_time(fasync::Time::after(delay));
+        let () = exec.set_fake_time(fasync::Time::after(delay));
         let update_stats = (|| async {
             if let Some(error) = error {
-                stats.finish_query(start_time, Some(&error)).await;
+                let () = stats.finish_query(start_time, Some(&error)).await;
             } else {
-                stats.finish_query(start_time, None).await;
+                let () = stats.finish_query(start_time, None).await;
             }
         })();
         pin_mut!(update_stats);
@@ -1698,7 +1732,7 @@ mod tests {
     fn test_query_stats_inspect_average() {
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
-        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+        let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
         let env = TestEnvironment::new();
         let inspector = fuchsia_inspect::Inspector::new();
@@ -1708,14 +1742,14 @@ mod tests {
         const SUCCESSFUL_QUERY_DURATION: fuchsia_zircon::Duration =
             fuchsia_zircon::Duration::from_seconds(30);
         for _ in 0..SUCCESSFUL_QUERY_COUNT / 2 {
-            run_fake_lookup(
+            let () = run_fake_lookup(
                 &mut exec,
                 env.stats.clone(),
                 None,
                 fuchsia_zircon::Duration::from_nanos(0),
             );
-            run_fake_lookup(&mut exec, env.stats.clone(), None, SUCCESSFUL_QUERY_DURATION);
-            exec.set_fake_time(fasync::Time::after(
+            let () = run_fake_lookup(&mut exec, env.stats.clone(), None, SUCCESSFUL_QUERY_DURATION);
+            let () = exec.set_fake_time(fasync::Time::after(
                 STAT_WINDOW_DURATION - SUCCESSFUL_QUERY_DURATION,
             ));
         }
@@ -1750,7 +1784,7 @@ mod tests {
     fn test_query_stats_inspect_error_counters() {
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
-        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+        let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
         let env = TestEnvironment::new();
         let inspector = fuchsia_inspect::Inspector::new();
@@ -1760,7 +1794,7 @@ mod tests {
         const FAILED_QUERY_DURATION: fuchsia_zircon::Duration =
             fuchsia_zircon::Duration::from_millis(500);
         for _ in 0..FAILED_QUERY_COUNT {
-            run_fake_lookup(
+            let () = run_fake_lookup(
                 &mut exec,
                 env.stats.clone(),
                 Some(ResolveErrorKind::Timeout),
@@ -1794,7 +1828,7 @@ mod tests {
     fn test_query_stats_inspect_oldest_stats_erased() {
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
-        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+        let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
         let env = TestEnvironment::new();
         let inspector = fuchsia_inspect::Inspector::new();
@@ -1802,12 +1836,17 @@ mod tests {
             add_query_stats_inspect(inspector.root(), env.stats.clone());
         const DELAY: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_millis(100);
         for _ in 0..STAT_WINDOW_COUNT {
-            run_fake_lookup(&mut exec, env.stats.clone(), Some(ResolveErrorKind::Timeout), DELAY);
-            exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
+            let () = run_fake_lookup(
+                &mut exec,
+                env.stats.clone(),
+                Some(ResolveErrorKind::Timeout),
+                DELAY,
+            );
+            let () = exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
         }
         for _ in 0..STAT_WINDOW_COUNT {
-            run_fake_lookup(&mut exec, env.stats.clone(), None, DELAY);
-            exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
+            let () = run_fake_lookup(&mut exec, env.stats.clone(), None, DELAY);
+            let () = exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
         }
         // All the failed queries should be erased from the stats as they are
         // now out of date.
@@ -1878,7 +1917,7 @@ mod tests {
             ),
         ][..]
         {
-            stats.increment(error_kind);
+            let () = stats.increment(error_kind);
             assert_eq!(&stats, expected, "invalid stats after incrementing with {:?}", error_kind);
         }
     }
