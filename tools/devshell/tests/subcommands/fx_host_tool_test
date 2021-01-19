@@ -121,8 +121,9 @@ TEST_firewall_check_fail() {
 # the logic for this test is the following:
 #  - execute a custom fx command (mycmd)
 #  - 'fx mycmd' runs 'host-tool slow_tool' in the background, waits a bit and
-#    attempts to kill it with SIGINT, simulating a user Ctrl+C in the foreground
-#    command.
+#    attempts to kill it with SIGTERM, simulating a user Ctrl+C in the foreground
+#    command. SIGINT can't be used because old versions of Bash ignore it
+#    when the process is running in background.
 #  - 'slow_tool' should be stopped and have a chance to clean up resources, in
 #    this case a lock file in a known location, which is checked as a condition
 #    for the test to succeeed.
@@ -143,16 +144,9 @@ TEST_kill_bg_process() {
     fi
   done
 
-  kill -SIGINT \$pid
+  kill -TERM \$pid
+  wait \$pid
 
-  SECONDS=0
-  while kill -0 \$pid >/dev/null 2>&1; do
-    if [[ $SECONDS -gt 10 ]]; then
-      echo >&2 "ERROR, timed out waiting for PID $pid to die"
-      exit 1
-    fi
-  done
-  exit $?
 EOF
   chmod +x "${frontend_cmd}"
 
@@ -169,7 +163,7 @@ EOF
     rm -f "$lockfile"
     exit \$st
   }
-  trap 'cleanup 0' SIGINT
+  trap 'cleanup 0' SIGTERM
   touch "$lockfile"
   c=0
   while (( c < 10 )); do
