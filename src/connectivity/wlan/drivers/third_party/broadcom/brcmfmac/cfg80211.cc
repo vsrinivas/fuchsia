@@ -1088,7 +1088,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
-    BRCMF_ERR("Scan request suppressed: connect in progress (status: %lu)\n",
+    BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)\n",
               vif->sme_state.load());
     return ZX_ERR_UNAVAILABLE;
   }
@@ -3279,7 +3279,7 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
                zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_SHOULD_WAIT);
   } else {
-    BRCMF_ERR("Couldn't start scan: %d %s", result, zx_status_get_string(result));
+    BRCMF_INFO("Couldn't start scan: %d %s", result, zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
 }
