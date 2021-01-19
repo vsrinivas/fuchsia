@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/vector.h>
@@ -124,9 +126,6 @@ class ParseState {
 
   bool Init() {
     fbl::AllocChecker ac;
-    coll_.reserve(kMaxCollectionCount, &ac);
-    if (!ac.check())
-      return false;
 
     // Add the initial report ID representing "no report_id".
     ReportID empty_report_id = {false, 0, 0, 0, 0};
@@ -151,7 +150,7 @@ class ParseState {
     // valid within the destination memory area.
 
     // Check if we actually have items or report ids before going forward.
-    if (coll_.size() == 0) {
+    if (coll_size_ == 0) {
       return kParseMoreNeeded;
     }
 
@@ -166,7 +165,7 @@ class ParseState {
 
     size_t device_sz = sizeof(DeviceDescriptor) + report_count * sizeof(ReportDescriptor);
     size_t fields_sz = fields_.size() * sizeof(ReportField);
-    size_t collect_sz = coll_.size() * sizeof(Collection);
+    size_t collect_sz = coll_size_ * sizeof(Collection);
 
     auto mem = Alloc(device_sz + fields_sz + collect_sz);
     if (mem == nullptr)
@@ -182,16 +181,14 @@ class ParseState {
 
     Fixup<Collection> coll_fixup(&coll_[0], &dest_colls[0]);
 
-    size_t ix = 0u;
     // Copy and fix the collections first.
-    for (const auto& c : coll_) {
-      dest_colls[ix] = c;
-      dest_colls[ix].parent = coll_fixup(c.parent);
-      ++ix;
+    for (size_t i = 0; i < coll_size_; i++) {
+      dest_colls[i] = coll_[i];
+      dest_colls[i].parent = coll_fixup(coll_[i].parent);
     }
 
     // Copy and fix the fields next.
-    ix = 0u;
+    size_t ix = 0u;
     size_t ifr = 0u;
 
     for (const ReportID& report_id : report_ids_) {
@@ -288,9 +285,7 @@ class ParseState {
     if (!is_valid_collection(data))
       return kParseInvalidItemValue;
 
-    // By reserving and doing the size() check here, we ensure
-    // never a re-alloc, keeping the intra-collection pointers valid.
-    if (coll_.size() > kMaxCollectionCount)
+    if (coll_size_ >= kMaxCollectionCount)
       return kParseOverflow;
 
     if (parent_coll_ == nullptr) {
@@ -304,8 +299,8 @@ class ParseState {
     Collection col{static_cast<CollectionType>(data), Usage{table_.attributes.usage.page, usage},
                    parent_coll_};
 
-    coll_.push_back(col);
-    parent_coll_ = &coll_[coll_.size() - 1];
+    coll_[coll_size_++] = col;
+    parent_coll_ = &coll_[coll_size_ - 1];
     return kParseOk;
   }
 
@@ -322,7 +317,7 @@ class ParseState {
   }
 
   ParseResult add_field(NodeType type, uint32_t data) {  // Main
-    if (coll_.size() == 0)
+    if (coll_size_ == 0)
       return kParseUnexpectedItem;
 
     if (!validate_ranges())
@@ -335,7 +330,7 @@ class ParseState {
     for (uint32_t ix = 0; ix != table_.report_count; ++ix) {
       attributes.usage = usage_it.next_usage();
 
-      auto curr_col = &coll_[coll_.size() - 1];
+      auto curr_col = &coll_[coll_size_ - 1];
 
       ReportField field{report_ids_[table_.report_ids_index].report_id, attributes, type, flags,
                         curr_col};
@@ -616,7 +611,8 @@ class ParseState {
   // Temporary output model:
   Collection* parent_coll_;
   fbl::Vector<ReportID> report_ids_;
-  fbl::Vector<Collection> coll_;
+  std::array<Collection, kMaxCollectionCount> coll_;
+  size_t coll_size_ = 0;
   fbl::Vector<ReportField> fields_;
 };
 
