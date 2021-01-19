@@ -11,7 +11,8 @@ use fidl_fuchsia_sysmem::{
     PixelFormatType,
 };
 use fuchsia_component::client::connect_to_service;
-use fuchsia_zircon::{self as zx, Status};
+use fuchsia_runtime;
+use fuchsia_zircon::{self as zx, AsHandleRef, Status};
 use std::cmp;
 
 pub fn linear_image_format_constraints(
@@ -153,6 +154,12 @@ pub struct BufferCollectionAllocator {
     collection_client: Option<fidl_fuchsia_sysmem::BufferCollectionProxy>,
 }
 
+fn set_allocator_name(sysmem_client: &fidl_fuchsia_sysmem::AllocatorProxy) -> Result<(), Error> {
+    let name = fuchsia_runtime::process_self().get_name()?;
+    let koid = fuchsia_runtime::process_self().get_koid()?;
+    Ok(sysmem_client.set_debug_client_info(name.to_str()?, koid.raw_koid())?)
+}
+
 impl BufferCollectionAllocator {
     pub fn new(
         width: u32,
@@ -162,6 +169,8 @@ impl BufferCollectionAllocator {
         buffer_count: usize,
     ) -> Result<BufferCollectionAllocator, Error> {
         let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+
+        let _ = set_allocator_name(&sysmem);
 
         let (local_token, local_token_request) =
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
@@ -178,6 +187,10 @@ impl BufferCollectionAllocator {
             sysmem,
             collection_client: None,
         })
+    }
+
+    pub fn set_name(&mut self, priority: u32, name: &str) -> Result<(), Error> {
+        Ok(self.token.as_ref().expect("token in set_name").set_name(priority, name)?)
     }
 
     pub async fn allocate_buffers(

@@ -630,6 +630,8 @@ impl FrameBuffer {
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
         let local_token = local_token.into_proxy()?;
 
+        local_token.set_name(1, "fuchsia_framebuffer")?;
+
         sysmem.allocate_shared_collection(local_token_request)?;
 
         let fb = FrameBuffer {

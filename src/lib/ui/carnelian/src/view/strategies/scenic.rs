@@ -62,6 +62,8 @@ impl Plumber {
             buffer_count,
         )?;
 
+        buffer_allocator.set_name(100, "CarnelianFramebuffer")?;
+
         let buffer_collection_token = buffer_allocator.duplicate_token().await?;
         session.lock().register_buffer_collection(collection_id, buffer_collection_token)?;
 
