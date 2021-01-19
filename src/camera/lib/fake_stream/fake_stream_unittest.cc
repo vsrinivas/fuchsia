@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/errors.h>
-#include <zircon/syscalls/object.h>
-
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/camera/lib/fake_stream/fake_stream.h"
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/gtest/real_loop_fixture.h>
 
 static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
   return {.image_format{.pixel_format{

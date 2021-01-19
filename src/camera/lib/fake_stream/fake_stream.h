@@ -7,9 +7,6 @@
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <zircon/types.h>
-
-#include <memory>
 
 namespace camera {
 

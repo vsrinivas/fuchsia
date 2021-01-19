@@ -19,7 +19,6 @@ camera_tests = {
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/lib/fake_camera/test",
     "//src/camera/lib/fake_legacy_stream/test",
-    "//src/camera/lib/fake_stream/test",
   ]
 
   tests = [
@@ -82,11 +81,6 @@ camera_tests = {
     {
       name = "camera_device_unittests"
       manifest = "//src/camera/bin/device/camera_device_unittests.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "fake_stream_test"
-      manifest = "//src/camera/lib/fake_stream/test/fake_stream_test.cmx"
       environments = basic_envs
     },
     {
