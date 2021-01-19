@@ -174,6 +174,13 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   }
 }
 
+void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
+                            std::map<std::string, std::string>* annotations) {
+  if (const auto snapshot_annotations = snapshot.LockAnnotations(); snapshot_annotations) {
+    annotations->insert(snapshot_annotations->begin(), snapshot_annotations->end());
+  }
+}
+
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
                                const ::fit::result<std::string, Error>& device_id,
@@ -238,7 +245,7 @@ void AddCrashServerAnnotations(const std::string& program_name,
 }  // namespace
 
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
-                                 const SnapshotUuid& snapshot_uuid,
+                                 const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product,
@@ -254,6 +261,9 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   // Optional annotations and attachments filled by the client.
   ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump,
                                    &should_process);
+
+  // Snapshot annotations specific to this crash report.
+  AddSnapshotAnnotations(snapshot_uuid, snapshot, &annotations);
 
   // Crash server annotations common to all crash reports.
   AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
