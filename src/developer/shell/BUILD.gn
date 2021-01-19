@@ -10,10 +10,11 @@ import("//build/test/test_package.gni")
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK (and any other FIDL files we might want).
 action("generate_fidl_json") {
-  hermetic_deps = false
   script = "generate_fidl_json.py"
   generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
+  inputs = [ "$root_gen_dir/sdk/core.fidl_json.txt" ]
   outputs = [ "$generated_output" ]
+  depfile = "$target_gen_dir/$target_name.d"
   testonly = true
   deps = [
     "//sdk:core",
@@ -27,6 +28,8 @@ action("generate_fidl_json") {
   args = [
     "--out-file",
     rebase_path("$generated_output", root_build_dir),
+    "--dep-file",
+    rebase_path(depfile, root_build_dir),
     "@" + rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
     rebase_path(
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.device.manager/fuchsia.device.manager.fidl.json",

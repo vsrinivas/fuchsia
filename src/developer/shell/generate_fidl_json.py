@@ -12,6 +12,8 @@ def main():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
     parser.add_argument(
         '--out-file', type=argparse.FileType('w'), required=True)
+    parser.add_argument(
+        '--dep-file', type=argparse.FileType('w'), required=True)
     parser.add_argument('fidl_json_files', nargs='+')
     args = parser.parse_args()
 
@@ -28,6 +30,9 @@ def main():
                     ".fidl.json"
             })
     json.dump(output, args.out_file)
+
+    args.dep_file.write(
+        '{}: {}\n'.format(args.out_file.name, ' '.join(args.fidl_json_files)))
 
 
 if __name__ == '__main__':

@@ -120,6 +120,53 @@ This suppresses the check that's described above.
 If you spot an action that has this suppression, you should remove the
 suppression, attempt to reproduce the issue as outlined above, and fix it.
 
+## Common issues and how to fix them
+
+### Inputs not known until action runtime
+
+As explained above, sometimes not all inputs are known at build time and so
+cannot be specified in `BUILD.gn` definitions. This is what [depfiles][depfiles]
+are for.
+
+You can find an example for fixing a build action to generate a depfile here:
+
+472565: [build] Generate depfile in generate_fidl_json.py |
+https://fuchsia-review.googlesource.com/c/fuchsia/+/472565
+
+### Expanding arguments from a file
+
+There is a common pattern used especially in Python scripts to expand the
+contents of a file as arguments. In `BUILD.gn` you will find:
+
+```gn
+action("foo") {
+   script = "myaction.py"
+   args = [ "@" + rebase_path(args_file, root_build_dir) ]
+   ...
+}
+```
+
+Then in the associated Python file `myaction.py` you will find:
+
+```python
+def main():
+    parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
+    args = parser.parse_args()
+    ...
+```
+
+The problem with the above is that `args_file` is read at runtime by the Python
+script, and should be specified as an input. To fix:
+
+```gn
+action("foo") {
+   script = "myaction.py"
+   inputs = [ args_file ]
+   args = [ "@" + rebase_path(args_file, root_build_dir) ]
+   ...
+}
+```
+
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
