@@ -2461,16 +2461,11 @@ copy("fastboot") {
 }
 
 group("archive-extras") {
+  deps = [ ":build-args-metadata" ]
   metadata = {
     # Not actually images, but historically required entries to be included in
     # the relevant build archives.
     images = [
-      {
-        archive = true
-        name = "buildargs"
-        type = "gn"
-        path = "args.gn"
-      },
       {
         archive = true
         name = "flash"
@@ -2514,10 +2509,23 @@ compiled_action("uefi-disk") {
   }
 }
 
+group("build-args-metadata") {
+  metadata = {
+    images = [
+      {
+        archive = true
+        name = "buildargs"
+        type = "gn"
+        path = "args.gn"
+      },
+    ]
+  }
+}
+
 group("images") {
   testonly = true
   deps = [
-    ":archive-extras",
+    ":build-args-metadata",
     ":default-images",
     "system",
   ]
@@ -2534,17 +2542,19 @@ group("default-images") {
   testonly = true
 
   deps = [
-    ":bootserver",
     ":fastboot",
     ":fastboot_manifest",
     ":flash_script",
-    ":paver-script",
     ":qemu-kernel",
     recovery_label,
   ]
 
   if (recovery_is_zedboot) {
-    deps += [ ":zedboot-script" ]
+    deps += [
+      ":bootserver",
+      ":paver-script",
+      ":zedboot-script",
+    ]
   }
 
   if (build_uefi_disk) {
