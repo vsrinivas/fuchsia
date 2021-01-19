@@ -411,7 +411,6 @@ if (current_toolchain != sysroot_toolchain) {
   action("headers") {
     inputs = [ sysroot_entries_json_file ]
     outputs = sysroot_headers
-    hermetic_deps = false
     script = "populate_sysroot_headers.py"
     depfile = "$root_out_dir/headers.d"
     args = [

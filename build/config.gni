@@ -135,7 +135,6 @@ template("config_package") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     deps = [ ":$config_package_entries_target" ]
-    hermetic_deps = false
     script = "//build/tools/validate_sysmgr_config.py"
     inputs = [ config_package_entries ]
     depfile = "$target_out_dir/$target_name.d"

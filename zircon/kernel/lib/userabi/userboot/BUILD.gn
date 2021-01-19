@@ -172,7 +172,6 @@ if (toolchain.environment == "userboot") {
     outputs = [ "$target_gen_dir/vdso-syms.h" ]
     depfile = "${outputs[0]}.d"
     utils = [ "nm" ]
-    hermetic_deps = false
     script = "$zx/scripts/shlib-symbols"
     args = [
       "-a",
