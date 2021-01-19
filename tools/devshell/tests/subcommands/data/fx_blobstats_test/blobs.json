@@ -18,7 +18,7 @@
     "size": 24576
   },
   {
-    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/libc.so",
+    "source_path": "../default/user-arm64-clang.shlib/obj/system/ulib/c/libc.so",
     "merkle": "24b756bb0b98fe282484272c213a7743c092ea950568e5b4471ea532046f0889",
     "bytes": 660184,
     "size": 409600
@@ -36,7 +36,7 @@
     "size": 237568
   },
   {
-    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/fdio/libfdio.so",
+    "source_path": "../default/user-arm64-clang.shlib/obj/system/ulib/fdio/libfdio.so",
     "merkle": "98e137f484f95960352cb692c2a0c330614a6c09869906433a006bc0eba64ee6",
     "bytes": 291504,
     "size": 122880
@@ -48,7 +48,7 @@
     "size": 32768
   },
   {
-    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/trace-engine/libtrace-engine.so",
+    "source_path": "../default/user-arm64-clang.shlib/obj/system/ulib/trace-engine/libtrace-engine.so",
     "merkle": "e2aec5e19fa0ea4ea4de761e7173da1f16b803b28598b95cf3db5e027ec7657d",
     "bytes": 45080,
     "size": 57344

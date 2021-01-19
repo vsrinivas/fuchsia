@@ -88,11 +88,6 @@ btf::make_hosttools_mock() {
   btf::_make_buildtool_mock "out/default/host_x64/${hosttool_name}"
 }
 
-btf::make_zircontools_mock() {
-  local zircontool_name="$1"
-  btf::_make_buildtool_mock "out/default.zircon/tools/${zircontool_name}"
-}
-
 btf::make_mock_binary() {
   local -r _BIN_PATH="$(mktemp -d "${BT_TEMP_DIR}/binpath.XXXXXX")"
   local tool_name="$1"
