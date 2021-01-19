@@ -64,6 +64,7 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   allocations_failed_fragmentation_property_ =
       node_.CreateUint("allocations_failed_fragmentation", 0);
   max_free_at_high_water_property_ = node_.CreateUint("max_free_at_high_water", size);
+  is_ready_property_ = node_.CreateBool("is_ready", is_ready_);
 
   if (dispatcher) {
     zx_status_t status = zx::event::create(0, &trace_observer_event_);
@@ -283,7 +284,10 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   }
 }
 
-void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
+void ContiguousPooledMemoryAllocator::set_ready() {
+  is_ready_ = true;
+  is_ready_property_.Set(is_ready_);
+}
 
 bool ContiguousPooledMemoryAllocator::is_ready() { return is_ready_; }
 

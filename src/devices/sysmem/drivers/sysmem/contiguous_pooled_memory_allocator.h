@@ -105,6 +105,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty max_free_at_high_water_property_;
   // size - high_water_mark. This is used for cobalt reporting.
   inspect::UintProperty free_at_high_water_mark_property_;
+  inspect::BoolProperty is_ready_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,
