@@ -177,19 +177,19 @@ func (he *hardError) storeAndRetrieveLocked(err *tcpip.Error) *tcpip.Error {
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "Sync", "%p", ep)
+	_ = syslog.DebugTf("Sync", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
 func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", ep)
+	_ = syslog.DebugTf("GetAttr", "%p", ep)
 
 	return 0, fidlio.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", ep)
+func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32, error) {
+	_ = syslog.DebugTf("SetAttr", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
@@ -208,7 +208,7 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 		if err != nil {
 			panic(err)
 		}
-		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ep, localAddr)
+		_ = syslog.DebugTf("bind", "%p: local=%+v", ep, localAddr)
 	}
 
 	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
@@ -229,7 +229,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 	} else {
 		if l := len(addr.Addr); l > 0 {
 			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ep, addr.Addr)
+				_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
 				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
 			}
 		}
@@ -247,7 +247,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 				if err != nil {
 					panic(err)
 				}
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
+				_ = syslog.DebugTf("connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
 			// For TCP endpoints, gVisor Connect() returns this error when the endpoint
 			// is in an error state and the hard error state has already been read from the
 			// endpoint via other APIs. Apply the saved hard error state here.
@@ -267,13 +267,13 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 		}
 
 		if disconnect {
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
+			_ = syslog.DebugTf("connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
 		} else {
 			remoteAddr, err := ep.ep.GetRemoteAddress()
 			if err != nil {
 				panic(err)
 			}
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
+			_ = syslog.DebugTf("connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
 		}
 	}
 
@@ -322,7 +322,7 @@ func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []ui
 			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
-	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
+	_ = syslog.DebugTf("setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
 
 	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
 }
@@ -354,7 +354,7 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 	if n < len(b) {
 		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
 	}
-	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
+	_ = syslog.DebugTf("getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
 
 	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
 		Optval: b,
@@ -519,7 +519,7 @@ type endpointWithEvent struct {
 func (epe *endpointWithEvent) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var info fidlio.NodeInfo
 	event, err := epe.peer.Duplicate(zx.RightsBasic)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
+	_ = syslog.DebugTf("Describe", "%p: err=%v", epe, err)
 	if err != nil {
 		return info, err
 	}
@@ -601,7 +601,7 @@ func (eps *endpointWithSocket) close() {
 
 		eps.ep.Close()
 
-		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
+		_ = syslog.DebugTf("close", "%p", eps)
 	})
 }
 
@@ -650,7 +650,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		cb()
 	})
 
-	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", eps, backlog)
+	_ = syslog.DebugTf("listen", "%p: backlog=%d", eps, backlog)
 
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
@@ -755,7 +755,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		// does not actually return any errors. However, we handle
 		// the tcpip.ErrNotConnected case now for the same reasons
 		// as mentioned below for the ep.GetRemoteAddress case.
-		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", eps)
+		_ = syslog.DebugTf("accept", "%p: disconnected", eps)
 	} else if err != nil {
 		panic(err)
 	} else {
@@ -766,11 +766,11 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		// to Accept returned, but before this point. If GetRemoteAddress
 		// returns other (unexpected) errors, panic.
 		if remoteAddr, err := ep.GetRemoteAddress(); err == tcpip.ErrNotConnected {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", eps, localAddr)
+			_ = syslog.DebugTf("accept", "%p: local=%+v, disconnected", eps, localAddr)
 		} else if err != nil {
 			panic(err)
 		} else {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
+			_ = syslog.DebugTf("accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
 		}
 	}
 	{
@@ -902,7 +902,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			triggerClose = true
 			return
 		default:
-			syslog.Errorf("TCP Endpoint.Write(): %s", err)
+			_ = syslog.Errorf("TCP Endpoint.Write(): %s", err)
 		}
 	}
 }
@@ -1005,7 +1005,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 						if err != tcpip.ErrNotConnected {
 							panic(err)
 						}
-						syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
+						_ = syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
 					}
 					return
 				case zx.ErrShouldWait:
@@ -1028,7 +1028,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				panic(err)
 			}
 		default:
-			syslog.Errorf("Endpoint.Read(): %s", err)
+			_ = syslog.Errorf("Endpoint.Read(): %s", err)
 		}
 	}
 }
@@ -1059,13 +1059,13 @@ func (s *datagramSocketImpl) close() {
 
 		s.ep.Close()
 
-		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
+		_ = syslog.DebugTf("close", "%p", s.endpointWithEvent)
 	}
 	s.cancel()
 }
 
 func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithEvent)
+	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
 	return int32(zx.ErrOk), nil
 }
@@ -1101,7 +1101,7 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWit
 func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithEvent, flags)
+	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
 
 	return nil
 }
@@ -1113,6 +1113,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 		N: int64(dataLen),
 	}
 	// TODO(https://fxbug.dev/21106): do something with control messages.
+	_ = wantControl
 	res, err := s.ep.Read(&dst, tcpip.ReadOptions{
 		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
 		NeedRemoteAddr: wantAddr,
@@ -1152,7 +1153,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 
 // NB: Due to another soft transition that happened, SendMsg is the "final
 // state" we want to get at, while SendMsg2 is the "old" one.
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, flags socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
 	var writeOpts tcpip.WriteOptions
 	if addr != nil {
 		addr, err := toTCPIPFullAddress(*addr)
@@ -1165,6 +1166,7 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 		writeOpts.To = &addr
 	}
 	// TODO(https://fxbug.dev/21106): do something with control.
+	_ = control
 	n, err := s.ep.Write(tcpip.SlicePayload(data), writeOpts)
 	if err != nil {
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
@@ -1189,7 +1191,7 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 		endpointWithSocket: eps,
 	}
 	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
+	_ = syslog.DebugTf("NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
@@ -1250,7 +1252,7 @@ func (s *streamSocketImpl) close() {
 }
 
 func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithSocket)
+	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
 	s.close()
 	return int32(zx.ErrOk), nil
 }
@@ -1286,7 +1288,7 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
 	s.addConnection(ctx, object)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithSocket, flags)
+	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
 
 	return nil
 }
@@ -1294,7 +1296,7 @@ func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.N
 func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var info fidlio.NodeInfo
 	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
+	_ = syslog.DebugTf("Describe", "%p: err=%v", s.endpointWithSocket, err)
 	if err != nil {
 		return info, err
 	}
@@ -1314,6 +1316,7 @@ func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamS
 	if err != nil {
 		return socket.StreamSocketAcceptResult{}, err
 	}
+	// TODO(https://fxbug.dev/67600): this copies a lock; avoid this when FIDL bindings are better.
 	response := socket.StreamSocketAcceptResponse{
 		S: streamSocketInterface,
 	}
@@ -1343,7 +1346,7 @@ func (ns *Netstack) onAddEndpoint(e *endpoint) {
 		case *stack.TransportEndpointInfo:
 			info = *t
 		}
-		syslog.Errorf("endpoint map store error, key %d exists for endpoint %+v", key, info)
+		_ = syslog.Errorf("endpoint map store error, key %d exists for endpoint %+v", key, info)
 	} else {
 		e.key = key
 	}
@@ -1366,7 +1369,7 @@ type providerImpl struct {
 
 var _ socket.ProviderWithCtx = (*providerImpl)(nil)
 
-func toTransProtoStream(domain socket.Domain, proto socket.StreamSocketProtocol) (posix.Errno, tcpip.TransportProtocolNumber) {
+func toTransProtoStream(_ socket.Domain, proto socket.StreamSocketProtocol) (posix.Errno, tcpip.TransportProtocolNumber) {
 	switch proto {
 	case socket.StreamSocketProtocolTcp:
 		return 0, tcp.ProtocolNumber
@@ -1460,7 +1463,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	s.wq.EventRegister(&s.entry, waiter.EventIn)
 
 	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
+	_ = syslog.DebugTf("NewDatagram", "%p", s.endpointWithEvent)
 	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
 	sp.ns.onAddEndpoint(&s.endpoint)
@@ -1475,7 +1478,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 
 }
 
-func (sp *providerImpl) StreamSocket(ctx fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
+func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
 	code, netProto := toNetProto(domain)
 	if code != 0 {
 		return socket.ProviderStreamSocketResultWithErr(code), nil
@@ -1620,9 +1623,9 @@ func tcpipErrorToCode(err *tcpip.Error) posix.Errno {
 			if i := strings.LastIndexByte(file, '/'); i != -1 {
 				file = file[i+1:]
 			}
-			syslog.VLogf(syslog.DebugVerbosity, "%s: %s:%d: %s", runtime.FuncForPC(pc).Name(), file, line, err)
+			_ = syslog.Debugf("%s: %s:%d: %s", runtime.FuncForPC(pc).Name(), file, line, err)
 		} else {
-			syslog.VLogf(syslog.DebugVerbosity, "%s", err)
+			_ = syslog.Debugf("%s", err)
 		}
 	}
 	switch err {
