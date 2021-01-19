@@ -140,7 +140,7 @@ This will generate a `fidl_crates_bin_test` target, which should then be added
 to the build group:
 
 ```
-{%includecode gerrict_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="group" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/BUILD.gn" region_tag="group" %}
 ```
 
 To import the crate, add the following to the top of the `tests` module.
