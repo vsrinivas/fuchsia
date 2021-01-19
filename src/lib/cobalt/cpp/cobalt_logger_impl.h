@@ -260,7 +260,7 @@ class CobaltEvents : public BaseEvent {
 
 class BaseCobaltLoggerImpl : public CobaltLogger {
  public:
-  BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id);
+  BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id, size_t max_buffer_size);
   ~BaseCobaltLoggerImpl() override;
   void LogEvent(uint32_t metric_id, uint32_t event_code) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,
@@ -306,6 +306,9 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
   // project ID to use when connecting to Cobalt with CreateLoggerFromProjectId().
   const uint32_t project_id_;
 
+  // Maximum combined size of the following buffers.
+  const size_t max_buffer_size_;
+
   std::set<std::unique_ptr<BaseEvent>> events_to_send_;
   std::set<std::unique_ptr<BaseEvent>> events_in_transit_;
 
@@ -317,7 +320,7 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
   // Use this version of the constructor in order to connect to the Cobalt
   // application via CreateLoggerFromProjectId().
   CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                   uint32_t project_id);
+                   uint32_t project_id, size_t max_buffer_size);
 
   ~CobaltLoggerImpl() override{};
 

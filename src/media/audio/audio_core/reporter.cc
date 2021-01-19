@@ -22,7 +22,7 @@ static Reporter* singleton_real;
 
 class TokenBucket {
  public:
-  TokenBucket(zx::duration period, uint64_t tokens_per_period)
+  TokenBucket(zx::duration period, size_t tokens_per_period)
       : period_(period),
         tokens_per_period_(tokens_per_period),
         start_time_(zx::clock::get_monotonic()),
@@ -44,17 +44,19 @@ class TokenBucket {
 
  private:
   const zx::duration period_;
-  const uint64_t tokens_per_period_;
+  const size_t tokens_per_period_;
 
   std::mutex mutex_;
   zx::time start_time_ FXL_GUARDED_BY(mutex_);
-  uint64_t tokens_ FXL_GUARDED_BY(mutex_);
+  size_t tokens_ FXL_GUARDED_BY(mutex_);
 };
 
 // To avoid overloading cobalt, throttle cobalt RPCs. See fxbug.dev/67416.
 // In a typical worst case, we might expect about 1 RPC every 10ms, or 6000 RPCs per minute.
 // Throttle to 30 per minute.
 static TokenBucket* const cobalt_token_bucket = new TokenBucket(zx::min(1), 30);
+// Buffer up to 5 minutes worth of events.
+static constexpr size_t kMaxCobaltBufferSize = 5 * 30;
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1014,7 +1016,8 @@ void Reporter::InitInspect() {
 
 void Reporter::InitCobalt() {
   impl_->cobalt_logger = ::cobalt::NewCobaltLoggerFromProjectId(
-      impl_->threading_model.FidlDomain().dispatcher(), impl_->component_context.svc(), kProjectId);
+      impl_->threading_model.FidlDomain().dispatcher(), impl_->component_context.svc(), kProjectId,
+      kMaxCobaltBufferSize);
 }
 
 Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr

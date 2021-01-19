@@ -14,6 +14,10 @@ namespace cobalt {
 // If this class is used through multiple threads, it is the caller's
 // responsibility to ensure that no task posted on the main thread will outlive
 // this class.
+//
+// Events are buffered locally then forwarded asynchronously. If the maximum
+// buffering size is reached, events will be silently dropped until buffer space
+// becomes available.
 class CobaltLogger {
  public:
   virtual ~CobaltLogger() = default;
@@ -294,9 +298,13 @@ class CobaltLogger {
 //
 // |project_id| The ID of the Cobalt project to be associated with the
 // returned CobaltLogger.
+//
+// |max_buffer_size| The maximum number of events to buffer at a time. If events are
+// created more quickly than the internal buffer can be drained, some events will be
+// silently dropped.
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    uint32_t project_id);
+    uint32_t project_id, size_t max_buffer_size = 1024);
 
 }  // namespace cobalt
 

@@ -331,7 +331,8 @@ TEST_F(CobaltLoggerTest, InitializeCobalt) {
 TEST_F(CobaltLoggerTest, LogMultipleEvent_BeforeCreateLoggerCallbackExecutes) {
   constexpr size_t num_events = 5u;
 
-  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(), kProjectId);
+  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(), kProjectId,
+                                 num_events);
   OccurrenceEvent event(kFakeCobaltMetricId, 123);
 
   // Send multiple events before the FakeLoggerImpl is ready.
@@ -527,6 +528,40 @@ TEST_F(CobaltLoggerTest, LogCustomEvent) {
   cobalt_logger()->LogCustomEvent(event.metric_id(), std::move(event_values));
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::CUSTOM, &event);
+}
+
+TEST_F(CobaltLoggerTest, LogMultipleEventsExceedsBufferSize) {
+  constexpr size_t num_events = 5u;
+  constexpr size_t max_events = 4u;
+
+  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(), kProjectId,
+                                 max_events);
+  OccurrenceEvent event(kFakeCobaltMetricId, 123);
+
+  // Send multiple events before the FakeLoggerImpl is ready.
+  for (size_t i = 0; i < num_events; ++i) {
+    cobalt_logger.LogEvent(event.metric_id(), event.event_code());
+  }
+  RunLoopUntilIdle();
+
+  // Last event should have been dropped.
+  const auto& first_events = logger()->GetEvents(EventType::EVENT_OCCURRED);
+  EXPECT_EQ(first_events.size(), max_events);
+  for (size_t i = 0; i < max_events; ++i) {
+    EXPECT_TRUE(Equals(static_cast<const OccurrenceEvent*>(&event),
+                       static_cast<OccurrenceEvent*>(first_events[i].get())));
+  }
+
+  // Log an additional event to make sure the logger is in a good state.
+  cobalt_logger.LogEvent(event.metric_id(), event.event_code());
+  RunLoopUntilIdle();
+
+  const auto& all_events = logger()->GetEvents(EventType::EVENT_OCCURRED);
+  EXPECT_EQ(all_events.size(), max_events + 1);
+  for (size_t i = 0; i < max_events + 1; ++i) {
+    EXPECT_TRUE(Equals(static_cast<const OccurrenceEvent*>(&event),
+                       static_cast<OccurrenceEvent*>(all_events[i].get())));
+  }
 }
 
 }  // namespace

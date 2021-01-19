@@ -20,9 +20,11 @@ using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id)
-    : dispatcher_(dispatcher), project_id_(project_id) {
+BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id,
+                                           size_t max_buffer_size)
+    : dispatcher_(dispatcher), project_id_(project_id), max_buffer_size_(max_buffer_size) {
   FX_CHECK(project_id_ > 0) << "Must define a project_id greater than 0.";
+  FX_CHECK(max_buffer_size > 0) << "Must have a non-empty buffer.";
 }
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
@@ -159,6 +161,10 @@ void BaseCobaltLoggerImpl::OnConnectionError() {
 }
 
 void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<BaseEvent> event) {
+  if (events_to_send_.size() + events_in_transit_.size() >= max_buffer_size_) {
+    FX_LOGS_FIRST_N(WARNING, 20) << "Buffer full; dropping event.";
+    return;
+  }
   events_to_send_.insert(std::move(event));
   if (!logger_ready_ || !events_in_transit_.empty()) {
     return;
@@ -234,8 +240,8 @@ fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
 
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                   uint32_t project_id)
-    : BaseCobaltLoggerImpl(dispatcher, project_id), services_(services) {
+                                   uint32_t project_id, size_t max_buffer_size)
+    : BaseCobaltLoggerImpl(dispatcher, project_id, max_buffer_size), services_(services) {
   ConnectToCobaltApplication();
 }
 

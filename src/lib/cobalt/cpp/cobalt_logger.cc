@@ -13,8 +13,8 @@ namespace cobalt {
 
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    uint32_t project_id) {
-  return std::make_unique<CobaltLoggerImpl>(dispatcher, services, project_id);
+    uint32_t project_id, size_t max_buffer_size) {
+  return std::make_unique<CobaltLoggerImpl>(dispatcher, services, project_id, max_buffer_size);
 }
 
 }  // namespace cobalt
