@@ -258,8 +258,8 @@ The set of currently known features are as follows:
   for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.
 
-- `hub`, which requests access to the [Hub directory](/docs/concepts/framework/hub.md)
-  scoped to the component instance's realm.
+- `hub`, which shows information about the component instance's realm and its
+  children in a [directory structure][hub].
 
 - `deprecated-shell`, which requests access to the resources appropriate for an
   interactive command line. Typically, shells are granted access to all the
@@ -289,7 +289,8 @@ The set of currently known features are as follows:
   partition is for storing persistent data that will survive a factory reset,
   and is only to be used for specific, approved use cases.
 
-See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
+See [sandboxing](/docs/concepts/process/sandboxing.md) for more information about sandboxing.
 
+[hub]: /docs/concepts/components/v1/hub.md
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
 [test-components]: /docs/concepts/testing/v1_test_component.md

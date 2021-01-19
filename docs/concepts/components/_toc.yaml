@@ -10,6 +10,8 @@ toc:
   section:
   - title: "Component manifests"
     path: /docs/concepts/components/v1/component_manifests.md
+  - title: "Hub"
+    path: /docs/concepts/components/v1/hub.md
 - title: "Components v2"
   section:
   - title: "Overview"

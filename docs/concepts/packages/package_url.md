@@ -185,7 +185,7 @@ Per [RFC 3986], resource paths are percent-encoded when they appear in URLs.
  * `assets/en/strings`
  * `hello/unicode/%F0%9F%98%81`, which decodes to `hello/unicode/😁`
 
-[Fuchsia filesystem paths]: /docs/concepts/framework/namespaces.md#object-relative-path-expressions
+[Fuchsia filesystem paths]: /docs/concepts/process/namespaces.md#object-relative-path-expressions
 [RFC 3986]: https://tools.ietf.org/html/rfc3986#page-11
 
 ## The fuchsia-pkg URL scheme

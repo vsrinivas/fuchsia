@@ -55,7 +55,7 @@ open document](/docs/concepts/system/life_of_an_open.md).
 
 ### Namespaces
 
-On Fuchsia, a [namespace](/docs/concepts/framework/namespaces.md) is a small filesystem which exists
+On Fuchsia, a [namespace](/docs/concepts/process/namespaces.md) is a small filesystem which exists
 entirely within the client. At the most basic level, the idea of the client
 saving “/” as root and associating a handle with it is a very primitive
 namespace. Instead of a typical singular "global" filesystem namespace, Fuchsia
@@ -85,7 +85,7 @@ according to application-launching policy.
 
 For more detail the mechanisms and policies applied to restricting process
 capability, refer to the documentation on
-[sandboxing](/docs/concepts/framework/sandboxing.md).
+[sandboxing](/docs/concepts/process/sandboxing.md).
 
 ### Passing Data
 

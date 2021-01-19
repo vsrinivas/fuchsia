@@ -20,7 +20,7 @@ the resources provided to programs when starting.
 Some of the initial handles given to a process are directories that the process
 mounts into its _namespace_. These handles let the process discover and
 communicate with other processes running on the system, including file systems
-and other servers. See [Namespaces](/docs/concepts/framework/namespaces.md) for more details.
+and other servers. See [Namespaces](/docs/concepts/process/namespaces.md) for more details.
 
 The namespace given to a process strongly influences how much of the system the
 process can influence. Therefore, configuring the sandbox in which a process

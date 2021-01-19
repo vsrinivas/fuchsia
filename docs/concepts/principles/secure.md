@@ -47,7 +47,7 @@ Isolated namespaces mean a component only has visibility to its own package.
 
 ## Fuchsia has no global file system or ambient authority
 
-**[Namespaces](/docs/concepts/framework/namespaces.md)
+**[Namespaces](/docs/concepts/process/namespaces.md)
 prevent programs from escaping their containers**
 
 Fuchsia aims to have no ambient authority,

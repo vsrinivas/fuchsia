@@ -1,4 +1,6 @@
-# Hub
+# Hub (Components v1)
+
+<<../_v1_banner.md>>
 
 ## What do we mean by hub?
 

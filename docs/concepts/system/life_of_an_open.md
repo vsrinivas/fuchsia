@@ -26,7 +26,7 @@ call, where the kernel might handle path parsing, redirection, etc. In that
 model, the kernel would need to mediate access to resources based on exterior
 knowledge about the caller. The Zircon kernel, however, intentionally has no
 such system call. Instead, clients access filesystems through **channels** --
-when a process is initialized, it is provided a [namespace](/docs/concepts/framework/namespaces.md),
+when a process is initialized, it is provided a [namespace](/docs/concepts/process/namespaces.md),
 which is a table of "absolute path" -> "handle" mappings. All paths accessed
 from within a process are opened by directing requests through this namespace
 mapping.

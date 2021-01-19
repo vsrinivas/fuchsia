@@ -40,9 +40,9 @@ toc:
 - title: "Filesystems"
   section:
   - include: /docs/concepts/filesystems/_toc.yaml
-- title: "Framework"
+- title: "Process"
   section:
-  - include: /docs/concepts/framework/_toc.yaml
+  - include: /docs/concepts/process/_toc.yaml
 - title: "FIDL"
   section:
   - include: /docs/concepts/fidl/_toc.yaml

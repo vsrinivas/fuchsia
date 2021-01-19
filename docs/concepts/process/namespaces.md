@@ -228,7 +228,7 @@ There are some typical objects which a component namespace might contain:
   - `vendor.topic.Interface`: service defined by a _vendor_
 - `dev/`: device tree (relevant portions visible to privileged components as needed)
   - `class/`, ...
-- `hub/`: introspect the system, see [Hub](hub.md) (privileged components only)
+- `hub/`: introspect the system, see [Hub][hub] (privileged components only)
 - `config/`: configuration data for the component
 
 ## Namespace Participants
@@ -293,9 +293,4 @@ depending on the features listed in their
 which are exposed as files in the `/config` namespace entry. These are
 defined by the feature set of the component.
 
-<!--
-## FIDL Protocols
-
-_TODO(jeffbrown): Explain how the namespace protocols work._
--->
-
+[hub]: /docs/concepts/components/v2/hub.md

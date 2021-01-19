@@ -6,12 +6,6 @@ Appmgr is responsible for launching v1 components and managing the namespaces in
 which those components run. It is the first process started in the `fuchsia` job
 by `devmgr`.
 
-See:
-
-* [Boot sequence](/docs/concepts/framework/boot_sequence.md)
-* [Sandboxing](/docs/concepts/framework/sandboxing.md)
-* [Package](/docs/concepts/storage/package.md)
-
 ## Building
 
 This project is typically included in Fuchsia builds by default, but it can be

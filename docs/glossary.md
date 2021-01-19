@@ -665,7 +665,7 @@ A namespace is the composite hierarchy of files, directories, sockets,
 [service](#service)s, and other named objects which are offered to components by
 their [environment](#environment).
 
--   [Fuchsia Namespace Spec](/docs/concepts/framework/namespaces.md)
+-   [Fuchsia Namespace Spec](/docs/concepts/process/namespaces.md)
 
 ### **Netstack** {#netstack}
 

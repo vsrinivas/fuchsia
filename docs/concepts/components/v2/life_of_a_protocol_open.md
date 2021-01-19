@@ -273,7 +273,7 @@ with `use` declarations; it must use `BindChild()`.
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
 [handle]: /docs/concepts/kernel/handles.md
 [channel]: /docs/reference/kernel_objects/channel.md
-[namespaces]: /docs/concepts/framework/namespaces.md
+[namespaces]: /docs/concepts/process/namespaces.md
 [component-manifests]: component_manifests.md
 [fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
 [abi-system]: /docs/concepts/system/abi/system.md
