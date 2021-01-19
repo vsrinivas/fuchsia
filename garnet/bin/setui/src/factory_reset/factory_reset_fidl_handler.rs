@@ -4,7 +4,8 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::settings::RequestContext;
-use crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest};
+use crate::handler::base::Request;
+use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::{fidl_hanging_get_responder, fidl_process, request_respond};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
@@ -27,8 +28,8 @@ impl From<SettingInfo> for FactoryResetSettings {
     }
 }
 
-fn to_request(settings: FactoryResetSettings) -> Option<SettingRequest> {
-    settings.is_local_reset_allowed.map(SettingRequest::SetLocalResetAllowed)
+fn to_request(settings: FactoryResetSettings) -> Option<Request> {
+    settings.is_local_reset_allowed.map(Request::SetLocalResetAllowed)
 }
 
 fidl_process!(FactoryReset, SettingType::FactoryReset, process_request);
@@ -81,6 +82,6 @@ mod tests {
             is_local_reset_allowed: Some(true),
             ..FactoryResetSettings::EMPTY
         });
-        matches::assert_matches!(result, Some(SettingRequest::SetLocalResetAllowed(true)));
+        matches::assert_matches!(result, Some(Request::SetLocalResetAllowed(true)));
     }
 }

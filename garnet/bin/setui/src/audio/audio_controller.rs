@@ -6,7 +6,7 @@ use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::{Event, SettingHandlerResult, State};
+use crate::handler::base::{Event, Request, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -210,13 +210,11 @@ impl data_controller::Create<AudioInfo> for AudioController {
 
 #[async_trait]
 impl controller::Handle for AudioController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
-            SettingRequest::SetVolume(volume) => {
-                Some(self.volume.lock().await.set_volume(volume).await)
-            }
-            SettingRequest::Get => Some(
+            Request::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
+            Request::SetVolume(volume) => Some(self.volume.lock().await.set_volume(volume).await),
+            Request::Get => Some(
                 self.volume
                     .lock()
                     .await
@@ -224,7 +222,7 @@ impl controller::Handle for AudioController {
                     .await
                     .map(|info| Some(SettingInfo::Audio(info))),
             ),
-            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.volume.lock().await.set_mic_mute_state(state).await)
             }
             _ => None,

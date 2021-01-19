@@ -4,7 +4,7 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
-use crate::handler::base::{SettingHandlerResult, State};
+use crate::handler::base::{Request, SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -16,7 +16,7 @@ use crate::input::types::{
     InputState, Microphone,
 };
 use crate::input::ButtonType;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest};
+use crate::switchboard::base::ControllerStateResult;
 
 use async_trait::async_trait;
 use futures::lock::Mutex;
@@ -289,33 +289,33 @@ impl data_controller::Create<InputInfoSources> for InputController {
 
 #[async_trait]
 impl controller::Handle for InputController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Restore => {
+            Request::Restore => {
                 // Get hardware state.
                 // TODO(fxbug.dev/57917): After config is implemented, handle the error here.
                 self.inner.lock().await.restore().await;
                 Some(Ok(None))
             }
-            SettingRequest::SetMicMute(muted) => {
+            Request::SetMicMute(muted) => {
                 Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
             }
-            SettingRequest::Get => Some(
+            Request::Get => Some(
                 self.inner.lock().await.get_info().await.map(|info| Some(SettingInfo::Input(info))),
             ),
-            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
                 if !self.has_input_device(InputDeviceType::MICROPHONE).await {
                     return Some(Ok(None));
                 }
                 Some(self.inner.lock().await.set_hw_mic_mute(state).await)
             }
-            SettingRequest::OnButton(ButtonType::CameraDisable(disabled)) => {
+            Request::OnButton(ButtonType::CameraDisable(disabled)) => {
                 if !self.has_input_device(InputDeviceType::CAMERA).await {
                     return Some(Ok(None));
                 }
                 Some(self.inner.lock().await.set_hw_camera_disable(disabled).await)
             }
-            SettingRequest::SetInputStates(input_states) => Some(
+            Request::SetInputStates(input_states) => Some(
                 self.inner
                     .lock()
                     .await

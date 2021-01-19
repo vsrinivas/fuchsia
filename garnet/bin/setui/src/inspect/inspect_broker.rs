@@ -16,11 +16,10 @@ use futures::StreamExt;
 
 use crate::base::SettingInfo;
 use crate::clock;
-use crate::handler::base::{Command, Event};
+use crate::handler::base::{Command, Event, Request};
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::SettingRequest;
 
 /// A broker that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
@@ -68,7 +67,7 @@ impl InspectBroker {
                         // we watch the reply to get the signature of the setting handler and ask
                         // for its value, so that we have the value of all settings immediately on
                         // start.
-                        Payload::Command(Command::HandleRequest(SettingRequest::Restore)) => {
+                        Payload::Command(Command::HandleRequest(Request::Restore)) => {
                             match InspectBroker::watch_reply(client).await {
                                 Ok(reply_signature) => {
                                     broker
@@ -127,7 +126,7 @@ impl InspectBroker {
         let mut send_receptor = self
             .messenger_client
             .message(
-                Payload::Command(Command::HandleRequest(SettingRequest::Get)),
+                Payload::Command(Command::HandleRequest(Request::Get)),
                 Audience::Messenger(signature),
             )
             .send();
@@ -222,7 +221,7 @@ mod tests {
         // Proxy sends restore request.
         proxy
             .message(
-                Payload::Command(Command::HandleRequest(SettingRequest::Restore)),
+                Payload::Command(Command::HandleRequest(Request::Restore)),
                 Audience::Address(setting_handler_address),
             )
             .send();
@@ -234,7 +233,7 @@ mod tests {
         // Inspect broker sends get request to setting handler, handler replies with value.
         let inspect_broker_client = verify_payload(
             setting_handler_receptor,
-            Payload::Command(Command::HandleRequest(SettingRequest::Get)),
+            Payload::Command(Command::HandleRequest(Request::Get)),
         )
         .await;
         inspect_broker_client
@@ -301,7 +300,7 @@ mod tests {
         // Inspect broker sends get request to setting handler, handler replies with value.
         let inspect_broker_client = verify_payload(
             setting_handler_receptor,
-            Payload::Command(Command::HandleRequest(SettingRequest::Get)),
+            Payload::Command(Command::HandleRequest(Request::Get)),
         )
         .await;
         inspect_broker_client

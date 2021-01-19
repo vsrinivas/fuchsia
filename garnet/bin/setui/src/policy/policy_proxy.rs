@@ -7,13 +7,14 @@ use fuchsia_async::Task;
 use futures::StreamExt;
 
 use crate::base::SettingType;
+use crate::handler::base::Request;
 use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{filter, MessageEvent, MessengerType};
-use crate::policy::base::{PolicyHandlerFactory, Request};
+use crate::policy::base::{PolicyHandlerFactory, Request as PolicyRequest};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -138,7 +139,7 @@ impl PolicyProxy {
 
     async fn process_policy_request(
         &mut self,
-        request: Request,
+        request: PolicyRequest,
         message_client: policy::message::Client,
     ) {
         let response = self.policy_handler.handle_policy_request(request).await;
@@ -155,7 +156,7 @@ impl PolicyProxy {
         &mut self,
         request_id: u64,
         setting_type: SettingType,
-        request: SettingRequest,
+        request: Request,
         message_client: core::message::Client,
     ) {
         let handler_result = self.policy_handler.handle_setting_request(request).await;

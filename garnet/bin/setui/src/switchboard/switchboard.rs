@@ -4,13 +4,12 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::clock;
+use crate::handler::base::Request;
 use crate::internal::core;
 use crate::internal::switchboard;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SwitchboardError,
-};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SwitchboardError};
 
 use anyhow::Error;
 use fuchsia_async as fasync;
@@ -33,7 +32,7 @@ const INSPECT_REQUESTS_COUNT: usize = 25;
 /// Information about a switchboard setting to be written to inspect.
 #[derive(Inspect)]
 struct SettingTypeInfo {
-    /// Map from the name of the SettingRequest variant to a RequestTypeInfo that holds a list of
+    /// Map from the name of the Request variant to a RequestTypeInfo that holds a list of
     /// recent requests.
     #[inspect(skip)]
     requests_by_type: HashMap<String, RequestTypeInfo>,
@@ -80,7 +79,7 @@ impl RequestTypeInfo {
 /// once they go out of scope.
 #[derive(Inspect)]
 struct RequestInfo {
-    /// Debug string representation of this SettingRequest.
+    /// Debug string representation of this Request.
     request: inspect::StringProperty,
 
     /// Milliseconds since switchboard creation that this request arrived.
@@ -361,7 +360,7 @@ impl Switchboard {
     fn process_action_request(
         &mut self,
         setting_type: SettingType,
-        request: SettingRequest,
+        request: Request,
         reply_client: switchboard::message::Client,
     ) -> Result<(), SwitchboardError> {
         let messenger = self.core_messenger.clone();
@@ -461,7 +460,7 @@ impl Switchboard {
     }
 
     /// Write a request to inspect.
-    fn record_request(&mut self, setting_type: SettingType, request: SettingRequest) {
+    fn record_request(&mut self, setting_type: SettingType, request: Request) {
         let inspect_node = &self.inspect_node;
         let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
             SettingTypeInfo::new()
@@ -567,7 +566,7 @@ mod tests {
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     SettingType::Unknown,
-                    SettingRequest::Get,
+                    Request::Get,
                 )),
                 Audience::Address(switchboard::Address::Switchboard),
             )
@@ -577,7 +576,7 @@ mod tests {
         let (client, action) = retrieve_and_verify_action(
             &mut proxy_receptor,
             SettingType::Unknown,
-            SettingActionData::Request(SettingRequest::Get),
+            SettingActionData::Request(Request::Get),
         )
         .await;
 
@@ -613,7 +612,7 @@ mod tests {
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     SettingType::Unknown,
-                    SettingRequest::Get,
+                    Request::Get,
                 )),
                 Audience::Address(switchboard::Address::Switchboard),
             )
@@ -749,7 +748,7 @@ mod tests {
     async fn send_request_and_wait(
         messenger: &switchboard::message::Messenger,
         setting_type: SettingType,
-        setting_request: SettingRequest,
+        setting_request: Request,
     ) {
         let _ = messenger
             .message(
@@ -781,24 +780,16 @@ mod tests {
         let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
 
         // Send a few requests to make sure they get written to inspect properly.
-        send_request_and_wait(
-            &messenger,
-            SettingType::Display,
-            SettingRequest::SetAutoBrightness(false),
-        )
-        .await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
 
-        send_request_and_wait(
-            &messenger,
-            SettingType::Display,
-            SettingRequest::SetAutoBrightness(false),
-        )
-        .await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
 
         send_request_and_wait(
             &messenger,
             SettingType::Intl,
-            SettingRequest::SetIntlInfo(IntlInfo {
+            Request::SetIntlInfo(IntlInfo {
                 locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some("UTC".to_string()),
@@ -850,23 +841,15 @@ mod tests {
         let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
 
         // Interlace different request types to make sure the counter is correct.
-        send_request_and_wait(
-            &messenger,
-            SettingType::Display,
-            SettingRequest::SetAutoBrightness(false),
-        )
-        .await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
 
-        send_request_and_wait(&messenger, SettingType::Display, SettingRequest::Get).await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::Get).await;
 
-        send_request_and_wait(
-            &messenger,
-            SettingType::Display,
-            SettingRequest::SetAutoBrightness(true),
-        )
-        .await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(true))
+            .await;
 
-        send_request_and_wait(&messenger, SettingType::Display, SettingRequest::Get).await;
+        send_request_and_wait(&messenger, SettingType::Display, Request::Get).await;
 
         assert_inspect_tree!(inspector, root: {
             switchboard: {
@@ -914,7 +897,7 @@ mod tests {
         send_request_and_wait(
             &messenger,
             SettingType::Intl,
-            SettingRequest::SetIntlInfo(IntlInfo {
+            Request::SetIntlInfo(IntlInfo {
                 locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some("UTC".to_string()),
@@ -928,7 +911,7 @@ mod tests {
             send_request_and_wait(
                 &messenger,
                 SettingType::Display,
-                SettingRequest::SetAutoBrightness(false),
+                Request::SetAutoBrightness(false),
             )
             .await;
         }

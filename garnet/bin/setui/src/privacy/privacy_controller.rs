@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::privacy::types::PrivacyInfo;
-use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for PrivacyInfo {
@@ -41,16 +40,16 @@ impl data_controller::Create<PrivacyInfo> for PrivacyController {
 
 #[async_trait]
 impl controller::Handle for PrivacyController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::SetUserDataSharingConsent(user_data_sharing_consent) => {
+            Request::SetUserDataSharingConsent(user_data_sharing_consent) => {
                 let mut current = self.client.read().await;
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;
                 Some(write(&self.client, current, false).await.into_handler_result())
             }
-            SettingRequest::Get => Some(Ok(Some(SettingInfo::Privacy(self.client.read().await)))),
+            Request::Get => Some(Ok(Some(SettingInfo::Privacy(self.client.read().await)))),
             _ => None,
         }
     }

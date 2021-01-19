@@ -6,18 +6,19 @@
 use crate::audio::policy as audio;
 use crate::audio::policy::PolicyId;
 use crate::base::SettingType;
+use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::persist::Storage;
 use crate::internal::core;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
-use crate::policy::base::Request;
+use crate::policy::base::Request as PolicyRequest;
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
 use crate::privacy::types::PrivacyInfo;
-use crate::switchboard::base::{SettingEvent, SettingRequest};
+use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -25,7 +26,7 @@ use futures::future::BoxFuture;
 const CONTEXT_ID: u64 = 0;
 
 pub type HandlePolicyRequestCallback<S> =
-    Box<dyn Fn(Request, ClientProxy<S>) -> BoxFuture<'static, Response> + Send + Sync>;
+    Box<dyn Fn(PolicyRequest, ClientProxy<S>) -> BoxFuture<'static, Response> + Send + Sync>;
 
 pub struct FakePolicyHandler<S: Storage + 'static> {
     client_proxy: ClientProxy<S>,
@@ -50,15 +51,12 @@ impl<S: Storage> Create<S> for FakePolicyHandler<S> {
 
 #[async_trait]
 impl<S: Storage> PolicyHandler for FakePolicyHandler<S> {
-    async fn handle_policy_request(&mut self, request: Request) -> Response {
+    async fn handle_policy_request(&mut self, request: PolicyRequest) -> Response {
         self.handle_policy_request_callback.as_ref().unwrap()(request, self.client_proxy.clone())
             .await
     }
 
-    async fn handle_setting_request(
-        &mut self,
-        _request: SettingRequest,
-    ) -> Option<RequestTransform> {
+    async fn handle_setting_request(&mut self, _request: Request) -> Option<RequestTransform> {
         None
     }
 
@@ -97,7 +95,7 @@ async fn test_write() {
 
     // Call handle_policy_request.
     handler
-        .handle_policy_request(Request::Audio(audio::Request::Get))
+        .handle_policy_request(PolicyRequest::Audio(audio::Request::Get))
         .await
         .expect("handle failed");
 

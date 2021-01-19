@@ -11,9 +11,9 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
 use crate::night_mode::types::NightModeInfo;
 use crate::request_respond;
-use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchResponder,);
 
@@ -29,11 +29,11 @@ impl From<SettingInfo> for NightModeSettings {
     }
 }
 
-impl From<NightModeSettings> for SettingRequest {
+impl From<NightModeSettings> for Request {
     fn from(settings: NightModeSettings) -> Self {
         let mut night_mode_info = NightModeInfo::empty();
         night_mode_info.night_mode_enabled = settings.night_mode_enabled;
-        SettingRequest::SetNightModeInfo(night_mode_info)
+        Request::SetNightModeInfo(night_mode_info)
     }
 }
 
@@ -76,9 +76,9 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(NightModeSettings::EMPTY);
+        let request = Request::from(NightModeSettings::EMPTY);
         let night_mode_info = NightModeInfo::empty();
-        assert_eq!(request, SettingRequest::SetNightModeInfo(night_mode_info));
+        assert_eq!(request, Request::SetNightModeInfo(night_mode_info));
     }
 
     #[test]
@@ -87,11 +87,11 @@ mod tests {
 
         let mut night_mode_settings = NightModeSettings::EMPTY;
         night_mode_settings.night_mode_enabled = Some(NIGHT_MODE_ENABLED);
-        let request = SettingRequest::from(night_mode_settings);
+        let request = Request::from(night_mode_settings);
 
         let mut night_mode_info = NightModeInfo::empty();
         night_mode_info.night_mode_enabled = Some(NIGHT_MODE_ENABLED);
 
-        assert_eq!(request, SettingRequest::SetNightModeInfo(night_mode_info));
+        assert_eq!(request, Request::SetNightModeInfo(night_mode_info));
     }
 }

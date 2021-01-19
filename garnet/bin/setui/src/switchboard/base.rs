@@ -7,19 +7,9 @@ use std::collections::HashSet;
 use fuchsia_syslog::fx_log_warn;
 use thiserror::Error;
 
-use crate::accessibility::types::AccessibilityInfo;
-use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
-use crate::display::types::{LowLightMode, Theme};
-use crate::do_not_disturb::types::DoNotDisturbInfo;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::setting_handler::ControllerError;
-use crate::input::types::InputDevice;
-use crate::input::{ButtonType, VolumeGain};
-use crate::intl::types::IntlInfo;
-use crate::light::types::LightState;
-use crate::night_mode::types::NightModeInfo;
-use crate::setup::types::ConfigurationInterfaceFlags;
 use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
@@ -35,7 +25,7 @@ pub trait Merge {
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum SwitchboardError {
     #[error("Unimplemented Request:{0:?} for setting type: {1:?}")]
-    UnimplementedRequest(SettingType, SettingRequest),
+    UnimplementedRequest(SettingType, Request),
 
     #[error("Storage failure for setting type: {0:?}")]
     StorageFailure(SettingType),
@@ -62,7 +52,7 @@ pub enum SwitchboardError {
     UnexpectedError(Cow<'static, str>),
 
     #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
-    UndeliverableError(SettingType, SettingRequest),
+    UndeliverableError(SettingType, Request),
 
     #[error("Unsupported request for setting type: {0:?}")]
     UnsupportedError(SettingType),
@@ -154,98 +144,6 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
     .collect();
 }
 
-/// The possible requests that can be made on a setting. The sink will expect a
-/// subset of the values defined below based on the associated type.
-/// The types are arranged alphabetically.
-#[derive(PartialEq, Debug, Clone)]
-pub enum SettingRequest {
-    Get,
-
-    // Input events.
-    OnButton(ButtonType),
-    OnVolume(VolumeGain),
-
-    // Accessibility requests.
-    SetAccessibilityInfo(AccessibilityInfo),
-
-    // Account requests
-    ScheduleClearAccounts,
-
-    // Audio requests.
-    SetVolume(Vec<AudioStream>),
-
-    // Audio in requests.
-    SetMicMute(bool),
-
-    // Display requests.
-    SetBrightness(f32),
-    SetAutoBrightness(bool),
-    SetLowLightMode(LowLightMode),
-    SetScreenEnabled(bool),
-    SetTheme(Theme),
-
-    // Do not disturb requests.
-    SetDnD(DoNotDisturbInfo),
-
-    // Factory Reset requests.
-    SetLocalResetAllowed(bool),
-
-    // Input requests.
-    SetInputStates(Vec<InputDevice>),
-
-    // Intl requests.
-    SetIntlInfo(IntlInfo),
-
-    // Light requests.
-    SetLightGroupValue(String, Vec<LightState>),
-
-    // Night mode requests.
-    SetNightModeInfo(NightModeInfo),
-
-    // Power requests.
-    Reboot,
-
-    // Restores settings to outside dependencies.
-    Restore,
-
-    // Privacy requests.
-    SetUserDataSharingConsent(Option<bool>),
-
-    // Setup info requests.
-    SetConfigurationInterfaces(ConfigurationInterfaceFlags),
-}
-
-impl SettingRequest {
-    /// Returns the name of the enum, for writing to inspect.
-    /// TODO(fxbug.dev/56718): write a macro to simplify this
-    pub fn for_inspect(self) -> &'static str {
-        match self {
-            SettingRequest::Get => "Get",
-            SettingRequest::OnButton(_) => "OnButton",
-            SettingRequest::OnVolume(_) => "OnVolume",
-            SettingRequest::SetAccessibilityInfo(_) => "SetAccessibilityInfo",
-            SettingRequest::ScheduleClearAccounts => "ScheduleClearAccounts",
-            SettingRequest::SetVolume(_) => "SetVolume",
-            SettingRequest::SetMicMute(_) => "SetMicMute",
-            SettingRequest::SetBrightness(_) => "SetBrightness",
-            SettingRequest::SetAutoBrightness(_) => "SetAutoBrightness",
-            SettingRequest::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
-            SettingRequest::SetLowLightMode(_) => "SetLowLightMode",
-            SettingRequest::SetDnD(_) => "SetDnD",
-            SettingRequest::SetInputStates(_) => "SetInputStates",
-            SettingRequest::SetIntlInfo(_) => "SetIntlInfo",
-            SettingRequest::SetLightGroupValue(_, _) => "SetLightGroupValue",
-            SettingRequest::SetNightModeInfo(_) => "SetNightModeInfo",
-            SettingRequest::Reboot => "Reboot",
-            SettingRequest::Restore => "Restore",
-            SettingRequest::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
-            SettingRequest::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
-            SettingRequest::SetScreenEnabled(_) => "SetScreenEnabled",
-            SettingRequest::SetTheme(_) => "SetTheme",
-        }
-    }
-}
-
 /// Description of an action request on a setting. This wraps a
 /// SettingActionData, providing destination details (setting type) along with
 /// callback information (action id).
@@ -257,7 +155,7 @@ pub struct SettingAction {
 }
 
 /// The types of actions. Note that specific request types should be enumerated
-/// in the SettingRequest enum.
+/// in the Request enum.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingActionData {
     /// The listening state has changed for the particular setting. The provided
@@ -265,8 +163,8 @@ pub enum SettingActionData {
     /// no more listeners.
     Listen(u64),
     /// A request has been made on a particular setting. The specific setting
-    /// and request data are encoded in SettingRequest.
-    Request(SettingRequest),
+    /// and request data are encoded in Request.
+    Request(Request),
 }
 
 /// The events generated in response to SettingAction.

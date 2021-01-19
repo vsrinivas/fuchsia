@@ -4,14 +4,14 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::call_async;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
-use crate::switchboard::base::{Merge, SettingRequest};
+use crate::switchboard::base::Merge;
 use async_trait::async_trait;
 use std::collections::HashSet;
 
@@ -55,10 +55,10 @@ impl data_controller::Create<IntlInfo> for IntlController {
 
 #[async_trait]
 impl controller::Handle for IntlController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::SetIntlInfo(info) => Some(self.set(info).await),
-            SettingRequest::Get => Some(Ok(Some(SettingInfo::Intl(self.client.read().await)))),
+            Request::SetIntlInfo(info) => Some(self.set(info).await),
+            Request::Get => Some(Ok(Some(SettingInfo::Intl(self.client.read().await)))),
             _ => None,
         }
     }

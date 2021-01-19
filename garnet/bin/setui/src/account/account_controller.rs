@@ -4,10 +4,9 @@
 
 use crate::base::SettingType;
 use crate::call_async;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
@@ -26,10 +25,10 @@ impl controller::Create for AccountController {
 
 #[async_trait]
 impl controller::Handle for AccountController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         #[allow(unreachable_patterns)]
         match request {
-            SettingRequest::ScheduleClearAccounts => {
+            Request::ScheduleClearAccounts => {
                 Some(match schedule_clear_accounts(&self.service_context).await {
                     Ok(()) => Ok(None),
                     Err(error) => Err(error),

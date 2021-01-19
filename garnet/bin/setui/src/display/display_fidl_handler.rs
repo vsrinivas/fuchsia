@@ -7,8 +7,9 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
+    crate::handler::base::Request,
     crate::request_respond,
-    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
+    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
@@ -112,26 +113,24 @@ impl From<SettingInfo> for DisplaySettings {
     }
 }
 
-fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
+fn to_request(settings: DisplaySettings) -> Option<Request> {
     let mut request = None;
     if let Some(brightness_value) = settings.brightness_value {
-        request = Some(SettingRequest::SetBrightness(brightness_value));
+        request = Some(Request::SetBrightness(brightness_value));
     } else if let Some(screen_enabled) = settings.screen_enabled {
-        request = Some(SettingRequest::SetScreenEnabled(screen_enabled));
+        request = Some(Request::SetScreenEnabled(screen_enabled));
     } else if let Some(enable_auto_brightness) = settings.auto_brightness {
-        request = Some(SettingRequest::SetAutoBrightness(enable_auto_brightness));
+        request = Some(Request::SetAutoBrightness(enable_auto_brightness));
     } else if let Some(low_light_mode) = settings.low_light_mode {
         request = match low_light_mode {
-            FidlLowLightMode::Enable => Some(SettingRequest::SetLowLightMode(LowLightMode::Enable)),
-            FidlLowLightMode::Disable => {
-                Some(SettingRequest::SetLowLightMode(LowLightMode::Disable))
-            }
+            FidlLowLightMode::Enable => Some(Request::SetLowLightMode(LowLightMode::Enable)),
+            FidlLowLightMode::Disable => Some(Request::SetLowLightMode(LowLightMode::Disable)),
             FidlLowLightMode::DisableImmediately => {
-                Some(SettingRequest::SetLowLightMode(LowLightMode::DisableImmediately))
+                Some(Request::SetLowLightMode(LowLightMode::DisableImmediately))
             }
         };
     } else if let Some(fidl_theme) = settings.theme {
-        request = Some(SettingRequest::SetTheme(Theme {
+        request = Some(Request::SetTheme(Theme {
             theme_type: fidl_theme.theme_type.map(ThemeType::from),
             theme_mode: match fidl_theme.theme_mode {
                 Some(fidl_theme_mode) => ThemeMode::from(fidl_theme_mode),

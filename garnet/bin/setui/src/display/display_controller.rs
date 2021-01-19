@@ -11,14 +11,13 @@ use crate::display::display_configuration::{
     ConfigurationThemeMode, ConfigurationThemeType, DisplayConfiguration,
 };
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,
@@ -198,9 +197,9 @@ impl<T> controller::Handle for DisplayController<T>
 where
     T: BrightnessManager + Send + Sync,
 {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Restore => {
+            Request::Restore => {
                 // Load and set value.
                 Some(
                     self.brightness_manager
@@ -208,24 +207,24 @@ where
                         .await,
                 )
             }
-            SettingRequest::SetBrightness(brightness_value) => {
+            Request::SetBrightness(brightness_value) => {
                 let mut display_info = self.client.read().await;
                 display_info.auto_brightness = false;
                 display_info.manual_brightness_value = brightness_value;
                 display_info.screen_enabled = true;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
+            Request::SetAutoBrightness(auto_brightness_enabled) => {
                 let mut display_info = self.client.read().await;
                 display_info.auto_brightness = auto_brightness_enabled;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetLowLightMode(low_light_mode) => {
+            Request::SetLowLightMode(low_light_mode) => {
                 let mut display_info = self.client.read().await;
                 display_info.low_light_mode = low_light_mode;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetScreenEnabled(enabled) => {
+            Request::SetScreenEnabled(enabled) => {
                 let mut display_info = self.client.read().await;
                 display_info.screen_enabled = enabled;
 
@@ -236,7 +235,7 @@ where
                 display_info.auto_brightness = !enabled;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetTheme(incoming_theme) => {
+            Request::SetTheme(incoming_theme) => {
                 let mut display_info = self.client.read().await;
                 let mut theme_builder = ThemeBuilder::new();
 
@@ -275,9 +274,7 @@ where
 
                 Some(write(&self.client, display_info, false).await.into_handler_result())
             }
-            SettingRequest::Get => {
-                Some(Ok(Some(SettingInfo::Brightness(self.client.read().await))))
-            }
+            Request::Get => Some(Ok(Some(SettingInfo::Brightness(self.client.read().await)))),
             _ => None,
         }
     }

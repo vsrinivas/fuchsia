@@ -7,9 +7,10 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process_custom,
     crate::fidl_processor::settings::RequestContext,
+    crate::handler::base::Request,
     crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
     crate::request_respond,
-    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
+    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,
@@ -39,7 +40,7 @@ impl From<SettingInfo> for InputDeviceSettings {
     }
 }
 
-fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<SettingRequest> {
+fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
     // Every device requires at least a device type and state flags.
     let input_states_invalid_args: Vec<&FidlInputState> = fidl_input_states
         .iter()
@@ -67,13 +68,13 @@ fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<SettingRequest
         })
         .collect();
 
-    Some(SettingRequest::SetInputStates(input_states))
+    Some(Request::SetInputStates(input_states))
 }
 
 // TODO(fxbug.dev/65686): Remove when clients are ported over to new version.
-fn to_request(settings: InputDeviceSettings) -> Option<SettingRequest> {
+fn to_request(settings: InputDeviceSettings) -> Option<Request> {
     if let Some(Microphone { muted: Some(muted), .. }) = settings.microphone {
-        Some(SettingRequest::SetMicMute(muted))
+        Some(Request::SetMicMute(muted))
     } else {
         None
     }

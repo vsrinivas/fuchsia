@@ -4,10 +4,11 @@
 
 use {
     crate::base::{SettingInfo, SettingType},
+    crate::handler::base::Request,
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
-    crate::switchboard::base::{SettingRequest, SwitchboardError},
+    crate::switchboard::base::SwitchboardError,
     anyhow::Error,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
@@ -340,7 +341,7 @@ where
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     self.setting_type,
-                    SettingRequest::Get,
+                    Request::Get,
                 )),
                 Audience::Address(switchboard::Address::Switchboard),
             )
@@ -504,10 +505,10 @@ mod tests {
             &mut self,
             requestor: switchboard::message::Client,
             setting_type: SettingType,
-            request: SettingRequest,
+            request: Request,
         ) {
             assert_eq!(setting_type, SETTING_TYPE);
-            assert_eq!(request, SettingRequest::Get);
+            assert_eq!(request, Request::Get);
 
             let mut response = None;
             if self.always_fail {

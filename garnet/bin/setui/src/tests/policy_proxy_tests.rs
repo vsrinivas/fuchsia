@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::audio::policy::{PolicyId, Request, Response};
+use crate::audio::policy::{PolicyId, Request as PolicyRequest, Response};
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::core;
 use crate::internal::policy;
@@ -16,7 +16,7 @@ use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransf
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::privacy::types::PrivacyInfo;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -29,7 +29,7 @@ static SETTING_TYPE: SettingType = SettingType::Privacy;
 static SETTING_REQUEST_PAYLOAD: core::Payload = core::Payload::Action(SettingAction {
     id: REQUEST_ID,
     setting_type: SETTING_TYPE,
-    data: SettingActionData::Request(SettingRequest::Get),
+    data: SettingActionData::Request(Request::Get),
 });
 static SETTING_REQUEST_PAYLOAD_2: core::Payload = core::Payload::Action(SettingAction {
     id: REQUEST_ID,
@@ -75,10 +75,7 @@ impl PolicyHandler for FakePolicyHandler {
         self.policy_response.clone()
     }
 
-    async fn handle_setting_request(
-        &mut self,
-        _request: SettingRequest,
-    ) -> Option<RequestTransform> {
+    async fn handle_setting_request(&mut self, _request: Request) -> Option<RequestTransform> {
         self.setting_response.clone()
     }
 
@@ -144,7 +141,7 @@ async fn test_policy_proxy_creation() {
 /// response is returned via the proxy.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_messages_passed_to_handler() {
-    let policy_request = policy_base::Request::Audio(Request::Get);
+    let policy_request = policy_base::Request::Audio(PolicyRequest::Get);
     let policy_payload =
         policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
     let storage_factory = InMemoryStorageFactory::create();
@@ -325,7 +322,7 @@ async fn test_setting_message_result_replacement() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_payload_replacement() {
     // Original request that will be sent by the switchboard.
-    let setting_request_1 = SettingRequest::Get;
+    let setting_request_1 = Request::Get;
     let setting_request_1_payload = core::Payload::Action(SettingAction {
         id: REQUEST_ID,
         setting_type: SETTING_TYPE,
@@ -333,7 +330,7 @@ async fn test_setting_message_payload_replacement() {
     });
 
     // Modified request that the policy handler will return.
-    let setting_request_2 = SettingRequest::Restore;
+    let setting_request_2 = Request::Restore;
     let setting_request_2_payload = core::Payload::Action(SettingAction {
         id: REQUEST_ID,
         setting_type: SETTING_TYPE,
@@ -505,7 +502,7 @@ async fn test_setting_event_replace() {
 /// all answered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_messages() {
-    let policy_request = policy_base::Request::Audio(Request::Get);
+    let policy_request = policy_base::Request::Audio(PolicyRequest::Get);
     let policy_payload =
         policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
 

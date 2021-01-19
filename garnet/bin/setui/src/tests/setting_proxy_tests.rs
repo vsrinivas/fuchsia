@@ -17,7 +17,7 @@ use async_trait::async_trait;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{
-    Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerFactoryError,
+    Command, Event, ExitResult, Request, SettingHandlerFactory, SettingHandlerFactoryError,
     SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
@@ -28,7 +28,7 @@ use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
@@ -37,7 +37,7 @@ struct SettingHandler {
     setting_type: SettingType,
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
-    responses: Vec<(SettingRequest, HandlerAction)>,
+    responses: Vec<(Request, HandlerAction)>,
     done_tx: Option<oneshot::Sender<()>>,
     proxy_signature: handler::message::Signature,
 }
@@ -54,7 +54,7 @@ impl SettingHandler {
         Ok(None)
     }
 
-    pub fn queue_action(&mut self, request: SettingRequest, action: HandlerAction) {
+    pub fn queue_action(&mut self, request: Request, action: HandlerAction) {
         self.responses.push((request, action))
     }
 
@@ -68,7 +68,7 @@ impl SettingHandler {
             .ack();
     }
 
-    fn process_request(&mut self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    fn process_request(&mut self, request: Request) -> Option<SettingHandlerResult> {
         if let Some((match_request, action)) = self.responses.pop() {
             if request == match_request {
                 match action {
@@ -389,7 +389,7 @@ async fn test_request() {
         .setting_handler
         .lock()
         .await
-        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
     // Send initial request.
     let mut receptor = environment
@@ -398,7 +398,7 @@ async fn test_request() {
             Payload::Action(SettingAction {
                 id: request_id,
                 setting_type,
-                data: SettingActionData::Request(SettingRequest::Get),
+                data: SettingActionData::Request(Request::Get),
             }),
             Audience::Messenger(environment.proxy_signature),
         )
@@ -429,7 +429,7 @@ async fn test_request_order() {
         .setting_handler
         .lock()
         .await
-        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
     // Send multiple requests.
     let receptor_1 = environment
@@ -438,7 +438,7 @@ async fn test_request_order() {
             Payload::Action(SettingAction {
                 id: request_id_1,
                 setting_type,
-                data: SettingActionData::Request(SettingRequest::Get),
+                data: SettingActionData::Request(Request::Get),
             }),
             Audience::Messenger(environment.proxy_signature),
         )
@@ -449,7 +449,7 @@ async fn test_request_order() {
             Payload::Action(SettingAction {
                 id: request_id_2,
                 setting_type,
-                data: SettingActionData::Request(SettingRequest::Get),
+                data: SettingActionData::Request(Request::Get),
             }),
             Audience::Messenger(environment.proxy_signature),
         )
@@ -465,7 +465,7 @@ async fn test_request_order() {
             .setting_handler
             .lock()
             .await
-            .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
+            .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Some(MessageEvent::Message(
@@ -534,7 +534,7 @@ async fn test_generation() {
                 Payload::Action(SettingAction {
                     id: request_id,
                     setting_type,
-                    data: SettingActionData::Request(SettingRequest::Get),
+                    data: SettingActionData::Request(Request::Get),
                 }),
                 Audience::Messenger(environment.proxy_signature),
             )
@@ -564,7 +564,7 @@ async fn test_regeneration() {
                     Payload::Action(SettingAction {
                         id: request_id,
                         setting_type,
-                        data: SettingActionData::Request(SettingRequest::Get),
+                        data: SettingActionData::Request(Request::Get),
                     }),
                     Audience::Messenger(environment.proxy_signature),
                 )
@@ -623,7 +623,7 @@ async fn test_regeneration() {
                     Payload::Action(SettingAction {
                         id: request_id,
                         setting_type,
-                        data: SettingActionData::Request(SettingRequest::Get),
+                        data: SettingActionData::Request(Request::Get),
                     }),
                     Audience::Messenger(environment.proxy_signature),
                 )
@@ -654,7 +654,7 @@ async fn test_retry() {
     // Queue up external failure responses in the handler.
     for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
         environment.setting_handler.lock().await.queue_action(
-            SettingRequest::Get,
+            Request::Get,
             HandlerAction::Respond(Err(ControllerError::ExternalFailure(
                 setting_type,
                 "test_component".into(),
@@ -664,7 +664,7 @@ async fn test_retry() {
     }
 
     let request_id = 2;
-    let request = SettingRequest::Get;
+    let request = Request::Get;
 
     // Send request.
     let (returned_request_id, handler_result) = get_response(
@@ -722,7 +722,7 @@ async fn test_retry() {
         .setting_handler
         .lock()
         .await
-        .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
     // Ensure subsequent request succeeds
     assert!(get_response(
@@ -770,11 +770,11 @@ async fn test_early_exit() {
             .setting_handler
             .lock()
             .await
-            .queue_action(SettingRequest::Get, HandlerAction::Exit(exit_result.clone()));
+            .queue_action(Request::Get, HandlerAction::Exit(exit_result.clone()));
     }
 
     let request_id = 2;
-    let request = SettingRequest::Get;
+    let request = Request::Get;
 
     // Send request.
     let (returned_request_id, handler_result) = get_response(
@@ -855,11 +855,11 @@ fn test_timeout() {
                 .setting_handler
                 .lock()
                 .await
-                .queue_action(SettingRequest::Get, HandlerAction::Ignore);
+                .queue_action(Request::Get, HandlerAction::Ignore);
         }
 
         let request_id = 2;
-        let request = SettingRequest::Get;
+        let request = Request::Get;
 
         // Send request.
         let (returned_request_id, handler_result) = get_response(
@@ -955,10 +955,10 @@ fn test_timeout_no_retry() {
             .setting_handler
             .lock()
             .await
-            .queue_action(SettingRequest::Get, HandlerAction::Respond(Ok(None)));
+            .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
         let request_id = 2;
-        let request = SettingRequest::Get;
+        let request = Request::Get;
 
         // Send request.
         let (returned_request_id, handler_result) = get_response(

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::call,
+    crate::handler::base::Request,
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::SettingRequest,
     anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
@@ -88,15 +88,15 @@ pub enum VolumeGain {
     Down,
 }
 
-impl From<ButtonType> for SettingRequest {
+impl From<ButtonType> for Request {
     fn from(button_type: ButtonType) -> Self {
-        SettingRequest::OnButton(button_type)
+        Request::OnButton(button_type)
     }
 }
 
-impl From<VolumeGain> for SettingRequest {
+impl From<VolumeGain> for Request {
     fn from(volume_gain: VolumeGain) -> Self {
-        SettingRequest::OnVolume(volume_gain)
+        Request::OnVolume(volume_gain)
     }
 }
 

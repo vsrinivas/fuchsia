@@ -5,13 +5,13 @@
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
 use crate::factory_reset::types::FactoryResetInfo;
-use crate::handler::base::{SettingHandlerResult, State};
+use crate::handler::base::{Request, SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::ControllerError;
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest};
+use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
 use fuchsia_syslog::fx_log_err;
@@ -34,11 +34,11 @@ impl Into<SettingInfo> for FactoryResetInfo {
 
 type FactoryResetHandle = Arc<Mutex<FactoryResetManager>>;
 
-/// Handles the mapping between [`SettingRequest`]s/[`State`] changes and the
+/// Handles the mapping between [`Request`]s/[`State`] changes and the
 /// [`FactoryResetManager`] logic. Wraps an Arc Mutex of the manager so that each field
 /// doesn't need to be individually locked within the manager.
 ///
-/// [`SettingRequest`]: crate::switchboard::base::SettingRequest
+/// [`Request`]: crate::handler::base::Request
 /// [`State`]: crate::handler::base::State
 /// [`FactoryResetManager`]: crate::factory_reset::FactoryResetManager
 pub struct FactoryResetController {
@@ -135,11 +135,11 @@ impl controller::Create<FactoryResetInfo> for FactoryResetController {
 
 #[async_trait]
 impl Handle for FactoryResetController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Restore => Some(self.handle.lock().await.restore().await),
-            SettingRequest::Get => Some(self.handle.lock().await.get()),
-            SettingRequest::SetLocalResetAllowed(is_local_reset_allowed) => {
+            Request::Restore => Some(self.handle.lock().await.restore().await),
+            Request::Get => Some(self.handle.lock().await.get()),
+            Request::SetLocalResetAllowed(is_local_reset_allowed) => {
                 Some(self.handle.lock().await.set_local_reset_allowed(is_local_reset_allowed).await)
             }
             _ => None,

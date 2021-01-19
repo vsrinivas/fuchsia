@@ -8,6 +8,7 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
+    crate::handler::base::Request,
     crate::request_respond,
     crate::switchboard::base::*,
     fidl::endpoints::ServiceMarker,
@@ -33,11 +34,11 @@ impl From<SettingInfo> for DoNotDisturbSettings {
     }
 }
 
-fn to_request(settings: DoNotDisturbSettings) -> Option<SettingRequest> {
+fn to_request(settings: DoNotDisturbSettings) -> Option<Request> {
     let mut dnd_info = DoNotDisturbInfo::empty();
     dnd_info.user_dnd = settings.user_initiated_do_not_disturb;
     dnd_info.night_mode_dnd = settings.night_mode_initiated_do_not_disturb;
-    Some(SettingRequest::SetDnD(dnd_info))
+    Some(Request::SetDnD(dnd_info))
 }
 
 fidl_process!(DoNotDisturb, SettingType::DoNotDisturb, process_request);

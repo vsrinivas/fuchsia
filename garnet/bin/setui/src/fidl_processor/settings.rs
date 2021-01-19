@@ -4,15 +4,16 @@
 
 use std::sync::Arc;
 
-use fidl::endpoints::{Request, ServiceMarker};
+use fidl::endpoints::{Request as FidlRequest, ServiceMarker};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
+use crate::handler::base::Request as SettingRequest;
 use crate::internal::switchboard::{self, Action, Address, Payload};
 use crate::message::base::{self, Audience};
-use crate::switchboard::base::{SettingRequest, SettingResponseResult, SwitchboardError};
+use crate::switchboard::base::{SettingResponseResult, SwitchboardError};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
 use std::hash::Hash;
@@ -46,7 +47,7 @@ macro_rules! request_respond {
 /// request, containing None if not processed and the original request
 /// otherwise.
 pub type RequestCallback<S, T, ST, K, P, A> =
-    Box<dyn Fn(RequestContext<T, ST, K, P, A>, Request<S>) -> RequestResultCreator<'static, S>>;
+    Box<dyn Fn(RequestContext<T, ST, K, P, A>, FidlRequest<S>) -> RequestResultCreator<'static, S>>;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 
@@ -208,7 +209,7 @@ where
     fn process(
         &self,
         switchboard_messenger: crate::message::messenger::MessengerClient<P, A>,
-        request: Request<S>,
+        request: FidlRequest<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {

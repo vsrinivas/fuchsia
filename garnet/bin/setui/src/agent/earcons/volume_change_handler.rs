@@ -8,11 +8,11 @@ use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::base::{SettingInfo, SettingType};
+use crate::handler::base::Request;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
-use crate::switchboard::base::SettingRequest;
 
 use anyhow::Error;
 use fuchsia_async as fasync;
@@ -47,7 +47,7 @@ impl VolumeChangeHandler {
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
                     SettingType::Audio,
-                    SettingRequest::Get,
+                    Request::Get,
                 )),
                 Audience::Address(switchboard::Address::Switchboard),
             )

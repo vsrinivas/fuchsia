@@ -13,9 +13,8 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
 use crate::request_respond;
-
-use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(
     AccessibilityMarker,
@@ -46,9 +45,9 @@ impl From<SettingInfo> for AccessibilitySettings {
     }
 }
 
-impl From<AccessibilitySettings> for SettingRequest {
+impl From<AccessibilitySettings> for Request {
     fn from(settings: AccessibilitySettings) -> Self {
-        SettingRequest::SetAccessibilityInfo(AccessibilityInfo {
+        Request::SetAccessibilityInfo(AccessibilityInfo {
             audio_description: settings.audio_description,
             screen_reader: settings.screen_reader,
             color_inversion: settings.color_inversion,
@@ -133,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_request_try_from_settings_request_empty() {
-        let request = SettingRequest::from(AccessibilitySettings::EMPTY);
+        let request = Request::from(AccessibilitySettings::EMPTY);
 
         const EXPECTED_ACCESSIBILITY_INFO: AccessibilityInfo = AccessibilityInfo {
             audio_description: None,
@@ -144,7 +143,7 @@ mod tests {
             captions_settings: None,
         };
 
-        assert_eq!(request, SettingRequest::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
+        assert_eq!(request, Request::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
     }
 
     #[test]
@@ -181,8 +180,8 @@ mod tests {
         accessibility_settings.color_correction = Some(ColorBlindnessType::Protanomaly);
         accessibility_settings.captions_settings = Some(EXPECTED_CAPTION_SETTINGS.into());
 
-        let request = SettingRequest::from(accessibility_settings);
+        let request = Request::from(accessibility_settings);
 
-        assert_eq!(request, SettingRequest::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
+        assert_eq!(request, Request::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
     }
 }

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core;
 use crate::policy::base::response::{Error as PolicyError, Response};
-use crate::policy::base::{BoxedHandler, Context, GenerateHandlerResult, Request};
-use crate::switchboard::base::{SettingEvent, SettingRequest};
+use crate::policy::base::{BoxedHandler, Context, GenerateHandlerResult, Request as PolicyRequest};
+use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -23,7 +23,7 @@ impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}
 #[async_trait]
 pub trait PolicyHandler {
     /// Called when a policy client makes a request on the policy API this handler controls.
-    async fn handle_policy_request(&mut self, request: Request) -> Response;
+    async fn handle_policy_request(&mut self, request: PolicyRequest) -> Response;
 
     /// Called when a setting request is intercepted for the setting this policy handler supervises.
     ///
@@ -38,8 +38,7 @@ pub trait PolicyHandler {
     ///
     /// [`RequestTransform::Result`]: enum.RequestTransform.html
     /// [`RequestTransform::Request`]: enum.RequestTransform.html
-    async fn handle_setting_request(&mut self, request: SettingRequest)
-        -> Option<RequestTransform>;
+    async fn handle_setting_request(&mut self, request: Request) -> Option<RequestTransform>;
 
     /// Called when a setting event is intercepted from the setting this policy handler supervises.
     ///
@@ -65,7 +64,7 @@ pub trait PolicyHandler {
 #[derive(Clone, Debug, PartialEq)]
 pub enum RequestTransform {
     /// A new, modified request that should be forwarded to the setting handler for processing.
-    Request(SettingRequest),
+    Request(Request),
 
     /// A result to return directly to the settings client.
     Result(SettingHandlerResult),

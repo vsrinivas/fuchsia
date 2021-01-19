@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 use crate::base::SettingType;
 use crate::handler::base::{
-    Command, Context, ControllerGenerateResult, Event, SettingHandlerResult, State,
+    Command, Context, ControllerGenerateResult, Event, Request, SettingHandlerResult, State,
 };
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{message, reply, Payload};
 use crate::message::base::{Audience, MessageEvent};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest};
+use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -27,7 +27,7 @@ impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ControllerError {
     #[error("Unimplemented Request:{1:?} for setting type: {0:?}")]
-    UnimplementedRequest(SettingType, SettingRequest),
+    UnimplementedRequest(SettingType, Request),
     #[error("Write failed. setting type: {0:?}")]
     WriteFailure(SettingType),
     #[error("Initialization failure: cause {0:?}")]
@@ -43,7 +43,7 @@ pub enum ControllerError {
     #[error("Unexpected error: {0:?}")]
     UnexpectedError(Cow<'static, str>),
     #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
-    UndeliverableError(SettingType, SettingRequest),
+    UndeliverableError(SettingType, Request),
     #[error("Unsupported request for setting type: {0:?}")]
     UnsupportedError(SettingType),
     #[error("Delivery error for type: {0:?} received by: {1:?}")]
@@ -72,7 +72,7 @@ pub mod controller {
 
     #[async_trait]
     pub trait Handle: Send {
-        async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult>;
+        async fn handle(&self, request: Request) -> Option<SettingHandlerResult>;
         async fn change_state(&mut self, _state: State) -> Option<ControllerStateResult> {
             None
         }
@@ -120,7 +120,7 @@ impl ClientImpl {
     async fn process_request(
         setting_type: SettingType,
         controller: &BoxedController,
-        request: SettingRequest,
+        request: Request,
     ) -> SettingHandlerResult {
         let result = controller.handle(request.clone()).await;
         match result {

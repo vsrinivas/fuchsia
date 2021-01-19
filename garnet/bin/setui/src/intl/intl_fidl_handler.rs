@@ -10,8 +10,8 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
 use crate::request_respond;
-use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(
     IntlMarker,
@@ -31,9 +31,9 @@ impl From<SettingInfo> for IntlSettings {
     }
 }
 
-impl From<IntlSettings> for SettingRequest {
+impl From<IntlSettings> for Request {
     fn from(settings: IntlSettings) -> Self {
-        SettingRequest::SetIntlInfo(settings.into())
+        Request::SetIntlInfo(settings.into())
     }
 }
 
@@ -102,11 +102,11 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(IntlSettings::EMPTY);
+        let request = Request::from(IntlSettings::EMPTY);
 
         assert_eq!(
             request,
-            SettingRequest::SetIntlInfo(IntlInfo {
+            Request::SetIntlInfo(IntlInfo {
                 locales: None,
                 temperature_unit: None,
                 time_zone_id: None,
@@ -127,11 +127,11 @@ mod tests {
             ..IntlSettings::EMPTY
         };
 
-        let request = SettingRequest::from(intl_settings);
+        let request = Request::from(intl_settings);
 
         assert_eq!(
             request,
-            SettingRequest::SetIntlInfo(IntlInfo {
+            Request::SetIntlInfo(IntlInfo {
                 locales: Some(vec![LocaleId { id: "blah".into() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some(TIME_ZONE_ID.to_string()),

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
 use crate::base::SettingInfo;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{Merge, SettingRequest};
+use crate::switchboard::base::Merge;
 
 use async_trait::async_trait;
 
@@ -48,12 +48,10 @@ impl data_controller::Create<AccessibilityInfo> for AccessibilityController {
 
 #[async_trait]
 impl controller::Handle for AccessibilityController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Get => {
-                Some(Ok(Some(SettingInfo::Accessibility(self.client.read().await))))
-            }
-            SettingRequest::SetAccessibilityInfo(info) => Some(
+            Request::Get => Some(Ok(Some(SettingInfo::Accessibility(self.client.read().await)))),
+            Request::SetAccessibilityInfo(info) => Some(
                 write(&self.client, info.merge(self.client.read().await), false)
                     .await
                     .into_handler_result(),

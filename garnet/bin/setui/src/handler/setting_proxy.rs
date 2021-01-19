@@ -17,18 +17,19 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
 use crate::base::{SettingInfo, SettingType};
+use crate::handler::base::Request;
 use crate::internal::core;
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SettingRequest};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use fuchsia_zircon::Duration;
 
 #[derive(Clone, Debug)]
 struct ActiveRequest {
     id: u64,
-    request: SettingRequest,
+    request: Request,
     client: core::message::Client,
     attempts: u64,
     last_result: Option<SettingHandlerResult>,
@@ -328,12 +329,7 @@ impl SettingProxy {
     /// Forwards request to proper sink. A new task is spawned in order to receive
     /// the response. If no sink is available, an error is immediately reported
     /// back.
-    async fn process_request(
-        &mut self,
-        id: u64,
-        request: SettingRequest,
-        client: core::message::Client,
-    ) {
+    async fn process_request(&mut self, id: u64, request: Request, client: core::message::Client) {
         match self.get_handler_signature(false).await {
             None => {
                 client

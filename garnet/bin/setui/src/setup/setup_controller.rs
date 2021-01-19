@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
-use crate::switchboard::base::SettingRequest;
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for SetupInfo {
@@ -41,15 +40,15 @@ impl data_controller::Create<SetupInfo> for SetupController {
 
 #[async_trait]
 impl controller::Handle for SetupController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::SetConfigurationInterfaces(interfaces) => {
+            Request::SetConfigurationInterfaces(interfaces) => {
                 let mut info = self.client.read().await;
                 info.configuration_interfaces = interfaces;
 
                 return Some(write(&self.client, info, true).await.into_handler_result());
             }
-            SettingRequest::Get => {
+            Request::Get => {
                 return Some(Ok(Some(SettingInfo::Setup(self.client.read().await))));
             }
             _ => None,

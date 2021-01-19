@@ -7,7 +7,7 @@ use {
     crate::agent::restore_agent,
     crate::base::{SettingInfo, SettingType},
     crate::do_not_disturb::types::DoNotDisturbInfo,
-    crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
+    crate::handler::base::{Command, ContextBuilder, Request, SettingHandlerResult, State},
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
     crate::handler::setting_handler::persist::WriteResult,
@@ -18,7 +18,7 @@ use {
     },
     crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::switchboard::base::{get_all_setting_types, ControllerStateResult, SettingRequest},
+    crate::switchboard::base::{get_all_setting_types, ControllerStateResult},
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
@@ -49,7 +49,7 @@ macro_rules! gen_controller {
 
         #[async_trait]
         impl controller::Handle for $name {
-            async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
+            async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
                 return None;
             }
 
@@ -84,7 +84,7 @@ macro_rules! gen_data_controller {
 
         #[async_trait]
         impl<S: Storage> controller::Handle for $name<S> {
-            async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
+            async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
                 return None;
             }
 
@@ -254,7 +254,7 @@ impl StateController {
 
 #[async_trait]
 impl controller::Handle for StateController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
         None
     }
 
@@ -270,7 +270,7 @@ struct BlankController {}
 
 #[async_trait]
 impl controller::Handle for BlankController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
         return None;
     }
 
@@ -417,7 +417,7 @@ impl StubController {
 
 #[async_trait]
 impl controller::Handle for StubController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
         return None;
     }
 
@@ -451,7 +451,7 @@ async fn test_unimplemented_error() {
 
         let mut reply_receptor = messenger
             .message(
-                Payload::Command(Command::HandleRequest(SettingRequest::Get)),
+                Payload::Command(Command::HandleRequest(Request::Get)),
                 Audience::Messenger(signature),
             )
             .send();

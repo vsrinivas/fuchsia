@@ -2,12 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::accessibility::types::AccessibilityInfo;
+use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
+use crate::display::types::{LowLightMode, Theme};
+use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
+use crate::input::types::InputDevice;
+use crate::input::{ButtonType, VolumeGain};
 use crate::internal::handler::message;
+use crate::intl::types::IntlInfo;
+use crate::light::types::LightState;
+use crate::night_mode::types::NightModeInfo;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingRequest;
+use crate::setup::types::ConfigurationInterfaceFlags;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -28,11 +37,103 @@ pub type ExitResult = Result<(), ControllerError>;
 pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
+/// The possible requests that can be made on a setting. The sink will expect a
+/// subset of the values defined below based on the associated type.
+/// The types are arranged alphabetically.
+#[derive(PartialEq, Debug, Clone)]
+pub enum Request {
+    Get,
+
+    // Input events.
+    OnButton(ButtonType),
+    OnVolume(VolumeGain),
+
+    // Accessibility requests.
+    SetAccessibilityInfo(AccessibilityInfo),
+
+    // Account requests
+    ScheduleClearAccounts,
+
+    // Audio requests.
+    SetVolume(Vec<AudioStream>),
+
+    // Audio in requests.
+    SetMicMute(bool),
+
+    // Display requests.
+    SetAutoBrightness(bool),
+    SetBrightness(f32),
+    SetLowLightMode(LowLightMode),
+    SetScreenEnabled(bool),
+    SetTheme(Theme),
+
+    // Do not disturb requests.
+    SetDnD(DoNotDisturbInfo),
+
+    // Factory Reset requests.
+    SetLocalResetAllowed(bool),
+
+    // Input requests.
+    SetInputStates(Vec<InputDevice>),
+
+    // Intl requests.
+    SetIntlInfo(IntlInfo),
+
+    // Light requests.
+    SetLightGroupValue(String, Vec<LightState>),
+
+    // Night mode requests.
+    SetNightModeInfo(NightModeInfo),
+
+    // Power requests.
+    Reboot,
+
+    // Restores settings to outside dependencies.
+    Restore,
+
+    // Privacy requests.
+    SetUserDataSharingConsent(Option<bool>),
+
+    // Setup info requests.
+    SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+}
+
+impl Request {
+    /// Returns the name of the enum, for writing to inspect.
+    /// TODO(fxbug.dev/56718): write a macro to simplify this
+    pub fn for_inspect(self) -> &'static str {
+        match self {
+            Request::Get => "Get",
+            Request::OnButton(_) => "OnButton",
+            Request::OnVolume(_) => "OnVolume",
+            Request::SetAccessibilityInfo(_) => "SetAccessibilityInfo",
+            Request::ScheduleClearAccounts => "ScheduleClearAccounts",
+            Request::SetVolume(_) => "SetVolume",
+            Request::SetMicMute(_) => "SetMicMute",
+            Request::SetBrightness(_) => "SetBrightness",
+            Request::SetAutoBrightness(_) => "SetAutoBrightness",
+            Request::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
+            Request::SetLowLightMode(_) => "SetLowLightMode",
+            Request::SetDnD(_) => "SetDnD",
+            Request::SetInputStates(_) => "SetInputStates",
+            Request::SetIntlInfo(_) => "SetIntlInfo",
+            Request::SetLightGroupValue(_, _) => "SetLightGroupValue",
+            Request::SetNightModeInfo(_) => "SetNightModeInfo",
+            Request::Reboot => "Reboot",
+            Request::Restore => "Restore",
+            Request::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
+            Request::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
+            Request::SetScreenEnabled(_) => "SetScreenEnabled",
+            Request::SetTheme(_) => "SetTheme",
+        }
+    }
+}
+
 /// An command represents messaging from the proxy to take a
 /// particular action.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
-    HandleRequest(SettingRequest),
+    HandleRequest(Request),
     ChangeState(State),
 }
 

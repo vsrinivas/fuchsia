@@ -8,8 +8,9 @@ use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
+    crate::handler::base::Request,
     crate::request_respond,
-    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest},
+    crate::switchboard::base::FidlResponseErrorLogger,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
@@ -105,7 +106,7 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
     }
 }
 
-fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
+fn to_request(settings: AudioSettings) -> Option<Request> {
     let mut request = None;
     if let Some(streams_value) = settings.streams {
         let mut streams = Vec::new();
@@ -121,7 +122,7 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
             });
         }
 
-        request = Some(SettingRequest::SetVolume(streams));
+        request = Some(Request::SetVolume(streams));
     }
     request
 }

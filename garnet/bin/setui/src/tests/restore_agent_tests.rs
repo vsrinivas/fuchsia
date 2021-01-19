@@ -4,12 +4,11 @@
 
 use crate::agent::restore_agent;
 use crate::base::SettingType;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::internal::event::{self as event, message::Receptor, restore, Event};
 use crate::message::base::{MessageEvent, MessengerType};
-use crate::switchboard::base::SettingRequest;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::scaffold::event::subscriber::Blueprint;
@@ -69,7 +68,7 @@ async fn verify_restore_handling(
                 SettingType::Unknown,
                 create_setting_handler(Box::new(move |request| {
                     let counter = counter_clone.clone();
-                    if request == SettingRequest::Restore {
+                    if request == Request::Restore {
                         let result = (response_generate)();
                         return Box::pin(async move {
                             let mut counter_lock = counter.lock().await;
@@ -99,10 +98,7 @@ async fn test_restore() {
     // Snould succeed when the restore command is explicitly not handled.
     verify_restore_handling(
         Box::new(|| {
-            Err(ControllerError::UnimplementedRequest(
-                SettingType::Unknown,
-                SettingRequest::Restore,
-            ))
+            Err(ControllerError::UnimplementedRequest(SettingType::Unknown, Request::Restore))
         }),
         true,
     )

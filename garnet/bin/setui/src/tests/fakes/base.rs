@@ -1,12 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::Command;
+use crate::handler::base::{Command, Request};
 use crate::handler::base::{GenerateHandler, SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{reply, Payload};
 use crate::message::base::MessageEvent;
-use crate::switchboard::base::SettingRequest;
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -29,7 +28,7 @@ pub trait Service {
 /// A helper function for creating a simple setting handler.
 pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
     request_handler: Box<
-        dyn Fn(SettingRequest) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync + 'static,
+        dyn Fn(Request) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync + 'static,
     >,
 ) -> GenerateHandler<T> {
     let shared_handler = Arc::new(Mutex::new(request_handler));

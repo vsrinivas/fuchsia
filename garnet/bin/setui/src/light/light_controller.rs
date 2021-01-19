@@ -7,7 +7,7 @@ use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
-use crate::handler::base::SettingHandlerResult;
+use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -17,7 +17,7 @@ use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{ControllerStateResult, SettingRequest};
+use crate::switchboard::base::ControllerStateResult;
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -72,14 +72,14 @@ impl data_controller::Create<LightInfo> for LightController {
 
 #[async_trait]
 impl controller::Handle for LightController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Restore => Some(self.restore().await),
-            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+            Request::Restore => Some(self.restore().await),
+            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.on_mic_mute(state).await)
             }
-            SettingRequest::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
-            SettingRequest::Get => {
+            Request::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
+            Request::Get => {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
                 // value to ensure we have the latest light state.
                 // TODO(fxbug.dev/56319): remove once all clients are migrated.

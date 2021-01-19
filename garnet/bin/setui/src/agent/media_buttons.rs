@@ -7,6 +7,7 @@ use crate::agent::base::{
 };
 use crate::base::SettingType;
 use crate::blueprint_definition;
+use crate::handler::base::Request;
 use crate::input::common::ButtonType;
 use crate::input::{monitor_media_buttons, VolumeGain};
 use crate::internal::agent::Payload;
@@ -14,7 +15,6 @@ use crate::internal::event::{media_buttons, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingRequest;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -141,10 +141,10 @@ impl EventHandler {
 
     fn send_event<E>(&self, event: E)
     where
-        E: Copy + Into<media_buttons::Event> + Into<SettingRequest> + std::fmt::Debug,
+        E: Copy + Into<media_buttons::Event> + Into<Request> + std::fmt::Debug,
     {
         self.publisher.send_event(Event::MediaButtons(event.into()));
-        let setting_request: SettingRequest = event.into();
+        let setting_request: Request = event.into();
 
         // Send the event to all the interested setting types that are also available.
         for setting_type in self.recipient_settings.iter() {
@@ -339,7 +339,7 @@ mod tests {
                     if let MessageEvent::Message(
                         switchboard::Payload::Action(switchboard::Action::Request(
                             setting_type,
-                            SettingRequest::OnButton(button),
+                            Request::OnButton(button),
                         )),
                         _,
                     ) = message

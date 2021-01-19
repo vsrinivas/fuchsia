@@ -15,9 +15,9 @@ use fuchsia_zircon::Status;
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
 use crate::light::light_controller::ARG_NAME;
 use crate::shutdown_responder_with_error;
-use crate::switchboard::base::SettingRequest;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -98,7 +98,7 @@ async fn process_request(
                 let mut res = context
                     .request(
                         SettingType::Light,
-                        SettingRequest::SetLightGroupValue(
+                        Request::SetLightGroupValue(
                             name,
                             state.into_iter().map(LightState::into).collect::<Vec<_>>(),
                         ),
@@ -174,7 +174,7 @@ async fn validate_light_group_name(
     name: String,
     context: RequestContext<Vec<LightGroup>, IndividualLightGroupResponder>,
 ) -> bool {
-    let result = context.request(SettingType::Light, SettingRequest::Get).await;
+    let result = context.request(SettingType::Light, Request::Get).await;
 
     match result {
         Ok(Some(SettingInfo::Light(info))) => info.contains_light_group_name(name),

@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use crate::audio::default_audio_info;
-use crate::audio::policy::{Request, Response, State, StateBuilder, TransformFlags};
+use crate::audio::policy::{
+    Request as PolicyRequest, Response, State, StateBuilder, TransformFlags,
+};
+use crate::handler::base::Request as SettingRequest;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
-use crate::switchboard::base::{SettingEvent, SettingRequest};
+use crate::switchboard::base::SettingEvent;
 use anyhow::Error;
 use async_trait::async_trait;
 use std::collections::hash_map::Entry;
@@ -43,8 +46,8 @@ impl PolicyHandler for AudioPolicyHandler {
     ) -> policy_base::response::Response {
         let audio_response = match request {
             policy_base::Request::Audio(audio_request) => match audio_request {
-                Request::Get => Response::State(self.state.clone()),
-                Request::AddPolicy(target, transform) => {
+                PolicyRequest::Get => Response::State(self.state.clone()),
+                PolicyRequest::AddPolicy(target, transform) => {
                     // TODO(fxbug.dev/60966): perform validations and return errors for invalid
                     // inputs
                     match self.state.properties.entry(target) {
@@ -64,7 +67,7 @@ impl PolicyHandler for AudioPolicyHandler {
                         }
                     }
                 }
-                Request::RemovePolicy(policy_id) => {
+                PolicyRequest::RemovePolicy(policy_id) => {
                     match self.state.remove_policy(policy_id) {
                         Some(_) => {
                             // Found and removed a policy.
@@ -87,10 +90,7 @@ impl PolicyHandler for AudioPolicyHandler {
         Ok(policy_base::response::Payload::Audio(audio_response))
     }
 
-    async fn handle_setting_request(
-        &mut self,
-        _request: SettingRequest,
-    ) -> Option<RequestTransform> {
+    async fn handle_setting_request(&mut self, _request: SettingRequest) -> Option<RequestTransform> {
         // TODO(fxbug.dev/60367): implement policy transforms
         return None;
     }

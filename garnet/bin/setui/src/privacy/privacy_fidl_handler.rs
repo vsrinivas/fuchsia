@@ -12,8 +12,8 @@ use fuchsia_async as fasync;
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
 use crate::request_respond;
-use crate::switchboard::base::SettingRequest;
 
 fidl_hanging_get_responder!(
     PrivacyMarker,
@@ -36,9 +36,9 @@ impl From<SettingInfo> for PrivacySettings {
     }
 }
 
-impl From<PrivacySettings> for SettingRequest {
+impl From<PrivacySettings> for Request {
     fn from(settings: PrivacySettings) -> Self {
-        SettingRequest::SetUserDataSharingConsent(settings.user_data_sharing_consent)
+        Request::SetUserDataSharingConsent(settings.user_data_sharing_consent)
     }
 }
 
@@ -107,9 +107,9 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(PrivacySettings::EMPTY);
+        let request = Request::from(PrivacySettings::EMPTY);
 
-        assert_eq!(request, SettingRequest::SetUserDataSharingConsent(None));
+        assert_eq!(request, Request::SetUserDataSharingConsent(None));
     }
 
     #[test]
@@ -119,11 +119,8 @@ mod tests {
         let mut privacy_settings = PrivacySettings::EMPTY;
         privacy_settings.user_data_sharing_consent = Some(USER_DATA_SHARING_CONSENT);
 
-        let request = SettingRequest::from(privacy_settings);
+        let request = Request::from(privacy_settings);
 
-        assert_eq!(
-            request,
-            SettingRequest::SetUserDataSharingConsent(Some(USER_DATA_SHARING_CONSENT))
-        );
+        assert_eq!(request, Request::SetUserDataSharingConsent(Some(USER_DATA_SHARING_CONSENT)));
     }
 }

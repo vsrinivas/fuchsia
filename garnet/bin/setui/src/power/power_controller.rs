@@ -5,10 +5,9 @@
 use {
     crate::base::SettingType,
     crate::call_async,
-    crate::handler::base::SettingHandlerResult,
+    crate::handler::base::{Request, SettingHandlerResult},
     crate::handler::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::SettingRequest,
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,
@@ -61,9 +60,9 @@ impl controller::Create for PowerController {
 
 #[async_trait]
 impl controller::Handle for PowerController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            SettingRequest::Reboot => Some(reboot(&self.service_context).await.map(|_| None)),
+            Request::Reboot => Some(reboot(&self.service_context).await.map(|_| None)),
             _ => None,
         }
     }

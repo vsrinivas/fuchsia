@@ -5,11 +5,12 @@
 use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
+use crate::handler::base::Request;
 use crate::internal::agent::Payload;
 use crate::internal::event::{restore, Event, Publisher};
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessageEvent};
-use crate::switchboard::base::{SettingRequest, SwitchboardError};
+use crate::switchboard::base::SwitchboardError;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
@@ -62,7 +63,7 @@ impl RestoreAgent {
                         .message(
                             switchboard::Payload::Action(switchboard::Action::Request(
                                 component,
-                                SettingRequest::Restore,
+                                Request::Restore,
                             )),
                             Audience::Address(switchboard::Address::Switchboard),
                         )
