@@ -84,5 +84,5 @@ above.
 In the case of a conflict, the legacy configuration takes precedence and a
 warning is printed when running the test.
 
-[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/v1_test_component.md#restricting-log-severity
+[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
 [syslog]: /docs/development/diagnostics/logs/README.md
