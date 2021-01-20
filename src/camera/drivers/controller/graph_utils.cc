@@ -79,16 +79,10 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     }
   }
 
-  auto status = memory_allocator.AllocateSharedMemory(constraints, &buffers);
+  auto status = memory_allocator.AllocateSharedMemory(constraints, &buffers, buffer_tag);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate shared memory";
     return fit::error(status);
-  }
-
-  for (uint32_t i = 0; i < buffers.buffer_count; i++) {
-    auto buffer_collection_name = buffer_tag;
-    auto buffer_name = buffer_collection_name.append(std::to_string(i));
-    buffers.buffers[i].vmo.set_property(ZX_PROP_NAME, buffer_name.data(), buffer_name.size());
   }
 
   return fit::ok(std::move(buffers));

@@ -24,7 +24,7 @@ ControllerMemoryAllocator::ControllerMemoryAllocator(
 
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     const std::vector<fuchsia::sysmem::BufferCollectionConstraints>& constraints,
-    fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) const {
+    fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info, std::string name) const {
   TRACE_DURATION("camera", "ControllerMemoryAllocator::AllocateSharedMemory");
   if (out_buffer_collection_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -66,6 +66,9 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     FX_LOG(ERROR, kTag, "Failed to sync");
     return status;
   }
+
+  constexpr uint32_t kNamePriority = 10u;
+  buffer_collections[0]->SetName(kNamePriority, name);
 
   // Create rest of the logical buffer collections
   for (uint32_t i = 1; i < num_constraints; i++) {
