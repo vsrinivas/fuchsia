@@ -47,11 +47,11 @@ declare_args() {
 #   flavors = [
 #     {
 #       name = "release"
-#       path = "some/path/to/snazzy/release"
+#       archive = "some/path/to/snazzy/release"
 #     },
 #     {
 #       name = "with_hooks"
-#       path = "some/path/to/snazzy/with_hooks"
+#       archive = "some/path/to/snazzy/with_hooks"
 #     }
 #   ]
 #   package_flavor_selections
