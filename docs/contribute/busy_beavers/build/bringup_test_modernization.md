@@ -68,6 +68,6 @@ Find reviewers by OWNERS and merge your change.
 
 Reach out for questions or for status updates:
 
-*   gboone@google.com.com
+*   <gboone@google.com>
 
 [build-gn]: /bundles/bringup/BUILD.gn

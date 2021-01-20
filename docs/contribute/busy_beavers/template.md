@@ -44,5 +44,5 @@ Link to an example of a task being done, such as a change or a fixed bug.
 
 Reach out for questions or for status updates:
 
-*   person@example.com
-*   group@fuchsia.dev
+*   <person@example.com>
+*   <group@fuchsia.dev>

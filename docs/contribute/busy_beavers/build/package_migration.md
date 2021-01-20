@@ -98,8 +98,8 @@ New volunteer? Please add yourself to the list!
 
 Reach out for questions or for status updates:
 
-*   shayba@google.com
-*   xbhatnag@google.com
+*   <shayba@google.com>
+*   <xbhatnag@google.com>
 
 [building-components]: /docs/development/components/build.md
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md

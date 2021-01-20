@@ -119,9 +119,9 @@ Find reviewers via owners and merge your change.
 
 Reach out for questions or for status updates:
 
-*   leonardchan@google.com
-*   phosek@google.com
-*   mcgrathr@google.com
+*   <leonardchan@google.com>
+*   <phosek@google.com>
+*   <mcgrathr@google.com>
 
 [label-ubsan-open]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Aubsan%20is%3Aopen&can=2
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html

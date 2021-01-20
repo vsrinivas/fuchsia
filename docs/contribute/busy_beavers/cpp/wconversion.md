@@ -309,9 +309,9 @@ Find reviewers via owners and merge your change.
 
 Reach out for questions or for status updates:
 
-*   leonardchan@google.com
-*   phosek@google.com
-*   mcgrathr@google.com
+*   <leonardchan@google.com>
+*   <phosek@google.com>
+*   <mcgrathr@google.com>
 
 [fxb58162]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=58162
 [wconversion]: https://gcc.gnu.org/wiki/NewWconversion

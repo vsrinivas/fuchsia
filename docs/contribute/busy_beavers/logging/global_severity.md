@@ -65,8 +65,8 @@ Find reviewers by OWNERS and merge your change.
 
 Reach out for questions or for status updates:
 
-*   anmittal@google.com
-*   shayba@google.com
+*   <anmittal@google.com>
+*   <shayba@google.com>
 
 [logs]: /docs/concepts/diagnostics/logs/README.md
 [logs-tests]: /docs/concepts/testing/logs.md

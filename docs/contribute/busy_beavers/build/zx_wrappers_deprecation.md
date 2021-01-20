@@ -88,8 +88,8 @@ here for reference.
 
 Reach out for questions or for status updates:
 
-*   digit@google.com
-*   pylaligand@google.com
-*   shayba@google.com
+*   <digit@google.com>
+*   <pylaligand@google.com>
+*   <shayba@google.com>
 
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
