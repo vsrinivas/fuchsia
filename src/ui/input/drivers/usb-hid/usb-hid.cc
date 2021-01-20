@@ -15,7 +15,6 @@
 
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -23,6 +22,8 @@
 #include <pretty/hexdump.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/ui/input/drivers/usb-hid/usb_hid-bind.h"
 
 namespace usb_hid {
 
@@ -345,9 +346,4 @@ static zx_driver_ops_t usb_hid_driver_ops = []() {
 
 }  // namespace usb_hid
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_hid, usb_hid::usb_hid_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-  BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
-ZIRCON_DRIVER_END(usb_hid)
-    // clang-format on
+ZIRCON_DRIVER(usb_hid, usb_hid::usb_hid_driver_ops, "zircon", "0.1");
