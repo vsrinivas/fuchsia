@@ -162,7 +162,8 @@ TEST_F(WireParserTest, ParseSingleString) {
       handle_dispositions = new zx_handle_disposition_t[message.handles().size()];                \
       for (uint32_t i = 0; i < message.handles().size(); ++i) {                                   \
         handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;                      \
-        handle_dispositions[i].handle = message.handles().data()[i];                              \
+        /* Do not keep the returned value (it can be random). Instead use a well known value */   \
+        handle_dispositions[i].handle = 0x100 + i;                                                \
         handle_dispositions[i].type = ZX_OBJ_TYPE_CHANNEL;                                        \
         handle_dispositions[i].rights = ZX_DEFAULT_CHANNEL_RIGHTS;                                \
         handle_dispositions[i].result = ZX_OK;                                                    \
@@ -233,7 +234,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       ASSERT_EQ(message.handles().size(), encode_result.handles.size());                          \
                                                                                                   \
       for (uint32_t i = 0; i < message.handles().size(); ++i) {                                   \
-        EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                  \
+        EXPECT_EQ(0x100 + i, encode_result.handles[i].handle);                                    \
       }                                                                                           \
     }                                                                                             \
                                                                                                   \
@@ -316,7 +317,7 @@ std::string ValueToPretty(const std::string& key, const std::string& type, std::
   return key + ": #gre#" + type + "#rst# = #red#\"" + value + "\"#rst#";
 }
 
-std::string HandleToJson(const std::string& key, zx_handle_t value) {
+std::string HandleToJson(const std::string& key, uint32_t value) {
   std::stringstream ss;
   ss << std::hex << std::setfill('0') << std::setw(kUint32Precision) << value << std::dec
      << std::setw(0);
@@ -325,7 +326,7 @@ std::string HandleToJson(const std::string& key, zx_handle_t value) {
          "ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT)\"";
 }
 
-std::string HandleToPretty(const std::string& key, zx_handle_t value) {
+std::string HandleToPretty(const std::string& key, uint32_t value) {
   std::stringstream ss;
   ss << std::hex << std::setfill('0') << std::setw(kUint32Precision) << value << std::dec
      << std::setw(0);
@@ -1235,8 +1236,8 @@ class HandleSupport {
  public:
   HandleSupport() {
     zx::channel::create(0, &out1_, &out2_);
-    json_ = "{" + HandleToJson("ch", out2_.get()) + "}";
-    pretty_ = "{ " + HandleToPretty("ch", out2_.get()) + " }";
+    json_ = "{" + HandleToJson("ch", 0x100) + "}";
+    pretty_ = "{ " + HandleToPretty("ch", 0x100) + " }";
   }
   zx::channel handle() { return std::move(out2_); }
 
@@ -1278,11 +1279,11 @@ class HandleStructSupport {
   HandleStructSupport() {
     zx::channel::create(0, &out1_, &out2_);
     zx::channel::create(0, &out3_, &out4_);
-    json_ = "{\"hs\":{" + HandleToJson("h1", out1_.get()) + "," + HandleToJson("h2", out2_.get()) +
-            "," + HandleToJson("h3", out3_.get()) + "}}";
+    json_ = "{\"hs\":{" + HandleToJson("h1", 0x100) + "," + HandleToJson("h2", 0x101) + "," +
+            HandleToJson("h3", 0x102) + "}}";
     pretty_ = "{\n  hs: #gre#test.fidlcodec.examples/HandleStruct#rst# = {\n    " +
-              HandleToPretty("h1", out1_.get()) + "\n    " + HandleToPretty("h2", out2_.get()) +
-              "\n    " + HandleToPretty("h3", out3_.get()) + "\n  }\n}";
+              HandleToPretty("h1", 0x100) + "\n    " + HandleToPretty("h2", 0x101) + "\n    " +
+              HandleToPretty("h3", 0x102) + "\n  }\n}";
   }
   test::fidlcodec::examples::HandleStruct handle_struct() {
     test::fidlcodec::examples::HandleStruct hs;
@@ -1318,18 +1319,18 @@ class HandleTableSupport {
  public:
   HandleTableSupport() {
     zx::channel::create(0, &out1_, &out2_);
-    json_ = "{\"t\":{" + HandleToJson("h1", out1_.get()) + ",\"s1\":{\"sh1\":\"00000000\"," +
-            HandleToJson("sh2", out2_.get()) + "}}}";
+    json_ = "{\"t\":{" + HandleToJson("h1", 0x100) + ",\"s1\":{\"sh1\":\"00000000\"," +
+            HandleToJson("sh2", 0x101) + "}}}";
     pretty_ =
         "{\n"
         "  t: #gre#test.fidlcodec.examples/HandleTable#rst# = {\n"
         "    " +
-        HandleToPretty("h1", out1_.get()) +
+        HandleToPretty("h1", 0x100) +
         "\n"
         "    s1: #gre#test.fidlcodec.examples/OptHandleStruct#rst# = {\n"
         "      sh1: #gre#handle#rst# = #red#00000000#rst#\n"
         "      " +
-        HandleToPretty("sh2", out2_.get()) +
+        HandleToPretty("sh2", 0x101) +
         "\n"
         "    }\n"
         "  }\n"
@@ -1369,15 +1370,13 @@ class TraversalOrderSupport {
   TraversalOrderSupport() {
     zx::channel::create(0, &sh1_, &sh2_);
     zx::channel::create(0, &h1_, &h2_);
-    json_ = "{\"t\":{\"s\":{" + HandleToJson("sh1", sh1_.get()) + "," +
-            HandleToJson("sh2", sh2_.get()) + "}," + HandleToJson("h1", h1_.get()) + "," +
-            HandleToJson("h2", h2_.get()) + "}}";
+    json_ = "{\"t\":{\"s\":{" + HandleToJson("sh1", 0x100) + "," + HandleToJson("sh2", 0x101) +
+            "}," + HandleToJson("h1", 0x102) + "," + HandleToJson("h2", 0x103) + "}}";
     pretty_ =
         "{\n  t: #gre#test.fidlcodec.examples/TraversalOrder#rst# = {\n    "
         "s: #gre#test.fidlcodec.examples/OptHandleStruct#rst# = {\n      " +
-        HandleToPretty("sh1", sh1_.get()) + "\n      " + HandleToPretty("sh2", sh2_.get()) +
-        "\n    }\n    " + HandleToPretty("h1", h1_.get()) + "\n    " +
-        HandleToPretty("h2", h2_.get()) + "\n  }\n}";
+        HandleToPretty("sh1", 0x100) + "\n      " + HandleToPretty("sh2", 0x101) + "\n    }\n    " +
+        HandleToPretty("h1", 0x102) + "\n    " + HandleToPretty("h2", 0x103) + "\n  }\n}";
   }
   test::fidlcodec::examples::TraversalOrder TraversalOrder() {
     test::fidlcodec::examples::TraversalOrder t;
@@ -1416,8 +1415,8 @@ class TraversalMainSupport {
  public:
   TraversalMainSupport() {
     zx::channel::create(0, &out1_, &out2_);
-    json_ = R"JSON({"v":[{"x":"10","y":{"a":"20",)JSON" + HandleToJson("b", out1_.get()) +
-            R"JSON(}},{"x":"30","y":{"a":"40",)JSON" + HandleToJson("b", out2_.get()) +
+    json_ = R"JSON({"v":[{"x":"10","y":{"a":"20",)JSON" + HandleToJson("b", 0x100) +
+            R"JSON(}},{"x":"30","y":{"a":"40",)JSON" + HandleToJson("b", 0x101) +
             R"JSON(}}],"s":{"a":"50","b":"00000000"}})JSON";
     pretty_ =
         "{\n"
@@ -1427,7 +1426,7 @@ class TraversalMainSupport {
         "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"
         "        a: #gre#uint32#rst# = #blu#20#rst#\n"
         "        " +
-        HandleToPretty("b", out1_.get()) +
+        HandleToPretty("b", 0x100) +
         "\n"
         "      }\n"
         "    }\n"
@@ -1436,7 +1435,7 @@ class TraversalMainSupport {
         "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"
         "        a: #gre#uint32#rst# = #blu#40#rst#\n"
         "        " +
-        HandleToPretty("b", out2_.get()) +
+        HandleToPretty("b", 0x101) +
         "\n"
         "      }\n"
         "    }\n"
