@@ -79,6 +79,7 @@ class WlanInterface {
                    ethernet_impl_queue_tx_callback completion_cb, void* cookie);
   void SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp);
   void SaeFrameTx(const wlanif_sae_frame_t* frame);
+  void WmmStatusReq();
 
  private:
   WlanInterface();

@@ -4608,6 +4608,10 @@ void brcmf_if_stop_capture_frames(net_device* ndev) {
   BRCMF_ERR("stop_capture_frames not supported");
 }
 
+void brcmf_if_wmm_status_req(net_device* ndev) {
+  // TODO(fxbug.dev/52811) - Implement this
+}
+
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
                             struct brcmf_cfg80211_vif** vif_out) {
   struct brcmf_cfg80211_vif* vif_walk;

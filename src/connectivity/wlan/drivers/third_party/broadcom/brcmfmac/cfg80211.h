@@ -296,10 +296,8 @@ struct escan_info {
   uint32_t escan_state;
   uint8_t* escan_buf;
   struct brcmf_if* ifp;
-  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg,
-                     struct brcmf_if* ifp,
-                     const wlanif_scan_req_t* request,
-                     uint16_t* sync_id_out);
+  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                     const wlanif_scan_req_t* request, uint16_t* sync_id_out);
 };
 
 /**
@@ -561,6 +559,7 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie);
 zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp);
 zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame);
+void brcmf_if_wmm_status_req(net_device* ndev);
 
 // Given IE, return a vector with the SSID bytes if the SSID is present.
 // This function does not distinguish between whether the SSID IE is not present and the SSID

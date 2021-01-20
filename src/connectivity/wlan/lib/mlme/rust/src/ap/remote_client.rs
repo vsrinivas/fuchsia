@@ -438,10 +438,7 @@ impl RemoteClient {
                     },
 
                     qos: false,
-                    ac_be_params: ddk_converter::blank_wmm_params(),
-                    ac_bk_params: ddk_converter::blank_wmm_params(),
-                    ac_vi_params: ddk_converter::blank_wmm_params(),
-                    ac_vo_params: ddk_converter::blank_wmm_params(),
+                    wmm_params: ddk_converter::blank_wmm_params(),
 
                     rates_cnt: rates.len() as u16,
                     rates: rates_arr,
@@ -1210,10 +1207,13 @@ mod tests {
             )
             .expect("expected OK");
 
-        assert_variant!(r_sta.state.as_ref(), State::Associated {
-            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-            ..
-        });
+        assert_variant!(
+            r_sta.state.as_ref(),
+            State::Associated {
+                eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
+                ..
+            }
+        );
 
         assert_variant!(r_sta.aid(), Some(aid) => {
             assert_eq!(aid, 1);
@@ -1326,11 +1326,10 @@ mod tests {
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
-        assert_variant!(r_sta.state.as_ref(), State::Associated {
-            eapol_controlled_port: None,
-            active_timeout_event_id: Some(_),
-            ..
-        });
+        assert_variant!(
+            r_sta.state.as_ref(),
+            State::Associated { eapol_controlled_port: None, active_timeout_event_id: Some(_), .. }
+        );
     }
 
     #[test]
@@ -1443,10 +1442,13 @@ mod tests {
         r_sta
             .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
             .expect("expected OK");
-        assert_variant!(r_sta.state.as_ref(), State::Associated {
-            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open),
-            ..
-        });
+        assert_variant!(
+            r_sta.state.as_ref(),
+            State::Associated {
+                eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open),
+                ..
+            }
+        );
     }
 
     #[test]
@@ -1461,10 +1463,13 @@ mod tests {
         r_sta
             .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Closed)
             .expect("expected OK");
-        assert_variant!(r_sta.state.as_ref(), State::Associated {
-            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-            ..
-        });
+        assert_variant!(
+            r_sta.state.as_ref(),
+            State::Associated {
+                eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
+                ..
+            }
+        );
     }
 
     #[test]
@@ -1484,10 +1489,10 @@ mod tests {
             ),
             zx::Status::BAD_STATE
         );
-        assert_variant!(r_sta.state.as_ref(), State::Associated {
-            eapol_controlled_port: None,
-            ..
-        });
+        assert_variant!(
+            r_sta.state.as_ref(),
+            State::Associated { eapol_controlled_port: None, .. }
+        );
     }
 
     #[test]

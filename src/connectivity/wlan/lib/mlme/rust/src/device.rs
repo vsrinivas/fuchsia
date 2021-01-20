@@ -773,10 +773,7 @@ mod tests {
             phy: WlanPhyType::ERP,
             chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
             qos: false,
-            ac_be_params: ddk_converter::blank_wmm_params(),
-            ac_bk_params: ddk_converter::blank_wmm_params(),
-            ac_vi_params: ddk_converter::blank_wmm_params(),
-            ac_vo_params: ddk_converter::blank_wmm_params(),
+            wmm_params: ddk_converter::blank_wmm_params(),
 
             rates_cnt: 4,
             rates: [0; WLAN_MAC_MAX_RATES as usize],

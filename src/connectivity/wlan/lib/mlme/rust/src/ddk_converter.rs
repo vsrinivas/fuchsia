@@ -62,10 +62,7 @@ pub fn build_ddk_assoc_ctx(
         // dynamically determined for each outgoing data frame.
         // TODO(fxbug.dev/43938): Derive QoS flag and WMM parameters from device info
         qos: has_ht_cap,
-        ac_be_params: blank_wmm_params(),
-        ac_bk_params: blank_wmm_params(),
-        ac_vi_params: blank_wmm_params(),
-        ac_vo_params: blank_wmm_params(),
+        wmm_params: blank_wmm_params(),
 
         rates_cnt: cap.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
         rates,
@@ -92,7 +89,17 @@ pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
 }
 
 pub fn blank_wmm_params() -> banjo_wlan_info::WlanWmmParams {
-    banjo_wlan_info::WlanWmmParams { ecw_min: 0, ecw_max: 0, aifsn: 0, txop_limit: 0, acm: false }
+    banjo_wlan_info::WlanWmmParams {
+        apsd: false,
+        ac_be_params: blank_wmm_ac_params(),
+        ac_bk_params: blank_wmm_ac_params(),
+        ac_vi_params: blank_wmm_ac_params(),
+        ac_vo_params: blank_wmm_ac_params(),
+    }
+}
+
+fn blank_wmm_ac_params() -> banjo_wlan_info::WlanWmmAcParams {
+    banjo_wlan_info::WlanWmmAcParams { ecw_min: 0, ecw_max: 0, aifsn: 0, txop_limit: 0, acm: false }
 }
 
 #[cfg(test)]

@@ -722,6 +722,7 @@ protocol WlanifImplIfc {
     OnPmkAvailable(WlanifPmkInfo info) -> ();
     SaeHandshakeInd(WlanifSaeHandshakeInd ind) -> ();
     SaeFrameRx(WlanifSaeFrame frame) -> ();
+    OnWmmStatusResp(zx.status s, fuchsia.hardware.wlan.info.WlanWmmParams wmm_params) -> ();
 
     // Data operations
     DataRecv(vector<voidptr> data, uint32 flags) -> ();
@@ -758,6 +759,7 @@ protocol WlanifImpl {
     StopCaptureFrames() -> ();
     SaeHandshakeResp(WlanifSaeHandshakeResp resp) -> ();
     SaeFrameTx(WlanifSaeFrame frame) -> ();
+    WmmStatusReq() -> ();
 
     // Configuration operations
     SetMulticastPromisc(bool enable) -> (zx.status status);

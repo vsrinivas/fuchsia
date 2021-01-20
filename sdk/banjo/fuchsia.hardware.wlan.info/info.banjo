@@ -165,8 +165,16 @@ enum WlanAc {
     VOICE = 4;
 };
 
-/// WFA WMM v1.2, 2.2.2
 struct WlanWmmParams {
+    bool apsd;
+    WlanWmmAcParams ac_be_params;
+    WlanWmmAcParams ac_bk_params;
+    WlanWmmAcParams ac_vi_params;
+    WlanWmmAcParams ac_vo_params;
+};
+
+/// WFA WMM v1.2, 2.2.2
+struct WlanWmmAcParams {
     /// Lower bound of contention window in exponential form
     /// `cw_min = 2^(ecw_min) - 1`. The unit for contention window is "slot time", which
     /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
@@ -203,10 +211,7 @@ struct WlanAssocCtx {
     /// QoS capable and parameters
     bool qos;
     /// WFA WMM v1.2, 2.2.2
-    WlanWmmParams ac_be_params;
-    WlanWmmParams ac_bk_params;
-    WlanWmmParams ac_vi_params;
-    WlanWmmParams ac_vo_params;
+    WlanWmmParams wmm_params;
 
     /// Coincatenation of SupportedRates and ExtendedSupportedRates
     /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13

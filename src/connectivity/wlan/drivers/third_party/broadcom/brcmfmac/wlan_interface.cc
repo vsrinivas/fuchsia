@@ -121,6 +121,7 @@ wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, const wlanif_sae_frame_t* frame) {
           return static_cast<WlanInterface*>(ctx)->SaeFrameTx(frame);
         },
+    .wmm_status_req = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->WmmStatusReq(); },
     .set_multicast_promisc =
         [](void* ctx, bool enable) {
           return static_cast<WlanInterface*>(ctx)->SetMulticastPromisc(enable);
@@ -402,6 +403,13 @@ void WlanInterface::SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp) {
 
 void WlanInterface::SaeFrameTx(const wlanif_sae_frame_t* frame) {
   brcmf_if_sae_frame_tx(wdev_->netdev, frame);
+}
+
+void WlanInterface::WmmStatusReq() {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_wmm_status_req(wdev_->netdev);
+  }
 }
 
 WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
