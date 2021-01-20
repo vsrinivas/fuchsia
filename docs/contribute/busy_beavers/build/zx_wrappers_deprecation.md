@@ -11,17 +11,19 @@ organizationally or technically associated with the kernel or the people who
 worked on the kernel.
 
 All the build definitions have since been migrated to a single system, but some
-build definitions still carry the legacy of the old disjoint system.
-Particularly there still remain two deprecated wrappers for build templates:
+build definitions still carry the legacy of the previous system.
+Particularly there still remain two legacy wrappers for build templates:
 
 *   `zx_library()`
 *   `zx_host_tool()`
 
-These templates wrap other common build templates with some additional logic.
-Using these templates makes for less readable build definitions and more
-confusion. Ultimately there is no reason why there should be two ways of doing
-the same thing, with the choice of which way to go with being a function of some
-remote association with a legacy construct.
+These templates wrap other common build templates with some additional logic
+which was meant to enforce a common structure of C++ code and headers in
+Zircon. Over time they've evolved to carry other logic, such as for publishing
+artifacts to the SDK, that is also achieved by other templates, and hence is
+duplicate and may be confusing. Finally, some of the most common use cases can
+be achieved with standard GN target types which are more familiar and well
+documented.
 
 ## Technical background
 
