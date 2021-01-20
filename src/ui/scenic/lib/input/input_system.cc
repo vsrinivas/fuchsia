@@ -315,7 +315,9 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
   }
 
   const auto [it, success] = injectors_.try_emplace(
-      id, std::move(settings), std::move(viewport), std::move(injector),
+      id,
+      context()->inspect_node()->CreateChild(context()->inspect_node()->UniqueName("injector-")),
+      std::move(settings), std::move(viewport), std::move(injector),
       /*is_descendant_and_connected*/
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);

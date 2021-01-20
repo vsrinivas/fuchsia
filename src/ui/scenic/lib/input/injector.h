@@ -32,11 +32,27 @@ struct InjectorSettings {
   zx_koid_t target_koid = ZX_KOID_INVALID;
 };
 
+// Utility that Injectors use to send diagnostics to Inspect.
+class InjectorInspector {
+ public:
+  explicit InjectorInspector(inspect::Node inspect_node);
+
+  void OnPointerInjectorEvent(const fuchsia::ui::pointerinjector::Event& event);
+
+ private:
+  inspect::Node node_;
+
+  inspect::ExponentialUintHistogram viewport_event_latency_;
+  inspect::ExponentialUintHistogram pointer_event_latency_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(InjectorInspector);
+};
+
 // Implementation of the |fuchsia::ui::pointerinjector::Device| interface. One instance per channel.
 class Injector : public fuchsia::ui::pointerinjector::Device {
  public:
-  Injector(InjectorSettings settings, Viewport viewport,
-           fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
+  Injector(inspect::Node inspect_node, InjectorSettings settings, Viewport viewport,
+           fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
            fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                is_descendant_and_connected,
            fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
@@ -68,6 +84,8 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // NOTE: No further method calls or member accesses should be made after CloseChannel(), since
   // they might be made on a destroyed object.
   void CloseChannel(zx_status_t epitaph);
+
+  InjectorInspector inspector_;
 
   fidl::Binding<fuchsia::ui::pointerinjector::Device> binding_;
 

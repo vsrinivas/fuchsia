@@ -11,6 +11,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/inspect/cpp/hierarchy.h"
+#include "lib/inspect/cpp/inspector.h"
+#include "lib/inspect/cpp/reader.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
@@ -556,6 +561,139 @@ TEST_F(InputInjectionTest, MultipleRegistrations_ShouldSucceed) {
   }
 }
 
+class InputInjectionInspectionTest : public gtest::RealLoopFixture {
+ protected:
+  std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
+      const std::vector<std::string>& path, const std::string& property) {
+    inspect::Hierarchy root = RunPromise(inspect::ReadFromInspector(inspector_)).take_value();
+
+    const inspect::Hierarchy* parent = root.GetByPath(path);
+    FX_CHECK(parent) << "no node found at path " << fxl::JoinStrings(path, "/");
+    const inspect::UintArrayValue* histogram =
+        parent->node().get_property<inspect::UintArrayValue>(property);
+    FX_CHECK(histogram) << "no histogram named " << property << " in node with path "
+                        << fxl::JoinStrings(path, "/");
+    return histogram->GetBuckets();
+  }
+
+  inspect::Inspector inspector() { return inspector_; }
+
+ private:
+  inspect::Inspector inspector_;
+};
+
+TEST_F(InputInjectionInspectionTest, HistogramsTrackInjections) {
+  // Set up an isolated Injector.
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+
+  bool error_callback_fired = false;
+  injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
+
+  bool connectivity_is_good = true;
+  uint32_t num_injections = 0;
+  scenic_impl::input::Injector injector_impl(
+      inspector().GetRoot().CreateChild("injector"), InjectorSettingsTemplate(), ViewportTemplate(),
+      injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
+      /*inject=*/[&num_injections](auto...) { ++num_injections; },
+      /*on_channel_closed=*/[] {});
+
+  {  // Inject ADD event.
+    bool injection_callback_fired = false;
+    fuchsia::ui::pointerinjector::Event event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::ADD);
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)},
+                     [&injection_callback_fired] { injection_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(injection_callback_fired);
+
+    // 2 injections, since an injected ADD becomes "ADD; DOWN"
+    // in fuchsia.ui.input.PointerEvent's state machine.
+    EXPECT_EQ(num_injections, 2u);
+    EXPECT_FALSE(error_callback_fired);
+  }
+
+  {  // Inject CHANGE event.
+    bool injection_callback_fired = false;
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    fuchsia::ui::pointerinjector::Event event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)},
+                     [&injection_callback_fired] { injection_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(injection_callback_fired);
+
+    EXPECT_EQ(num_injections, 3u);
+    EXPECT_FALSE(error_callback_fired);
+  }
+
+  {  // Inject REMOVE event.
+    bool injection_callback_fired = false;
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    fuchsia::ui::pointerinjector::Event event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::REMOVE);
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)},
+                     [&injection_callback_fired] { injection_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(injection_callback_fired);
+
+    // 5 injections, since an injected REMOVE becomes "UP; REMOVE" in
+    // fuchsia.ui.input.PointerEvent's state machine.
+    EXPECT_EQ(num_injections, 5u);
+    EXPECT_FALSE(error_callback_fired);
+  }
+
+  {  // Inject VIEWPORT event.
+    bool injection_callback_fired = false;
+    fuchsia::ui::pointerinjector::Event event;
+    event.set_timestamp(1);
+    {
+      fuchsia::ui::pointerinjector::Viewport viewport;
+      viewport.set_extents({{{-242, -383}, {124, 252}}});
+      viewport.set_viewport_to_context_transform(kIdentityMatrix);
+      fuchsia::ui::pointerinjector::Data data;
+      data.set_viewport(std::move(viewport));
+      event.set_data(std::move(data));
+    }
+
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)},
+                     [&injection_callback_fired] { injection_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(injection_callback_fired);
+
+    // Still 5 injections; the callback is not invoked for viewport changes.
+    EXPECT_EQ(num_injections, 5u);
+    EXPECT_FALSE(error_callback_fired);
+  }
+
+  {
+    uint64_t count = 0;
+    for (const inspect::UintArrayValue::HistogramBucket& bucket :
+         GetHistogramBuckets({"injector"}, "viewport_event_latency")) {
+      count += bucket.count;
+    }
+
+    EXPECT_EQ(count, 1u);
+  }
+
+  {
+    uint64_t count = 0;
+    for (const inspect::UintArrayValue::HistogramBucket& bucket :
+         GetHistogramBuckets({"injector"}, "pointer_event_latency")) {
+      count += bucket.count;
+    }
+
+    EXPECT_EQ(count, 3u);
+  }
+}
+
 TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
   async::TestLoop test_loop;
   async_set_default_dispatcher(test_loop.dispatcher());
@@ -569,7 +707,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
   bool connectivity_is_good = true;
   uint32_t num_injections = 0;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/[&num_injections](auto...) { ++num_injections; },
@@ -636,7 +774,7 @@ TEST(InjectorTest, InjectionWithNoEvent_ShouldCloseChannel) {
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
@@ -666,7 +804,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
 
   std::vector<uint32_t> cancelled_streams;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
@@ -733,7 +871,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
 
   std::vector<uint32_t> cancelled_streams;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
@@ -800,7 +938,7 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
 
   bool injection_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/
@@ -835,7 +973,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerOnChannelClosedLambda) {
 
   bool on_channel_closed_callback_fired = false;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/
@@ -864,7 +1002,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
 
   bool on_channel_closed_callback_fired = false;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/
@@ -903,7 +1041,7 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
   bool connectivity_is_good = true;
   uint32_t num_cancel_events = 0;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/
@@ -981,7 +1119,7 @@ TEST_P(InjectorInvalidEventsTest, InjectEventWithMissingField_ShouldCloseChannel
   });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
@@ -1037,7 +1175,7 @@ TEST_P(InjectorGoodEventStreamTest,
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
       /*inject=*/
@@ -1071,7 +1209,7 @@ TEST_P(InjectorGoodEventStreamTest,
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
       /*inject=*/
@@ -1136,7 +1274,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
   });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -1171,7 +1309,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
   });
 
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -1203,7 +1341,7 @@ TEST(InjectorTest, InjectedViewport_ShouldNotTriggerInjectLambda) {
 
   bool inject_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
       /*on_channel_closed=*/[] {});
@@ -1377,7 +1515,7 @@ TEST_P(InjectorBadViewportTest, InjectBadViewport_ShouldCloseChannel) {
 
   bool inject_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
-      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
       /*on_channel_closed=*/[] {});

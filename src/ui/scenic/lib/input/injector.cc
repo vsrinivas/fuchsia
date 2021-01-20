@@ -7,6 +7,8 @@
 #include <lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "lib/async/cpp/time.h"
+#include "lib/async/default.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/input/constants.h"
 
@@ -14,6 +16,51 @@ namespace scenic_impl {
 namespace input {
 
 using fuchsia::ui::pointerinjector::EventPhase;
+
+namespace {
+
+// A histogram that ranges from 1ms to ~8s.
+constexpr zx::duration kLatencyHistogramFloor = zx::msec(1);
+constexpr zx::duration kLatencyHistogramInitialStep = zx::msec(1);
+constexpr uint64_t kLatencyHistogramStepMultiplier = 2;
+constexpr size_t kLatencyHistogramBuckets = 14;
+
+}  // namespace
+
+InjectorInspector::InjectorInspector(inspect::Node node)
+    : node_(std::move(node)),
+      viewport_event_latency_(node_.CreateExponentialUintHistogram(
+          "viewport_event_latency", kLatencyHistogramFloor.to_nsecs(),
+          kLatencyHistogramInitialStep.to_nsecs(), kLatencyHistogramStepMultiplier,
+          kLatencyHistogramBuckets)),
+      pointer_event_latency_(node_.CreateExponentialUintHistogram(
+          "pointer_event_latency", kLatencyHistogramFloor.to_nsecs(),
+          kLatencyHistogramInitialStep.to_nsecs(), kLatencyHistogramStepMultiplier,
+          kLatencyHistogramBuckets)) {}
+
+void InjectorInspector::OnPointerInjectorEvent(const fuchsia::ui::pointerinjector::Event& event) {
+  if (!event.has_data() || !event.has_timestamp()) {
+    FX_LOGS(ERROR) << "OnPointerInjectorEvent() called with an incomplete event";
+    return;
+  }
+
+  async_dispatcher_t* dispatcher = async_get_default_dispatcher();
+  if (dispatcher == nullptr) {
+    FX_LOGS(ERROR) << "pointerinjector::Event dropped from inspect metrics. "
+                      "async_get_default_dispatcher() returned null.";
+    return;
+  }
+
+  zx::duration latency = async::Now(dispatcher) - zx::time(event.timestamp());
+
+  if (event.data().is_viewport()) {
+    viewport_event_latency_.Insert(latency.to_nsecs());
+  } else if (event.data().is_pointer_sample()) {
+    pointer_event_latency_.Insert(latency.to_nsecs());
+  } else {
+    FX_LOGS(ERROR) << "pointerinjector::Event dropped from inspect metrics. Unexpected data type.";
+  }
+}
 
 StreamId NewStreamId() {
   static StreamId next_id = 1;
@@ -130,13 +177,14 @@ bool Injector::IsValidConfig(const fuchsia::ui::pointerinjector::Config& config)
   return true;
 }
 
-Injector::Injector(InjectorSettings settings, Viewport viewport,
+Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewport viewport,
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                    fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                        is_descendant_and_connected,
                    fit::function<void(const InternalPointerEvent&, StreamId)> inject,
                    fit::function<void()> on_channel_closed)
-    : binding_(this, std::move(device)),
+    : inspector_(std::move(inspect_node)),
+      binding_(this, std::move(device)),
       settings_(std::move(settings)),
       viewport_(std::move(viewport)),
       is_descendant_and_connected_(std::move(is_descendant_and_connected)),
@@ -184,6 +232,8 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
       CloseChannel(ZX_ERR_INVALID_ARGS);
       return;
     }
+
+    inspector_.OnPointerInjectorEvent(event);
 
     if (event.data().is_viewport()) {
       const auto& new_viewport = event.data().viewport();
