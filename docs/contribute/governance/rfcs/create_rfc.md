@@ -102,9 +102,10 @@ To identify your RFC, you need to edit the
             </ul>
             <devsite-expandable>
               <p>Valid areas</p>
+              <a name="valid-areas"></a>
               <aside class="note"><b>Note:</b> If you think there should be additional
                 areas, <a class="external" href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ areas_yaml_file }}">suggest a new RFC area.</a></aside>
-              <a href="" class="expand-control once">Valid areas</a>
+              <a href="#valid-areas" class="expand-control once">Valid areas</a>
               <ul>
                 {% for area in areas %}
                 <li><code>{{ area }}</code></li>
