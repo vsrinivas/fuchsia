@@ -11,9 +11,11 @@ services), and Topaz (application layer).
 
 The distinctions between layers weren't crystal clear, the cost/benefit of this
 arrangement wasn't compelling, and so eventually we moved the majority of
-Fuchsia OS & platform development into a single repository. However the old
-model left a lingering mark on our directory structure, as you can still find
-top-level directories named after layers.
+Fuchsia OS & platform development into a single repository and established a
+new [source code layout][source-code-layout].
+
+However the old model left a lingering mark on our directory structure, as you
+can still find top-level directories named after layers.
 
 These holdover-directories only serve to confuse new team members.
 Let's move on.
@@ -35,6 +37,13 @@ The following directories remain in the Fuchsia git repository:
 
 Show them that you mean business by picking one of their subdirectories and
 moving it elsewhere - typically to `//src`.
+
+At the time of writing, prime targets for migrations include:
+
+*   `//zircon/system/ulib/`
+*   `//zircon/system/utest/`
+*   `//garnet/bin/`
+*   `//garnet/lib/`
 
 ### Doing a task
 
@@ -60,3 +69,5 @@ deleting layer directories.
 Reach out for questions or for status updates:
 
 *   jamesr@google.com
+
+[source-code-layout]: /docs/concepts/source_code/layout.md
