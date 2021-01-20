@@ -10,6 +10,7 @@ board_name = "qemu-x64"
 
 _common_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/realtek-8111",
+  "//src/devices/bin/acpidump",
   "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/mbr",
   "//src/devices/block/drivers/nvme",
@@ -19,6 +20,7 @@ _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",
   "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/i2c/drivers/intel-i2c",
+  "//src/devices/pci/bin:bootfs",
   "//src/devices/rtc/drivers/intel-rtc",
   "//src/devices/serial/drivers/intel-serialio",
   "//src/devices/serial/drivers/uart16550",
@@ -29,6 +31,7 @@ _common_bootfs_deps = [
   "//src/graphics/display/drivers/simple:simple.intel",
   "//src/graphics/display/drivers/simple:simple.nv",
   "//src/graphics/display/drivers/simple:simple.vmware",
+  "//src/media/audio/bin/ihda",
   "//src/media/audio/drivers/codecs/alc5514",
   "//src/media/audio/drivers/codecs/alc5663",
   "//src/media/audio/drivers/codecs/max98927",
@@ -62,5 +65,6 @@ board_package_labels = [
 
 max_fuchsia_zbi_size = "16777216"  # 16 MiB
 max_zedboot_zbi_size = "16777216"  # 16 MiB
+minfs_enable_dirty_cache = true
 
 add_qemu_to_build_archives = true

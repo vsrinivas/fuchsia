@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("emulation/emulation_x64.gni")
+
 target_cpu = "x64"
 
 board_name = "chromebook-x64"
@@ -22,11 +24,17 @@ _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",
   "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/i2c/drivers/intel-i2c",
+  "//src/devices/pci/bin:bootfs",
   "//src/devices/rtc/drivers/intel-rtc",
   "//src/devices/serial/drivers/intel-serialio",
   "//src/devices/serial/drivers/uart16550",
   "//src/devices/usb/drivers/xhci-rewrite:xhci",
   "//src/graphics/display/drivers/intel-i915",
+  "//src/graphics/display/drivers/simple:simple.amd-kaveri",
+  "//src/graphics/display/drivers/simple:simple.bochs",
+  "//src/graphics/display/drivers/simple:simple.intel",
+  "//src/graphics/display/drivers/simple:simple.nv",
+  "//src/graphics/display/drivers/simple:simple.vmware",
   "//src/media/audio/bin/ihda",
   "//src/media/audio/drivers/codecs/alc5514",
   "//src/media/audio/drivers/codecs/alc5663",
@@ -34,19 +42,21 @@ _common_bootfs_deps = [
   "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
   "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
   "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+  "//src/power/power-manager:base_config",
   "//src/ui/input/drivers/i2c-hid",
   "//src/ui/input/drivers/pc-ps2",
+  "//zircon/third_party/dev/ethernet/e1000",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
-# Some Chromebook users are known to leave a USB key (containing zedboot) plugged into their
-# Chromebook at all times. To avoid unintentionally breaking remote workflows, we permit multiple
-# GPT devices.
-board_bootfs_labels = _common_bootfs_deps + [ "//src/storage/fshost:gpt_all" ]
+# Some users leave a USB key (containing zedboot) plugged into their
+# device at all times. To avoid unintentionally breaking remote workflows,
+# we permit multiple GPT devices.
+board_bootfs_labels += _common_bootfs_deps + [ "//src/storage/fshost:gpt_all" ]
 
-board_zedboot_bootfs_labels = _common_bootfs_deps
+board_recovery_bootfs_labels += _common_bootfs_deps
 
-board_recovery_bootfs_labels = _common_bootfs_deps
+board_zedboot_bootfs_labels += _common_bootfs_deps
 
 board_system_image_deps = [
   "//garnet/packages/prod:drivers-system",
@@ -57,4 +67,9 @@ board_package_labels = [
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/packages/prod:drivers-support",
+  "//src/hwinfo:default_board_config",
 ]
+
+max_fuchsia_zbi_size = "16777216"  # 16 MiB
+max_zedboot_zbi_size = "16777216"  # 16 MiB
+minfs_enable_dirty_cache = true
