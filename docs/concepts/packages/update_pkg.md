@@ -36,7 +36,16 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     unsupported architecture.  For example, attempting to update an x64 target to an arm64 build will fail.
 
 *   `/bootloader`
-    Image of the bootloader firmware.
+    Image of the bootloader firmware. DEPRECATED: please use `firmware` instead.
+
+*   `/firmware[_<type>]`
+    Firmware image. For example: `firmware`, `firmware_bl2`, `firmware_full`. Each device
+    supports a custom set of firmware types, and unsupported types are ignored. This serves
+    two main purposes:
+    * 1. We can specify multiple pieces of firmware, for example devices which have multiple
+      bootloader stages.
+    * 2. Provides a simple and safe way to transition to new firmware types; it's just a matter of
+      adding the backend paver logic and then putting the new file in the update package.
 
 *   `/packages.json`
     Json formatted list of merkle pinned package urls that belong to the base package set
