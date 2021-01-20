@@ -257,11 +257,11 @@ readonly EXPECTED_HELP="Usage: femu.sh
   [--work-dir <directory to store image assets>]
     Defaults to ${BT_TEMP_DIR}/test-home/.fuchsia
   [--bucket <fuchsia gsutil bucket>]
-    Default is read using \`fconfig.sh get emu-bucket\` if set. Otherwise defaults to fuchsia.
+    Default is read using \`fconfig get step-atom-yard-juicy.bucket\` if set. Otherwise defaults to fuchsia.
   [--image <image name>]
-     Default is read using \`fconfig.sh get emu-image\` if set. Otherwise defaults to qemu-x64.
+    Default is read using \`fconfig get step-atom-yard-juicy.image\` if set. Otherwise defaults to qemu-x64.
   [--authorized-keys <file>]
-    The authorized public key file for securing the device.  Defaults to 
+    The authorized public key file for securing the device.  Defaults to
     ${BT_TEMP_DIR}/test-home/.ssh/fuchsia_authorized_keys, which is generated if needed.
   [--version <version>]
     Specify the CIPD version of AEMU to download.
@@ -314,8 +314,19 @@ Invalid argument names are not flagged as errors, and are passed on to emulator"
 }
 
 TEST_femu_with_props() {
-  BT_EXPECT "${FCONFIG_CMD}" set emu-bucket "test-bucket"
-  BT_EXPECT "${FCONFIG_CMD}" set emu-image "test-image"
+    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "step-atom-yard-juicy.bucket" ]]; then
+      echo "test-bucket"
+      return 0
+    elif [[ "${2}" == "step-atom-yard-juicy.image" ]]; then
+      echo "test-image"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   # Run command.
   BT_EXPECT run_femu_wrapper
@@ -350,6 +361,8 @@ BT_MOCKED_TOOLS=(
   test-home/.fuchsia/emulator/grpcwebproxy-linux-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/zbi
   scripts/sdk/gn/base/tools/arm64/zbi
   scripts/sdk/gn/base/tools/x64/fvm
@@ -377,9 +390,9 @@ BT_SET_UP() {
     PLATFORM="linux-amd64"
   fi
 
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_FVM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fvm"
   MOCKED_ZBI="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/zbi"
-  FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
   # Specify the name of a fake /dev/kvm device that we control, modify fx emu to use this
   DEV_KVM_FAKE="${BT_TEMP_DIR}/dev-kvm-fake"

@@ -25,7 +25,7 @@ BT_SET_UP() {
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
-  FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
 
   # Add the ssh mock to the path so fssh uses it vs. the real ssh.
   SSH_MOCK_PATH="${BT_TEMP_DIR}/isolated_path_for"
@@ -136,7 +136,16 @@ TEST_fssh_name_not_found() {
 TEST_fssh_with_ip_prop() {
   set_up_device_finder
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "$2" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
 
@@ -151,7 +160,16 @@ TEST_fssh_with_ip_prop() {
 TEST_fssh_with_name_prop() {
   set_up_device_finder
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "$2" == "device-name" ]]; then
+      echo "coffee-coffee-coffee-coffee"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
 
@@ -167,7 +185,16 @@ TEST_fssh_with_ip_prop_quiet() {
   set_up_device_finder
   echo "my-super-cool-device" > "${SSH_MOCK_PATH}/ssh.mock_stdout"
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "$2" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" "-q" "hostname" > "out.txt"
 
@@ -184,8 +211,19 @@ TEST_fssh_with_ip_prop_quiet() {
 TEST_fssh_with_all_props() {
   set_up_device_finder
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "$2" == "device-name" ]]; then
+      echo "coffee-coffee-coffee-coffee"
+      return 0
+    elif [[ "$2" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
 
@@ -219,6 +257,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/device-finder
   scripts/sdk/gn/base/tools/arm64/device-finder
   isolated_path_for/ssh

@@ -8,7 +8,6 @@
 set -e
 
 FSERVE_REMOTE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve-remote.sh"
-FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
 # Sets up an ssh mock binary on the $PATH of any subshell.
 set_up_ssh() {
@@ -195,9 +194,20 @@ TEST_fserve_remote_with_config() {
   set_up_device_finder
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
+  
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
-  BT_EXPECT "${FCONFIG_CMD}" set image "test-image"
-  BT_EXPECT "${FCONFIG_CMD}" set bucket "custom-bucket"
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "bucket" ]]; then
+      echo "custom-bucket"
+      return 0
+    elif [[ "${2}" == "image" ]]; then
+      echo "test-image"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   # Create a mock that simulates a clean environment, nothing is running.
   cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
@@ -715,6 +725,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/tools/x64/device-finder
   scripts/sdk/gn/base/tools/arm64/device-finder
@@ -747,6 +759,7 @@ BT_SET_UP() {
   export HOME="${BT_TEMP_DIR}/test-home"
 
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
 
   if [[ "$(type -t kill)" == "builtin" ]]; then
     kill() {

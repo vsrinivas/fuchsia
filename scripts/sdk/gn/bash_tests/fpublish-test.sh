@@ -19,25 +19,18 @@ TEST_fpublish() {
   # Verify that pm serve was run correctly.
   # shellcheck disable=SC1090
   source "${MOCKED_PM}.mock_state"
-  local PM_ARGS=("${BT_MOCK_ARGS[@]:1}")
 
   # Expected commands to be run by fpublish.sh.
   local EXPECTED_PM_PUBLISH_ARGS=(
+    _ANY_
     publish
     -a
     -r "${FUCHSIA_WORK_DIR}/packages/amber-files"
     -f "${PACKAGE_NAME}"
   )
 
-  BT_EXPECT_EQ ${#EXPECTED_PM_PUBLISH_ARGS[@]} ${#PM_ARGS[@]}
-  for i in "${!EXPECTED_PM_PUBLISH_ARGS[@]}"; do
-    if [[ "$i" == "0" ]]; then
-      # The path to pm isn't relevant. The fact that the pm mock state is
-      # available is sufficient verification that pm was called.
-      continue
-    fi
-    BT_EXPECT_EQ "${EXPECTED_PM_PUBLISH_ARGS[$i]}" "${PM_ARGS[$i]}"
-  done
+  gn-test-check-mock-args "${EXPECTED_PM_PUBLISH_ARGS[@]}"
+
 
   # Verify that pm was only run once.
   BT_EXPECT_FILE_DOES_NOT_EXIST "${MOCKED_PM}.mock_state.1"
@@ -52,6 +45,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/pm
   scripts/sdk/gn/base/tools/arm64/pm
 )

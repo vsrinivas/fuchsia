@@ -242,9 +242,22 @@ TEST_fpave_with_props() {
   set_up_gsutil
   set_up_sdk_stubs
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "custom-device-name"
-  BT_EXPECT "${FCONFIG_CMD}" set bucket "other"
-  BT_EXPECT "${FCONFIG_CMD}" set image "image4"
+    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "bucket" ]]; then
+      echo "other"
+      return 0
+    elif [[ "${2}" == "device-name" ]]; then
+      echo "custom-device-name"
+      return 0
+    elif [[ "${2}" == "image" ]]; then
+      echo "image4"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${FPAVE_CMD}" > "${BT_TEMP_DIR}/fpave_with_props_log.txt" 2>&1
 
@@ -295,7 +308,16 @@ TEST_fpave_name_not_resolved() {
   set_up_gsutil
   set_up_sdk_stubs
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "unknown-device"
+    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-name" ]]; then
+      echo "unknown-device"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${FPAVE_CMD}" "--image" "image1" 2>"${BT_TEMP_DIR}/TEST_fpave_name_not_resolved_stderr.log"
 
@@ -306,9 +328,7 @@ TEST_fpave_name_not_resolved() {
 # shellcheck disable=SC2034
 # Test initialization.
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fpave.sh
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
@@ -320,6 +340,8 @@ BT_MOCKED_TOOLS=(
   test-home/.fuchsia/image/pave.sh
   scripts/sdk/gn/base/tools/x64/device-finder
   scripts/sdk/gn/base/tools/arm64/device-finder
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   isolated_path_for/ssh
 )
 
@@ -328,7 +350,6 @@ BT_SET_UP() {
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 
   FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
-  FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
@@ -338,6 +359,7 @@ BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
 
 }

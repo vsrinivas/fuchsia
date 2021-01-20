@@ -10,7 +10,6 @@
 set -e
 
 FSERVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
-FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
 # Sets up an ssh mock binary on the $PATH of any subshell.
 set_up_ssh() {
@@ -226,7 +225,16 @@ TEST_fserve_with_ip_prop() {
   set_up_device_finder
   set_up_gsutil
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
 
@@ -246,7 +254,16 @@ TEST_fserve_with_name_prop() {
   set_up_device_finder
   set_up_gsutil
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-name" ]]; then
+      echo "coffee-coffee-coffee-coffee"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
 
@@ -266,8 +283,19 @@ TEST_fserve_with_all_props() {
   set_up_device_finder
   set_up_gsutil
 
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
-  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-name" ]]; then
+      echo "coffee-coffee-coffee-coffee"
+      return 0
+    elif [[ "${2}" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
   BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
 
@@ -310,6 +338,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/tools/x64/device-finder
   scripts/sdk/gn/base/tools/arm64/device-finder
@@ -328,6 +358,7 @@ BT_SET_UP() {
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_PM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/pm"
 }
 

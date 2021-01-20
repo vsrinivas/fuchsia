@@ -25,6 +25,8 @@ BT_MOCKED_TOOLS=(
    "${MOCKED_SSH_BIN}"
    "${MOCKED_SSH_KEYGEN_BIN}"
    "${MOCKED_HOSTNAME_BIN}"
+   "scripts/sdk/gn/base/tools/x64/fconfig"
+   "scripts/sdk/gn/base/tools/arm64/fconfig"
    "scripts/sdk/gn/base/tools/x64/device-finder"
    "scripts/sdk/gn/base/tools/arm64/device-finder"
    "${MOCKED_GSUTIL}"
@@ -329,6 +331,7 @@ EOF
   BT_EXPECT kill-running-pm 2> "${BT_TEMP_DIR}/kill-running-pm_output.txt"
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/kill-running-pm_output.txt" "WARNING: Killing existing pm process"
 
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/${MOCKED_KILL}.mock_state"
   gn-test-check-mock-args "_ANY_" "-9" 987654321
 }
@@ -348,23 +351,41 @@ TEST_get-fuchsia-property-names() {
   done
 }
 
+TEST_migrate-properties_no_existing_props() {
+  # called by get-fuchsia-property.
+  name="$(get-fuchsia-property device-name)"
+  BT_EXPECT_GOOD_STATUS $?
+}
+
+set-old-fuchsia-property() {
+  local prop_path
+  prop_path="$(get-fuchsia-sdk-data-dir)/.properties/$1.txt"
+  if ! mkdir -p "$(dirname "${prop_path}")"; then
+    fx-error "Cannot write property to $prop_path"
+    exit 1
+  fi
+  echo "$2" > "${prop_path}"
+}
+
+TEST_migrate-properties_with_existing_props() {
+  # called by get-fuchsia-property.
+
+  set-old-fuchsia-property "device-name" "test-device"
+  set-old-fuchsia-property "bucket" "test-bucket"
+  set-old-fuchsia-property "device-ip" "test-ip"
+  set-old-fuchsia-property "image" "test-image"
+  set-old-fuchsia-property "emu-image" "test-emu-image"
+  set-old-fuchsia-property "emu-bucket" "test-emu-bucket"
+
+  name="$(get-fuchsia-property device-name)"
+  BT_EXPECT_GOOD_STATUS $?
+  # Not checking the value of $name since properties are stored
+  # using ffx which is mocked.
+}
 
 TEST_is-valid-fuchsia-property()  {
   BT_ASSERT is-valid-fuchsia-property "device-ip"
   BT_ASSERT_FAIL  is-valid-fuchsia-property "random-value"
-}
-
-TEST_set_and_get-fuchsia-property() {
-  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-property
-  BT_ASSERT_FUNCTION_EXISTS set-fuchsia-property
-
-  BT_EXPECT set-fuchsia-property "device-ip" 100
-  value="$(get-fuchsia-property "device-ip")"
-  BT_EXPECT_EQ "$value" "100"
-
-  BT_EXPECT set-fuchsia-property "device-ip" ""
-  value="$(get-fuchsia-property "device-ip")"
-  BT_EXPECT_EQ "$value" ""
 }
 
 TEST_migrate_ssh_key() {

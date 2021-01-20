@@ -84,9 +84,18 @@ get \"/config/build-info/version\" \"version.txt\""
 TEST_fcp_with_props() {
   setup_sftp
   setup_device_finder
+  
+  cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh" set device-ip "192.1.1.2"
-
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
+  
  # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
 
@@ -111,6 +120,8 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   "scripts/sdk/gn/base/tools/x64/device-finder"
   "scripts/sdk/gn/base/tools/arm64/device-finder"
+  "scripts/sdk/gn/base/tools/x64/fconfig"
+  "scripts/sdk/gn/base/tools/arm64/fconfig"
   _isolated_path_for/sftp
 )
 
@@ -124,6 +135,7 @@ BT_SET_UP() {
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
 }
 
 BT_RUN_TESTS "$@"

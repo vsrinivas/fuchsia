@@ -16,12 +16,17 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
+TOOLS_SHORT_PATH="tools/$(basename "$(get-fuchsia-sdk-tools-dir)")"
+
 function usage {
+    fx-error "fconfig.sh is DEPRECATED. Please use ${TOOLS_SHORT_PATH}/fconfig."
   cat << EOF
 usage: fconfig.sh [set|get|default|list] propname [value]
     Sets or gets the property values used as defaults for commands.
 
-    set: Sets the property to the given value.
+    set: fconfig.sh set is deprecated. Use "${TOOLS_SHORT_PATH}/fconfig" to configure
+        properties. This script only works for reading values.
+
     get: Prints the value of the property or empty string if not found.
     default: Restores the given property to the default value, or unsets.
     list: Lists prop=value one per line.
@@ -29,15 +34,6 @@ usage: fconfig.sh [set|get|default|list] propname [value]
     propname: One of the predefined properties: $(get-fuchsia-property-names)).
     value: if using setting, the value to set to the property. Otherwise ignored.
 EOF
-}
-
-function _do_set {
-    if is-valid-fuchsia-property "$1"; then
-        set-fuchsia-property "$1" "$2"
-    else
-        fx-error "Invalid property name: $1"
-        return 1
-    fi
 }
 
 function _do_get {
@@ -57,7 +53,6 @@ function _do_list {
 
 CMD=""
 PROPNAME=""
-VALUE=""
 
 if (( "$#" >= 1 )); then
     CMD="${1}"
@@ -67,16 +62,9 @@ else
 fi
 shift
 
-if [[ "${CMD}" == "set" ]]; then
-    if (( "$#" >= 2 )); then
-        PROPNAME="${1}"
-        shift
-        VALUE="$*"
-    else
-        usage
-        exit 1
-    fi
-    _do_set "${PROPNAME}" "${VALUE}"
+if [[ "${CMD}" == "set" || "${CMD}" == "default" ]]; then
+    fx-error "fconfig.sh default/set are no longer supported. Use ${TOOLS_SHORT_PATH}/fconfig instead."
+     exit 1
 elif [[ "${CMD}" == "get" ]]; then
     if (( "$#" == 1 )); then
         PROPNAME="${1}"
@@ -85,14 +73,6 @@ elif [[ "${CMD}" == "get" ]]; then
         exit 1
     fi
     _do_get "${PROPNAME}"
-elif [[ "${CMD}" == "default" ]]; then
-    if (( "$#" == 1 )); then
-        PROPNAME="${1}"
-    else
-        usage
-        exit 1
-    fi
-    _do_set "${PROPNAME}" ""
 elif [[ "${CMD}" == "list" ]]; then
     if (( "$#" != 0 )); then
         usage

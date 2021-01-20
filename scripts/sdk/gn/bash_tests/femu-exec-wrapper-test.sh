@@ -133,8 +133,16 @@ TEST_femu_exec_wrapper_with_default_ip_set() {
   # This tests making sure the package server is serving to the emulator, and not the default ip address
   # set via fconfig.sh.
 
-    BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
+  if [[ "$1" == "get" ]]; then
+    if [[ "${2}" == "device-ip" ]]; then
+      echo "192.1.1.2"
+      return 0
+    fi
+    echo ""
+  fi
+EOF
 
     BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu-exec-wrapper.sh"  > "${BT_TEMP_DIR}/TEST_femu_exec_wrapper_with_default_ip_set.txt" 2>&1
 
@@ -157,6 +165,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/fssh.sh
   scripts/sdk/gn/base/bin/fserve.sh
@@ -173,6 +183,8 @@ BT_SET_UP() {
     # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
+
+  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
 }
 
 BT_RUN_TESTS "$@"

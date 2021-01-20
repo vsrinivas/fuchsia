@@ -181,6 +181,8 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/fvm
   scripts/sdk/gn/base/tools/arm64/zbi
   scripts/sdk/gn/base/tools/arm64/fvm
+  scripts/sdk/gn/base/tools/x64/fconfig
+  scripts/sdk/gn/base/tools/arm64/fconfig
   _isolated_path_for/ip
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty

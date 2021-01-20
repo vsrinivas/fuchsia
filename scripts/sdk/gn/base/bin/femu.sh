@@ -15,6 +15,7 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
+# Note: DEFAULT_EMULATOR_NAME is defined in fuchsia-common.sh
 
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 VER_GRPCWEBPROXY="$(cat "${SCRIPT_SRC_DIR}/grpcwebproxy.version")"
@@ -24,7 +25,6 @@ PREBUILT_GRPCWEBPROXY_DIR=""
 # it requires --experiment-arm64 since there is no auto detection.
 FUCHSIA_ARCH="x64"
 
-readonly FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 readonly FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 readonly IMAGE_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
 readonly TOOL_DIR="$(get-fuchsia-sdk-tools-dir)"
@@ -73,11 +73,11 @@ usage () {
   echo "  [--work-dir <directory to store image assets>]"
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
   echo "  [--bucket <fuchsia gsutil bucket>]"
-  echo "    Default is read using \`fconfig.sh get emu-bucket\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_BUCKET}".
+  echo "    Default is read using \`fconfig get ${DEFAULT_EMULATOR_NAME}.bucket\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_BUCKET}".
   echo "  [--image <image name>]"
-  echo "     Default is read using \`fconfig.sh get emu-image\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_IMAGE}".
+  echo "    Default is read using \`fconfig get ${DEFAULT_EMULATOR_NAME}.image\` if set. Otherwise defaults to ${DEFAULT_FUCHSIA_IMAGE}".
   echo "  [--authorized-keys <file>]"
-  echo "    The authorized public key file for securing the device.  Defaults to "
+  echo "    The authorized public key file for securing the device.  Defaults to"
   echo "    ${DEFAULT_FUCHSIA_AUTHKEYS}, which is generated if needed."
   echo "  [--version <version>]"
   echo "    Specify the CIPD version of AEMU to download."
@@ -169,14 +169,14 @@ else
 fi
 
 if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
-  FUCHSIA_BUCKET="$(get-fuchsia-property emu-bucket)"
+  FUCHSIA_BUCKET="$(get-fuchsia-property "${DEFAULT_EMULATOR_NAME}.bucket")"
   if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
     FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
   fi
 fi
 
 if [[ "${IMAGE_NAME}" == "" ]]; then
-  IMAGE_NAME="$(get-fuchsia-property emu-image)"
+  IMAGE_NAME="$(get-fuchsia-property "${DEFAULT_EMULATOR_NAME}.image")"
   if [[ "${IMAGE_NAME}" == "" ]]; then
     IMAGE_NAME="${DEFAULT_FUCHSIA_IMAGE}"
   fi

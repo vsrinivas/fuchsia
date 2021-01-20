@@ -155,10 +155,6 @@ if [[ "${CHECK_SSH_KEYS}" == "1" ]]; then
   verify_default_keys "" "${REMOTE_HOST}" "" || exit $?
 fi
 
-# set the device name as the default to avoid confusion, and clear out the IP address
-set-fuchsia-property "device-name" "${DEVICE_NAME}"
-set-fuchsia-property "device-ip" ""
-
 
 # Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
 # intentionally do not use %h/%p in the control path because there can only be one forwarding

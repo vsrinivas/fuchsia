@@ -35,12 +35,10 @@ TEST_config_invalid_property() {
 }
 
 TEST_config_set() {
-  BT_EXPECT "${FCONFIG_CMD}" set device-ip 8080
-
-  value="$("${FCONFIG_CMD}" get device-ip)"
-
-  BT_EXPECT_EQ "8080"  "${value}"
+  BT_EXPECT_FAIL "${FCONFIG_CMD}" set device-ip 8080 2> "${BT_TEMP_DIR}/set_error_message.txt"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/set_error_message.txt" "ERROR: fconfig.sh default/set are no longer supported. Use tools/x64/fconfig instead."
 }
+
 
 # Test initialization.
 # shellcheck disable=SC2034
@@ -48,6 +46,11 @@ BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
+)
+# shellcheck disable=SC2034
+BT_MOCKED_TOOLS=(
+  "scripts/sdk/gn/base/tools/x64/fconfig"
+  "scripts/sdk/gn/base/tools/arm64/fconfig"
 )
 
 BT_RUN_TESTS "$@"
