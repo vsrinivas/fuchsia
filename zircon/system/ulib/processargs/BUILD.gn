@@ -13,6 +13,6 @@ zx_library("processargs") {
 
   configs += [
     # This code is used in early startup, where safe-stack is not ready yet.
-    "$zx_build_config:no_sanitizers",
+    "//build/config/zircon:no_sanitizers",
   ]
 }

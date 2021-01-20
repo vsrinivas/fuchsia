@@ -36,12 +36,12 @@ zx_library("lz4") {
 
   # TODO(41766): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
 
   # NOTE: The zircon toolchains in the Fuchsia build add
   # warn-implicit-fallthrough as a default config.
   if (zircon_toolchain != false) {
-    configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+    configs -= [ "//build/config/zircon:warn-implicit-fallthrough" ]
   }
 }
 

@@ -27,7 +27,7 @@ if (current_toolchain == default_toolchain) {
         # work around fxbug.dev/48501.  It's separate from
         # userboot_config so it can be removed by other links
         # reusing this environment, e.g. hermetic_module().
-        "$zx_build_config:rodso",
+        "//build/config/zircon:rodso",
       ]
 
       # This doesn't get a separate shlib sub-toolchain, but the main one
@@ -55,10 +55,10 @@ if (toolchain.environment == "userboot") {
   # Everything in userboot gets compiled this way.
   config("userboot_config") {
     configs = [
-      "$zx_build_config:user",
-      "$zx_build_config:static-libc++",
-      "$zx_build_config:no_sanitizers",
-      "$zx_build_config:no_undefined_symbols",
+      "//build/config/zircon:user",
+      "//build/config/zircon:static-libc++",
+      "//build/config/zircon:no_sanitizers",
+      "//build/config/zircon:no_undefined_symbols",
     ]
 
     cflags = [

@@ -22,5 +22,5 @@ source_set("unistd") {
     "usleep.c",
   ]
 
-  configs -= [ "$zx_build_config:visibility_hidden" ]
+  configs -= [ "//build/config/zircon:visibility_hidden" ]
 }

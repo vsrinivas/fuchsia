@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx_build_config/levels.gni")
+import("//build/config/zircon/levels.gni")
 
 declare_args() {
   # Maximum number of CPUs the kernel will run on (others will be ignored).

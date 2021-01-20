@@ -33,7 +33,7 @@ zx_library("hwreg") {
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 zx_library("hwreg-mock") {

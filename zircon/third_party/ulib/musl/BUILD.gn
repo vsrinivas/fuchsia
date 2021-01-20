@@ -70,7 +70,7 @@ config("musl_internal.config") {
   # libfuzzer also uses libc internally, by removing the fuzzing
   # instrumentation we avoid it adding noise to the fuzzing coverage.
   # TODO(25073): Once a cleaner solution is found, remove this.
-  configs = [ "$zx_build_config:no_fuzzer" ]
+  configs = [ "//build/config/zircon:no_fuzzer" ]
 }
 
 if (toolchain_variant.base == "//zircon/system/ulib/c:user.libc_$target_cpu") {

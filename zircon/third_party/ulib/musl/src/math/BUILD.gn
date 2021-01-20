@@ -185,5 +185,5 @@ source_set("math") {
     "$zx/third_party/ulib/musl/third_party/math",
   ]
 
-  configs -= [ "$zx_build_config:visibility_hidden" ]
+  configs -= [ "//build/config/zircon:visibility_hidden" ]
 }

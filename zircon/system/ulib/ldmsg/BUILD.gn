@@ -18,17 +18,17 @@ zx_library("ldmsg") {
   # fancy stacks have been set up.  So it can't rely on safe-stack or
   # shadow-call-stack ABIs.
   configs += [
-    "$zx_build_config:no_safestack",
-    "$zx_build_config:no-shadow-call-stack",
+    "//build/config/zircon:no_safestack",
+    "//build/config/zircon:no-shadow-call-stack",
 
     # This library is linked into libc, which is used by libfuzzer.
     # Don't instrument it to avoid getting noise in code coverage.
     # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
-    "$zx_build_config:no_fuzzer",
+    "//build/config/zircon:no_fuzzer",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 group("tests") {

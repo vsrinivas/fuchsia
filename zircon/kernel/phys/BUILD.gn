@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
 
       # Always enable frame pointers. This works because frame_pointers
       # is added as part of :phys_config below.
-      remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+      remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
 
       exclude_variant_tags = [
         # There is no possibility of fancy runtimes like ASan for phys.
@@ -61,16 +61,16 @@ if (current_toolchain == default_toolchain) {
 
       # Don't emit extra code making static initializers thread-safe (we don't
       # have threads or any of the corresponding library support.)
-      "$zx_build_config:no_threadsafe_statics",
+      "//build/config/zircon:no_threadsafe_statics",
 
       # All physmem code is inherently sensitive and in a position for
       # any bug to be unusually dangerous.  So compile with minimal
       # undefined behavior checking in all builds, regardless of variant.
-      "$zx_build_config/instrumentation:ubsan-trap",
+      "//build/config/zircon/instrumentation:ubsan-trap",
     ]
 
     # Always enable frame pointers.
-    configs += [ "$zx_build_config:frame_pointers" ]
+    configs += [ "//build/config/zircon:frame_pointers" ]
 
     # Add arch-specific configs here. The reason this is not done
     # in the zircon_toolchain_suite() call is because every config listed

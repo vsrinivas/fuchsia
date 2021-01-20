@@ -61,7 +61,7 @@ if (is_asan) {
     visibility = [ ":*" ]
     configs -= [
       _asan_config,
-      "$zx_build_config:frame_pointers",
+      "//build/config/zircon:frame_pointers",
     ]
 
     if (is_sancov) {
@@ -71,7 +71,7 @@ if (is_asan) {
 
     configs += [
       ":kasan-defines",
-      "$zx_build_config:frame_pointers",
+      "//build/config/zircon:frame_pointers",
     ]
     sources = [
       "asan-init.cc",

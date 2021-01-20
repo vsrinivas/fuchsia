@@ -13,7 +13,7 @@ source_set("fitx") {
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  public_configs = [ "$zx_build_config:Wno-conversion" ]
+  public_configs = [ "//build/config/zircon:Wno-conversion" ]
 }
 
 source_set("zx") {
@@ -41,5 +41,5 @@ zx_library("zxc") {
   static = true
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }

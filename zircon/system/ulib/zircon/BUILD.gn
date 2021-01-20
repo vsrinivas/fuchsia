@@ -162,7 +162,7 @@ if (toolchain.environment != "user.vdso") {
       "$zx/kernel/lib/syscalls",
     ]
     if (toolchain.base_environment == "user") {
-      configs -= [ "$zx_build_config:user" ]
+      configs -= [ "//build/config/zircon:user" ]
     }
   }
 }

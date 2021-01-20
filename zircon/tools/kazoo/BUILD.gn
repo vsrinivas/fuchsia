@@ -50,7 +50,7 @@ zx_library("kazoo_lib") {
   public_deps = [ "$zx/third_party/rapidjson" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 zx_host_tool("kazoo") {
@@ -104,7 +104,7 @@ test("kazoo-unittests") {
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 zx_host_tool_action_foreach("test_files_fidl_to_json") {

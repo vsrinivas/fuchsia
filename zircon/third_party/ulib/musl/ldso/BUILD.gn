@@ -27,19 +27,19 @@ source_set("ldso") {
     defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
   }
 
-  configs -= [ "$zx_build_config:visibility_hidden" ]
+  configs -= [ "//build/config/zircon:visibility_hidden" ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-unused-function" ]
+  configs += [ "//build/config/zircon:Wno-unused-function" ]
 
   # TODO(41901): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("dlstart") {
   visibility = [ ":*" ]
   deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [ "dlstart.c" ]
-  configs += [ "$zx_build_config:no_sanitizers" ]
+  configs += [ "//build/config/zircon:no_sanitizers" ]
 }

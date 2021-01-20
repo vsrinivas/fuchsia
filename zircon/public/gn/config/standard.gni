@@ -72,26 +72,26 @@ if (host_os == "mac") {
 
 # Universal configs that apply to all code in the build.
 standard_configs = [
-  "$zx_build_config:compiler",
-  "$zx_build_config:language",
-  "$zx_build_config:machine",
-  "$zx_build_config:relative_paths",
-  "$zx_build_config:assert_level",
-  "$zx_build_config:default_optimize",
-  "$zx_build_config:default_debuginfo",
-  "$zx_build_config:default_warnings",
-  "$zx_build_config:default_icf",
-  "$zx_build_config:default_include_dirs",
-  "$zx_build_config:default_frame_pointers",
-  "$zx_build_config:default_linker_gc",
-  "$zx_build_config:default_template_backtrace_limit",
-  "$zx_build_config:no_exceptions",
-  "$zx_build_config:no_rtti",
-  "$zx_build_config:thread_safety_annotations",
-  "$zx_build_config:warn-implicit-fallthrough",
-  "$zx_build_config:visibility_hidden",
-  "$zx_build_config:auto_var_init",
-  "$zx_build_config:werror",
+  "//build/config/zircon:compiler",
+  "//build/config/zircon:language",
+  "//build/config/zircon:machine",
+  "//build/config/zircon:relative_paths",
+  "//build/config/zircon:assert_level",
+  "//build/config/zircon:default_optimize",
+  "//build/config/zircon:default_debuginfo",
+  "//build/config/zircon:default_warnings",
+  "//build/config/zircon:default_icf",
+  "//build/config/zircon:default_include_dirs",
+  "//build/config/zircon:default_frame_pointers",
+  "//build/config/zircon:default_linker_gc",
+  "//build/config/zircon:default_template_backtrace_limit",
+  "//build/config/zircon:no_exceptions",
+  "//build/config/zircon:no_rtti",
+  "//build/config/zircon:thread_safety_annotations",
+  "//build/config/zircon:warn-implicit-fallthrough",
+  "//build/config/zircon:visibility_hidden",
+  "//build/config/zircon:auto_var_init",
+  "//build/config/zircon:werror",
 
   {
     # Additional configs apply only to code built into shared libraries.
@@ -99,8 +99,8 @@ standard_configs = [
     # directly in the `sources` of a shared_library() or library() target.
     shlib = true
     add = [
-      "$zx_build_config:shared_library_config",
-      "$zx_build_config:no_undefined_symbols",
+      "//build/config/zircon:shared_library_config",
+      "//build/config/zircon:no_undefined_symbols",
     ]
   },
 ]
@@ -134,10 +134,10 @@ standard_environments = [
     }
     configs = standard_fuchsia_configs
     configs += [
-      "$zx_build_config:user",
+      "//build/config/zircon:user",
       {
         shlib = false
-        add = [ "$zx_build_config:user_executable" ]
+        add = [ "//build/config/zircon:user_executable" ]
       },
       {
         # All drivers use hidden visibility and the static standard C++ library.
@@ -145,7 +145,7 @@ standard_environments = [
           "driver",
           "test_driver",
         ]
-        add = [ "$zx_build_config:static-libc++" ]
+        add = [ "//build/config/zircon:static-libc++" ]
       },
     ]
     implicit_deps = [
@@ -158,7 +158,7 @@ standard_environments = [
         ]
         add = [
           "$zx/system/ulib/c:crt1",
-          "$zx_build_config:maybe_scudo_default_options",
+          "//build/config/zircon:maybe_scudo_default_options",
         ]
       },
     ]
@@ -213,14 +213,14 @@ standard_sanitizer_variants = [
         {
           # First add and then remove both in case either is already there.
           add = [
-            "$zx_build_config:frame_pointers",
-            "$zx_build_config:default_frame_pointers",
+            "//build/config/zircon:frame_pointers",
+            "//build/config/zircon:default_frame_pointers",
           ]
           remove = add
         },
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
-        "$zx_build_config:frame_pointers",
+        "//build/config/zircon:frame_pointers",
         "$zx/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
@@ -346,19 +346,19 @@ standard_variants += [
         {
           # First add and then remove both in case either is already there.
           add = [
-            "$zx_build_config:frame_pointers",
-            "$zx_build_config:default_frame_pointers",
+            "//build/config/zircon:frame_pointers",
+            "//build/config/zircon:default_frame_pointers",
           ]
           remove = add
         },
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
-        "$zx_build_config:frame_pointers",
+        "//build/config/zircon:frame_pointers",
 
         # kasan disables safestack for all files built with instrumentation, so
         # we need to ensure that files built without instrumentation have a
         # consistent no_safestack setting.
-        "$zx_build_config:no_safestack",
+        "//build/config/zircon:no_safestack",
 
         "$zx/public/gn/config/instrumentation:asan",
       ]

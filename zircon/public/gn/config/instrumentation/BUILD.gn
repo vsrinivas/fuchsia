@@ -4,7 +4,7 @@
 
 # TODO(fxbug.dev/54160): Keep in sync with //build/config/zircon/instrumentation/BUILD.gn
 
-import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
+import("//build/config/zircon/instrumentation/sanitizer_default_options.gni")
 
 config("asan") {
   compiler_flags = [ "-fsanitize=address" ]
@@ -33,7 +33,7 @@ sanitizer_default_options("lsan_default_options") {
 # and then add:
 # ```
 #   # TODO(nnnnn): Fix the leaks and remove this.
-#   deps += [ "$zx_build_config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+#   deps += [ "//build/config/zircon/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 # ```
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
@@ -52,7 +52,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
 # are found, file a bug #nnnnn for the buggy test/component, and then add:
 # ```
 #   # TODO(nnnnn): Fix the bugs and remove this.
-#   deps += [ "$zx_build_config/instrumentation:suppress-asan-stack-use-after-return" ]
+#   deps += [ "//build/config/zircon/instrumentation:suppress-asan-stack-use-after-return" ]
 # ```
 sanitizer_extra_options("suppress-asan-stack-use-after-return") {
   visibility = [

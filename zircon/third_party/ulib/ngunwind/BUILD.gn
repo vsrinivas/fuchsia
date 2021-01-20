@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/zircon/levels.gni")
 import("//build/zircon/migrated_targets.gni")
-import("$zx_build_config/levels.gni")
 optimize = zircon_optimize
 
 zx_library("ngunwind") {
@@ -117,20 +117,20 @@ zx_library("ngunwind") {
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "$zx_build_config:default_frame_pointers" ] -
-      [ "$zx_build_config:default_frame_pointers" ] != configs) {
-    configs -= [ "$zx_build_config:default_frame_pointers" ]
-    configs += [ "$zx_build_config:frame_pointers" ]
+  if (configs + [ "//build/config/zircon:default_frame_pointers" ] -
+      [ "//build/config/zircon:default_frame_pointers" ] != configs) {
+    configs -= [ "//build/config/zircon:default_frame_pointers" ]
+    configs += [ "//build/config/zircon:frame_pointers" ]
   }
 
   if (optimize == "none" || optimize == "debug") {
     # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "$zx_build_config:default_optimize" ]
-    configs += [ "$zx_build_config:optimize_default" ]
+    configs -= [ "//build/config/zircon:default_optimize" ]
+    configs += [ "//build/config/zircon:optimize_default" ]
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 config("private_config") {

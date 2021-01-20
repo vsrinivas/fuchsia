@@ -20,7 +20,7 @@ zx_host_tool("lz4") {
   # The zircon toolchains in the Fuchsia build add
   # warn-implicit-fallthrough as a default config.
   if (zircon_toolchain != false) {
-    configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
+    configs -= [ "//build/config/zircon:warn-implicit-fallthrough" ]
   }
 
   defines = [ "XXH_NAMESPACE=LZ4_" ]

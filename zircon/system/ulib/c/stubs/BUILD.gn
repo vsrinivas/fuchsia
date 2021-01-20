@@ -10,5 +10,5 @@ source_set("stubs") {
     "socketstubs.c",
   ]
 
-  configs -= [ "$zx_build_config:visibility_hidden" ]
+  configs -= [ "//build/config/zircon:visibility_hidden" ]
 }

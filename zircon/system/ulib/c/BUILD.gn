@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 import("$zx/vdso/vdso.gni")
-import("$zx_build_config/standard.gni")
 import("libc.gni")
 
 assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
@@ -88,9 +88,9 @@ if (current_toolchain == default_toolchain) {
            "//zircon/system/ulib/c:user.libc_$target_cpu") {
   config("libc_config") {
     configs = [
-      "$zx_build_config:user",
-      "$zx_build_config:shared_library_config",
-      "$zx_build_config:no_undefined_symbols",
+      "//build/config/zircon:user",
+      "//build/config/zircon:shared_library_config",
+      "//build/config/zircon:no_undefined_symbols",
     ]
   }
 
@@ -165,7 +165,7 @@ if (zircon_toolchain == false) {
     ]
 
     # Don't link against the shared libc++.
-    configs += [ "$zx_build_config:static-libc++" ]
+    configs += [ "//build/config/zircon:static-libc++" ]
   }
 }
 
@@ -187,7 +187,7 @@ if (zircon_toolchain == false) {
     sources = [ "Scrt1.cc" ]
 
     # This runs before all runtime setup.
-    configs += [ "$zx_build_config:no_sanitizers" ]
+    configs += [ "//build/config/zircon:no_sanitizers" ]
 
     # Minimize the code.  Even if there were lazy PLT resolution, it's never
     # worthwhile to have PLT entries for main or __libc_start_main, since

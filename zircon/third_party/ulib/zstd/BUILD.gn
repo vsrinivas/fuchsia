@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/zircon/levels.gni")
 import("//build/zircon/migrated_targets.gni")
-import("$zx_build_config/levels.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 zstd = "$zx/third_party/zstd"
@@ -19,7 +19,7 @@ config("zstd-config") {
     "$zstd/lib/dictBuilder",
   ]
 
-  configs = [ "$zx_build_config:visibility_hidden" ]
+  configs = [ "//build/config/zircon:visibility_hidden" ]
   defines = [
     "XXH_NAMESPACE=ZSTD_",
     "ZDICTLIB_VISIBILITY=",
@@ -36,11 +36,11 @@ config("zstd-config") {
     cflags = [ "-Wno-incompatible-pointer-types" ]
   }
 
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 
   # TODO(41757): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config/zircon:temporarily_disable_ubsan_do_not_use" ]
 }
 
 zstd_common_sources = [
@@ -85,7 +85,7 @@ zstd_decompress_sources = [
 warn_implicit_fallthrough_configs = []
 if (zircon_toolchain != false) {
   warn_implicit_fallthrough_configs =
-      [ "$zx_build_config:warn-implicit-fallthrough" ]
+      [ "//build/config/zircon:warn-implicit-fallthrough" ]
 }
 
 zx_library("zstd") {
@@ -113,15 +113,15 @@ zx_library("zstd") {
   # optimizations for just this library to speed up builds.
   # See fxbug.dev/55297
   if (zircon_toolchain != false) {
-    configs -= [ "$zx_build_config:default_optimize" ]
-    configs += [ "$zx_build_config:optimize_speed" ]
+    configs -= [ "//build/config/zircon:default_optimize" ]
+    configs += [ "//build/config/zircon:optimize_speed" ]
   } else {
     configs -= [ "//build/config:default_optimize" ]
     configs += [ "//build/config:optimize_speed" ]
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
+  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 # The standalone varaint of this library supports only decompression and does

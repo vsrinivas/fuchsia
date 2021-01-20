@@ -14,11 +14,11 @@ phys_configs = [
   "$zx/kernel/arch/arm64/phys:strict-align",
 
   # All phys executables should be small enough for the tiny code model.
-  "$zx_build_config:tiny",
+  "//build/config/zircon:tiny",
 
   # Compile as a position-independent executable. The code will apply its own
   # fixups during initialization.
-  "$zx_build_config:static-pie",
+  "//build/config/zircon:static-pie",
 ]
 phys_tags = [
   "strict-align",

@@ -23,7 +23,7 @@ if (current_toolchain == default_toolchain) {
     # Always enable frame pointers.
     # NOTE: This works because frame_pointers is added in the
     # phys32_config definition below.
-    remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
+    remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
 
     exclude_variant_tags = [
       # There is no possibility of fancy runtimes like ASan for phys.
@@ -58,13 +58,13 @@ if (current_toolchain == default_toolchain) {
 
         # Don't emit extra code making static initializers thread-safe (we don't
         # have threads or any of the corresponding library support.)
-        "$zx_build_config:no_threadsafe_statics",
+        "//build/config/zircon:no_threadsafe_statics",
 
         # All physmem code is inherently sensitive and in a position for any
         # bug to be unusually dangerous.  So compile with undefined behavior
         # checking in all builds, regardless of variant.  This is only the
         # basic support that requires no runtime code.
-        "$zx_build_config/instrumentation:ubsan-trap",
+        "//build/config/zircon/instrumentation:ubsan-trap",
 
         # This overrides some of the common settings (like PIE) that aren't
         # broken out into removable configs, so it must come last.
@@ -73,7 +73,7 @@ if (current_toolchain == default_toolchain) {
 
       # NOTE: This works because default_frame_pointers is listed in
       # remove_common_configs in the zircon_toolchain_suite() call above!
-      configs += [ "$zx_build_config:frame_pointers" ]
+      configs += [ "//build/config/zircon:frame_pointers" ]
     }
 
     group("phys32_config_deps") {

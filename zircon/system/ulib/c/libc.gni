@@ -24,7 +24,7 @@ libc_configs += [
   # libfuzzer also uses libc internally.  By removing the fuzzing
   # instrumentation we avoid it adding noise to the fuzzing coverage.
   # TODO(25073): Once a cleaner solution is found, remove this.
-  "$zx_build_config:no_fuzzer",
+  "//build/config/zircon:no_fuzzer",
 ]
 
 # Define source_set() targets for some libc code.
