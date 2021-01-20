@@ -248,5 +248,86 @@ class AccessTraceCheckerTests(unittest.TestCase):
         )
 
 
+class CheckMissingWritesTests(unittest.TestCase):
+
+    def test_no_accesses(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes([], {}),
+            {},
+        )
+
+    def test_only_reads(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [action_tracer.Read("newspaper.pdf")],
+                {},
+            ),
+            {},
+        )
+
+    def test_excess_write(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [action_tracer.Write("side-effect.txt")],
+                {},
+            ),
+            {},
+        )
+
+    def test_fulfilled_write(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [action_tracer.Write("compiled.o")],
+                {"compiled.o"},
+            ),
+            set(),
+        )
+
+    def test_missing_write(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [],
+                {"write-me.out"},
+            ),
+            {"write-me.out"},
+        )
+
+    def test_missing_and_fulfilled_write(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [action_tracer.Write("compiled.o")],
+                {
+                    "write-me.out",
+                    "compiled.o",
+                },
+            ),
+            {"write-me.out"},
+        )
+
+    def test_written_then_deleted(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [
+                    action_tracer.Write("compiled.o"),
+                    action_tracer.Delete("compiled.o"),
+                ],
+                {"compiled.o"},
+            ),
+            {"compiled.o"},
+        )
+
+    def test_deleted_then_written(self):
+        self.assertEqual(
+            action_tracer.check_missing_writes(
+                [
+                    action_tracer.Delete("compiled.o"),
+                    action_tracer.Write("compiled.o"),
+                ],
+                {"compiled.o"},
+            ),
+            set(),
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

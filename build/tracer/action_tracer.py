@@ -169,9 +169,30 @@ class AccessTraceChecker(object):
             if not access.allowed(self.allowed_reads, self.allowed_writes)
         ]
 
-        # TODO(fangism): check for missing must_write accesses
         # TODO(fangism): track state of files across moves
         return unexpected_accesses
+
+
+def check_missing_writes(
+        accesses: Iterable[FSAccess],
+        required_writes: FrozenSet[str]) -> AbstractSet[str]:
+    """Tracks sequence of access to verify that required files are written.
+
+    Args:
+      accesses: file-system accesses.
+      required_writes: paths that are expected to be written.
+
+    Returns:
+      Subset of required_writes that were not fulfilled.
+    """
+    missing_writes = required_writes.copy()
+    for access in accesses:
+        if access.op == FileAccessType.WRITE and access.path in missing_writes:
+            missing_writes.remove(access.path)
+        elif access.op == FileAccessType.DELETE and access.path in required_writes:
+            missing_writes.add(access.path)
+
+    return missing_writes
 
 
 def main():
@@ -239,28 +260,34 @@ def main():
         if os.path.basename(args.args[1]) in ignored_compiled_actions:
             return 0
 
-    # Paths that the action is allowed to access
-    allowed_writes = {os.path.abspath(path) for path in args.outputs}
+    # TODO(fangism): factor out logic for allowed/required calculation for
+    # testability (before the ignored_* section).
+
+    # Action is required to write outputs and depfile, if provided.
+    required_writes = {os.path.abspath(path) for path in args.outputs}
+
+    # Paths that the action is allowed to write.
+    # Actions may touch files other than their listed outputs.
+    allowed_writes = required_writes.copy()
 
     depfile_outs = []
     depfile_ins = []
     if args.depfile and os.path.exists(args.depfile):
+        # Writing the depfile is not required (yet), but allowed.
         allowed_writes.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
             for line in f:
                 out, _, ins = line.strip().partition(":")
                 depfile_outs.append(os.path.abspath(out))
                 depfile_ins.extend(os.path.abspath(p) for p in shlex.split(ins))
-        allowed_writes.update(depfile_ins)
+        allowed_writes.update(depfile_ins)  # TODO(fangism): allowed_reads?
         allowed_writes.update(depfile_outs)
 
+    # Everything writeable is readable.
     allowed_reads = {
         os.path.abspath(path)
         for path in [args.script] + args.inputs + args.sources + depfile_ins
     } | allowed_writes
-    # TODO(fangism): prevent inputs from being written/touched/moved.
-    # Changes to the input may confuse any timestamp-based build system,
-    # and introduce race conditions among multiple reader rules.
 
     if args.response_file_name:
         allowed_reads.add(os.path.abspath(response_file_name))
@@ -311,13 +338,17 @@ def main():
     )
     unexpected_accesses = checker.check_accesses(filtered_accesses)
 
-    if not unexpected_accesses:
-        return 0
+    # Verify that outputs are written as promised.
+    missing_writes = check_missing_writes(filtered_accesses, required_writes)
 
-    accesses_formatted = "\n".join(
-        f"{access}" for access in unexpected_accesses)
-    print(
-        f"""
+    # Check for overall correctness, print diagnostics,
+    # and exit with the right code.
+    exit_code = 0
+    if unexpected_accesses:
+        accesses_formatted = "\n".join(
+            f"{access}" for access in unexpected_accesses)
+        print(
+            f"""
 Unexpected file accesses building {args.label}, following the order they are accessed:
 {accesses_formatted}
 
@@ -327,9 +358,33 @@ Full access trace:
 See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 
 """,
-        file=sys.stderr,
-    )
-    return 1
+            file=sys.stderr,
+        )
+        exit_code = 1
+
+    if missing_writes:
+        required_writes_formatted = "\n".join(required_writes)
+        missing_writes_formatted = "\n".join(missing_writes)
+        print(
+            f"""
+Not all outputs of {args.label} were written or touched, which can cause subsequent
+build invocations to re-execute actions due to a missing file or old timestamp.
+Writes to the following files are missing:
+
+Required writes:
+{required_writes_formatted}
+
+Missing writes:
+{missing_writes_formatted}
+
+See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
+
+""",
+            file=sys.stderr,
+        )
+        exit_code = 1
+
+    return exit_code
 
 
 if __name__ == "__main__":
