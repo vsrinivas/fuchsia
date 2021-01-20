@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context,
+    anyhow::Context as _,
     bt_a2dp_metrics as metrics,
     bt_avdtp::{
         self as avdtp, MediaCodecType, ServiceCapability, ServiceCategory, StreamEndpoint,
@@ -23,8 +23,8 @@ use {
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
-        task::{Context as TaskContext, Poll, Waker},
-        Future, StreamExt,
+        task::{Context, Poll, Waker},
+        Future, FutureExt, StreamExt,
     },
     log::{info, trace, warn},
     parking_lot::Mutex,
@@ -97,7 +97,7 @@ impl Peer {
 
     /// How long to wait after a non-local establishment of a stream to start the stream.
     /// Chosen to produce reasonably quick startup while allowing for peer start.
-    const STREAM_DWELL: zx::Duration = zx::Duration::from_seconds(2);
+    const STREAM_DWELL: zx::Duration = zx::Duration::from_millis(500);
 
     /// Receive a channel from the peer that was initiated remotely.
     /// This function should be called whenever the peer associated with this opens an L2CAP channel.
@@ -244,6 +244,28 @@ impl Peer {
         }
     }
 
+    /// Query whether any streams are currently started or scheduled to start.
+    pub fn streaming_active(&self) -> bool {
+        self.inner.lock().is_streaming() || self.will_start_streaming()
+    }
+
+    /// Polls the task scheduled to start streaming, returning true if the task is still scheduled
+    /// to start streaming.
+    fn will_start_streaming(&self) -> bool {
+        let mut task_lock = self.start_stream_task.lock();
+        if task_lock.is_none() {
+            return false;
+        }
+        // This is the only thing that can poll the start task, so it is okay to ignore the wakeup.
+        let mut cx = Context::from_waker(futures::task::noop_waker_ref());
+        if let Poll::Pending = task_lock.as_mut().unwrap().poll_unpin(&mut cx) {
+            return true;
+        }
+        // Reset the task to None so that we don't try to re-poll it.
+        let _ = task_lock.take();
+        false
+    }
+
     /// Suspend a media transport stream that connects a local stream `local_id` to the
     /// remote stream `remote_id`.
     /// It's possible that the stream is not active - a suspend will be attempted, but an
@@ -319,7 +341,7 @@ pub struct ClosedPeer {
 impl Future for ClosedPeer {
     type Output = ();
 
-    fn poll(self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.inner.upgrade() {
             None => Poll::Ready(()),
             Some(inner) => match inner.lock().as_mut() {
@@ -409,6 +431,11 @@ impl PeerInner {
         self.remote_endpoints
             .as_ref()
             .and_then(|v| v.iter().find(|v| v.local_id() == id).map(StreamEndpoint::as_new))
+    }
+
+    /// Returns true if there is at least one stream in the started state for this peer.
+    fn is_streaming(&self) -> bool {
+        self.local.streaming().next().is_some() || self.opening.is_some()
     }
 
     async fn set_opening(

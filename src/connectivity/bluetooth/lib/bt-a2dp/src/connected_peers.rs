@@ -14,6 +14,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
+    fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         stream::{Stream, StreamExt},
@@ -46,6 +47,9 @@ pub struct ConnectedPeers {
     inspect_peer_direction: inspect::StringProperty,
     /// Listeners for new connected peers
     connected_peer_senders: Vec<mpsc::Sender<DetachableWeak<PeerId, Peer>>>,
+    /// Task handles for newly connected peer stream starts.
+    // TODO(fxbug.dev/67947): Completed tasks aren't garbage-collected yet.
+    start_stream_tasks: HashMap<PeerId, fasync::Task<()>>,
 }
 
 impl ConnectedPeers {
@@ -65,6 +69,7 @@ impl ConnectedPeers {
             inspect_peer_direction: inspect::StringProperty::default(),
             cobalt_sender,
             connected_peer_senders: Vec::new(),
+            start_stream_tasks: HashMap::new(),
         }
     }
 
@@ -80,11 +85,18 @@ impl ConnectedPeers {
         self.connected.contains_key(id)
     }
 
+    /// Attempts to start streaming on `peer` by collecting the remote streaming endpoint
+    /// information, selecting a compatible peer using `negotiation` and starting the stream.
+    /// Does nothing and returns Ok(()) if the peer is already streaming or will start streaming
+    /// on it's own.
     async fn start_streaming(
         peer: &DetachableWeak<PeerId, Peer>,
         negotiation: CodecNegotiation,
     ) -> Result<(), anyhow::Error> {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
+        if strong.streaming_active() {
+            return Ok(());
+        }
         let remote_streams = strong.collect_capabilities().await?;
 
         let (negotiated, remote_seid) =
@@ -108,14 +120,15 @@ impl ConnectedPeers {
         self.codec_negotiation.direction()
     }
 
-    /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
-    /// this connection (and should take the INT role)
-    /// Returns a weak peer pointer if connected (even if it was connected before) if successful.
+    /// Accept a channel that was connected to the peer `id`.
+    /// If `initiator_delay` is set, attempt to start a stream after the specified delay.
+    /// `initatiator_delay` has no effect if the peer already has a control channel.
+    /// Returns a weak peer pointer (even if it was previously connected) if successful.
     pub fn connected(
         &mut self,
         id: PeerId,
         channel: Channel,
-        initiator: bool,
+        initiator_delay: Option<zx::Duration>,
     ) -> Result<DetachableWeak<PeerId, Peer>, Error> {
         if let Some(weak) = self.get_weak(&id) {
             let peer = weak.upgrade().ok_or(format_err!("Disconnected connecting transport"))?;
@@ -156,16 +169,23 @@ impl ConnectedPeers {
             Ok(weak_peer) => weak_peer,
         };
 
-        if initiator {
-            let peer_clone = peer.clone();
+        if let Some(delay) = initiator_delay {
+            let peer = peer.clone();
+            let peer_id = peer.key().clone();
             let negotiation = self.codec_negotiation.clone();
-            fuchsia_async::Task::local(async move {
-                if let Err(e) = ConnectedPeers::start_streaming(&peer_clone, negotiation).await {
-                    info!("Peer {} start failed with error: {:?}", peer_clone.key(), e);
-                    peer_clone.detach();
+            let start_stream_task = fuchsia_async::Task::local(async move {
+                info!(
+                    "Peer {}: dwelling {}s for peer initiation",
+                    peer.key(),
+                    delay.into_millis() as f64 / 1000.0
+                );
+                fasync::Timer::new(fasync::Time::after(delay)).await;
+                if let Err(e) = ConnectedPeers::start_streaming(&peer, negotiation).await {
+                    info!("Peer {} start failed with error: {:?}", peer.key(), e);
+                    peer.detach();
                 }
-            })
-            .detach();
+            });
+            self.start_stream_tasks.insert(peer_id, start_stream_task);
         }
 
         // Remove the peer when we disconnect.
@@ -228,13 +248,13 @@ impl Stream for PeerConnections {
 mod tests {
     use super::*;
 
-    use bt_avdtp::Request;
+    use bt_avdtp::{Request, ServiceCapability};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_inspect::assert_inspect_tree;
     use futures::channel::mpsc;
-    use futures::{self, task::Poll, StreamExt};
+    use futures::{self, pin_mut, task::Poll, StreamExt};
     use std::convert::{TryFrom, TryInto};
 
     use crate::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
@@ -307,7 +327,7 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        let peer = peers.connected(id, channel, false).expect("peer should connect");
+        let peer = peers.connected(id, channel, None).expect("peer should connect");
         let peer = peer.upgrade().expect("peer should be connected");
 
         exercise_avdtp(&mut exec, remote, &peer);
@@ -322,7 +342,7 @@ mod tests {
         let mut peer_stream = peers.connected_stream();
         let mut peer_stream_two = peers.connected_stream();
 
-        let peer = peers.connected(id, channel, false).expect("peer should connect");
+        let peer = peers.connected(id, channel, None).expect("peer should connect");
         let peer = peer.upgrade().expect("peer should be connected");
 
         // Peers should have been notified of the new peer
@@ -338,7 +358,7 @@ mod tests {
 
         let id2 = PeerId(2);
         let (remote2, channel2) = Channel::create();
-        let peer2 = peers.connected(id2, channel2, false).expect("peer should connect");
+        let peer2 = peers.connected(id2, channel2, None).expect("peer should connect");
         let peer2 = peer2.upgrade().expect("peer two should be connected");
 
         let weak = exec.run_singlethreaded(peer_stream_two.next()).expect("peer stream to produce");
@@ -366,16 +386,21 @@ mod tests {
         Stream::build(endpoint, task_builder.builder())
     }
 
-    #[test]
-    fn connect_initiation_uses_negotiation() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let (proxy, _stream) =
+    /// Sets up a test in which we expect to select a stream and connect to a peer.
+    /// Returns the executor, connected peers (under test), request stream for profile interaction,
+    /// and an SBC and AAC service capability.
+    fn setup_negotiation_test() -> (
+        fasync::Executor,
+        ConnectedPeers,
+        ProfileRequestStream,
+        ServiceCapability,
+        ServiceCapability,
+    ) {
+        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(1_000_000));
+        let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
-        let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let (remote, channel) = Channel::create();
-        let remote = avdtp::Peer::new(remote);
 
         let aac_codec: avdtp::ServiceCapability = AacCodecInfo::new(
             AacObjectType::MANDATORY_SNK,
@@ -386,7 +411,6 @@ mod tests {
         )
         .unwrap()
         .into();
-        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
 
         let sbc_codec: avdtp::ServiceCapability = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
@@ -399,7 +423,6 @@ mod tests {
         )
         .unwrap()
         .into();
-        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
 
         let negotiation = CodecNegotiation::build(
             vec![aac_codec.clone(), sbc_codec.clone()],
@@ -411,17 +434,79 @@ mod tests {
         streams.insert(build_test_stream(SBC_SEID, sbc_codec.clone()));
         streams.insert(build_test_stream(AAC_SEID, aac_codec.clone()));
 
-        let mut peers =
-            ConnectedPeers::new(streams, negotiation.clone(), proxy, Some(cobalt_sender));
+        let peers = ConnectedPeers::new(streams, negotiation.clone(), proxy, Some(cobalt_sender));
 
-        assert!(peers.connected(id, channel, true).is_ok());
+        (exec, peers, stream, sbc_codec, aac_codec)
+    }
 
-        // Should discover remote streams, negotiate, and start.
+    #[test]
+    fn streaming_start_with_streaming_peer_is_noop() {
+        let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
+        let id = PeerId(1);
+        let (remote, channel) = Channel::create();
+        let remote = avdtp::Peer::new(remote);
+
+        let delay = zx::Duration::from_seconds(1);
 
         let mut remote_requests = remote.take_request_stream();
 
-        match exec.run_singlethreaded(&mut remote_requests.next()) {
-            Some(Ok(avdtp::Request::Discover { responder })) => {
+        // This starts the task in the background waiting.
+        assert!(peers.connected(id, channel, Some(delay)).is_ok());
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Before the delay expires, the peer starts the stream.
+
+        let seid: avdtp::StreamEndpointId = SBC_SEID.try_into().expect("seid to be okay");
+        let config_caps = &[ServiceCapability::MediaTransport, sbc_codec];
+        let set_config_fut = remote.set_configuration(&seid, &seid, config_caps);
+        pin_mut!(set_config_fut);
+        match exec.run_until_stalled(&mut set_config_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected set config to be ready and Ok, got {:?}", x),
+        };
+
+        // The remote peer doesn't need to actually open, Set Configuration is enough of a signal.
+        // wait for the delay to expire now.
+
+        exec.set_fake_time(fasync::Time::after(delay) + zx::Duration::from_micros(1));
+        exec.wake_expired_timers();
+
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Shouldn't start a discovery, since the stream is scheduled to start already.
+        assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
+    }
+
+    #[test]
+    fn connect_initiation_uses_negotiation() {
+        let (mut exec, mut peers, _stream, sbc_codec, aac_codec) = setup_negotiation_test();
+        let id = PeerId(1);
+        let (remote, channel) = Channel::create();
+        let remote = avdtp::Peer::new(remote);
+
+        let delay = zx::Duration::from_seconds(1);
+
+        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+
+        // run the start task until it's stalled.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        let mut remote_requests = remote.take_request_stream();
+
+        // Should wait for the specified amount of time.
+        assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
+
+        exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
+        exec.wake_expired_timers();
+
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        let remote_aac_seid: avdtp::StreamEndpointId = 2u8.try_into().unwrap();
+        let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
+
+        // Should discover remote streams, negotiate, and start.
+        match exec.run_until_stalled(&mut remote_requests.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::Discover { responder }))) => {
                 let endpoints = vec![
                     avdtp::StreamInformation::new(
                         remote_sbc_seid.clone(),
@@ -438,12 +523,12 @@ mod tests {
                 ];
                 responder.send(&endpoints).expect("response succeeds");
             }
-            x => panic!("Expected a discovery request, got {:?}", x),
+            x => panic!("Expected a discovery request to be sent after delay, got {:?}", x),
         };
 
         for _twice in 1..=2 {
-            match exec.run_singlethreaded(&mut remote_requests.next()) {
-                Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder })) => {
+            match exec.run_until_stalled(&mut remote_requests.next()) {
+                Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
                     if stream_id == remote_sbc_seid {
                         responder.send(&vec![
                             avdtp::ServiceCapability::MediaTransport,
@@ -459,24 +544,24 @@ mod tests {
                     }
                     .expect("respond succeeds");
                 }
-                x => panic!("Expected a get capabilities request, got {:?}", x),
+                x => panic!("Expected a ready get capabilities request, got {:?}", x),
             };
         }
 
-        match exec.run_singlethreaded(&mut remote_requests.next()) {
-            Some(Ok(avdtp::Request::SetConfiguration {
+        match exec.run_until_stalled(&mut remote_requests.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::SetConfiguration {
                 local_stream_id,
                 remote_stream_id,
                 capabilities: _,
                 responder,
-            })) => {
+            }))) => {
                 // Should set the aac stream, matched with local AAC seid.
                 assert_eq!(remote_aac_seid, local_stream_id);
                 let local_aac_seid: avdtp::StreamEndpointId = AAC_SEID.try_into().unwrap();
                 assert_eq!(local_aac_seid, remote_stream_id);
                 responder.send().expect("response sends");
             }
-            x => panic!("Expected a set configuration request, got {:?}", x),
+            x => panic!("Expected a ready set configuration request, got {:?}", x),
         };
     }
 
@@ -497,7 +582,7 @@ mod tests {
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
-        assert!(peers.connected(id, channel, false).is_ok());
+        assert!(peers.connected(id, channel, None).is_ok());
 
         assert_inspect_tree!(inspect, root: {
             peers: {
@@ -514,7 +599,7 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        assert!(peers.connected(id, channel, false).is_ok());
+        assert!(peers.connected(id, channel, None).is_ok());
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -530,7 +615,7 @@ mod tests {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let (remote, channel) = Channel::create();
-        assert!(peers.connected(id, channel, false).is_ok());
+        assert!(peers.connected(id, channel, None).is_ok());
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -543,7 +628,7 @@ mod tests {
         // Connect another peer with the same ID
         let (_remote, channel) = Channel::create();
 
-        assert!(peers.connected(id, channel, false).is_ok());
+        assert!(peers.connected(id, channel, None).is_ok());
         run_to_stalled(&mut exec);
 
         // Should be connected.

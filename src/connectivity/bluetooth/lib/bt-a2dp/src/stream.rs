@@ -273,6 +273,11 @@ impl Streams {
         self.streams.values().filter(|s| s.endpoint().state() == &avdtp::StreamState::Open)
     }
 
+    /// Returns streams that are streaming.
+    pub fn streaming(&self) -> impl Iterator<Item = &Stream> {
+        self.streams.values().filter(|s| s.endpoint().state() == &avdtp::StreamState::Streaming)
+    }
+
     /// Finds streams in the set which are compatible with `codec_config`.
     pub fn compatible(&self, codec_config: MediaCodecConfig) -> impl Iterator<Item = &Stream> {
         self.streams.values().filter(move |s| s.config_supported(&codec_config))

@@ -361,7 +361,7 @@ async fn connect_after_timeout(
         channel.channel_mode(),
         channel.max_tx_size()
     );
-    if let Err(e) = peers.lock().connected(peer_id, channel, /* initiator = */ true) {
+    if let Err(e) = peers.lock().connected(peer_id, channel, Some(zx::Duration::from_nanos(0))) {
         warn!("Problem connecting to peer: {}", e);
     }
 }
@@ -616,9 +616,8 @@ async fn handle_profile_events(
                     channel.channel_mode(),
                     channel.max_tx_size()
                 );
-                if let Err(e) =
-                    peers.lock().connected(peer_id, channel, /* initiator= */ false)
-                {
+                // Connected, initiate after the delay if not streaming.
+                if let Err(e) = peers.lock().connected(peer_id, channel, initiator_delay) {
                     warn!("Problem accepting peer connection: {}", e);
                 }
             }
@@ -802,13 +801,13 @@ mod tests {
 
         // Fast forward time by .5 seconds. The threshold is 1 second, so the timer
         // to initiate connections has not been triggered.
-        exec.set_fake_time(fasync::Time::from_nanos(1500000000));
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(500)));
         exec.wake_expired_timers();
         run_to_stalled(&mut exec);
 
         // A peer connects before the timeout.
-        let (_remote, transport) = Channel::create();
-        let _ = peers.lock().connected(peer_id.clone(), transport, /* initiator= */ false);
+        let (_remote, signaling) = Channel::create();
+        let _ = peers.lock().connected(peer_id.clone(), signaling, None);
 
         run_to_stalled(&mut exec);
 
@@ -817,7 +816,7 @@ mod tests {
 
         // Fast forward time by 4.5 seconds. Ensure no outbound connection is initiated
         // by us, since the remote peer has assumed the INT role.
-        exec.set_fake_time(fasync::Time::from_nanos(6000000000));
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(4500)));
         exec.wake_expired_timers();
         run_to_stalled(&mut exec);
 
