@@ -220,7 +220,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     cobalt_sender.clone(),
                     Arc::clone(&resolver_service_inspect),
                 )
-                .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:#}", anyhow!(e))),
+                .unwrap_or_else(|e| fx_log_err!("run_resolver_service failed: {:#}", anyhow!(e))),
             )
             .detach()
         }
@@ -240,7 +240,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     cobalt_sender.clone(),
                 )
                 .unwrap_or_else(|e| {
-                    fx_log_err!("Failed to spawn_local font_resolver_service {:#}", anyhow!(e))
+                    fx_log_err!("run_font_resolver_service failed: {:#}", anyhow!(e))
                 }),
             )
             .detach()

@@ -14,7 +14,7 @@ use {
         repository_manager::{GetPackageError, GetPackageError::*, GetPackageHashError},
         rewrite_manager::RewriteManager,
     },
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
@@ -106,7 +106,7 @@ pub async fn run_resolver_service(
                             fx_log_warn!("resolve does not support selectors yet");
                         }
                         let start_time = Instant::now();
-                        let response = resolve(&cache, &package_fetcher, package_url, dir).await;
+                        let response = resolve(&cache, &package_fetcher, package_url.clone(), dir).await;
 
                         cobalt_sender.log_event_count(
                             metrics::RESOLVE_METRIC_ID,
@@ -126,7 +126,14 @@ pub async fn run_resolver_service(
                             ),
                             Instant::now().duration_since(start_time).as_micros() as i64,
                         );
-                        responder.send(&mut response.map_err(|status| status.into_raw()))?;
+                        responder
+                            .send(&mut response.map_err(|status| status.into_raw()))
+                            .with_context(
+                                || format!(
+                                    "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",
+                                    package_url
+                                )
+                            )?;
                         Ok(())
                     }
 
@@ -142,10 +149,20 @@ pub async fn run_resolver_service(
                         .await
                         {
                             Ok(blob_id) => {
-                                responder.send(&mut Ok(blob_id.into()))?;
+                                responder.send(&mut Ok(blob_id.into())).with_context(
+                                    || format!(
+                                        "sending fuchsia.pkg/PackageResolver.GetHash success response for {:?}",
+                                        package_url.url
+                                        )
+                                    )?;
                             }
                             Err(status) => {
-                                responder.send(&mut Err(status.into_raw()))?;
+                                responder.send(&mut Err(status.into_raw())).with_context(
+                                    || format!(
+                                        "sending fuchsia.pkg/PackageResolver.GetHash failure response for {:?}",
+                                        package_url.url
+                                    )
+                                )?;
                             }
                         }
                         Ok(())
