@@ -70,6 +70,10 @@ async fn handler(
 ) -> Result<(), Error> {
     match request {
         AccessRequest::SetPairingDelegate { input, output, delegate, control_handle } => {
+            info!(
+                "Received FIDL call: fuchsia.bluetooth.sys.Access.SetPairingDelegate({:?}, {:?})",
+                input, output
+            );
             match delegate.into_proxy() {
                 Ok(proxy) => {
                     hd.set_io_capability(input, output);
@@ -86,18 +90,24 @@ async fn handler(
             Ok(())
         }
         AccessRequest::SetLocalName { name, control_handle: _ } => {
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.SetLocalName({})", name);
             if let Err(e) = hd.set_name(name).await {
                 warn!("Error setting local name: {:?}", e);
             }
             Ok(())
         }
         AccessRequest::SetDeviceClass { device_class, control_handle: _ } => {
+            info!(
+                "Received FIDL call: fuchsia.bluetooth.sys.Access.SetDeviceClass({:?})",
+                device_class
+            );
             if let Err(e) = hd.set_device_class(device_class).await {
                 warn!("Error setting local name: {:?}", e);
             }
             Ok(())
         }
         AccessRequest::MakeDiscoverable { token, responder } => {
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.MakeDiscoverable()");
             let stream = token.into_stream().unwrap(); // into_stream never fails
             let mut result = hd
                 .set_discoverable()
@@ -110,6 +120,7 @@ async fn handler(
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::StartDiscovery { token, responder } => {
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.StartDiscovery()");
             let stream = token.into_stream().unwrap(); // into_stream never fails
             let mut result = hd
                 .start_discovery()
@@ -122,6 +133,7 @@ async fn handler(
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::WatchPeers { responder } => {
+            trace!("Received FIDL call: fuchsia.bluetooth.sys.Access.WatchPeers()");
             watch_peers_subscriber
                 .register(PeerWatcher::new(session.peers_seen.clone(), responder))
                 .await
@@ -135,6 +147,7 @@ async fn handler(
         }
         AccessRequest::Connect { id, responder } => {
             let id = PeerId::from(id);
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.Connect({})", id);
             let result = hd.connect(id).await;
             if let Err(e) = &result {
                 warn!("Error connecting to peer {}: {:?}", id, e);
@@ -144,6 +157,7 @@ async fn handler(
         }
         AccessRequest::Disconnect { id, responder } => {
             let id = PeerId::from(id);
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.Disconnect({})", id);
             let result = hd.disconnect(id).await;
             if let Err(e) = &result {
                 warn!("Error disconnecting from peer {}: {:?}", id, e);
@@ -153,6 +167,7 @@ async fn handler(
         }
         AccessRequest::Pair { id, options, responder } => {
             let id = PeerId::from(id);
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.Pair({})", id);
             let opts: PairingOptions = options.into();
             // We currently do not support NonBondable mode on the classic Br/Edr transport
             // If NonBondable is asked for a Br/Edr pairing, return an InvalidArguments error
@@ -176,6 +191,7 @@ async fn handler(
         }
         AccessRequest::Forget { id, responder } => {
             let id = PeerId::from(id);
+            info!("Received FIDL call: fuchsia.bluetooth.sys.Access.Forget({})", id);
             let result = hd.forget(id).await;
             if let Err(e) = &result {
                 warn!("Error forgetting peer {}: {:?}", id, e);
