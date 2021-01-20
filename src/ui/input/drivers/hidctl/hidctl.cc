@@ -12,13 +12,14 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
+
+#include "src/ui/input/drivers/hidctl/hidctl_bind.h"
 
 namespace hidctl {
 
@@ -303,10 +304,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace hidctl
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(hidctl, hidctl::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_HIDCTL_TEST),
-    BI_MATCH()
-ZIRCON_DRIVER_END(hidctl)
-    // clang-format on
+ZIRCON_DRIVER(hidctl, hidctl::driver_ops, "zircon", "0.1");
