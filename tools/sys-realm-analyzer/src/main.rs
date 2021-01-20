@@ -211,6 +211,7 @@ pub fn get_target_products(products_str: Option<&String>) -> Vec<BuildTarget> {
     build_targets
 }
 
+#[cfg(test)]
 mod test {
 
     use super::{get_target_products, get_target_sets, BuildTarget};

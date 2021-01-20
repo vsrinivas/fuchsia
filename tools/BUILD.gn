@@ -137,6 +137,7 @@ group("tests") {
     "//tools/size_checker:tests($host_toolchain)",
     "//tools/symbol-index:tests",
     "//tools/symbolizer:tests",
+    "//tools/sys-realm-analyzer:tests($host_toolchain)",
     "//tools/testing:tests($host_toolchain)",
     "//tools/virtual_device:tests($host_toolchain)",
     "//tools/zedmon:tests",
