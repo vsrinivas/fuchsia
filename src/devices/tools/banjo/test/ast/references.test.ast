@@ -1,0 +1,178 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.references",
+    namespaces: {
+        "banjo.examples.references": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.references",
+                    ),
+                    name: "SomeType",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: UInt32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "value",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.references",
+                    ),
+                    name: "VectorFieldInStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "OutOfLineContents",
+                                    val: None,
+                                },
+                            ],
+                        ),
+                        ty: Vector {
+                            ty: Identifier {
+                                id: Ident {
+                                    namespace: Some(
+                                        "banjo.examples.references",
+                                    ),
+                                    name: "SomeType",
+                                },
+                                reference: false,
+                            },
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "the_vector",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Identifier {
+                                id: Ident {
+                                    namespace: Some(
+                                        "banjo.examples.references",
+                                    ),
+                                    name: "SomeType",
+                                },
+                                reference: true,
+                            },
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "the_other_vector",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Identifier {
+                                id: Ident {
+                                    namespace: Some(
+                                        "banjo.examples.references",
+                                    ),
+                                    name: "SomeType",
+                                },
+                                reference: false,
+                            },
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "the_default_vector",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.references",
+                    ),
+                    name: "MutableField",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Mutable",
+                                    val: None,
+                                },
+                            ],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_string",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_other_string",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "some_default_string",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
+}

@@ -192,6 +192,8 @@ if (host_toolchain == current_toolchain) {
       "test/ast/alias.test.ast",
       "test/banjo/alias.test.banjo",
       "test/c/alias.h",
+      "test/banjo/references.test.banjo",
+      "test/c/references.h",
       "test/ast/protocol-primitive.test.ast",
       "test/ast/example-2.test.ast",
       "test/cpp/protocol-base-internal.h",

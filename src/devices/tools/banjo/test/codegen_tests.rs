@@ -32,6 +32,7 @@ mod c {
         "c/preserve_names.h"
     );
     codegen_test!(table, CBackend, ["banjo/tables.test.banjo"], "c/tables.h");
+    codegen_test!(references, CBackend, ["banjo/references.test.banjo"], "c/references.h");
     codegen_test!(simple, CBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "c/simple.h");
     codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
     codegen_test!(types, CBackend, ["banjo/types.test.banjo"], "c/types.h");

@@ -64,6 +64,11 @@ do
     with_cpp=false
   fi
 
+  if [ "$filename" = "references" ]; then
+    with_rust=false
+    with_cpp=false
+  fi
+
   echo "Regenerating $filename"
   if [ $with_c = true ]; then
     $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f

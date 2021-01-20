@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.references;
+
+struct SomeType {
+  uint32 value;
+};
+
+struct VectorFieldInStruct {
+  [OutOfLineContents] vector<SomeType> the_vector;
+  vector<SomeType?> the_other_vector;
+  vector<SomeType> the_default_vector;
+};
+
+struct MutableField {
+  [Mutable] string some_string;
+  string? some_other_string;
+  string some_default_string;
+};
