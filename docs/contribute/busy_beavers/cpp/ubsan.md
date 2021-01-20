@@ -46,6 +46,9 @@ Your first step is to remove the suppression and address the issue. UBSan
 provides troubleshooting information by logging a root cause and a stack trace
 during a test, when the issue was surfaced at runtime. For instance:
 
+{# Disable variable substition to avoid '{{' being interpreted by the template engine #}
+{% verbatim %}
+
 ```
 [2105.728] 1054084.1055594> ../../src/connectivity/wlan/lib/common/cpp/include/wlan/common/element.h:769:48: runtime error: upcast
 [2105.728] 1054084.1055594> of misaligned address 0x245287a88d03 for type 'wlan::SupportedMcsRxMcsHead', which requires 8 byte alignment
@@ -81,6 +84,9 @@ not ok 138 fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/configure_legacy_priv
 [2105.736] 1054084.1055594>    #18   0x000041f10d3017ad in thread_trampoline ../../out/default.zircon/../../zircon/system/ulib/runtime/thread.c:93 <libc.so>+0x1bb7ad
 [2105.736] 1054084.1055594>
 ```
+
+{# Re-enable variable substition #}
+{% endverbatim %}
 
 If you're picking up a UBSan bug then the bug will already have this information
 in it, although depending on when the bug was filed the information might be out
