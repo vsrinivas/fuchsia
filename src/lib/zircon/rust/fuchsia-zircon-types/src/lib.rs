@@ -4,6 +4,9 @@
 
 #![allow(non_camel_case_types)]
 
+use std::fmt::{self, Debug};
+use std::hash::{Hash, Hasher};
+
 pub type zx_addr_t = usize;
 pub type zx_stream_seek_origin_t = u32;
 pub type zx_clock_t = u32;
@@ -390,6 +393,35 @@ multiconst!(u64, [
     ZX_CLOCK_ARGS_VERSION_1 = 1 << 58;
 ]);
 
+/// A byte used only to control memory alignment. All padding bytes are considered equal
+/// regardless of their content.
+///
+/// Note that the kernel C/C++ struct definitions use explicit padding fields to ensure no implicit
+/// padding is added. This is important for security since implicit padding bytes are not always
+/// safely initialized. These explicit padding fields are mirrored in the Rust struct definitions
+/// to minimize the opportunities for mistakes and inconsistencies.
+#[repr(C)]
+#[derive(Copy, Clone, Eq, Default)]
+pub struct PadByte(u8);
+
+impl PartialEq for PadByte {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Hash for PadByte {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u8(0);
+    }
+}
+
+impl Debug for PadByte {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("-")
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_create_args_v1_t {
@@ -424,14 +456,14 @@ pub struct zx_clock_details_v1_t {
     pub last_rate_adjust_update_ticks: zx_ticks_t,
     pub last_error_bounds_update_ticks: zx_ticks_t,
     pub generation_counter: u32,
-    pub padding1: [u8; 4],
+    pub padding1: [PadByte; 4],
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct zx_clock_update_args_v1_t {
     pub rate_adjust: i32,
-    pub padding1: [u8; 4],
+    pub padding1: [PadByte; 4],
     pub value: i64,
     pub error_bound: u64,
 }
@@ -1024,7 +1056,7 @@ pub struct acpi_transition_s_state {
     target_s_state: u8, // Value between 1 and 5 indicating which S-state
     sleep_type_a: u8,   // Value from ACPI VM (SLP_TYPa)
     sleep_type_b: u8,   // Value from ACPI VM (SLP_TYPb)
-    _padding1: [u8; 9],
+    _padding1: [PadByte; 9],
 }
 
 #[repr(C)]
@@ -1034,7 +1066,7 @@ pub struct x86_power_limit {
     time_window: u32, // PL1 time window in microseconds
     clamp: u8,        // PL1 clamping enable
     enable: u8,       // PL1 enable
-    _padding2: [u8; 2],
+    _padding2: [PadByte; 2],
 }
 
 // source: zircon/system/public/zircon/syscalls/pci.h
@@ -1067,7 +1099,7 @@ pub union zx_pci_bar_union {
 #[derive(Default, Debug, PartialEq, Copy, Clone)]
 pub struct zx_pci_bar_union_struct {
     handle: zx_handle_t,
-    _padding1: [u8; 4],
+    _padding1: [PadByte; 4],
 }
 
 // source: zircon/system/public/zircon/syscalls/smc.h
@@ -1075,7 +1107,7 @@ pub struct zx_pci_bar_union_struct {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_smc_parameters_t {
     func_id: u32,
-    _padding1: [u8; 4],
+    _padding1: [PadByte; 4],
     arg1: u64,
     arg2: u64,
     arg3: u64,
@@ -1084,7 +1116,7 @@ pub struct zx_smc_parameters_t {
     arg6: u64,
     client_id: u16,
     secure_os_id: u16,
-    _padding2: [u8; 4],
+    _padding2: [PadByte; 4],
 }
 
 #[repr(C)]
@@ -1111,7 +1143,7 @@ pub struct zx_cpu_set_t {
 #[derive(Copy, Clone)]
 pub struct zx_profile_info_t {
     flags: u32,
-    _padding1: [u8; 4],
+    _padding1: [PadByte; 4],
     zx_profile_info_union: zx_profile_info_union,
     cpu_affinity_mask: zx_cpu_set_t,
 }
@@ -1120,7 +1152,7 @@ pub struct zx_profile_info_t {
 #[derive(Copy, Clone)]
 struct priority_params {
     priority: i32,
-    _padding2: [u8; 20],
+    _padding2: [PadByte; 20],
 }
 
 #[repr(C)]
@@ -1136,4 +1168,47 @@ struct zx_sched_deadline_params_t {
     capacity: zx_duration_t,
     relative_deadline: zx_duration_t,
     period: zx_duration_t,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn padded_struct_equality() {
+        let test_struct = zx_clock_update_args_v1_t {
+            rate_adjust: 222,
+            padding1: [PadByte(0), PadByte(0), PadByte(0), PadByte(0)],
+            value: 333,
+            error_bound: 444,
+        };
+
+        let different_data = zx_clock_update_args_v1_t { rate_adjust: 999, ..test_struct.clone() };
+
+        let different_padding = zx_clock_update_args_v1_t {
+            padding1: [PadByte(0), PadByte(1), PadByte(2), PadByte(3)],
+            ..test_struct.clone()
+        };
+
+        // Structures with different data should not be equal.
+        assert_ne!(test_struct, different_data);
+        // Structures with only different padding should not be equal.
+        assert_eq!(test_struct, different_padding);
+    }
+
+    #[test]
+    fn padded_struct_debug() {
+        let test_struct = zx_clock_update_args_v1_t {
+            rate_adjust: 222,
+            padding1: [PadByte(0), PadByte(0), PadByte(0), PadByte(0)],
+            value: 333,
+            error_bound: 444,
+        };
+        let expectation = "zx_clock_update_args_v1_t { \
+            rate_adjust: 222, \
+            padding1: [-, -, -, -], \
+            value: 333, \
+            error_bound: 444 }";
+        assert_eq!(format!("{:?}", test_struct), expectation);
+    }
 }

@@ -99,6 +99,13 @@ rustc_library("fuchsia-zircon-types") {
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
 }
 
+rustc_test("fuchsia-zircon-types-tests") {
+  name = "fuchsia_zircon_types_tests"
+  edition = "2018"
+  source_root = "fuchsia-zircon-types/src/lib.rs"
+  sources = [ "fuchsia-zircon-types/src/lib.rs" ]
+}
+
 rustc_library("fuchsia-zircon-status") {
   version = "0.1.0"
   edition = "2018"
@@ -163,6 +170,7 @@ test_package("fuchsia-zircon-tests") {
     ":exit_with_code_util",
     ":fuchsia-cprng_test",
     ":fuchsia-zircon-status-tests",
+    ":fuchsia-zircon-types-tests",
     ":fuchsia-zircon-unittest",
     ":sleep_forever_util",
   ]
@@ -178,6 +186,9 @@ test_package("fuchsia-zircon-tests") {
     {
       name = "fuchsia_zircon_status_tests"
       dest = "fuchsia_zircon_status_tests"
+    },
+    {
+      name = "fuchsia_zircon_types_tests"
     },
   ]
 

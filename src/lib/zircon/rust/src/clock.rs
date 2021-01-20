@@ -240,7 +240,7 @@ impl From<ClockUpdate> for sys::zx_clock_update_args_v1_t {
     fn from(cu: ClockUpdate) -> Self {
         sys::zx_clock_update_args_v1_t {
             rate_adjust: cu.rate_adjust.unwrap_or(0),
-            padding1: [0, 0, 0, 0],
+            padding1: Default::default(),
             value: cu.value.map(Time::into_nanos).unwrap_or(0),
             error_bound: cu.error_bounds.unwrap_or(0),
         }

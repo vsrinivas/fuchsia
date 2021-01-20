@@ -477,6 +477,7 @@ mod tests {
             time_source::FakeTimeSource,
         },
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
+        lazy_static::lazy_static,
     };
 
     const BACKSTOP_TIME: i64 = 111111111;
@@ -488,30 +489,32 @@ mod tests {
     const CORRECTION: zx::Duration = zx::Duration::from_millis(88);
     const SQRT_COVARIANCE: i64 = 5454545454;
 
-    const VALID_DETAILS: zx::sys::zx_clock_details_v1_t = zx::sys::zx_clock_details_v1_t {
-        options: 0,
-        backstop_time: BACKSTOP_TIME,
-        ticks_to_synthetic: zx::sys::zx_clock_transformation_t {
-            reference_offset: 777777777777,
-            synthetic_offset: 787878787878,
-            rate: zx::sys::zx_clock_rate_t { reference_ticks: 1_000, synthetic_ticks: 1_000 },
-        },
-        mono_to_synthetic: zx::sys::zx_clock_transformation_t {
-            reference_offset: 888888888888,
-            synthetic_offset: 898989898989,
-            rate: zx::sys::zx_clock_rate_t {
-                reference_ticks: ONE_MILLION as u32,
-                synthetic_ticks: (RATE_ADJUST + ONE_MILLION) as u32,
+    lazy_static! {
+        static ref VALID_DETAILS: zx::sys::zx_clock_details_v1_t = zx::sys::zx_clock_details_v1_t {
+            options: 0,
+            backstop_time: BACKSTOP_TIME,
+            ticks_to_synthetic: zx::sys::zx_clock_transformation_t {
+                reference_offset: 777777777777,
+                synthetic_offset: 787878787878,
+                rate: zx::sys::zx_clock_rate_t { reference_ticks: 1_000, synthetic_ticks: 1_000 },
             },
-        },
-        error_bound: ERROR_BOUNDS,
-        query_ticks: 12345789,
-        last_value_update_ticks: 36363636,
-        last_rate_adjust_update_ticks: 37373737,
-        last_error_bounds_update_ticks: 38383838,
-        generation_counter: GENERATION_COUNTER,
-        padding1: [0, 0, 0, 0],
-    };
+            mono_to_synthetic: zx::sys::zx_clock_transformation_t {
+                reference_offset: 888888888888,
+                synthetic_offset: 898989898989,
+                rate: zx::sys::zx_clock_rate_t {
+                    reference_ticks: ONE_MILLION as u32,
+                    synthetic_ticks: (RATE_ADJUST + ONE_MILLION) as u32,
+                },
+            },
+            error_bound: ERROR_BOUNDS,
+            query_ticks: 12345789,
+            last_value_update_ticks: 36363636,
+            last_rate_adjust_update_ticks: 37373737,
+            last_error_bounds_update_ticks: 38383838,
+            generation_counter: GENERATION_COUNTER,
+            padding1: Default::default()
+        };
+    }
 
     /// Creates a new wrapped clock set to backstop time.
     fn create_clock() -> Arc<zx::Clock> {
@@ -541,7 +544,7 @@ mod tests {
 
     #[test]
     fn valid_clock_details_conversion() {
-        let details = ClockDetails::from(zx::ClockDetails::from(VALID_DETAILS));
+        let details = ClockDetails::from(zx::ClockDetails::from(VALID_DETAILS.clone()));
         assert_eq!(details.generation_counter, GENERATION_COUNTER);
         assert_eq!(details.utc_offset, VALID_DETAILS.mono_to_synthetic.synthetic_offset);
         assert_eq!(details.monotonic_offset, VALID_DETAILS.mono_to_synthetic.reference_offset);
@@ -551,7 +554,7 @@ mod tests {
 
     #[test]
     fn invalid_clock_details_conversion() {
-        let mut zx_details = zx::ClockDetails::from(VALID_DETAILS);
+        let mut zx_details = zx::ClockDetails::from(VALID_DETAILS.clone());
         zx_details.mono_to_synthetic.rate.synthetic_ticks = 1000;
         zx_details.mono_to_synthetic.rate.reference_ticks = 0;
         let details = ClockDetails::from(zx::ClockDetails::from(zx_details));
