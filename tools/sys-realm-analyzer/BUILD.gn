@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("sys_realm_analyzer") {
+    name = "sys-realm-analyzer"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+    ]
+    sources = [ "src/main.rs" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":sys_realm_analyzer_test($host_toolchain)" ]
+}
