@@ -110,7 +110,7 @@ go_library("netstack_lib") {
   deps = [
     ":gen/netstack",
     ":networking_metrics_golib",
-    "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
+    "fidlext/fuchsia/hardware/ethernet",
     "//sdk/fidl/fuchsia.cobalt($go_toolchain)",
     "//sdk/fidl/fuchsia.device($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",

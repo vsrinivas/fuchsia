@@ -12,10 +12,10 @@ import (
 	"testing"
 	"unsafe"
 
-	"gen/netstack/link/eth"
+	ethernetext "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet"
 
 	"fidl/fuchsia/hardware/ethernet"
-	ethernetext "fidlext/fuchsia/hardware/ethernet"
+	"gen/netstack/link/eth"
 )
 
 // makeEntryFifo creates a pair of handles to a FIFO of "depth" FifoEntry

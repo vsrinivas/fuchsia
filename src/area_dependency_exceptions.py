@@ -14,7 +14,6 @@ exceptions = {
     '//src/cobalt': ['//src/connectivity/wlan/lib/mlme/cpp:mlme',],
     '//src/connectivity/network':
         [
-            '//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib',
             '//garnet/go/src/grand_unified_binary:grand_unified_binary',
             '//src/connectivity/network/testing/netemul/lib/',
         ],
