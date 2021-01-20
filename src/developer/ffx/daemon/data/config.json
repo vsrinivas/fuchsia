@@ -1,25 +1,26 @@
 {
-  "overnet": {
-    "socket": "/tmp/ascendd",
-    "max_retry_count": 30
-  },
-  "ssh": {
-    "port": "$FUCHSIA_SSH_PORT",
-    "priv": [
-      "$FUCHSIA_SSH_KEY",
-      "$HOME/.ssh/fuchsia_ed25519",
-      "$FUCHSIA_DIR/.ssh/pkey"
-    ],
-    "pub": [
-      "$FUCHSIA_AUTHORIZED_KEYS",
-      "$HOME/.ssh/fuchsia_authorized_keys",
-      "$FUCHSIA_DIR/.ssh/authorized_keys"
-    ]
-  },
-  "proactive_log": {
+    "overnet": {
+        "max_retry_count": 30,
+        "socket": "/tmp/ascendd"
+    },
+    "proactive_log": {
         "cache_directory": "$DATA/target_logs",
+        "enabled": false,
         "max_log_size_bytes": 5242880,
         "max_session_size_bytes": 104857600,
-        "enabled": false
-  }
+        "max_sessions_per_target": 10
+    },
+    "ssh": {
+        "port": "$FUCHSIA_SSH_PORT",
+        "priv": [
+            "$FUCHSIA_SSH_KEY",
+            "$HOME/.ssh/fuchsia_ed25519",
+            "$FUCHSIA_DIR/.ssh/pkey"
+        ],
+        "pub": [
+            "$FUCHSIA_AUTHORIZED_KEYS",
+            "$HOME/.ssh/fuchsia_authorized_keys",
+            "$FUCHSIA_DIR/.ssh/authorized_keys"
+        ]
+    }
 }

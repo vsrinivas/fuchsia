@@ -23,6 +23,7 @@ pub mod streamer;
 
 const BRIDGE_SELECTOR: &str =
     "core/remote-diagnostics-bridge:out:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge";
+const ENABLED_CONFIG: &str = "proactive_log.enabled";
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -131,7 +132,7 @@ impl Logger {
         async move {
             let enabled = match self.enabled {
                 Some(e) => e,
-                None => get("proactive_log.enabled").await.unwrap_or(false),
+                None => get(ENABLED_CONFIG).await.unwrap_or(false),
             };
             if !enabled {
                 log::info!("proactive logger disabled. exiting...");
@@ -174,11 +175,15 @@ impl Logger {
             target.stream_info()
         };
 
+        let nodename = target.nodename_str().await;
         let boot_timestamp = target
             .boot_timestamp_nanos()
             .await
-            .ok_or(anyhow!("no boot timestamp for target {:?}", target.nodename_str().await))?;
-        streamer.setup_stream(target.nodename_str().await, boot_timestamp).await?;
+            .with_context(|| format!("no boot timestamp for target {:?}", &nodename))?;
+        streamer.setup_stream(nodename, boot_timestamp).await?;
+
+        // Garbage collect old sessions before kicking off the log stream.
+        streamer.clean_sessions_for_target().await?;
 
         let (listener_client, listener_fut) = write_logs_to_file(streamer.clone())?;
         let params = BridgeStreamParameters {
@@ -227,7 +232,9 @@ mod test {
         log_buf: Arc<Mutex<Vec<LogEntry>>>,
         most_recent_ts: u64,
         expect_setup: bool,
+        cleaned_sessions: bool,
     }
+
     struct FakeDiagnosticsStreamer {
         // This struct has to be Send + Sync to be compatible with the Logger implementation.
         inner: Mutex<FakeDiagnosticsStreamerInner>,
@@ -250,6 +257,11 @@ mod test {
             inner.nodename = nodename.to_string();
             inner.boot_time = boot_time;
         }
+
+        async fn assert_cleaned_sessions(&self) {
+            let inner = self.inner.lock().await;
+            assert!(inner.cleaned_sessions);
+        }
     }
 
     #[async_trait]
@@ -269,6 +281,7 @@ mod test {
         }
 
         async fn append_logs(&self, entries: Vec<LogEntry>) -> Result<()> {
+            self.assert_cleaned_sessions().await;
             let inner = self.inner.lock().await;
             inner.log_buf.lock().await.extend(entries);
             Ok(())
@@ -277,6 +290,12 @@ mod test {
         async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>> {
             let inner = self.inner.lock().await;
             Ok(Some(Timestamp::from(inner.most_recent_ts)))
+        }
+
+        async fn clean_sessions_for_target(&self) -> Result<()> {
+            let mut inner = self.inner.lock().await;
+            inner.cleaned_sessions = true;
+            Ok(())
         }
     }
 

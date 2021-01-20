@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     async_std::{
-        fs::{create_dir_all, read_dir, remove_file, File, OpenOptions},
+        fs::{create_dir_all, read_dir, remove_dir_all, remove_file, File, OpenOptions},
         io::{BufReader, Lines},
         path::PathBuf,
         prelude::*,
@@ -26,6 +26,7 @@ use {
 const CACHE_DIRECTORY_CONFIG: &str = "proactive_log.cache_directory";
 const MAX_LOG_SIZE_CONFIG: &str = "proactive_log.max_log_size_bytes";
 const MAX_SESSION_SIZE_CONFIG: &str = "proactive_log.max_session_size_bytes";
+const MAX_SESSIONS_CONFIG: &str = "proactive_log.max_sessions_per_target";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum EventType {
@@ -72,44 +73,45 @@ impl Stream for LogFileEntries {
     }
 }
 
+async fn sort_directory(parent: &PathBuf) -> Result<Vec<PathBuf>> {
+    let mut reader = read_dir(parent.clone()).await?;
+    let mut result = vec![];
+    while let Some(ent) = reader.try_next().await? {
+        let fname_num: u64 = match String::from(ent.file_name().to_string_lossy()).parse() {
+            Ok(name) => name,
+            Err(_) => continue,
+        };
+        result.push((fname_num, ent));
+    }
+
+    result.sort_by_key(|tup| tup.0);
+
+    Ok(result.iter().map(|tup| tup.1.path()).collect())
+}
+
 #[derive(Debug)]
 struct LogFile {
     path: PathBuf,
+    parent: TargetSessionDirectory,
     file: Option<Box<File>>,
 }
 
 impl LogFile {
-    fn new(path: PathBuf) -> Self {
-        Self { path, file: None }
+    fn new(path: PathBuf, parent: TargetSessionDirectory) -> Self {
+        Self { path, parent, file: None }
     }
 
-    fn from_file(path: PathBuf, file: Box<File>) -> Self {
-        Self { path, file: Some(file) }
+    fn from_file(path: PathBuf, parent: TargetSessionDirectory, file: Box<File>) -> Self {
+        Self { path, parent, file: Some(file) }
     }
 
-    async fn sort_directory(parent: &PathBuf) -> Result<Vec<LogFile>> {
-        let mut reader = read_dir(parent.clone()).await?;
-        let mut result = vec![];
-        while let Some(ent) = reader.try_next().await? {
-            let fname_num: u64 = match String::from(ent.file_name().to_string_lossy()).parse() {
-                Ok(name) => name,
-                Err(_) => continue,
-            };
-            result.push((fname_num, ent));
-        }
-
-        result.sort_by_key(|tup| tup.0);
-
-        Ok(result.iter().map(|tup| LogFile::new(tup.1.path())).collect())
-    }
-
-    async fn create(parent: &PathBuf) -> Result<Self> {
-        let mut file_path = parent.clone();
-        let fname = match Self::sort_directory(parent).await?.last() {
+    async fn create(parent: TargetSessionDirectory) -> Result<Self> {
+        let fname = match parent.latest_file().await? {
             Some(f) => f.parsed_name()? + 1,
             None => 1,
         };
 
+        let mut file_path = parent.to_path_buf();
         file_path.push(fname.to_string());
 
         let mut options = OpenOptions::new();
@@ -121,7 +123,7 @@ impl LogFile {
             .context("opening output file")
             .map(|f| Box::new(f))?;
 
-        Ok(Self::from_file(file_path, f))
+        Ok(Self::from_file(file_path, parent.clone(), f))
     }
 
     fn parsed_name(&self) -> Result<u64> {
@@ -178,21 +180,105 @@ impl LogFile {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TargetLogDirectory {
+    root: PathBuf,
+}
+
+impl TargetLogDirectory {
+    async fn new(nodename: String) -> Result<Self> {
+        let mut root = get::<std::path::PathBuf, &str>(CACHE_DIRECTORY_CONFIG).await?;
+        root.push(nodename);
+        Ok(Self { root: root.into() })
+    }
+
+    #[cfg(test)]
+    fn new_with_root(root_dir: PathBuf, nodename: String) -> Self {
+        let mut root = root_dir.clone();
+        root.push(nodename);
+        Self { root }
+    }
+
+    fn with_session(&self, timestamp_millis: usize) -> TargetSessionDirectory {
+        TargetSessionDirectory::new(self.clone(), timestamp_millis)
+    }
+
+    pub async fn clean_sessions(&self, max_sessions: usize) -> Result<()> {
+        let entries = sort_directory(&self.root).await?;
+        if entries.len() > max_sessions {
+            let end = entries.len() - max_sessions;
+            let entries_to_remove = &entries[..end];
+
+            for path in entries_to_remove.iter() {
+                log::info!("[logger] garbage collecting log directory: {:?}", &path);
+                remove_dir_all(path).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn to_path_buf(&self) -> PathBuf {
+        self.root.clone()
+    }
+}
+
+#[derive(Clone, Debug)]
+struct TargetSessionDirectory {
+    target_root: TargetLogDirectory,
+    full_path: PathBuf,
+}
+
+impl TargetSessionDirectory {
+    fn new(target_root: TargetLogDirectory, timestamp_millis: usize) -> Self {
+        let mut pb = target_root.to_path_buf();
+        pb.push(timestamp_millis.to_string());
+
+        Self { target_root, full_path: pb }
+    }
+
+    async fn sort_entries(&self) -> Result<Vec<LogFile>> {
+        Ok(sort_directory(&self.full_path)
+            .await?
+            .iter()
+            .map(|p| LogFile::new(p.clone(), self.clone()))
+            .collect())
+    }
+
+    fn parent(&self) -> TargetLogDirectory {
+        self.target_root.clone()
+    }
+
+    async fn latest_file(&self) -> Result<Option<LogFile>> {
+        self.sort_entries().await.map(|v| v.into_iter().rev().next())
+    }
+
+    async fn create_file(&self) -> Result<LogFile> {
+        LogFile::create(self.clone()).await
+    }
+
+    fn to_path_buf(&self) -> PathBuf {
+        self.full_path.clone()
+    }
+}
+
 #[derive(Debug, Default)]
 struct DiagnosticsStreamerInner {
-    target_dir: Option<PathBuf>,
+    output_dir: Option<TargetSessionDirectory>,
     current_file: Option<LogFile>,
     max_file_size_bytes: usize,
     max_session_size_bytes: usize,
+    max_num_sessions: usize,
 }
 
 impl Clone for DiagnosticsStreamerInner {
     fn clone(&self) -> Self {
         Self {
-            target_dir: self.target_dir.clone(),
+            output_dir: self.output_dir.clone(),
             current_file: None,
             max_file_size_bytes: self.max_file_size_bytes,
             max_session_size_bytes: self.max_session_size_bytes,
+            max_num_sessions: self.max_num_sessions,
         }
     }
 }
@@ -225,6 +311,8 @@ pub trait GenericDiagnosticsStreamer {
     async fn append_logs(&self, entries: Vec<LogEntry>) -> Result<()>;
 
     async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>>;
+
+    async fn clean_sessions_for_target(&self) -> Result<()>;
 }
 
 #[async_trait::async_trait]
@@ -235,11 +323,11 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         target_boot_time_nanos: u64,
     ) -> Result<()> {
         self.setup_stream_with_config(
-            target_nodename,
+            TargetLogDirectory::new(target_nodename).await?,
             target_boot_time_nanos,
-            get::<std::path::PathBuf, &str>(CACHE_DIRECTORY_CONFIG).await?.into(),
             get::<u64, &str>(MAX_LOG_SIZE_CONFIG).await? as usize,
             get::<u64, &str>(MAX_SESSION_SIZE_CONFIG).await? as usize,
+            get::<u64, &str>(MAX_SESSIONS_CONFIG).await? as usize,
         )
         .await
     }
@@ -262,17 +350,17 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
 
         let mut inner = self.inner.write().await;
         let max_file_size = inner.max_file_size_bytes;
-        let parent_path = inner.target_dir.as_ref().ok_or(anyhow!("no stream setup!"))?.clone();
+        let parent = inner.output_dir.as_ref().context("no stream setup")?.clone();
 
         let mut file = match inner.current_file.take() {
             Some(f) => f,
             None => {
                 // Continue appending to the latest file for this session if one exists.
-                let latest_file =
-                    LogFile::sort_directory(&parent_path).await?.into_iter().rev().next();
+                let latest_file = parent.latest_file().await?;
+
                 match latest_file {
                     Some(f) => f,
-                    None => LogFile::create(&parent_path).await?,
+                    None => parent.create_file().await?,
                 }
             }
         };
@@ -290,7 +378,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
                 buf_bytes = 0;
                 buf = vec![];
 
-                file = LogFile::create(&parent_path).await?;
+                file = parent.create_file().await?;
             }
 
             buf_bytes += log_bytes.len();
@@ -302,7 +390,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
             // the buffer exceeds the max file size, but hasn't been
             // flushed yet (i.e. we got a single log entry > max_file_size)
             if buf_bytes > max_file_size && file.bytes_in_file().await? != 0 {
-                file = LogFile::create(&parent_path).await?;
+                file = parent.create_file().await?;
             }
             file.write_entries(buf).await?;
         }
@@ -315,9 +403,9 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
 
     async fn read_most_recent_timestamp(&self) -> Result<Option<Timestamp>> {
         let inner = self.inner.read().await;
-        let target_dir = inner.target_dir.as_ref().ok_or(anyhow!("stream not setup"))?;
+        let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
 
-        let files = LogFile::sort_directory(target_dir).await?;
+        let files = output_dir.sort_entries().await?;
         for file in files.iter().rev() {
             let entry = file
                 .iter_entries()
@@ -335,34 +423,44 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         }
         Ok(None)
     }
+
+    async fn clean_sessions_for_target(&self) -> Result<()> {
+        let inner = self.inner.read().await;
+        inner
+            .output_dir
+            .as_ref()
+            .context("missing output directory")?
+            .parent()
+            .clean_sessions(inner.max_num_sessions)
+            .await
+    }
 }
 
 impl DiagnosticsStreamer {
     // This should only be called by tests.
     pub(crate) async fn setup_stream_with_config(
         &self,
-        target_nodename: String,
+        target_root_dir: TargetLogDirectory,
         target_boot_time_nanos: u64,
-        cache_directory: PathBuf,
         max_file_size_bytes: usize,
         max_session_size_bytes: usize,
+        max_num_sessions: usize,
     ) -> Result<()> {
         // The ticks=>time conversion isn't accurate enough to use units smaller than milliseconds here.
         let t = target_boot_time_nanos / 1_000_000;
 
-        let mut output_path: PathBuf = cache_directory.clone();
-        output_path.push(target_nodename);
-        output_path.push(t.to_string());
+        let session_dir = target_root_dir.with_session(t as usize);
 
-        create_dir_all(output_path.to_owned()).await.or_else(|e| match e.kind() {
+        create_dir_all(session_dir.to_path_buf()).await.or_else(|e| match e.kind() {
             ErrorKind::AlreadyExists => Ok(()),
             _ => Err(e),
         })?;
 
         let mut inner = self.inner.write().await;
-        inner.target_dir.replace(output_path);
+        inner.output_dir.replace(session_dir);
         inner.max_file_size_bytes = max_file_size_bytes;
         inner.max_session_size_bytes = max_session_size_bytes;
+        inner.max_num_sessions = max_num_sessions;
         Ok(())
     }
 
@@ -370,8 +468,8 @@ impl DiagnosticsStreamer {
         &self,
         inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner>,
     ) -> Result<()> {
-        let parent_path = inner.target_dir.as_ref().context("no stream setup")?.clone();
-        let mut entries = LogFile::sort_directory(&parent_path).await?;
+        let output_dir = inner.output_dir.as_ref().context("no stream setup")?;
+        let mut entries = output_dir.sort_entries().await?;
 
         // We approximate the need to garbage collect by multiplying the number of files by
         // the max file size, *excluding* the most recent file.
@@ -403,6 +501,7 @@ mod test {
     const LARGE_MAX_LOG_SIZE: usize = 1_000_000;
     const SMALL_MAX_SESSION_SIZE: usize = 11;
     const LARGE_MAX_SESSION_SIZE: usize = 1_000_001;
+    const DEFAULT_MAX_SESSIONS: usize = 1;
     const NODENAME: &str = "my-cool-node";
     const BOOT_TIME_NANOS: u64 = 123456789000000000;
     const BOOT_TIME_MILLIS: u64 = 123456789000;
@@ -423,10 +522,17 @@ mod test {
     }
 
     async fn collect_default_logs(dir_path: &PathBuf) -> Result<HashMap<String, String>> {
+        collect_default_logs_for_session(dir_path, BOOT_TIME_MILLIS).await
+    }
+
+    async fn collect_default_logs_for_session(
+        dir_path: &PathBuf,
+        boot_time_millis: u64,
+    ) -> Result<HashMap<String, String>> {
         let mut root = dir_path.clone();
         root.push(FAKE_DIR_NAME);
         root.push(NODENAME);
-        root.push(BOOT_TIME_MILLIS.to_string());
+        root.push(boot_time_millis.to_string());
         collect_logs(root).await
     }
 
@@ -460,43 +566,72 @@ mod test {
         }
     }
 
-    async fn setup_default_streamer_with_temp(
+    async fn setup_default_streamer_with_temp_and_boot_time(
         temp_parent: &TempDir,
+        boot_time_nanos: u64,
         max_log_size: usize,
         max_session_size: usize,
+        max_sessions: usize,
     ) -> Result<DiagnosticsStreamer> {
         let mut root: PathBuf = temp_parent.path().to_path_buf().into();
         root.push(FAKE_DIR_NAME.to_string());
 
         let streamer = DiagnosticsStreamer::default();
+        let target_dir = TargetLogDirectory::new_with_root(root.clone(), NODENAME.to_string());
         streamer
             .setup_stream_with_config(
-                NODENAME.to_string(),
-                BOOT_TIME_NANOS,
-                root.clone(),
+                target_dir,
+                boot_time_nanos,
                 max_log_size,
                 max_session_size,
+                max_sessions,
             )
             .await?;
 
         Ok(streamer)
     }
 
+    async fn setup_default_streamer_with_temp(
+        temp_parent: &TempDir,
+        max_log_size: usize,
+        max_session_size: usize,
+        max_sessions: usize,
+    ) -> Result<DiagnosticsStreamer> {
+        setup_default_streamer_with_temp_and_boot_time(
+            temp_parent,
+            BOOT_TIME_NANOS,
+            max_log_size,
+            max_session_size,
+            max_sessions,
+        )
+        .await
+    }
+
     async fn setup_default_streamer(
         max_log_size: usize,
         max_session_size: usize,
+        max_sessions: usize,
     ) -> Result<(TempDir, DiagnosticsStreamer)> {
         let temp_parent = tempdir()?;
-        let streamer =
-            setup_default_streamer_with_temp(&temp_parent, max_log_size, max_session_size).await?;
+        let streamer = setup_default_streamer_with_temp(
+            &temp_parent,
+            max_log_size,
+            max_session_size,
+            max_sessions,
+        )
+        .await?;
 
         Ok((temp_parent, streamer))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_single_log_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         streamer.append_logs(vec![log.clone()]).await?;
@@ -513,8 +648,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_two_logs_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -532,8 +671,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_two_logs_with_two_calls_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_SESSION_SIZE).await?;
+        let (temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            SMALL_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -553,7 +696,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_garbage_collection_doesnt_count_latest_file() -> Result<()> {
         let (temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE).await?;
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE, DEFAULT_MAX_SESSIONS)
+                .await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -573,7 +717,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_two_logs_with_two_calls_exceeds_max_session_size() -> Result<()> {
         let (temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE).await?;
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE, DEFAULT_MAX_SESSIONS)
+                .await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -600,18 +745,26 @@ mod test {
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
         {
-            let streamer =
-                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE)
-                    .await
-                    .unwrap();
+            let streamer = setup_default_streamer_with_temp(
+                &temp,
+                LARGE_MAX_LOG_SIZE,
+                LARGE_MAX_SESSION_SIZE,
+                DEFAULT_MAX_SESSIONS,
+            )
+            .await
+            .unwrap();
             streamer.append_logs(vec![log.clone()]).await.unwrap();
         }
 
         {
-            let streamer =
-                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE)
-                    .await
-                    .unwrap();
+            let streamer = setup_default_streamer_with_temp(
+                &temp,
+                LARGE_MAX_LOG_SIZE,
+                LARGE_MAX_SESSION_SIZE,
+                DEFAULT_MAX_SESSIONS,
+            )
+            .await
+            .unwrap();
             streamer.append_logs(vec![log2.clone()]).await.unwrap();
         }
 
@@ -640,8 +793,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple_read() -> Result<()> {
-        let (_temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
 
         let early_log = make_valid_log(TIMESTAMP - 1, String::default());
         let log = make_valid_log(TIMESTAMP, String::default());
@@ -654,8 +811,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_none_if_no_logs() -> Result<()> {
-        let (_temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
 
         assert!(streamer.read_most_recent_timestamp().await?.is_none());
         Ok(())
@@ -663,8 +824,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_none_if_logs_malformed() -> Result<()> {
-        let (_temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
 
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -676,14 +841,91 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_valid_log() -> Result<()> {
-        let (_temp, streamer) =
-            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
 
         let log = make_valid_log(TIMESTAMP, String::default());
         let log2 = make_malformed_log(TIMESTAMP + 1);
         streamer.append_logs(vec![log.clone(), log2.clone()]).await?;
 
         assert_eq!(streamer.read_most_recent_timestamp().await?.unwrap(), TIMESTAMP.into());
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_cleans_old_sessions() -> Result<()> {
+        let temp = tempdir()?;
+        let root: PathBuf = temp.path().to_path_buf().into();
+
+        let log = make_malformed_log(TIMESTAMP);
+        let log2 = make_malformed_log(TIMESTAMP + 1);
+        let log3 = make_malformed_log(TIMESTAMP + 2);
+        {
+            let streamer = setup_default_streamer_with_temp_and_boot_time(
+                &temp,
+                BOOT_TIME_NANOS,
+                LARGE_MAX_LOG_SIZE,
+                LARGE_MAX_SESSION_SIZE,
+                DEFAULT_MAX_SESSIONS,
+            )
+            .await
+            .unwrap();
+            streamer.append_logs(vec![log.clone()]).await.unwrap();
+        }
+
+        {
+            let streamer = setup_default_streamer_with_temp_and_boot_time(
+                &temp,
+                BOOT_TIME_NANOS + 2_000_000,
+                LARGE_MAX_LOG_SIZE,
+                LARGE_MAX_SESSION_SIZE,
+                DEFAULT_MAX_SESSIONS,
+            )
+            .await
+            .unwrap();
+            streamer.append_logs(vec![log2.clone()]).await.unwrap();
+        }
+
+        let streamer = setup_default_streamer_with_temp_and_boot_time(
+            &temp,
+            BOOT_TIME_NANOS + 3_000_000,
+            LARGE_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await
+        .unwrap();
+        streamer.append_logs(vec![log3.clone()]).await.unwrap();
+
+        streamer.clean_sessions_for_target().await?;
+
+        let mut session1 = root.clone();
+        session1.push(FAKE_DIR_NAME);
+        session1.push(NODENAME);
+        session1.push(BOOT_TIME_MILLIS.to_string());
+        assert!(!session1.exists().await);
+
+        let mut session2 = root.clone();
+        session2.push(FAKE_DIR_NAME);
+        session2.push(NODENAME);
+        session2.push((BOOT_TIME_MILLIS + 2).to_string());
+        assert!(!session2.exists().await);
+
+        let results = collect_default_logs_for_session(&root, BOOT_TIME_MILLIS + 3).await.unwrap();
+        println!("{:?}", results);
+        assert_eq!(results.len(), 1, "{:?}", results);
+        let mut values = results.values().collect::<Vec<_>>();
+        values.sort();
+        assert_eq!(
+            serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(),
+            log3,
+            "{:?}",
+            results
+        );
         Ok(())
     }
 }
