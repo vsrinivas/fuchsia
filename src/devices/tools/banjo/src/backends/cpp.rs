@@ -5,7 +5,7 @@
 use {
     crate::ast::{self, BanjoAst, Ident},
     crate::backends::c::{array_bounds, get_doc_comment, name_buffer, name_size, not_callback},
-    crate::backends::util::to_c_name,
+    crate::backends::util::{is_banjo_namespace, to_c_name},
     crate::backends::Backend,
     anyhow::{format_err, Error},
     std::collections::HashSet,
@@ -858,7 +858,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         ]
         .into_iter()
         .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| {
-            if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+            if is_banjo_namespace(n.0) {
                 n.0.replace('.', "/") + "/c/banjo"
             } else {
                 n.0.replace('.', "/")
@@ -1296,7 +1296,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         let mut includes = vec!["lib/mock-function/mock-function".to_string()]
             .into_iter()
             .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| {
-                if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+                if is_banjo_namespace(n.0) {
                     n.0.replace('.', "/") + "/cpp/banjo"
                 } else {
                     n.0.replace('.', "/")

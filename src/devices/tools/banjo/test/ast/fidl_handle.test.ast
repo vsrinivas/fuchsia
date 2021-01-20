@@ -1,0 +1,34 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.fidlhandle",
+    namespaces: {
+        "banjo.examples.fidlhandle": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.fidlhandle",
+                    ),
+                    name: "SomeStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "vmo",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
+}

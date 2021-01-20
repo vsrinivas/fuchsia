@@ -22,7 +22,7 @@ declaration_list = _{ ( declaration ~ ";" )* }
 
 declaration = _{ resource_declaration | const_declaration | enum_declaration | union_declaration | struct_declaration | protocol_declaration | alias_declaration }
 
-resource_declaration = { attributes ~ "resource" ~ (handle_type | identifier_type) ~ (":" ~ constant ~ ("," ~ constant)*)? }
+resource_declaration = { attributes ~ "deprecated_resource" ~ (handle_type | identifier_type) ~ (":" ~ constant ~ ("," ~ constant)*)? }
 
 const_declaration = { attributes ~ "const" ~ ( primitive_type | string_type | identifier_type ) ~ ident ~ "=" ~ constant }
 
@@ -32,7 +32,7 @@ attribute = { ident ~ ( "=" ~ string)? }
 attribute_list = { "[" ~ ( (attribute) ~ (",")? )* ~ "]" }
 attributes = !{ (doc_comment_block)? ~ (attribute_list)? }
 
-struct_declaration = { attributes ~ "struct" ~ ident ~ "{" ~ (struct_field ~ ";")* ~ "}" }
+struct_declaration = { attributes ~ "resource"? ~ "struct" ~ ident ~ "{" ~ (struct_field ~ ";")* ~ "}" }
 struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ constant)? }
 
 union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
@@ -55,7 +55,7 @@ protocol_declaration = { attributes ~ "protocol" ~ ident ~ ( ":" ~ super_protoco
 
 alias_declaration = { attributes ~ "alias" ~ ident ~ "=" ~ ident }
 
-type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | identifier_type }
+type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | fidl_handle_type | identifier_type }
 
 identifier_type = { compound_ident ~ reference? }
 array_type = { "array" ~ "<" ~ type_ ~ ">" ~ ":" ~ constant }
@@ -75,6 +75,10 @@ handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "por
                  "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" | "profile" |
                  "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" | "clock" |
                  "msi" }
+
+fidl_handle_type = { "zx.handle:" ~ fidl_handle_subtype ~ reference? }
+
+fidl_handle_subtype = { "VMO" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = @{ ("@")? ~ (alpha | digit | "_")+ }

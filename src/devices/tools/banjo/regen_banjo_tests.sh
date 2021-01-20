@@ -22,6 +22,14 @@ do
   extension="${filename##*.*.}"
   filename="${filename%.*.*}"
 
+  if [ "$filename" = "library_part_two" ]; then
+    continue
+  fi
+  if [ "$filename" = "library_part_one" ]; then
+    $BANJO_BIN --backend ast --omit-zx --output "$AST_FILES/library_parts.test.ast" --files $f "$BANJO_FILES/library_part_two.test.banjo"
+    continue
+  fi
+
   dependencies=""
   zx="--omit-zx"
   type_only=false

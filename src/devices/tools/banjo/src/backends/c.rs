@@ -6,7 +6,7 @@ use {
     crate::ast::{
         self, Attrs, BanjoAst, Constant, Decl, EnumVariant, Ident, Method, StructField, UnionField,
     },
-    crate::backends::util::to_c_name,
+    crate::backends::util::{is_banjo_namespace, to_c_name},
     crate::backends::Backend,
     anyhow::{format_err, Error},
     std::io,
@@ -859,7 +859,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .filter(|n| *n.0 != ast.primary_namespace)
             .filter(|n| *n.0 != "zx")
             .map(|n| {
-                if n.0.contains("fuchsia.hardware") || n.0.contains("ddk.hw") {
+                if is_banjo_namespace(n.0) {
                     n.0.replace('.', "/") + "/c/banjo"
                 } else {
                     n.0.replace('.', "/")

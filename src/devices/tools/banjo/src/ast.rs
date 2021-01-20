@@ -16,8 +16,6 @@ use {
 
 #[derive(Debug, Error)]
 pub enum ParseError {
-    #[error("The primary namespace was already set")]
-    AlreadyPrimaryNamespace,
     #[error("{} is not yet support", 0)]
     NotYetSupported(String),
     #[error("{:?} is not expected in this location", 0)]
@@ -317,6 +315,33 @@ impl Ty {
                                 "pmt" => HandleTy::Pmt,
                                 "clock" => HandleTy::Clock,
                                 "msi" => HandleTy::Msi,
+                                _e => {
+                                    return Err(ParseError::UnrecognizedType(
+                                        inner_pair.as_str().to_string(),
+                                    ));
+                                }
+                            }
+                        }
+                        Rule::reference => {
+                            reference = true;
+                        }
+                        _e => {
+                            return Err(ParseError::UnrecognizedType(
+                                inner_pair.as_str().to_string(),
+                            ));
+                        }
+                    }
+                }
+                Ok(Ty::Handle { ty, reference })
+            }
+            Rule::fidl_handle_type => {
+                let mut ty = HandleTy::Handle;
+                let mut reference = false;
+                for inner_pair in pair.clone().into_inner() {
+                    match inner_pair.as_rule() {
+                        Rule::fidl_handle_subtype => {
+                            ty = match inner_pair.as_str() {
+                                "VMO" => HandleTy::Vmo,
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),
@@ -1164,19 +1189,19 @@ impl BanjoAst {
         for pairs in pair_vec {
             for pair in pairs {
                 let mut current_namespace = String::default();
-                let mut namespace = Vec::default();
                 for inner_pair in pair.into_inner() {
                     match inner_pair.as_rule() {
                         Rule::library_header => {
                             for token in inner_pair.into_inner() {
                                 if Rule::compound_ident == token.as_rule() {
                                     current_namespace = String::from(token.as_str());
-                                    if let Some(primary_namespace) = primary_namespace {
-                                        if primary_namespace == current_namespace {
-                                            return Err(ParseError::AlreadyPrimaryNamespace);
-                                        }
-                                    }
+                                    // Keep updating the primary namespace as it should be the last
+                                    // one we encounter.
                                     primary_namespace = Some(String::from(token.as_str()));
+                                    if !namespaces.contains_key(&current_namespace) {
+                                        namespaces
+                                            .insert(current_namespace.clone(), Vec::default());
+                                    }
                                 }
                             }
                         }
@@ -1206,13 +1231,12 @@ impl BanjoAst {
                         | Rule::alias_declaration => {
                             let decl =
                                 Self::parse_decl(inner_pair, &current_namespace, &namespaces)?;
-                            namespace.push(decl)
+                            namespaces.get_mut(&current_namespace).unwrap().push(decl)
                         }
                         Rule::EOI => (),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     };
                 }
-                namespaces.insert(current_namespace, namespace);
             }
         }
 

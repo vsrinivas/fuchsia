@@ -180,6 +180,11 @@ if (host_toolchain == current_toolchain) {
     inputs = [
       "test/banjo/binary.test.banjo",
       "test/c/binary.h",
+      "test/ast/fidl_handle.test.ast",
+      "test/banjo/fidl_handle.test.banjo",
+      "test/banjo/library_part_one.test.banjo",
+      "test/banjo/library_part_two.test.banjo",
+      "test/ast/library_parts.test.ast",
       "test/banjo/preserve_names.test.banjo",
       "test/c/preserve_names.h",
       "test/ast/alias.test.ast",
