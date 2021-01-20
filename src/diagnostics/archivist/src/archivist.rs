@@ -17,6 +17,7 @@ use {
                 EventSource,
             },
         },
+        inspect::budget::SnapshotBudget,
         logs::{redact::Redactor, socket::LogMessageSocket},
         pipeline::Pipeline,
         repository::DataRepo,
@@ -124,6 +125,9 @@ impl ArchivistBuilder {
                 .ok()
         });
 
+        let snapshot_budget =
+            SnapshotBudget::new(archivist_configuration.inspect.max_concurrent_components);
+
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline_node = pipelines_node.create_child("feedback");
         let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
@@ -152,8 +156,12 @@ impl ArchivistBuilder {
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
-        let all_access_pipeline =
-            Arc::new(RwLock::new(Pipeline::new(None, Redactor::noop(), diagnostics_repo.clone())));
+        let all_access_pipeline = Arc::new(RwLock::new(Pipeline::new(
+            None,
+            Redactor::noop(),
+            diagnostics_repo.clone(),
+            snapshot_budget.clone(),
+        )));
 
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
@@ -175,6 +183,7 @@ impl ArchivistBuilder {
             feedback_static_selectors,
             feedback_redactor,
             diagnostics_repo.clone(),
+            snapshot_budget.clone(),
         )));
 
         // The Inspect Repository offered to the LegacyMetrics
@@ -192,6 +201,7 @@ impl ArchivistBuilder {
             },
             Redactor::noop(),
             diagnostics_repo.clone(),
+            snapshot_budget.clone(),
         )));
 
         // TODO(fxbug.dev/55736): Refactor this code so that we don't store
@@ -816,6 +826,7 @@ mod tests {
             max_archive_size_bytes: 10,
             max_event_group_size_bytes: 10,
             num_threads: 1,
+            inspect: configs::InspectConfig { max_concurrent_components: 1 },
             logs: configs::LogsConfig {
                 max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
             },

@@ -14,7 +14,7 @@ use {
 
 static DISABLE_FILTER_FILE_NAME: &'static str = "DISABLE_FILTERING.txt";
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
     /// Path to which archived data will be written. No storage will be performed if left empty.
     pub archive_path: Option<PathBuf>,
@@ -28,11 +28,20 @@ pub struct Config {
     /// Number of threads the archivist has available to use.
     pub num_threads: usize,
 
+    /// Configuration for Archivist's inspect subsystem.
+    pub inspect: InspectConfig,
+
     /// Configuration for Archivist's log subsystem.
     pub logs: LogsConfig,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq)]
+pub struct InspectConfig {
+    /// The maximum number of components' Inspect we will snapshot at a given time.
+    pub max_concurrent_components: usize,
+}
+
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq)]
 pub struct LogsConfig {
     /// The maximum number of "raw logs bytes" Archivist will keep cached at one time.
     ///
@@ -186,6 +195,9 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
+                  "inspect": {
+                    "max_concurrent_components": 1
+                  },
                   "logs": {
                     "max_cached_original_bytes": 500
                   },
@@ -211,6 +223,9 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
+                  "inspect": {
+                    "max_concurrent_components": 1
+                  },
                   "logs": {
                     "max_cached_original_bytes": 500
                   },

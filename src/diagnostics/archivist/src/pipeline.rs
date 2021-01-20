@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        inspect::container::UnpopulatedInspectDataContainer,
+        inspect::{budget::SnapshotBudget, container::UnpopulatedInspectDataContainer},
         lifecycle::container::LifecycleDataContainer,
         logs::{
             redact::{RedactedItem, Redactor},
@@ -30,6 +30,7 @@ pub struct Pipeline {
     log_redactor: Arc<Redactor>,
     moniker_to_static_matcher_map: HashMap<String, InspectHierarchyMatcher>,
     data_repo: DataRepo,
+    snapshot_budget: SnapshotBudget,
 }
 
 impl Pipeline {
@@ -37,12 +38,14 @@ impl Pipeline {
         static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
         log_redactor: Redactor,
         data_repo: DataRepo,
+        snapshot_budget: SnapshotBudget,
     ) -> Self {
         Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),
             static_pipeline_selectors,
             log_redactor: Arc::new(log_redactor),
             data_repo,
+            snapshot_budget,
         }
     }
 
@@ -56,6 +59,7 @@ impl Pipeline {
             static_pipeline_selectors,
             log_redactor: Arc::new(Redactor::noop()),
             data_repo,
+            snapshot_budget: SnapshotBudget::new(1),
         }
     }
 
@@ -105,5 +109,10 @@ impl Pipeline {
         self.data_repo
             .read()
             .fetch_inspect_data(component_selectors, moniker_to_static_selector_opt)
+    }
+
+    /// Returns a reference to the overall repository's budget for in-flight snapshots.
+    pub fn snapshot_budget(&self) -> SnapshotBudget {
+        self.snapshot_budget.clone()
     }
 }

@@ -1,4 +1,7 @@
 {
+    "inspect": {
+        "max_concurrent_components": 3
+    },
     "logs": {
         "max_cached_original_bytes": 4194304
     },
