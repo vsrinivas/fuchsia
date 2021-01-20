@@ -10,13 +10,13 @@
 
 namespace camera {
 
-inline constexpr const char* kMutablePartitionDirPath = "/data";
 inline constexpr const char* kExtension = ".raw";
 inline constexpr const char* kFilename = "/frame_";
 
-// An ImageIOUtil object that writes frames from a stream to disk.
+// An ImageIOUtil object that writes frames from a stream to an on-device partition.
 // If the files are accessed via `fx shell` they will appear at the following path:
-//  data/r/sys/fuchsia.com:[COMPONENT NAME]:0#meta:[COMPONENT NAME].cmx
+//
+//  [PARTITION]/r/sys/fuchsia.com:[PKG NAME]:0#meta:[COMPONENT NAME].cmx
 class ImageIOUtil {
  public:
   // Constructor.
@@ -42,9 +42,9 @@ class ImageIOUtil {
   //  |id| The id of the buffer containing the frame to be written to disk.
   zx_status_t WriteImageData(uint32_t id);
 
-  std::string GetDirpath() { return kMutablePartitionDirPath + dir_path_; }
+  std::string GetDirpath() { return dir_path_; }
   std::string GetFilepath(uint32_t file_num) {
-    return kMutablePartitionDirPath + dir_path_ + kFilename + std::to_string(file_num) + kExtension;
+    return dir_path_ + kFilename + std::to_string(file_num) + kExtension;
   }
 
  private:

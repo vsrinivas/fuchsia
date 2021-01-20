@@ -22,6 +22,11 @@ fit::result<std::unique_ptr<ImageIOUtil>, zx_status_t> ImageIOUtil::Create(
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
+  if (dir_path.empty()) {
+    FX_LOGS(DEBUG) << "Failed to create ImageIOUtil with empty dir_path.";
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_clone;
   zx_status_t status = buffer_collection->Clone(&buffer_collection_clone);
   if (status != ZX_OK) {
@@ -42,12 +47,8 @@ fit::result<std::unique_ptr<ImageIOUtil>, zx_status_t> ImageIOUtil::Create(
 // ImageIOUtil was created) are also deleted.
 zx_status_t ImageIOUtil::DeleteImageData() {
   bool delete_status = true;
-  if (dir_path_.empty()) {
-    for (uint32_t i = 0; i < num_image_; ++i) {
-      delete_status &= files::DeletePath(GetFilepath(i), false);
-    }
-  } else {
-    delete_status = files::DeletePath(GetDirpath(), true);
+  for (uint32_t i = 0; i < num_image_; ++i) {
+    delete_status &= files::DeletePath(GetFilepath(i), false);
   }
 
   return delete_status ? ZX_OK : ZX_ERR_IO;
