@@ -5,6 +5,7 @@
         args: [
             "--disable-klog",
             "--disable-log-connector",
+            "--disable-component-event-provider",
             "--config-path",
             "/pkg/data/embedding-config.json",
         ],

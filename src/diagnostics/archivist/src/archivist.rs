@@ -21,18 +21,13 @@ use {
         pipeline::Pipeline,
         repository::DataRepo,
     },
-    anyhow::{Context, Error},
+    anyhow::Error,
     fidl::{endpoints::RequestStream, AsyncChannel},
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
-    fidl_fuchsia_sys2::EventSourceMarker,
-    fidl_fuchsia_sys_internal::ComponentEventProviderMarker,
     fuchsia_async::{self as fasync, Task},
-    fuchsia_component::{
-        client::connect_to_service,
-        server::{ServiceFs, ServiceObj, ServiceObjTrait},
-    },
+    fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
@@ -100,7 +95,7 @@ pub struct ArchivistBuilder {
 impl ArchivistBuilder {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
-    /// Call `install_log_services`, `install_event_sources`.
+    /// Call `install_log_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
@@ -396,20 +391,6 @@ impl ArchivistBuilder {
             });
         debug!("Log services initialized.");
         self
-    }
-
-    pub async fn install_event_sources(&mut self, enable_v2: bool) -> Result<(), Error> {
-        let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
-            .context("failed to connect to event provider")?;
-        self.add_event_source("v1", Box::new(legacy_event_provider)).await;
-
-        if enable_v2 {
-            let event_source = connect_to_service::<EventSourceMarker>()
-                .context("failed to connect to event source")?;
-            self.add_event_source("v2", Box::new(event_source)).await;
-        }
-
-        Ok(())
     }
 
     // Sets event provider which is used to collect component events, Panics if called twice.

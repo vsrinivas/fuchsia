@@ -15,7 +15,8 @@ use {
     fidl_fuchsia_diagnostics_internal::{
         DetectControllerMarker, LogStatsControllerMarker, SamplerControllerMarker,
     },
-    fidl_fuchsia_sys_internal::LogConnectorMarker,
+    fidl_fuchsia_sys2::EventSourceMarker,
+    fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
@@ -25,6 +26,7 @@ use {
 };
 
 /// Monitor, collect, and store diagnostics from components.
+// TODO(fxbug.dev/67983) make flags positive rather than negative
 #[derive(Debug, Default, FromArgs)]
 pub struct Args {
     /// disables proxying kernel logger
@@ -36,9 +38,15 @@ pub struct Args {
     #[argh(switch)]
     disable_log_connector: bool,
 
-    /// whether to connecto to event source or not.
+    /// whether to connecto to event source or not. This can be set to true when the archivist won't
+    /// consume events from the Component Framework v2 to remove log spam.
     #[argh(switch)]
     disable_event_source: bool,
+
+    /// whether to connecto to the component event provider or not. This can be set to true when the
+    /// archivist won't consume events from the Component Framework v1 to remove log spam.
+    #[argh(switch)]
+    disable_component_event_provider: bool,
 
     /// initializes syslog library with a log socket to itself
     #[argh(switch)]
@@ -100,7 +108,21 @@ fn main() -> Result<(), Error> {
 
     executor.run_singlethreaded(archivist.install_log_services());
     executor
-        .run_singlethreaded(archivist.install_event_sources(!opt.disable_event_source))
+        .run_singlethreaded(async {
+            if !opt.disable_component_event_provider {
+                let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
+                    .context("failed to connect to event provider")?;
+                archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
+            }
+
+            if !opt.disable_event_source {
+                let event_source = connect_to_service::<EventSourceMarker>()
+                    .context("failed to connect to event source")?;
+                archivist.add_event_source("v2", Box::new(event_source)).await;
+            }
+
+            Ok::<(), Error>(())
+        })
         .context("failed to add event lifecycle event sources")?;
 
     if let Some(socket) = log_server {
