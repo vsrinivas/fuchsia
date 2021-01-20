@@ -1,0 +1,18 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/io_conformance_harness_minfs",
+    },
+    capabilities: [
+        { protocol: "fuchsia.io.test.Io1Harness" },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.io.test.Io1Harness",
+            from: "self",
+        },
+    ],
+}

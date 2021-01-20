@@ -16,6 +16,7 @@ static_library("minfs") {
   friend = [
     "test:*",
     "allocator/test:*",
+    "//src/storage/conformance/conformance_harness/minfs:bin",
   ]
   visibility = [
     "//src/devices/block/bin/disk-inspect",
@@ -65,7 +66,6 @@ static_library("minfs") {
     "metrics.cc",
     "metrics.h",
     "minfs.cc",
-    "minfs_private.h",
     "minfs_private.h",
     "pending_work.h",
     "resizeable_array_buffer.cc",

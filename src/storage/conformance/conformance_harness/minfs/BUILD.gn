@@ -1,0 +1,46 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "io_conformance_harness_minfs"
+  sources = [ "harness.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io.test",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/storage/minfs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fs",
+  ]
+}
+
+fuchsia_component("minfs-harness") {
+  testonly = true
+  manifest = "meta/minfs_harness.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("minfs-test") {
+  testonly = true
+  manifest = "//src/storage/conformance/meta/minfs_io1_conformance_test.cml"
+  deps = [ "//src/storage/conformance:io1_conformance_test" ]
+}
+
+fuchsia_test_package("minfs-io1-conformance-test") {
+  test_components = [ ":minfs-test" ]
+  deps = [ ":minfs-harness" ]
+}
