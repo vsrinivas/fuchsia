@@ -18,7 +18,8 @@ use {
 /// Taken from //src/storage/blobfs/include/blobfs/format.h
 const BLOBFS_MAGIC_0: u64 = 0xac2153479e694d21;
 const BLOBFS_MAGIC_1: u64 = 0x985000d4d4d3d314;
-const BLOBFS_VERSION: u32 = 8;
+const BLOBFS_VERSION_8: u32 = 8;
+const BLOBFS_VERSION_9: u32 = 9;
 const BLOBFS_BLOCK_SIZE: u64 = 8192;
 const BLOBFS_MERKLE_SIZE: u64 = 32;
 const BLOBFS_BLOCK_BITS: u64 = BLOBFS_BLOCK_SIZE * 8;
@@ -81,7 +82,9 @@ impl BlobFsHeader {
             return Err(Error::new(BlobFsError::InvalidHeaderMagic));
         }
         let version: u32 = cursor.read_u32::<LittleEndian>()?;
-        if version != BLOBFS_VERSION {
+        // Version 9 removes support fo ZSTD_Seekable blobs which scrutiny
+        // does not support anyway. So both are suitable for use with the tool.
+        if version != BLOBFS_VERSION_8 && version != BLOBFS_VERSION_9 {
             return Err(Error::new(BlobFsError::UnsupportedVersion));
         }
         let flags: u32 = cursor.read_u32::<LittleEndian>()?;
@@ -463,7 +466,7 @@ mod tests {
         BlobFsHeader {
             magic_0: BLOBFS_MAGIC_0,
             magic_1: BLOBFS_MAGIC_1,
-            version: BLOBFS_VERSION,
+            version: BLOBFS_VERSION_9,
             flags: 0,
             block_size: 8192,
             reserved_1: 0,
@@ -629,5 +632,16 @@ mod tests {
         let mut reader = BlobFsReader::new(blobfs_bytes);
         let blobs = reader.parse().unwrap();
         assert_eq!(blobs.len(), 1);
+    }
+
+    #[test]
+    fn test_blobfs_old_compat_version() {
+        let mut header = fake_blobfs_header();
+        header.version = BLOBFS_VERSION_8;
+        let mut blobfs_bytes = bincode::serialize(&header).unwrap();
+        let mut empty_data = vec![0u8; 8192 * 20];
+        blobfs_bytes.append(&mut empty_data);
+        let mut reader = BlobFsReader::new(blobfs_bytes);
+        assert!(reader.parse().is_ok());
     }
 }
