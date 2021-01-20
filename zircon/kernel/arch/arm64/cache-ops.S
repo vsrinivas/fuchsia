@@ -51,6 +51,13 @@ FUNCTION(arch_invalidate_cache_range)
     SPECULATION_POSTFENCE
 END_FUNCTION(arch_invalidate_cache_range)
 
+    // void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
+FUNCTION(arm64_clean_cache_range_pou)
+    cache_range_op dc cvau arm64_dcache_size // clean dcache to PoU by MVA
+    ret
+    SPECULATION_POSTFENCE
+END_FUNCTION(arm64_clean_cache_range_pou)
+
     // void arch_sync_cache_range(vaddr_t start, size_t len);
 FUNCTION(arch_sync_cache_range)
     cache_range_op dc cvau arm64_dcache_size // clean dcache to PoU by MVA

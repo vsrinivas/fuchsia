@@ -1410,3 +1410,24 @@ vaddr_t ArmArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vadd
   canary_.Assert();
   return PAGE_ALIGN(base);
 }
+
+void ArmVmICacheConsistencyManager::SyncAddr(vaddr_t start, size_t len) {
+  // Validate we are operating on a kernel address range.
+  DEBUG_ASSERT(is_kernel_address(start));
+  // use the physmap to clean the range to PoU, which is the point of where the instruction cache
+  // pulls from. Cleaning to PoU is potentially cheaper than cleaning to PoC, which is the default
+  // of arch_clean_cache_range.
+  arm64_clean_cache_range_pou(start, len);
+  // We can batch the icache invalidate and just perform it once at the end.
+  need_invalidate_ = true;
+}
+void ArmVmICacheConsistencyManager::Finish() {
+  if (!need_invalidate_) {
+    return;
+  }
+  // Under the assumption our icache is VIPT then as we do not know all the virtual aliases of the
+  // sections we cleaned our only option is to dump the entire icache.
+  asm volatile("ic ialluis" ::: "memory");
+  __isb(ARM_MB_SY);
+  need_invalidate_ = false;
+}

@@ -28,6 +28,8 @@ static inline uint32_t arch_dcache_line_size(void) { return arm64_dcache_size; }
 
 static inline uint32_t arch_icache_line_size(void) { return arm64_icache_size; }
 
+void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
+
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before
 // it is running. Alas we can't use zx_koid_t here as the arch layer is at a

@@ -139,10 +139,25 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   const size_t size_ = 0;
 };
 
+// TODO: Take advantage of information in the CTR to determine if icache is PIPT and whether
+// cleaning is required.
+class ArmVmICacheConsistencyManager final : public ArchVmICacheConsistencyManagerInterface {
+ public:
+  ArmVmICacheConsistencyManager() = default;
+  ~ArmVmICacheConsistencyManager() override { Finish(); }
+
+  void SyncAddr(vaddr_t start, size_t len) override;
+  void Finish() override;
+
+ private:
+  bool need_invalidate_ = false;
+};
+
 static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
   return static_cast<paddr_t>(vmid) << 48 | baddr;
 }
 
 using ArchVmAspace = ArmArchVmAspace;
+using ArchVmICacheConsistencyManager = ArmVmICacheConsistencyManager;
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_

@@ -368,6 +368,10 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
 
   Guard<Mutex> guard{&lock_};
 
+  // For syncing instruction caches there may be work that is more efficient to batch together, and
+  // so we use an abstract consistency manager to optimize it for the given architecture.
+  ArchVmICacheConsistencyManager sync_cm;
+
   const size_t end_offset = static_cast<size_t>(start_offset + len);
   size_t op_start_offset = static_cast<size_t>(start_offset);
 
@@ -415,7 +419,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
           arch_clean_invalidate_cache_range(cache_op_addr, cache_op_len);
           break;
         case CacheOpType::Sync:
-          arch_sync_cache_range(cache_op_addr, cache_op_len);
+          sync_cm.SyncAddr(cache_op_addr, cache_op_len);
           break;
       }
     } else if (status == ZX_ERR_OUT_OF_RANGE) {

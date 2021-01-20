@@ -155,6 +155,31 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   ktl::atomic<int> active_cpus_{0};
 };
 
+class X86VmICacheConsistencyManager final : public ArchVmICacheConsistencyManagerInterface {
+ public:
+  X86VmICacheConsistencyManager() = default;
+  ~X86VmICacheConsistencyManager() override { Finish(); }
+
+  void SyncAddr(vaddr_t start, size_t len) override { need_cpuid_ = true; }
+
+  void Finish() override {
+    if (!need_cpuid_) {
+      return;
+    }
+    // Invoke cpuid to act as a serializing instruction.  This will ensure we
+    // see modifications to future parts of the instruction stream.  See
+    // Intel Volume 3, 8.1.3 "Handling Self- and Cross-Modifying Code".  cpuid
+    // is the more conservative approach suggested in this section.
+    uint32_t v;
+    cpuid(0, &v, &v, &v, &v);
+    need_cpuid_ = false;
+  }
+
+ private:
+  bool need_cpuid_ = false;
+};
+
 using ArchVmAspace = X86ArchVmAspace;
+using ArchVmICacheConsistencyManager = X86VmICacheConsistencyManager;
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
