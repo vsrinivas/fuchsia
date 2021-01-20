@@ -54,8 +54,10 @@ template("ffx") {
              "//third_party/rust_crates:argh",
              "//third_party/rust_crates:async-std",
              "//third_party/rust_crates:futures",
+             "//third_party/rust_crates:hex",
              "//third_party/rust_crates:lazy_static",
              "//third_party/rust_crates:log",
+             "//third_party/rust_crates:ring",
            ]
     non_rust_deps = [
       "//src/lib/chunked-compression",

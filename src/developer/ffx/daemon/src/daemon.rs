@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, MDNS_BROADCAST_INTERVAL_SECS},
+    crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL_SECS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
@@ -522,6 +522,11 @@ impl Daemon {
             DaemonRequest::RemoveTarget { target_id, responder } => {
                 let result = self.target_collection.remove_target(target_id.clone()).await;
                 responder.send(&mut Ok(result)).context("error sending response")?;
+            }
+            DaemonRequest::GetHash { responder } => {
+                let hash: String =
+                    ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
+                responder.send(&hash).context("error sending response")?;
             }
         }
         Ok(())

@@ -6,7 +6,7 @@ use {
     analytics::{add_crash_event, add_launch_event, show_analytics_notice},
     anyhow::{anyhow, Context, Result},
     async_std::future::timeout,
-    ffx_core::{build_info, ffx_error, FfxError},
+    ffx_core::{build_info, ffx_bail, ffx_error, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
@@ -15,6 +15,9 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
     lazy_static::lazy_static,
+    ring::digest::{Context as ShaContext, Digest, SHA256},
+    std::fs::File,
+    std::io::{BufReader, Read},
     std::sync::{Arc, Mutex},
     std::time::{Duration, Instant},
 };
@@ -39,6 +42,8 @@ Tip: You can use `ffx --target \"my-nodename\" <command>` to specify a target
 for a particular command, or use `ffx target default set \"my-nodename\"` if
 you always want to use a particular target.";
 
+const CURRENT_EXE_HASH: &str = "current.hash";
+
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
     static ref SPAWN_GUARD: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
@@ -47,13 +52,34 @@ lazy_static! {
 // This could get called multiple times by the plugin system via multiple threads - so make sure
 // the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    {
-        let _guard = SPAWN_GUARD.lock().unwrap();
-        if !is_daemon_running().await {
-            spawn_daemon().await?;
+    let mut check_hash = false;
+    let _guard = SPAWN_GUARD.lock().unwrap();
+    if !is_daemon_running().await {
+        spawn_daemon().await?;
+    } else {
+        check_hash = true;
+    }
+    let proxy = find_and_connect(hoist::hoist()).await?;
+    if check_hash {
+        // TODO(fxb/67400) Create an e2e test.
+        let hash: String =
+            ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
+        let daemon_hash = proxy.get_hash().await?;
+        if hash != daemon_hash {
+            log::info!("Daemon is a different version.  Attempting to restart");
+            if proxy.quit().await? {
+                spawn_daemon().await?;
+                return find_and_connect(hoist::hoist()).await;
+            } else {
+                ffx_bail!(
+                    "FFX daemon is a different version. \n\
+                    Try running `ffx doctor --force-daemon-restart` and then retrying your \
+                    command"
+                )
+            }
         }
     }
-    find_and_connect(hoist::hoist()).await
+    Ok(proxy)
 }
 
 async fn proxy_timeout() -> Result<Duration> {
@@ -118,12 +144,46 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     false
 }
 
+fn set_hash_config(overrides: Option<String>) -> Result<Option<String>> {
+    let input = std::env::current_exe()?;
+    let reader = BufReader::new(File::open(input)?);
+    let digest = sha256_digest(reader)?;
+
+    let runtime = format!("{}={}", CURRENT_EXE_HASH, hex::encode(digest.as_ref()));
+    match overrides {
+        Some(s) => {
+            if s.is_empty() {
+                Ok(Some(runtime))
+            } else {
+                let new_overrides = format!("{},{}", s, runtime);
+                Ok(Some(new_overrides))
+            }
+        }
+        None => Ok(Some(runtime)),
+    }
+}
+
+fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest> {
+    let mut context = ShaContext::new(&SHA256);
+    let mut buffer = [0; 1024];
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        context.update(&buffer[..count]);
+    }
+
+    Ok(context.finish())
+}
+
 async fn run() -> Result<()> {
     let app: Ffx = from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
-    let overrides = app.runtime_config_overrides();
+    let overrides = set_hash_config(app.runtime_config_overrides())?;
     ffx_config::init_config(&app.config, &overrides, &app.env)?;
     let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
     ffx_config::logging::init(log_to_stdio).await?;

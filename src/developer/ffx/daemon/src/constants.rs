@@ -42,3 +42,5 @@ pub async fn get_socket() -> String {
 pub async fn get_socket() -> String {
     DEFAULT_SOCKET.to_string()
 }
+
+pub(crate) const CURRENT_EXE_HASH: &str = "current.hash";

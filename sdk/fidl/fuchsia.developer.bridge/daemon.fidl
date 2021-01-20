@@ -89,4 +89,7 @@ protocol Daemon {
     ///
     /// If target_id doesn't match a device name, the daemon will try to interpret it as an IP.
     RemoveTarget(string:fuchsia.device.DEVICE_NAME_MAX target_id) -> (bool removed) error DaemonError;
+
+    // Retrieves a hash of the current binary.
+    GetHash() -> (string:64 response);
 };
