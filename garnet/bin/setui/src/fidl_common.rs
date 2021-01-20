@@ -1,5 +1,4 @@
-use crate::switchboard::base::SwitchboardError;
-use anyhow::Error;
+use crate::handler::base::Error;
 
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -240,9 +239,9 @@ macro_rules! fidl_process_2 {
     };
 }
 
-pub fn convert_to_epitaph(error: &Error) -> fuchsia_zircon::Status {
-    match error.root_cause().downcast_ref::<SwitchboardError>() {
-        Some(SwitchboardError::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
+pub fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Status {
+    match error.root_cause().downcast_ref::<Error>() {
+        Some(Error::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
         _ => fuchsia_zircon::Status::INTERNAL,
     }
 }

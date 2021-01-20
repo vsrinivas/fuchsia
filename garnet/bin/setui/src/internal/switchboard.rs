@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::Request;
+use crate::handler::base::{Request, Response};
 use crate::message_hub_definition;
-use crate::switchboard::base::SettingResponseResult;
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
@@ -33,7 +32,7 @@ pub enum Action {
     // Defines a request to be acted upon the specified `SettingType`.
     Request(SettingType, Request),
     // Contains the response to the last request.
-    Response(SettingResponseResult),
+    Response(Response),
 }
 
 message_hub_definition!(Payload, Address);

@@ -4,14 +4,13 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::clock;
-use crate::handler::base::Request;
+use crate::handler::base::{Error, Request};
 use crate::internal::core;
 use crate::internal::switchboard;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent, SwitchboardError};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 
-use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_inspect_derive::{Inspect, WithInspect};
@@ -158,7 +157,7 @@ impl SwitchboardBuilder {
         self
     }
 
-    pub async fn build(self) -> Result<(), Error> {
+    pub async fn build(self) -> Result<(), anyhow::Error> {
         Switchboard::create(
             self.core_messenger_factory.unwrap_or(core::message::create_hub()),
             self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
@@ -201,19 +200,19 @@ impl Switchboard {
         setting_proxies: HashMap<SettingType, core::message::Signature>,
         policy_proxies: HashMap<core::message::Signature, SettingType>,
         inspect_node: inspect::Node,
-    ) -> Result<(), Error> {
+    ) -> Result<(), anyhow::Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<(SettingType, switchboard::message::Client)>();
 
         let (core_messenger, mut core_receptor) = core_messenger_factory
             .create(MessengerType::Addressable(core::Address::Switchboard))
             .await
-            .map_err(Error::new)?;
+            .map_err(anyhow::Error::new)?;
 
         let (_, mut switchboard_receptor) = switchboard_messenger_factory
             .create(MessengerType::Addressable(switchboard::Address::Switchboard))
             .await
-            .map_err(Error::new)?;
+            .map_err(anyhow::Error::new)?;
 
         let mut proxy_settings = HashMap::new();
 
@@ -362,7 +361,7 @@ impl Switchboard {
         setting_type: SettingType,
         request: Request,
         reply_client: switchboard::message::Client,
-    ) -> Result<(), SwitchboardError> {
+    ) -> Result<(), Error> {
         let messenger = self.core_messenger.clone();
         let action_id = self.get_next_action_id();
 
@@ -372,10 +371,10 @@ impl Switchboard {
             Entry::Vacant(_) => {
                 reply_client
                     .reply(switchboard::Payload::Action(switchboard::Action::Response(Err(
-                        SwitchboardError::UnhandledType(setting_type),
+                        Error::UnhandledType(setting_type),
                     ))))
                     .send();
-                return Err(SwitchboardError::UnhandledType(setting_type));
+                return Err(Error::UnhandledType(setting_type));
             }
             Entry::Occupied(occupied) => occupied.get().clone(),
         };
@@ -413,19 +412,16 @@ impl Switchboard {
         Ok(())
     }
 
-    async fn notify_proxy_listen(
-        &mut self,
-        setting_type: SettingType,
-    ) -> Result<(), SwitchboardError> {
+    async fn notify_proxy_listen(&mut self, setting_type: SettingType) -> Result<(), Error> {
         if !self.setting_proxies.contains_key(&setting_type) {
-            return Err(SwitchboardError::UnhandledType(setting_type));
+            return Err(Error::UnhandledType(setting_type));
         }
 
         let action_id = self.get_next_action_id();
         let listener_count = self.listeners.get(&setting_type).map_or(0, |x| x.len());
 
         let signature = match self.setting_proxies.entry(setting_type) {
-            Entry::Vacant(_) => return Err(SwitchboardError::UnhandledType(setting_type)),
+            Entry::Vacant(_) => return Err(Error::UnhandledType(setting_type)),
             Entry::Occupied(occupied) => occupied.get().clone(),
         };
 

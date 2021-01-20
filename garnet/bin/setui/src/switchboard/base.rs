@@ -5,105 +5,18 @@
 use std::collections::HashSet;
 
 use fuchsia_syslog::fx_log_warn;
-use thiserror::Error;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::setting_handler::ControllerError;
-use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), ControllerError>;
-pub type SettingResponseResult = Result<Option<SettingInfo>, SwitchboardError>;
 
 /// A trait for structs where all fields are options. Recursively performs
 /// [Option::or](std::option::Option::or) on each field in the struct and substructs.
 pub trait Merge {
     fn merge(&self, other: Self) -> Self;
-}
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum SwitchboardError {
-    #[error("Unimplemented Request:{0:?} for setting type: {1:?}")]
-    UnimplementedRequest(SettingType, Request),
-
-    #[error("Storage failure for setting type: {0:?}")]
-    StorageFailure(SettingType),
-
-    #[error("Initialization failure: cause {0:?}")]
-    InitFailure(Cow<'static, str>),
-
-    #[error("Restoration of setting on controller startup failed: cause {0:?}")]
-    RestoreFailure(Cow<'static, str>),
-
-    #[error("Invalid argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
-    InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
-
-    #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?}")]
-    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
-
-    #[error("Unhandled type: {0:?}")]
-    UnhandledType(SettingType),
-
-    #[error("Delivery error for type: {0:?} received by: {1:?}")]
-    DeliveryError(SettingType, SettingType),
-
-    #[error("Unexpected error: {0}")]
-    UnexpectedError(Cow<'static, str>),
-
-    #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
-    UndeliverableError(SettingType, Request),
-
-    #[error("Unsupported request for setting type: {0:?}")]
-    UnsupportedError(SettingType),
-
-    #[error("Communication error")]
-    CommunicationError,
-
-    #[error("Irrecoverable error")]
-    IrrecoverableError,
-
-    #[error("Timeout error")]
-    TimeoutError,
-}
-
-impl From<ControllerError> for SwitchboardError {
-    fn from(error: ControllerError) -> Self {
-        match error {
-            ControllerError::UnimplementedRequest(setting_type, request) => {
-                SwitchboardError::UnimplementedRequest(setting_type, request)
-            }
-            ControllerError::WriteFailure(setting_type) => {
-                SwitchboardError::StorageFailure(setting_type)
-            }
-            ControllerError::InitFailure(description) => SwitchboardError::InitFailure(description),
-            ControllerError::RestoreFailure(description) => {
-                SwitchboardError::RestoreFailure(description)
-            }
-            ControllerError::ExternalFailure(setting_type, dependency, request) => {
-                SwitchboardError::ExternalFailure(setting_type, dependency, request)
-            }
-            ControllerError::InvalidArgument(setting_type, argument, value) => {
-                SwitchboardError::InvalidArgument(setting_type, argument, value)
-            }
-            ControllerError::UnhandledType(setting_type) => {
-                SwitchboardError::UnhandledType(setting_type)
-            }
-            ControllerError::UnexpectedError(error) => SwitchboardError::UnexpectedError(error),
-            ControllerError::UndeliverableError(setting_type, request) => {
-                SwitchboardError::UndeliverableError(setting_type, request)
-            }
-            ControllerError::UnsupportedError(setting_type) => {
-                SwitchboardError::UnsupportedError(setting_type)
-            }
-            ControllerError::DeliveryError(setting_type, setting_type_2) => {
-                SwitchboardError::DeliveryError(setting_type, setting_type_2)
-            }
-            ControllerError::IrrecoverableError => SwitchboardError::IrrecoverableError,
-            ControllerError::TimeoutError => SwitchboardError::TimeoutError,
-            ControllerError::ExitError => SwitchboardError::IrrecoverableError,
-        }
-    }
 }
 
 /// Returns all known setting types. New additions to SettingType should also

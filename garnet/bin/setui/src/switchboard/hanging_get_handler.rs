@@ -4,12 +4,10 @@
 
 use {
     crate::base::{SettingInfo, SettingType},
-    crate::handler::base::Request,
+    crate::handler::base::{Error, Request},
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
-    crate::switchboard::base::SwitchboardError,
-    anyhow::Error,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
     futures::lock::Mutex,
@@ -70,7 +68,7 @@ where
         self.pending_responders.push((responder, error_sender));
     }
 
-    fn on_error(&mut self, error: &Error) {
+    fn on_error(&mut self, error: &anyhow::Error) {
         self.initialize();
 
         // Notify responders of error.
@@ -142,7 +140,7 @@ where
 /// Trait that should be implemented to send data to the hanging get watcher.
 pub trait Sender<T> {
     fn send_response(self, data: T);
-    fn on_error(self, error: &Error);
+    fn on_error(self, error: &anyhow::Error);
 }
 
 enum ListenCommand {
@@ -324,7 +322,7 @@ where
         }
     }
 
-    fn on_error(&mut self, error: &Error) {
+    fn on_error(&mut self, error: &anyhow::Error) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             exit_tx.unbounded_send(()).ok();
         }
@@ -335,7 +333,7 @@ where
         }
     }
 
-    async fn get_response(&self) -> Result<SettingInfo, Error> {
+    async fn get_response(&self) -> Result<SettingInfo, anyhow::Error> {
         let mut receptor = self
             .switchboard_messenger
             .message(
@@ -349,8 +347,8 @@ where
 
         match receptor.next_payload().await {
             switchboard_action_response!(Ok(Some(setting_response))) => Ok(setting_response),
-            switchboard_action_response!(Err(err)) => Err(Error::new(err)),
-            _ => Err(Error::new(SwitchboardError::UnexpectedError("Unexpected error".into()))),
+            switchboard_action_response!(Err(err)) => Err(anyhow::Error::new(err)),
+            _ => Err(anyhow::Error::new(Error::UnexpectedError("Unexpected error".into()))),
         }
     }
 }
@@ -382,13 +380,13 @@ mod tests {
     #[derive(PartialEq, Debug, Clone)]
     enum Event {
         Data(TestStruct),
-        SwitchboardError(SwitchboardError),
+        Error(Error),
         UnknownError,
     }
 
-    impl<C: Into<Cow<'static, str>>> From<C> for SwitchboardError {
+    impl<C: Into<Cow<'static, str>>> From<C> for Error {
         fn from(c: C) -> Self {
-            SwitchboardError::UnexpectedError(c.into())
+            Error::UnexpectedError(c.into())
         }
     }
 
@@ -512,7 +510,7 @@ mod tests {
 
             let mut response = None;
             if self.always_fail {
-                response = Some(Err(SwitchboardError::from(SET_ERROR)));
+                response = Some(Err(Error::from(SET_ERROR)));
             } else if let Some(value) = self.id_to_send {
                 response = Some(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                     false,
@@ -536,9 +534,9 @@ mod tests {
             self.sender.unbounded_send(Event::Data(data)).unwrap();
         }
 
-        fn on_error(self, error: &Error) {
-            let error = match error.root_cause().downcast_ref::<SwitchboardError>() {
-                Some(switchboard_error) => Event::SwitchboardError(switchboard_error.clone()),
+        fn on_error(self, error: &anyhow::Error) {
+            let error = match error.root_cause().downcast_ref::<Error>() {
+                Some(switchboard_error) => Event::Error(switchboard_error.clone()),
                 _ => Event::UnknownError,
             };
             self.sender.unbounded_send(error).unwrap();
@@ -592,7 +590,7 @@ mod tests {
         // The responder should receive an error
         assert_eq!(
             hanging_get_listener.next().await.unwrap(),
-            Event::SwitchboardError(SwitchboardError::from(SET_ERROR))
+            Event::Error(Error::from(SET_ERROR))
         );
 
         // When set, the exit sender should also be fired

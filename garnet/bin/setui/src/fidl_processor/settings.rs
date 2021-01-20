@@ -10,10 +10,9 @@ use futures::lock::Mutex;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
-use crate::handler::base::Request as SettingRequest;
+use crate::handler::base::{Error, Request as SettingRequest, Response};
 use crate::internal::switchboard::{self, Action, Address, Payload};
 use crate::message::base::{self, Audience};
-use crate::switchboard::base::{SettingResponseResult, SwitchboardError};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
 use std::hash::Hash;
@@ -74,11 +73,7 @@ where
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    pub async fn request(
-        &self,
-        setting_type: SettingType,
-        request: SettingRequest,
-    ) -> SettingResponseResult {
+    pub async fn request(&self, setting_type: SettingType, request: SettingRequest) -> Response {
         let mut receptor = self
             .switchboard_messenger
             .message(
@@ -91,7 +86,7 @@ where
             return result;
         }
 
-        Err(SwitchboardError::CommunicationError)
+        Err(Error::CommunicationError)
     }
 
     pub async fn watch(&self, responder: ST, close_on_error: bool) {

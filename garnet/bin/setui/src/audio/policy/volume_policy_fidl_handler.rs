@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::policy_request_respond;
-use anyhow::Error;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings_policy::{
     Property, VolumePolicyControllerAddPolicyResponder, VolumePolicyControllerAddPolicyResult,
@@ -21,10 +20,11 @@ use crate::base::SettingType;
 use crate::fidl_process_policy;
 use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
+use crate::handler::base::Error;
 use crate::internal::policy::{Address, Payload};
 use crate::policy::base as policy;
 use crate::shutdown_responder_with_error;
-use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
+use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_result_sender_for_responder!(
@@ -43,7 +43,7 @@ impl Sender<Vec<Property>> for VolumePolicyControllerGetPropertiesResponder {
             .log_fidl_response_error(VolumePolicyControllerMarker::DEBUG_NAME);
     }
 
-    fn on_error(self, error: &Error) {
+    fn on_error(self, error: &anyhow::Error) {
         shutdown_responder_with_error!(self, error);
     }
 }
@@ -102,7 +102,7 @@ async fn process_request(
                 Ok(transform) => transform,
                 Err(error_message) => {
                     fx_log_err!("Invalid policy parameters: {:?}", error_message);
-                    responder.on_error(&Error::new(SwitchboardError::UnexpectedError(
+                    responder.on_error(&anyhow::Error::new(Error::UnexpectedError(
                         error_message.into(),
                     )));
                     return Ok(None);
