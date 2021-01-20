@@ -125,6 +125,9 @@ A change can be submitted after a repository owner applies the
 is submitted to the Commit Queue (CQ). The Commit Queue verifies and
 merges changes to the `master` branch.
 
+**Only contributors with [commit access](/docs/contribute/community/contributor-roles.md#committer)** can submit code directly
+through the Gerrit interface. Regular members need to ask a Committer to submit code for them.
+
 ### Create and upload a patch
 
 After creating a change, to upload a patch to your change, do the following:
