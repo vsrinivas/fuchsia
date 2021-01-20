@@ -185,6 +185,8 @@ if (host_toolchain == current_toolchain) {
       "test/banjo/library_part_one.test.banjo",
       "test/banjo/library_part_two.test.banjo",
       "test/ast/library_parts.test.ast",
+      "test/ast/parameter-attributes.test.ast",
+      "test/banjo/parameter-attributes.test.banjo",
       "test/banjo/preserve_names.test.banjo",
       "test/c/preserve_names.h",
       "test/ast/alias.test.ast",

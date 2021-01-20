@@ -34,6 +34,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -45,6 +48,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -62,6 +68,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -73,6 +82,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -90,6 +102,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -101,6 +116,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -118,6 +136,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -129,6 +150,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -146,6 +170,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -157,6 +184,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -174,6 +204,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -185,6 +218,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -202,6 +238,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -213,6 +252,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -230,6 +272,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -241,6 +286,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -258,6 +306,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -269,6 +320,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -286,6 +340,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -297,6 +354,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -314,6 +374,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -325,6 +388,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -345,6 +411,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -359,6 +428,9 @@ BanjoAst {
                                         "1",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -411,6 +483,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -422,6 +497,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -439,6 +517,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -450,6 +531,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -467,6 +551,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -478,6 +565,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -495,6 +585,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -506,6 +599,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -523,6 +619,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -534,6 +633,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -551,6 +653,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -562,6 +667,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -579,6 +687,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -590,6 +701,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -607,6 +721,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -618,6 +735,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -635,6 +755,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -646,6 +769,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -663,6 +789,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -674,6 +803,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -691,6 +823,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -702,6 +837,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -722,6 +860,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -736,6 +877,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -778,6 +922,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -794,6 +941,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -816,6 +966,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -832,6 +985,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -854,6 +1010,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -870,6 +1029,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -892,6 +1054,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -908,6 +1073,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -930,6 +1098,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -946,6 +1117,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -968,6 +1142,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -984,6 +1161,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1006,6 +1186,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1022,6 +1205,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1044,6 +1230,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1060,6 +1249,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1082,6 +1274,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1098,6 +1293,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1120,6 +1318,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1136,6 +1337,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1158,6 +1362,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1174,6 +1381,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1199,6 +1409,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1218,6 +1431,9 @@ BanjoAst {
                                         "array_size",
                                     ),
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

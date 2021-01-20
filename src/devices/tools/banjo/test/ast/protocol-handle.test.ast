@@ -32,6 +32,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -41,6 +44,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -48,6 +54,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -63,6 +72,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -72,6 +84,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -79,6 +94,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -94,6 +112,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -103,6 +124,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -110,6 +134,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -125,6 +152,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -134,6 +164,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -141,6 +174,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -156,6 +192,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -165,6 +204,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -172,6 +214,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -187,6 +232,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -196,6 +244,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -203,6 +254,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -218,6 +272,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -227,6 +284,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -234,6 +294,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -249,6 +312,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -258,6 +324,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -265,6 +334,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -280,6 +352,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -289,6 +364,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -296,6 +374,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -311,6 +392,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -320,6 +404,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -327,6 +414,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -342,6 +432,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -351,6 +444,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -358,6 +454,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -373,6 +472,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -382,6 +484,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -389,6 +494,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -404,6 +512,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -413,6 +524,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -420,6 +534,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -435,6 +552,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -444,6 +564,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -451,6 +574,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -466,6 +592,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -475,6 +604,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -482,6 +614,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -497,6 +632,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -506,6 +644,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -513,6 +654,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -528,6 +672,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -537,6 +684,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -544,6 +694,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -559,6 +712,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -568,6 +724,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -575,6 +734,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -610,6 +772,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -619,6 +784,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "@h2",
@@ -626,6 +794,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -666,6 +837,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -675,6 +849,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -682,6 +859,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -702,6 +882,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -711,6 +894,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -718,6 +904,9 @@ BanjoAst {
                                     ty: Process,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -738,6 +927,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -747,6 +939,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -754,6 +949,9 @@ BanjoAst {
                                     ty: Thread,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -774,6 +972,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -783,6 +984,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -790,6 +994,9 @@ BanjoAst {
                                     ty: Vmo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -810,6 +1017,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -819,6 +1029,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -826,6 +1039,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -846,6 +1062,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -855,6 +1074,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -862,6 +1084,9 @@ BanjoAst {
                                     ty: Event,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -882,6 +1107,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -891,6 +1119,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -898,6 +1129,9 @@ BanjoAst {
                                     ty: Port,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -918,6 +1152,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -927,6 +1164,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -934,6 +1174,9 @@ BanjoAst {
                                     ty: Interrupt,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -954,6 +1197,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -963,6 +1209,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -970,6 +1219,9 @@ BanjoAst {
                                     ty: DebugLog,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -990,6 +1242,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -999,6 +1254,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1006,6 +1264,9 @@ BanjoAst {
                                     ty: Socket,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1026,6 +1287,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1035,6 +1299,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1042,6 +1309,9 @@ BanjoAst {
                                     ty: Resource,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1062,6 +1332,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1071,6 +1344,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1078,6 +1354,9 @@ BanjoAst {
                                     ty: EventPair,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1098,6 +1377,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1107,6 +1389,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1114,6 +1399,9 @@ BanjoAst {
                                     ty: Job,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1134,6 +1422,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1143,6 +1434,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1150,6 +1444,9 @@ BanjoAst {
                                     ty: Vmar,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1170,6 +1467,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1179,6 +1479,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1186,6 +1489,9 @@ BanjoAst {
                                     ty: Fifo,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1206,6 +1512,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1215,6 +1524,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1222,6 +1534,9 @@ BanjoAst {
                                     ty: Guest,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1242,6 +1557,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1251,6 +1569,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1258,6 +1579,9 @@ BanjoAst {
                                     ty: Timer,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1278,6 +1602,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1287,6 +1614,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "h2",
@@ -1294,6 +1624,9 @@ BanjoAst {
                                     ty: Profile,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

@@ -45,8 +45,9 @@ protocol_method = { attributes ~ protocol_parameters }
 protocol_parameters = { ident ~ parameter_list ~ ( "->" ~ parameter_list )? }
 
 parameter_list = { "(" ~ ( parameters )? ~ ")" }
-parameters = _{ parameter ~ "," ~ parameters | parameter}
-parameter = { type_ ~ ident }
+parameters = _{ parameter ~ "," ~ parameters | parameter }
+docless_attributes_ = { attribute_list? }
+parameter = { docless_attributes_ ~ type_ ~ ident }
 
 super_protocol_list = { compound_ident | compound_ident ~ "," ~ super_protocol_list }
 

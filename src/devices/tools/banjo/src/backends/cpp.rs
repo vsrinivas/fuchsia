@@ -141,7 +141,7 @@ fn get_in_params(
 ) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
-        .map(|(name, ty)| {
+        .map(|(name, ty, _)| {
             match ty {
                 ast::Ty::Identifier { id, .. } => {
                     if id.is_base_type() {
@@ -239,7 +239,7 @@ fn get_out_params(
     let (skip, return_param) = get_first_param(ast, m)?;
     let skip_amt = if skip { 1 } else { 0 };
 
-    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty)| {
+    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, _)| {
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
@@ -288,7 +288,7 @@ fn get_out_params(
 fn get_in_args(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     Ok(m.in_params
         .iter()
-        .map(|(name, ty)| match ty {
+        .map(|(name, ty, _)| match ty {
             ast::Ty::Vector { .. } => {
                 let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
                 format!(
@@ -325,7 +325,7 @@ fn get_out_args(
         m.out_params
             .iter()
             .skip(skip_amt)
-            .map(|(name, ty)| match ty {
+            .map(|(name, ty, _)| match ty {
                 ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Str { .. } => {
                     format!("out_{name}, {name}_capacity", name = to_c_name(name))
@@ -370,7 +370,7 @@ fn get_mock_out_param_types(m: &ast::Method, ast: &BanjoAst) -> Result<String, E
             "std::tuple<{}>",
             m.out_params
                 .iter()
-                .map(|(_name, ty)| match ty {
+                .map(|(_name, ty, _)| match ty {
                     ast::Ty::Str { .. } => "std::string".to_string(),
                     ast::Ty::Vector { ref ty, .. } => {
                         format!("std::vector<{}>", ty_to_cpp_str(ast, false, ty).unwrap())
@@ -385,7 +385,7 @@ fn get_mock_out_param_types(m: &ast::Method, ast: &BanjoAst) -> Result<String, E
 
 fn get_mock_param_types(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
     Ok(iter::once(get_mock_out_param_types(m, ast)?)
-        .chain(m.in_params.iter().map(|(_name, ty)| match ty {
+        .chain(m.in_params.iter().map(|(_name, ty, _)| match ty {
             ast::Ty::Str { .. } => "std::string".to_string(),
             ast::Ty::Vector { ref ty, .. } => {
                 format!("std::vector<{}>", ty_to_cpp_str(ast, false, ty).unwrap())
@@ -409,7 +409,7 @@ fn get_mock_params(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
 
     Ok(params
         .into_iter()
-        .chain(m.in_params.iter().map(|(name, ty)| match ty {
+        .chain(m.in_params.iter().map(|(name, ty, _)| match ty {
             ast::Ty::Handle { .. } => {
                 format!("const {}& {}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name))
             }
@@ -421,8 +421,8 @@ fn get_mock_params(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
             ),
             _ => format!("{} {}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name)),
         }))
-        .chain(m.out_params.iter().skip(if has_return_value { 1 } else { 0 }).map(|(name, ty)| {
-            match ty {
+        .chain(m.out_params.iter().skip(if has_return_value { 1 } else { 0 }).map(
+            |(name, ty, _)| match ty {
                 ast::Ty::Str { .. } => format!("std::string {}", to_c_name(name)),
                 ast::Ty::Vector { ref ty, .. } => format!(
                     "std::vector<{ty}> out_{name}",
@@ -430,8 +430,8 @@ fn get_mock_params(m: &ast::Method, ast: &BanjoAst) -> Result<String, Error> {
                     name = to_c_name(name),
                 ),
                 _ => format!("{} out_{}", ty_to_cpp_str(ast, true, ty).unwrap(), to_c_name(name)),
-            }
-        }))
+            },
+        ))
         .collect::<Vec<_>>()
         .join(", "))
 }
@@ -443,7 +443,7 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
             "{{{}}}",
             m.out_params
                 .iter()
-                .map(|(name, ty)| match ty {
+                .map(|(name, ty, _)| match ty {
                     ast::Ty::Handle { .. } => format!("std::move(out_{})", to_c_name(name)),
                     ast::Ty::Str { .. } => format!("std::move(out_{})", to_c_name(name)),
                     ast::Ty::Vector { .. } => format!("std::move(out_{})", to_c_name(name)),
@@ -456,7 +456,7 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
 
     Ok(args
         .into_iter()
-        .chain(m.in_params.iter().map(|(name, ty)| match ty {
+        .chain(m.in_params.iter().map(|(name, ty, _)| match ty {
             ast::Ty::Handle { .. } => format!("{}.get()", to_c_name(name)),
             ast::Ty::Str { .. } => format!("std::move({})", to_c_name(name)),
             ast::Ty::Vector { .. } => format!("std::move({})", to_c_name(name)),
@@ -679,7 +679,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 vec![]
             } else {
                 let skip_amt = if skip { 1 } else { 0 };
-                m.out_params.iter().skip(skip_amt).filter_map(|(name, ty)| {
+                m.out_params.iter().skip(skip_amt).filter_map(|(name, ty, _)| {
                     match ty {
                         ast::Ty::Handle {..} => Some((to_c_name(name), ty_to_cpp_str(ast, true, ty).unwrap())),
                         _ => None
@@ -745,7 +745,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let proto_args = m
                     .in_params
                     .iter()
-                    .filter_map(|(name, ty)| {
+                    .filter_map(|(name, ty, _)| {
                         if let ast::Ty::Identifier { id, .. } = ty {
                             if ast.id_to_type(id) == ast::Ty::Protocol && not_callback(ast, id) {
                                 return Some((
@@ -883,11 +883,11 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                         method
                             .in_params
                             .iter()
-                            .filter_map(|(_, ty)| match ty {
+                            .filter_map(|(_, ty, _)| match ty {
                                 ast::Ty::Handle { ty, .. } => Some(ty),
                                 _ => None,
                             })
-                            .chain(method.out_params.iter().filter_map(|(_, ty)| match ty {
+                            .chain(method.out_params.iter().filter_map(|(_, ty, _)| match ty {
                                 ast::Ty::Handle { ty, .. } => Some(ty),
                                 _ => None,
                             }))
@@ -1157,7 +1157,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let in_args = m
                     .in_params
                     .iter()
-                    .map(|(name, ty)| match ty {
+                    .map(|(name, ty, _)| match ty {
                         ast::Ty::Handle { .. } => format!("std::move({})", to_c_name(name)),
                         ast::Ty::Str { .. } => format!("std::string({})", to_c_name(name)),
                         ast::Ty::Vector { ref ty, .. } => {
@@ -1253,7 +1253,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
         namespace.iter().filter_map(filter_protocol).for_each(|(_name, methods, _attributes)| {
             methods.iter().for_each(|m| {
-                m.in_params.iter().for_each(|(_name, ty)| match ty {
+                m.in_params.iter().for_each(|(_name, ty, _)| match ty {
                     ast::Ty::Str { .. } => need_cpp_string_header = true,
                     ast::Ty::Vector { .. } => need_cpp_vector_header = true,
                     _ => {}
@@ -1263,7 +1263,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     need_cpp_tuple_header = true;
                 }
 
-                m.out_params.iter().for_each(|(_name, ty)| match ty {
+                m.out_params.iter().for_each(|(_name, ty, _)| match ty {
                     ast::Ty::Str { .. } => {
                         need_cpp_string_header = true;
                         if !m.attributes.has_attribute("Async") {

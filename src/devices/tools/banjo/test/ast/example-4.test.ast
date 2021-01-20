@@ -76,6 +76,9 @@ BanjoAst {
                             (
                                 "x",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [],

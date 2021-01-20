@@ -123,12 +123,18 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "token",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -152,6 +158,9 @@ BanjoAst {
                             (
                                 "token",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "time",
@@ -164,6 +173,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -178,6 +190,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -197,6 +212,9 @@ BanjoAst {
                             (
                                 "token",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -211,6 +229,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -264,6 +285,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [],

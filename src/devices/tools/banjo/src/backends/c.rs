@@ -263,10 +263,11 @@ fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String
         Ok((false, "void".to_string()))
     }
 }
+
 fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
-        .map(|(name, ty)| {
+        .map(|(name, ty, _)| {
             match ty {
                 ast::Ty::Identifier { id, .. } => {
                     if id.is_base_type() {
@@ -366,7 +367,7 @@ fn get_out_params(
     let (skip, return_param) = get_first_param(ast, m)?;
     let skip_amt = if skip { 1 } else { 0 };
 
-    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty)| {
+    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, _)| {
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
@@ -413,7 +414,7 @@ fn get_out_params(
 fn get_in_args(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     Ok(m.in_params
         .iter()
-        .map(|(name, ty)| match ty {
+        .map(|(name, ty, _)| match ty {
             ast::Ty::Vector { .. } => {
                 let ty = ty_to_c_str(ast, ty).unwrap();
                 format!(
@@ -439,7 +440,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
         m.out_params
             .iter()
             .skip(skip_amt)
-            .map(|(name, ty)| match ty {
+            .map(|(name, ty, _)| match ty {
                 ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_c_str(ast, ty).unwrap();
@@ -700,7 +701,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 let proto_args = m
                     .in_params
                     .iter()
-                    .filter_map(|(name, ty)| {
+                    .filter_map(|(name, ty, _)| {
                         if let ast::Ty::Identifier { id, .. } = ty {
                             if ast.id_to_type(id) == ast::Ty::Protocol && not_callback(ast, id) {
                                 return Some((to_c_name(name), ty_to_c_str(ast, ty).unwrap()));

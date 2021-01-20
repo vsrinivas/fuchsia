@@ -254,6 +254,7 @@ impl Ty {
             _ => true,
         }
     }
+
     pub fn is_reference(&self) -> bool {
         match self {
             Ty::Str { nullable, .. } => *nullable,
@@ -507,14 +508,14 @@ impl EnumVariant {
 pub struct Method {
     pub attributes: Attrs,
     pub name: String,
-    pub in_params: Vec<(String, Ty)>,
-    pub out_params: Vec<(String, Ty)>,
+    pub in_params: Vec<(String, Ty, Attrs)>,
+    pub out_params: Vec<(String, Ty, Attrs)>,
 }
 
 impl Method {
     #[allow(dead_code)]
     pub fn name_to_ty(&self, arg_name: &str) -> Result<&Ty, Error> {
-        for (name, ty) in self.in_params.iter() {
+        for (name, ty, _) in self.in_params.iter() {
             if arg_name == name {
                 return Ok(ty);
             }
@@ -540,10 +541,15 @@ impl Method {
                     for in_pair in inner_params.into_inner() {
                         match in_pair.as_rule() {
                             Rule::parameter => {
-                                let mut param = in_pair.into_inner();
-                                let ty = Ty::from_pair(ns, &param.next().unwrap())?;
-                                let name = String::from(param.next().unwrap().as_str());
-                                in_params.push((name, ty));
+                                let mut param_fields: Vec<Pair<'_, Rule>> =
+                                    in_pair.into_inner().collect();
+                                let mut attributes = Attrs::default();
+                                if param_fields.len() > 2 {
+                                    attributes = Attrs::from_pair(param_fields.remove(0))?;
+                                }
+                                let ty = Ty::from_pair(ns, &param_fields.get(0).unwrap())?;
+                                let name = String::from(param_fields.get(1).unwrap().as_str());
+                                in_params.push((name, ty, attributes));
                             }
                             e => return Err(ParseError::UnexpectedToken(e)),
                         }
@@ -554,10 +560,15 @@ impl Method {
                         for in_pair in inner_params.into_inner() {
                             match in_pair.as_rule() {
                                 Rule::parameter => {
-                                    let mut param = in_pair.into_inner();
-                                    let ty = Ty::from_pair(ns, &param.next().unwrap())?;
-                                    let name = String::from(param.next().unwrap().as_str());
-                                    out_params.push((name, ty));
+                                    let mut param_fields: Vec<Pair<'_, Rule>> =
+                                        in_pair.into_inner().collect();
+                                    let mut attributes = Attrs::default();
+                                    if param_fields.len() > 2 {
+                                        attributes = Attrs::from_pair(param_fields.remove(0))?;
+                                    }
+                                    let ty = Ty::from_pair(ns, &param_fields.get(0).unwrap())?;
+                                    let name = String::from(param_fields.get(1).unwrap().as_str());
+                                    out_params.push((name, ty, attributes));
                                 }
                                 e => return Err(ParseError::UnexpectedToken(e)),
                             }
@@ -993,10 +1004,10 @@ impl BanjoAst {
         match decl {
             Decl::Protocol { methods, .. } => {
                 for method in methods {
-                    for (_, ty) in method.in_params.iter() {
+                    for (_, ty, _) in method.in_params.iter() {
                         maybe_add_decl(&ty, false);
                     }
-                    for (_, ty) in method.out_params.iter() {
+                    for (_, ty, _) in method.out_params.iter() {
                         maybe_add_decl(&ty, false);
                     }
                 }

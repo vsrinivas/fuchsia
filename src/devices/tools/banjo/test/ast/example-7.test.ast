@@ -32,6 +32,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -41,6 +44,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

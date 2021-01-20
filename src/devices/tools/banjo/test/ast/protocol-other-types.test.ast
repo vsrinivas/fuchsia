@@ -128,6 +128,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -142,6 +145,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -162,6 +168,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -176,6 +185,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -196,6 +208,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -210,6 +225,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -225,6 +243,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -234,6 +255,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -253,6 +277,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -266,6 +293,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -285,6 +315,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -298,6 +331,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -343,6 +379,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -357,6 +396,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -382,6 +424,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -396,6 +441,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -421,6 +469,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -435,6 +486,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -455,6 +509,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -464,6 +521,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -488,6 +548,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -501,6 +564,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -525,6 +591,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -538,6 +607,9 @@ BanjoAst {
                                     ),
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -578,6 +650,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -592,6 +667,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -612,6 +690,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -626,6 +707,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -641,6 +725,9 @@ BanjoAst {
                                     size: None,
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -650,6 +737,9 @@ BanjoAst {
                                     size: None,
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -669,6 +759,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -682,6 +775,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -701,6 +797,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -714,6 +813,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -759,6 +861,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -773,6 +878,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -798,6 +906,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -812,6 +923,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -832,6 +946,9 @@ BanjoAst {
                                     size: None,
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -841,6 +958,9 @@ BanjoAst {
                                     size: None,
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -865,6 +985,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -878,6 +1001,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -902,6 +1028,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -915,6 +1044,9 @@ BanjoAst {
                                     ),
                                     nullable: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -955,6 +1087,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -969,6 +1104,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -989,6 +1127,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1003,6 +1144,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1028,6 +1172,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1042,6 +1189,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -1067,6 +1217,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -1081,6 +1234,9 @@ BanjoAst {
                                     },
                                     reference: true,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

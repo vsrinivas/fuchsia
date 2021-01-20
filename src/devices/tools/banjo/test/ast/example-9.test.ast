@@ -96,12 +96,18 @@ BanjoAst {
                             (
                                 "uint32",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "response",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -114,12 +120,18 @@ BanjoAst {
                             (
                                 "uint64",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "response",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -140,6 +152,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -154,6 +169,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -169,6 +187,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -178,6 +199,9 @@ BanjoAst {
                                     ty: Handle,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -193,6 +217,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -202,6 +229,9 @@ BanjoAst {
                                     ty: Channel,
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -222,6 +252,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -236,6 +269,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

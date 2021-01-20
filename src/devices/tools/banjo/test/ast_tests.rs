@@ -23,6 +23,12 @@ codegen_test!(example_9, AstBackend, ["banjo/example-9.test.banjo"], "ast/exampl
 codegen_test!(fidl_handle, AstBackend, ["banjo/fidl_handle.test.banjo"], "ast/fidl_handle.test.ast");
 codegen_test!(library_parts, AstBackend, ["banjo/library_part_one.test.banjo", "banjo/library_part_two.test.banjo"], "ast/library_parts.test.ast");
 codegen_test!(types, AstBackend, ["banjo/types.test.banjo"], "ast/types.test.ast");
+codegen_test!(
+    parameter_attributes,
+    AstBackend,
+    ["banjo/parameter-attributes.test.banjo"],
+    "ast/parameter-attributes.test.ast"
+);
 codegen_test!(point, AstBackend, ["banjo/point.test.banjo"], "ast/point.test.ast");
 codegen_test!(tables, AstBackend, ["banjo/tables.test.banjo"], "ast/tables.test.ast");
 codegen_test!(

@@ -37,6 +37,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -51,6 +54,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "status_2",
@@ -63,6 +69,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -83,6 +92,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -97,6 +109,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "time_2",
@@ -109,6 +124,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -129,6 +147,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -143,6 +164,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "duration_2",
@@ -155,6 +179,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -175,6 +202,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -189,6 +219,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "koid_2",
@@ -201,6 +234,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -221,6 +257,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -235,6 +274,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "vaddr_2",
@@ -247,6 +289,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -267,6 +312,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -281,6 +329,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "paddr_2",
@@ -293,6 +344,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -313,6 +367,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -327,6 +384,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "paddr32_2",
@@ -339,6 +399,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -359,6 +422,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -373,6 +439,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "gpaddr_2",
@@ -385,6 +454,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -405,6 +477,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -419,6 +494,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "off_2",
@@ -431,6 +509,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -476,6 +557,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -490,6 +574,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "status_2",
@@ -502,6 +589,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -527,6 +617,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -541,6 +634,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "time_2",
@@ -553,6 +649,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -578,6 +677,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -592,6 +694,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "duration_2",
@@ -604,6 +709,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -629,6 +737,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -643,6 +754,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "koid_2",
@@ -655,6 +769,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -680,6 +797,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -694,6 +814,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "vaddr_2",
@@ -706,6 +829,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -731,6 +857,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -745,6 +874,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "paddr_2",
@@ -757,6 +889,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -782,6 +917,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -796,6 +934,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "paddr32_2",
@@ -808,6 +949,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -833,6 +977,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -847,6 +994,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "gpaddr_2",
@@ -859,6 +1009,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -884,6 +1037,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -898,6 +1054,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "off_2",
@@ -910,6 +1069,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

@@ -29,16 +29,25 @@ BanjoAst {
                             (
                                 "b",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "b",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "b_2",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -51,16 +60,25 @@ BanjoAst {
                             (
                                 "i8",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i8",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i8_2",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -73,16 +91,25 @@ BanjoAst {
                             (
                                 "i16",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i16",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i16_2",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -95,16 +122,25 @@ BanjoAst {
                             (
                                 "i32",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i32",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i32_2",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -117,16 +153,25 @@ BanjoAst {
                             (
                                 "i64",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i64",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i64_2",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -139,16 +184,25 @@ BanjoAst {
                             (
                                 "u8",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u8",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u8_2",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -161,16 +215,25 @@ BanjoAst {
                             (
                                 "u16",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u16",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u16_2",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -183,16 +246,25 @@ BanjoAst {
                             (
                                 "u32",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u32",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u32_2",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -205,16 +277,25 @@ BanjoAst {
                             (
                                 "u64",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u64",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u64_2",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -227,16 +308,25 @@ BanjoAst {
                             (
                                 "f32",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "f32",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "f32_2",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -249,16 +339,25 @@ BanjoAst {
                             (
                                 "u64",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "f64",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "f64_2",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -296,16 +395,25 @@ BanjoAst {
                             (
                                 "b",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "b",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "b_2",
                                 Bool,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -323,16 +431,25 @@ BanjoAst {
                             (
                                 "i8",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i8",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i8_2",
                                 Int8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -350,16 +467,25 @@ BanjoAst {
                             (
                                 "i16",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i16",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i16_2",
                                 Int16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -377,16 +503,25 @@ BanjoAst {
                             (
                                 "i32",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i32",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i32_2",
                                 Int32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -404,16 +539,25 @@ BanjoAst {
                             (
                                 "i64",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "i64",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "i64_2",
                                 Int64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -431,16 +575,25 @@ BanjoAst {
                             (
                                 "u8",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u8",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u8_2",
                                 UInt8,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -458,16 +611,25 @@ BanjoAst {
                             (
                                 "u16",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u16",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u16_2",
                                 UInt16,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -485,16 +647,25 @@ BanjoAst {
                             (
                                 "u32",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u32",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u32_2",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -512,16 +683,25 @@ BanjoAst {
                             (
                                 "u64",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "u64",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "u64_2",
                                 UInt64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -539,16 +719,25 @@ BanjoAst {
                             (
                                 "f32",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "f32",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "f32_2",
                                 Float32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
@@ -566,16 +755,25 @@ BanjoAst {
                             (
                                 "u64",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
                             (
                                 "f64",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "f64_2",
                                 Float64,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },

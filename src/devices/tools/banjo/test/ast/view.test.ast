@@ -74,6 +74,9 @@ BanjoAst {
                                     },
                                     reference: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [],

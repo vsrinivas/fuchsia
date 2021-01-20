@@ -32,8 +32,10 @@ do
 
   dependencies=""
   zx="--omit-zx"
-  type_only=false
-  rust_only=false
+  with_c=true
+  with_cpp=true
+  with_rust=true
+
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] ; then
     zx=""
@@ -48,21 +50,30 @@ do
     || [ "$filename" = "example-3" ] || [ "$filename" = "alignment" ] \
     || [ "$filename" = "example-8" ] || [ "$filename" = "point" ] \
     || [ "$filename" = "tables" ]; then
-    type_only=true
+    with_cpp=false
   fi
 
   if [ "$filename" = "rust-derive" ]; then
-    rust_only=true
+    with_c=false
+    with_cpp=false
+  fi
+
+  if [ "$filename" = "parameter-attributes" ]; then
+    with_rust=false
+    with_c=false
+    with_cpp=false
   fi
 
   echo "Regenerating $filename"
-  if [ $rust_only = false ]; then
+  if [ $with_c = true ]; then
     $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f
-    if [ $type_only = false ]; then
-      $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
-      $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
-    fi
   fi
-  $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
+  if [ $with_cpp = true ]; then
+    $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
+    $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
+  fi
+  if [ $with_rust = true ]; then
+    $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
+  fi
   $BANJO_BIN --backend ast $zx --output "$AST_FILES/$filename.test.ast" $dependencies --files $f
 done

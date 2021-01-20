@@ -89,10 +89,16 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                             (
                                 "count",
                                 UInt32,
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                         out_params: [
@@ -102,6 +108,9 @@ BanjoAst {
                                     size: None,
                                     nullable: false,
                                 },
+                                Attrs(
+                                    [],
+                                ),
                             ),
                         ],
                     },
