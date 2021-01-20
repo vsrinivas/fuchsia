@@ -9,6 +9,64 @@ from unittest import mock
 import action_tracer
 
 
+class DepEdgesParseTests(unittest.TestCase):
+
+    def test_invalid_input(self):
+        with self.assertRaises(ValueError):
+            action_tracer.parse_dep_edges(
+                "output.txt input1.txt")  # missing ":"
+
+    def test_output_only(self):
+        dep = action_tracer.parse_dep_edges("output.txt:")
+        self.assertEqual(dep.ins, set())
+        self.assertEqual(dep.outs, {"output.txt"})
+
+    def test_output_with_one_input(self):
+        dep = action_tracer.parse_dep_edges("output.txt:input.cc")
+        self.assertEqual(dep.ins, {"input.cc"})
+        self.assertEqual(dep.outs, {"output.txt"})
+
+    def test_output_with_multiple_inputs(self):
+        dep = action_tracer.parse_dep_edges(
+            "output.txt:input.cc includes/header.h")
+        self.assertEqual(dep.ins, {"input.cc", "includes/header.h"})
+        self.assertEqual(dep.outs, {"output.txt"})
+
+    def test_output_with_multiple_inputs_unusual_spacing(self):
+        dep = action_tracer.parse_dep_edges(
+            "  output.txt  :    input.cc   includes/header.h  ")
+        self.assertEqual(dep.ins, {"input.cc", "includes/header.h"})
+        self.assertEqual(dep.outs, {"output.txt"})
+
+    def test_file_name_with_escaped_space(self):
+        dep = action_tracer.parse_dep_edges(
+            "output.txt:  source\\ input.cc includes/header.h")
+        self.assertEqual(dep.ins, {"source input.cc", "includes/header.h"})
+        self.assertEqual(dep.outs, {"output.txt"})
+
+
+class ParseDepFileTests(unittest.TestCase):
+
+    def test_empty(self):
+        depfile = action_tracer.parse_depfile([])
+        self.assertEqual(depfile.deps, [])
+        self.assertEqual(depfile.all_ins, set())
+        self.assertEqual(depfile.all_outs, set())
+
+    def test_two_deps(self):
+        depfile = action_tracer.parse_depfile([
+            "A: B",
+            "C: D E",
+        ])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"B"}, outs={"A"}),
+                action_tracer.DepEdges(ins={"D", "E"}, outs={"C"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"B", "D", "E"})
+        self.assertEqual(depfile.all_outs, {"A", "C"})
+
+
 class ParseFsatraceOutputTests(unittest.TestCase):
 
     def test_empty_stream(self):

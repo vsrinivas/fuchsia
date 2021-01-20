@@ -11,7 +11,7 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import AbstractSet, FrozenSet, Iterable, Sequence, Tuple
+from typing import AbstractSet, Collection, FrozenSet, Iterable, Sequence, Tuple
 
 
 class FileAccessType(enum.Enum):
@@ -195,6 +195,67 @@ def check_missing_writes(
     return missing_writes
 
 
+@dataclasses.dataclass
+class DepEdges(object):
+    ins: FrozenSet[str] = dataclasses.field(default_factory=set)
+    outs: FrozenSet[str] = dataclasses.field(default_factory=set)
+
+    def abspaths(self) -> "DepEdges":
+        return DepEdges(
+            ins={os.path.abspath(p) for p in self.ins},
+            outs={os.path.abspath(p) for p in self.outs})
+
+
+def parse_dep_edges(depfile_line: str) -> DepEdges:
+    """Parse a single line of a depfile.
+
+    This assumes that all depfile entries are formatted onto a single line.
+    TODO(fangism): support more generalized forms of input, e.g. multi-line.
+      See https://github.com/ninja-build/ninja/blob/master/src/depfile_parser_test.cc
+
+    Args:
+      depfile_line: has the form "OUTPUT: INPUT INPUT ..."
+
+    Returns:
+      A DepEdges object represending a dependency between inputs and outputs.
+
+    Raises:
+      ValueError if unable to parse dependency entry.
+    """
+    out, sep, ins = depfile_line.strip().partition(":")
+    if sep != ":":
+        raise ValueError("Failed to parse depfile entry:\n" + depfile_line)
+    return DepEdges(ins=set(shlex.split(ins)), outs={out.strip()})
+
+
+@dataclasses.dataclass
+class DepFile(object):
+    """DepFile represents a collection of dependency edges."""
+    deps: Collection[DepEdges] = dataclasses.field(default_factory=list)
+
+    @property
+    def all_ins(self) -> AbstractSet[str]:
+        """Returns a set of all dependency inputs."""
+        return {f for dep in self.deps for f in dep.ins}
+
+    @property
+    def all_outs(self) -> AbstractSet[str]:
+        """Returns a set of all dependency outputs."""
+        return {f for dep in self.deps for f in dep.outs}
+
+
+def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
+    """Parses a depfile into a set of inputs and outputs.
+
+    See https://github.com/ninja-build/ninja/blob/master/src/depfile_parser_test.cc
+    for examples of format using Ninja syntax.
+
+    Limitation: For now, assume one dep per line.
+    TODO(fangism): ignore blank/comment lines
+    """
+    return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Traces a GN action and enforces strict inputs/outputs",
@@ -270,18 +331,16 @@ def main():
     # Actions may touch files other than their listed outputs.
     allowed_writes = required_writes.copy()
 
-    depfile_outs = []
     depfile_ins = []
     if args.depfile and os.path.exists(args.depfile):
         # Writing the depfile is not required (yet), but allowed.
         allowed_writes.add(os.path.abspath(args.depfile))
         with open(args.depfile, "r") as f:
-            for line in f:
-                out, _, ins = line.strip().partition(":")
-                depfile_outs.append(os.path.abspath(out))
-                depfile_ins.extend(os.path.abspath(p) for p in shlex.split(ins))
-        allowed_writes.update(depfile_ins)  # TODO(fangism): allowed_reads?
-        allowed_writes.update(depfile_outs)
+            depfile = parse_depfile(f)
+
+        depfile_ins = depfile.all_ins
+        allowed_writes.update(depfile.all_ins)  # TODO(fangism): allowed_reads?
+        allowed_writes.update(depfile.all_outs)
 
     # Everything writeable is readable.
     allowed_reads = {
