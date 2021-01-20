@@ -37,6 +37,7 @@ impl Cache {
     /// manifest must be provided.
     fn launch_with_components(pkgfs: &Pkgfs, cache_url: &str) -> Result<Self, Error> {
         let mut pkg_cache = AppBuilder::new(cache_url)
+            .arg("--ignore-system-image")
             .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
 
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();

@@ -7,7 +7,6 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_inspect_contrib::inspectable::InspectableLen,
     fuchsia_merkle::Hash,
-    fuchsia_syslog::fx_log_err,
     futures::{stream::FuturesUnordered, TryStreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{collections::HashSet, io::Read as _},
@@ -16,14 +15,8 @@ use {
 
 #[derive(Debug)]
 pub(crate) struct BlobLocation {
-    inner: Inner,
+    base_blobs: BaseBlobs,
     node: finspect::Node,
-}
-
-#[derive(Debug)]
-enum Inner {
-    AssumeAllInBase(finspect::Node),
-    BaseBlobs(BaseBlobs),
 }
 
 #[derive(Debug)]
@@ -43,25 +36,13 @@ impl BlobLocation {
         system_image: &SystemImage,
         versions: &Versions,
         node: finspect::Node,
-    ) -> Self {
+    ) -> Result<Self, anyhow::Error> {
         match Self::load_base_blobs(system_image, versions).await {
-            Ok(base_blobs) => Self {
-                inner: Inner::BaseBlobs(BaseBlobs::new(
-                    base_blobs,
-                    node.create_child("base-blobs"),
-                )),
+            Ok(blobs) => Ok(Self {
+                base_blobs: BaseBlobs::new(blobs, node.create_child("base-blobs")),
                 node,
-            },
-            Err(e) => {
-                fx_log_err!(
-                    "Error determining base blobs, assuming all blobs are in base: {:#}",
-                    anyhow!(e)
-                );
-                Self {
-                    inner: Inner::AssumeAllInBase(node.create_child("assume-all-in-base")),
-                    node,
-                }
-            }
+            }),
+            Err(e) => Err(anyhow!(e).context("Error determining base blobs")),
         }
     }
 
@@ -102,7 +83,10 @@ impl BlobLocation {
         versions: &Versions,
         package: &Hash,
     ) -> Result<impl Iterator<Item = Hash>, Error> {
-        let package_dir = versions.open_package(package).await?;
+        let package_dir = versions
+            .open_package(package)
+            .await
+            .with_context(|| format!("failing to open package: {}", package))?;
         let blobs = package_dir
             .blobs()
             .await
@@ -114,10 +98,7 @@ impl BlobLocation {
     // TODO(fxbug.dev/43635) use this function, remove allow
     #[allow(dead_code)]
     pub fn is_blob_in_base(&self, hash: &Hash) -> bool {
-        match &self.inner {
-            Inner::AssumeAllInBase(..) => true,
-            Inner::BaseBlobs(BaseBlobs { blobs, .. }) => blobs.contains(hash),
-        }
+        self.base_blobs.blobs.contains(hash)
     }
 }
 
@@ -277,7 +258,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn inspect_failure_loading_base_blobs_assume_all_in_base() {
+    async fn blob_location_fails_when_loading_fails() {
         let system_image_hash: Hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
         let static_packages = StaticPackages::from_entries(vec![]);
@@ -286,18 +267,16 @@ mod tests {
         let env = TestPkgfs::new(&system_image_hash, &static_packages, &versions_contents);
         let inspector = finspect::Inspector::new();
 
-        let _blob_location = BlobLocation::new(
+        let blob_location_result = BlobLocation::new(
             &env.system_image(),
             &env.versions(),
             inspector.root().create_child("blob-location"),
         )
         .await;
 
-        assert_inspect_tree!(inspector, root: {
-            "blob-location": {
-                "assume-all-in-base": {}
-            }
-        });
+        assert!(blob_location_result.is_err());
+
+        assert_inspect_tree!(inspector, root: {});
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -333,7 +312,8 @@ mod tests {
             &env.versions(),
             finspect::Inspector::new().root().create_child("blob-location"),
         )
-        .await;
+        .await
+        .unwrap();
 
         assert_eq!(blob_location.is_blob_in_base(&system_image_hash), true);
         assert_eq!(blob_location.is_blob_in_base(&fake_package_hash), true);
@@ -347,27 +327,5 @@ mod tests {
             ),
             false
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn is_blob_in_base_when_loading_fails() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![]);
-        // system_image not in versions, so loading will fail
-        let versions_contents = HashMap::new();
-        let env = TestPkgfs::new(&system_image_hash, &static_packages, &versions_contents);
-
-        let blob_location = BlobLocation::new(
-            &env.system_image(),
-            &env.versions(),
-            finspect::Inspector::new().root().create_child("blob-location"),
-        )
-        .await;
-
-        assert_eq!(blob_location.is_blob_in_base(&system_image_hash), true);
-        let non_existent_hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        assert_eq!(blob_location.is_blob_in_base(&non_existent_hash), true);
     }
 }

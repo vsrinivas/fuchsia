@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#![recursion_limit = "256"]
 
 /// This module tests the property that pkg_resolver propagates pkgfs errors when
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
@@ -14,6 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{Package, RepositoryBuilder},
+    fuchsia_vfs_pseudo_fs::file::simple::{read_only, read_only_str},
     fuchsia_vfs_pseudo_fs::{
         directory::entry::DirectoryEntry, directory::entry::EntryInfo, pseudo_directory,
     },
@@ -276,14 +278,39 @@ impl PkgFsDirectoryBuilder {
         let mut needs_packages = pseudo_directory! {};
         if let Some((pkg, blob)) = self.needs_packages {
             let mut pkg_dir = pseudo_directory! {};
-            pkg_dir
-                .add_entry(&blob, fuchsia_vfs_pseudo_fs::file::simple::read_only(|| Ok(vec![])))
-                .map_err(|_| ())
-                .expect("add_entry");
+            pkg_dir.add_entry(&blob, read_only(|| Ok(vec![]))).map_err(|_| ()).expect("add_entry");
             needs_packages.add_entry(&pkg, pkg_dir).map_err(|_| ()).expect("add_entry");
         }
+
+        let mut system = pseudo_directory! {};
+
+        system
+            .add_entry(
+                "meta",
+                read_only_str(move || {
+                    Ok("0000000000000000000000000000000000000000000000000000000000000000"
+                        .to_string())
+                }),
+            )
+            .map_err(|_| ())
+            .expect("system hash");
+
+        let mut data_dir = pseudo_directory! {};
+        data_dir
+            .add_entry("static_packages", read_only_str(move || Ok("".to_string())))
+            .map_err(|_| ())
+            .expect("static_packages");
+        system.add_entry("data", data_dir).map_err(|_| ()).expect("data dir");
+
         pseudo_directory! {
-            "versions" => pseudo_directory! {},
+            "versions" => pseudo_directory! {
+                "0000000000000000000000000000000000000000000000000000000000000000" => pseudo_directory! {
+                    "meta" => pseudo_directory! {
+                        "contents" => read_only_str(move || {
+                            Ok("".to_string())}),
+                    }
+                }
+            },
             "packages" => pseudo_directory! {},
             "ctl" => pseudo_directory! {},
             "install" => pseudo_directory! {
@@ -294,6 +321,7 @@ impl PkgFsDirectoryBuilder {
                 "blobs" => pseudo_directory! {},
                 "packages" => needs_packages,
             },
+            "system" => system,
         }
     }
 }
@@ -363,7 +391,6 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
     let () = env.proxies.repo_manager.add(repo_config.into()).await?.map_err(Status::from_raw)?;
-
     let res = env.resolve_package(format!("fuchsia-pkg://test/{}", pkg.name()).as_str()).await;
 
     assert_matches!(res, Err(Status::IO));

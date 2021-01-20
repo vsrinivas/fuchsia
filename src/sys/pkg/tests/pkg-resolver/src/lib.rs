@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
     diagnostics_reader::{ArchiveReader, ComponentSelector},
@@ -31,10 +32,11 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_merkle::{Hash, MerkleTree},
+    fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{self as zx, Status},
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
     matches::assert_matches,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
@@ -235,9 +237,32 @@ pub fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
     client.into()
 }
 
-pub struct TestEnvBuilder<PkgFsFn, P, MountsFn>
+async fn pkgfs_with_system_image() -> PkgfsRamdisk {
+    let system_image_package = SystemImageBuilder::new();
+    let system_image_package = system_image_package.build().await;
+    pkgfs_with_system_image_and_pkg(&system_image_package, None).await
+}
+
+pub async fn pkgfs_with_system_image_and_pkg(
+    system_image_package: &Package,
+    pkg: Option<&Package>,
+) -> PkgfsRamdisk {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    if let Some(pkg) = pkg {
+        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    }
+    PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap()
+}
+
+pub struct TestEnvBuilder<PkgFsFn, PkgFsFut, MountsFn>
 where
-    PkgFsFn: FnOnce() -> P,
+    PkgFsFn: FnOnce() -> PkgFsFut,
+    PkgFsFut: Future,
 {
     pkgfs: PkgFsFn,
     mounts: MountsFn,
@@ -249,10 +274,16 @@ where
     blob_network_body_timeout: Option<Duration>,
 }
 
-impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
+impl
+    TestEnvBuilder<
+        fn() -> BoxFuture<'static, PkgfsRamdisk>,
+        BoxFuture<'static, PkgfsRamdisk>,
+        fn() -> Mounts,
+    >
+{
     pub fn new() -> Self {
         Self {
-            pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
+            pkgfs: || pkgfs_with_system_image().boxed(),
             // If it's not overriden, the default state of the mounts allows for dynamic configuration.
             // We do this because in the majority of tests, we'll want to use dynamic repos and rewrite rules.
             // Note: this means that we'll produce different envs from TestEnvBuilder::new().build().await
@@ -270,21 +301,22 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
     }
 }
 
-impl<PkgFsFn, P, MountsFn> TestEnvBuilder<PkgFsFn, P, MountsFn>
+impl<PkgFsFn, PkgFsFut, MountsFn> TestEnvBuilder<PkgFsFn, PkgFsFut, MountsFn>
 where
-    PkgFsFn: FnOnce() -> P,
-    P: PkgFs,
+    PkgFsFn: FnOnce() -> PkgFsFut,
+    PkgFsFut: Future,
+    PkgFsFut::Output: PkgFs,
     MountsFn: FnOnce() -> Mounts,
 {
     pub fn pkgfs<Pother>(
         self,
         pkgfs: Pother,
-    ) -> TestEnvBuilder<impl FnOnce() -> Pother, Pother, MountsFn>
+    ) -> TestEnvBuilder<impl FnOnce() -> future::Ready<Pother>, future::Ready<Pother>, MountsFn>
     where
         Pother: PkgFs + 'static,
     {
-        TestEnvBuilder::<_, Pother, MountsFn> {
-            pkgfs: || pkgfs,
+        TestEnvBuilder::<_, _, MountsFn> {
+            pkgfs: || future::ready(pkgfs),
             mounts: self.mounts,
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
@@ -294,8 +326,11 @@ where
             blob_network_body_timeout: self.blob_network_body_timeout,
         }
     }
-    pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
-        TestEnvBuilder::<PkgFsFn, P, _> {
+    pub fn mounts(
+        self,
+        mounts: Mounts,
+    ) -> TestEnvBuilder<PkgFsFn, PkgFsFut, impl FnOnce() -> Mounts> {
+        TestEnvBuilder::<PkgFsFn, _, _> {
             pkgfs: self.pkgfs,
             mounts: || mounts,
             boot_arguments_service: self.boot_arguments_service,
@@ -306,11 +341,8 @@ where
             blob_network_body_timeout: self.blob_network_body_timeout,
         }
     }
-    pub fn boot_arguments_service(
-        self,
-        svc: BootArgumentsService<'static>,
-    ) -> TestEnvBuilder<PkgFsFn, P, MountsFn> {
-        TestEnvBuilder::<PkgFsFn, P, _> {
+    pub fn boot_arguments_service(self, svc: BootArgumentsService<'static>) -> Self {
+        Self {
             pkgfs: self.pkgfs,
             mounts: self.mounts,
             boot_arguments_service: Some(svc),
@@ -378,8 +410,8 @@ where
         self
     }
 
-    pub async fn build(self) -> TestEnv<P> {
-        let pkgfs = (self.pkgfs)();
+    pub async fn build(self) -> TestEnv<PkgFsFut::Output> {
+        let pkgfs = (self.pkgfs)().await;
         let mounts = (self.mounts)();
 
         let mut pkg_cache = AppBuilder::new(

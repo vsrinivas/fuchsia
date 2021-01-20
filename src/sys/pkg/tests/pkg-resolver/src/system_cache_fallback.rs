@@ -405,7 +405,15 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
         .expect("made blobfs builder")
         .start()
         .expect("started blobfs");
-    let pkgfs = PkgfsRamdisk::builder().blobfs(very_small_blobfs).start().expect("started pkgfs");
+    let system_image_package = SystemImageBuilder::new();
+    let system_image_package = system_image_package.build().await;
+    system_image_package.write_to_blobfs_dir(&very_small_blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(very_small_blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .expect("started pkgfs");
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let small_pkg = test_package(pkg_name, "cache").await;

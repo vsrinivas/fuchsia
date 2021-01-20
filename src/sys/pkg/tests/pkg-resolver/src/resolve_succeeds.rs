@@ -32,6 +32,7 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn package_resolution() {
     let env = TestEnvBuilder::new().build().await;
+    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
 
     let s = "package_resolution";
     let pkg = PackageBuilder::new(s)
@@ -64,8 +65,12 @@ async fn package_resolution() {
     // Verify the served package directory contains the exact expected contents.
     pkg.verify_contents(&package).await.unwrap();
 
+    // Make sure repo also has the blobs that were in blobfs on startup.
+    let mut repo_blobs = repo.list_blobs().unwrap();
+    repo_blobs.append(&mut startup_blobs);
+
     // All blobs in the repository should now be present in blobfs.
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -73,6 +78,9 @@ async fn package_resolution() {
 #[fasync::run_singlethreaded(test)]
 async fn separate_blobs_url() {
     let env = TestEnvBuilder::new().build().await;
+
+    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
+
     let pkg_name = "separate_blobs_url";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
     let repo = Arc::new(
@@ -112,7 +120,11 @@ async fn separate_blobs_url() {
         .expect("package to resolve without error");
     pkg.verify_contents(&package).await.unwrap();
     std::fs::rename(repo_root.join("blobsbolb"), repo_root.join("blobs")).unwrap();
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    let mut repo_blobs = repo.list_blobs().unwrap();
+    repo_blobs.append(&mut startup_blobs);
+
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -122,6 +134,8 @@ async fn verify_resolve_with_altered_env(
     alter_env: impl FnOnce(&TestEnv, &Package),
 ) -> () {
     let env = TestEnvBuilder::new().build().await;
+
+    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -143,7 +157,11 @@ async fn verify_resolve_with_altered_env(
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
 
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+
+    let mut repo_blobs = repo.list_blobs().unwrap();
+    repo_blobs.append(&mut startup_blobs);
+
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -919,6 +937,7 @@ async fn resolve_local_mirror() {
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;
+    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
     let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, true);
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
@@ -926,7 +945,9 @@ async fn resolve_local_mirror() {
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
 
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
+    let mut repo_blobs = repo.list_blobs().unwrap();
+    repo_blobs.append(&mut startup_blobs);
+    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }

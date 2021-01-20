@@ -4,13 +4,11 @@
 
 /// This module tests pkg-resolver's behavior when resolving base packages.
 use {
-    blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
-    lib::{TestEnvBuilder, EMPTY_REPO_PATH},
+    lib::{pkgfs_with_system_image_and_pkg, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
-    pkgfs_ramdisk::PkgfsRamdisk,
     std::sync::Arc,
 };
 
@@ -20,22 +18,6 @@ async fn test_package(name: &str, contents: &str) -> Package {
         .build()
         .await
         .expect("build package")
-}
-
-async fn pkgfs_with_system_image_and_pkg(
-    system_image_package: &Package,
-    pkg: Option<&Package>,
-) -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    if let Some(pkg) = pkg {
-        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    }
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -127,42 +109,6 @@ async fn test_base_package_with_variant_found() {
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
     // Check that get_hash fallback behavior matches resolve.
-    let hash = env.get_hash(pkg_url).await;
-    assert_eq!(hash.unwrap(), base_pkg.meta_far_merkle_root().clone().into());
-
-    env.stop().await;
-}
-
-// The package is in the static index, but not in pkgfs.
-#[fasync::run_singlethreaded(test)]
-async fn test_absent_base_package() {
-    let pkg_name = "test_absent_base_package";
-    let base_pkg = test_package(pkg_name, "static").await;
-    // Put a copy of the package with altered contents in the repo to make sure
-    // we're getting the one from the system image.
-    let repo_pkg = test_package(pkg_name, "repo").await;
-    let system_image_package =
-        SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, None).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
-
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&repo_pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let served_repository = repo.server().start().unwrap();
-
-    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    // Resolve returns NOT FOUND if cache.open() fails.
-    let res = env.resolve_package(&pkg_url).await;
-    assert_matches!(res, Err(Status::NOT_FOUND));
-
-    // GetHash will succeed because it doesn't try to open the package.
     let hash = env.get_hash(pkg_url).await;
     assert_eq!(hash.unwrap(), base_pkg.meta_far_merkle_root().clone().into());
 

@@ -10,13 +10,18 @@ use {
     fidl_fuchsia_paver as paver,
     fidl_fuchsia_space::{ErrorCode, ManagerMarker},
     fuchsia_async::{self as fasync, OnSignals},
+    fuchsia_merkle::Hash,
+    fuchsia_pkg::{MetaContents, PackagePath},
     fuchsia_zircon as zx,
+    maplit::{btreemap, hashmap},
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
     std::{
-        fs::{create_dir, File},
+        fs::{create_dir, create_dir_all, File},
+        io::Write as _,
         path::PathBuf,
     },
+    system_image::StaticPackages,
     tempfile::TempDir,
 };
 
@@ -26,11 +31,49 @@ struct TempDirPkgFs {
 
 impl TempDirPkgFs {
     fn new() -> Self {
+        let system_image_hash: Hash =
+            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
+        let fake_package_hash: Hash =
+            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
+        let static_packages = StaticPackages::from_entries(vec![(
+            PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            fake_package_hash,
+        )]);
+        let versions_contents = hashmap! {
+            system_image_hash.clone() => MetaContents::from_map(
+                btreemap! {
+                    "some-blob".to_string() =>
+                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
+                }
+            ).unwrap(),
+            fake_package_hash.clone() => MetaContents::from_map(
+                btreemap! {
+                    "other-blob".to_string() =>
+                        "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
+                }
+            ).unwrap()
+        };
         let root = tempfile::tempdir().unwrap();
-        // pkg-cache needs these dirs to exist to start
+
         create_dir(root.path().join("ctl")).unwrap();
+
         create_dir(root.path().join("system")).unwrap();
+        File::create(root.path().join("system/meta"))
+            .unwrap()
+            .write_all(system_image_hash.to_string().as_bytes())
+            .unwrap();
+        create_dir(root.path().join("system/data")).unwrap();
+        static_packages
+            .serialize(File::create(root.path().join("system/data/static_packages")).unwrap())
+            .unwrap();
+
         create_dir(root.path().join("versions")).unwrap();
+        for (hash, contents) in versions_contents.iter() {
+            let meta_path = root.path().join(format!("versions/{}/meta", hash));
+            create_dir_all(&meta_path).unwrap();
+            contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
+        }
+
         Self { root }
     }
 

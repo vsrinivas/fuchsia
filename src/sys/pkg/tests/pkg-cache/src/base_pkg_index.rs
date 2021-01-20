@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg::{PackageIndexIteratorMarker, PackageIndexIteratorProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_hash::{Hash, HashRangeFull},
+    fuchsia_hash::Hash,
     fuchsia_pkg::PackagePath,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     pkgfs_ramdisk::PkgfsRamdisk,
@@ -77,6 +77,14 @@ async fn verify_base_packages_iterator(
     assert_eq!(expected_entries.next(), None);
 }
 
+/// Verifies that no base packages does not start package cache.
+#[fasync::run_singlethreaded(test)]
+async fn no_base_package_error() {
+    let env = TestEnv::builder().build().await;
+    let res = env.proxies.package_cache.sync().await;
+    assert_eq!(res.is_err(), true);
+}
+
 /// Verifies that a single base package is handled correctly.
 #[fasync::run_singlethreaded(test)]
 async fn base_pkg_index_with_one_package() {
@@ -124,7 +132,14 @@ async fn base_pkg_index_verify_multiple_chunks() {
     let mut system_image = SystemImageBuilder::new();
     let mut expected_entries = Vec::with_capacity(bundle_size);
 
-    for (i, hash) in HashRangeFull::default().enumerate().take(bundle_size) {
+    let pkg_0 = PackageBuilder::new("base-package-zzz")
+        .add_resource_at("resource", &[][..])
+        .build()
+        .await
+        .unwrap();
+    let hash = *pkg_0.meta_far_merkle_root();
+
+    for i in 0..bundle_size {
         let name = format!("base-package-{}", i);
         let url = format!("fuchsia-pkg://fuchsia.com/{}", name);
         let path = PackagePath::from_name_and_variant(name, "0").unwrap();
@@ -137,6 +152,9 @@ async fn base_pkg_index_verify_multiple_chunks() {
     let system_image = system_image.build().await;
 
     system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    pkg_0.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
         .system_image_merkle(system_image.meta_far_merkle_root())

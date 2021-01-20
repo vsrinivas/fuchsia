@@ -101,24 +101,6 @@ async fn base_blob_count_ignores_cache_packages() {
     assert_base_blob_count(&[], Some(&[&pkg]), 3).await;
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn assume_all_blobs_in_base_on_error() {
-    // no system_image in pkgfs, so BlobLocation will use fallback.
-    let env = TestEnv::builder().build().await;
-    env.block_until_started().await;
-
-    let hierarchy = env.inspect_hierarchy().await;
-    assert_inspect_tree!(
-        hierarchy,
-        root: contains {
-            "blob-location": {
-                "assume-all-in-base": {}
-            }
-        }
-    );
-    env.stop().await;
-}
-
 async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRamdisk {
     let blobfs = BlobfsRamdisk::start().unwrap();
     let mut system_image_package = SystemImageBuilder::new();
@@ -167,16 +149,6 @@ async fn pkgfs_executability_restrictions_disabled() {
     assert_pkgfs_executability_restrictions_enabled(
         pkgfs_with_restrictions_enabled(false).await,
         "false".to_string(),
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn pkgfs_executability_restrictions_error() {
-    // We should get an error in inspect state if there is no system image package.
-    assert_pkgfs_executability_restrictions_enabled(
-        PkgfsRamdisk::builder().start().unwrap(),
-        "error".to_string(),
     )
     .await;
 }

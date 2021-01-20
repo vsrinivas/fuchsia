@@ -5,6 +5,7 @@
 use {
     crate::{blob_location::BlobLocation, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
+    argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_update::CommitStatusProviderMarker,
     fuchsia_async::Task,
@@ -26,6 +27,14 @@ mod pkgfs_inspect;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
+#[derive(FromArgs, Debug, PartialEq)]
+/// Flags to the package cache.
+pub struct Args {
+    /// whether to ignore the system image when starting pkg-cache.
+    #[argh(switch)]
+    ignore_system_image: bool,
+}
+
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
@@ -42,6 +51,8 @@ async fn main() -> Result<(), Error> {
 async fn main_inner() -> Result<(), Error> {
     fx_log_info!("starting package cache service");
 
+    let Args { ignore_system_image } = argh::from_env();
+
     let inspector = finspect::Inspector::new();
 
     let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
@@ -55,8 +66,11 @@ async fn main_inner() -> Result<(), Error> {
     let pkgfs_ctl =
         pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
 
-    let (static_packages, _blob_location, _pkgfs_inspect) = {
+    let (static_packages, _pkgfs_inspect, blob_location) = {
         let static_packages_fut = get_static_packages(&pkgfs_system);
+
+        let pkgfs_inspect_fut =
+            PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs"));
 
         let blob_location_fut = BlobLocation::new(
             &pkgfs_system,
@@ -64,11 +78,14 @@ async fn main_inner() -> Result<(), Error> {
             inspector.root().create_child("blob-location"),
         );
 
-        let pkgfs_inspect_fut =
-            PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs"));
-
-        future::join3(static_packages_fut, blob_location_fut, pkgfs_inspect_fut).await
+        future::join3(static_packages_fut, pkgfs_inspect_fut, blob_location_fut).await
     };
+
+    let mut _blob_location = None;
+
+    if !ignore_system_image {
+        _blob_location = Some(blob_location?);
+    }
 
     let commit_status_provider =
         fuchsia_component::client::connect_to_service::<CommitStatusProviderMarker>()
