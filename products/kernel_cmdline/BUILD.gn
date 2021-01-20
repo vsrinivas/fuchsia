@@ -56,6 +56,10 @@ kernel_cmdline("kernel.serial--legacy") {
   args = [ "kernel.serial=legacy" ]
 }
 
+kernel_cmdline("kernel.serial--acpi") {
+  args = [ "kernel.serial=acpi" ]
+}
+
 kernel_cmdline("kernel.serial--none") {
   args = [ "kernel.serial=none" ]
 }
