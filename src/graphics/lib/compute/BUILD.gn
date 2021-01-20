@@ -49,7 +49,7 @@ group("tests") {
     ":graphics-compute-unittests",
     "mold:mold-tests",
     "spinel-rs:spinel-rs-tests",
-    "spinel-rs-sys:spinel-rs-sys-tests",
+    "spinel-rs-sys:tests",
     "surpass:surpass-tests",
   ]
 
