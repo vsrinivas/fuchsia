@@ -1645,60 +1645,86 @@ class NetStreamSocketsTest : public ::testing::Test {
   fbl::unique_fd server_;
 };
 
-TEST_F(NetStreamSocketsTest, DataTransferTest) {
-  std::thread echo([&]() {
-    std::array<uint8_t, 1024> buf;
-
-    for (;;) {
-      ssize_t r = read(server().get(), buf.data(), buf.size());
-      ASSERT_GE(r, 0) << strerror(errno);
-      if (r == 0) {
-        return;
-      }
-
-      for (ssize_t i = 0; i < r;) {
-        ssize_t w = write(server().get(), buf.data() + i, r - i);
-        ASSERT_GE(w, 0) << strerror(errno);
-        i += w;
-      }
-    }
-  });
-
+TEST_F(NetStreamSocketsTest, PartialWriteStress) {
+  // Generate a payload large enough to fill the client->server buffers.
   std::string big_string;
-  while (big_string.size() < 31 << 20) {
-    big_string += "Though this upload be but little, it is fierce.";
+  {
+    uint32_t sndbuf_opt;
+    socklen_t sndbuf_optlen = sizeof(sndbuf_opt);
+    EXPECT_EQ(getsockopt(client().get(), SOL_SOCKET, SO_SNDBUF, &sndbuf_opt, &sndbuf_optlen), 0)
+        << strerror(errno);
+    EXPECT_EQ(sndbuf_optlen, sizeof(sndbuf_opt));
+
+    uint32_t rcvbuf_opt;
+    socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
+    EXPECT_EQ(getsockopt(server().get(), SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen), 0)
+        << strerror(errno);
+    EXPECT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
+
+    // SO_{SND,RCV}BUF lie and report double the real value.
+    size_t size = (sndbuf_opt + rcvbuf_opt) >> 1;
+#if defined(__Fuchsia__)
+    // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are not
+    // artificially increasing the buffer sizes.
+    size += 2 * (1 << 18);
+#endif
+
+    big_string.reserve(size);
+    while (big_string.size() < size) {
+      big_string += "Though this upload be but little, it is fierce.";
+    }
   }
 
-  std::thread writer([this, big_string]() {
+  {
+    // Write in small chunks to allow the outbound TCP to coalesce adjacent writes into a single
+    // segment; that is the circumstance in which the data corruption bug that prompted writing this
+    // test was observed.
+    //
+    // Loopback MTU is 64KiB, so use a value smaller than that.
+    constexpr size_t write_size = 1 << 10;  // 1 KiB.
+
     auto s = big_string;
     while (!s.empty()) {
-      ssize_t w = write(client().get(), s.data(), s.size());
+      ssize_t w = write(client().get(), s.data(), std::min(s.size(), write_size));
       ASSERT_GE(w, 0) << strerror(errno);
       s = s.substr(w);
     }
     ASSERT_EQ(shutdown(client().get(), SHUT_WR), 0) << strerror(errno);
-  });
-
-  std::string buf;
-  buf.resize(1 << 20);
-  for (size_t i = 0; i < big_string.size();) {
-    ssize_t r = read(client().get(), buf.data(), buf.size());
-    ASSERT_GT(r, 0) << strerror(errno);
-
-    auto actual = buf.substr(0, r);
-    auto expected = big_string.substr(i, r);
-
-    constexpr size_t kChunkSize = 100;
-    for (size_t j = 0; j < actual.size(); j += kChunkSize) {
-      auto actual_chunk = actual.substr(j, kChunkSize);
-      auto expected_chunk = expected.substr(j, actual_chunk.size());
-      ASSERT_EQ(actual_chunk, expected_chunk) << "offset " << i + j;
-    }
-    i += r;
   }
 
-  writer.join();
-  echo.join();
+  // Read the data and validate it against our payload.
+  {
+    // Read in small chunks to increase the probability of partial writes from the network endpoint
+    // into the zircon socket; that is the circumstance in which the data corruption bug that
+    // prompted writing this test was observed.
+    //
+    // zircon sockets are 256KiB deep, so use a value smaller than that.
+    //
+    // Note that in spite of the trickery we employ in this test to create the conditions necessary
+    // to trigger the data corruption bug, it is still not guaranteed to happen. This is because a
+    // race is still necessary to trigger the bug; as netstack is copying bytes from the network to
+    // the zircon socket, the application on the other side of this socket (this test) must read
+    // between a partial write and the next write.
+    constexpr size_t read_size = 1 << 13;  // 8 KiB.
+
+    std::string buf;
+    buf.resize(read_size);
+    for (size_t i = 0; i < big_string.size();) {
+      ssize_t r = read(server().get(), buf.data(), buf.size());
+      ASSERT_GT(r, 0) << strerror(errno);
+
+      auto actual = buf.substr(0, r);
+      auto expected = big_string.substr(i, r);
+
+      constexpr size_t kChunkSize = 100;
+      for (size_t j = 0; j < actual.size(); j += kChunkSize) {
+        auto actual_chunk = actual.substr(j, kChunkSize);
+        auto expected_chunk = expected.substr(j, actual_chunk.size());
+        ASSERT_EQ(actual_chunk, expected_chunk) << "offset " << i + j;
+      }
+      i += r;
+    }
+  }
 }
 
 TEST_F(NetStreamSocketsTest, PeerClosedPOLLOUT) {

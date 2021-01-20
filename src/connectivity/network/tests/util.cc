@@ -20,7 +20,7 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
     // We'll arbitrarily select a larger size which will allow us to fill both zircon sockets
     // faster.
     //
-    // TODO(fxbug.dev/60337): We can use the minimum buffer size once zircon sockets are not
+    // TODO(https://fxbug.dev/60337): We can use the minimum buffer size once zircon sockets are not
     // artificially increasing the buffer sizes.
     constexpr int bufsize = 64 << 10;
 #else
