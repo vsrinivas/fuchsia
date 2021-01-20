@@ -137,4 +137,8 @@ result in multiple packets going each direction.
 
 ## See also
 
-+ [USB 2.0 spec](https://www.usb.org/document-library/usb-20-specification)
++ [USB 2.0 spec]
+
+<!-- xref -->
+
+[USB 2.0 spec]: https://www.usb.org/document-library/usb-20-specification

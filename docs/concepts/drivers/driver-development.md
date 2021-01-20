@@ -350,7 +350,7 @@ then these flags will have no effect.
 
 `run_unit_tests()` passes the driver a channel for it to write test output to.
 Test output should be in the form of `fuchsia.driver.test.Logger` FIDL messages.
-The driver-unit-test library contains a [helper class][] that integrates with
+The driver-unit-test library contains a [helper class] that integrates with
 zxtest and handles logging for you.
 
 [helper class]: /zircon/system/ulib/driver-unit-test/include/lib/driver-unit-test/logger.h

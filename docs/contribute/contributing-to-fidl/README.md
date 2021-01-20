@@ -702,6 +702,7 @@ fidl fmt --library my_library.fidl -i
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev
 [FTP-042]: /docs/contribute/governance/fidl/ftp/ftp-042.md
+[pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 
 [/zircon/tools/fidl/lib/c_generator.cc]: /zircon/tools/fidl/lib/c_generator.cc
 [/zircon/tools/fidl/lib/tables_generator.cc]: /zircon/tools/fidl/lib/tables_generator.cc

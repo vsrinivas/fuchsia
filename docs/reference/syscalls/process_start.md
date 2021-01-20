@@ -83,7 +83,7 @@ does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** o
 **ZX_ERR_BAD_STATE**  *process* is already running or has exited.
 
 **ZX_ERR_INVALID_ARGS** *entry* is not a userspace address, is not a
-[canonical address], or is not `0`.
+canonical address, or is not `0`.
 
 ## SEE ALSO
 
