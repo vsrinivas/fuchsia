@@ -31,10 +31,6 @@
     use: [
         { runner: "elf" },
         {
-            storage: "data",
-            path: "/data",
-        },
-        {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.diagnostics.internal.DetectController",
