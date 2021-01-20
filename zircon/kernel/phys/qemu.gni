@@ -4,9 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-if (zx != "/") {
-  import("//build/unification/global_variables.gni")
-}
+import("//build/unification/global_variables.gni")
 
 # TODO(mcgrathr): declare_args() { qemu_boot_format = "multiboot"/"zeropage" }
 
@@ -27,13 +25,9 @@ if (toolchain.environment == "kernel.phys") {
   qemu_deps = [ "$zx/kernel/phys:qemu-header" ]
 } else {
   assert(current_cpu == "x64")
-  if (zx == "/") {
-    assert(toolchain.environment_label == qemu_environment)
-  } else {
-    assert(toolchain.environment == get_label_info(qemu_environment, "name"),
-           "Bad toolchain environment ${toolchain.environment}, expected " +
-               get_label_info(qemu_environment, "name"))
-  }
+  assert(toolchain.environment == get_label_info(qemu_environment, "name"),
+         "Bad toolchain environment ${toolchain.environment}, expected " +
+             get_label_info(qemu_environment, "name"))
 
   # What to link into a raw QEMU kernel executable (x86-32 Multiboot).
   qemu_deps = [ "$zx/kernel/arch/x86/phys:multiboot" ]

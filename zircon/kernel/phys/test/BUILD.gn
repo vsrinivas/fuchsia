@@ -5,24 +5,14 @@
 # https://opensource.org/licenses/MIT
 
 if (current_toolchain != default_toolchain) {
+  import("//build/dist/generated_resource.gni")
+  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
   import("$zx/kernel/phys/phys_executable.gni")
   import("$zx/kernel/phys/qemu.gni")
   import("$zx/kernel/phys/zbi_executable.gni")
-  if (zx == "/") {
-    import("$zx/public/gn/resource.gni")
-    import("$zx/public/gn/test/zbi_test.gni")
-  } else {
-    import("//build/dist/generated_resource.gni")
-    import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-  }
 
-  if (zx == "/") {
-    assert(toolchain.environment == "kernel.phys" ||
-           toolchain.environment_label == qemu_environment)
-  } else {
-    assert(toolchain.environment == "kernel.phys" ||
-           toolchain_variant.base == qemu_environment)
-  }
+  assert(toolchain.environment == "kernel.phys" ||
+         toolchain_variant.base == qemu_environment)
 
   # This provides a PhysMain function appropriate for zbi_test() targets.
   source_set("qemu-test-main") {
@@ -110,22 +100,10 @@ if (current_toolchain != default_toolchain) {
       timeout = qemu_short_timeout
     }
 
-    if (zx == "/") {
-      # The "null redirect" is needed to perform variant selection consistent
-      # with what the phys_executable will do.  That way the $executable_target
-      # label is in the right toolchain to be found in images.json.
-      environment_redirect(main_target) {
-        testonly = true
-        forward_variables_from(invoker, [ "visibility" ])
-        environment_label = qemu_environment
-        deps = [ ":$zbi_target" ]
-      }
-    } else {
-      group(main_target) {
-        testonly = true
-        forward_variables_from(invoker, [ "visibility" ])
-        public_deps = [ ":$zbi_target($qemu_environment)" ]
-      }
+    group(main_target) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      public_deps = [ ":$zbi_target($qemu_environment)" ]
     }
   }
 
@@ -277,9 +255,6 @@ if (current_toolchain != default_toolchain) {
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 
   # We create mexec-chainloading variations of all of the phys ZBI tests.
-  # Once there is no longer a separate zircon build, we can define these targets
-  # directly, instead of sifting through zircon's zbi_tests.json to synthesize
-  # targets in this build.
   test_deps = []
   foreach(test,
           [

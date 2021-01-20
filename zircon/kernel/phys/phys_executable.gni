@@ -6,9 +6,6 @@
 
 import("//build/zircon/migrated_targets.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
-if (zx == "/") {
-  import("$zx/public/gn/toolchain/environment_redirect.gni")
-}
 
 _is_phys = toolchain.environment == "kernel.phys" ||
            toolchain.environment == "kernel.phys32"
@@ -43,16 +40,9 @@ _phys_linker_scripts = [
 #
 template("phys_executable") {
   if (!_is_phys) {
-    if (zx == "/") {
-      environment_redirect(target_name) {
-        environment_label = "$zx/kernel/phys:kernel.phys"
-        deps = [ ":$target_name" ]
-      }
-    } else {
-      group(target_name) {
-        public_deps =
-            [ ":$target_name($zx/kernel/phys:kernel.phys_$current_cpu)" ]
-      }
+    group(target_name) {
+      public_deps =
+          [ ":$target_name($zx/kernel/phys:kernel.phys_$current_cpu)" ]
     }
     not_needed(invoker, "*")
   } else {
@@ -80,10 +70,6 @@ template("phys_executable") {
       inputs += _phys_linker_scripts
       foreach(ldscript, _phys_linker_scripts) {
         ldflags += [ "-Wl,-T," + rebase_path(ldscript, root_build_dir) ]
-      }
-      if (zx == "/") {
-        # Don't generate a binaries.json entry for this binary.
-        sdk_migrated = true
       }
     }
 
@@ -113,11 +99,7 @@ template("phys_executable") {
       }
 
       if (!defined(output_dir)) {
-        if (zx == "/") {
-          output_dir = target_out_dir
-        } else {
-          output_dir = root_out_dir
-        }
+        output_dir = root_out_dir
       }
       if (!defined(output_name)) {
         output_name = target_name
@@ -153,27 +135,7 @@ template("phys_executable") {
 }
 
 if (_is_phys) {
-  if (zx == "/") {
-    # Templates like phys_executable() use this in set_defaults().
-    #
-    # Type: list(config)
-    phys_default_configs = []
-    foreach(config, toolchain.configs) {
-      if (config == "$config") {
-        phys_default_configs += [ config ]
-      } else if (!defined(config.types) || config.types + [ "executable" ] -
-                                           [ "executable" ] != config.types) {
-        phys_default_configs += config.add
-        phys_default_configs -= config.remove
-      }
-    }
-
-    set_defaults("phys_executable") {
-      configs = phys_default_configs
-    }
-  } else {
-    set_defaults("phys_executable") {
-      configs = default_executable_configs
-    }
+  set_defaults("phys_executable") {
+    configs = default_executable_configs
   }
 }
