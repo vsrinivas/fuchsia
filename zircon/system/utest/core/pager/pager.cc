@@ -681,6 +681,35 @@ TEST(Pager, ClosePageCompleteTest) {
   ASSERT_TRUE(pager.WaitForPageComplete(key, ZX_TIME_INFINITE));
 }
 
+// Tests that accessing a VMO in non-mapping ways returns appropriate errors if detached.
+TEST(Pager, DetachNonMappingAccess) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+
+  zx_status_t vmo_result = ZX_OK;
+  TestThread t([vmo, &vmo_result]() -> bool {
+    uint64_t val;
+    // Do a read that strides two pages so we can succeed one and fail one.
+    vmo_result = vmo->vmo().read(&val, PAGE_SIZE - sizeof(uint64_t) / 2, sizeof(uint64_t));
+    return true;
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // Supply the first page, then once the second is requested detach the VMO.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+  pager.DetachVmo(vmo);
+  ASSERT_TRUE(t.WaitForTerm());
+
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo_result);
+}
+
 // Tests that interrupting a read after receiving the request doesn't result in hanging threads.
 void ReadInterruptLateTest(bool check_vmar, bool detach) {
   UserPager pager;

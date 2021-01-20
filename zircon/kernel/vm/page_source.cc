@@ -169,7 +169,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
 
   Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
-    return ZX_ERR_NOT_FOUND;
+    return ZX_ERR_BAD_STATE;
   }
 
   if (GetPage(offset, vmo_debug_info, page_out, pa_out)) {
@@ -245,7 +245,7 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
 
   Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
-    return ZX_ERR_NOT_FOUND;
+    return ZX_ERR_BAD_STATE;
   }
 
   RaiseReadRequestLocked(request);
