@@ -156,6 +156,10 @@
       "licenseLocation": "docs/LICENSE.TXT"
     },
     {
+      "projectRoot": "third_party/android/platform/bionic",
+      "licenseLocation": "libc/NOTICE"
+    },
+    {
       "projectRoot": "third_party/imgtec-pvr-rgx-km",
       "licenseLocation": "MIT-COPYING"
     },
