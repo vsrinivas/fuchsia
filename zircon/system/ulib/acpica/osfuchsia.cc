@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <lib/pci/pio.h>
@@ -42,6 +41,8 @@ __WEAK zx_handle_t root_resource_handle;
 
 #define _COMPONENT ACPI_OS_SERVICES
 ACPI_MODULE_NAME("oszircon")
+
+#define UNIMPLEMENTED() ZX_PANIC("%s unimplemented\n", __func__)
 
 #define LOCAL_TRACE 0
 
@@ -684,7 +685,7 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
  */
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
   // TODO: Implement support for Units > 1
-  assert(Units == 1);
+  ZX_DEBUG_ASSERT(Units == 1);
 
   sem_post(Handle);
   return AE_OK;
@@ -892,7 +893,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLE
     return AE_OK;
   }
 
-  assert(InterruptLevel == 0x9);  // SCI
+  ZX_DEBUG_ASSERT(InterruptLevel == 0x9);  // SCI
 
   fbl::AllocChecker ac;
   std::unique_ptr<AcpiIrqThread> arg(new (&ac) AcpiIrqThread());
@@ -933,8 +934,8 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLE
  * @return AE_NOT_EXIST There is no handler installed for this interrupt level.
  */
 ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER Handler) {
-  assert(InterruptNumber == 0x9);  // SCI
-  assert(sci_irq);
+  ZX_DEBUG_ASSERT(InterruptNumber == 0x9);  // SCI
+  ZX_DEBUG_ASSERT(sci_irq);
   zx_interrupt_destroy(sci_irq->irq_handle);
   thrd_join(sci_irq->thread, nullptr);
   sci_irq.reset();
@@ -951,7 +952,7 @@ ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLE
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64* Value, UINT32 Width) {
-  assert(false);
+  UNIMPLEMENTED();
   return AE_OK;
 }
 
@@ -965,7 +966,7 @@ ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64* Value, UINT3
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width) {
-  assert(false);
+  UNIMPLEMENTED();
   return AE_OK;
 }
 
@@ -1304,7 +1305,7 @@ UINT64 AcpiOsGetTimer() { return zx_clock_get_monotonic() / 100; }
  * @return Exception code that indicates success or reason for failure.
  */
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info) {
-  assert(false);
+  UNIMPLEMENTED();
   return AE_OK;
 }
 
@@ -1334,7 +1335,7 @@ static_assert(sizeof(AlignedFacs) == sizeof(ACPI_TABLE_FACS));
  * @return True if the lock was successfully acquired
  */
 bool _acpica_acquire_global_lock(void* FacsPtr) {
-  assert(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
+  ZX_DEBUG_ASSERT(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
   AlignedFacs* table = (AlignedFacs*)FacsPtr;
   uint32_t old_val, new_val, test_val;
   do {
@@ -1364,7 +1365,7 @@ bool _acpica_acquire_global_lock(void* FacsPtr) {
 bool _acpica_release_global_lock(void* FacsPtr) {
   // the FACS table is required to be 8 byte aligned, so sanity check with an assert but otherwise
   // we can just treat it as being aligned.
-  assert(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
+  ZX_DEBUG_ASSERT(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
   AlignedFacs* table = (AlignedFacs*)FacsPtr;
   uint32_t old_val, new_val, test_val;
   do {
