@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS},
+    crate::constants::{
+        FASTBOOT_CHECK_INTERVAL_SECS, FASTBOOT_DROP_GRACE_PERIOD_SECS,
+        MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
+    },
     crate::events::{self, DaemonEvent, EventSynthesizer},
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
@@ -194,6 +197,7 @@ impl RcsConnection {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ConnectionState {
+    /// Default state: no connection.
     Disconnected,
     /// Contains the last known ping from mDNS.
     Mdns(DateTime<Utc>),
@@ -202,8 +206,8 @@ pub enum ConnectionState {
     /// Target was manually added. Same as `Disconnected` but indicates that the target's name is
     /// wrong as well.
     Manual,
-    // TODO(awdavies): Have fastboot in here.
-    Fastboot,
+    /// Contains the last known interface update with a Fastboot serial number.
+    Fastboot(DateTime<Utc>),
 }
 
 impl Default for ConnectionState {
@@ -415,7 +419,38 @@ impl Target {
                 .await;
                 Timer::new(Duration::from_secs(1)).await;
             } else {
-                log::debug!("parent target dropped. exiting");
+                log::debug!("parent target dropped in mdns monitor loop. exiting");
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    async fn fastboot_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
+        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
+        loop {
+            if let Some(t) = weak_target.upgrade() {
+                let nodename = t.nodename_str().await;
+                t.update_connection_state(|s| match s {
+                    ConnectionState::Fastboot(ref time) => {
+                        let now = Utc::now();
+                        if now.signed_duration_since(*time) > limit {
+                            log::debug!(
+                                "dropping target '{}'. fastboot state older than {}",
+                                nodename,
+                                limit
+                            );
+                            ConnectionState::Disconnected
+                        } else {
+                            s
+                        }
+                    }
+                    _ => s,
+                })
+                .await;
+                Timer::new(Duration::from_secs(1)).await;
+            } else {
+                log::debug!("parent target dropped in serial monitor loop. exiting");
                 break;
             }
         }
@@ -448,6 +483,11 @@ impl Target {
             )
             .boxed(),
             TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed(),
+            TargetTaskType::FastbootMonitor => Target::fastboot_monitor_loop(
+                weak_target.clone(),
+                Duration::from_secs(FASTBOOT_CHECK_INTERVAL_SECS + FASTBOOT_DROP_GRACE_PERIOD_SECS),
+            )
+            .boxed(),
         }));
         Self { inner, events, task_manager }
     }
@@ -726,6 +766,10 @@ impl Target {
 
     pub async fn run_mdns_monitor(&self) {
         self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor).await;
+    }
+
+    pub async fn run_fastboot_monitor(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::FastbootMonitor).await;
     }
 
     pub async fn run_logger(&self) {
@@ -1963,6 +2007,33 @@ mod test {
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
                     ConnectionState::Mdns(now),
+                    ConnectionState::Disconnected,
+                )
+            })
+            .await
+            .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_fastboot_set_disconnected() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let t = Target::new(ascendd, "platypodes-are-venomous");
+        let now = Utc::now();
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Fastboot(now)
+        })
+        .await;
+        let events = t.events.clone();
+        let _task = fuchsia_async::Task::local(async move {
+            Target::fastboot_monitor_loop(t.downgrade(), Duration::from_secs(2))
+                .await
+                .expect("mdns monitor loop failed")
+        });
+        events
+            .wait_for(None, move |e| {
+                e == TargetEvent::ConnectionStateChanged(
+                    ConnectionState::Fastboot(now),
                     ConnectionState::Disconnected,
                 )
             })

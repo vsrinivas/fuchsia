@@ -17,6 +17,10 @@ pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 20;
 // as disconnected.
 pub(crate) const MDNS_TARGET_DROP_GRACE_PERIOD_SECS: u64 = 5;
 
+pub(crate) const FASTBOOT_CHECK_INTERVAL_SECS: u64 = 3;
+
+pub(crate) const FASTBOOT_DROP_GRACE_PERIOD_SECS: u64 = 2;
+
 pub(crate) const DEFAULT_MAX_RETRY_COUNT: u64 = 30;
 
 // Delay between retry attempts to find the RCS.

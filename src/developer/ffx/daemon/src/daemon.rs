@@ -169,10 +169,13 @@ impl DaemonEventHandler {
             .then(|target| async move {
                 target
                     .update_connection_state(|s| match s {
-                        ConnectionState::Disconnected => ConnectionState::Fastboot,
+                        ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
+                            ConnectionState::Fastboot(Utc::now())
+                        }
                         _ => s,
                     })
                     .await;
+                target.run_fastboot_monitor().await;
             })
             .await;
     }

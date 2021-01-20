@@ -11,4 +11,5 @@ pub enum TargetTaskType {
     HostPipe,
     MdnsMonitor,
     ProactiveLog,
+    FastbootMonitor,
 }
