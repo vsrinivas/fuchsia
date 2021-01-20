@@ -97,18 +97,25 @@ impl<C: HttpsDateClient + Send> HttpsSampler for HttpsSamplerImpl<C> {
         num_polls: usize,
         measure_offset: bool,
     ) -> Result<BoxFuture<'_, HttpsSample>, HttpsDateError> {
-        let (mut bound, first_poll) = self.poll_server(measure_offset).await?;
+        // Don't measure offset on the initial poll, as setting up TLS connections causes this poll
+        // to take longer.
+        let (mut bound, first_poll) = self.poll_server(false).await?;
         let mut polls = vec![first_poll];
 
         let sample_fut = async move {
-            for _ in 1..num_polls {
+            for poll_idx in 1..num_polls {
                 let ideal_next_poll_time =
                     ideal_next_poll_time(&bound, polls.iter().map(|poll| &poll.round_trip_time));
                 fasync::Timer::new(ideal_next_poll_time).await;
 
                 // For subsequent polls ignore errors. This allows producing a degraded sample
-                // instead of outright failing as long as one poll succeeds.
-                if let Ok((new_bound, new_poll)) = self.poll_server(measure_offset).await {
+                // instead of outright failing as long as one poll succeeds. In addition,
+                // we measure offset only on the second poll. As our algorithm attempts to schedule
+                // polls at certain times, measuring offsets for all polls biases the offset
+                // towards +/- .5 seconds.
+                if let Ok((new_bound, new_poll)) =
+                    self.poll_server(measure_offset && poll_idx == 1).await
+                {
                     bound = match bound.combine(&new_bound) {
                         Some(combined) => combined,
                         None => {
@@ -437,11 +444,16 @@ mod test {
 
         let sample = sampler.produce_sample(3, true).await.unwrap().await;
 
-        for Poll { round_trip_time, center_offset } in sample.polls.iter() {
-            let offset = center_offset.unwrap();
-            assert!(offset >= zx::Duration::from_millis(-500) - *round_trip_time / 2);
-            assert!(offset <= zx::Duration::from_millis(500) + *round_trip_time / 2);
-        }
+        // only the second poll has an offset.
+        let first_poll = sample.polls[0].clone();
+        assert!(first_poll.center_offset.is_none());
+
+        let second_poll = sample.polls[1].clone();
+        let offset = second_poll.center_offset.unwrap();
+        assert!(offset >= zx::Duration::from_millis(-500) - second_poll.round_trip_time / 2);
+        assert!(offset <= zx::Duration::from_millis(500) + second_poll.round_trip_time / 2);
+
+        assert!(sample.polls.iter().skip(2).all(|poll| poll.center_offset.is_none()));
     }
 
     #[fasync::run_singlethreaded(test)]
