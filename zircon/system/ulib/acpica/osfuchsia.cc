@@ -999,7 +999,8 @@ static bool check_port_permissions(uint16_t address, uint8_t width_bytes) {
  * @return Status code that indicates success or reason for error.
  */
 static zx_status_t add_port_permissions(uint16_t address, uint8_t width_bytes) {
-  assert(port_bitmap.Set(address, address + width_bytes) == ZX_OK);
+  zx_status_t result = port_bitmap.Set(address, address + width_bytes);
+  ZX_ASSERT(result == ZX_OK);
 
   LTRACEF("Adding permissions to [%#x, %#x]\n", address, address + width_bytes);
 
