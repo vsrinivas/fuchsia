@@ -49,6 +49,32 @@ class RealEmbeddedController : public EmbeddedController {
 };
 
 zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out) {
+  // Enable access to the ranges of IO ports required for communication with the EC.
+  //
+  // This list is not available via ACPI, so we need to hard-code it.
+  struct PortRange {
+    uint16_t base;
+    uint16_t size;
+  };
+  for (const auto& region : (PortRange[]){
+           {EC_HOST_CMD_REGION0, EC_HOST_CMD_REGION_SIZE},
+           {EC_HOST_CMD_REGION1, EC_HOST_CMD_REGION_SIZE},
+           {EC_LPC_ADDR_ACPI_DATA, 4},
+           {EC_LPC_ADDR_ACPI_CMD, 4},
+           {EC_LPC_ADDR_HOST_DATA, 4},
+           {EC_LPC_ADDR_HOST_CMD, 4},
+           {EC_LPC_ADDR_MEMMAP, EC_MEMMAP_SIZE},
+       }) {
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+    zx_status_t status = zx_ioports_request(get_root_resource(), region.base, region.size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "acpi-cros-ec-core: ioports request for range %d--%d failed: %s",
+             region.base, region.base + region.size - 1, zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  // Ensure we have a supported EC.
   if (!CrOsEc::IsLpc3Supported()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
