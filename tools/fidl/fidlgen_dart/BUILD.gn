@@ -46,8 +46,11 @@ install_host_tools("host") {
   outputs = [ "fidlgen_dart" ]
 }
 
+dartfmt_command = rebase_path("${dart_sdk}/bin/dartfmt")
+
 golden_test("fidlgen_dart_golden_tests") {
   goldens_dir = "goldens"
+  reformat_goldens_command = dartfmt_command
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {

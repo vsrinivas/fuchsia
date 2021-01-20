@@ -45,8 +45,13 @@ go_test("fidlgen_go_lib_tests") {
   deps = [ ":gopkg" ]
 }
 
+gofmt_command =
+    rebase_path("//prebuilt/third_party/go/$host_platform/bin/gofmt",
+                root_build_dir)
+
 golden_test("fidlgen_go_golden_tests") {
   goldens_dir = "goldens"
+  reformat_goldens_command = gofmt_command
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {

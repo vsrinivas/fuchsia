@@ -67,8 +67,12 @@ go_test("fidlgen_rust_lib_tests") {
   ]
 }
 
+rustfmt = rebase_path("$fidl_rust_tools_dir/bin/rustfmt", root_build_dir)
+rustfmt_config = rebase_path("//rustfmt.toml", root_build_dir)
+
 golden_test("fidlgen_rust_golden_tests") {
   goldens_dir = "goldens"
+  reformat_goldens_command = "'${rustfmt}' --config-path '${rustfmt_config}'"
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {

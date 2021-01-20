@@ -39,8 +39,14 @@ install_host_tools("host") {
   outputs = [ "fidlgen_libfuzzer" ]
 }
 
+clang_format =
+    rebase_path("//prebuilt/third_party/clang/$host_platform/bin/clang-format",
+                root_build_dir)
+reformat_command = "'${clang_format}' --style=google"
+
 golden_test("fidlgen_libfuzzer_golden_tests") {
   goldens_dir = "goldens"
+  reformat_goldens_command = reformat_command
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {

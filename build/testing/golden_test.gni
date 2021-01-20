@@ -55,6 +55,12 @@ import("//build/testing/host_test_data.gni")
 #     an absolute path to the corresponding generated file, which must be
 #     produced by one of the targets in `deps`.
 #
+#   reformat_goldens_command (optional)
+#     A command that will reformat from stdin to stdout.
+#     The command will be invoked for each golden file checked into the tree
+#     before comparing it to the newly generated version. This allows changes
+#     to source formatting tools to not cause goldens tests to fail.
+#
 #   deps (required)
 #   visibility
 #
@@ -68,22 +74,59 @@ template("golden_test") {
   assert(defined(invoker.entries))
   assert(defined(invoker.deps))
 
-  copied_goldens_prefix = "$target_gen_dir/${target_name}_"
-  copied_goldens_dir = copied_goldens_prefix + invoker.goldens_dir
-  manifest_file = "$target_gen_dir/${target_name}_manifest.json"
+  reformat_goldens = "cat"
+  if (defined(invoker.reformat_goldens_command)) {
+    reformat_goldens = invoker.reformat_goldens_command
+  }
 
-  # Copy golden files from the source tree so the test can access them. Also
-  # copy the goldens.txt file itself to ensure the test fails when golden files
-  # are removed (it won't just use copies that are still lying around).
-  target_copy_goldens = "${target_name}_copy_goldens"
-  host_test_data(target_copy_goldens) {
+  copied_goldens_dir = "${target_gen_dir}/${target_name}"
+  manifest_file = "${target_gen_dir}/${target_name}_manifest.json"
+
+  # read the checked-in list of golden files
+  goldens_list = read_file("${invoker.goldens_dir}/goldens.txt", "list lines")
+  assert(goldens_list ==
+             process_file_template(goldens_list, "{{source_file_part}}"),
+         "Subdirectories are not allowed in goldens.txt")
+
+  # Copy the goldens.txt list and make it available to the test at runtime.
+  target_test_data_goldens_list = "${target_name}_test_data_goldens_list"
+  host_test_data(target_test_data_goldens_list) {
     visibility = [ ":*" ]
-    sources = rebase_path(
-            [ "goldens.txt" ] +
-                read_file("${invoker.goldens_dir}/goldens.txt", "list lines"),
-            ".",
-            "${invoker.goldens_dir}")
-    outputs = [ copied_goldens_prefix + "{{source_target_relative}}" ]
+    sources = [ "${invoker.goldens_dir}/goldens.txt" ]
+    outputs = [ "${copied_goldens_dir}/goldens.txt" ]
+  }
+
+  # Reformat or copy the goldens from the source directory by piping each
+  # golden file through `reformat_goldens`.
+  target_reformat_goldens = "${target_name}_reformat_goldens"
+  action_foreach(target_reformat_goldens) {
+    testonly = true
+    visibility = [ ":*" ]
+
+    # Always copy & format the goldens when the generated files change to avoid
+    # comparing stale goldens.
+    deps = invoker.deps
+
+    script = "/bin/sh"
+    sources = rebase_path(goldens_list, ".", invoker.goldens_dir)
+    outputs = [ "${copied_goldens_dir}/{{source_file_part}}" ]
+    output_dir = rebase_path(copied_goldens_dir, root_build_dir)
+    args = [
+      "-c",
+      "${reformat_goldens} < '{{source}}' > " +
+          "'${output_dir}/{{source_file_part}}'",
+    ]
+  }
+
+  # Make the copy of the goldens available to the test at runtime.
+  target_test_data_goldens = "${target_name}_test_data_goldens"
+  host_test_data(target_test_data_goldens) {
+    visibility = [ ":*" ]
+    deps = [ ":${target_reformat_goldens}" ]
+    sources = []
+    foreach(golden, goldens_list) {
+      sources += [ "${copied_goldens_dir}/${golden}" ]
+    }
   }
 
   # Generate the manifest file.
@@ -118,20 +161,21 @@ template("golden_test") {
     foreach(entry, invoker.entries) {
       sources += [ entry.generated ]
     }
-    deps = [ ":$target_generate_manifest" ] + invoker.deps
+    deps = [ ":${target_generate_manifest}" ] + invoker.deps
   }
 
   # Generate a test target, so that this test can be executed with `fx test`.
   host_test(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
-    binary_path = "$root_out_dir/golden-util"
+    binary_path = "${root_out_dir}/golden-util"
     args = [
       "--manifest",
       rebase_path(manifest_file, root_build_dir),
     ]
     deps = [
-      ":$target_copy_goldens",
-      ":$target_generated_files",
+      ":${target_generated_files}",
+      ":${target_test_data_goldens_list}",
+      ":${target_test_data_goldens}",
       "//tools/golden-util",
     ]
   }

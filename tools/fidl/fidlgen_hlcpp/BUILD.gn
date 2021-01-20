@@ -54,8 +54,14 @@ go_binary("fidlgen") {
   deps = [ ":gopkg" ]
 }
 
+clang_format =
+    rebase_path("//prebuilt/third_party/clang/$host_platform/bin/clang-format",
+                root_build_dir)
+reformat_command = "'${clang_format}' --style=google"
+
 golden_test("fidlgen_hlcpp_golden_tests") {
   goldens_dir = "goldens/bindings"
+  reformat_goldens_command = reformat_command
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {
@@ -84,6 +90,7 @@ golden_test("fidlgen_hlcpp_golden_tests") {
 
 golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
   goldens_dir = "goldens/natural_types"
+  reformat_goldens_command = reformat_command
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {
