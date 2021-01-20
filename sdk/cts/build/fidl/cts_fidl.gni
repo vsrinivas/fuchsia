@@ -13,17 +13,29 @@ template("cts_fidl") {
   assert(defined(invoker.sources), "Sources must be defined.")
   assert(!defined(invoker.deps), "All FIDL dependencies should be public.")
 
-  if (defined(invoker.public_deps) && invoker.public_deps != []) {
+  invoker_deps = []
+  if (defined(invoker.public_deps)) {
+    invoker_deps += invoker.public_deps
+  }
+  if (defined(invoker.non_fidl_deps)) {
+    invoker_deps += invoker.non_fidl_deps
+  }
+
+  if (invoker_deps != []) {
     cts_element("${target_name}_verify_deps") {
-      deps = invoker.public_deps
+      deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
   fidl(target_name) {
     forward_variables_from(invoker, "*")
-    if (defined(public_deps) && public_deps != []) {
-      public_deps += [ ":${target_name}_verify_deps" ]
+    if (invoker_deps != []) {
+      if (defined(non_fidl_deps)) {
+        non_fidl_deps += [ ":${target_name}_verify_deps" ]
+      } else {
+        non_fidl_deps = [ ":${target_name}_verify_deps" ]
+      }
     }
   }
 
