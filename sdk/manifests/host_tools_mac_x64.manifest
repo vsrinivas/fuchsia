@@ -1,4 +1,5 @@
 sdk://docs/metadata_schemas
+sdk://tools/x64/blobfs-compression
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
 sdk://tools/x64/device-finder
@@ -8,6 +9,7 @@ sdk://tools/x64/fidl-format
 sdk://tools/x64/fidlc
 sdk://tools/x64/fidlcat
 sdk://tools/x64/fidlgen
+sdk://tools/x64/fvdl
 sdk://tools/x64/fvm
 sdk://tools/x64/merkleroot
 sdk://tools/x64/minfs

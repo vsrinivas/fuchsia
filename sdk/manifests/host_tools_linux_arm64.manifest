@@ -1,4 +1,5 @@
 sdk://docs/metadata_schemas
+sdk://tools/arm64/blobfs-compression
 sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
 sdk://tools/arm64/device-finder
@@ -7,6 +8,7 @@ sdk://tools/arm64/ffx
 sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
 sdk://tools/arm64/fidlgen
+sdk://tools/arm64/fvdl
 sdk://tools/arm64/fvm
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
