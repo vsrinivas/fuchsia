@@ -19,7 +19,7 @@ use fuchsia_async::TimeoutExt;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryFutureExt};
 use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt, ZxResult};
-use spinel_pack::TryUnpack;
+use spinel_pack::{TryUnpack, EUI64};
 use std::convert::TryInto;
 
 /// Helpers for API-related tasks.
@@ -790,20 +790,177 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         settings: MacAddressFilterSettings,
     ) -> ZxResult<()> {
-        if settings.mode.or(Some(MacAddressFilterMode::Disabled))
-            == Some(MacAddressFilterMode::Disabled)
-        {
-            Ok(())
-        } else {
-            Err(ZxStatus::NOT_SUPPORTED)
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock("get_mac_address_filter_settings").await?;
+
+        // Disbale allowlist/denylist
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropMac::AllowListEnabled.into(), false).verify())
+            .await
+            .map_err(|err| {
+                fx_log_err!("Error disable allowlist: {}", err);
+                ZxStatus::INTERNAL
+            })?;
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropMac::DenyListEnabled.into(), false).verify())
+            .await
+            .map_err(|err| {
+                fx_log_err!("Error disbale denylist: {}", err);
+                ZxStatus::INTERNAL
+            })?;
+
+        match settings.mode {
+            Some(MacAddressFilterMode::Disabled) => Ok(()),
+            Some(MacAddressFilterMode::Allow) => {
+                let allow_list = settings
+                    .items
+                    .or(Some(vec![]))
+                    .unwrap()
+                    .into_iter()
+                    .map(|x| {
+                        Ok(AllowListEntry {
+                            mac_addr: EUI64(
+                                x.mac_address
+                                    .unwrap_or(vec![])
+                                    .try_into()
+                                    .map_err(|_| Err(ZxStatus::INVALID_ARGS))?,
+                            ),
+                            rssi: x.rssi.unwrap_or(127),
+                        })
+                    })
+                    .collect::<Result<Vec<AllowListEntry>, ZxStatus>>()?;
+                // Set allowlist
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropMac::AllowList.into(), allow_list).verify())
+                    .await
+                    .map_err(|err| {
+                        fx_log_err!("Error with CmdPropValueSet: {:?}", err);
+                        ZxStatus::INTERNAL
+                    })?;
+                // Enable allowlist
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropMac::AllowListEnabled.into(), true).verify())
+                    .await
+                    .map_err(|err| {
+                        fx_log_err!("Error enable allowlist: {}", err);
+                        ZxStatus::INTERNAL
+                    })
+            }
+            Some(MacAddressFilterMode::Deny) => {
+                // Construct denylist
+                let deny_list = settings
+                    .items
+                    .or(Some(vec![]))
+                    .unwrap()
+                    .into_iter()
+                    .map(|x| {
+                        x.mac_address.map_or(Err(ZxStatus::INVALID_ARGS), Ok).and_then(|x| {
+                            // TODO (jiamingw): apply this change after the openthread library patch is in
+                            // Ok(DenyListEntry {
+                            //     mac_addr: EUI64(
+                            //         x.try_into().map_err(|_| Err(ZxStatus::INVALID_ARGS))?,
+                            //     ),
+                            // })
+                            Ok(AllowListEntry {
+                                mac_addr: EUI64(
+                                    x.try_into().map_err(|_| Err(ZxStatus::INVALID_ARGS))?,
+                                ),
+                                rssi: 127,
+                            })
+                        })
+                    })
+                    .collect::<Result<Vec<AllowListEntry>, ZxStatus>>()?;
+                // Set denylist
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropMac::AllowList.into(), deny_list).verify())
+                    .await
+                    .map_err(|err| {
+                        fx_log_err!("Error with CmdPropValueSet: {:?}", err);
+                        ZxStatus::INTERNAL
+                    })?;
+                // Enable denylist
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropMac::DenyListEnabled.into(), true).verify())
+                    .await
+                    .map_err(|err| {
+                        fx_log_err!("Error enable denylist: {}", err);
+                        ZxStatus::INTERNAL
+                    })
+            }
+            _ => Err(ZxStatus::NOT_SUPPORTED),
         }
     }
 
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings> {
-        Ok(MacAddressFilterSettings {
-            mode: Some(MacAddressFilterMode::Disabled),
-            ..MacAddressFilterSettings::EMPTY
-        })
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock("get_mac_address_filter_settings").await?;
+
+        let allow_list_enabled =
+            self.get_property_simple::<bool, _>(PropMac::AllowListEnabled).await?;
+
+        let deny_list_enabled =
+            self.get_property_simple::<bool, _>(PropMac::DenyListEnabled).await?;
+
+        if allow_list_enabled && deny_list_enabled {
+            fx_log_err!("get_mac_address_filter_settings: Both allow and deny list are enabled");
+            self.ncp_is_misbehaving();
+            return Err(ZxStatus::INTERNAL);
+        }
+
+        let mode = if allow_list_enabled == true {
+            MacAddressFilterMode::Allow
+        } else if deny_list_enabled == true {
+            MacAddressFilterMode::Deny
+        } else {
+            MacAddressFilterMode::Disabled
+        };
+
+        let filter_item_vec = match mode {
+            MacAddressFilterMode::Allow => self
+                .get_property_simple::<AllowList, _>(PropMac::AllowList)
+                .await?
+                .into_iter()
+                .map(|item| MacAddressFilterItem {
+                    mac_address: Some(item.mac_addr.0.to_vec()),
+                    rssi: Some(item.rssi),
+                    ..MacAddressFilterItem::EMPTY
+                })
+                .collect::<Vec<_>>(),
+            MacAddressFilterMode::Deny => self
+                .get_property_simple::<DenyList, _>(PropMac::DenyList)
+                .await?
+                .into_iter()
+                .map(|item| MacAddressFilterItem {
+                    mac_address: Some(item.mac_addr.0.to_vec()),
+                    rssi: None,
+                    ..MacAddressFilterItem::EMPTY
+                })
+                .collect::<Vec<_>>(),
+            _ => vec![],
+        };
+
+        match mode {
+            MacAddressFilterMode::Disabled => Ok(MacAddressFilterSettings {
+                mode: Some(MacAddressFilterMode::Disabled),
+                ..MacAddressFilterSettings::EMPTY
+            }),
+            MacAddressFilterMode::Allow => Ok(MacAddressFilterSettings {
+                mode: Some(MacAddressFilterMode::Allow),
+                items: Some(filter_item_vec),
+                ..MacAddressFilterSettings::EMPTY
+            }),
+            MacAddressFilterMode::Deny => Ok(MacAddressFilterSettings {
+                mode: Some(MacAddressFilterMode::Deny),
+                items: Some(filter_item_vec),
+                ..MacAddressFilterSettings::EMPTY
+            }),
+        }
     }
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {

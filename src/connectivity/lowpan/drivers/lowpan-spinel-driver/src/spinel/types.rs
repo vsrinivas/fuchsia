@@ -259,6 +259,25 @@ pub struct NetworkPacket<'a> {
 
 pub type AddressTable = HashSet<AddressTableEntry>;
 
+/// An allow list entry
+#[spinel_packed("Ec")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct AllowListEntry {
+    pub mac_addr: EUI64,
+    pub rssi: i8,
+}
+
+pub type AllowList = HashSet<AllowListEntry>;
+
+/// An deny list entry
+#[spinel_packed("E")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct DenyListEntry {
+    pub mac_addr: EUI64,
+}
+
+pub type DenyList = HashSet<DenyListEntry>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
