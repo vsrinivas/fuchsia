@@ -173,6 +173,96 @@ BanjoAst {
                     },
                 ],
             },
+            Protocol {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.references",
+                    ),
+                    name: "InOutProtocol",
+                },
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomething",
+                        in_params: [
+                            (
+                                "param",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "banjo.examples.references",
+                                        ),
+                                        name: "SomeType",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [
+                                        Attr {
+                                            key: "InOut",
+                                            val: None,
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomeOtherThing",
+                        in_params: [
+                            (
+                                "param",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "banjo.examples.references",
+                                        ),
+                                        name: "SomeType",
+                                    },
+                                    reference: true,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomeDefaultThing",
+                        in_params: [
+                            (
+                                "param",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "banjo.examples.references",
+                                        ),
+                                        name: "SomeType",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                ],
+            },
         ],
     },
 }

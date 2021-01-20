@@ -126,6 +126,13 @@ mod cpp {
 
     codegen_test!(empty, CppBackend, ["banjo/empty.test.banjo"], "cpp/empty.h", CppSubtype::Base);
     codegen_test!(
+        references,
+        CppBackend,
+        ["banjo/references.test.banjo"],
+        "cpp/references.h",
+        CppSubtype::Base
+    );
+    codegen_test!(
         example_4,
         CppBackend,
         ["banjo/example-4.test.banjo"],

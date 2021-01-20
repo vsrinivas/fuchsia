@@ -19,3 +19,9 @@ struct MutableField {
   string? some_other_string;
   string some_default_string;
 };
+
+protocol InOutProtocol {
+  DoSomething([InOut] SomeType param) -> ();
+  DoSomeOtherThing(SomeType? param) -> ();
+  DoSomeDefaultThing(SomeType param) -> ();
+};

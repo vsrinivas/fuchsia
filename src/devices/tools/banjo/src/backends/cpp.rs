@@ -141,7 +141,7 @@ fn get_in_params(
 ) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
-        .map(|(name, ty, _)| {
+        .map(|(name, ty, attrs)| {
             match ty {
                 ast::Ty::Identifier { id, .. } => {
                     if id.is_base_type() {
@@ -164,8 +164,11 @@ fn get_in_params(
                         }
                         ast::Ty::Struct | ast::Ty::Union => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
-                            // TODO: Using nullability to determine whether param is mutable is a hack.
-                            let prefix = if ty.is_reference() { "" } else { "const " };
+                            let prefix = if attrs.has_attribute("InOut") || ty.is_reference() {
+                                ""
+                            } else {
+                                "const "
+                            };
                             Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
                         }
                         ast::Ty::Enum => Ok(format!(

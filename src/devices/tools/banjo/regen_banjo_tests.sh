@@ -66,7 +66,6 @@ do
 
   if [ "$filename" = "references" ]; then
     with_rust=false
-    with_cpp=false
   fi
 
   echo "Regenerating $filename"
