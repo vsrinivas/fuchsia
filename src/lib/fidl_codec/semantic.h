@@ -32,18 +32,20 @@ enum class ContextType { kRead, kWrite, kCall };
 class SemanticContext {
  public:
   SemanticContext(const HandleSemantic* handle_semantic, zx_koid_t pid, zx_handle_t handle,
-                  const StructValue* request, const StructValue* response)
+                  const StructValue* request, const StructValue* response, int64_t timestamp)
       : handle_semantic_(handle_semantic),
         pid_(pid),
         handle_(handle),
         request_(request),
-        response_(response) {}
+        response_(response),
+        timestamp_(timestamp) {}
 
   const HandleSemantic* handle_semantic() const { return handle_semantic_; }
   zx_koid_t pid() const { return pid_; }
   zx_handle_t handle() const { return handle_; }
   const StructValue* request() const { return request_; }
   const StructValue* response() const { return response_; }
+  int64_t timestamp() const { return timestamp_; }
 
  private:
   // The semantic rules for the FIDL method.
@@ -56,6 +58,8 @@ class SemanticContext {
   const StructValue* const request_;
   // The response (can be null).
   const StructValue* const response_;
+  // The timestamp associated with the context.
+  const int64_t timestamp_;
 };
 
 // Context used during the execution of semantic rules.
@@ -63,8 +67,10 @@ class AssignmentSemanticContext : public SemanticContext {
  public:
   AssignmentSemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_koid_t tid,
                             zx_handle_t handle, ContextType type, const StructValue* request,
-                            const StructValue* response)
-      : SemanticContext(handle_semantic, pid, handle, request, response), tid_(tid), type_(type) {}
+                            const StructValue* response, int64_t timestamp)
+      : SemanticContext(handle_semantic, pid, handle, request, response, timestamp),
+        tid_(tid),
+        type_(type) {}
 
   zx_koid_t tid() const { return tid_; }
   ContextType type() const { return type_; }
@@ -352,9 +358,11 @@ class HandleSemantic {
     return result->second.get();
   }
 
-  virtual void CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) {}
+  virtual void CreateHandleInfo(int64_t timestamp, zx_koid_t thread_koid, zx_handle_t handle) {}
 
-  virtual bool NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const { return false; }
+  virtual bool NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid, zx_handle_t handle) const {
+    return false;
+  }
 
   void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle,
                              const InferredHandleInfo* inferred_handle_info) {

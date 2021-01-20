@@ -31,17 +31,20 @@ std::unique_ptr<SystemCallTest> ZxProcessExit(int64_t result, std::string_view r
 
 PROCESS_EXIT_DISPLAY_TEST(ZxProcessExit0, ZX_OK, 0,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_process_exit(retcode: \x1B[32mint64\x1B[0m = \x1B[34m0\x1B[0m)\n");
 
 PROCESS_EXIT_DISPLAY_TEST(ZxProcessExit1, ZX_OK, 1,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_process_exit(retcode: \x1B[32mint64\x1B[0m = \x1B[34m1\x1B[0m)\n");
 
 PROCESS_EXIT_DISPLAY_TEST(
     ZxProcessExit2, ZX_OK, std::numeric_limits<int64_t>::min(),
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_process_exit(retcode: \x1B[32mint64\x1B[0m = \x1B[34m-9223372036854775808\x1B[0m)\n");
 
@@ -80,11 +83,13 @@ std::unique_ptr<SystemCallTest> ZxProcessCreate(int64_t result, std::string_view
 
 PROCESS_CREATE_DISPLAY_TEST(ZxProcessCreate, ZX_OK,
                             "\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_process_create("
                             "job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                             "name: \x1B[32mstring\x1B[0m = \x1B[31m\"my_process\"\x1B[0m, "
                             "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m ("
                             "proc_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
                             "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
@@ -121,6 +126,7 @@ std::unique_ptr<SystemCallTest> ZxProcessStart(int64_t result, std::string_view 
 
 PROCESS_START_DISPLAY_TEST(ZxProcessStart, ZX_OK,
                            "\n"
+                           "\x1B[32m0.000000\x1B[0m "
                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                            "zx_process_start("
                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -129,6 +135,7 @@ PROCESS_START_DISPLAY_TEST(ZxProcessStart, ZX_OK,
                            "stack: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000100001234\x1B[0m, "
                            "arg1: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m, "
                            "arg2: \x1B[32muintptr\x1B[0m = \x1B[34m0000000789abcdef\x1B[0m)\n"
+                           "\x1B[32m0.000000\x1B[0m "
                            "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_process_read_memory tests.
@@ -169,11 +176,13 @@ std::unique_ptr<SystemCallTest> ZxProcessReadMemory(int64_t result, std::string_
 PROCESS_READ_MEMORY_DISPLAY_TEST(
     ZxProcessReadMemory, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_process_read_memory("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "vaddr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000123456789\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m10\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, "
@@ -219,6 +228,7 @@ std::unique_ptr<SystemCallTest> ZxProcessWriteMemory(int64_t result, std::string
 PROCESS_WRITE_MEMORY_DISPLAY_TEST(
     ZxProcessWriteMemory, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_process_write_memory("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -228,6 +238,7 @@ PROCESS_WRITE_MEMORY_DISPLAY_TEST(
     "\x1B[34m04\x1B[0m, "
     "\x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, \x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m "
     "]\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize\x1B[0m = \x1B[34m10\x1B[0m)\n");
 
 }  // namespace fidlcat

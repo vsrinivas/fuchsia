@@ -50,6 +50,7 @@ std::unique_ptr<SystemCallTest> ZxPciGetNthDevice(int64_t result, std::string_vi
 PCI_GET_NTH_DEVICE_DISPLAY_TEST(
     ZxPciGetNthDevice, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_nth_device("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -65,6 +66,7 @@ PCI_GET_NTH_DEVICE_DISPLAY_TEST(
     "    dev_id: \x1B[32muint8\x1B[0m = \x1B[34m8\x1B[0m\n"
     "    func_id: \x1B[32muint8\x1B[0m = \x1B[34m9\x1B[0m\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pci_enable_bus_master tests.
@@ -91,10 +93,12 @@ std::unique_ptr<SystemCallTest> ZxPciEnableBusMaster(int64_t result, std::string
 
 PCI_ENABLE_BUS_MASTER_DISPLAY_TEST(ZxPciEnableBusMaster, ZX_OK,
                                    "\n"
+                                   "\x1B[32m0.000000\x1B[0m "
                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                    "zx_pci_enable_bus_master("
                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                    "enable: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
+                                   "\x1B[32m0.000000\x1B[0m "
                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_reset_device tests.
@@ -121,8 +125,10 @@ std::unique_ptr<SystemCallTest> ZxPciResetDevice(int64_t result, std::string_vie
 PCI_RESET_DEVICE_DISPLAY_TEST(
     ZxPciResetDevice, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_reset_device(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_config_read tests.
@@ -154,11 +160,13 @@ std::unique_ptr<SystemCallTest> ZxPciConfigRead(int64_t result, std::string_view
 PCI_CONFIG_READ_DISPLAY_TEST(
     ZxPciConfigRead, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_config_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "offset: \x1B[32muint16\x1B[0m = \x1B[34m1000\x1B[0m, "
     "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
 
 // zx_pci_config_write tests.
@@ -188,12 +196,14 @@ std::unique_ptr<SystemCallTest> ZxPciConfigWrite(int64_t result, std::string_vie
 
 PCI_CONFIG_WRITE_DISPLAY_TEST(ZxPciConfigWrite, ZX_OK,
                               "\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pci_config_write("
                               "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                               "offset: \x1B[32muint16\x1B[0m = \x1B[34m1000\x1B[0m, "
                               "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
                               "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_cfg_pio_rw tests.
@@ -231,6 +241,7 @@ std::unique_ptr<SystemCallTest> ZxPciCfgPioRw(int64_t result, std::string_view r
 PCI_CFG_PIO_RW_DISPLAY_TEST(
     ZxPciCfgPioRwRead, ZX_OK, false,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_cfg_pio_rw("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -240,10 +251,12 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(
     "offset: \x1B[32muint8\x1B[0m = \x1B[34m100\x1B[0m, "
     "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
     "write: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
 
 PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_pci_cfg_pio_rw("
                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -254,6 +267,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
                             "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m, "
                             "write: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_get_bar tests.
@@ -286,10 +300,12 @@ std::unique_ptr<SystemCallTest> ZxPciGetBar(int64_t result, std::string_view res
 PCI_GET_BAR_UNUSED_DISPLAY_TEST(
     ZxPciGetBarUnused, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
     "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = { "
     "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
@@ -313,10 +329,12 @@ PCI_GET_BAR_UNUSED_DISPLAY_TEST(
 PCI_GET_BAR_MMIO_DISPLAY_TEST(
     ZxPciGetBarMmio, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
     "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = { "
     "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
@@ -341,10 +359,12 @@ PCI_GET_BAR_MMIO_DISPLAY_TEST(
 PCI_GET_BAR_PIO_DISPLAY_TEST(
     ZxPciGetBarPio, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_get_bar("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "bar_num: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
     "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = {\n"
     "      id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m\n"
@@ -381,10 +401,12 @@ std::unique_ptr<SystemCallTest> ZxPciMapInterrupt(int64_t result, std::string_vi
 PCI_MAP_INTERRUPT_DISPLAY_TEST(
     ZxPciMapInterrupt, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_map_interrupt("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "which_irq: \x1B[32mint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pci_query_irq_mode tests.
@@ -415,10 +437,12 @@ std::unique_ptr<SystemCallTest> ZxPciQueryIrqMode(int64_t result, std::string_vi
 PCI_QUERY_IRQ_MODE_DISPLAY_TEST(
     ZxPciQueryIrqMode, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_query_irq_mode("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs: \x1B[32muint32\x1B[0m = \x1B[34m12\x1B[0m)\n");
 
 // zx_pci_set_irq_mode tests.
@@ -447,11 +471,13 @@ std::unique_ptr<SystemCallTest> ZxPciSetIrqMode(int64_t result, std::string_view
 
 PCI_SET_IRQ_MODE_DISPLAY_TEST(ZxPciSetIrqMode, ZX_OK,
                               "\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pci_set_irq_mode("
                               "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                               "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                               "requested_irq_count: \x1B[32muint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pci_init tests.
@@ -536,6 +562,7 @@ std::string FillPins(std::string_view header, std::string_view footer) {
 PCI_INIT_DISPLAY_TEST(
     ZxPciInit, ZX_OK,
     FillPins("\n"
+             "\x1B[32m0.000000\x1B[0m "
              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_pci_init("
              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
              "len: \x1B[32muint32\x1B[0m = \x1B[34m5968\x1B[0m)\n"
@@ -583,6 +610,7 @@ PCI_INIT_DISPLAY_TEST(
              "      }\n"
              "    ]\n"
              "  }\n"
+             "\x1B[32m0.000000\x1B[0m "
              "  -> \x1B[32mZX_OK\x1B[0m\n")
         .c_str());
 
@@ -617,6 +645,7 @@ std::unique_ptr<SystemCallTest> ZxPciAddSubtractIoRange(int64_t result,
 
 PCI_ADD_SUBTRACT_IO_RANGE_DISPLAY_TEST(ZxPciAddSubtractIoRange, ZX_OK,
                                        "\n"
+                                       "\x1B[32m0.000000\x1B[0m "
                                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                        "zx_pci_add_subtract_io_range("
                                        "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -624,6 +653,7 @@ PCI_ADD_SUBTRACT_IO_RANGE_DISPLAY_TEST(ZxPciAddSubtractIoRange, ZX_OK,
                                        "base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m, "
                                        "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
                                        "add: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
+                                       "\x1B[32m0.000000\x1B[0m "
                                        "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

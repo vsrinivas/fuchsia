@@ -45,6 +45,7 @@ std::unique_ptr<SystemCallTest> ZxProfileCreate(int64_t result, std::string_view
 PROFILE_CREATE_DISPLAY_TEST(
     ZxProfileCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_profile_create("
     "root_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -62,6 +63,7 @@ PROFILE_CREATE_DISPLAY_TEST(
     "      ]\n"
     "    }\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

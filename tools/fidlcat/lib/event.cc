@@ -93,12 +93,12 @@ void StopMonitoringEvent::Write(proto::Event* dst) const {
 
 bool SyscallEvent::NeedsToLoadHandleInfo(Inference* inference) {
   for (const auto& field : inline_fields_) {
-    if (field.second->NeedsToLoadHandleInfo(thread()->koid(), inference)) {
+    if (field.second->NeedsToLoadHandleInfo(timestamp(), thread()->koid(), inference)) {
       return true;
     }
   }
   for (const auto& field : outline_fields_) {
-    if (field.second->NeedsToLoadHandleInfo(thread()->koid(), inference)) {
+    if (field.second->NeedsToLoadHandleInfo(timestamp(), thread()->koid(), inference)) {
       return true;
     }
   }
@@ -310,7 +310,7 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
                                                   (invoked_event()->handle_info() == nullptr)
                                                       ? ZX_HANDLE_INVALID
                                                       : invoked_event()->handle_info()->handle(),
-                                                  request, nullptr);
+                                                  request, nullptr, invoked_event()->timestamp());
     for (const auto& expression : method->short_display()->inputs()) {
       if (first_argument) {
         printer << '(';
@@ -334,7 +334,7 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
                                                   (invoked_event()->handle_info() == nullptr)
                                                       ? ZX_HANDLE_INVALID
                                                       : invoked_event()->handle_info()->handle(),
-                                                  request, nullptr);
+                                                  request, nullptr, invoked_event()->timestamp());
     bool first_result = true;
     for (const auto& expression : method->short_display()->results()) {
       printer << (first_result ? "-> " : ", ");

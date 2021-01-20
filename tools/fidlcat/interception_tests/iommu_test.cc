@@ -42,10 +42,12 @@ std::unique_ptr<SystemCallTest> ZxIommuCreate(int64_t result, std::string_view r
 IOMMU_CREATE_DUMMY_DISPLAY_TEST(
     ZxIommuCreateDummy, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_iommu_create("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "type: \x1B[32mzx_iommu_type_t\x1B[0m = \x1B[31mZX_IOMMU_TYPE_DUMMY\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 #define IOMMU_CREATE_INTEL_DISPLAY_TEST_CONTENT(result, expected)                        \
@@ -71,6 +73,7 @@ IOMMU_CREATE_DUMMY_DISPLAY_TEST(
 IOMMU_CREATE_INTEL_DISPLAY_TEST(
     ZxIommuCreateIntel, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_iommu_create("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -82,6 +85,7 @@ IOMMU_CREATE_INTEL_DISPLAY_TEST(
     "    scope_bytes: \x1B[32muint8\x1B[0m = \x1B[34m8\x1B[0m\n"
     "    reserved_memory_bytes: \x1B[32muint16\x1B[0m = \x1B[34m1024\x1B[0m\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

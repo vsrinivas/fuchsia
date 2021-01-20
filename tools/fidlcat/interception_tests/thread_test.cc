@@ -23,6 +23,7 @@ std::unique_ptr<SystemCallTest> ZxThreadExit() {
 
 THREAD_EXIT_DISPLAY_TEST(ZxThreadExit,
                          "\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                          "zx_thread_exit()\n");
 
@@ -56,11 +57,13 @@ std::unique_ptr<SystemCallTest> ZxThreadCreate(int64_t result, std::string_view 
 
 THREAD_CREATE_DISPLAY_TEST(ZxThreadCreate, ZX_OK,
                            "\n"
+                           "\x1B[32m0.000000\x1B[0m "
                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                            "zx_thread_create("
                            "process: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                            "name: \x1B[32mstring\x1B[0m = \x1B[31m\"my_thread\"\x1B[0m, "
                            "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                           "\x1B[32m0.000000\x1B[0m "
                            "  -> \x1B[32mZX_OK\x1B[0m ("
                            "out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
@@ -95,13 +98,16 @@ std::unique_ptr<SystemCallTest> ZxThreadStart(int64_t result, std::string_view r
 
 THREAD_START_DISPLAY_TEST(
     ZxThreadStart, ZX_OK,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_start("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "thread_entry: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m000000000000eeee\x1B[0m, "
     "stack: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m000000000000aaaa\x1B[0m, "
     "arg1: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000001111\x1B[0m, "
     "arg2: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000002222\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_thread_read_state tests.
@@ -139,11 +145,13 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadReadStateGeneralRegsAArch64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_GENERAL_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_GENERAL_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m280\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_general_regs_aarch64_t\x1B[0m = {\n"
       "      r: vector<\x1B[32muint64\x1B[0m> = [ "
@@ -195,11 +203,13 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateGeneralRegsX64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_GENERAL_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_GENERAL_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m160\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_general_regs_x86_t\x1B[0m = {\n"
       "      rax: \x1B[32muint64\x1B[0m = \x1B[34m000000000000aaaa\x1B[0m\n"
@@ -247,11 +257,13 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateFpRegsX64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_FP_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_FP_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m160\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_fp_regs_x86_t\x1B[0m = {\n"
       "      fcw: \x1B[32muint16\x1B[0m = \x1B[34mcccc\x1B[0m\n"
@@ -290,11 +302,13 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadReadStateVectorRegsAArch64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_VECTOR_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_VECTOR_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m520\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_vector_regs_aarch64_t\x1B[0m = {\n"
       "      fpcr: \x1B[32muint32\x1B[0m = \x1B[34m12345678\x1B[0m\n"
@@ -354,11 +368,13 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateVectorRegsX64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_VECTOR_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_VECTOR_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m2120\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_vector_regs_x86_t\x1B[0m = {\n"
       "      zmm: array<\x1B[32mzx_thread_state_vector_regs_x86_zmm_t\x1B[0m> = [\n"
@@ -621,11 +637,13 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadReadStateDebugRegsAArch64) {
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_DEBUG_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_DEBUG_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m528\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_debug_regs_aarch64_t\x1B[0m = {\n"
       "      hw_bps: array<\x1B[32mzx_thread_state_debug_regs_aarch64_bp_t\x1B[0m> = [\n"
@@ -779,11 +797,14 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateDebugRegsX64) {
   buffer.dr7 = 0x77777777;
   THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_DEBUG_REGS, buffer,
-      "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+      "\n"
+      "\x1B[32m0.000000\x1B[0m "
+      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_DEBUG_REGS\x1B[0m, "
       "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m48\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    regs: \x1B[32mzx_thread_state_debug_regs_x86_t\x1B[0m = {\n"
       "      dr: vector<\x1B[32muint64\x1B[0m> = [ "
@@ -809,21 +830,25 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateDebugRegsX64) {
 THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadReadStateSingleStep0, ZX_OK, 0,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_read_state("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n");
 
 THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadReadStateSingleStep1, ZX_OK, 1,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_read_state("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n");
 
 // zx_thread_write_state tests.
@@ -861,6 +886,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateGeneralRegsAArch64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_GENERAL_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -889,6 +915,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateGeneralRegsAArch64) {
       "    cpsr: \x1B[32muint64\x1B[0m = \x1B[34m00000000dddddddd\x1B[0m\n"
       "    tpidr: \x1B[32muint64\x1B[0m = \x1B[34m00000000eeeeeeee\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -917,6 +944,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateGeneralRegsX64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_GENERAL_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -944,6 +972,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateGeneralRegsX64) {
       "    fs_base: \x1B[32muint64\x1B[0m = \x1B[34m0000000100000000\x1B[0m\n"
       "    gs_base: \x1B[32muint64\x1B[0m = \x1B[34m0000000200000000\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -969,6 +998,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateFpRegsX64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_FP_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -991,6 +1021,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateFpRegsX64) {
       "\x1B[34m{ low = 0000000600000006, high = 0000000600000000 }\x1B[0m, "
       "\x1B[34m{ low = 0000000700000007, high = 0000000700000000 }\x1B[0m ]\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -1012,6 +1043,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateVectorRegsAArch64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_VECTOR_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -1054,6 +1086,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateVectorRegsAArch64) {
       "\x1B[34m{ low = 0000001e0000001e, high = 0000001e00000000 }\x1B[0m, "
       "\x1B[34m{ low = 0000001f0000001f, high = 0000001f00000000 }\x1B[0m ]\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -1076,6 +1109,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateVectorRegsX64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_VECTOR_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -1315,6 +1349,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateVectorRegsX64) {
       "\x1B[34m0000010600000106\x1B[0m, \x1B[34m0000010700000107\x1B[0m ]\n"
       "    mxcsr: \x1B[32muint32\x1B[0m = \x1B[34m12345678\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -1343,6 +1378,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateDebugRegsAArch64) {
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_DEBUG_REGS, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -1485,6 +1521,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateDebugRegsAArch64) {
       "    hw_wps_count: \x1B[32muint8\x1B[0m = \x1B[34m02\x1B[0m\n"
       "    esr: \x1B[32muint32\x1B[0m = \x1B[34meeeeffff\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -1501,7 +1538,9 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateDebugRegsX64) {
   buffer.dr7 = 0x77777777;
   THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, ZX_THREAD_STATE_DEBUG_REGS, buffer,
-      "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+      "\n"
+      "\x1B[32m0.000000\x1B[0m "
+      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_thread_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_DEBUG_REGS\x1B[0m, "
@@ -1513,6 +1552,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateDebugRegsX64) {
       "    dr6: \x1B[32muint64\x1B[0m = \x1B[34m0000000066666666\x1B[0m\n"
       "    dr7: \x1B[32muint64\x1B[0m = \x1B[34m0000000077777777\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -1531,23 +1571,27 @@ TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateDebugRegsX64) {
 THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadWriteStateSingleStep0, ZX_OK, 0,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_write_state("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m, "
     "single_step: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadWriteStateSingleStep1, ZX_OK, 1,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_thread_write_state("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m, "
     "single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

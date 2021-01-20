@@ -36,10 +36,12 @@ std::unique_ptr<SystemCallTest> ZxGuestCreate(int64_t result, std::string_view r
 
 GUEST_CREATE_DISPLAY_TEST(ZxGuestCreate, ZX_OK,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_guest_create("
                           "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m ("
                           "guest_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
                           "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
@@ -76,6 +78,7 @@ std::unique_ptr<SystemCallTest> ZxGuestSetTrap(int64_t result, std::string_view 
 GUEST_SET_TRAP_DISPLAY_TEST(
     ZxGuestSetTrap, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_guest_set_trap("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -84,6 +87,7 @@ GUEST_SET_TRAP_DISPLAY_TEST(
     "size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m, "
     "port_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
     "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

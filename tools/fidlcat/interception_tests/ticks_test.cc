@@ -23,7 +23,9 @@ std::unique_ptr<SystemCallTest> ZxTicksGet(int64_t result, std::string_view resu
 
 TICKS_GET_DISPLAY_TEST(ZxTicksGet, 497475301988264,
                        "\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_get()\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "  -> \x1B[32mticks\x1B[0m: \x1B[34m497475301988264\x1B[0m\n");
 
 // zx_ticks_per_second tests.
@@ -46,7 +48,9 @@ std::unique_ptr<SystemCallTest> ZxTicksPerSecond(int64_t result, std::string_vie
 TICKS_PER_SECOND_DISPLAY_TEST(
     ZxTicksPerSecond, 2992964000,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_per_second()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mticks\x1B[0m: \x1B[34m2992964000\x1B[0m\n");
 
 }  // namespace fidlcat

@@ -60,7 +60,6 @@ void ExceptionDecoder::Destroy() {
 }
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
-  int64_t timestamp = time(nullptr);
   Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
   if (thread == nullptr) {
     Process* process = dispatcher_->SearchProcess(decoder->process_id());
@@ -75,7 +74,7 @@ void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
     }
     thread = dispatcher_->CreateThread(decoder->thread_id(), process);
   }
-  auto event = std::make_shared<ExceptionEvent>(timestamp << 32, thread);
+  auto event = std::make_shared<ExceptionEvent>(decoder->timestamp(), thread);
   CopyStackFrame(decoder->caller_locations(), &event->stack_frame());
   dispatcher_->AddExceptionEvent(std::move(event));
 

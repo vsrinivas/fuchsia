@@ -44,8 +44,10 @@ std::unique_ptr<SystemCallTest> ZxFramebufferGetInfo(int64_t result, std::string
 FRAMEBUFFER_GET_INFO_DISPLAY_TEST(
     ZxFramebufferGetInfo, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_framebuffer_get_info(resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "format: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
     "width: \x1B[32muint32\x1B[0m = \x1B[34m1080\x1B[0m, "
@@ -84,6 +86,7 @@ std::unique_ptr<SystemCallTest> ZxFramebufferSetRange(int64_t result, std::strin
 
 FRAMEBUFFER_SET_RANGE_DISPLAY_TEST(ZxFramebufferSetRange, ZX_OK,
                                    "\n"
+                                   "\x1B[32m0.000000\x1B[0m "
                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                    "zx_framebuffer_set_range("
                                    "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -93,6 +96,7 @@ FRAMEBUFFER_SET_RANGE_DISPLAY_TEST(ZxFramebufferSetRange, ZX_OK,
                                    "width: \x1B[32muint32\x1B[0m = \x1B[34m1080\x1B[0m, "
                                    "height: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m, "
                                    "stride: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                                   "\x1B[32m0.000000\x1B[0m "
                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

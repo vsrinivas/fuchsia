@@ -38,15 +38,15 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
     return &result->second;
   }
 
-  void CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) override;
+  void CreateHandleInfo(int64_t timestamp, zx_koid_t thread_koid, zx_handle_t handle) override;
 
-  bool NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const override;
+  bool NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid, zx_handle_t handle) const override;
 
   // Function called when processargs_extract_handles (from libc) is intercepted.
-  void ExtractHandleInfos(SyscallDecoder* decoder);
+  void ExtractHandleInfos(int64_t timestamp, SyscallDecoder* decoder);
 
   // Function called when __libc_extensions_init (from libc) is intercepted.
-  void LibcExtensionsInit(SyscallDecoder* decoder);
+  void LibcExtensionsInit(int64_t timestamp, SyscallDecoder* decoder);
 
   // Function call for channel functions which read/write FILD messages to try to infer some
   // semantic.

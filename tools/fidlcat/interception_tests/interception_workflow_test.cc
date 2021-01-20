@@ -88,9 +88,9 @@ void InterceptionWorkflowTest::PerformDisplayTest(ProcessController* controller,
                   loader, decode_options_, display_options_, result_, controller, aborted_),
               /*interleaved_test=*/false, /*multi_thread=*/true);
   std::string both_results = result_.str();
-  // The second output starts with "test_2718"
-  size_t split = both_results.find("test_2718");
-  ASSERT_NE(split, std::string::npos);
+  // The second output starts with "\x1B[32m0.000000\x1B[0m test_2718"
+  size_t split = both_results.find("\x1B[32m0.000000\x1B[0m test_2718");
+  ASSERT_NE(split, std::string::npos) << both_results;
   if (!display_options_.with_process_info) {
     // When we don't have the process info on each line, the first displayed line is empty (instead
     // of having the process name, process id and thread id). Go back one position to add this line

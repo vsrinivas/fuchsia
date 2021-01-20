@@ -35,9 +35,11 @@ std::unique_ptr<SystemCallTest> ZxSocketCreate(int64_t result, std::string_view 
 SOCKET_CREATE_DISPLAY_TEST(
     ZxSocketCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_create("
     "options: \x1B[32mzx_socket_create_options_t\x1B[0m = \x1B[34mZX_SOCKET_STREAM\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
@@ -74,6 +76,7 @@ std::unique_ptr<SystemCallTest> ZxSocketWrite(int64_t result, std::string_view r
 SOCKET_WRITE_DISPLAY_TEST(
     ZxSocketWrite, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -81,6 +84,7 @@ SOCKET_WRITE_DISPLAY_TEST(
     "  buffer: \x1B[32muint8\x1B[0m = "
     "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
     "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m8\x1B[0m)\n");
 
@@ -103,11 +107,13 @@ SOCKET_WRITE_DISPLAY_TEST(
 SOCKET_WRITE_STRING_DISPLAY_TEST(
     ZxSocketWriteString, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  buffer: \x1B[32muint8\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m5\x1B[0m)\n");
 
@@ -144,11 +150,13 @@ std::unique_ptr<SystemCallTest> ZxSocketRead(int64_t result, std::string_view re
 SOCKET_READ_DISPLAY_TEST(
     ZxSocketRead, ZX_OK, 0,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34m0\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32muint8\x1B[0m = "
@@ -158,11 +166,13 @@ SOCKET_READ_DISPLAY_TEST(
 SOCKET_READ_DISPLAY_TEST(
     ZxSocketReadPeek, ZX_OK, ZX_SOCKET_PEEK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34mZX_SOCKET_PEEK\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32muint8\x1B[0m = "
@@ -187,11 +197,13 @@ SOCKET_READ_DISPLAY_TEST(
 SOCKET_READ_STRING_DISPLAY_TEST(
     ZxSocketReadString, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34m0\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32muint8\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n");
@@ -220,20 +232,24 @@ std::unique_ptr<SystemCallTest> ZxSocketShutdown(int64_t result, std::string_vie
 
 SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownRead, ZX_OK, ZX_SOCKET_SHUTDOWN_READ,
                              "\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_socket_shutdown("
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                              "options: \x1B[32mzx_socket_shutdown_options_t\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_READ\x1B[0m)\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WRITE,
                              "\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_socket_shutdown("
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                              "options: \x1B[32mzx_socket_shutdown_options_t\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_WRITE\x1B[0m)\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

@@ -41,12 +41,14 @@ std::unique_ptr<SystemCallTest> ZxVmarAllocate(int64_t result, std::string_view 
 VMAR_ALLOCATE_DISPLAY_TEST(
     ZxVmarAllocate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_allocate("
     "parent_vmar: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_vm_option_t\x1B[0m = \x1B[31mZX_VM_COMPACT | ZX_VM_CAN_MAP_READ\x1B[0m, "
     "offset: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "child_vmar: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
     "child_addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
@@ -72,8 +74,10 @@ std::unique_ptr<SystemCallTest> ZxVmarDestroy(int64_t result, std::string_view r
 VMAR_DESTROY_DISPLAY_TEST(
     ZxVmarDestroy, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_destroy(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_map tests.
@@ -108,6 +112,7 @@ std::unique_ptr<SystemCallTest> ZxVmarMap(int64_t result, std::string_view resul
 VMAR_MAP_DISPLAY_TEST(
     ZxVmarMap, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_map("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -116,6 +121,7 @@ VMAR_MAP_DISPLAY_TEST(
     "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
     "vmo_offset: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m, "
     "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "mapped_addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
 
@@ -140,11 +146,13 @@ std::unique_ptr<SystemCallTest> ZxVmarUnmap(int64_t result, std::string_view res
 
 VMAR_UNMAP_DISPLAY_TEST(ZxVmarUnmap, ZX_OK,
                         "\n"
+                        "\x1B[32m0.000000\x1B[0m "
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_vmar_unmap("
                         "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                         "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
                         "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+                        "\x1B[32m0.000000\x1B[0m "
                         "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_protect tests.
@@ -175,13 +183,16 @@ std::unique_ptr<SystemCallTest> ZxVmarProtect(int64_t result, std::string_view r
 VMAR_PROTECT_DISPLAY_TEST(
     ZxVmarProtect, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_protect("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_vm_option_t\x1B[0m = \x1B[31mZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE\x1B[0m, "
     "addr: \x1B[32mzx_vaddr_t\x1B[0m = \x1B[34m0000000000012345\x1B[0m, len: \x1B[32muint64\x1B[0m "
     "= "
-    "\x1B[34m1024\x1B[0m)\n  -> \x1B[32mZX_OK\x1B[0m\n");
+    "\x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmar_unmap_handle_close_thread_exit tests.
 
@@ -216,12 +227,14 @@ std::unique_ptr<SystemCallTest> ZxVmarUnmapHandleCloseThreadExit(int64_t result,
 VMAR_UNMAP_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(
     ZxVmarUnmapHandleCloseThreadExit, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_unmap_handle_close_thread_exit("
     "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
     "size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m, "
     "close_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

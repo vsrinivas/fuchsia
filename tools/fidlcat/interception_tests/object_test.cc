@@ -38,12 +38,14 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitOne(int64_t result, std::string_view
 
 OBJECT_WAIT_ONE_DISPLAY_TEST(ZxObjectWaitOne, ZX_OK,
                              "\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_object_wait_one("
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                              "signals: \x1B[32msignals\x1B[0m = \x1B[34m"
                              "__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m, "
                              "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m ("
                              "observed: \x1B[32msignals\x1B[0m = "
                              "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m)\n");
@@ -96,25 +98,30 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitMany(int64_t result, std::string_vie
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitManyNull, ZX_OK, -1, false,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_wait_many("
     "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
     "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> = \x1B[31mnullptr\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> = \x1B[31mnullptr\x1B[0m\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitManyZero, ZX_OK, 0, false,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_wait_many("
     "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
     "  items: vector<\x1B[32mzx_wait_item_t\x1B[0m> = \x1B[31mnullptr\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> = \x1B[31mnullptr\x1B[0m\n");
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_object_wait_many("
                               "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
@@ -138,6 +145,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
                               "      pending: \x1B[32msignals\x1B[0m = \x1B[34m0\x1B[0m\n"
                               "    }\n"
                               "  ]\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "  -> \x1B[32mZX_OK\x1B[0m\n"
                               "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "      {\n"
@@ -165,6 +173,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitMany, ZX_OK, 3, false,
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true,
                               "\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_object_wait_many("
                               "deadline: \x1B[32mtime\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
@@ -176,6 +185,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true
                               "      pending: \x1B[32msignals\x1B[0m = \x1B[34m0\x1B[0m\n"
                               "    }\n"
                               "  ]\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "  -> \x1B[31mZX_ERR_CANCELED\x1B[0m\n"
                               "    items: vector<\x1B[32mzx_wait_item_t\x1B[0m> =  [\n"
                               "      {\n"
@@ -217,6 +227,7 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitAsync(int64_t result, std::string_vi
 
 OBJECT_WAIT_ASYNC_DISPLAY_TEST(ZxObjectWaitAsync, ZX_OK,
                                "\n"
+                               "\x1B[32m0.000000\x1B[0m "
                                "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                "zx_object_wait_async("
                                "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -225,6 +236,7 @@ OBJECT_WAIT_ASYNC_DISPLAY_TEST(ZxObjectWaitAsync, ZX_OK,
                                "signals: \x1B[32msignals\x1B[0m = "
                                "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m, "
                                "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                               "\x1B[32m0.000000\x1B[0m "
                                "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_object_signal tests.
@@ -253,11 +265,13 @@ std::unique_ptr<SystemCallTest> ZxObjectSignal(int64_t result, std::string_view 
 OBJECT_SIGNAL_DISPLAY_TEST(
     ZxObjectSignal, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_signal("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "clear_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3\x1B[0m, "
     "set_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_object_signal_peer tests.
@@ -288,11 +302,13 @@ std::unique_ptr<SystemCallTest> ZxObjectSignalPeer(int64_t result, std::string_v
 OBJECT_SIGNAL_PEER_DISPLAY_TEST(
     ZxObjectSignalPeer, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_signal_peer("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "clear_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3\x1B[0m, "
     "set_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_object_get_property tests.
@@ -328,10 +344,12 @@ std::unique_ptr<SystemCallTest> ZxObjectGetProperty(int64_t result, std::string_
 OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(
     ZxObjectGetPropertyName, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_NAME\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -352,10 +370,12 @@ OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(
 OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     ZxObjectGetPropertyProcessDebugAddr, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mzx.vaddr\x1B[0m = "
     "\x1B[34m0000000000045678\x1B[0m)\n");
 
@@ -378,10 +398,12 @@ OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
 OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(
     ZxObjectGetPropertyProcessVdsoBaseAddress, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_VDSO_BASE_ADDRESS\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mzx.vaddr\x1B[0m = "
     "\x1B[34m0000000000045678\x1B[0m)\n");
 
@@ -403,10 +425,12 @@ OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(
 OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     ZxObjectGetPropertySocketRxThreshold, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -427,10 +451,12 @@ OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
 OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     ZxObjectGetPropertySocketTxThreshold, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n");
 
 #define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -451,10 +477,12 @@ OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
 OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     ZxObjectGetPropertyExceptionState, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
 
@@ -491,11 +519,13 @@ std::unique_ptr<SystemCallTest> ZxObjectSetProperty(int64_t result, std::string_
 OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(
     ZxObjectSetPropertyName, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_NAME\x1B[0m, "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST_CONTENT(result, expected)                   \
@@ -516,11 +546,13 @@ OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(
     ZxObjectSetPropertyRegisterFs, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_REGISTER_FS\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(result, expected)                   \
@@ -541,11 +573,13 @@ OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(
     ZxObjectSetPropertyRegisterGs, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_REGISTER_GS\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -566,11 +600,13 @@ OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     ZxObjectSetPropertyProcessDebugAddr, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -591,11 +627,13 @@ OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     ZxObjectSetPropertySocketRxThreshold, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -616,11 +654,13 @@ OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     ZxObjectSetPropertySocketTxThreshold, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -641,11 +681,13 @@ OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(
     ZxObjectSetPropertyJobKillOnOom, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_JOB_KILL_ON_OOM\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
@@ -666,11 +708,13 @@ OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(
 OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     ZxObjectSetPropertyExceptionState, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_property("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m, "
     "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_object_get_info tests.
@@ -704,21 +748,25 @@ std::unique_ptr<SystemCallTest> ZxObjectGetInfo(int64_t result, std::string_view
 OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
     ZxObjectGetInfoHandleValidOk, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_HANDLE_VALID\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
     ZxObjectGetInfoHandleValidBad, ZX_ERR_BAD_HANDLE,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_HANDLE_VALID\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[31mZX_ERR_BAD_HANDLE\x1B[0m\n");
 
 #define OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST_CONTENT(result, expected)                   \
@@ -744,11 +792,13 @@ OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
 OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
     ZxObjectGetInfoHandleBasic, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_HANDLE_BASIC\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m32\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_handle_basic_t\x1B[0m = {\n"
     "      koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m4252\x1B[0m\n"
@@ -776,11 +826,14 @@ OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
 
 OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(
     ZxObjectGetInfoHandleCount, ZX_OK,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_HANDLE_COUNT\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_handle_count_t\x1B[0m = {\n"
     "      handle_count: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m\n"
@@ -808,11 +861,13 @@ OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(
 OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
     ZxObjectGetInfoProcessHandleStats, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_HANDLE_STATS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m256\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_process_handle_stats_t\x1B[0m = {\n"
     "      handle_count: vector<\x1B[32muint32\x1B[0m> = [ "
@@ -853,11 +908,13 @@ OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
 OBJECT_GET_INFO_JOB_DISPLAY_TEST(
     ZxObjectGetInfoJob, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_JOB\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_job_t\x1B[0m = {\n"
     "      return_code: \x1B[32mint64\x1B[0m = \x1B[34m-1\x1B[0m\n"
@@ -888,11 +945,13 @@ OBJECT_GET_INFO_JOB_DISPLAY_TEST(
 OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
     ZxObjectGetInfoProcess, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_process_t\x1B[0m = {\n"
     "      return_code: \x1B[32mint64\x1B[0m = \x1B[34m-1\x1B[0m\n"
@@ -924,11 +983,13 @@ OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
 OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
     ZxObjectGetInfoProcessThreads, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_THREADS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m24\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize_t\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mzx_koid_t\x1B[0m = "
@@ -956,11 +1017,13 @@ OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
 OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
     ZxObjectGetInfoThread, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_THREAD\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m72\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_thread_t\x1B[0m = {\n"
     "      state: \x1B[32mzx_info_thread_t::state\x1B[0m = "
@@ -997,11 +1060,13 @@ OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
 OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(
     ZxObjectGetInfoThreadStats, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_THREAD_STATS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_thread_stats_t\x1B[0m = {\n"
     "      total_runtime: \x1B[32mduration\x1B[0m = "
@@ -1053,11 +1118,13 @@ OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(
 OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(
     ZxObjectGetInfoCpuStats, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_CPU_STATS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m120\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_cpu_stats_t\x1B[0m = {\n"
     "      cpu_number: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m\n"
@@ -1098,11 +1165,13 @@ OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(
 OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
     ZxObjectGetInfoVmar, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_VMAR\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m16\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_vmar_t\x1B[0m = {\n"
     "      base: \x1B[32muintptr_t\x1B[0m = \x1B[34m0000000124680ace\x1B[0m\n"
@@ -1140,11 +1209,13 @@ OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
 OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     ZxObjectGetInfoVmo, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_VMO\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m120\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_vmo_t\x1B[0m = {\n"
     "      koid: \x1B[32mzx_koid_t\x1B[0m = \x1B[31m4252\x1B[0m\n"
@@ -1192,11 +1263,13 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
 OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(
     ZxObjectGetInfoSocket, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_SOCKET\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m48\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_socket_t\x1B[0m = {\n"
     "      options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m\n"
@@ -1230,11 +1303,13 @@ OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(
 OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
     ZxObjectGetInfoTimer, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mtopic=25\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m24\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_timer_t\x1B[0m = {\n"
     "      options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m\n"
@@ -1265,11 +1340,13 @@ OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
 OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
     ZxObjectGetInfoJobChildren, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_JOB_CHILDREN\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m24\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize_t\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mzx_koid_t\x1B[0m = "
@@ -1298,11 +1375,13 @@ OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
 OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
     ZxObjectGetInfoJobProcesses, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_JOB_PROCESSES\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m24\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize_t\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mzx_koid_t\x1B[0m = "
@@ -1334,11 +1413,13 @@ OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
 OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
     ZxObjectGetInfoTaskStats, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_TASK_STATS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m32\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_task_stats_t\x1B[0m = {\n"
     "      mem_mapped_bytes: \x1B[32msize_t\x1B[0m = \x1B[34m65536\x1B[0m\n"
@@ -1381,11 +1462,13 @@ OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
 OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
     ZxObjectGetInfoProcessMaps, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_MAPS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m288\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m3\x1B[0m/\x1B[34m10\x1B[0m)\n"
     "    info: vector<\x1B[32mzx_info_maps_t\x1B[0m> =  [\n"
@@ -1461,11 +1544,13 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
 OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     ZxObjectGetInfoProcessVmos, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_PROCESS_VMOS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m240\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize_t\x1B[0m = \x1B[34m2\x1B[0m/\x1B[34m2\x1B[0m)\n"
     "    info: vector<\x1B[32mzx_info_vmo_t\x1B[0m> =  [\n"
@@ -1539,11 +1624,13 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
 OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
     ZxObjectGetInfoKmemStats, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_KMEM_STATS\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m72\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_kmem_stats_t\x1B[0m = {\n"
     "      total_bytes: \x1B[32msize_t\x1B[0m = \x1B[34m16384\x1B[0m\n"
@@ -1577,11 +1664,13 @@ OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
 OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
     ZxObjectGetInfoResource, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_RESOURCE\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m56\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_resource_t\x1B[0m = {\n"
     "      kind: \x1B[32mzx_rsrc_kind_t\x1B[0m = \x1B[34mZX_RSRC_KIND_ROOT\x1B[0m\n"
@@ -1615,11 +1704,13 @@ OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
 OBJECT_GET_INFO_BTI_DISPLAY_TEST(
     ZxObjectGetInfoBti, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_info("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "topic: \x1B[32mzx_object_info_topic_t\x1B[0m = \x1B[34mZX_INFO_BTI\x1B[0m, "
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m32\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_bti_t\x1B[0m = {\n"
     "      minimum_contiguity: \x1B[32muint64\x1B[0m = \x1B[34m1048576\x1B[0m\n"
@@ -1657,11 +1748,13 @@ std::unique_ptr<SystemCallTest> ZxObjectGetChild(int64_t result, std::string_vie
 OBJECT_GET_CHILD_DISPLAY_TEST(
     ZxObjectGetChild, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_get_child("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "koid: \x1B[32muint64\x1B[0m = \x1B[34m4252\x1B[0m, "
     "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_object_set_profile tests.
@@ -1691,10 +1784,12 @@ std::unique_ptr<SystemCallTest> ZxObjectSetProfile(int64_t result, std::string_v
 OBJECT_SET_PROFILE_DISPLAY_TEST(
     ZxObjectSetProfile, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_object_set_profile(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "profile: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

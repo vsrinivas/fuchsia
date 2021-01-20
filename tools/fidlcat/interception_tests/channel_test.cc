@@ -61,8 +61,10 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
 CREATE_DISPLAY_TEST(
     ZxChannelCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
 
@@ -111,16 +113,20 @@ CREATE_DISPLAY_TEST(
 CREATE_INTERLEAVED_DISPLAY_TEST(
     ZxChannelCreateInterleaved, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_2718 \x1B[31m2718\x1B[0m:\x1B[31m8765\x1B[0m zx_channel_create("
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m   -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n"
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_2718 \x1B[31m2718\x1B[0m:\x1B[31m8765\x1B[0m   -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
@@ -169,6 +175,7 @@ WRITE_CHECK_TEST(ZxChannelWriteCheck, ZX_OK);
 
 WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    "\n"
+                   "\x1B[32m0.000000\x1B[0m "
                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
@@ -180,10 +187,12 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "    handles=\n"
                    "      0000: 01234567, 89abcdef\n"
+                   "\x1B[32m0.000000\x1B[0m "
                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "\n"
+                   "\x1B[32m0.000000\x1B[0m "
                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                    "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
@@ -195,6 +204,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "    handles=\n"
                    "      0000: 01234567, 89abcdef\n"
+                   "\x1B[32m0.000000\x1B[0m "
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
 #define LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                       \
@@ -210,6 +220,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
 
 LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
                          "\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
                          "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                          "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
@@ -232,6 +243,7 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
                          "      0060: \x1B[31m00, c1, 84, 49\x1B[0m\n"
                          "    handles=\n"
                          "      0000: 01234567, 89abcdef\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define WRITE_ABORTED_TEST_CONTENT(errno, expected)                                                \
@@ -247,7 +259,8 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
   TEST_F(InterceptionWorkflowTestArmAborted, name) { WRITE_ABORTED_TEST_CONTENT(errno, expected); }
 
 WRITE_ABORTED_TEST(ZxChannelWriteAborted, ZX_OK,
-                   "\x1B[32m\nStop monitoring \x1B[34mtest_3141\x1B[0m koid=\x1B[31m3141\x1B[0m\n");
+                   "\n\x1B[32m0\x1B[0m \x1B[32mStop monitoring\x1B[0m \x1B[34mtest_3141\x1B[0m "
+                   "koid \x1B[31m3141\x1B[0m\n");
 
 // zx_channel_read tests.
 
@@ -293,11 +306,13 @@ std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view r
 
 READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
                   "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
@@ -309,31 +324,37 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                   "actual_bytes: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m, "
                   "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n");
 
 READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    not enough data for message\n"
                   "    \x1B[31mCan't decode message: num_bytes=0 num_handles=2\x1B[0m\n"
@@ -343,11 +364,13 @@ READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message: num_bytes=16 num_handles=0 "
                   "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
@@ -400,11 +423,13 @@ std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_vie
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                       "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
                       "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
@@ -416,32 +441,38 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                       "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                       "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
                       ""
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                       "actual_bytes: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m, "
                       "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n");
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                       "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    not enough data for message\n"
                       "    \x1B[31mCan't decode message: num_bytes=0 num_handles=2\x1B[0m\n"
@@ -451,11 +482,13 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                       "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    \x1B[31mCan't decode message: num_bytes=16 num_handles=0 "
                       "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
@@ -551,6 +584,7 @@ CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
 
 CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
                   "\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
                   "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                   "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
@@ -564,6 +598,7 @@ CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                   "    handles=\n"
                   "      0000: 01234567, 89abcdef\n"
+                  "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
                   "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
@@ -585,37 +620,50 @@ CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
 
 CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     ZxChannelCallWithProcessInfo, ZX_OK, true, true,
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m, "
     "rd_num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
     "rd_num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "  \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
     "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "    data=\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "    handles=\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      0000: 01234567, 89abcdef\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "    \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
     "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      data=\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      handles=\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "        0000: 01234567, 89abcdef\n");
 
@@ -635,6 +683,7 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
 
 CALL_DISPLAY_TEST_NULL_ARGS(ZxChannelCallNullArgs, ZX_OK,
                             "\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                             "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
@@ -644,6 +693,7 @@ CALL_DISPLAY_TEST_NULL_ARGS(ZxChannelCallNullArgs, ZX_OK,
                             "  not enough data for message\n"
                             "  \x1B[31mCan't decode message: num_bytes=0 num_handles=0\x1B[0m\n"
                             "    data=\x1B[0m\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m\n"
                             "    not enough data for message\n"
                             "    \x1B[31mCan't decode message: num_bytes=0 num_handles=0\x1B[0m\n"

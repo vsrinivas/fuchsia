@@ -773,7 +773,7 @@ void main(List<String> arguments) {
 
       /// We only check that fidlcat didn't crash.
       expect(instance.stdout,
-          contains('Stop monitoring exceptions.cmx koid=19884\n'),
+          contains('Stop monitoring exceptions.cmx koid 19884\n'),
           reason: instance.additionalResult);
     });
 

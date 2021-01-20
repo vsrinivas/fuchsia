@@ -16,19 +16,17 @@
 
 namespace fidlcat {
 
-void Inference::CreateHandleInfo(zx_koid_t thread_koid, zx_handle_t handle) {
-  int64_t timestamp = time(NULL);
+void Inference::CreateHandleInfo(int64_t timestamp, zx_koid_t thread_koid, zx_handle_t handle) {
   Thread* thread = dispatcher_->SearchThread(thread_koid);
   FX_DCHECK(thread != nullptr);
   dispatcher_->CreateHandleInfo(thread, handle, timestamp, /*startup=*/false);
 }
 
-bool Inference::NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const {
+bool Inference::NeedsToLoadHandleInfo(int64_t timestamp, zx_koid_t tid, zx_handle_t handle) const {
   Thread* thread = dispatcher_->SearchThread(tid);
   FX_DCHECK(thread != nullptr);
   HandleInfo* handle_info = thread->process()->SearchHandleInfo(handle);
   if (handle_info == nullptr) {
-    int64_t timestamp = time(NULL);
     handle_info = dispatcher_->CreateHandleInfo(thread, handle, timestamp, /*startup=*/false);
   }
   return handle_info->koid() == ZX_KOID_INVALID;
@@ -37,7 +35,7 @@ bool Inference::NeedsToLoadHandleInfo(zx_koid_t tid, zx_handle_t handle) const {
 // This is the first function which is intercepted. This gives us information about
 // all the handles an application have at startup. However, for directory handles,
 // we don't have the name of the directory.
-void Inference::ExtractHandleInfos(SyscallDecoder* decoder) {
+void Inference::ExtractHandleInfos(int64_t timestamp, SyscallDecoder* decoder) {
   constexpr int kNhandles = 0;
   constexpr int kHandles = 1;
   constexpr int kHandleInfo = 2;
@@ -47,7 +45,6 @@ void Inference::ExtractHandleInfos(SyscallDecoder* decoder) {
       reinterpret_cast<const zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, kHandles));
   const uint32_t* handle_info =
       reinterpret_cast<const zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, kHandleInfo));
-  int64_t timestamp = time(NULL);
   // Get the information about all the handles.
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < nhandles; ++handle) {
@@ -76,7 +73,7 @@ void Inference::ExtractHandleInfos(SyscallDecoder* decoder) {
 // This is the second function which is intercepted. This gives us information about
 // all the handles which have not been used by processargs_extract_handles.
 // This only adds information about directories.
-void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
+void Inference::LibcExtensionsInit(int64_t timestamp, SyscallDecoder* decoder) {
   constexpr int kHandleCount = 0;
   constexpr int kHandles = 1;
   constexpr int kHandleInfo = 2;
@@ -91,7 +88,6 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
   uint32_t name_count = decoder->ArgumentValue(kNameCount);
   const uint64_t* names =
       reinterpret_cast<const uint64_t*>(decoder->ArgumentContent(Stage::kEntry, kNames));
-  int64_t timestamp = time(NULL);
   // Get the information about the remaining handles.
   // The meaning of handle info is described in zircon/system/public/zircon/processargs.h
   for (uint32_t handle = 0; handle < handle_count; ++handle) {
@@ -171,7 +167,7 @@ void Inference::InferMessage(const OutputEvent* event,
     }
     fidl_codec::semantic::AssignmentSemanticContext context(
         this, event->thread()->process()->koid(), event->thread()->koid(),
-        handle_value->handle().handle, context_type, request, response);
+        handle_value->handle().handle, context_type, request, response, event->timestamp());
     semantic->ExecuteAssignments(&context);
   }
 }

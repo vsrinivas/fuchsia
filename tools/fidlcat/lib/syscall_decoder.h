@@ -124,13 +124,15 @@ class SyscallDecoderBuffer {
 class SyscallDecoder {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use);
+                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use,
+                 int64_t timestamp);
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
   zxdb::Thread* get_thread() const { return weak_thread_.get(); }
   debug_ipc::Arch arch() const { return arch_; }
   const Syscall* syscall() const { return syscall_; }
   Thread* fidlcat_thread() const { return fidlcat_thread_; }
+  int64_t timestamp() const { return timestamp_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
@@ -261,6 +263,7 @@ class SyscallDecoder {
   const Syscall* const syscall_;
   Thread* fidlcat_thread_;
   std::unique_ptr<SyscallUse> use_;
+  const int64_t timestamp_;
   std::vector<zxdb::Location> caller_locations_;
   uint64_t entry_sp_ = 0;
   uint64_t return_address_ = 0;

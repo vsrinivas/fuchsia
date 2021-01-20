@@ -4,6 +4,8 @@
 
 #include "tools/fidlcat/lib/interception_workflow.h"
 
+#include <sys/time.h>
+
 #include <cstring>
 #include <string>
 #include <thread>
@@ -309,7 +311,14 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
     target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
                                                               const zxdb::Err& err) {
       if (!err.ok()) {
-        int64_t timestamp = time(nullptr);
+        // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+        // print the syscall.
+        struct timeval tv;
+        int64_t timestamp = 0;
+        if (gettimeofday(&tv, nullptr) == 0) {
+          timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000 +
+                      static_cast<int64_t>(tv.tv_usec) * 1000;
+        }
         Process* process = syscall_decoder_dispatcher()->SearchProcess(process_koid);
         if (process == nullptr) {
           process = syscall_decoder_dispatcher()->CreateProcess("", process_koid, nullptr);
@@ -329,7 +338,14 @@ void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
     return;
   }
   configured_processes_.erase(koid);
-  int64_t timestamp = time(nullptr);
+  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+  // print the syscall.
+  struct timeval tv;
+  int64_t timestamp = 0;
+  if (gettimeofday(&tv, nullptr) == 0) {
+    timestamp =
+        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
+  }
   Process* process = syscall_decoder_dispatcher()->SearchProcess(koid);
   if (process == nullptr) {
     FX_LOGS(ERROR) << "Can't find process with koid=" << koid;
@@ -394,7 +410,14 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
       cmd.append(param);
       cmd.append(" ");
     }
-    int64_t timestamp = time(nullptr);
+    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+    // print the syscall.
+    struct timeval tv;
+    int64_t timestamp = 0;
+    if (gettimeofday(&tv, nullptr) == 0) {
+      timestamp =
+          static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
+    }
     syscall_decoder_dispatcher()->AddProcessLaunchedEvent(
         std::make_shared<ProcessLaunchedEvent>(timestamp, cmd, err.ok() ? "" : err.msg()));
   };
@@ -468,7 +491,14 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
 }
 
 void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process) {
-  int64_t timestamp = time(nullptr);
+  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+  // print the syscall.
+  struct timeval tv;
+  int64_t timestamp = 0;
+  if (gettimeofday(&tv, nullptr) == 0) {
+    timestamp =
+        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
+  }
   Process* process = syscall_decoder_dispatcher()->SearchProcess(zxdb_process->GetKoid());
   if (process == nullptr) {
     process = syscall_decoder_dispatcher()->CreateProcess(

@@ -52,8 +52,11 @@ std::unique_ptr<SystemCallTest> ZxPortCreate(int64_t status, std::string_view st
 
 PORT_CREATE_DISPLAY_TEST(
     ZxPortCreate, ZX_OK,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n");
 
 // zx_port_queue tests.
@@ -93,6 +96,7 @@ void InitUser(zx_port_packet_t* packet) {
 PORT_QUEUE_DISPLAY_TEST(
     ZxPortQueueUser, ZX_OK, kHandle, InitUser,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_queue("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
@@ -129,6 +133,7 @@ PORT_QUEUE_DISPLAY_TEST(
     "      ]\n"
     "    }\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_port_wait tests.
@@ -160,10 +165,12 @@ std::unique_ptr<SystemCallTest> ZxPortWait(int64_t status, std::string_view stat
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitUser, ZX_OK, kHandle, ZX_TIME_INFINITE, InitUser,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_wait("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -213,10 +220,12 @@ void InitSignalOne(zx_port_packet_t* packet) {
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitSignalOne, ZX_OK, kHandle, ZX_TIME_INFINITE, InitSignalOne,
     ("\n"
+     "\x1B[32m0.000000\x1B[0m "
      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
      "zx_port_wait("
      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
      "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+     "\x1B[32m0.000000\x1B[0m "
      "  -> \x1B[32mZX_OK\x1B[0m\n"
      "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
      "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -249,10 +258,12 @@ void InitGuestBell(zx_port_packet_t* packet) {
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitGuestBell, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestBell,
     ("\n"
+     "\x1B[32m0.000000\x1B[0m "
      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
      "zx_port_wait("
      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
      "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+     "\x1B[32m0.000000\x1B[0m "
      "  -> \x1B[32mZX_OK\x1B[0m\n"
      "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
      "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -286,10 +297,13 @@ void InitGuestMemX64(zx_port_packet_t* packet) {
 TEST_F(InterceptionWorkflowTestX64, ZxPortWaitGuestMemX64) {
   PORT_WAIT_DISPLAY_TEST_CONTENT(
       ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestMemX64,
-      "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+      "\n"
+      "\x1B[32m0.000000\x1B[0m "
+      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_port_wait("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
       "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -331,10 +345,13 @@ void InitGuestMemAArch64(zx_port_packet_t* packet) {
 TEST_F(InterceptionWorkflowTestArm, ZxPortWaitGuestMemAArch64) {
   PORT_WAIT_DISPLAY_TEST_CONTENT(
       ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestMemAArch64,
-      "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+      "\n"
+      "\x1B[32m0.000000\x1B[0m "
+      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_port_wait("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
       "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -370,10 +387,13 @@ void InitGuestIo(zx_port_packet_t* packet) {
 
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitGuestIo, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestIo,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_wait("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -408,10 +428,13 @@ void InitGuestVcpuInterrupt(zx_port_packet_t* packet) {
 
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitGuestVcpuInterrupt, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestVcpuInterrupt,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_wait("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -442,10 +465,13 @@ void InitGuestVcpuStartup(zx_port_packet_t* packet) {
 
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitGuestVcpuStartup, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestVcpuStartup,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_wait("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -477,10 +503,12 @@ PORT_WAIT_DISPLAY_TEST(
     ClockExpected(
         0,
         "\n"
+        "\x1B[32m0.000000\x1B[0m "
         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
         "zx_port_wait("
         "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
         "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+        "\x1B[32m0.000000\x1B[0m "
         "  -> \x1B[32mZX_OK\x1B[0m\n"
         "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
         "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -510,10 +538,13 @@ void InitPageRequest(zx_port_packet_t* packet) {
 
 PORT_WAIT_DISPLAY_TEST(
     ZxPortWaitPageRequest, ZX_OK, kHandle, ZX_TIME_INFINITE, InitPageRequest,
-    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_wait("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -552,11 +583,14 @@ std::unique_ptr<SystemCallTest> ZxPortCancel(int64_t status, std::string_view st
   TEST_F(InterceptionWorkflowTestArm, name) { PORT_CANCEL_DISPLAY_TEST_CONTENT(status, expected); }
 
 PORT_CANCEL_DISPLAY_TEST(ZxPortCancel, ZX_OK,
-                         "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                         "\n"
+                         "\x1B[32m0.000000\x1B[0m "
+                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                          "zx_port_cancel("
                          "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                          "source: \x1B[32mhandle\x1B[0m = \x1B[31m00ab1234\x1B[0m, "
                          "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

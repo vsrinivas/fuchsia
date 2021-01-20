@@ -34,10 +34,12 @@ std::unique_ptr<SystemCallTest> ZxJobCreate(int64_t result, std::string_view res
 JOB_CREATE_DISPLAY_TEST(
     ZxJobCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_create("
     "parent_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_job_set_policy tests.
@@ -74,6 +76,7 @@ std::unique_ptr<SystemCallTest> ZxJobSetPolicy(int64_t result, std::string_view 
 JOB_SET_POLICY_BASIC_DISPLAY_TEST(
     ZxJobSetPolicyBasic, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_set_policy("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -89,6 +92,7 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
     "      policy: \x1B[32mzx_policy_action_t\x1B[0m = \x1B[34mZX_POL_ACTION_DENY\x1B[0m\n"
     "    }\n"
     "  ]\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST_CONTENT(result, expected)                     \
@@ -108,6 +112,7 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
 JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(
     ZxJobSetPolicyTimerSlack, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_job_set_policy("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m,"
@@ -117,6 +122,7 @@ JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(
     "    min_slack: \x1B[32mduration\x1B[0m = \x1B[34m100 nano seconds\x1B[0m\n"
     "    default_mode: \x1B[32mzx_timer_option_t\x1B[0m = \x1B[34mZX_TIMER_SLACK_CENTER\x1B[0m\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

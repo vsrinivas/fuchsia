@@ -18,23 +18,31 @@ namespace fidlcat {
 
 DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::ExceptionType::kPageFault,
                        "\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10:2\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50:4\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
                        "thread stopped on exception\x1B[0m\n");
 
 DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::ExceptionType::kGeneral,
                        "\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10:2\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50:4\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
+                       "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
                        "thread stopped on exception\x1B[0m\n");
 
@@ -64,8 +72,10 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetThread(int64_t result, std::string
 ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST(
     ZxExceptionGetThread, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_exception_get_thread(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_exception_get_process tests.
@@ -94,8 +104,10 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetProcess(int64_t result, std::strin
 ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST(
     ZxExceptionGetProcess, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_exception_get_process(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

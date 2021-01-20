@@ -31,10 +31,12 @@ std::unique_ptr<SystemCallTest> ZxVmoCreate(int64_t result, std::string_view res
 VMO_CREATE_DISPLAY_TEST(
     ZxVmoCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create("
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
     "options: \x1B[32mzx_vmo_creation_option_t\x1B[0m = \x1B[34mZX_VMO_RESIZABLE\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vmo_read tests.
@@ -66,10 +68,12 @@ std::unique_ptr<SystemCallTest> ZxVmoRead(int64_t result, std::string_view resul
 VMO_READ_DISPLAY_TEST(
     ZxVmoRead, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, \x1B[34m03\x1B[0m, "
@@ -107,6 +111,7 @@ std::unique_ptr<SystemCallTest> ZxVmoWrite(int64_t result, std::string_view resu
 VMO_WRITE_DISPLAY_TEST(
     ZxVmoWrite, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -117,6 +122,7 @@ VMO_WRITE_DISPLAY_TEST(
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
     "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmo_get_size tests.
@@ -143,8 +149,10 @@ std::unique_ptr<SystemCallTest> ZxVmoGetSize(int64_t result, std::string_view re
 VMO_GET_SIZE_DISPLAY_TEST(
     ZxVmoGetSize, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_get_size(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n");
 
 // zx_vmo_set_size tests.
@@ -169,10 +177,12 @@ std::unique_ptr<SystemCallTest> ZxVmoSetSize(int64_t result, std::string_view re
 
 VMO_SET_SIZE_DISPLAY_TEST(ZxVmoSetSize, ZX_OK,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_vmo_set_size("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmo_op_range tests.
@@ -203,12 +213,14 @@ std::unique_ptr<SystemCallTest> ZxVmoOpRange(int64_t result, std::string_view re
 
 VMO_OP_RANGE_DISPLAY_TEST(ZxVmoOpRange, ZX_OK,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_vmo_op_range("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "op: \x1B[32mzx_vmo_op_t\x1B[0m = \x1B[34mZX_VMO_OP_CACHE_SYNC\x1B[0m, "
                           "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
                           "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmo_create_child tests.
@@ -242,12 +254,14 @@ std::unique_ptr<SystemCallTest> ZxVmoCreateChild(int64_t result, std::string_vie
 VMO_CREATE_CHILD_DISPLAY_TEST(
     ZxVmoCreateChild, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_child("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32mzx_vmo_option_t\x1B[0m = \x1B[34mZX_VMO_CHILD_SNAPSHOT\x1B[0m, "
     "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vmo_set_cache_policy tests.
@@ -276,10 +290,12 @@ std::unique_ptr<SystemCallTest> ZxVmoSetCachePolicy(int64_t result, std::string_
 VMO_SET_CACHE_POLICY_DISPLAY_TEST(
     ZxVmoSetCachePolicy, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_set_cache_policy("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "cache_policy: \x1B[32mzx.cache_policy\x1B[0m = \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vmo_replace_as_executable tests.
@@ -313,10 +329,12 @@ std::unique_ptr<SystemCallTest> ZxVmoReplaceAsExecutable(int64_t result,
 VMO_REPLACE_AS_EXECUTABLE_DISPLAY_TEST(
     ZxVmoReplaceAsExecutable, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_replace_as_executable("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "vmex: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vmo_create_contiguous tests.
@@ -348,11 +366,13 @@ std::unique_ptr<SystemCallTest> ZxVmoCreateContiguous(int64_t result, std::strin
 VMO_CREATE_CONTIGUOUS_DISPLAY_TEST(
     ZxVmoCreateContiguous, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_contiguous("
     "bti: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "size: \x1B[32msize\x1B[0m = \x1B[34m20\x1B[0m, "
     "alignment_log2: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vmo_create_physical tests.
@@ -384,11 +404,13 @@ std::unique_ptr<SystemCallTest> ZxVmoCreatePhysical(int64_t result, std::string_
 VMO_CREATE_PHYSICAL_DISPLAY_TEST(
     ZxVmoCreatePhysical, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_physical("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "paddr: \x1B[32mzx.paddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
     "size: \x1B[32msize\x1B[0m = \x1B[34m20\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 }  // namespace fidlcat

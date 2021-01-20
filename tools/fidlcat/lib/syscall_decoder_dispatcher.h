@@ -1453,11 +1453,12 @@ class Syscall {
 
   // The code to execute when the input is decoded and before the input is displayed.
   // If it exists and returns false, the input is not displayed.
-  [[nodiscard]] bool (SyscallDecoderDispatcher::*inputs_decoded_action() const)(SyscallDecoder*) {
+  [[nodiscard]] bool (SyscallDecoderDispatcher::*inputs_decoded_action() const)(int64_t,
+                                                                                SyscallDecoder*) {
     return inputs_decoded_action_;
   }
-  void set_inputs_decoded_action(
-      bool (SyscallDecoderDispatcher::*inputs_decoded_action)(SyscallDecoder* decoder)) {
+  void set_inputs_decoded_action(bool (SyscallDecoderDispatcher::*inputs_decoded_action)(
+      int64_t timestamp, SyscallDecoder* decoder)) {
     inputs_decoded_action_ = inputs_decoded_action;
   }
 
@@ -1743,7 +1744,8 @@ class Syscall {
   std::vector<std::unique_ptr<fidl_codec::StructMember>> input_outline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_inline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_outline_members_;
-  bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
+  bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(int64_t timestamp,
+                                                           SyscallDecoder* decoder) = nullptr;
   void (SyscallDecoderDispatcher::*inference_)(
       const OutputEvent* event, const fidl_codec::semantic::MethodSemantic* semantic) = nullptr;
   // Method which can compute statistics for the syscall.
@@ -1759,8 +1761,6 @@ class SyscallDecoderDispatcher {
   virtual ~SyscallDecoderDispatcher() = default;
 
   const DecodeOptions& decode_options() const { return decode_options_; }
-
-  int64_t startup_timestamp() const { return startup_timestamp_; }
 
   const std::map<std::string, std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
@@ -1919,14 +1919,14 @@ class SyscallDecoderDispatcher {
   }
 
   // Called when we intercept processargs_extract_handles.
-  bool ExtractHandleInfos(SyscallDecoder* decoder) {
-    inference_.ExtractHandleInfos(decoder);
+  bool ExtractHandleInfos(int64_t timestamp, SyscallDecoder* decoder) {
+    inference_.ExtractHandleInfos(timestamp, decoder);
     return false;
   }
 
   // Called when we intercept __libc_extensions_init.
-  bool LibcExtensionsInit(SyscallDecoder* decoder) {
-    inference_.LibcExtensionsInit(decoder);
+  bool LibcExtensionsInit(int64_t timestamp, SyscallDecoder* decoder) {
+    inference_.LibcExtensionsInit(timestamp, decoder);
     return false;
   }
 
@@ -1968,9 +1968,6 @@ class SyscallDecoderDispatcher {
 
   // Decoding options.
   const DecodeOptions& decode_options_;
-
-  // When fidlcat has started.
-  const int64_t startup_timestamp_;
 
   // The definition of all the syscalls we can decode.
   std::map<std::string, std::unique_ptr<Syscall>> syscalls_;
@@ -2052,6 +2049,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   const Event* last_displayed_event() const { return last_displayed_event_; }
   void clear_last_displayed_event() { last_displayed_event_ = nullptr; }
 
+  std::ostream& os() const { return os_; }
+
   bool dump_messages() const { return dump_messages_; }
 
   uint32_t GetNextInvokedEventId() { return next_invoked_event_id_++; }
@@ -2070,6 +2069,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
                                                   zxdb::Thread* thread) override;
+
+  double GetTime(int64_t timestamp);
 
   void AddProcessLaunchedEvent(std::shared_ptr<ProcessLaunchedEvent> event) override;
 
@@ -2106,6 +2107,7 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   // True if we always display the binary dump of the messages.
   const bool dump_messages_;
   uint32_t next_invoked_event_id_ = 0;
+  int64_t timestamp_base_ = 0;
 };
 
 class SyscallCompareDispatcher : public SyscallDisplayDispatcher {

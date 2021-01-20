@@ -273,9 +273,9 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       aborted_ = false;
       Process* process = global_dispatcher->SearchProcess(kFirstPid);
       FX_DCHECK(process != nullptr);
-      int64_t timestamp = time(nullptr);
+      constexpr int64_t kReadFailTimestamp = 1000000000;
       global_dispatcher->AddStopMonitoringEvent(
-          std::make_shared<StopMonitoringEvent>(timestamp, process));
+          std::make_shared<StopMonitoringEvent>(kReadFailTimestamp, process));
     }
     debug_ipc::ReadMemoryReply reply;
     data_.PopulateMemoryBlockForAddress(request.address, request.size, reply.blocks.emplace_back());
@@ -597,7 +597,7 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
                                                 zxdb::Thread* thread,
                                                 const Syscall* syscall) override {
     return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
-                                            std::make_unique<SyscallCheck>(controller_));
+                                            std::make_unique<SyscallCheck>(controller_), 0);
   }
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
@@ -633,6 +633,19 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
         replay_(replay_dispatcher_.get()) {}
 
   ProcessController* controller() const { return controller_; }
+
+  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
+                                                zxdb::Thread* thread,
+                                                const Syscall* syscall) override {
+    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
+                                            std::make_unique<SyscallDisplay>(this, os()), 0);
+  }
+
+  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
+                                                  zxdb::Thread* thread) override {
+    return std::make_unique<ExceptionDecoder>(workflow, this, thread,
+                                              std::make_unique<ExceptionDisplay>(this, os()), 0);
+  }
 
   void DeleteDecoder(SyscallDecoder* decoder) override {
     SyscallDisplayDispatcher::DeleteDecoder(decoder);

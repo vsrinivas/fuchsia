@@ -33,20 +33,22 @@ class ExceptionUse {
 class ExceptionDecoder {
  public:
   ExceptionDecoder(InterceptionWorkflow* workflow, SyscallDecoderDispatcher* dispatcher,
-                   zxdb::Thread* thread, std::unique_ptr<ExceptionUse> use)
+                   zxdb::Thread* thread, std::unique_ptr<ExceptionUse> use, int64_t timestamp)
       : workflow_(workflow),
         dispatcher_(dispatcher),
         weak_thread_(thread->GetWeakPtr()),
         process_name_(thread->GetProcess()->GetName()),
         process_id_(thread->GetProcess()->GetKoid()),
         thread_id_(thread->GetKoid()),
-        use_(std::move(use)) {}
+        use_(std::move(use)),
+        timestamp_(timestamp) {}
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
   zxdb::Thread* get_thread() const { return weak_thread_.get(); }
   const std::string& process_name() const { return process_name_; }
   uint64_t process_id() const { return process_id_; }
   uint64_t thread_id() const { return thread_id_; }
+  int64_t timestamp() const { return timestamp_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
 
   std::stringstream& Error(DecoderError::Type type) { return error_.Set(type); }
@@ -71,6 +73,7 @@ class ExceptionDecoder {
   const uint64_t process_id_;
   const uint64_t thread_id_;
   std::unique_ptr<ExceptionUse> use_;
+  const int64_t timestamp_;
   std::vector<zxdb::Location> caller_locations_;
   DecoderError error_;
 };

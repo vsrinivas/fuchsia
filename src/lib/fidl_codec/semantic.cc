@@ -214,7 +214,8 @@ void Assignment::Execute(AssignmentSemanticContext* context) const {
     inferred_handle_info =
         context->handle_semantic()->GetInferredHandleInfo(context->pid(), source_value.handle());
   }
-  context->handle_semantic()->CreateHandleInfo(context->tid(), destination_handle);
+  context->handle_semantic()->CreateHandleInfo(context->timestamp(), context->tid(),
+                                               destination_handle);
   context->handle_semantic()->AddInferredHandleInfo(context->pid(), destination_handle,
                                                     inferred_handle_info);
 }

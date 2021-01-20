@@ -4,6 +4,7 @@
 
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
+#include <sys/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -191,8 +192,8 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(Sysca
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
                         decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value,
-                        type(), error_stream);
+                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
       &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
       num_handles_value);
@@ -236,8 +237,8 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
                         decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value,
-                        type(), error_stream);
+                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
       &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
       num_handles_value);
@@ -270,8 +271,8 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleDisposition::Generate
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
                         decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value,
-                        type(), error_stream);
+                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
       &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
       num_handles_value);
@@ -396,7 +397,7 @@ void Syscall::ComputeStatistics(const OutputEvent* event) const {
 }
 
 SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_options)
-    : decode_options_(decode_options), startup_timestamp_(time(nullptr)), inference_(this) {
+    : decode_options_(decode_options), inference_(this) {
   Populate();
   ComputeTypes();
   if (!decode_options.trigger_filters.empty()) {
@@ -597,27 +598,51 @@ void SyscallDecoderDispatcher::ComputeTypes() {
 
 std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
     InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
+  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+  // print the syscall.
+  struct timeval tv;
+  int64_t timestamp = 0;
+  if (gettimeofday(&tv, nullptr) == 0) {
+    timestamp =
+        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
+  }
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
-                                          std::make_unique<SyscallDisplay>(this, os_));
+                                          std::make_unique<SyscallDisplay>(this, os_), timestamp);
 }
 
 std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
     InterceptionWorkflow* workflow, zxdb::Thread* thread) {
-  return std::make_unique<ExceptionDecoder>(workflow, this, thread,
-                                            std::make_unique<ExceptionDisplay>(this, os_));
+  // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+  // print the syscall.
+  struct timeval tv;
+  int64_t timestamp = 0;
+  if (gettimeofday(&tv, nullptr) == 0) {
+    timestamp =
+        static_cast<int64_t>(tv.tv_sec) * 1000000000 + static_cast<int64_t>(tv.tv_usec) * 1000;
+  }
+  return std::make_unique<ExceptionDecoder>(
+      workflow, this, thread, std::make_unique<ExceptionDisplay>(this, os_), timestamp);
+}
+
+double SyscallDisplayDispatcher::GetTime(int64_t timestamp) {
+  if (timestamp_base_ == 0) {
+    timestamp_base_ = timestamp;
+  }
+  int64_t delta = (timestamp - timestamp_base_) / 1000;
+  return static_cast<double>(delta) / 1000000;
 }
 
 void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
     std::shared_ptr<ProcessLaunchedEvent> event) {
   if (decode_options().output_mode == OutputMode::kStandard) {
     last_displayed_syscall_ = nullptr;
+    os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
     if (event->error_message().empty()) {
-      os_ << colors().green << "\nLaunched " << colors().blue << event->command() << colors().reset
+      os_ << colors().green << "Launched " << colors().blue << event->command() << colors().reset
           << '\n';
     } else {
-      os_ << colors().red << "\nCan't launch " << colors().blue << event->command()
-          << colors().reset << " : " << colors().red << event->error_message() << colors().reset
-          << '\n';
+      os_ << colors().red << "Can't launch " << colors().blue << event->command() << colors().reset
+          << " : " << colors().red << event->error_message() << colors().reset << '\n';
     }
   }
 
@@ -628,10 +653,11 @@ void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
     std::shared_ptr<ProcessMonitoredEvent> event) {
   if (decode_options().output_mode == OutputMode::kStandard) {
     last_displayed_syscall_ = nullptr;
+    os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
     if (event->error_message().empty()) {
-      os_ << colors().green << "\nMonitoring ";
+      os_ << colors().green << "Monitoring ";
     } else {
-      os_ << colors().red << "\nCan't monitor ";
+      os_ << colors().red << "Can't monitor ";
     }
 
     if (event->process()->name().empty()) {
@@ -653,14 +679,14 @@ void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
 void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
   if (decode_options().output_mode == OutputMode::kStandard) {
     last_displayed_syscall_ = nullptr;
-    os_ << colors().green;
+    os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
     if (event->process()->name().empty()) {
-      os_ << "\nStop monitoring process with koid ";
+      os_ << colors().green << "Stop monitoring process with koid" << colors().reset;
     } else {
-      os_ << "\nStop monitoring " << colors().blue << event->process()->name() << colors().reset
-          << " koid=";
+      os_ << colors().green << "Stop monitoring" << colors().reset << ' ' << colors().blue
+          << event->process()->name() << colors().reset << " koid";
     }
-    os_ << colors().red << event->process()->koid() << colors().reset << '\n';
+    os_ << ' ' << colors().red << event->process()->koid() << colors().reset << '\n';
   }
 
   SaveEvent(event);
@@ -702,10 +728,11 @@ void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_e
   if (decode_options().output_mode != OutputMode::kStandard) {
     return;
   }
-  std::string line_header = invoked_event->thread()->process()->name() + ' ' + colors().red +
-                            std::to_string(invoked_event->thread()->process()->koid()) +
-                            colors().reset + ':' + colors().red +
-                            std::to_string(invoked_event->thread()->koid()) + colors().reset + ' ';
+  std::string line_header =
+      colors().green + std::to_string(GetTime(invoked_event->timestamp())) + colors().reset + ' ' +
+      invoked_event->thread()->process()->name() + ' ' + colors().red +
+      std::to_string(invoked_event->thread()->process()->koid()) + colors().reset + ':' +
+      colors().red + std::to_string(invoked_event->thread()->koid()) + colors().reset + ' ';
   if (with_process_info()) {
     os_ << line_header;
   }
@@ -761,9 +788,13 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
       }
       std::string line_header;
       if (with_process_info() || (last_displayed_event_ != output_event->invoked_event())) {
-        line_header = output_event->thread()->process()->name() + ' ' + colors().red +
-                      std::to_string(output_event->thread()->process()->koid()) + colors().reset +
-                      ':' + colors().red + std::to_string(output_event->thread()->koid()) +
+        line_header = colors().green + std::to_string(GetTime(output_event->timestamp())) +
+                      colors().reset + ' ' + output_event->thread()->process()->name() + ' ' +
+                      colors().red + std::to_string(output_event->thread()->process()->koid()) +
+                      colors().reset + ':' + colors().red +
+                      std::to_string(output_event->thread()->koid()) + colors().reset + ' ';
+      } else {
+        line_header = colors().green + std::to_string(GetTime(output_event->timestamp())) +
                       colors().reset + ' ';
       }
       FidlcatPrinter printer(this, output_event->thread()->process(), os_, line_header);
@@ -783,7 +814,8 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
     os_ << '\n';
 
     std::string line_header =
-        exception_event->thread()->process()->name() + ' ' + colors().red +
+        colors().green + std::to_string(GetTime(exception_event->timestamp())) + colors().reset +
+        ' ' + exception_event->thread()->process()->name() + ' ' + colors().red +
         std::to_string(exception_event->thread()->process()->koid()) + colors().reset + ':' +
         colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
     FidlcatPrinter printer(this, exception_event->thread()->process(), os_, line_header);
@@ -842,7 +874,8 @@ void SyscallDisplayDispatcher::SessionEnded() {
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
     InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
-                                          std::make_unique<SyscallCompare>(this, comparator_, os_));
+                                          std::make_unique<SyscallCompare>(this, comparator_, os_),
+                                          0);
 }
 
 void SyscallDisplayDispatcher::GenerateTests(const std::string& output_directory) {

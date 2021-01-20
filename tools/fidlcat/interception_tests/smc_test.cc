@@ -42,6 +42,7 @@ std::unique_ptr<SystemCallTest> ZxSmcCall(int64_t result, std::string_view resul
 
 SMC_CALL_DISPLAY_TEST(ZxSmcCall, ZX_OK,
                       "\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                       "zx_smc_call(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                       "  parameters: \x1B[32mzx_smc_parameters_t\x1B[0m = {\n"
@@ -55,6 +56,7 @@ SMC_CALL_DISPLAY_TEST(ZxSmcCall, ZX_OK,
                       "    client_id: \x1B[32muint16\x1B[0m = \x1B[34m8\x1B[0m\n"
                       "    secure_os_id: \x1B[32muint16\x1B[0m = \x1B[34m9\x1B[0m\n"
                       "  }\n"
+                      "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    out_smc_result: \x1B[32mzx_smc_result_t\x1B[0m = { "
                       "arg0: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m, "

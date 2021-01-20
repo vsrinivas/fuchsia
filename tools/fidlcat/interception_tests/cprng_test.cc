@@ -33,7 +33,9 @@ std::unique_ptr<SystemCallTest> ZxCprngDraw(int64_t result, std::string_view res
 CPRNG_DRAW_DISPLAY_TEST(
     ZxCprngDraw, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_cprng_draw()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m00\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m02\x1B[0m, \x1B[34m03\x1B[0m, "
@@ -71,6 +73,7 @@ std::unique_ptr<SystemCallTest> ZxCprngAddEntropy(int64_t result, std::string_vi
 CPRNG_ADD_ENTROPY_DISPLAY_TEST(
     ZxCprngAddEntropy, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_cprng_add_entropy()\n"
     "  buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
@@ -79,6 +82,7 @@ CPRNG_ADD_ENTROPY_DISPLAY_TEST(
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
     "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

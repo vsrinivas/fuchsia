@@ -36,10 +36,12 @@ std::unique_ptr<SystemCallTest> ZxDebuglogCreate(int64_t result, std::string_vie
 DEBUGLOG_CREATE_DISPLAY_TEST(
     ZxDebuglogCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_debuglog_create("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_debuglog_write tests.
@@ -72,11 +74,13 @@ std::unique_ptr<SystemCallTest> ZxDebuglogWrite(int64_t result, std::string_view
 DEBUGLOG_WRITE_DISPLAY_TEST(
     ZxDebuglogWrite, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_debuglog_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My buffer data\"\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_debuglog_read tests.
@@ -107,10 +111,12 @@ std::unique_ptr<SystemCallTest> ZxDebuglogRead(int64_t result, std::string_view 
 DEBUGLOG_READ_DISPLAY_TEST(
     ZxDebuglogRead, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_debuglog_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My buffer data\"\x1B[0m\n");
 
@@ -143,10 +149,12 @@ std::unique_ptr<SystemCallTest> ZxKtraceRead(int64_t result, std::string_view re
 
 KTRACE_READ_DISPLAY_TEST(ZxKtraceRead, ZX_OK,
                          "\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                          "zx_ktrace_read("
                          "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                          "offset: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+                         "\x1B[32m0.000000\x1B[0m "
                          "  -> \x1B[32mZX_OK\x1B[0m ("
                          "actual: \x1B[32msize_t\x1B[0m = \x1B[34m7\x1B[0m/\x1B[34m100\x1B[0m)\n"
                          "    data: \x1B[32muint8\x1B[0m = \x1B[31m\"My data\"\x1B[0m\n");
@@ -183,22 +191,26 @@ std::unique_ptr<SystemCallTest> ZxKtraceControl(int64_t result, std::string_view
 KTRACE_CONTROL_DISPLAY_TEST(
     ZxKtraceControl1, ZX_OK, 1,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_ktrace_control("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "action: \x1B[32mzx_ktrace_control_action_t\x1B[0m = \x1B[34mKTRACE_ACTION_START\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 KTRACE_CONTROL_DISPLAY_TEST(
     ZxKtraceControl4, ZX_OK, 4,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_ktrace_control("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "action: \x1B[32mzx_ktrace_control_action_t\x1B[0m = \x1B[34mKTRACE_ACTION_NEW_PROBE\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "ptr: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_ktrace_write tests.
@@ -226,12 +238,14 @@ std::unique_ptr<SystemCallTest> ZxKtraceWrite(int64_t result, std::string_view r
 
 KTRACE_WRITE_DISPLAY_TEST(ZxKtraceWrite, ZX_OK,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_ktrace_write("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "id: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                           "arg0: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
                           "arg1: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_mtrace_control tests.
@@ -266,6 +280,7 @@ std::unique_ptr<SystemCallTest> ZxMtraceControl(int64_t result, std::string_view
 
 MTRACE_CONTROL_DISPLAY_TEST(ZxMtraceControl, ZX_OK,
                             "\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_mtrace_control("
                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -273,6 +288,7 @@ MTRACE_CONTROL_DISPLAY_TEST(ZxMtraceControl, ZX_OK,
                             "action: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m, "
                             "options: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m)\n"
                             "  ptr: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My data\"\x1B[0m\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_debug_read tests.
@@ -303,8 +319,10 @@ std::unique_ptr<SystemCallTest> ZxDebugRead(int64_t result, std::string_view res
 
 DEBUG_READ_DISPLAY_TEST(ZxDebugRead, ZX_OK,
                         "\n"
+                        "\x1B[32m0.000000\x1B[0m "
                         "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                         "zx_debug_read(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+                        "\x1B[32m0.000000\x1B[0m "
                         "  -> \x1B[32mZX_OK\x1B[0m ("
                         "actual: \x1B[32msize_t\x1B[0m = \x1B[34m7\x1B[0m/\x1B[34m32\x1B[0m, "
                         "buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n");
@@ -331,8 +349,10 @@ std::unique_ptr<SystemCallTest> ZxDebugWrite(int64_t result, std::string_view re
 DEBUG_WRITE_DISPLAY_TEST(
     ZxDebugWrite, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_debug_write(buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_debug_send_command tests.
@@ -363,10 +383,12 @@ std::unique_ptr<SystemCallTest> ZxDebugSendCommand(int64_t result, std::string_v
 
 DEBUG_SEND_COMMAND_DISPLAY_TEST(ZxDebugSendCommand, ZX_OK,
                                 "\n"
+                                "\x1B[32m0.000000\x1B[0m "
                                 "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                 "zx_debug_send_command("
                                 "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                 "buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n"
+                                "\x1B[32m0.000000\x1B[0m "
                                 "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

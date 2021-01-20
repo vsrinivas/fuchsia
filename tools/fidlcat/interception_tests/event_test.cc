@@ -31,8 +31,10 @@ std::unique_ptr<SystemCallTest> ZxEventCreate(int64_t result, std::string_view r
 EVENT_CREATE_DISPLAY_TEST(
     ZxEventCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_event_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_eventpair_create tests.
@@ -64,8 +66,10 @@ std::unique_ptr<SystemCallTest> ZxEventPairCreate(int64_t result, std::string_vi
 EVENTPAIR_CREATE_DISPLAY_TEST(
     ZxEventPairCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_eventpair_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");

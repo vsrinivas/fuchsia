@@ -47,16 +47,19 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
 WRITE_DISPLAY_TEST(
     ZxChannelWriteDecoded, ZX_OK, false,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 WRITE_DISPLAY_TEST(
     ZxChannelWriteDecodedDumped, ZX_OK, true,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
@@ -71,6 +74,7 @@ WRITE_DISPLAY_TEST(
     "ff, ff, ff, ff\x1B[0m, ff, ff, ff, ff, \n"
     "      0020: \x1B[31m68, 65, 6c, 6c\x1B[0m, 6f, 20, 77, 6f\x1B[31m, "
     "72, 6c, 64, 00\x1B[0m, 00, 00, 00, 00\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_channel_write_etc_tests.
@@ -109,12 +113,14 @@ std::unique_ptr<SystemCallTest> ZxChannelWriteEtc(int64_t result, std::string_vi
 WRITE_ETC_DISPLAY_TEST(
     ZxChannelWriteEtcDecoded, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write_etc("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoHandle\x1B[0m = { "
     "handle: \x1B[32mhandle\x1B[0m = Duplicate(\x1B[31mChannel:bde90caf\x1B[0m, "
     "\x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m) }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_channel_call_etc_tests.
@@ -166,6 +172,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCallEtc(int64_t result, std::string_vie
 CALL_ETC_DISPLAY_TEST(
     ZxChannelCallEtcDecoded, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call_etc("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
@@ -175,6 +182,7 @@ CALL_ETC_DISPLAY_TEST(
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoHandle\x1B[0m = { "
     "handle: \x1B[32mhandle\x1B[0m = Duplicate(\x1B[31mChannel:bde90caf\x1B[0m,"
     " \x1B[34mZX_RIGHT_TRANSFER\x1B[0m) }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    \x1B[45m\x1B[37mreceived response\x1B[0m "
     "\x1B[32mfidl.examples.echo/Echo.EchoHandle\x1B[0m = { "
@@ -202,10 +210,12 @@ CALL_ETC_DISPLAY_TEST(
 WRITE_EVENT_TEST(
     EventWriteDecoded, ZX_OK, false,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent event\x1B[0m \x1B[32mfidl.examples.echo/Echo.OnPong\x1B[0m = {}\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

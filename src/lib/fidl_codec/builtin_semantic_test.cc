@@ -22,6 +22,7 @@ constexpr uint32_t kChannel0 = 0x1000;
 constexpr uint32_t kChannel1 = 0x2000;
 constexpr uint32_t kChannel2 = 0x3000;
 constexpr uint32_t kChannel3 = 0x4000;
+constexpr int64_t kEventTimestamp = 0;
 
 class BuiltinSemanticTest : public SemanticParserTest {
  public:
@@ -60,14 +61,16 @@ BuiltinSemanticTest::BuiltinSemanticTest()
 void BuiltinSemanticTest::ExecuteWrite(const MethodSemantic* method_semantic,
                                        const StructValue* request, const StructValue* response) {
   fidl_codec::semantic::AssignmentSemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
-                                                          ContextType::kWrite, request, response);
+                                                          ContextType::kWrite, request, response,
+                                                          kEventTimestamp);
   method_semantic->ExecuteAssignments(&context);
 }
 
 void BuiltinSemanticTest::ExecuteRead(const MethodSemantic* method_semantic,
                                       const StructValue* request, const StructValue* response) {
   fidl_codec::semantic::AssignmentSemanticContext context(&handle_semantic_, kPid, kTid, kHandle,
-                                                          ContextType::kRead, request, response);
+                                                          ContextType::kRead, request, response,
+                                                          kEventTimestamp);
   method_semantic->ExecuteAssignments(&context);
 }
 
@@ -75,7 +78,7 @@ void BuiltinSemanticTest::ShortDisplay(std::ostream& os, const MethodDisplay* di
                                        const StructValue* request, const StructValue* response) {
   PrettyPrinter printer(os, WithoutColors, true, "", 100, false);
   fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, ZX_HANDLE_INVALID, request,
-                                                response);
+                                                response, kEventTimestamp);
   bool first_argument = true;
   for (const auto& expression : display->inputs()) {
     if (first_argument) {
@@ -253,11 +256,9 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   launch_info->AddField("url",
                         std::make_unique<StringValue>(
                             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx"));
-  launch_info->AddField("directory_request",
-                        std::make_unique<HandleValue>(channel0_));
+  launch_info->AddField("directory_request", std::make_unique<HandleValue>(channel0_));
   request.AddField("launch_info", std::move(launch_info));
-  request.AddField("controller",
-                   std::make_unique<HandleValue>(channel2_));
+  request.AddField("controller", std::make_unique<HandleValue>(channel2_));
 
   ExecuteWrite(method->semantic(), &request, nullptr);
 

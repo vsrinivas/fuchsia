@@ -35,7 +35,9 @@ std::unique_ptr<SystemCallTest> ZxSystemGetDcacheLineSize(int64_t result,
 SYSTEM_GET_DCACHE_LINE_SIZE_DISPLAY_TEST(
     ZxSystemGetDcacheLineSize, 64,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_dcache_line_size()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[34m64\x1B[0m\n");
 
 // zx_system_get_num_cpus tests.
@@ -59,7 +61,9 @@ std::unique_ptr<SystemCallTest> ZxSystemGetNumCpus(int64_t result, std::string_v
 SYSTEM_GET_NUM_CPUS_DISPLAY_TEST(
     ZxSystemGetNumCpus, 8,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_num_cpus()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[34m8\x1B[0m\n");
 
 // zx_system_get_version tests.
@@ -89,7 +93,9 @@ std::unique_ptr<SystemCallTest> ZxSystemGetVersion(int64_t result, std::string_v
 SYSTEM_GET_VERSION_DISPLAY_TEST(
     ZxSystemGetVersion, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_version()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "version: \x1B[32mstring\x1B[0m = "
     "\x1B[31m\"git-8a07d52603404521038d8866b297f99de36f9162\"\x1B[0m)\n");
@@ -115,7 +121,9 @@ std::unique_ptr<SystemCallTest> ZxSystemGetPhysmem(int64_t result, std::string_v
 SYSTEM_GET_PHYSMEM_DISPLAY_TEST(
     ZxSystemGetPhysmem, 536870912,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_physmem()\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[34m536870912\x1B[0m\n");
 
 // zx_system_get_event tests.
@@ -148,10 +156,12 @@ std::unique_ptr<SystemCallTest> ZxSystemGetEvent(int64_t result, std::string_vie
 SYSTEM_GET_EVENT_DISPLAY_TEST(
     ZxSystemGetEvent, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_system_get_event("
     "root_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "kind: \x1B[32mzx_system_event_type_t\x1B[0m = \x1B[34mZX_SYSTEM_EVENT_OUT_OF_MEMORY\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (event: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_system_get_features tests.
@@ -182,8 +192,10 @@ std::unique_ptr<SystemCallTest> ZxSystemGetFeatures(int64_t result, std::string_
 SYSTEM_GET_FEATURES_DISPLAY_TEST(
     ZxSystemGetFeatures, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_get_features("
     "kind: \x1B[32mzx_feature_kind_t\x1B[0m = \x1B[31mZX_FEATURE_KIND_HW_BREAKPOINT_COUNT\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (features: \x1B[32muint32\x1B[0m = \x1B[34m8\x1B[0m)\n");
 
 // zx_system_mexec tests.
@@ -210,11 +222,13 @@ std::unique_ptr<SystemCallTest> ZxSystemMexec(int64_t result, std::string_view r
 
 SYSTEM_MEXEC_DISPLAY_TEST(ZxSystemMexec, ZX_OK,
                           "\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_system_mexec("
                           "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "kernel_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
                           "bootimage_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m)\n"
+                          "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_system_mexec_payload_get tests.
@@ -247,9 +261,11 @@ std::unique_ptr<SystemCallTest> ZxSystemMexecPayloadGet(int64_t result,
 SYSTEM_MEXEC_PAYLOAD_GET_DISPLAY_TEST(
     ZxSystemMexecPayloadGet, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_system_mexec_payload_get("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
@@ -283,11 +299,13 @@ std::unique_ptr<SystemCallTest> ZxSystemPowerctl(int64_t result, std::string_vie
 
 SYSTEM_POWERCTL_DISPLAY_TEST(ZxSystemPowerctl, ZX_OK,
                              "\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_system_powerctl("
                              "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                              "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
                              "\x1B[34mZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS\x1B[0m)\n"
+                             "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define SYSTEM_POWERCTL_ACPI_DISPLAY_TEST_CONTENT(result, expected)                            \
@@ -308,6 +326,7 @@ SYSTEM_POWERCTL_DISPLAY_TEST(ZxSystemPowerctl, ZX_OK,
 
 SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
                                   "\n"
+                                  "\x1B[32m0.000000\x1B[0m "
                                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                   "zx_system_powerctl("
                                   "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -318,6 +337,7 @@ SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
                                   "    sleep_type_a: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
                                   "    sleep_type_b: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
                                   "  }\n"
+                                  "\x1B[32m0.000000\x1B[0m "
                                   "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define SYSTEM_POWERCTL_PL1_DISPLAY_TEST_CONTENT(result, expected)                          \
@@ -339,6 +359,7 @@ SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
 
 SYSTEM_POWERCTL_PL1_DISPLAY_TEST(ZxSystemPowerctlPl1, ZX_OK,
                                  "\n"
+                                 "\x1B[32m0.000000\x1B[0m "
                                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                  "zx_system_powerctl("
                                  "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -350,6 +371,7 @@ SYSTEM_POWERCTL_PL1_DISPLAY_TEST(ZxSystemPowerctlPl1, ZX_OK,
                                  "    clamp: \x1B[32muint8\x1B[0m = \x1B[34m0\x1B[0m\n"
                                  "    enable: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
                                  "  }\n"
+                                 "\x1B[32m0.000000\x1B[0m "
                                  "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

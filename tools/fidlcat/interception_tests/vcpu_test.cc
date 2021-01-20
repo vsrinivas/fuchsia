@@ -35,11 +35,13 @@ std::unique_ptr<SystemCallTest> ZxVcpuCreate(int64_t result, std::string_view re
 VCPU_CREATE_DISPLAY_TEST(
     ZxVcpuCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vcpu_create("
     "guest: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "entry: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000123456\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_vcpu_resume tests.
@@ -70,8 +72,10 @@ std::unique_ptr<SystemCallTest> ZxVcpuResume(int64_t result, std::string_view re
 VCPU_RESUME_DISPLAY_TEST(
     ZxVcpuResume, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vcpu_resume(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    packet: \x1B[32mzx_port_packet_t\x1B[0m = {\n"
     "      key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m\n"
@@ -112,10 +116,12 @@ std::unique_ptr<SystemCallTest> ZxVcpuInterrupt(int64_t result, std::string_view
 
 VCPU_INTERRUPT_DISPLAY_TEST(ZxVcpuInterrupt, ZX_OK,
                             "\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                             "zx_vcpu_interrupt("
                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                             "vector: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m)\n"
+                            "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_vcpu_read_state tests.
@@ -147,10 +153,12 @@ TEST_F(InterceptionWorkflowTestArm, ZxVcpuReadStateAArch64) {
   VCPU_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_vcpu_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_vcpu_t\x1B[0m = \x1B[31mZX_VCPU_STATE\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    buffer: \x1B[32mzx_vcpu_state_aarch64_t\x1B[0m = {\n"
       "      x: vector<\x1B[32muint64\x1B[0m> = [ "
@@ -196,10 +204,12 @@ TEST_F(InterceptionWorkflowTestX64, ZxVcpuReadStateX86) {
   VCPU_READ_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_vcpu_read_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
       "kind: \x1B[32mzx_vcpu_t\x1B[0m = \x1B[31mZX_VCPU_STATE\x1B[0m)\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n"
       "    buffer: \x1B[32mzx_vcpu_state_x86_t\x1B[0m = {\n"
       "      rax: \x1B[32muint64\x1B[0m = \x1B[34m0000000000000001\x1B[0m\n"
@@ -251,6 +261,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxVcpuWriteStateAArch64) {
   VCPU_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_vcpu_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -276,6 +287,7 @@ TEST_F(InterceptionWorkflowTestArm, ZxVcpuWriteStateAArch64) {
       "    sp: \x1B[32muint64\x1B[0m = \x1B[34m0000000001234576\x1B[0m\n"
       "    cpsr: \x1B[32muint32\x1B[0m = \x1B[34me0000000\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -300,6 +312,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxVcpuWriteStateX86) {
   VCPU_WRITE_STATE_DISPLAY_TEST_CONTENT(
       ZX_OK, buffer,
       "\n"
+      "\x1B[32m0.000000\x1B[0m "
       "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
       "zx_vcpu_write_state("
       "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -323,6 +336,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxVcpuWriteStateX86) {
       "    r15: \x1B[32muint64\x1B[0m = \x1B[34m0000000000000010\x1B[0m\n"
       "    rflags: \x1B[32muint64\x1B[0m = \x1B[34m0000000000001234\x1B[0m\n"
       "  }\n"
+      "\x1B[32m0.000000\x1B[0m "
       "  -> \x1B[32mZX_OK\x1B[0m\n");
 }
 
@@ -343,6 +357,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxVcpuWriteStateX86) {
 VCPU_WRITE_STATE_IO_DISPLAY_TEST(
     ZxVcpuWriteStateIo, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vcpu_write_state("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -355,6 +370,7 @@ VCPU_WRITE_STATE_IO_DISPLAY_TEST(
     "    data: vector<\x1B[32muint8\x1B[0m> = [ "
     "\x1B[34m78\x1B[0m, \x1B[34m56\x1B[0m, \x1B[34m34\x1B[0m, \x1B[34m12\x1B[0m ]\n"
     "  }\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat

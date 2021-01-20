@@ -31,8 +31,10 @@ std::unique_ptr<SystemCallTest> ZxPagerCreate(int64_t result, std::string_view r
 PAGER_CREATE_DISPLAY_TEST(
     ZxPagerCreate, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pager_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pager_create_vmo tests.
@@ -68,6 +70,7 @@ std::unique_ptr<SystemCallTest> ZxPagerCreateVmo(int64_t result, std::string_vie
 PAGER_CREATE_VMO_DISPLAY_TEST(
     ZxPagerCreateVmo, ZX_OK,
     "\n"
+    "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pager_create_vmo("
     "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -75,6 +78,7 @@ PAGER_CREATE_VMO_DISPLAY_TEST(
     "port: \x1B[32mhandle\x1B[0m = \x1B[31mdf0b2ec1\x1B[0m, "
     "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_pager_detach_vmo tests.
@@ -101,10 +105,12 @@ std::unique_ptr<SystemCallTest> ZxPagerDetachVmo(int64_t result, std::string_vie
 
 PAGER_DETACH_VMO_DISPLAY_TEST(ZxPagerDetachVmo, ZX_OK,
                               "\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                               "zx_pager_detach_vmo("
                               "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                               "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
+                              "\x1B[32m0.000000\x1B[0m "
                               "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 // zx_pager_supply_pages tests.
@@ -139,6 +145,7 @@ std::unique_ptr<SystemCallTest> ZxPagerSupplyPages(int64_t result, std::string_v
 
 PAGER_SUPPLY_PAGES_DISPLAY_TEST(ZxPagerSupplyPages, ZX_OK,
                                 "\n"
+                                "\x1B[32m0.000000\x1B[0m "
                                 "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                 "zx_pager_supply_pages("
                                 "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
@@ -147,6 +154,7 @@ PAGER_SUPPLY_PAGES_DISPLAY_TEST(ZxPagerSupplyPages, ZX_OK,
                                 "length: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
                                 "aux_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m, "
                                 "aux_offset: \x1B[32muint64\x1B[0m = \x1B[34m2000\x1B[0m)\n"
+                                "\x1B[32m0.000000\x1B[0m "
                                 "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat
