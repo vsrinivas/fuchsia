@@ -27,14 +27,18 @@ rustc_binary("bin") {
     "//third_party/rust_crates:eui48",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
   ]
 
   sources = [
     "src/main.rs",
     "src/opts.rs",
-    "src/policy.rs",
+    "src/policy/mod.rs",
+    "src/policy/serialize.rs",
   ]
 }
 

@@ -129,6 +129,10 @@ pub enum PolicyClientCmd {
     StartClientConnections,
     #[structopt(name = "stop-client-connections")]
     StopClientConnections,
+    #[structopt(name = "dump-config")]
+    DumpConfig,
+    #[structopt(name = "restore-config")]
+    RestoreConfig { serialized_config: String },
 }
 
 #[derive(StructOpt, Clone, Debug)]
