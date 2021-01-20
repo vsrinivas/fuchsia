@@ -7,13 +7,14 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+
+#include "src/devices/rtc/drivers/fallback/fallback_rtc_bind.h"
 
 namespace fallback_rtc {
 
@@ -138,14 +139,4 @@ static constexpr zx_driver_ops_t ops = []() {
 
 }  // namespace fallback_rtc
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(fallback_rtc, fallback_rtc::ops, "fallback_rtc", "0.1", 7)
-  BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST, 0),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_FALLBACK),
-  BI_ABORT(),
-  BI_LABEL(0),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_FALLBACK_RTC_TEST),
-ZIRCON_DRIVER_END(fallback_rtc)
-    // clang-format on
+ZIRCON_DRIVER(fallback_rtc, fallback_rtc::ops, "fallback_rtc", "0.1");

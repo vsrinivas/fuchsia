@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("fallback_rtc_bind") {
+  rules = "fallback_rtc.bind"
+  output = "fallback_rtc_bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/test.platform",
+  ]
+}
 
 driver_module("fallback") {
   configs += [
@@ -14,12 +25,10 @@ driver_module("fallback") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc-impl.cc" ]
   deps = [
+    ":fallback_rtc_bind",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -29,13 +38,11 @@ driver_module("fallback") {
 test("fallback-rtc") {
   sources = [ "fallback-rtc-test.cc" ]
   deps = [
+    ":fallback_rtc_bind",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//sdk/lib/fdio",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
@@ -56,5 +63,8 @@ isolated_devmgr_unittest_package("fallback-rtc-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fallback-rtc-test" ]
+  deps = [
+    ":fallback-rtc-test",
+    ":fallback_rtc_bind_test",
+  ]
 }
