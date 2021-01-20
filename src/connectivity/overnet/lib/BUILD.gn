@@ -8,7 +8,6 @@ group("lib") {
     "core",
     "hoist",
     "onet_tool",
-    "quic",
     "serial_link",
     "stream_framer",
     "stream_link",
@@ -24,7 +23,6 @@ group("tests") {
   deps = [
     "core:tests",
     "hoist:tests",
-    "quic:tests",
     "serial_link:tests",
     "stream_framer:tests",
     "stream_link:tests",
