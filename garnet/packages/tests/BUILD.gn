@@ -57,7 +57,6 @@ group("all") {
     "//garnet/go/src/device_settings:device_settings_gotests",
     "//garnet/go/src/go-tuf:go_tuf_host_tests($host_toolchain)",
     "//garnet/go/src/go-tuf:go_tuf_tests",
-    "//garnet/go/src/inspect:go_inspect_tests",
     "//garnet/go/src/merkle:go_merkle_tests",
     "//garnet/go/src/sse:sse_test($host_toolchain)",
     "//garnet/go/src/thinfs:go_thinfs_tests",
