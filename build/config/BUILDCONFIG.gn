@@ -15,11 +15,6 @@ cobalt_root = "//third_party/cobalt"
 # TODO(fxbug.dev/3367): remove when the build is unified.
 zx = "//zircon"
 
-# Variable used in Zircon build files to declare absolute labels representing
-# build infrastructure (e.g. .gni files).
-# TODO(fxbug.dev/3367): remove when the build is unified.
-zx_build = "//build/unification/zn_build"
-
 declare_args() {
   # If set, the build will produce compilation analysis dumps, used for code
   # cross-referencing in code search.  The extra work done during analysis
