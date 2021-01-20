@@ -1488,6 +1488,7 @@ mod tests {
                 periodic_interval: Duration::from_secs(42 * 60),
                 startup_delay: Duration::from_secs(43),
                 retry_delay: Duration::from_secs(301),
+                fuzz_percentage_range: 55,
                 ..PolicyConfig::default()
             }
         );

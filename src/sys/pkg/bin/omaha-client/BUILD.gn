@@ -156,6 +156,7 @@ omcl_policy_config("omaha-client-policy-config-for-test") {
   periodic_interval_minutes = 42
   startup_delay_seconds = 43
   retry_delay_seconds = 301
+  fuzz_percentage_range = 55
   for_pkg = "omaha-client-service-bin-tests"
 }
 
