@@ -26,11 +26,9 @@ use {
     tracing::error,
 };
 
-pub mod budget;
 pub mod collector;
 pub mod container;
 
-use budget::SnapshotBudget;
 use container::PopulatedInspectDataContainer;
 
 /// Packet containing a node hierarchy and all the metadata needed to
@@ -111,7 +109,6 @@ impl ReaderServer {
     pub fn stream(
         unpopulated_diagnostics_sources: Vec<UnpopulatedInspectDataContainer>,
         performance_configuration: PerformanceConfig,
-        budget: SnapshotBudget,
         selectors: Option<Vec<Arc<Selector>>>,
         stats: Arc<ConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
@@ -123,13 +120,11 @@ impl ReaderServer {
             // make a stream of futures of populated Vec's
             .map(move |unpopulated| {
                 let global_stats = stats.global_stats().clone();
-                let budget = budget.clone();
 
                 // this returns a future, which means the closure capture must be 'static
                 async move {
                     let start_time = zx::Time::get_monotonic();
                     let global_stats_2 = global_stats.clone();
-                    let _allowance = budget.acquire().await;
                     let result = unpopulated
                         .populate(batch_timeout, move || global_stats.add_timeout())
                         .await;
@@ -1098,7 +1093,6 @@ mod tests {
         let reader_server = Box::pin(ReaderServer::stream(
             inspect_pipeline.read().fetch_inspect_data(&None),
             test_performance_config,
-            SnapshotBudget::new(3),
             None,
             stats.clone(),
         ));

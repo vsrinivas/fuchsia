@@ -109,7 +109,6 @@ impl ArchiveAccessor {
 
                 let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
 
-                let budget = pipeline.read().snapshot_budget();
                 let unpopulated_container_vec = pipeline.read().fetch_inspect_data(&selectors);
 
                 let per_component_budget_opt = if unpopulated_container_vec.is_empty() {
@@ -124,7 +123,6 @@ impl ArchiveAccessor {
                     inspect::ReaderServer::stream(
                         unpopulated_container_vec,
                         performance_config,
-                        budget,
                         selectors,
                         stats.clone(),
                     ),
