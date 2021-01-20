@@ -14,9 +14,12 @@ const uint8 MAX_SERVICE_DATA_LENGTH = 252;
 // is 255 (uint8::MAX) - 1 byte (field type) - 2 bytes (company ID size).
 const uint8 MAX_MANUFACTURER_DATA_LENGTH = 252;
 
-// The size of each BT-encoded URI size must fit into a uint8, so the max allowed data size is
-// uint8::MAX - 1 byte (field type).
-const uint8 MAX_URI_LENGTH = 254;
+// The size of each BT-encoded URI must fit into a uint8. Recognized encoding schemes are compressed
+// to 1 encoded byte, so encoded URIs are |original length| - (|encoding scheme| + 1) bytes. This
+// leads to a formula for the maximum URI length of |longest_scheme_str| - 1 byte (encoding) +
+// uint8::MAX - 1 byte (field type). The longest_scheme_str is "ms-settings-cloudstorage:", of
+// length 25, leading to a limit of 25 - 1 + 255 - 1 = 278.
+const uint16 MAX_URI_LENGTH = 278;
 
 /// Entry in the `service_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
 struct ServiceData {
