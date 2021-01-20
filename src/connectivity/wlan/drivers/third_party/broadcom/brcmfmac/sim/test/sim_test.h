@@ -105,6 +105,7 @@ class SimInterface {
   virtual void OnSignalReport(const wlanif_signal_report_indication_t* ind) {}
   virtual void OnEapolInd(const wlanif_eapol_indication_t* ind) {}
   virtual void OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {}
+  virtual void OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* resp) {}
   virtual void OnRelayCapturedFrame(const wlanif_captured_frame_result_t* result) {}
   virtual void OnDataRecv(const void* data, size_t data_size, uint32_t flags) {}
 

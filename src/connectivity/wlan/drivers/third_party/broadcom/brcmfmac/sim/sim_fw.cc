@@ -43,6 +43,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
+#include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 
 namespace wlan::brcmfmac {
 
@@ -2210,6 +2211,43 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
     *result_ptr = iface_tbl_[ifidx].allmulti;
+  } else if (!std::strcmp(name, "wme_ac_sta")) {
+    if (value_len < sizeof(edcf_acparam_t) * 4) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Note: the below mocked AC parameters are slightly different from default values
+    //       because we set different values for each AC to make sure in the test that
+    //       the right ACs are parsed.
+    edcf_acparam_t params[4];
+
+    // AC_BE
+    params[0].aci = 4;              // aifsn
+    params[0].ecw = 5 + (10 << 4);  // ecw_min + (ecw_max << 4)
+    params[0].txop = 0;
+
+    // AC_BK
+    params[1].aci = 7 + (1 << 5);   // aifsn + (aci << 5)
+    params[1].ecw = 6 + (11 << 4);  // ecw_min + (ecw_max << 4)
+    params[1].txop = 0;
+
+    // AC_VI
+    params[2].aci = 3 + (2 << 5);  // aifsn + (aci << 5)
+    params[2].ecw = 4 + (5 << 4);  // ecw_min + (ecw_max << 4)
+    params[2].txop = 94;
+
+    // AC_VO
+    params[3].aci = 2 + (1 << 4) + (3 << 5);  // aifsn + (acm << 4) + (aci << 5)
+    params[3].ecw = 2 + (4 << 4);             // ecw_min + (ecw_max << 4)
+    params[3].txop = 47;
+
+    memcpy(value_out, params, sizeof(params));
+  } else if (!std::strcmp(name, "wme_apsd")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+    *result_ptr = 1;
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);

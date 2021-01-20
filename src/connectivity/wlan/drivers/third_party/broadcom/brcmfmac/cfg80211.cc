@@ -59,6 +59,7 @@
 #include "pno.h"
 #include "proto.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
+#include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "third_party/bcmdhd/crossdriver/wlioctl.h"
 #include "workqueue.h"
 
@@ -4608,8 +4609,53 @@ void brcmf_if_stop_capture_frames(net_device* ndev) {
   BRCMF_ERR("stop_capture_frames not supported");
 }
 
+static void brcmf_if_convert_ac_param(const edcf_acparam_t* acparam,
+                                      wlan_wmm_ac_params_t* out_ac_params) {
+  out_ac_params->aifsn = acparam->aci & EDCF_AIFSN_MASK;
+  out_ac_params->acm = (acparam->aci & EDCF_ACM_MASK) != 0;
+  out_ac_params->ecw_min = acparam->ecw & EDCF_ECWMIN_MASK;
+  out_ac_params->ecw_max = (acparam->ecw & EDCF_ECWMAX_MASK) >> EDCF_ECWMAX_SHIFT;
+  out_ac_params->txop_limit = acparam->txop;
+}
+
 void brcmf_if_wmm_status_req(net_device* ndev) {
-  // TODO(fxbug.dev/52811) - Implement this
+  zx_status_t status = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
+  edcf_acparam_t ac_params[AC_COUNT];
+  wlan_wmm_params_t resp;
+  brcmf_if* ifp = ndev_to_if(ndev);
+  if (ifp == nullptr) {
+    BRCMF_ERR("ifp is null");
+    wlanif_impl_ifc_on_wmm_status_resp(&ndev->if_proto, ZX_ERR_INTERNAL, &resp);
+    return;
+  }
+
+  status = brcmf_fil_iovar_data_get(ifp, "wme_ac_sta", &ac_params, sizeof(ac_params), &fw_err);
+
+  // TODO(fxbug.dev/67821): Check what happens when WMM is not enabled.
+  if (status != ZX_OK) {
+    BRCMF_ERR("could not get STA WMM status: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+    wlanif_impl_ifc_on_wmm_status_resp(&ndev->if_proto, status, &resp);
+    return;
+  }
+
+  uint32_t apsd = 0;
+  status = brcmf_fil_iovar_data_get(ifp, "wme_apsd", &apsd, sizeof(apsd), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("could not get WMM APSD: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+    wlanif_impl_ifc_on_wmm_status_resp(&ndev->if_proto, status, &resp);
+    return;
+  }
+
+  resp.apsd = apsd != 0;
+  brcmf_if_convert_ac_param(&ac_params[AC_BE], &resp.ac_be_params);
+  brcmf_if_convert_ac_param(&ac_params[AC_BK], &resp.ac_bk_params);
+  brcmf_if_convert_ac_param(&ac_params[AC_VI], &resp.ac_vi_params);
+  brcmf_if_convert_ac_param(&ac_params[AC_VO], &resp.ac_vo_params);
+
+  wlanif_impl_ifc_on_wmm_status_resp(&ndev->if_proto, status, &resp);
 }
 
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
