@@ -1,4 +1,4 @@
-# Project name
+# Layer cake deprecation
 
 ## Goal & motivation
 
@@ -34,6 +34,7 @@ The following directories remain in the Fuchsia git repository:
 
 *   `//zircon/`
 *   `//garnet/`
+*   `//topaz/`
 
 Show them that you mean business by picking one of their subdirectories and
 moving it elsewhere - typically to `//src`.
@@ -57,12 +58,9 @@ deleting layer directories.
 
 ## Examples
 
-*   424156: [fuchsia-cprng] Move to src/lib/zircon/rust |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/424156
-*   449714: [build][power] Move power_manager to //src/power |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/449714
-*   461096: [thermd][shuffle] Migrate thermd from //garnet to //src |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/461096
+*   [424156: [fuchsia-cprng] Move to src/lib/zircon/rust](https://fuchsia-review.googlesource.com/c/fuchsia/+/424156)
+*   [449714: [build][power] Move power_manager to //src/power](https://fuchsia-review.googlesource.com/c/fuchsia/+/449714)
+*   [461096: [thermd][shuffle] Migrate thermd from //garnet to //src](https://fuchsia-review.googlesource.com/c/fuchsia/+/461096)
 
 ## Sponsors
 

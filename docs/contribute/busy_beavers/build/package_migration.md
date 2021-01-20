@@ -1,4 +1,4 @@
-# Project name
+# `package()` migration
 
 ## Goal & motivation
 
@@ -40,7 +40,7 @@ Please review the guide on [building components][building-components].
 
 General experience in working with `BUILD.gn` files is recommended but not
 entirely necessary.
-Please consult the [GN reference][gn-reference]i{:.external} guide.
+Please consult the [GN reference][gn-reference]{:.external} guide.
 
 ## How to help
 
@@ -90,12 +90,9 @@ New volunteer? Please add yourself to the list!
 
 ## Examples
 
-*   464409: [time] Migrate all packages + tests to new build rules |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/464409
-*   464407: [build] Migrate tests in //src/sys/lib to new build rules |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/464407
-*   464410: [build] migrate packages in //src/sys to new build rules |
-    https://fuchsia-review.googlesource.com/c/fuchsia/+/464410
+*   [464409: [time] Migrate all packages + tests to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464409)
+*   [464407: [build] Migrate tests in //src/sys/lib to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464407)
+*   [464410: [build] migrate packages in //src/sys to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464410)
 
 ## Sponsors
 

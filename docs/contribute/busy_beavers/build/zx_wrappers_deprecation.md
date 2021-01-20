@@ -64,7 +64,8 @@ Replace `zx_library` with one of the following:
 
 Replace `zx_host_tool` with the built-in `executable` rule and using the host
 toolchain as needed. If the tool is used in the SDK, then you may also need to
-define an `sdk_atom` target.
+define an `sdk_atom` target. There is a convenience wrapper at
+[`//build/sdk/sdk_host_tool.gni`](/build/sdk/sdk_host_tool.gni) just for that.
 
 As you run into common failure modes and solutions, please consider documenting
 them here for reference.
