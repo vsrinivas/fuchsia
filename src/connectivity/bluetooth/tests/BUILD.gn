@@ -21,12 +21,20 @@ fuchsia_test_package("bluetooth-tests") {
   ]
 }
 
+# Define a name provider, which is required for BT-GAP
+fuchsia_component("device-name-provider") {
+  testonly = true
+  manifest = "meta/device-name-provider.cmx"
+  deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":bluetooth-tests",
     "audio-device-output-harness",
     "bt-bonding-integration:bt-bonding-integration-tests",
+    "bt-gap-lifecycle:bt-gap-lifecycle-tests",
     "bt-host-integration:bt-host-integration-tests",
     "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:bt_host_bind_test",
