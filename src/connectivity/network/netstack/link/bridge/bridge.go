@@ -13,6 +13,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 
 	"fidl/fuchsia/hardware/network"
 
@@ -28,11 +29,16 @@ var _ link.Controller = (*Endpoint)(nil)
 
 type Endpoint struct {
 	links           map[tcpip.LinkAddress]*BridgeableEndpoint
-	dispatcher      stack.NetworkDispatcher
 	mtu             uint32
 	capabilities    stack.LinkEndpointCapabilities
 	maxHeaderLength uint16
 	linkAddress     tcpip.LinkAddress
+
+	mu struct {
+		sync.RWMutex
+
+		dispatcher stack.NetworkDispatcher
+	}
 }
 
 // New creates a new link from a list of BridgeableEndpoints that bridges
@@ -174,7 +180,10 @@ func (ep *Endpoint) WritePackets(r stack.RouteInfo, gso *stack.GSO, pkts stack.P
 }
 
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
-	ep.dispatcher = d
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+
+	ep.mu.dispatcher = d
 	if d == nil {
 		for _, l := range ep.links {
 			l.SetBridge(nil)
@@ -183,7 +192,9 @@ func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 }
 
 func (ep *Endpoint) IsAttached() bool {
-	return ep.dispatcher != nil
+	ep.mu.RLock()
+	defer ep.mu.RUnlock()
+	return ep.mu.dispatcher != nil
 }
 
 // DeliverNetworkPacketToBridge delivers a network packet to the bridged network.
@@ -191,6 +202,10 @@ func (ep *Endpoint) IsAttached() bool {
 // Endpoint does not implement stack.NetworkEndpoint.DeliverNetworkPacket because we need
 // to know which BridgeableEndpoint the packet was delivered from to prevent packet loops.
 func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+	ep.mu.RLock()
+	dispatcher := ep.mu.dispatcher
+	ep.mu.RUnlock()
+
 	// Is the destination link address a multicast/broadcast?
 	//
 	// If the least significant bit of the first octet is 1, then the address is a
@@ -207,7 +222,9 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	if !flood {
 		switch dstLinkAddr {
 		case ep.linkAddress:
-			ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
+			if dispatcher != nil {
+				dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
+			}
 			return
 		default:
 			if l, ok := ep.links[dstLinkAddr]; ok {
@@ -220,11 +237,11 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	// The bridge `ep` isn't included in ep.links below and we don't want to write
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if flood, also deliver to ep.links."
-	if flood {
+	if flood && dispatcher != nil {
 		// We need to clone the packet buffer because the stack may attempt to set the
 		// network or transport headers which may only be done once for the lifetime
 		// of a packet buffer.
-		ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
+		dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 	}
 
 	// NB: This isn't really a valid Route; Route is a public type but cannot

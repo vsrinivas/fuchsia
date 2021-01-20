@@ -207,6 +207,34 @@ func makeChannelEndpoint(linkAddr tcpip.LinkAddress, size int) channelEndpoint {
 	}
 }
 
+func TestBridgeWithoutDispatcher(t *testing.T) {
+	ep := makeChannelEndpoint(linkAddr1, 0)
+	bep := bridge.NewEndpoint(&ep)
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep})
+
+	tests := []struct {
+		name        string
+		dstLinkAddr tcpip.LinkAddress
+	}{
+		{
+			name:        "To bridge",
+			dstLinkAddr: bridgeEP.LinkAddress(),
+		},
+		{
+			name:        "Flood",
+			dstLinkAddr: header.EthernetBroadcastAddress,
+		},
+	}
+
+	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bridgeEP.DeliverNetworkPacketToBridge(nil /* rxEP */, linkAddr2 /* srcLinkAddr */, test.dstLinkAddr, 0 /* protocol */, pkt)
+		})
+	}
+}
+
 // TestBridgeWritePackets tests that writing to a bridge writes the packets to
 // all bridged endpoints.
 func TestBridgeWritePackets(t *testing.T) {
