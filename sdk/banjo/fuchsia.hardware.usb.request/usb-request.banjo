@@ -53,9 +53,9 @@ struct UsbRequest {
 
     handle pmt;
     /// Phys addresses of the payload.
-    vector<zx.paddr>? phys;
+    [Mutable] vector<zx.paddr> phys;
 
-    vector<ddk.physiter.PhysIterSgEntry>? sg;
+    [Mutable] vector<ddk.physiter.PhysIterSgEntry> sg;
 
     UsbResponse response;
 

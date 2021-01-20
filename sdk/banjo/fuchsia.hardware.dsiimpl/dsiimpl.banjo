@@ -61,7 +61,7 @@ struct DsiConfig {
     DisplaySetting display_setting;
     VideoMode video_mode_type;
     ColorCode color_coding;
-    vector<voidptr>? vendor_config;
+    [Mutable] vector<voidptr> vendor_config;
 };
 
 /// This is the generic MIPI-DSI command structure
@@ -73,7 +73,7 @@ struct MipiDsiCmd {
     vector<uint8> pld_data;
 
     // RX Direction
-    vector<uint8>? rsp_data;
+    [Mutable] vector<uint8> rsp_data;
 
     uint32 flags;
 };

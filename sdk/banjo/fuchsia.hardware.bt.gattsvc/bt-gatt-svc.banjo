@@ -81,7 +81,7 @@ struct BtGattChr {
     uint8 properties;
     uint16 extended_properties;
 
-    vector<BtGattDescriptor>? descriptor;
+    [Mutable] vector<BtGattDescriptor> descriptor;
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
