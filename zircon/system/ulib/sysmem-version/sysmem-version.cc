@@ -108,7 +108,7 @@ inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarType
     using DstType = decltype((dst));                                \
     using SrcType = decltype((src));                                \
     static_assert(IsCompatibleFidlScalarTypes_v<DstType, SrcType>); \
-    using DstNoRef = std::remove_reference<DstType>::type;          \
+    using DstNoRef = typename std::remove_reference<DstType>::type; \
     (dst) = static_cast<DstNoRef>(src);                             \
   } while (false)
 
