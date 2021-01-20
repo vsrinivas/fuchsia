@@ -220,6 +220,8 @@ void VirtualCameraImpl::OnSetBufferCollection(
     FX_PLOGS(ERROR, status) << "BufferCollection server disconnected.";
     camera_ = nullptr;
   });
+  constexpr uint32_t kNamePriority = 1;
+  collection->SetName(kNamePriority, "VirtualCameraOutput");
   collection->SetConstraints(true, DefaultBufferConstraints());
   collection->WaitForBuffersAllocated(
       [this, collection = std::move(collection)](zx_status_t status,
