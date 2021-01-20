@@ -42,12 +42,12 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        '--builddir',
+        default=os.path.join('out','default'),
+        help='overrides default build directory if set')
     parser.add_argument('--json',
-                        default=os.path.normpath(
-                            os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
-                                         'out', 'default', 'gen',
-                                         'include', 'zircon', 'syscalls',
-                                         'definitions.json')),
+                        default=None,
                         help='path to kazoo .json output')
     parser.add_argument('--docroot',
                         default=os.path.normpath(
@@ -648,7 +648,7 @@ def update_syscall_references(lines, syscall, all_syscall_names, concepts, warn)
         lines[:] = lines[:-3]
 
 
-def build_if_out_of_date(syscalls_dir, json):
+def build_if_out_of_date(syscalls_dir, build_dir, json):
     """If the json file appears out-of-date relative to any files in the
     syscalls dir, then run a zircon build to get the definitions updated.
     """
@@ -668,10 +668,16 @@ def build_if_out_of_date(syscalls_dir, json):
         if not os.path.isfile(syscall):
             continue
         if not is_up_to_date(syscall, json):
-            print('%s out of date vs %s, running `fx build`\n'
-                  'This will only work if using out/default and configured'
-                  ' for x64.' % (json, syscall))
-            subprocess.check_call(['fx', 'build', '-C', 'out/default'])
+            print(
+                '%s out of date vs %s, running `fx build`\n'
+                'This will only work if using out/default (or --builddir is set) '
+                'and configured for x64.' % (json, syscall))
+            subprocess.check_call(
+                [
+                    'fx',
+                    '--dir=%s' % (build_dir), 'build', '-C',
+                    build_dir
+                ])
             if not is_up_to_date(syscall, json):
                 print('%s still out of date relative to %s!' % (json, syscall))
                 raise SystemExit()
@@ -680,9 +686,19 @@ def build_if_out_of_date(syscalls_dir, json):
 
 def main():
     args = parse_args()
-    inf = os.path.relpath(args.json)
+    # Need to construct the default json path here so that we can use any
+    # configured build directory.
+    if args.json:
+        json_path = args.json
+    else:
+        json_path = os.path.normpath(
+            os.path.join(
+                SCRIPT_DIR, os.pardir, os.pardir, args.builddir, 'gen',
+                'include', 'zircon', 'syscalls', 'definitions.json'))
+    inf = os.path.relpath(json_path)
     outf = os.path.relpath(args.docroot)
-    build_if_out_of_date(os.path.relpath(SYSCALLS_FIDL_DIR), args.json)
+    build_if_out_of_date(
+        os.path.relpath(SYSCALLS_FIDL_DIR), args.builddir, json_path)
     print('using %s as input and updating %s...' % (inf, outf))
     data = json.load(open(inf, 'rb'))
     missing_count = 0
