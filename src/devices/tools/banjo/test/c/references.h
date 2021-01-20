@@ -22,7 +22,7 @@ typedef struct in_out_protocol_protocol in_out_protocol_protocol_t;
 // Declarations
 struct mutable_field {
     char* some_string;
-    char* some_other_string;
+    const char* some_other_string;
     const char* some_default_string;
 };
 
@@ -33,7 +33,7 @@ struct some_type {
 struct vector_field_in_struct {
     const some_type_t** the_vector_list;
     size_t the_vector_count;
-    const some_type_t** the_other_vector_list;
+    const some_type_t* the_other_vector_list;
     size_t the_other_vector_count;
     const some_type_t* the_default_vector_list;
     size_t the_default_vector_count;

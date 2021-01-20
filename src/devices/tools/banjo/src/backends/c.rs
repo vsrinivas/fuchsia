@@ -181,17 +181,13 @@ fn field_to_c_str(
 ) -> Result<String, Error> {
     let mut accum = String::new();
     accum.push_str(get_doc_comment(attrs, 1).as_str());
-    let prefix = if attrs.has_attribute("Mutable") || ty.is_reference() { "" } else { "const " };
+    let prefix = if attrs.has_attribute("Mutable") { "" } else { "const " };
     let c_name = if preserve_names { String::from(ident.name()) } else { to_c_name(ident.name()) };
     match ty {
-        ast::Ty::Vector { ty: ref inner_ty, .. } => {
+        ast::Ty::Vector { .. } => {
             let ty_name = ty_to_c_str(ast, &ty)?;
             // TODO(surajmalhotra): Support multi-dimensional vectors.
-            let ptr = if attrs.has_attribute("OutOfLineContents") || inner_ty.is_reference() {
-                "*"
-            } else {
-                ""
-            };
+            let ptr = if attrs.has_attribute("OutOfLineContents") { "*" } else { "" };
             accum.push_str(
                 format!(
                     "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
