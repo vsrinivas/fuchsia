@@ -15,6 +15,8 @@ use {
     futures::TryStreamExt,
 };
 
+mod serialize;
+
 // String formatting, printing, and general boilerplate helpers.
 
 /// Communicates with the client policy provider to get the components required to get a client
@@ -215,6 +217,27 @@ pub fn print_saved_networks(saved_networks: Vec<wlan_policy::NetworkConfig>) -> 
     Ok(())
 }
 
+/// Prints a serialized version of saved networks
+pub fn print_serialized_saved_networks(
+    saved_networks: Vec<wlan_policy::NetworkConfig>,
+) -> Result<(), Error> {
+    let serialized = serialize::serialize_saved_networks(saved_networks)?;
+    println!("{}", serialized);
+    Ok(())
+}
+
+/// Deserializes the output of serialize_saved_networks and saves them
+pub async fn restore_serialized_config(
+    client_controller: wlan_policy::ClientControllerProxy,
+    serialized_config: String,
+) -> Result<(), Error> {
+    let network_configs = serialize::deserialize_saved_networks(serialized_config)?;
+    for network in network_configs {
+        save_network(client_controller.clone(), network).await?;
+    }
+    Ok(())
+}
+
 /// Iterates through a vector of scan results and prints each one.
 pub fn print_scan_results(scan_results: Vec<wlan_policy::ScanResult>) -> Result<(), Error> {
     for network in scan_results {
@@ -409,11 +432,13 @@ pub async fn handle_remove_network(
     client_controller: wlan_policy::ClientControllerProxy,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config)?;
-    match client_controller.remove_network(network_config).await? {
-        Ok(()) => Ok(()),
-        Err(e) => Err(format_err!("failed to remove network with {:?}", e)),
-    }
+    let network_config = construct_network_config(config.clone())?;
+    client_controller
+        .remove_network(network_config)
+        .await?
+        .map_err(|e| format_err!("failed to remove network with {:?}", e))?;
+    println!("Successfully removed network '{}'", config.ssid);
+    Ok(())
 }
 
 /// Communicates with the client policy layer to save a network configuration.
@@ -421,11 +446,23 @@ pub async fn handle_save_network(
     client_controller: wlan_policy::ClientControllerProxy,
     config: PolicyNetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config)?;
-    match client_controller.save_network(network_config).await? {
-        Ok(()) => Ok(()),
-        Err(e) => Err(format_err!("failed to save network with {:?}", e)),
-    }
+    let network_config = construct_network_config(config.clone())?;
+    save_network(client_controller, network_config).await
+}
+
+async fn save_network(
+    client_controller: wlan_policy::ClientControllerProxy,
+    network_config: wlan_policy::NetworkConfig,
+) -> Result<(), Error> {
+    client_controller
+        .save_network(network_config.clone())
+        .await?
+        .map_err(|e| format_err!("failed to save network with {:?}", e))?;
+    println!(
+        "Successfully saved network '{}'",
+        std::str::from_utf8(&network_config.id.unwrap().ssid).unwrap()
+    );
+    Ok(())
 }
 
 /// Issues a scan request to the client policy layer.
@@ -1572,7 +1609,9 @@ mod tests {
         // Make sure that the request is seen on the request stream
         assert_variant!(
             exec.run_until_stalled(&mut test_values.ap_stream.next()),
-            Poll::Ready(Some(Ok(wlan_policy::AccessPointControllerRequest::StopAllAccessPoints{ .. })))
+            Poll::Ready(Some(Ok(
+                wlan_policy::AccessPointControllerRequest::StopAllAccessPoints { .. }
+            )))
         );
     }
 

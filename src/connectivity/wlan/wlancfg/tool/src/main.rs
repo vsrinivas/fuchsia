@@ -14,7 +14,6 @@ use crate::policy::*;
 
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
-    println!("{:?}", opt);
 
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
 
@@ -63,6 +62,15 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
         opts::PolicyClientCmd::StopClientConnections => {
             let (client_controller, _) = get_client_controller().await?;
             handle_stop_client_connections(client_controller).await?;
+        }
+        opts::PolicyClientCmd::DumpConfig => {
+            let (client_controller, _) = get_client_controller().await?;
+            let saved_networks = handle_get_saved_networks(client_controller).await?;
+            print_serialized_saved_networks(saved_networks)?;
+        }
+        opts::PolicyClientCmd::RestoreConfig { serialized_config } => {
+            let (client_controller, _) = get_client_controller().await?;
+            restore_serialized_config(client_controller, serialized_config).await?;
         }
     }
     Ok(())
