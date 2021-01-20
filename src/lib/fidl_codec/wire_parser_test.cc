@@ -164,9 +164,7 @@ TEST_F(WireParserTest, ParseSingleString) {
         handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;                      \
         handle_dispositions[i].handle = message.handles().data()[i];                              \
         handle_dispositions[i].type = ZX_OBJ_TYPE_CHANNEL;                                        \
-        handle_dispositions[i].rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE |      \
-                                        ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT |  \
-                                        ZX_RIGHT_INSPECT;                                         \
+        handle_dispositions[i].rights = ZX_DEFAULT_CHANNEL_RIGHTS;                                \
         handle_dispositions[i].result = ZX_OK;                                                    \
       }                                                                                           \
     }                                                                                             \
