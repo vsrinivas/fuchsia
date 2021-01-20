@@ -5,43 +5,139 @@
 
 import argparse
 import dataclasses
+import enum
+import itertools
 import os
 import shlex
 import subprocess
 import sys
-from typing import FrozenSet, Iterable, Sequence, Tuple
+from typing import AbstractSet, FrozenSet, Iterable, Sequence, Tuple
 
 
-def check_access_line(
-        op: str, path: str, allowed_reads: FrozenSet[str],
-        allowed_writes: FrozenSet[str]) -> Sequence[Tuple[str, str]]:
-    """Validates a file system access against a set of allowed accesses.
+class FileAccessType(enum.Enum):
+    # String values for readable diagnostics.
+    READ = enum.auto()
+    WRITE = enum.auto()
+    DELETE = enum.auto()
+
+
+@dataclasses.dataclass
+class FSAccess(object):
+    """Represents a single file system access."""
+    # One of: "read", "write" (covers touch), "delete" (covers move-from)
+    op: FileAccessType
+    # The path accessed
+    path: str
+
+    # TODO(fangism): for diagnostic purposes, we may want a copy of the fsatrace
+    # line from which this access came.
+
+    def __repr__(self):
+        return f"({self.op} {self.path})"
+
+    def should_check(
+            self,
+            required_path_prefix: str = "",
+            ignored_prefixes: FrozenSet[str] = {},
+            ignored_suffixes: FrozenSet[str] = {},
+            ignored_path_parts: FrozenSet[str] = {}) -> bool:
+        """Predicate function use to filter out FSAccesses.
+
+        Args:
+          required_path_prefix: Accesses outside of this path prefix are not checked.
+            An empty string means: check this access.
+          ignored_prefixes: don't check accesses whose path starts with these prefixes.
+          ignored_suffixes: don't check accesses whose path ends with these suffixes.
+          ignored_path_parts: don't check accesses whose path *components* match any of
+            these names exactly.
+
+        Returns:
+          true if this access should be checked.
+        """
+        if not self.path.startswith(required_path_prefix):
+            return False
+        if any(self.path.startswith(ignored) for ignored in ignored_prefixes):
+            return False
+        if any(self.path.endswith(ignored) for ignored in ignored_suffixes):
+            return False
+        if any(part for part in self.path.split(os.path.sep)
+               if part in ignored_path_parts):
+            return False
+        return True
+
+    def allowed(
+            self, allowed_reads: FrozenSet[str],
+            allowed_writes: FrozenSet[str]) -> bool:
+        """Validates a file system access against a set of allowed accesses.
+
+        Args:
+          allowed_reads: set of allowed read paths.
+          allowed_writes: set of allowed write paths.
+
+        Returns:
+          True if this access is allowed.
+        """
+        if self.op == FileAccessType.READ:
+            return self.path in allowed_reads
+        elif self.op == FileAccessType.WRITE:
+            return self.path in allowed_writes
+        elif self.op == FileAccessType.DELETE:
+            # TODO(fangism): separate out forbidded_deletes
+            return self.path in allowed_writes
+        raise ValueError(f"Unknown operation: {self.op}")
+
+
+# Factory functions for making FSAccess objects.
+def Read(path: str):
+    return FSAccess(FileAccessType.READ, path)
+
+
+def Write(path: str):
+    return FSAccess(FileAccessType.WRITE, path)
+
+
+def Delete(path: str):
+    return FSAccess(FileAccessType.DELETE, path)
+
+
+def _parse_fsatrace_line(fsatrace_line: str) -> Iterable[FSAccess]:
+    """Parses an output line from fsatrace into a stream of FSAccesses.
+
+    See: https://github.com/jacereda/fsatrace#output-format
+    Moves are split into two operations: delete source, write destination
 
     Args:
-      op: operation code in [rwdtm]
-        See: https://github.com/jacereda/fsatrace#output-format
-      path: file(s) accessed.
-        Only the 'm' move operation contains two paths: "destination|source".
-      allowed_reads: set of allowed read paths.
-      allowed_writes: set of allowed write paths.
+      fsatrace_line: one line of trace from fsatrace
 
-    Returns:
-      0 to 2 access violations in the form (op, path).
+    Yields:
+      0 to 2 FSAccess objects.
     """
+    # ignore any lines that do not parse
+    op, sep, path = fsatrace_line.partition("|")
+    if not sep == "|":
+        return
+
+    # op: operation code in [rwdtm]
     if op == "r":
-        if path not in allowed_reads:
-            return [("read", path)]
-    elif op in {"w", "d", "t"}:
-        if path not in allowed_writes:
-            return [("write", path)]
+        yield Read(path)
+    elif op in {"w", "t"}:
+        yield Write(path)
+    elif op == "d":
+        yield Delete(path)
     elif op == "m":
-        # path: "destination|source" (both are considered writes)
-        return [
-            ("write", path)
-            for path in path.split("|")
-            if path not in allowed_writes
-        ]
-    return []
+        # path: "destination|source"
+        # The source is deleted, and the destination is written.
+        dest, sep, source = path.partition("|")
+        if not sep == "|":
+            raise ValueError("Malformed move line: " + fsatrace_line)
+        yield Delete(source)
+        yield Write(dest)
+
+
+def parse_fsatrace_output(fsatrace_lines: Iterable[str]) -> Iterable[FSAccess]:
+    """Returns a stream of FSAccess objects."""
+    return itertools.chain.from_iterable(
+        _parse_fsatrace_line(line) for line in fsatrace_lines)
 
 
 @dataclasses.dataclass
@@ -49,22 +145,13 @@ class AccessTraceChecker(object):
     """Validates a sequence of file system accesses against constraints.
     """
 
-    # Accesses outside of this path prefix are not checked.
-    # An empty string will cause the checker to validate all accesses.
-    required_path_prefix: str = ""
-
-    # These affixes will be ignored for read/write checks.
-    ignored_prefixes: FrozenSet[str] = dataclasses.field(default_factory=set)
-    ignored_suffixes: FrozenSet[str] = dataclasses.field(default_factory=set)
-    ignored_path_parts: FrozenSet[str] = dataclasses.field(default_factory=set)
-
     # These are explicitly allowed accesses that are checked once the
     # above criteria are met.
     allowed_reads: FrozenSet[str] = dataclasses.field(default_factory=set)
     allowed_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
 
     def check_accesses(self,
-                       accesses: Iterable[str]) -> Sequence[Tuple[str, str]]:
+                       accesses: Iterable[FSAccess]) -> Sequence[FSAccess]:
         """Checks a sequence of access against constraints.
 
         Accesses outside of required_path_prefix are ignored.
@@ -72,33 +159,15 @@ class AccessTraceChecker(object):
         All other accesses are checked against allowed_reads and allowed_writes.
 
         Args:
-          accesses: lines in fsatrace output format.
-            See: https://github.com/jacereda/fsatrace#output-format
-            The sequence of accesses matters when tracking moves.
+          accesses: stream of file-system accesses
 
         Returns:
           access violations (in the order they were encountered)
         """
-        unexpected_accesses = []
-        for access in accesses:
-            op, sep, path = access.partition("|")
-            if not sep == "|":
-                # Not a trace line, ignore
-                continue
-            if not path.startswith(self.required_path_prefix):
-                # Outside of root, ignore
-                continue
-            if any(path.startswith(ignored)
-                   for ignored in self.ignored_prefixes):
-                continue
-            if any(path.endswith(ignored) for ignored in self.ignored_suffixes):
-                continue
-            if any(part for part in path.split(os.path.sep)
-                   if part in self.ignored_path_parts):
-                continue
-            unexpected_accesses.extend(
-                check_access_line(
-                    op, path, self.allowed_reads, self.allowed_writes))
+        unexpected_accesses = [
+            access for access in accesses
+            if not access.allowed(self.allowed_reads, self.allowed_writes)
+        ]
 
         # TODO(fangism): check for missing must_write accesses
         # TODO(fangism): track state of files across moves
@@ -210,35 +279,47 @@ def main():
         # TODO(fangism): validate python imports under source control more precisely
         ".py",
     }
-    # TODO(fangism): for suffixes that we always ignore for writing, such as safe
-    # or intended side-effect byproducts, make sure no declared inputs ever match them.
     ignored_path_parts = {
         # Python creates these directories with bytecode caches
         "__pycache__",
     }
+    # TODO(fangism): for suffixes that we always ignore for writing, such as safe
+    # or intended side-effect byproducts, make sure no declared inputs ever match them.
 
     raw_trace = ""
     with open(args.trace_output, "r") as trace:
         raw_trace = trace.read()
 
-    # Verify the filesystem access trace of the inner action
+    # Parse trace file.
+    all_accesses = parse_fsatrace_output(raw_trace.splitlines())
+
+    # Filter out access we don't want to track.
+    filtered_accesses = [
+        access for access in all_accesses if access.should_check(
+            # Ignore accesses that fall outside of the source root.
+            required_path_prefix=src_root,
+            ignored_prefixes=ignored_prefixes,
+            ignored_suffixes=ignored_suffixes,
+            ignored_path_parts=ignored_path_parts,
+        )
+    ]
+
+    # Verify the filesystem access trace.
     checker = AccessTraceChecker(
-        required_path_prefix=src_root,
-        ignored_prefixes=ignored_prefixes,
-        ignored_suffixes=ignored_suffixes,
-        ignored_path_parts=ignored_path_parts,
         allowed_reads=allowed_reads,
-        allowed_writes=allowed_writes)
-    unexpected_accesses = checker.check_accesses(raw_trace.splitlines())
+        allowed_writes=allowed_writes,
+    )
+    unexpected_accesses = checker.check_accesses(filtered_accesses)
 
     if not unexpected_accesses:
         return 0
 
-    accesses = "\n".join(f"{op} {path}" for (op, path) in unexpected_accesses)
+    accesses_formatted = "\n".join(
+        f"{access}" for access in unexpected_accesses)
     print(
         f"""
 Unexpected file accesses building {args.label}, following the order they are accessed:
-{accesses}
+{accesses_formatted}
 
 Full access trace:
 {raw_trace}
