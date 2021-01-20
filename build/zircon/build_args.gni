@@ -3,22 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
-  # This is included in the default value of [`zircon_args`](#zircon_args) so
-  # you can set this to add things there without wiping out the defaults.
-  # When you set `zircon_args` directly, then this has no effect at all.
-  # Arguments you set here override any arguments in the default
-  # `zircon_args`.  There is no way to append to a value from the defaults.
-  # Note that for just setting simple (string-only) values in Zircon GN's
-  # [`variants`](/docs/gen/zircon_build_arguments.md#variants), the
-  # default [`zircon_args`](#zircon_args) uses a `variants` value derived from
-  # [`select_variant`](#select_variant) so for simple cases there is no need
-  # to explicitly set Zircon's `variants` here.
+  # This variable is no longer used, bur some of our infra build scripts still
+  # set it to an empty scope for historical reasons.
   zircon_extra_args = {
   }
-
-  # Additional Zircon GN labels to include in the Zircon build.
-  zircon_extra_deps = []
 
   # Forcibly disable all assertions for the Zircon kernel. If this is set, the
   # default is to use the value of zx_assert_level to control assertions when

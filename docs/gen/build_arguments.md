@@ -3655,42 +3655,6 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 From //build/zircon/build_args.gni:33
 
-### zircon_extra_args
-[Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
-This is included in the default value of [`zircon_args`](#zircon_args) so
-you can set this to add things there without wiping out the defaults.
-When you set `zircon_args` directly, then this has no effect at all.
-Arguments you set here override any arguments in the default
-`zircon_args`.  There is no way to append to a value from the defaults.
-Note that for just setting simple (string-only) values in Zircon GN's
-[`variants`](/docs/gen/zircon_build_arguments.md#variants), the
-default [`zircon_args`](#zircon_args) uses a `variants` value derived from
-[`select_variant`](#select_variant) so for simple cases there is no need
-to explicitly set Zircon's `variants` here.
-
-**Current value for `target_cpu = "arm64"`:** `{ }`
-
-From //out/not-default/args.gn:4
-
-**Overridden from the default:** `{ }`
-
-From //build/zircon/build_args.gni:17
-
-**Current value for `target_cpu = "x64"`:** `{ }`
-
-From //out/not-default/args.gn:4
-
-**Overridden from the default:** `{ }`
-
-From //build/zircon/build_args.gni:17
-
-### zircon_extra_deps
-Additional Zircon GN labels to include in the Zircon build.
-
-**Current value (from the default):** `[]`
-
-From //build/zircon/build_args.gni:21
-
 ### zircon_kernel_disable_asserts
 Forcibly disable all assertions for the Zircon kernel. If this is set, the
 default is to use the value of zx_assert_level to control assertions when

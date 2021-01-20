@@ -68,8 +68,7 @@ class YamlChecker {
       ..remove('$_rootDir/docs/navbar.md')
       // Remove docs/gen/build_arguments.md since it is generated, it is
       // accessed as a source file and not published.
-      ..remove('$_rootDir/docs/gen/build_arguments.md')
-      ..remove('$_rootDir/docs/gen/zircon_build_arguments.md');
+      ..remove('$_rootDir/docs/gen/build_arguments.md');
   }
 
   static bool _isFuchsiaDevYaml(String filename) {
