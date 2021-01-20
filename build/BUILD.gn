@@ -182,7 +182,6 @@ group("deprecated_package") {
     "//garnet/examples/intl/wisdom/tests/*",
     "//garnet/examples/tcp/tcp_file_sender/*",
     "//garnet/go/src/benchmarking/*",
-    "//garnet/go/src/device_settings/*",
     "//garnet/go/src/go-tuf/*",
     "//garnet/go/src/merkle/*",
     "//garnet/go/src/thinfs/*",

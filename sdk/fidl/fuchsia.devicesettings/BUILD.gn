@@ -19,7 +19,6 @@ fidl("fuchsia.devicesettings") {
     # fxbug.dev/47602 audit the below
     "//garnet/bin/setui/*",
     "//garnet/bin/setui_client/*",
-    "//garnet/go/src/device_settings/*",
     "//src/connectivity/network/testing/netemul/*",
     "//src/experiences/settings/lib/settings/*",
     "//src/modular/bin/basemgr/*",
