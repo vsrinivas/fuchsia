@@ -97,8 +97,6 @@ def main(name, argv):
                     }
 
                     sys.exit(MESSAGE.format(**message_values))
-                else:
-                    print('signatures match')
         except OSError:
             sys.exit(f'could not read signature from: {args.compare}')
         with open(args.stamp, 'w') as stamp:
