@@ -262,6 +262,7 @@ impl BatchIterator {
                             ) {
                                 Ok(contents)
                             } else {
+                                result_stats.add_schema_truncated();
                                 let new_data = d.dropped_payload_schema(
                                     "Schema failed to fit component budget.".to_string(),
                                 );

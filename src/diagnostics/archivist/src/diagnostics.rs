@@ -165,6 +165,9 @@ pub struct GlobalConnectionStats {
     batch_iterator_get_next_result_count: UintProperty,
     /// Number of items returned in batches from "GetNext" that contained errors
     batch_iterator_get_next_result_errors: UintProperty,
+    /// Number of times a diagnostics schema had to be truncated because it would otherwise
+    /// cause a component to exceed its configured size budget.
+    schema_truncation_count: UintProperty,
 
     /// Histogram of processing times for overall "GetNext" requests.
     batch_iterator_get_next_time_usec: UintExponentialHistogramProperty,
@@ -226,6 +229,9 @@ impl GlobalConnectionStats {
             },
         );
 
+        let schema_truncation_count = connection_node
+            .create_uint(format!("{}_schema_truncation_count", diagnostics_source), 0);
+
         GlobalConnectionStats {
             diagnostics_source,
             connection_node: connection_node.clone_weak(),
@@ -240,6 +246,7 @@ impl GlobalConnectionStats {
             batch_iterator_get_next_result_count,
             batch_iterator_get_next_result_errors,
             batch_iterator_get_next_time_usec,
+            schema_truncation_count,
             component_time_usec: Mutex::new(None),
             processing_time_tracker: Mutex::new(None),
         }
@@ -414,6 +421,10 @@ impl ConnectionStats {
 
     pub fn add_result_error(&self) {
         self.global_stats.batch_iterator_get_next_result_errors.add(1);
+    }
+
+    pub fn add_schema_truncated(&self) {
+        self.global_stats.schema_truncation_count.add(1);
     }
 
     pub fn for_inspect(archive_accessor_stats: Arc<AccessorStats>) -> Self {

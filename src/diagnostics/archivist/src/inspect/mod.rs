@@ -888,6 +888,7 @@ mod tests {
                 inspect_component_timeouts_count: 0u64,
                 inspect_reader_servers_constructed: 1u64,
                 inspect_reader_servers_destroyed: 0u64,
+                inspect_schema_truncation_count: 0u64,
                 inspect_batch_iterator_get_next_time_usec: AnyProperty,
                 lifecycle_batch_iterator_connections_closed: 0u64,
                 lifecycle_batch_iterator_connections_opened: 0u64,
@@ -900,6 +901,7 @@ mod tests {
                 lifecycle_reader_servers_constructed: 0u64,
                 lifecycle_reader_servers_destroyed: 0u64,
                 lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
+                lifecycle_schema_truncation_count: 0u64,
                 logs_batch_iterator_connections_closed: 0u64,
                 logs_batch_iterator_connections_opened: 0u64,
                 logs_batch_iterator_get_next_errors: 0u64,
@@ -911,6 +913,7 @@ mod tests {
                 logs_reader_servers_constructed: 0u64,
                 logs_reader_servers_destroyed: 0u64,
                 logs_batch_iterator_get_next_time_usec: AnyProperty,
+                logs_schema_truncation_count: 0u64,
                 stream_diagnostics_requests: 0u64,
             }
         });
@@ -982,6 +985,7 @@ mod tests {
                     inspect_reader_servers_destroyed: 1u64,
                     inspect_batch_iterator_get_next_time_usec: AnyProperty,
                     inspect_component_time_usec: AnyProperty,
+                    inspect_schema_truncation_count:0u64,
                     inspect_longest_processing_times: contains {
                         "test_component.cmx": contains {
                             "@time": AnyProperty,
@@ -999,6 +1003,7 @@ mod tests {
                     lifecycle_reader_servers_constructed: 0u64,
                     lifecycle_reader_servers_destroyed: 0u64,
                     lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
+                    lifecycle_schema_truncation_count:0u64,
                     logs_batch_iterator_connections_closed: 0u64,
                     logs_batch_iterator_connections_opened: 0u64,
                     logs_batch_iterator_get_next_errors: 0u64,
@@ -1010,6 +1015,7 @@ mod tests {
                     logs_reader_servers_constructed: 0u64,
                     logs_reader_servers_destroyed: 0u64,
                     logs_batch_iterator_get_next_time_usec: AnyProperty,
+                    logs_schema_truncation_count:0u64,
                     stream_diagnostics_requests: 0u64,
                 }
             });
@@ -1047,6 +1053,7 @@ mod tests {
                     inspect_reader_servers_destroyed: 2u64,
                     inspect_batch_iterator_get_next_time_usec: AnyProperty,
                     inspect_component_time_usec: AnyProperty,
+                    inspect_schema_truncation_count: 0u64,
                     inspect_longest_processing_times: contains {
                         "test_component.cmx": contains {
                             "@time": AnyProperty,
@@ -1063,6 +1070,7 @@ mod tests {
                     lifecycle_component_timeouts_count: 0u64,
                     lifecycle_reader_servers_constructed: 0u64,
                     lifecycle_reader_servers_destroyed: 0u64,
+                    lifecycle_schema_truncation_count: 0u64,
                     lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
                     logs_batch_iterator_connections_closed: 0u64,
                     logs_batch_iterator_connections_opened: 0u64,
@@ -1075,6 +1083,7 @@ mod tests {
                     logs_reader_servers_constructed: 0u64,
                     logs_reader_servers_destroyed: 0u64,
                     logs_batch_iterator_get_next_time_usec: AnyProperty,
+                    logs_schema_truncation_count: 0u64,
                     stream_diagnostics_requests: 0u64,
                 }
             });
