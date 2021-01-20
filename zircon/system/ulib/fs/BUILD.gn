@@ -72,6 +72,9 @@ zx_library("fs") {
       "mount.cc",
       "mount_channel.cc",
       "node_connection.cc",
+      "paged_vfs.cc",
+      "paged_vnode.cc",
+      "pager_thread_pool.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
       "remote_container.cc",
@@ -98,6 +101,7 @@ zx_library("fs") {
       "//zircon/public/lib/zx",
 
       # <fs/trace.h> has #include <lib/trace/event.h>.
+      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/trace",
     ]
     deps += [

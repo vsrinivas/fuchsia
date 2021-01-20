@@ -19,15 +19,6 @@ group("tests") {
 
 test("fs-vnode") {
   output_name = "fs-vnode-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "lazy_dir_tests.cc",
     "pseudo_dir_tests.cc",
@@ -66,20 +57,12 @@ test("fs-vnode") {
 
 test("fs-connection") {
   output_name = "fs-connection-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [
     "connection_contract_tests.cc",
     "connection_integration_tests.cc",
     "connection_rights_tests.cc",
     "fidl_transaction_tests.cc",
+    "paging_test.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
