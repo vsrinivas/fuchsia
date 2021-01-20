@@ -9,6 +9,7 @@ use crate::context::LowpanCtlContext;
 pub use crate::energy_scan_command::*;
 pub use crate::form_command::*;
 pub use crate::get_credential::*;
+pub use crate::get_mac_filter_settings_command::*;
 pub use crate::get_supported_channels::*;
 pub use crate::get_supported_network_types::*;
 pub use crate::join_command::*;
@@ -18,6 +19,7 @@ pub use crate::mfg_command::*;
 pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
 pub use crate::repeat_command::*;
+pub use crate::replace_mac_filter_settings_command::*;
 pub use crate::reset_command::*;
 pub use crate::set_active_comamnd::*;
 pub use crate::status_command::*;
@@ -68,6 +70,8 @@ pub enum CommandEnumWithRepeat {
     GetCredential(GetCredentialCommand),
     Mfg(MfgCommand),
     Repeat(RepeatCommand),
+    ReplaceMacFilterSettings(ReplaceMacFilterSettingsCommand),
+    GetMacFilterSettings(GetMacFilterSettingsCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -88,6 +92,8 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::GetSupportedChannels(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetCredential(x) => x.exec(context).await,
             CommandEnumWithRepeat::Repeat(x) => x.exec(context).await,
+            CommandEnumWithRepeat::ReplaceMacFilterSettings(x) => x.exec(context).await,
+            CommandEnumWithRepeat::GetMacFilterSettings(x) => x.exec(context).await,
         }
     }
 }
@@ -112,6 +118,8 @@ pub enum CommandEnum {
     GetSupportedChannels(GetSupportedChannelsCommand),
     GetCredential(GetCredentialCommand),
     Mfg(MfgCommand),
+    ReplaceMacFilterSettings(ReplaceMacFilterSettingsCommand),
+    GetMacFilterSettings(GetMacFilterSettingsCommand),
 }
 
 impl CommandEnum {
@@ -131,6 +139,8 @@ impl CommandEnum {
             CommandEnum::GetSupportedChannels(x) => x.exec(context).await,
             CommandEnum::GetCredential(x) => x.exec(context).await,
             CommandEnum::Mfg(x) => x.exec(context).await,
+            CommandEnum::ReplaceMacFilterSettings(x) => x.exec(context).await,
+            CommandEnum::GetMacFilterSettings(x) => x.exec(context).await,
         }
     }
 }

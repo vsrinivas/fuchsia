@@ -28,6 +28,8 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_get_credential().await;
     test_lowpanctl_get_supported_channels().await;
     test_lowpanctl_get_supported_network_types().await;
+    test_lowpanctl_get_mac_filter_settings().await;
+    test_lowpanctl_replace_mac_filter_settings().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -136,6 +138,49 @@ pub async fn test_lowpanctl_get_supported_network_types() {
     test_lowpanctl_command(vec!["get-supported-network-types".to_string()])
         .await
         .expect("Call to `lowpanctl get-supported-network-types` failed.");
+}
+
+pub async fn test_lowpanctl_get_mac_filter_settings() {
+    test_lowpanctl_command(vec!["get-mac-filter-settings".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-supported-network-types` failed.");
+}
+
+pub async fn test_lowpanctl_replace_mac_filter_settings() {
+    test_lowpanctl_command(vec![
+        "replace-mac-filter-settings".to_string(),
+        "--mode".to_string(),
+        "disabled".to_string(),
+    ])
+    .await
+    .expect("Call to `lowpanctl replace-supported-network-types` failed.");
+    test_lowpanctl_command(vec![
+        "replace-mac-filter-settings".to_string(),
+        "--mode".to_string(),
+        "allow".to_string(),
+        "--mac-addr-filter-items".to_string(),
+        "7AAD966C55768C64".to_string(),
+    ])
+    .await
+    .expect("Call to `lowpanctl replace-supported-network-types` failed.");
+    test_lowpanctl_command(vec![
+        "replace-mac-filter-settings".to_string(),
+        "--mode".to_string(),
+        "allow".to_string(),
+        "--mac-addr-filter-items".to_string(),
+        "7AAD966C55768C64.-10,7AAD966C55768C65.-20".to_string(),
+    ])
+    .await
+    .expect("Call to `lowpanctl replace-supported-network-types` failed.");
+    test_lowpanctl_command(vec![
+        "replace-mac-filter-settings".to_string(),
+        "--mode".to_string(),
+        "deny".to_string(),
+        "--mac-addr-filter-items".to_string(),
+        "7AAD966C55768C64".to_string(),
+    ])
+    .await
+    .expect("Call to `lowpanctl replace-supported-network-types` failed.");
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
