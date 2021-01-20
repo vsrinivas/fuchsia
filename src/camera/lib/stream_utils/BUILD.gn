@@ -40,7 +40,7 @@ source_set("stream_configs") {
 
 executable("image_io_util_test_bin") {
   testonly = true
-  sources = [ "image_io_util_test.cc" ]
+  sources = [ "image_io_util_unittest.cc" ]
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sysmem",
