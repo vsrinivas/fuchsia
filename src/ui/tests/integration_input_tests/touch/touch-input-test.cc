@@ -30,6 +30,7 @@
 #include <lib/zx/clock.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include <iostream>
 #include <type_traits>
@@ -254,11 +255,20 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
  private:
   template <typename TimeT>
-  TimeT RealNow() {
-    TimeT now(ZX_TIME_INFINITE_PAST);
-    FX_CHECK(zx::clock::get(&now) == ZX_OK);
-    return now;
-  };
+  TimeT RealNow();
+
+  template <>
+  zx::time RealNow() {
+    return zx::clock::get_monotonic();
+  }
+
+  template <>
+  zx::time_utc RealNow() {
+    zx::unowned_clock utc_clock(zx_utc_reference_get());
+    zx_time_t now;
+    FX_CHECK(utc_clock->read(&now) == ZX_OK);
+    return zx::time_utc(now);
+  }
 
   template <typename TimeT>
   uint64_t TimeToUint(const TimeT& time) {

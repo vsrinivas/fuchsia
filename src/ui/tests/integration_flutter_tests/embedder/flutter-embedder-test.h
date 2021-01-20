@@ -238,14 +238,14 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
       // Inject one input report, then a conclusion (empty) report.
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
       *touch = {.touches = {{.finger_id = 1, .x = 0, .y = 0}}};  // center of display
-      InputReport report{.event_time = TimeToUint(RealNow<zx::basic_time<ZX_CLOCK_MONOTONIC>>()),
+      InputReport report{.event_time = TimeToUint(MonotonicNow()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
 
     {
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      InputReport report{.event_time = TimeToUint(RealNow<zx::basic_time<ZX_CLOCK_MONOTONIC>>()),
+      InputReport report{.event_time = TimeToUint(MonotonicNow()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
@@ -253,11 +253,8 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
   }
 
  private:
-  template <typename TimeT>
-  TimeT RealNow() {
-    TimeT now(ZX_TIME_INFINITE_PAST);
-    FX_CHECK(zx::clock::get(&now) == ZX_OK);
-    return now;
+  zx::time MonotonicNow() {
+    return zx::clock::get_monotonic();
   };
 
   template <typename TimeT>
