@@ -17,7 +17,7 @@ use {
         ViewAssistantPtr, ViewKey,
     },
     chrono::{Local, Timelike},
-    euclid::{Angle, Transform2D, Vector2D},
+    euclid::{point2, size2, vec2, Angle, Transform2D},
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
     std::f32,
@@ -63,16 +63,16 @@ impl RoundedLine {
     fn new(mut path_builder: PathBuilder, pos: Point, length: f32, thickness: f32) -> Self {
         let radius = thickness / 2.0;
         let tl = pos.to_vector();
-        let tr = pos.to_vector() + Vector2D::new(length, 0.0);
-        let br = pos.to_vector() + Vector2D::new(length, thickness);
-        let bl = pos.to_vector() + Vector2D::new(0.0, thickness);
-        let radiush = Vector2D::new(radius, 0.0);
-        let radiusv = Vector2D::new(0.0, radius);
+        let tr = pos.to_vector() + vec2(length, 0.0);
+        let br = pos.to_vector() + vec2(length, thickness);
+        let bl = pos.to_vector() + vec2(0.0, thickness);
+        let radiush = vec2(radius, 0.0);
+        let radiusv = vec2(0.0, radius);
 
         let path = {
             macro_rules! c {
                 ( $v:expr ) => {
-                    Point::new($v.x, $v.y)
+                    point2($v.x, $v.y)
                 };
             }
 
@@ -107,7 +107,7 @@ impl Hand {
     ) -> Self {
         let line = RoundedLine::new(
             path_builder,
-            Point::new(-(thickness / 2.0 + offset), -thickness / 2.0),
+            point2(-(thickness / 2.0 + offset), -thickness / 2.0),
             length,
             thickness,
         );
@@ -116,7 +116,7 @@ impl Hand {
     }
 
     fn update(&mut self, context: &mut RenderContext, scale: f32, angle: f32) {
-        let rotation = Transform2D::create_rotation(Angle::radians(angle)).post_scale(scale, scale);
+        let rotation = Transform2D::rotation(Angle::radians(angle)).then_scale(scale, scale);
         let mut raster_builder = context.raster_builder().unwrap();
         raster_builder.add(&self.line.path, Some(&rotation));
         self.raster.replace(raster_builder.build());
@@ -160,7 +160,7 @@ impl ClockFaceFacet {
         );
 
         Self {
-            size: Size::new(1.0, 1.0),
+            size: size2(1.0, 1.0),
             hour_hand,
             minute_hand,
             second_hand,
@@ -223,8 +223,8 @@ impl Facet for ClockFaceFacet {
         self.update(render_context, &size, scale);
 
         let elevation = (ELEVATION * scale) as i32;
-        let center = Vector2D::new(size.width as i32 / 2, size.height as i32 / 2);
-        let shadow_offset = center + Vector2D::new(elevation, elevation * 2);
+        let center = vec2(size.width as i32 / 2, size.height as i32 / 2);
+        let shadow_offset = center + vec2(elevation, elevation * 2);
 
         let hands = [&self.hour_hand, &self.minute_hand, &self.second_hand];
 

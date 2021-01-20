@@ -13,10 +13,10 @@ use {
             BlendMode, Composition, Context, Fill, FillRule, Layer, Path, PreClear, RenderExt,
             Style,
         },
-        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        App, AppAssistant, Point, Rect, RenderOptions, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::{Transform2D, Vector2D},
+    euclid::{size2, vec2, Transform2D},
     fuchsia_trace_provider,
     fuchsia_zircon::{AsHandleRef, Event, Signals},
 };
@@ -77,14 +77,13 @@ impl ViewAssistant for GammaViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let path = self.path.take().unwrap_or_else(|| {
-            path_for_rectangle(&Rect::new(Point::zero(), Size::new(1.0, 1.0)), render_context)
+            path_for_rectangle(&Rect::new(Point::zero(), size2(1.0, 1.0)), render_context)
         });
-        let transform =
-            Transform2D::create_scale(context.size.width * 0.5, context.size.height * 0.5);
+        let transform = Transform2D::scale(context.size.width * 0.5, context.size.height * 0.5);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, Some(&transform));
         let raster = raster_builder.build();
-        let transform = Transform2D::create_scale(context.size.width * 0.5, 1.0);
+        let transform = Transform2D::scale(context.size.width * 0.5, 1.0);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, Some(&transform));
         let line_raster = raster_builder.build();
@@ -99,7 +98,7 @@ impl ViewAssistant for GammaViewAssistant {
             },
         })
         .chain(std::iter::once(Layer {
-            raster: raster.clone().translate(Vector2D::new(0, (context.size.height * 0.5) as i32)),
+            raster: raster.clone().translate(vec2(0, (context.size.height * 0.5) as i32)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(TRANSLUCENT_COLOR),
@@ -107,8 +106,7 @@ impl ViewAssistant for GammaViewAssistant {
             },
         }))
         .chain((0..context.size.height as i32).step_by(2).map(|y| Layer {
-            raster:
-                line_raster.clone().translate(Vector2D::new((context.size.width * 0.5) as i32, y)),
+            raster: line_raster.clone().translate(vec2((context.size.width * 0.5) as i32, y)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(BLACK_COLOR),

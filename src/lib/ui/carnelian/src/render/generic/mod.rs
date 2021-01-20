@@ -11,7 +11,10 @@ use std::{
 };
 
 use anyhow::Error;
-use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
+use euclid::{
+    default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
+    point2, size2,
+};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;
@@ -130,7 +133,7 @@ pub trait Context<B: Backend> {
         self.render_with_clip(
             composition,
             clip.unwrap_or_else(|| {
-                Rect::new(Point2D::new(u32::MIN, u32::MIN), Size2D::new(u32::MAX, u32::MAX))
+                Rect::new(point2(u32::MIN, u32::MIN), size2(u32::MAX, u32::MAX))
             }),
             image,
             ext,
@@ -273,14 +276,14 @@ pub(crate) mod tests {
             let mut context = B::new_context(token, size, display_rotation);
 
             let mut path_builder = context.path_builder().unwrap();
-            path_builder.move_to(Point::new(0.0, 0.0)).line_to(Point::new(1.0, 1.0));
+            path_builder.move_to(point2(0.0, 0.0)).line_to(point2(1.0, 1.0));
             let path = path_builder.build();
 
             let mut raster_builder = context.raster_builder().unwrap();
             raster_builder.add(&path, None);
             let raster = raster_builder.build();
 
-            let src_image = context.new_image(Size2D::new(100, 100));
+            let src_image = context.new_image(size2(100, 100));
             let dst_image = context.get_current_image(view_context);
 
             context.render(
@@ -303,7 +306,7 @@ pub(crate) mod tests {
                         copy_region: CopyRegion {
                             src_offset: Point2D::zero(),
                             dst_offset: Point2D::zero(),
-                            extent: Size2D::new(100, 100),
+                            extent: size2(100, 100),
                         },
                     }),
                     ..Default::default()

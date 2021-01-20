@@ -47,6 +47,8 @@ mod tests {
 
     use fidl::endpoints::create_endpoints;
 
+    use euclid::size2;
+
     use crate::{drawing::DisplayRotation, render::generic};
 
     #[test]
@@ -54,7 +56,7 @@ mod tests {
         generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-            Mold::new_context(token, Size2D::new(100, 100), DisplayRotation::Deg0);
+            Mold::new_context(token, size2(100, 100), DisplayRotation::Deg0);
         });
     }
 }

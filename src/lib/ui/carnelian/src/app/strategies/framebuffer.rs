@@ -20,6 +20,7 @@ use crate::{
 };
 use anyhow::{bail, Error};
 use async_trait::async_trait;
+use euclid::size2;
 use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
@@ -71,7 +72,7 @@ impl AppStrategy for FrameBufferAppStrategy {
 
     fn get_frame_buffer_size(&self) -> Option<IntSize> {
         let config = self.frame_buffer.borrow().get_config();
-        Some(IntSize::new(config.width as i32, config.height as i32))
+        Some(size2(config.width as i32, config.height as i32))
     }
 
     fn get_pixel_size(&self) -> u32 {

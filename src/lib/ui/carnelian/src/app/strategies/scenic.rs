@@ -4,7 +4,7 @@
 
 use crate::{
     app::{strategies::base::AppStrategy, InternalSender, MessageInternal, RenderOptions},
-    geometry::{IntSize, Size},
+    geometry::IntSize,
     view::{
         strategies::{
             base::{ScenicParams, ViewStrategyParams, ViewStrategyPtr},
@@ -15,6 +15,7 @@ use crate::{
 };
 use anyhow::{bail, Context as _, Error};
 use async_trait::async_trait;
+use euclid::size2;
 use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicProxy, SessionListenerRequest};
@@ -51,7 +52,7 @@ impl ScenicAppStrategy {
                                         sender
                                             .unbounded_send(MessageInternal::MetricsChanged(
                                                 view_key,
-                                                Size::new(
+                                                size2(
                                                     metrics_event.metrics.scale_x,
                                                     metrics_event.metrics.scale_y,
                                                 ),
@@ -63,7 +64,7 @@ impl ScenicAppStrategy {
                                     ) => {
                                         let bounding_box =
                                             &view_properties_event.properties.bounding_box;
-                                        let new_size = Size::new(
+                                        let new_size = size2(
                                             bounding_box.max.x - bounding_box.min.x,
                                             bounding_box.max.y - bounding_box.min.y,
                                         );

@@ -5,7 +5,7 @@
 use std::{fs::File, io::prelude::*, path};
 
 use anyhow::{bail, ensure};
-use euclid::default::Transform2D;
+use euclid::{default::Transform2D, point2, size2};
 
 use crate::{
     color::Color,
@@ -117,7 +117,7 @@ impl Parser {
         let x = self.parse_i16() as f32 / 16.0;
         let y = self.parse_i16() as f32 / 16.0;
 
-        Point::new(x, y)
+        point2(x, y)
     }
 
     fn parse_commands(&mut self) -> anyhow::Result<Vec<PathCommand>> {
@@ -185,7 +185,7 @@ impl Parser {
             });
         }
 
-        Ok(Shed { paths, size: Size::new(width, height) })
+        Ok(Shed { paths, size: size2(width, height) })
     }
 }
 
@@ -321,14 +321,14 @@ mod tests {
             shed.paths,
             vec![
                 SvgPath {
-                    commands: vec![PathCommand::MoveTo(Point::new(1.0, 2.0)), PathCommand::Close],
+                    commands: vec![PathCommand::MoveTo(point2(1.0, 2.0)), PathCommand::Close],
                     fill_rule: FillRule::NonZero,
                     color: Color { r: 255, g: 0, b: 0, a: 255 },
                 },
                 SvgPath {
                     commands: vec![
-                        PathCommand::MoveTo(Point::new(3.0, 4.0)),
-                        PathCommand::LineTo(Point::new(5.0, 6.0)),
+                        PathCommand::MoveTo(point2(3.0, 4.0)),
+                        PathCommand::LineTo(point2(5.0, 6.0)),
                         PathCommand::Close,
                     ],
                     fill_rule: FillRule::EvenOdd,

@@ -5,7 +5,10 @@
 use std::{cell::RefCell, collections::HashMap, io::Read, mem, ptr, u32};
 
 use anyhow::Error;
-use euclid::default::{Rect, Size2D, Vector2D};
+use euclid::{
+    default::{Rect, Size2D},
+    vec2,
+};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_sysmem::{
     AllocatorMarker, BufferCollectionConstraints, BufferCollectionSynchronousProxy,
@@ -248,7 +251,7 @@ fn render_composition(
 
         let transform = display_rotation
             .transform(&display_size.to_f32())
-            .pre_translate(Vector2D::new(layer.raster.translation.x, layer.raster.translation.y));
+            .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
 
         mold_layer.set_transform(&[
             transform.m11,

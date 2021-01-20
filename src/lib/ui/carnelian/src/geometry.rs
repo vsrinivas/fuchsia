@@ -38,19 +38,19 @@ pub trait Corners {
 
 impl Corners for Rect {
     fn top_left(&self) -> Point {
-        Point::new(self.min_x(), self.min_y())
+        euclid::point2(self.min_x(), self.min_y())
     }
 
     fn top_right(&self) -> Point {
-        Point::new(self.max_x(), self.min_y())
+        euclid::point2(self.max_x(), self.min_y())
     }
 
     fn bottom_left(&self) -> Point {
-        Point::new(self.min_x(), self.max_y())
+        euclid::point2(self.min_x(), self.max_y())
     }
 
     fn bottom_right(&self) -> Point {
-        Point::new(self.max_x(), self.max_y())
+        euclid::point2(self.max_x(), self.max_y())
     }
 }
 
@@ -62,6 +62,6 @@ impl LimitToBounds for IntRect {
     fn limit_to_bounds(&self, point: IntPoint) -> IntPoint {
         let x = point.x.min(self.max_x()).max(self.min_x());
         let y = point.y.min(self.max_y()).max(self.min_y());
-        IntPoint::new(x, y)
+        euclid::point2(x, y)
     }
 }

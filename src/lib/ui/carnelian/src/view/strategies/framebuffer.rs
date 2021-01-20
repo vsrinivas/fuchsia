@@ -4,7 +4,7 @@
 use crate::{
     app::{FrameBufferPtr, MessageInternal, RenderOptions},
     drawing::DisplayRotation,
-    geometry::{IntPoint, IntSize, Size, UintSize},
+    geometry::{IntPoint, IntSize, Size},
     input,
     message::Message,
     render::{
@@ -18,6 +18,7 @@ use crate::{
 };
 use anyhow::Error;
 use async_trait::async_trait;
+use euclid::size2;
 use fidl::endpoints::create_endpoints;
 use fuchsia_async::{self as fasync};
 use fuchsia_framebuffer::{FrameSet, ImageId};
@@ -59,7 +60,7 @@ impl FrameBufferViewStrategy {
     ) -> Result<ViewStrategyPtr, Error> {
         app_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
         app_sender.unbounded_send(MessageInternal::Focus(key)).expect("unbounded_send");
-        let unsize = UintSize::new(size.width as u32, size.height as u32);
+        let unsize = size2(size.width as u32, size.height as u32);
         let mut fb = frame_buffer.borrow_mut();
         let context = {
             let (context_token, context_token_request) =
@@ -165,10 +166,9 @@ impl FrameBufferViewStrategy {
                 key: view_details.key,
                 size: match self.display_rotation {
                     DisplayRotation::Deg0 | DisplayRotation::Deg180 => view_details.physical_size,
-                    DisplayRotation::Deg90 | DisplayRotation::Deg270 => Size::new(
-                        view_details.physical_size.height,
-                        view_details.physical_size.width,
-                    ),
+                    DisplayRotation::Deg90 | DisplayRotation::Deg270 => {
+                        size2(view_details.physical_size.height, view_details.physical_size.width)
+                    }
                 },
                 metrics: view_details.metrics,
                 presentation_time: time_now + interval_offset,
@@ -188,12 +188,12 @@ impl FrameBufferViewStrategy {
 #[async_trait(?Send)]
 impl ViewStrategy for FrameBufferViewStrategy {
     fn initial_metrics(&self) -> Size {
-        Size::new(1.0, 1.0)
+        size2(1.0, 1.0)
     }
 
     fn initial_physical_size(&self) -> Size {
         let config = self.frame_buffer.borrow().get_config();
-        Size::new(config.width as f32, config.height as f32)
+        size2(config.width as f32, config.height as f32)
     }
 
     fn initial_logical_size(&self) -> Size {

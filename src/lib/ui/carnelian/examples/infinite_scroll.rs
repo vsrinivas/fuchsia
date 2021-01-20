@@ -16,7 +16,10 @@ use {
         App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::default::{Point2D, Rect, Size2D, Vector2D},
+    euclid::{
+        default::{Rect, Vector2D},
+        point2, size2, vec2,
+    },
     fuchsia_trace::{self, counter, duration},
     fuchsia_trace_provider,
     fuchsia_zircon::{self as zx, AsHandleRef, Event, Signals, Time},
@@ -143,15 +146,15 @@ struct Box2D {
 impl Box2D {
     fn new() -> Self {
         Box2D {
-            min: Point::new(std::f32::MAX, std::f32::MAX),
-            max: Point::new(std::f32::MIN, std::f32::MIN),
+            min: point2(std::f32::MAX, std::f32::MAX),
+            max: point2(std::f32::MIN, std::f32::MIN),
         }
     }
 
     fn union(&self, point: &Point) -> Self {
         Box2D {
-            min: Point::new(self.min.x.min(point.x), self.min.y.min(point.y)),
-            max: Point::new(self.max.x.max(point.x), self.max.y.max(point.y)),
+            min: point2(self.min.x.min(point.x), self.min.y.min(point.y)),
+            max: point2(self.max.x.max(point.x), self.max.y.max(point.y)),
         }
     }
 
@@ -161,7 +164,7 @@ impl Box2D {
 }
 
 fn lerp(t: f32, p0: Point, p1: Point) -> Point {
-    Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
+    point2(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
 }
 
 fn cubic(
@@ -224,7 +227,7 @@ impl Flower {
         let dt: f32 = f32::consts::PI / (petal_count as f32);
         let mut t: f32 = 0.0;
 
-        let mut p0 = Point::new(t.cos() * r1, t.sin() * r1);
+        let mut p0 = point2(t.cos() * r1, t.sin() * r1);
         for _ in 0..petal_count {
             let x1 = t.cos() * r1;
             let y1 = t.sin() * r1;
@@ -233,12 +236,12 @@ impl Flower {
             let x3 = (t + 2.0 * dt).cos() * r1;
             let y3 = (t + 2.0 * dt).sin() * r1;
 
-            let p1 = Point::new(x1 - y1 * u, y1 + x1 * u);
-            let p2 = Point::new(x2 + y2 * v, y2 - x2 * v);
-            let p3 = Point::new(x2, y2);
-            let p4 = Point::new(x2 - y2 * v, y2 + x2 * v);
-            let p5 = Point::new(x3 + y3 * u, y3 - x3 * u);
-            let p6 = Point::new(x3, y3);
+            let p1 = point2(x1 - y1 * u, y1 + x1 * u);
+            let p2 = point2(x2 + y2 * v, y2 - x2 * v);
+            let p3 = point2(x2, y2);
+            let p4 = point2(x2 - y2 * v, y2 + x2 * v);
+            let p5 = point2(x3 + y3 * u, y3 - x3 * u);
+            let p6 = point2(x3, y3);
 
             cubic(&mut path_builder, p0, p1, p2, p3, &mut bounding_box);
             cubic(&mut path_builder, p3, p4, p5, p6, &mut bounding_box);
@@ -387,7 +390,7 @@ impl Scene {
         let bounding_box_raster = raster_builder.build();
 
         let y = if align_bottom { -bounding_box.size.height } else { 0.0 };
-        let offset = offset + Vector2D::new(x, (y - bounding_box.min_y()) as i32);
+        let offset = offset + vec2(x, (y - bounding_box.min_y()) as i32);
 
         Item {
             raster: raster.translate(offset),
@@ -473,7 +476,7 @@ impl Scene {
                 };
                 column.push_back(Self::new_item(
                     context,
-                    Vector2D::new(margin as i32, (y + padding) as i32),
+                    vec2(margin as i32, (y + padding) as i32),
                     false,
                     self.scale,
                     &mut self.title_glyphs,
@@ -495,7 +498,7 @@ impl Scene {
                 };
                 column.push_front(Self::new_item(
                     context,
-                    Vector2D::new(margin as i32, (y - padding) as i32),
+                    vec2(margin as i32, (y - padding) as i32),
                     true,
                     self.scale,
                     &mut self.title_glyphs,
@@ -522,7 +525,7 @@ impl Scene {
             .flat_map(|column| column.iter())
             .filter(|item| viewport.intersects(&item.bounding_box))
             .map(|item| Layer {
-                raster: item.bounding_box_raster.clone().translate(Vector2D::new(0, ty)),
+                raster: item.bounding_box_raster.clone().translate(vec2(0, ty)),
                 style: Style {
                     fill_rule: FillRule::WholeTile,
                     fill: Fill::Solid(BACKGROUND_COLOR),
@@ -545,7 +548,7 @@ impl Scene {
             .flat_map(|column| column.iter())
             .filter(|item| viewport.intersects(&item.bounding_box))
             .map(|item| Layer {
-                raster: item.raster.clone().translate(Vector2D::new(0, ty)),
+                raster: item.raster.clone().translate(vec2(0, ty)),
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(item.color),
@@ -598,8 +601,8 @@ impl Contents {
 
                 // Add clear layers for previous viewport.
                 let viewport = Rect::new(
-                    Point::new(0.0, self.scroll_offset_y as f32),
-                    Size::new(width as f32, height as f32),
+                    point2(0.0, self.scroll_offset_y as f32),
+                    size2(width as f32, height as f32),
                 );
                 scene.prepend_clear_layers_to_composition(
                     &mut self.composition,
@@ -609,8 +612,8 @@ impl Contents {
 
                 // Add layers for current viewport.
                 let viewport = Rect::new(
-                    Point::new(0.0, scene.scroll_offset_y as f32),
-                    Size::new(width as f32, height as f32),
+                    point2(0.0, scene.scroll_offset_y as f32),
+                    size2(width as f32, height as f32),
                 );
                 scene.prepend_layers_to_composition(
                     &mut self.composition,
@@ -633,7 +636,7 @@ impl Contents {
                 } else {
                     0
                 };
-                let mut clip = Rect::new(Point2D::new(0, 0), Size2D::new(width, height));
+                let mut clip = Rect::new(point2(0, 0), size2(width, height));
                 // Determine area to copy and clip to render depending on scroll direction.
                 if scroll_height > 0 {
                     match scroll_distance {
@@ -644,9 +647,9 @@ impl Contents {
                             ext.pre_copy = Some(PreCopy {
                                 image: self.image,
                                 copy_region: CopyRegion {
-                                    src_offset: Point2D::new(0, scroll_amount),
-                                    dst_offset: Point2D::new(0, 0),
-                                    extent: Size2D::new(width, height - scroll_amount),
+                                    src_offset: point2(0, scroll_amount),
+                                    dst_offset: point2(0, 0),
+                                    extent: size2(width, height - scroll_amount),
                                 },
                             });
                         }
@@ -657,9 +660,9 @@ impl Contents {
                             ext.pre_copy = Some(PreCopy {
                                 image: self.image,
                                 copy_region: CopyRegion {
-                                    src_offset: Point2D::new(0, 0),
-                                    dst_offset: Point2D::new(0, scroll_amount),
-                                    extent: Size2D::new(width, height - scroll_amount),
+                                    src_offset: point2(0, 0),
+                                    dst_offset: point2(0, scroll_amount),
+                                    extent: size2(width, height - scroll_amount),
                                 },
                             });
                         }
@@ -674,11 +677,11 @@ impl Contents {
 
                 // Add clear layers for previous viewport of clip.
                 let viewport = Rect::new(
-                    Point::new(
+                    point2(
                         clip.origin.x as f32,
                         clip.origin.y as f32 + self.scroll_offset_y as f32,
                     ),
-                    Size::new(clip.size.width as f32, clip.size.height as f32),
+                    size2(clip.size.width as f32, clip.size.height as f32),
                 );
                 scene.prepend_clear_layers_to_composition(
                     &mut self.composition,
@@ -688,11 +691,11 @@ impl Contents {
 
                 // Add layers for current viewport of clip.
                 let viewport = Rect::new(
-                    Point::new(
+                    point2(
                         clip.origin.x as f32,
                         clip.origin.y as f32 + scene.scroll_offset_y as f32,
                     ),
-                    Size::new(clip.size.width as f32, clip.size.height as f32),
+                    size2(clip.size.width as f32, clip.size.height as f32),
                 );
                 scene.prepend_layers_to_composition(
                     &mut self.composition,
@@ -765,7 +768,7 @@ impl Contents {
 
                 let image = staging_image
                     .take()
-                    .unwrap_or_else(|| context.new_image(Size2D::new(width, buffer_height)));
+                    .unwrap_or_else(|| context.new_image(size2(width, buffer_height)));
 
                 // Offset in staging image that translate to top of output.
                 let y_start = next_y0;
@@ -776,14 +779,11 @@ impl Contents {
                 // Render bottom span if needed.
                 if bottom_y0 < bottom_y1 {
                     let mut composition = Composition::new(BACKGROUND_COLOR);
-                    let clip = Rect::new(
-                        Point2D::new(0, bottom_y0),
-                        Size2D::new(width, bottom_y1 - bottom_y0),
-                    );
+                    let clip = Rect::new(point2(0, bottom_y0), size2(width, bottom_y1 - bottom_y0));
 
                     // Add layers for previous viewport of bottom clip.
                     let viewport = Rect::new(
-                        Point::new(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
+                        point2(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
                         clip.size.to_f32(),
                     );
                     scene.prepend_clear_layers_to_composition(
@@ -794,7 +794,7 @@ impl Contents {
 
                     // Add layers for current viewport of bottom clip.
                     let viewport =
-                        Rect::new(Point::new(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
+                        Rect::new(point2(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
                     scene.prepend_layers_to_composition(&mut composition, &viewport, -(dy as i32));
 
                     // Render bottom clip.
@@ -820,20 +820,20 @@ impl Contents {
                 ext.post_copy = Some(PostCopy {
                     image: self.image,
                     color: BACKGROUND_COLOR,
-                    exposure_distance: Vector2D::new(0, exposure),
+                    exposure_distance: vec2(0, exposure),
                     copy_region: CopyRegion {
-                        src_offset: Point2D::new(0, y_start),
-                        dst_offset: Point2D::new(0, 0),
-                        extent: Size2D::new(width, height),
+                        src_offset: point2(0, y_start),
+                        dst_offset: point2(0, 0),
+                        extent: size2(width, height),
                     },
                 });
 
                 let mut composition = Composition::new(BACKGROUND_COLOR);
-                let clip = Rect::new(Point2D::new(0, top_y0), Size2D::new(width, top_y1 - top_y0));
+                let clip = Rect::new(point2(0, top_y0), size2(width, top_y1 - top_y0));
 
                 // Add layers for previous viewport of top clip.
                 let viewport = Rect::new(
-                    Point::new(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
+                    point2(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
                     clip.size.to_f32(),
                 );
                 scene.prepend_clear_layers_to_composition(
@@ -844,7 +844,7 @@ impl Contents {
 
                 // Add layers for current viewport of top clip.
                 let viewport =
-                    Rect::new(Point::new(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
+                    Rect::new(point2(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
                 scene.prepend_layers_to_composition(&mut composition, &viewport, -(dy as i32));
 
                 // Render top clip.
@@ -1123,8 +1123,7 @@ impl InfiniteScroll {
             self.scroll_origin.y -= scroll_delta as f32;
             if distance != 0.0 && elapsed.into_nanos() > 0 {
                 let velocity = distance / (elapsed.into_nanos() as f32 * SECONDS_PER_NANOSECOND);
-                self.fling_curve =
-                    Some(FlingCurve::new(Vector2D::new(0.0, velocity), presentation_time));
+                self.fling_curve = Some(FlingCurve::new(vec2(0.0, velocity), presentation_time));
             }
         } else if let Some(fling) = &mut self.fling_curve {
             let (fling_active, delta) = fling.compute_scroll_delta_at_time(presentation_time);

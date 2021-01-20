@@ -16,7 +16,10 @@ use std::{
 };
 
 use anyhow::Error;
-use euclid::default::{Rect, Size2D};
+use euclid::{
+    default::{Rect, Size2D},
+    size2,
+};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;
@@ -1200,7 +1203,7 @@ impl Context<Spinel> for SpinelContext {
             &*self.inner.borrow(),
             *self.raster_builder,
             spn_composition,
-            Size2D::new(self.vulkan.width, self.vulkan.height),
+            size2(self.vulkan.width, self.vulkan.height),
             self.display_rotation,
             clip,
         );

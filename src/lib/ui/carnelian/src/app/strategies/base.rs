@@ -16,6 +16,7 @@ use crate::{
 };
 use anyhow::Error;
 use async_trait::async_trait;
+use euclid::size2;
 use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
@@ -130,7 +131,7 @@ pub(crate) async fn create_app_strategy(
         .detach();
 
         let config = fb.get_config();
-        let size = IntSize::new(config.width as i32, config.height as i32);
+        let size = size2(config.width as i32, config.height as i32);
 
         let frame_buffer_ptr = Rc::new(RefCell::new(fb));
 

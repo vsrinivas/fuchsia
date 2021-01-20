@@ -388,8 +388,8 @@ impl Facet for ShedFacet {
             let min_view_side = size.width.min(size.height);
             let scale_factor = min_view_side / min_side * 0.75;
             let transform =
-                Transform2D::create_translation(-shed_size.width / 2.0, -shed_size.height / 2.0)
-                    .post_scale(scale_factor, scale_factor);
+                Transform2D::translation(-shed_size.width / 2.0, -shed_size.height / 2.0)
+                    .then_scale(scale_factor, scale_factor);
 
             shed.rasters(render_context, Some(&transform))
         });

@@ -11,6 +11,7 @@ use crate::{
     view::strategies::base::ViewStrategyPtr,
 };
 use anyhow::Error;
+use euclid::size2;
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
 use fuchsia_zircon::{Duration, Event, Time};
@@ -416,7 +417,7 @@ impl ViewController {
     pub(crate) async fn render(&mut self) {
         if self.render_requested {
             // Recompute our logical size based on the provided physical size and screen metrics.
-            self.logical_size = Size::new(
+            self.logical_size = size2(
                 self.physical_size.width * self.metrics.width,
                 self.physical_size.height * self.metrics.height,
             );

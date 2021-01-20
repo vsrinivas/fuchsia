@@ -157,7 +157,7 @@ bytes = "0.5.4"
 # do not add back without verifying certificate transparency is ready to use - see fxbug.dev/25100
 # ct-logs = "0.6"
 derivative = "2.1.1"
-euclid = "0.20.7"
+euclid = "0.22.1"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 freetype = "0.4" # saved for future use
 getopts = "0.2"

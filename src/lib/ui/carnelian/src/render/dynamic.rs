@@ -11,7 +11,10 @@ use crate::{
     Point, ViewAssistantContext,
 };
 use anyhow::Error;
-use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
+use euclid::{
+    default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
+    point2, size2,
+};
 use fuchsia_framebuffer::PixelFormat;
 use std::{
     io::Read,
@@ -176,7 +179,7 @@ impl Context {
         self.render_with_clip(
             composition,
             clip.unwrap_or_else(|| {
-                Rect::new(Point2D::new(u32::MIN, u32::MIN), Size2D::new(u32::MAX, u32::MAX))
+                Rect::new(point2(u32::MIN, u32::MIN), size2(u32::MAX, u32::MAX))
             }),
             image,
             ext,

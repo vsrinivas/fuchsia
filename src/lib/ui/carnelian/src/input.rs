@@ -9,7 +9,7 @@ use crate::{
     view::ViewKey,
 };
 use anyhow::{format_err, Error};
-use euclid::default::{Transform2D, Vector2D};
+use euclid::{default::Transform2D, point2, size2, vec2};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
@@ -509,7 +509,7 @@ impl TouchScale {
     pub fn scale(&self, pt: &IntPoint) -> IntPoint {
         let x = scale_value(pt.x as i64, self.x_span, &self.x, self.target_size.width);
         let y = scale_value(pt.y as i64, self.y_span, &self.y, self.target_size.height);
-        IntPoint::new(x, y)
+        point2(x, y)
     }
 }
 
@@ -587,10 +587,7 @@ impl InputReportHandler {
 
         let transform = self.display_rotation.inv_transform(&self.view_size.to_f32());
         let new_cursor_position = self.cursor_position
-            + Vector2D::new(
-                mouse.movement_x.unwrap_or(0) as i32,
-                mouse.movement_y.unwrap_or(0) as i32,
-            );
+            + vec2(mouse.movement_x.unwrap_or(0) as i32, mouse.movement_y.unwrap_or(0) as i32);
         let m = self.view_size;
         let bounds = IntRect::new(IntPoint::zero(), m);
         let new_cursor_position = bounds.limit_to_bounds(new_cursor_position);
@@ -729,14 +726,14 @@ impl InputReportHandler {
                     if contact.contact_width.is_none() || contact.contact_height.is_none() {
                         None
                     } else {
-                        Some(IntSize::new(
+                        Some(size2(
                             contact.contact_width.expect("contact_width") as i32,
                             contact.contact_height.expect("contact_height") as i32,
                         ))
                     };
                 Some(touch::RawContact {
                     contact_id,
-                    position: IntPoint::new(
+                    position: point2(
                         contact.position_x.expect("position_x") as i32,
                         contact.position_y.expect("position_y") as i32,
                     ),
@@ -879,7 +876,7 @@ mod input_report_tests {
     use itertools::assert_equal;
 
     fn make_input_handler() -> InputReportHandler {
-        let test_size = IntSize::new(1024, 768);
+        let test_size = size2(1024, 768);
         let touch_scale = TouchScale {
             target_size: test_size,
             x: fidl_fuchsia_input_report::Range { min: 0, max: 4095 },
@@ -949,8 +946,8 @@ mod input_report_tests {
             }
         }
 
-        assert_eq!(start_point, IntPoint::new(302, 491));
-        assert_eq!(end_point, IntPoint::new(637, 21));
+        assert_eq!(start_point, point2(302, 491));
+        assert_eq!(end_point, point2(637, 21));
         assert_eq!(move_count, 15);
     }
 
@@ -992,8 +989,8 @@ mod input_report_tests {
         }
 
         assert!(down_button.expect("down_button").is_primary());
-        assert_eq!(start_point, IntPoint::new(129, 44));
-        assert_eq!(end_point, IntPoint::new(616, 213));
+        assert_eq!(start_point, point2(129, 44));
+        assert_eq!(end_point, point2(616, 213));
         assert_eq!(move_count, 181);
     }
 
@@ -1033,7 +1030,7 @@ mod input_report_tests {
 fn to_physical_point(x: f32, y: f32, metrics: &Size) -> IntPoint {
     let x = x * metrics.width;
     let y = y * metrics.height;
-    IntPoint::new(x as i32, y as i32)
+    point2(x as i32, y as i32)
 }
 
 #[derive(Default)]
@@ -1276,7 +1273,7 @@ mod scenic_input_tests {
     fn test_touch_drag() {
         let scenic_events = test_data::touch_drag_scenic_events();
         let mut scenic_input_handler = ScenicInputHandler::new();
-        let metrics = Size::new(1.0, 1.0);
+        let metrics = size2(1.0, 1.0);
         let input_events = scenic_events
             .iter()
             .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
@@ -1304,8 +1301,8 @@ mod scenic_input_tests {
             }
         }
 
-        assert_eq!(start_point, IntPoint::new(193, 107));
-        assert_eq!(end_point, IntPoint::new(269, 157));
+        assert_eq!(start_point, point2(193, 107));
+        assert_eq!(end_point, point2(269, 157));
         assert_eq!(move_count, 8);
     }
 
@@ -1313,7 +1310,7 @@ mod scenic_input_tests {
     fn test_mouse_drag() {
         let scenic_events = test_data::mouse_drag_scenic_events();
         let mut scenic_input_handler = ScenicInputHandler::new();
-        let metrics = Size::new(1.0, 1.0);
+        let metrics = size2(1.0, 1.0);
         let input_events = scenic_events
             .iter()
             .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
@@ -1345,8 +1342,8 @@ mod scenic_input_tests {
         }
 
         assert!(down_button.expect("down_button").is_primary());
-        assert_eq!(start_point, IntPoint::new(67, 62));
-        assert_eq!(end_point, IntPoint::new(128, 136));
+        assert_eq!(start_point, point2(67, 62));
+        assert_eq!(end_point, point2(128, 136));
         assert_eq!(move_count, 36);
     }
 }

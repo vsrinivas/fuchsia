@@ -46,15 +46,19 @@ pub enum ButtonMessages {
     Pressed(Time),
 }
 
-#[derive(Default)]
 struct ButtonAppAssistant {
     display_rotation: DisplayRotation,
 }
 
+impl Default for ButtonAppAssistant {
+    fn default() -> Self {
+        let args: Args = argh::from_env();
+        Self { display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
+    }
+}
+
 impl AppAssistant for ButtonAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         Ok(())
     }
 
@@ -277,9 +281,8 @@ impl ViewAssistant for ButtonViewAssistant {
             let mut builder = SceneBuilder::new(self.bg_color);
             let indicator_y = target_size.height / 5.0;
             let indicator_len = target_size.height.min(target_size.width) / 8.0;
-            let indicator_size = Size::new(indicator_len * 2.0, indicator_len);
-            let indicator_pos =
-                Point::new(center_x - indicator_len, indicator_y - indicator_len / 2.0);
+            let indicator_size = size2(indicator_len * 2.0, indicator_len);
+            let indicator_pos = point2(center_x - indicator_len, indicator_y - indicator_len / 2.0);
             let indicator_bounds = Rect::new(indicator_pos, indicator_size);
             let indicator = builder.rectangle(indicator_bounds, Color::green());
             let button = Button::new(

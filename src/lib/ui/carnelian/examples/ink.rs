@@ -14,8 +14,8 @@ use {
         ViewAssistantPtr, ViewKey,
     },
     euclid::{
-        default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
-        Angle,
+        default::{Rect, Transform2D, Vector2D},
+        point2, size2, vec2, Angle,
     },
     fidl_fuchsia_hardware_input as hid,
     fuchsia_trace::{self, duration},
@@ -58,7 +58,7 @@ const PENCILS: [f32; 3] = [1.5, 3.0, 10.0];
 const FLOWER_DELAY_SECONDS: i64 = 10;
 
 fn lerp(t: f32, p0: Point, p1: Point) -> Point {
-    Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
+    point2(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
 }
 
 trait InkPathBuilder {
@@ -71,7 +71,7 @@ trait InkPathBuilder {
         const PIXEL_ACCURACY: f32 = 0.25;
 
         if deviation_squared < PIXEL_ACCURACY {
-            self.line_to(Point::new(p3.x, p3.y) + offset);
+            self.line_to(point2(p3.x, p3.y) + offset);
             return;
         }
 
@@ -90,9 +90,9 @@ trait InkPathBuilder {
                 lerp(t, lerp(t, p1, p2), lerp(t, p2, p3)),
             );
 
-            self.line_to(Point::new(p_next.x, p_next.y) + offset);
+            self.line_to(point2(p_next.x, p_next.y) + offset);
         }
-        self.line_to(Point::new(p3.x, p3.y) + offset);
+        self.line_to(point2(p3.x, p3.y) + offset);
     }
 }
 
@@ -145,14 +145,14 @@ impl Circle {
         let dist = 4.0 / 3.0 * (f32::consts::PI / 8.0).tan();
         let control_dist = dist * radius;
 
-        let t = Point::new(0.0, -radius);
-        let r = Point::new(radius, 0.0);
-        let b = Point::new(0.0, radius);
-        let l = Point::new(-radius, 0.0);
-        let ct = Point::new(0.0, -control_dist).to_vector();
-        let cr = Point::new(control_dist, 0.0).to_vector();
-        let cb = Point::new(0.0, control_dist).to_vector();
-        let cl = Point::new(-control_dist, 0.0).to_vector();
+        let t = point2(0.0, -radius);
+        let r = point2(radius, 0.0);
+        let b = point2(0.0, radius);
+        let l = point2(-radius, 0.0);
+        let ct = point2(0.0, -control_dist).to_vector();
+        let cr = point2(control_dist, 0.0).to_vector();
+        let cb = point2(0.0, control_dist).to_vector();
+        let cl = point2(-control_dist, 0.0).to_vector();
 
         let mut points = Vec::new();
         points.push(t + offset);
@@ -185,7 +185,7 @@ impl Flower {
         let r1: f32 = rng.gen_range(FLOWER_MIN_R1, FLOWER_MAX_R1);
         let r2: f32 = rng.gen_range(FLOWER_MIN_R2, FLOWER_MAX_R2);
         // Random location in canvas.
-        let offset = Vector2D::new(
+        let offset = vec2(
             rng.gen_range(FLOWER_SIZE, width - FLOWER_SIZE),
             rng.gen_range(FLOWER_SIZE, height - FLOWER_SIZE),
         );
@@ -196,7 +196,7 @@ impl Flower {
         let dt: f32 = f32::consts::PI / (petal_count as f32);
         let mut t: f32 = 0.0;
 
-        let mut p0 = Point::new(t.cos() * r1, t.sin() * r1);
+        let mut p0 = point2(t.cos() * r1, t.sin() * r1);
         points.push(p0 + offset);
         let mut path_builder = PointPathBuilder::new(&mut points);
         for _ in 0..petal_count {
@@ -207,12 +207,12 @@ impl Flower {
             let x3 = (t + 2.0 * dt).cos() * r1;
             let y3 = (t + 2.0 * dt).sin() * r1;
 
-            let p1 = Point::new(x1 - y1 * u, y1 + x1 * u);
-            let p2 = Point::new(x2 + y2 * v, y2 - x2 * v);
-            let p3 = Point::new(x2, y2);
-            let p4 = Point::new(x2 - y2 * v, y2 + x2 * v);
-            let p5 = Point::new(x3 + y3 * u, y3 - x3 * u);
-            let p6 = Point::new(x3, y3);
+            let p1 = point2(x1 - y1 * u, y1 + x1 * u);
+            let p2 = point2(x2 + y2 * v, y2 - x2 * v);
+            let p3 = point2(x2, y2);
+            let p4 = point2(x2 - y2 * v, y2 + x2 * v);
+            let p5 = point2(x3 + y3 * u, y3 - x3 * u);
+            let p6 = point2(x3, y3);
 
             path_builder.cubic_to(p0, p1, p2, p3, offset);
             path_builder.cubic_to(p3, p4, p5, p6, offset);
@@ -434,7 +434,7 @@ impl InkStroke {
             1 => {
                 let p0 = self.points.pop().unwrap();
                 let e = p0.point - *p;
-                let n = Vector2D::new(-e.y, e.x).normalize();
+                let n = vec2(-e.y, e.x).normalize();
                 self.points.push(StrokePoint {
                     point: p0.point,
                     normal0: n,
@@ -455,7 +455,7 @@ impl InkStroke {
                 let p1 = self.points.pop().unwrap();
                 let p0 = self.points.pop().unwrap();
                 let e = p1.point - *p;
-                let n = Vector2D::new(-e.y, e.x).normalize();
+                let n = vec2(-e.y, e.x).normalize();
                 let mut t1 = (p1.normal1 + n) / 2.0;
                 let l = t1.square_length().max(0.1);
                 t1 *= 1.0 / l;
@@ -508,7 +508,7 @@ impl InkStroke {
             macro_rules! cap {
                 ( $p:expr, $w:expr ) => {
                     let offset = $p.point.to_vector();
-                    let n = Vector2D::new($p.normal0.y, -$p.normal0.x);
+                    let n = vec2($p.normal0.y, -$p.normal0.x);
                     let p0 = Point::zero() + $p.normal1 * $w;
                     let p1 = Point::zero() - n * $w;
                     let p2 = Point::zero() - $p.normal1 * $w;
@@ -615,7 +615,7 @@ impl InkStroke {
     }
 
     fn transform(&mut self, transform: &Transform2D<f32>) {
-        self.transform = self.transform.post_transform(transform);
+        self.transform = self.transform.then(transform);
 
         // Re-create rasters during next call to update.
         for (_, segment) in self.segments.iter_mut() {
@@ -641,7 +641,7 @@ impl Scene {
         let mut x = size.width / 2.0 - (tools.len() as f32 * TOOL_SIZE) / 2.0;
         let y = TOOL_PADDING * 2.0 + TOOL_RADIUS;
         for (color, size) in tools {
-            let center = Point::new(x, y);
+            let center = point2(x, y);
             let circle = Circle::new(center, TOOL_RADIUS);
             let mut stroke =
                 InkStroke::new(Color { r: 0, g: 0, b: 0, a: 255 }, 1.0, Transform2D::identity());
@@ -754,10 +754,8 @@ impl Contents {
     }
 
     fn update(&mut self, context: &mut Context, scene: &Scene, size: &Size) {
-        let clip = Rect::new(
-            Point2D::new(0, 0),
-            Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
-        );
+        let clip =
+            Rect::new(point2(0, 0), size2(size.width.floor() as u32, size.height.floor() as u32));
 
         let ext = if self.size != *size {
             self.size = *size;
@@ -1079,7 +1077,7 @@ impl Ink {
                     self.pan_origin = origin;
                 }
                 let distance = origin - self.pan_origin;
-                transform = transform.post_translate(distance);
+                transform = transform.then_translate(distance);
                 self.pan_origin = origin;
             }
             _ => {}
@@ -1092,7 +1090,7 @@ impl Ink {
             let point1 = iter.next().unwrap().1;
 
             let origin = (point0.to_vector() + point1.to_vector()) / 2.0;
-            transform = transform.post_translate(-origin);
+            transform = transform.then_translate(-origin);
 
             // Rotation.
             let line = *point0 - *point1;
@@ -1101,7 +1099,7 @@ impl Ink {
                 self.rotation_angle = angle;
             }
             let rotation_angle = angle - self.rotation_angle;
-            transform = transform.post_rotate(Angle::radians(rotation_angle));
+            transform = transform.then_rotate(Angle::radians(rotation_angle));
             self.rotation_angle = angle;
 
             // Pinch to zoom.
@@ -1111,11 +1109,11 @@ impl Ink {
                     self.scale_distance = distance;
                 }
                 let sxsy = distance / self.scale_distance;
-                transform = transform.post_scale(sxsy, sxsy);
+                transform = transform.then_scale(sxsy, sxsy);
                 self.scale_distance = distance;
             }
 
-            transform = transform.post_translate(origin);
+            transform = transform.then_translate(origin);
         }
 
         // Clear using 3 finger swipe across screen.
@@ -1153,7 +1151,7 @@ impl Ink {
                 const STYLUS_STATUS_TSWITCH: u8 = 0x01;
                 if (report.status & STYLUS_STATUS_TSWITCH) != 0 {
                     if report.x != self.last_stylus_x || report.y != self.last_stylus_y {
-                        let point = Point::new(
+                        let point = point2(
                             size.width * report.x as f32 / device.x_max as f32,
                             size.height * report.y as f32 / device.y_max as f32,
                         );

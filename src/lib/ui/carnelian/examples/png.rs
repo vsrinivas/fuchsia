@@ -17,7 +17,10 @@ use {
         App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
-    euclid::default::{Point2D, Rect, Vector2D},
+    euclid::{
+        default::{Point2D, Rect, Vector2D},
+        point2, size2,
+    },
     fuchsia_trace_provider,
     fuchsia_zircon::{AsHandleRef, Event, Signals},
     std::{collections::BTreeMap, fs::File},
@@ -56,7 +59,7 @@ fn parse_point(value: &str) -> Result<Point2D<f32>, String> {
         coords.push(value.parse::<f32>().map_err(|err| err.to_string())?);
     }
     if coords.len() == 2 {
-        Ok(Point2D::new(coords[0], coords[1]))
+        Ok(point2(coords[0], coords[1]))
     } else {
         Err("bad position".to_string())
     }
@@ -166,7 +169,7 @@ impl ViewAssistant for PngViewAssistant {
             let image = render_context
                 .new_image_from_png(&mut reader)
                 .expect(&format!("failed to decode file /pkg/data/static/{}", filename));
-            let size = Size::new(info.width as f32, info.height as f32);
+            let size = size2(info.width as f32, info.height as f32);
             let mut raster_builder = render_context.raster_builder().expect("raster_builder");
             raster_builder
                 .add(&path_for_rectangle(&Rect::new(Point2D::zero(), size), render_context), None);
@@ -177,7 +180,7 @@ impl ViewAssistant for PngViewAssistant {
         let position = self.position.take().unwrap_or_else(|| {
             let x = (rendering.size.width - png_size.width) / 2.0;
             let y = (rendering.size.height - png_size.height) / 2.0;
-            Point2D::new(x, y)
+            point2(x, y)
         });
 
         // Clear area where image was previously located.

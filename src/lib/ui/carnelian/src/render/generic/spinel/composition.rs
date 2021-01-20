@@ -118,8 +118,8 @@ impl SpinelComposition {
                     const SPINEL_TRANSFORM_MULTIPLIER: f32 = 32.0;
 
                     let transform = transform
-                        .post_translate(*txty)
-                        .post_transform(&display_rotation.transform(&size.to_f32()));
+                        .then_translate(*txty)
+                        .then(&display_rotation.transform(&size.to_f32()));
                     let transform = SpnTransform {
                         sx: transform.m11 * SPINEL_TRANSFORM_MULTIPLIER,
                         shx: transform.m21 * SPINEL_TRANSFORM_MULTIPLIER,

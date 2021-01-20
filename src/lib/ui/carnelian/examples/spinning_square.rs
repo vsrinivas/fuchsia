@@ -10,10 +10,10 @@ use carnelian::{
     input::{self},
     make_app_assistant,
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
-    App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    App, AppAssistant, Coord, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    ViewKey,
 };
-use euclid::{point2, size2, Angle, Transform2D, Vector2D};
+use euclid::{point2, size2, vec2, Angle, Transform2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
@@ -124,8 +124,8 @@ impl Facet for SpinningSquareFacet {
         let angle = t * PI * 2.0;
 
         if self.square_path.is_none() {
-            let top_left = Point::new(-SQUARE_PATH_SIZE_2, -SQUARE_PATH_SIZE_2);
-            let square = Rect::new(top_left, Size::new(SQUARE_PATH_SIZE, SQUARE_PATH_SIZE));
+            let top_left = point2(-SQUARE_PATH_SIZE_2, -SQUARE_PATH_SIZE_2);
+            let square = Rect::new(top_left, size2(SQUARE_PATH_SIZE, SQUARE_PATH_SIZE));
             let square_path = if self.rounded {
                 path_for_rounded_rectangle(&square, CORNER_RADIUS, render_context)
             } else {
@@ -134,9 +134,9 @@ impl Facet for SpinningSquareFacet {
             self.square_path.replace(square_path);
         }
 
-        let transformation = Transform2D::create_rotation(Angle::radians(angle))
-            .post_scale(square_size, square_size)
-            .post_translate(Vector2D::new(center_x, center_y));
+        let transformation = Transform2D::rotation(Angle::radians(angle))
+            .then_scale(square_size, square_size)
+            .then_translate(vec2(center_x, center_y));
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&self.clone_square_path(), Some(&transformation));
         let square_raster = raster_builder.build();

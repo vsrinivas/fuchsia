@@ -122,7 +122,7 @@ group("difference") {
 
 if (current_os == "fuchsia") {
   group("euclid") {
-    deps = [ ":euclid-v0_20_7" ]
+    deps = [ ":euclid-v0_22_1" ]
   }
 }
 
@@ -2708,10 +2708,10 @@ rust_library("error-chain-v0_12_0") {
   ]
 }
 
-rust_library("euclid-v0_20_7") {
+rust_library("euclid-v0_22_1") {
   crate_name = "euclid"
   crate_root = "//third_party/rust_crates/vendor/euclid/src/lib.rs"
-  output_name = "euclid-4687831aa0edfe47"
+  output_name = "euclid-f36cc8a923068aca"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -2724,9 +2724,9 @@ rust_library("euclid-v0_20_7") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=4687831aa0edfe47",
-    "-Cextra-filename=-4687831aa0edfe47",
+    "--edition=2018",
+    "-Cmetadata=f36cc8a923068aca",
+    "-Cextra-filename=-f36cc8a923068aca",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]

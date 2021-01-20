@@ -204,11 +204,11 @@ mod touch_event_resampling_tests {
     use std::collections::HashSet;
 
     fn create_test_down_phase(x: i32, y: i32) -> touch::Phase {
-        touch::Phase::Down(IntPoint::new(x, y), IntSize::zero())
+        touch::Phase::Down(euclid::point2(x, y), IntSize::zero())
     }
 
     fn create_test_moved_phase(x: i32, y: i32) -> touch::Phase {
-        touch::Phase::Moved(IntPoint::new(x, y), IntSize::zero())
+        touch::Phase::Moved(euclid::point2(x, y), IntSize::zero())
     }
 
     fn create_test_event(phase: touch::Phase, event_time: u64) -> Event {

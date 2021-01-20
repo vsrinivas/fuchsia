@@ -14,8 +14,8 @@ use crate::{
 };
 use anyhow::{Context, Error};
 use euclid::{
-    default::{Box2D, Size2D, Transform2D, Vector2D},
-    vec2, Angle,
+    default::{Box2D, Size2D, Transform2D},
+    point2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
@@ -40,9 +40,9 @@ impl DisplayRotation {
         let h = target_size.height;
         match self {
             Self::Deg0 => Transform2D::identity(),
-            Self::Deg90 => Transform2D::from_row_major_array([0.0, -1.0, 1.0, 0.0, 0.0, h]),
-            Self::Deg180 => Transform2D::from_row_major_array([-1.0, 0.0, 0.0, -1.0, w, h]),
-            Self::Deg270 => Transform2D::from_row_major_array([0.0, 1.0, -1.0, 0.0, w, 0.0]),
+            Self::Deg90 => Transform2D::from_array([0.0, -1.0, 1.0, 0.0, 0.0, h]),
+            Self::Deg180 => Transform2D::from_array([-1.0, 0.0, 0.0, -1.0, w, h]),
+            Self::Deg270 => Transform2D::from_array([0.0, 1.0, -1.0, 0.0, w, 0.0]),
         }
     }
 
@@ -51,9 +51,9 @@ impl DisplayRotation {
         let h = target_size.height;
         match self {
             Self::Deg0 => Transform2D::identity(),
-            Self::Deg90 => Transform2D::from_row_major_array([0.0, 1.0, -1.0, 0.0, h, 0.0]),
-            Self::Deg180 => Transform2D::from_row_major_array([-1.0, 0.0, 0.0, -1.0, w, h]),
-            Self::Deg270 => Transform2D::from_row_major_array([0.0, -1.0, 1.0, 0.0, 0.0, w]),
+            Self::Deg90 => Transform2D::from_array([0.0, 1.0, -1.0, 0.0, h, 0.0]),
+            Self::Deg180 => Transform2D::from_array([-1.0, 0.0, 0.0, -1.0, w, h]),
+            Self::Deg270 => Transform2D::from_array([0.0, -1.0, 1.0, 0.0, 0.0, w]),
         }
     }
 
@@ -63,7 +63,7 @@ impl DisplayRotation {
             _ => {
                 let display_rotation = *self;
                 let angle: Angle<Coord> = display_rotation.into();
-                Some(Transform2D::create_rotation(angle))
+                Some(Transform2D::rotation(angle))
             }
         }
     }
@@ -108,32 +108,32 @@ pub fn path_for_rounded_rectangle(
     let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
     let control_dist = kappa * corner_radius;
 
-    let top_left_arc_start = bounds.origin + Vector2D::new(0.0, corner_radius);
-    let top_left_arc_end = bounds.origin + Vector2D::new(corner_radius, 0.0);
-    let top_left_curve_center = bounds.origin + Vector2D::new(corner_radius, corner_radius);
-    let top_left_p1 = top_left_curve_center + Vector2D::new(-corner_radius, -control_dist);
-    let top_left_p2 = top_left_curve_center + Vector2D::new(-control_dist, -corner_radius);
+    let top_left_arc_start = bounds.origin + vec2(0.0, corner_radius);
+    let top_left_arc_end = bounds.origin + vec2(corner_radius, 0.0);
+    let top_left_curve_center = bounds.origin + vec2(corner_radius, corner_radius);
+    let top_left_p1 = top_left_curve_center + vec2(-corner_radius, -control_dist);
+    let top_left_p2 = top_left_curve_center + vec2(-control_dist, -corner_radius);
 
     let top_right = bounds.top_right();
-    let top_right_arc_start = top_right + Vector2D::new(-corner_radius, 0.0);
-    let top_right_arc_end = top_right + Vector2D::new(0.0, corner_radius);
-    let top_right_curve_center = top_right + Vector2D::new(-corner_radius, corner_radius);
-    let top_right_p1 = top_right_curve_center + Vector2D::new(control_dist, -corner_radius);
-    let top_right_p2 = top_right_curve_center + Vector2D::new(corner_radius, -control_dist);
+    let top_right_arc_start = top_right + vec2(-corner_radius, 0.0);
+    let top_right_arc_end = top_right + vec2(0.0, corner_radius);
+    let top_right_curve_center = top_right + vec2(-corner_radius, corner_radius);
+    let top_right_p1 = top_right_curve_center + vec2(control_dist, -corner_radius);
+    let top_right_p2 = top_right_curve_center + vec2(corner_radius, -control_dist);
 
     let bottom_right = bounds.bottom_right();
-    let bottom_right_arc_start = bottom_right + Vector2D::new(0.0, -corner_radius);
-    let bottom_right_arc_end = bottom_right + Vector2D::new(-corner_radius, 0.0);
-    let bottom_right_curve_center = bottom_right + Vector2D::new(-corner_radius, -corner_radius);
-    let bottom_right_p1 = bottom_right_curve_center + Vector2D::new(corner_radius, control_dist);
-    let bottom_right_p2 = bottom_right_curve_center + Vector2D::new(control_dist, corner_radius);
+    let bottom_right_arc_start = bottom_right + vec2(0.0, -corner_radius);
+    let bottom_right_arc_end = bottom_right + vec2(-corner_radius, 0.0);
+    let bottom_right_curve_center = bottom_right + vec2(-corner_radius, -corner_radius);
+    let bottom_right_p1 = bottom_right_curve_center + vec2(corner_radius, control_dist);
+    let bottom_right_p2 = bottom_right_curve_center + vec2(control_dist, corner_radius);
 
     let bottom_left = bounds.bottom_left();
-    let bottom_left_arc_start = bottom_left + Vector2D::new(corner_radius, 0.0);
-    let bottom_left_arc_end = bottom_left + Vector2D::new(0.0, -corner_radius);
-    let bottom_left_curve_center = bottom_left + Vector2D::new(corner_radius, -corner_radius);
-    let bottom_left_p1 = bottom_left_curve_center + Vector2D::new(-control_dist, corner_radius);
-    let bottom_left_p2 = bottom_left_curve_center + Vector2D::new(-corner_radius, control_dist);
+    let bottom_left_arc_start = bottom_left + vec2(corner_radius, 0.0);
+    let bottom_left_arc_end = bottom_left + vec2(0.0, -corner_radius);
+    let bottom_left_curve_center = bottom_left + vec2(corner_radius, -corner_radius);
+    let bottom_left_p1 = bottom_left_curve_center + vec2(-control_dist, corner_radius);
+    let bottom_left_p2 = bottom_left_curve_center + vec2(-corner_radius, control_dist);
 
     let mut path_builder = render_context.path_builder().expect("path_builder");
     path_builder
@@ -155,18 +155,18 @@ pub fn path_for_circle(center: Point, radius: Coord, render_context: &mut Render
     let control_dist = kappa * radius;
 
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let left = center + Vector2D::new(-radius, 0.0);
-    let top = center + Vector2D::new(0.0, -radius);
-    let right = center + Vector2D::new(radius, 0.0);
-    let bottom = center + Vector2D::new(0.0, radius);
-    let left_p1 = center + Vector2D::new(-radius, -control_dist);
-    let left_p2 = center + Vector2D::new(-control_dist, -radius);
-    let top_p1 = center + Vector2D::new(control_dist, -radius);
-    let top_p2 = center + Vector2D::new(radius, -control_dist);
-    let right_p1 = center + Vector2D::new(radius, control_dist);
-    let right_p2 = center + Vector2D::new(control_dist, radius);
-    let bottom_p1 = center + Vector2D::new(-control_dist, radius);
-    let bottom_p2 = center + Vector2D::new(-radius, control_dist);
+    let left = center + vec2(-radius, 0.0);
+    let top = center + vec2(0.0, -radius);
+    let right = center + vec2(radius, 0.0);
+    let bottom = center + vec2(0.0, radius);
+    let left_p1 = center + vec2(-radius, -control_dist);
+    let left_p2 = center + vec2(-control_dist, -radius);
+    let top_p1 = center + vec2(control_dist, -radius);
+    let top_p2 = center + vec2(radius, -control_dist);
+    let right_p1 = center + vec2(radius, control_dist);
+    let right_p2 = center + vec2(control_dist, radius);
+    let bottom_p1 = center + vec2(-control_dist, radius);
+    let bottom_p2 = center + vec2(-radius, control_dist);
     path_builder
         .move_to(left)
         .cubic_to(left_p1, left_p2, top)
@@ -185,7 +185,7 @@ fn point_for_segment_index(
     let angle = index as f32 * segment_angle;
     let x = radius * angle.cos();
     let y = radius * angle.sin();
-    center + Vector2D::new(x, y)
+    center + vec2(x, y)
 }
 
 /// Create a render path for the specified polygon.
@@ -271,17 +271,17 @@ pub fn path_for_cursor(hot_spot: Point, radius: Coord, render_context: &mut Rend
     let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
     let control_dist = kappa * radius;
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let center = hot_spot + Vector2D::new(radius, radius);
-    let left = center + Vector2D::new(-radius, 0.0);
-    let top = center + Vector2D::new(0.0, -radius);
-    let right = center + Vector2D::new(radius, 0.0);
-    let bottom = center + Vector2D::new(0.0, radius);
-    let top_p1 = center + Vector2D::new(control_dist, -radius);
-    let top_p2 = center + Vector2D::new(radius, -control_dist);
-    let right_p1 = center + Vector2D::new(radius, control_dist);
-    let right_p2 = center + Vector2D::new(control_dist, radius);
-    let bottom_p1 = center + Vector2D::new(-control_dist, radius);
-    let bottom_p2 = center + Vector2D::new(-radius, control_dist);
+    let center = hot_spot + vec2(radius, radius);
+    let left = center + vec2(-radius, 0.0);
+    let top = center + vec2(0.0, -radius);
+    let right = center + vec2(radius, 0.0);
+    let bottom = center + vec2(0.0, radius);
+    let top_p1 = center + vec2(control_dist, -radius);
+    let top_p2 = center + vec2(radius, -control_dist);
+    let right_p1 = center + vec2(radius, control_dist);
+    let right_p2 = center + vec2(control_dist, radius);
+    let bottom_p1 = center + vec2(-control_dist, radius);
+    let bottom_p2 = center + vec2(-radius, control_dist);
     path_builder
         .move_to(hot_spot)
         .line_to(top)
@@ -367,7 +367,7 @@ impl Glyph {
 
         macro_rules! flip_y {
             ( $p:expr ) => {
-                Point::new($p.x, -$p.y)
+                point2($p.x, -$p.y)
             };
         }
 
@@ -399,8 +399,8 @@ impl Glyph {
             }
 
             bounding_box = bounding_box.union(&Box2D::new(
-                Point::new(glyph_box.min.x, glyph_box.min.y),
-                Point::new(glyph_box.max.x, glyph_box.max.y),
+                point2(glyph_box.min.x, glyph_box.min.y),
+                point2(glyph_box.max.x, glyph_box.max.y),
             ));
         }
 
@@ -446,7 +446,7 @@ impl Text {
 
         for line in lines.iter() {
             // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = Vector2D::new(0.0, ascent).to_i32();
+            let y_offset = vec2(0.0, ascent).to_i32();
             let chars = line.chars();
             let mut x: f32 = 0.0;
             let mut last = None;
@@ -553,13 +553,12 @@ mod tests {
     use super::{GlyphMap, Text};
     use crate::{
         drawing::{DisplayRotation, FontFace},
-        geometry::{Point, UintSize},
         render::{
             generic::{self, Backend},
             Context as RenderContext, ContextInner,
         },
     };
-    use euclid::{approxeq::ApproxEq, Vector2D};
+    use euclid::{approxeq::ApproxEq, size2, vec2};
     use fuchsia_async::{self as fasync, Time, TimeoutExt};
     use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameUsage};
     use lazy_static::lazy_static;
@@ -579,7 +578,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_text_bounding_box() {
-        let size = UintSize::new(800, 800);
+        let size = size2(800, 800);
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
             size.height,
@@ -607,17 +606,17 @@ mod tests {
         let text =
             Text::new(&mut render_context, "Good Morning", 20.0, 200, &FONT_FACE, &mut glyphs);
 
-        let expected_origin = Point::new(0.0, 3.4487228);
-        let expected_size = Vector2D::new(100.486115, 14.787117);
+        let expected_origin = euclid::point2(0.0, 3.4487228);
+        let expected_size = vec2(100.486115, 14.787117);
         assert!(
             text.bounding_box.origin.approx_eq(&expected_origin),
-            "Expected bounding box origin to be close to {} but found {}",
+            "Expected bounding box origin to be close to {:?} but found {:?}",
             expected_origin,
             text.bounding_box.origin
         );
         assert!(
             text.bounding_box.size.to_vector().approx_eq(&expected_size),
-            "Expected bounding box origin to be close to {} but found {}",
+            "Expected bounding box origin to be close to {:?} but found {:?}",
             expected_size,
             text.bounding_box.size
         );
