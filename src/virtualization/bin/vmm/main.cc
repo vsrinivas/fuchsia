@@ -360,7 +360,10 @@ int main(int argc, char** argv) {
   // access as we configure the bridge. If networking is lost while loading
   // packages for devices, the VMM will fail.
   std::vector<std::unique_ptr<VirtioNet>> net_devices;
-  for (auto net_device : cfg.net_devices()) {
+  // NOTE(abdulla): We use mutable_net_devices() here so that we force default
+  // initialization of the field if it has not been previously set, thus
+  // avoiding an assertion failure.
+  for (auto& net_device : *cfg.mutable_net_devices()) {
     auto net = std::make_unique<VirtioNet>(guest.phys_mem());
     status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
