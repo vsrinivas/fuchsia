@@ -13,6 +13,8 @@ namespace debug_ipc {
 
 namespace {
 
+bool global_initialized = false;
+
 template <typename T>
 void curl_easy_setopt_CHECK(CURL* handle, CURLoption option, T t) {
   auto result = curl_easy_setopt(handle, option, t);
@@ -41,8 +43,8 @@ class Curl::Impl final : public debug_ipc::FDWatcher, public fxl::RefCountedThre
   static int TimerCallback(CURLM* multi, long timeout_ms, void* userp);
 
   // Impl() will check and set the pointer, and ~Impl() will check and reset it to make sure there's
-  // at most 1 instance at a time.
-  static Impl* instance_;
+  // at most 1 instance per thread at a time.
+  static thread_local Impl* instance_;
 
   Impl();
   ~Impl();
@@ -58,7 +60,7 @@ class Curl::Impl final : public debug_ipc::FDWatcher, public fxl::RefCountedThre
   FRIEND_MAKE_REF_COUNTED(Impl);
 };
 
-Curl::Impl* Curl::Impl::instance_ = nullptr;
+thread_local Curl::Impl* Curl::Impl::instance_ = nullptr;
 
 fxl::RefPtr<Curl::Impl> Curl::Impl::GetInstance() {
   if (instance_) {
@@ -173,8 +175,7 @@ Curl::Impl::Impl() {
   FX_DCHECK(instance_ == nullptr);
   instance_ = this;
 
-  auto res = curl_global_init(CURL_GLOBAL_SSL);
-  FX_DCHECK(!res);
+  FX_DCHECK(global_initialized);
 
   multi_handle_ = curl_multi_init();
   FX_DCHECK(multi_handle_);
@@ -190,10 +191,22 @@ Curl::Impl::~Impl() {
 
   auto result = curl_multi_cleanup(multi_handle_);
   FX_DCHECK(result == CURLM_OK);
-  curl_global_cleanup();
 
   FX_DCHECK(instance_ == this);
   instance_ = nullptr;
+}
+
+void Curl::GlobalInit() {
+  FX_DCHECK(!global_initialized);
+  auto res = curl_global_init(CURL_GLOBAL_SSL);
+  FX_DCHECK(!res);
+  global_initialized = true;
+}
+
+void Curl::GlobalCleanup() {
+  FX_DCHECK(global_initialized);
+  curl_global_cleanup();
+  global_initialized = false;
 }
 
 Curl::Curl() {

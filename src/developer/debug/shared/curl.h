@@ -19,7 +19,27 @@
 
 namespace debug_ipc {
 
-// Curl must be constructed through fxl::MakeShared<Curl>().
+// To use Curl, one must add something like the following to the beginning of their main() function
+// (and include necessary header files).
+//     Curl::GlobalInit();
+//     auto deferred_cleanup = fit::defer([]{ Curl::GlobalCleanup(); });
+// This is due to the thread-unsafety of curl_global_init() and curl_global_cleanup(), see
+// https://curl.se/libcurl/c/curl_global_init.html and
+// https://curl.se/libcurl/c/curl_global_cleanup.html.
+//
+// Curl must be constructed through fxl::MakeRefCounted<Curl>().
+//
+// Example usage:
+//     int main() {
+//       Curl::GlobalInit();
+//       auto deferred_cleanup = fit::defer([]{ Curl::GlobalCleanup(); });
+//
+//       // do something else and maybe spawn some threads
+//
+//       auto curl = fxl::MakeRefCounted<Curl>();
+//       // curl->......
+//
+//     }
 class Curl : public fxl::RefCountedThreadSafe<Curl> {
  public:
   class Error {
@@ -44,6 +64,11 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
 
   // Escapes URL strings (converts all letters consider illegal in URLs to their %XX versions)
   static std::string Escape(const std::string& input);
+
+  // Must be called before any threads are spawned and creation of Curl object.
+  static void GlobalInit();
+  // Need to be called after all threads are joined for resource cleanup.
+  static void GlobalCleanup();
 
   // Callback when we receive data from libcurl. The return value should be the number of bytes
   // successfully processed (i.e. if we are passing this data to the write() syscall and it returns

@@ -5,12 +5,14 @@
 #include "src/developer/debug/zxdb/console/console_main.h"
 
 #include <lib/cmdline/args_parser.h>
+#include <lib/fit/defer.h>
 
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 
 #include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/analytics_scope.h"
@@ -197,7 +199,9 @@ bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
 }  // namespace
 
 int ConsoleMain(int argc, const char* argv[]) {
-  AnalyticsScope<Analytics> _scope;
+  debug_ipc::Curl::GlobalInit();
+  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  AnalyticsScope<Analytics> _analytics_scope;
   CommandLineOptions options;
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);

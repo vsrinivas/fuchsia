@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <fstream>
 #include <iostream>
 
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/client/cloud_storage_symbol_server.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/common/version.h"
@@ -68,6 +71,8 @@ int AuthMode() {
 }  // namespace
 
 int Main(int argc, const char* argv[]) {
+  debug_ipc::Curl::GlobalInit();
+  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
   CommandLineOptions options;
 
   if (const Error error = ParseCommandLine(argc, argv, &options); !error.empty()) {

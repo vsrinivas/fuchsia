@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/fit/defer.h>
 #include <signal.h>
 #include <stdlib.h>
 
@@ -13,6 +14,7 @@
 #include <thread>
 #include <vector>
 
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/common/inet_util.h"
 #include "src/developer/debug/zxdb/common/version.h"
@@ -113,6 +115,8 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
 }
 
 int ConsoleMain(int argc, const char* argv[]) {
+  debug_ipc::Curl::GlobalInit();
+  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
