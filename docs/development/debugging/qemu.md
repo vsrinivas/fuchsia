@@ -145,19 +145,33 @@ shell1$ fx qemu -- -s
 [... some QEMU start up text ...]
 ```
 
+You will then need to locate `zircon.elf` in the `out` directory.
+
 And then in the shell you're running GDB in:
-[Commands here are fully spelled out, but remember most can be abbreviated.]
 
 ```
-shell2$ gdb build-x86/zircon.elf
+shell2$ gdb path-to-zircon.elf -x ${FUCHSIA_DIR}/zircon/kernel/scripts/zircon.elf-gdb.py
+Reading symbols from /fuchsia/out/default/kernel_x64-clang/zircon.elf...
+Loading zircon.elf-gdb.py ...
+Zircon extensions installed for /fuchsia/out/default/kernel_x64-clang/zircon.elf
 (gdb) target extended-remote :1234
 Remote debugging using :1234
 0x000000000000fff0 in ?? ()
+
+Thread 1 hit Breakpoint -1, 0x0000000000100050 in ?? ()
+Watchpoint set on KASLR relocated base variable
+
+Thread 1 hit Hardware read watchpoint -2: *0x767ca0
+
+Value = 0
+0x00000000001000ef in ?? ()
+Update symbols and breakpoints for KASLR
+KASLR: Correctly reloaded kernel at 0xffffffff00000000
 (gdb) # Don't try to do too much at this point.
 (gdb) # GDB can't handle architecture switching in one session,
 (gdb) # and at this point the architecture is 16-bit x86.
 (gdb) break lk_main
-Breakpoint 1 at 0xffffffff8010cb58: file kernel/top/main.c, line 59.
+Breakpoint 1 at 0xfffffffff010cb58: file kernel/top/main.c, line 59.
 (gdb) continue
 Continuing.
 
@@ -194,8 +208,17 @@ QEMU reports one thread to GDB for each CPU.
 
 ### The zircon.elf-gdb.py script
 
-The scripts/zircon.elf-gdb.py script is automagically loaded by gdb.
+The `zircon/kernel/scripts/zircon.elf-gdb.py` script should be automatically loaded by gdb. If it's
+not loaded automatically, you might need to add its path to gdb's auto-load-safe-path.
+Alternatively, you can add manually set it in gdb's command line flag:
+
+```
+$ gdb path-to-zircon.elf -x ${FUCHSIA_DIR}/zircon/kernel/scripts/zircon.elf-gdb.py
+```
+
 It provides several things:
+
+- KASLR relocation for gdb, allowing you to correctly set breakpoints in functions.
 
 - Pretty-printers for zircon objects (alas none at the moment).
 
@@ -210,6 +233,18 @@ It provides several things:
 - Enhanced unwinder support for automagic unwinding through kernel faults.
 
 Heads up: This script isn't always updated as zircon changes.
+
+**NOTE**: due to [bug 67893](https://fxbug.dev/67893), the KASLR part might not work if using qemu with kvm.
+  As a workaround, you can execute the following in gdb:
+
+```
+(gdb) # before attaching to qemu
+(gdb) mem 0 0xffffffffffffffff ro
+(gdb) target extended-remote :1234
+(gdb) ...
+(gdb) # after the script performed the kaslr relocations
+(gdb) mem auto
+```
 
 ### Terminating the session
 
