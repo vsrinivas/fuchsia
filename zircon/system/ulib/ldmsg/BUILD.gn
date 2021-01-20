@@ -11,13 +11,7 @@ zx_library("ldmsg") {
   sources = [ "ldmsg.c" ]
   deps = [ "$zx/system/ulib/zircon" ]
 
-  if (zx == "/" && toolchain.base_environment == "user") {
-    # This library is used by libc, so suppress the circularity.
-    # This is only needed in the Zircon build.
-    configs -= [ "$zx_build_config:user" ]
-  }
-
-  # However, it uses <string.h> for memcpy.
+  # It uses <string.h> for memcpy.
   deps += [ "$zx/system/ulib/c:headers" ]
 
   # This code is called by the dynamic linker in early startup before

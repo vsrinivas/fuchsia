@@ -17,9 +17,9 @@ zx_host_tool("lz4") {
   sdk_migrated = true
   deps = [ "$zx/third_party/ulib/lz4" ]
 
-  # The Zircon build, and zircon toolchains in the Fuchsia build
-  # Add warn-implicit-fallthrough as a default config.
-  if (zx == "/" || zircon_toolchain != false) {
+  # The zircon toolchains in the Fuchsia build add
+  # warn-implicit-fallthrough as a default config.
+  if (zircon_toolchain != false) {
     configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
   }
 

@@ -4,9 +4,7 @@
 
 import("//build/zircon/migrated_targets.gni")
 import("$zx_build_config/levels.gni")
-if (zx != "/") {
-  optimize = zircon_optimize
-}
+optimize = zircon_optimize
 
 zx_library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's

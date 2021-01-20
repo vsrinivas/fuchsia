@@ -2,16 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/args.gni")
 import("//build/zircon/migrated_targets.gni")
-if (zx == "/") {
-  import("$zx/public/gn/fidl/params.gni")
-} else {
-  import("//build/fidl/args.gni")
-  zx_fidl_trace_level = fidl_trace_level
-}
 
 config("fidl-tracing-config") {
-  defines = [ "FIDL_TRACE_LEVEL=$zx_fidl_trace_level" ]
+  defines = [ "FIDL_TRACE_LEVEL=$fidl_trace_level" ]
 }
 
 # Base library used by both Fuchsia and host

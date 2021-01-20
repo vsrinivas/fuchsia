@@ -10,7 +10,7 @@ source_set("dirent") {
     "versionsort.c",
   ]
 
-  if (zx == "/" || zircon_toolchain != false) {
+  if (zircon_toolchain != false) {
     configs -= [ "$zx_build_config:visibility_hidden" ]
   }
 }

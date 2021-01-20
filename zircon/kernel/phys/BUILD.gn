@@ -84,7 +84,8 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-if (current_toolchain != default_toolchain) {
+if (toolchain.environment == "kernel.phys" ||
+    toolchain.environment == "kernel.phys32") {
   # All the code gets built here in the phys environment.
 
   config("defines") {

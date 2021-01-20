@@ -16,11 +16,8 @@ config("kazoo_config") {
 zx_library("kazoo_lib") {
   host = true
 
-  if (zx != "/") {
-    # NOTE: The unification zx_library() template requires an sdk field.
-    sdk = "source"
-    sdk_migrated = true
-  }
+  sdk = "source"
+  sdk_migrated = true
 
   configs += [ ":kazoo_config" ]
 

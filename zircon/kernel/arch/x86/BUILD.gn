@@ -5,9 +5,6 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/zircon/migrated_targets.gni")
-if (zx == "/") {
-  import("$zx/kernel/params.gni")
-}
 
 # These set the ABI contract between C++ and assembly code.
 # This is kept consistent between the kernel proper and phys
@@ -97,41 +94,22 @@ config("kernel") {
 
   # TODO(digit): Once the dependencies below have been migrated to the Fuchsia
   # build, only use configs to add the include paths.
-  if (zx == "/") {
-    configs = [
-      # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
-      "$zx/system/ulib/bitmap:headers.config",
+  include_dirs += [
+    # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
+    "$zx/system/ulib/bitmap/include",
 
-      # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
-      "page_tables:headers.config",
+    # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
+    "page_tables/include",
 
-      # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
-      "$zx/system/ulib/hwreg:headers.config",
+    # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
+    "$zx/system/ulib/hwreg/include",
 
-      # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-      "$zx/kernel/lib/ktl:headers.config",
+    # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+    "$zx/kernel/lib/ktl/include",
 
-      # <arch/x86.h> has #include <lib/arch/intrin.h>.
-      "$zx/kernel/lib/arch/x86:headers.config",
-    ]
-  } else {
-    include_dirs += [
-      # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
-      "$zx/system/ulib/bitmap/include",
-
-      # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
-      "page_tables/include",
-
-      # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
-      "$zx/system/ulib/hwreg/include",
-
-      # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-      "$zx/kernel/lib/ktl/include",
-
-      # <arch/x86.h> has #include <lib/arch/intrin.h>.
-      "$zx/kernel/lib/arch/x86/include",
-    ]
-  }
+    # <arch/x86.h> has #include <lib/arch/intrin.h>.
+    "$zx/kernel/lib/arch/x86/include",
+  ]
 }
 
 # TODO(fxbug.dev/58463): Remove conditional when all dependencies below have been

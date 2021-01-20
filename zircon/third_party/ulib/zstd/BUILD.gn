@@ -83,7 +83,7 @@ zstd_decompress_sources = [
 # add warn-implicit-fallthrough as a default config, which needs to
 # be removed from several targets below. This variable helps.
 warn_implicit_fallthrough_configs = []
-if (zx == "/" || zircon_toolchain != false) {
+if (zircon_toolchain != false) {
   warn_implicit_fallthrough_configs =
       [ "$zx_build_config:warn-implicit-fallthrough" ]
 }
@@ -108,13 +108,16 @@ zx_library("zstd") {
   # This code doesn't use the annotation attribute.
   configs -= warn_implicit_fallthrough_configs
 
-  if (zx == "/") {
-    # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
-    # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
-    # optimizations for just this library to speed up builds.
-    # See fxbug.dev/55297
+  # host tools (specifically blobfs) used during build use zstd to compress blobs. zstd is
+  # slow when compiled with optimize=none or optimize=debug (-O0 currently); enable default
+  # optimizations for just this library to speed up builds.
+  # See fxbug.dev/55297
+  if (zircon_toolchain != false) {
     configs -= [ "$zx_build_config:default_optimize" ]
     configs += [ "$zx_build_config:optimize_speed" ]
+  } else {
+    configs -= [ "//build/config:default_optimize" ]
+    configs += [ "//build/config:optimize_speed" ]
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
@@ -202,13 +205,11 @@ zx_library("zstdseek") {
 }
 
 if (!is_kernel) {
-  if (zx != "/") {
-    import("//build/host.gni")
+  import("//build/host.gni")
 
-    install_host_tools("host-tools") {
-      deps = [ ":zstdcli" ]
-      outputs = [ "zstd" ]
-    }
+  install_host_tools("host-tools") {
+    deps = [ ":zstdcli" ]
+    outputs = [ "zstd" ]
   }
 
   zx_host_tool("zstdcli") {

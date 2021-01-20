@@ -11,14 +11,12 @@ config("fidlc_config") {
   }
 }
 
-if (zx != "/") {
-  group("headers") {
-    public_configs = [ ":headers.config" ]
-  }
+group("headers") {
+  public_configs = [ ":headers.config" ]
+}
 
-  config("headers.config") {
-    include_dirs = [ "include" ]
-  }
+config("headers.config") {
+  include_dirs = [ "include" ]
 }
 
 zx_library("fidl") {
@@ -66,15 +64,8 @@ zx_library("fidl") {
     "$zx/system/ulib/cmdline",
     "$zx/system/ulib/fit",
   ]
-  if (zx == "/") {
-    deps += [ "$zx/third_party/ulib/boringssl" ]
-  } else {
-    deps += [ "//third_party/boringssl" ]
-  }
+  deps += [ "//third_party/boringssl" ]
 
-  if (zx == "/") {
-    assert_no_deps = [ "//zircon/system/public" ]
-  }
   configs += [ ":fidlc_config" ]
 }
 

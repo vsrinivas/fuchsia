@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 executable("display-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]

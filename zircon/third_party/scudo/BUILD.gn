@@ -2,13 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if (zx == "/") {
-  _this_variant_tags = toolchain.tags
-} else {
-  _this_variant_tags = toolchain_variant.tags
-}
-variant_replaces_allocator = _this_variant_tags + [ "replaces-allocator" ] -
-                             [ "replaces-allocator" ] != _this_variant_tags
+variant_replaces_allocator = toolchain_variant.tags + [ "replaces-allocator" ] -
+                             [ "replaces-allocator" ] != toolchain_variant.tags
 
 assert(is_fuchsia)
 
@@ -90,7 +85,7 @@ group("common") {
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/sync",
   ]
-  if (zx == "/" || zircon_toolchain != false) {
+  if (zircon_toolchain != false) {
     public_deps += [ "$zx/system/ulib/zircon" ]
   } else {
     public_deps += [ "//src/zircon/lib/zircon" ]

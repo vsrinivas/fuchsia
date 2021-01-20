@@ -14,10 +14,7 @@ if (current_cpu == "x64") {
   qemu_environment = "$zx/kernel/arch/x86/phys:kernel.phys32"
 } else {
   # Environment for building raw QEMU kernels (64-bit physical memory).
-  qemu_environment = "$zx/kernel/phys:kernel.phys"
-  if (zx != "/") {
-    qemu_environment += "_$current_cpu"
-  }
+  qemu_environment = "$zx/kernel/phys:kernel.phys_$current_cpu"
 }
 
 if (toolchain.environment == "kernel.phys") {

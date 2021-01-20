@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if (!defined(zx) || zx != "/") {
-  import("//build/config/clang/clang.gni")
-}
+import("//build/config/clang/clang.gni")
 
 # Like action() but using utility binaries from the C/C++ toolchain.
 # This is the way to use `nm`, `objcopy`, etc.
@@ -69,83 +67,40 @@ template("toolchain_utils_action") {
   extra_params = {
   }
 
-  if (zx != "/") {
-    # `variant_target` is completely ignored in the Fuchsia build.
-    # The main reason for this is that it is used primarily to run
-    # the action() in a toolchain built from the same variant as the
-    # one that applies to the kernel (or more exactly, anything with
-    # an `output_name` or `label` of "zircon").
-    #
-    # However, in practice, this is always the same variant that is
-    # applied to the current toolchain instance. Since the Zircon build
-    # has become a secondary child of the Fuchsia build, it lost the
-    # ability to apply per-output or per-label variants anyway, proving
-    # that this feature was seldom used.
-    not_needed(invoker, [ "variant_target" ])
-  } else if (defined(invoker.variant_target)) {
-    target_type = "_variant_target"
-    extra_params = {
-      target = {
-        forward_variables_from(invoker.variant_target, "*", [ "type" ])
-        type = "action"
-      }
-    }
-  }
+  # `variant_target` is completely ignored in the Fuchsia build.
+  # The main reason for this is that it is used primarily to run
+  # the action() in a toolchain built from the same variant as the
+  # one that applies to the kernel (or more exactly, anything with
+  # an `output_name` or `label` of "zircon").
+  #
+  # However, in practice, this is always the same variant that is
+  # applied to the current toolchain instance. Since the Zircon build
+  # has become a secondary child of the Fuchsia build, it lost the
+  # ability to apply per-output or per-label variants anyway, proving
+  # that this feature was seldom used.
+  not_needed(invoker, [ "variant_target" ])
 
   forward_variables_from(invoker, [ "script" ])
 
   utils_inputs = []
   utils_paths = []
-  if (zx == "/") {
-    # ZN Build
-    if (toolchain.tool_dir != "") {
-      # The toolchain binaries are in a specified location (e.g. a prebuilt).
-      foreach(util, invoker.utils) {
-        if (util == "cc") {
-          util = toolchain.cc
-        } else {
-          util = "${toolchain.tool_prefix}${util}"
-        }
-        util = "${toolchain.tool_dir}/${util}"
-        utils_inputs += [ util ]
-        utils_paths += [ rebase_path(util, root_build_dir) ]
-      }
-    } else {
-      # The toolchain binaries are just found in the system PATH.
-      # They won't be used as dependencies.
-      if (!defined(script)) {
-        # If there's no script, utils_paths[0] will become the script.
-        # But the script has to be a known location that's a dependency.
-        # So use a dummy wrapper as the script.
-        script = "/usr/bin/env"
-      }
-      foreach(util, invoker.utils) {
-        if (util == "cc") {
-          util = toolchain.cc
-        } else {
-          util = "${toolchain.tool_prefix}${util}"
-        }
-        utils_paths += [ util ]
-      }
-    }
-  } else {
-    # The GN build only supports prebuilt Clang at the moment.
-    foreach(util, invoker.utils) {
-      if (util == "cc") {
-        util = "clang"
-      } else {
-        util = "llvm-${util}"
-      }
 
-      # NOTE: clang_prefix is already rebased to root_build_dir, so compute its
-      # path relative to the root source directory. Note that rebase_path() always
-      # return a path relative to the new base, so prepend "//" to fix it, otherwise
-      # the result will be interpreted as relative to this BUILD.gn file.
-      rebased_util_path = "${clang_prefix}/${util}"
-      util_path = "//" + rebase_path(rebased_util_path, "//", root_build_dir)
-      utils_inputs += [ util_path ]
-      utils_paths += [ rebased_util_path ]
+  # The GN build only supports prebuilt Clang at the moment.
+  foreach(util, invoker.utils) {
+    if (util == "cc") {
+      util = "clang"
+    } else {
+      util = "llvm-${util}"
     }
+
+    # NOTE: clang_prefix is already rebased to root_build_dir, so compute its
+    # path relative to the root source directory. Note that rebase_path() always
+    # return a path relative to the new base, so prepend "//" to fix it, otherwise
+    # the result will be interpreted as relative to this BUILD.gn file.
+    rebased_util_path = "${clang_prefix}/${util}"
+    util_path = "//" + rebase_path(rebased_util_path, "//", root_build_dir)
+    utils_inputs += [ util_path ]
+    utils_paths += [ rebased_util_path ]
   }
 
   target(target_type, target_name) {

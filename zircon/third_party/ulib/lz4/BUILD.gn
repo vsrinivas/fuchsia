@@ -38,9 +38,9 @@ zx_library("lz4") {
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
 
-  # NOTE: The Zircon build, and zircon toolchains in the Fuchsia build add
+  # NOTE: The zircon toolchains in the Fuchsia build add
   # warn-implicit-fallthrough as a default config.
-  if (zx == "/" || zircon_toolchain != false) {
+  if (zircon_toolchain != false) {
     configs -= [ "$zx_build_config:warn-implicit-fallthrough" ]
   }
 }

@@ -6,12 +6,6 @@
 
 import("$zx_build_config/levels.gni")
 
-if (zx == "/") {
-  _zx_assert_level = assert_level
-} else {
-  _zx_assert_level = zx_assert_level
-}
-
 declare_args() {
   # Maximum number of CPUs the kernel will run on (others will be ignored).
   smp_max_cpus = 32
@@ -67,7 +61,7 @@ declare_args() {
   #
   # TODO(fxbug.dev/41790): This value is derived from assert_level.  Decouple
   # the two and set kernel_debug_level independently.
-  kernel_debug_level = _zx_assert_level
+  kernel_debug_level = zx_assert_level
 
   # Controls the verbosity of kernel dprintf messages. The higher the value,
   # the more dprintf messages emitted. Valid values are 0-2 (inclusive):

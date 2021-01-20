@@ -5,8 +5,8 @@
 import("//build/dist/resource.gni")
 import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
+import("//build/testing/zbi_test_success.gni")
 import("//build/zbi/zbi_input.gni")
-import("//zircon/public/gn/test/zbi_test_success.gni")
 
 executable("bootsvc-integration-test") {
   if (is_fuchsia) {

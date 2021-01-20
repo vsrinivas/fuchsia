@@ -45,15 +45,10 @@ zx_library("instrumentation") {
 # so a symbol by that name must be defined at link time regardless; this file
 # also defines it.
 source_set("profile") {
-  if (zx == "/") {
-    _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
-    _has_profile = toolchain.configs + _profile_config - _profile_config !=
-                   toolchain.configs
-  } else {
-    _profile_config = [ "//build/config/profile" ]
-    _has_profile = toolchain_variant.configs + _profile_config -
-                   _profile_config != toolchain_variant.configs
-  }
+  _profile_config = [ "//build/config/profile" ]
+  _has_profile = toolchain_variant.configs + _profile_config -
+                 _profile_config != toolchain_variant.configs
+
   if (_has_profile) {
     sources = [ "profile.cc" ]
 

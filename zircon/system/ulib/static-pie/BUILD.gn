@@ -38,30 +38,27 @@ zx_library("static-pie") {
   }
 }
 
-# Fuchsia build only.
-if (zx != "/") {
-  import("//build/test.gni")
-  import("//src/sys/build/components.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
-  test("static_pie_test") {
-    sources = [ "relocation_test.cc" ]
-    deps = [
-      ":relocation_h",
-      ":static-pie",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
-    ]
-  }
+test("static_pie_test") {
+  sources = [ "relocation_test.cc" ]
+  deps = [
+    ":relocation_h",
+    ":static-pie",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
 
-  fuchsia_unittest_package("static-pie-test") {
-    deps = [ ":static_pie_test" ]
-  }
+fuchsia_unittest_package("static-pie-test") {
+  deps = [ ":static_pie_test" ]
+}
 
-  group("tests") {
-    testonly = true
-    deps = [
-      ":static-pie-test",
-      ":static_pie_test($host_toolchain)",
-    ]
-  }
+group("tests") {
+  testonly = true
+  deps = [
+    ":static-pie-test",
+    ":static_pie_test($host_toolchain)",
+  ]
 }

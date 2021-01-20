@@ -6,9 +6,6 @@
 
 import("//build/zircon/migrated_targets.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
-if (zx == "/") {
-  import("$zx/public/gn/toolchain/environment_redirect.gni")
-}
 
 zx_library("userabi") {
   kernel = true
@@ -165,18 +162,9 @@ template("rodso") {
   }
 }
 
-if (zx == "/") {
-  # Redirect to the userland vDSO shared library target.
-  environment_redirect("userland-vdso") {
-    visibility = [ ":*" ]
-    environment_label = "$zx/public/gn/toolchain:user"
-    deps = [ "$zx/system/ulib/zircon" ]
-  }
-} else {
-  group("userland-vdso") {
-    visibility = [ ":*" ]
-    public_deps = [ "$zx/system/ulib/zircon($default_toolchain)" ]
-  }
+group("userland-vdso") {
+  visibility = [ ":*" ]
+  public_deps = [ "$zx/system/ulib/zircon($default_toolchain)" ]
 }
 
 rodso("vdso") {
