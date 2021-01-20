@@ -116,19 +116,6 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   EXPECT_THAT(paths_, testing::ElementsAre("/pkg/data/foo", "/dev/class/block/001"));
 }
 
-TEST_F(GuestConfigParserTest, NetSpecArg) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--net=00:11:22:33:44:55", "--net=66:77:88:99:aa:bb"}));
-  ASSERT_EQ(2ul, config_.net_devices().size());
-
-  const fuchsia::virtualization::NetSpec& spec0 = config_.net_devices()[0];
-  EXPECT_THAT(spec0.mac_address.octets, testing::ElementsAre(0x00, 0x11, 0x22, 0x33, 0x44, 0x55));
-
-  const fuchsia::virtualization::NetSpec& spec1 = config_.net_devices()[1];
-  EXPECT_THAT(spec1.mac_address.octets, testing::ElementsAre(0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb));
-
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--net=000:111:22:33:44:55"}));
-}
-
 TEST_F(GuestConfigParserTest, InterruptSpecArg) {
   ASSERT_EQ(ZX_OK, ParseArgs({"--interrupt=32", "--interrupt=33"}));
   ASSERT_EQ(2ul, config_.interrupts().size());

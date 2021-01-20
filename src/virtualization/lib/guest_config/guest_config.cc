@@ -164,21 +164,6 @@ zx_status_t parse(const std::string& name, const std::string& value,
   return ZX_OK;
 }
 
-zx_status_t parse(const std::string& name, const std::string& value,
-                  fuchsia::virtualization::NetSpec* out) {
-  uint32_t bytes[6];
-  int r = std::sscanf(value.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
-                      &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
-  if (r != 6) {
-    FX_LOGS(ERROR) << "Couldn't parse MAC address";
-    return ZX_ERR_INVALID_ARGS;
-  }
-  for (size_t i = 0; i != 6; ++i) {
-    out->mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
-  }
-  return ZX_OK;
-}
-
 class OptionHandler {
  public:
   OptionHandler() : has_field_{[](const GuestConfig&) { return false; }} {}
@@ -380,8 +365,6 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   handlers.emplace("memory",
                    std::make_unique<RepeatedOptionHandler<fuchsia::virtualization::MemorySpec>>(
                        &GuestConfig::mutable_memory));
-  handlers.emplace("net", std::make_unique<RepeatedOptionHandler<fuchsia::virtualization::NetSpec>>(
-                              &GuestConfig::mutable_net_devices));
   handlers.emplace("default-net",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_default_net,
                                                        &GuestConfig::mutable_default_net, true));
@@ -441,7 +424,6 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t                        (default " << kDefaultMemory << " bytes)\n";
-  std::cerr << "\t--net=[spec]            Adds a net device with the given parameters\n";
   std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
