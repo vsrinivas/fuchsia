@@ -56,7 +56,7 @@ fx mkzedboot <device_path>
 ```
 
 On Linux, `device_path` is typically `/dev/sd<X>` where X is a letter. On macOS
-it is typically `/dev/disk<N>` where 'N' is a number. If you don't specify a 
+it is typically `/dev/disk<N>` where 'N' is a number. If you don't specify a
 device path, `mkzedboot` lists the drives it detects. **Be careful
 not to select the wrong device**. Once this is done, remove the USB drive.
 

@@ -4,7 +4,7 @@ The Fuchsia emulator (FEMU) allows you to test Fuchsia components and applicatio
 FEMU is included in Fuchsia source, and it’s downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
 It’s fetched into the Fuchsia directory `/prebuilt/third_party/aemu`.
 
-You can call FEMU with `fx` using `fx emu` (Linux) or `fx vdl` (macOS). Alternatively, 
+You can call FEMU with `fx` using `fx emu` (Linux) or `fx vdl` (macOS). Alternatively,
 you can call FEMU from the Fuchsia IDK using `femu.sh`.
 
 ## FEMU and other emulators {#femu-and-other-emulators}
