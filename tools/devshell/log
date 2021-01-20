@@ -34,7 +34,6 @@
 ##
 ## For more information on flags supported by the on-device log_listener, see
 ## https://fuchsia.dev/fuchsia-src/reference/diagnostics/consumers/log_listener.
-##
 
 set -o pipefail
 
@@ -62,7 +61,7 @@ while [[ $# -ne 0 ]]; do
   -h|--help)
     fx-command-help
     echo
-    echo "*** Help for on-device log_listener:"
+    echo "[Attempting to shell into a connected device to provide help for the on-device log_listener]"
     fx-command-exec shell log_listener -h
     exit 0
     ;;
