@@ -38,9 +38,11 @@ Pick any test target from
 Move that test to the Core configuration. Attempt to run the test locally or on
 CQ, and troubleshoot as needed.
 
-Most tests that are moved from Bringup to Core are expected to fail at first,
-but the root cause is typically trivial configuration and doesn't require
-changing the substance of the test.
+Most tests that are currently on Bringup will either fail at first when moved to
+Core, or will appear to pass but actually skip the otherwise-failing test cases.
+The root cause is often a trivial configuration issue that manifests itself as a
+missing path in the test's namespace. Fixing these doesn't require changing the
+test code, only changing a `.cmx` file.
 
 As you run into common failure modes and solutions, please consider documenting
 them here for reference.
