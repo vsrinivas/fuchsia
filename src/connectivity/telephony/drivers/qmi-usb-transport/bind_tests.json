@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_PID": "fuchsia.sierra.usb.BIND_USB_PID.EM7565",
+            "fuchsia.BIND_USB_VID": "fuchsia.sierra.usb.BIND_USB_VID.SIERRA"
+        },
+        "expected": "match",
+        "name": "Vendor"
+    }
+]

@@ -19,6 +19,8 @@
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
 
+#include "src/connectivity/telephony/drivers/qmi-usb-transport/qmi_usb_bind.h"
+
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
 #endif
@@ -444,7 +446,8 @@ void Device::QmiInterruptHandler(usb_request_t* request) {
   }
 
   usb_cdc_notification_t usb_req = {};
-  __UNUSED auto copy_length = usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
+  __UNUSED auto copy_length =
+      usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
 
   // TODO (jiamingw): confirm this check is unnecessary
   uint16_t packet_size = max_packet_size_;
@@ -984,9 +987,4 @@ static zx_driver_ops_t qmi_driver_ops = {
     .bind = qmi_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(qmi_usb, qmi_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_VID, SIERRA_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, EM7565_PID),
-ZIRCON_DRIVER_END(qmi_usb)
+ZIRCON_DRIVER(qmi_usb, qmi_driver_ops, "zircon", "0.1");

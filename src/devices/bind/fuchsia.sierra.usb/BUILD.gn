@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("drivers") {
-  testonly = true
-  deps = [
-    "qmi-fake-transport",
-    "qmi-usb-transport",
-    "qmi-usb-transport:tests",
-  ]
+import("//build/bind/bind.gni")
+
+bind_library("fuchsia.sierra.usb") {
+  source = "fuchsia.sierra.usb.bind"
 }

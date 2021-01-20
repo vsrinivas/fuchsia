@@ -20,7 +20,6 @@
 
 #include <array>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -29,8 +28,6 @@
 #include <usb/usb.h>
 
 // Binding info
-#define SIERRA_VID 0x1199
-#define EM7565_PID 0x9091
 #define EM7565_PHY_ID 0x11
 #define QMI_INTERFACE_NUM 8
 
