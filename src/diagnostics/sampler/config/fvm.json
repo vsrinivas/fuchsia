@@ -1,0 +1,18 @@
+{
+  "project_id": 3676913920,
+  "poll_rate_sec": 3600,
+  "metrics": [
+    {
+      "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
+      "metric_id": 3000,
+      "metric_type": "Integer",
+      "event_codes": [0]
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
+      "metric_id": 3000,
+      "metric_type": "Integer",
+      "event_codes": [1]
+    }
+  ]
+}
