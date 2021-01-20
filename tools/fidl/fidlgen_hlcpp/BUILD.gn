@@ -55,38 +55,51 @@ go_binary("fidlgen") {
 }
 
 golden_test("fidlgen_hlcpp_golden_tests") {
-  goldens_dir = "goldens"
+  goldens_dir = "goldens/bindings"
   deps = []
   entries = []
   foreach(info, fidl_testdata_info) {
     if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
         info.denylist) {
-      deps += [
-        "${info.target}_cpp_natural_types_generate($fidl_toolchain)",
-        "${info.target}_hlcpp_generate($fidl_toolchain)",
-      ]
+      deps += [ "${info.target}_hlcpp_generate($fidl_toolchain)" ]
       gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
       include_path = string_replace(info.library, ".", "/") + "/cpp"
       entries += [
         {
-          golden = "natural_types/${info.name}.h.golden"
-          generated = "$gen_dir/$include_path/natural_types.h"
-        },
-        {
-          golden = "natural_types/${info.name}.cc.golden"
-          generated = "$gen_dir/$include_path/natural_types.cc"
-        },
-        {
-          golden = "bindings/${info.name}.h.golden"
+          golden = "${info.name}.h.golden"
           generated = "$gen_dir/$include_path/fidl.h"
         },
         {
-          golden = "bindings/${info.name}.cc.golden"
+          golden = "${info.name}.cc.golden"
           generated = "$gen_dir/$include_path/fidl.cc"
         },
         {
-          golden = "bindings/${info.name}_test_base.h.golden"
+          golden = "${info.name}_test_base.h.golden"
           generated = "$gen_dir/$include_path/fidl_test_base.h"
+        },
+      ]
+    }
+  }
+}
+
+golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
+  goldens_dir = "goldens/natural_types"
+  deps = []
+  entries = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
+        info.denylist) {
+      deps += [ "${info.target}_cpp_natural_types_generate($fidl_toolchain)" ]
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      include_path = string_replace(info.library, ".", "/") + "/cpp"
+      entries += [
+        {
+          golden = "${info.name}.h.golden"
+          generated = "$gen_dir/$include_path/natural_types.h"
+        },
+        {
+          golden = "${info.name}.cc.golden"
+          generated = "$gen_dir/$include_path/natural_types.cc"
         },
       ]
     }
@@ -117,6 +130,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fidlgen_hlcpp_golden_tests($host_toolchain)",
+    ":fidlgen_hlcpp_natural_types_golden_tests($host_toolchain)",
     ":goldens",
     ":goldens($host_toolchain)",
   ]

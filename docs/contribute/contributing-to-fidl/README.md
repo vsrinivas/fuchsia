@@ -504,16 +504,17 @@ Note: While `fx test dart-bindings-test` prints test names as they run, it does 
 
 #### Fidlgen tests
 
-| Name                     | Test Command                              | Coverage
-|--------------------------|-------------------------------------------|---------------------------
-| fidlgen type definitions | `fx test fidlgen_lib_test`                | //tools/fidl/lib/fidlgen
-| fidlgen C++ specific IR  | `fx test fidlgen_cpp_ir_test`             | //tools/fidl/lib/fidlgen_cpp
-| fidlgen hlcpp            | `fx test fidlgen_hlcpp_golden_tests`      | //tools/fidl/fidlgen_hlcpp
-| fidlgen llcpp            | `fx test fidlgen_llcpp_golden_tests`      | //tools/fidl/fidlgen_llcpp
-| fidlgen golang           | `fx test fidlgen_go_{lib,golden}_tests`   | //tools/fidl/fidlgen_golang
-| fidlgen rust             | `fx test fidlgen_rust_{lib,golden}_tests` | //tools/fidl/fidlgen_rust
-| fidlgen syzkaller        | `fx test fidlgen_syzkaller_golden_tests`  | //tools/fidl/fidlgen_syzkaller
-| fidlgen dart             | `fx test fidlgen_dart_golden_tests`       | //tools/fidl/fidlgen_dart
+| Name                       | Test Command                                       | Coverage
+|----------------------------|----------------------------------------------------|---------
+| fidlgen type definitions   | `fx test fidlgen_lib_test`                         | //tools/fidl/lib/fidlgen
+| fidlgen C++ specific IR    | `fx test fidlgen_cpp_ir_test`                      | //tools/fidl/lib/fidlgen_cpp
+| fidlgen hlcpp              | `fx test fidlgen_hlcpp_golden_tests`               | //tools/fidl/fidlgen_hlcpp
+| fidlgen cpp  natural types | `fx test fidlgen_hlcpp_natural_types_golden_tests` | //tools/fidl/fidlgen_hlcpp
+| fidlgen llcpp              | `fx test fidlgen_llcpp_golden_tests`               | //tools/fidl/fidlgen_llcpp
+| fidlgen golang             | `fx test fidlgen_go_{lib,golden}_tests`            | //tools/fidl/fidlgen_golang
+| fidlgen rust               | `fx test fidlgen_rust_{lib,golden}_tests`          | //tools/fidl/fidlgen_rust
+| fidlgen syzkaller          | `fx test fidlgen_syzkaller_golden_tests`           | //tools/fidl/fidlgen_syzkaller
+| fidlgen dart               | `fx test fidlgen_dart_golden_tests`                | //tools/fidl/fidlgen_dart
 
 #### Other
 

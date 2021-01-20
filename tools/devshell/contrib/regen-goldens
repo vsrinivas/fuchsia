@@ -33,6 +33,7 @@ readonly all_tools=(
     "fidlgen_dart"
     "fidlgen_go"
     "fidlgen_hlcpp"
+    "fidlgen_hlcpp_natural_types"
     "fidlgen_libfuzzer"
     "fidlgen_llcpp"
     "fidlgen_rust"
