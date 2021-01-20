@@ -359,7 +359,7 @@ impl Daemon {
                                     .boxed()
                                 })
                                 .collect(),
-                            _ => match self.target_collection.get_connected(value.into()).await {
+                            _ => match self.target_collection.get_connected(value).await {
                                 Some(t) => {
                                     vec![async move { Some(t.to_fidl_target().await) }.boxed()]
                                 }
@@ -574,7 +574,7 @@ mod test {
                 .await
                 .unwrap();
             self.tc
-                .get(nodename.into())
+                .get(nodename)
                 .await
                 .unwrap()
                 .events

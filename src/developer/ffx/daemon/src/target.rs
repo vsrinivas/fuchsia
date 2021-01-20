@@ -153,9 +153,7 @@ impl Display for RcsConnectionError {
             RcsConnectionError::FidlConnectionError(ferr) => {
                 write!(f, "fidl connection error: {}", ferr)
             }
-            RcsConnectionError::ConnectionTimeoutError(_) => {
-                write!(f, "timeout error")
-            }
+            RcsConnectionError::ConnectionTimeoutError(_) => write!(f, "timeout error"),
             RcsConnectionError::RemoteControlError(ierr) => write!(f, "internal error: {:?}", ierr),
             RcsConnectionError::TargetError(error) => write!(f, "general error: {}", error),
         }
@@ -931,8 +929,52 @@ impl Display for TargetAddr {
     }
 }
 
+#[async_trait]
+pub trait MatchTarget {
+    async fn match_target<TQ>(self, t: TQ) -> Option<Target>
+    where
+        TQ: Into<TargetQuery> + Send;
+}
+
+// It's unclear why this definition has to exist, but the compiler complains
+// if invoking this either directly on `iter()` or if invoking on
+// `iter().into_iter()` about there being unmet trait constraints. With this
+// definition there are no compilation complaints.
+#[async_trait]
+impl<'a> MatchTarget for std::slice::Iter<'_, &'a Target> {
+    async fn match_target<TQ>(self, t: TQ) -> Option<Target>
+    where
+        TQ: Into<TargetQuery> + Send,
+    {
+        let t: TargetQuery = t.into();
+        for target in self {
+            if t.matches(&target).await {
+                return Some((*target).clone());
+            }
+        }
+        None
+    }
+}
+
+#[async_trait]
+impl<'a, T: Iterator<Item = &'a Target> + Send> MatchTarget for &'a mut T {
+    async fn match_target<TQ>(self, t: TQ) -> Option<Target>
+    where
+        TQ: Into<TargetQuery> + Send,
+    {
+        let t: TargetQuery = t.into();
+        for target in self {
+            if t.matches(&target).await {
+                return Some(target.clone());
+            }
+        }
+        None
+    }
+}
+
 pub enum TargetQuery {
-    Nodename(String),
+    /// Attempts to match the nodename, falling back to serial (in that order).
+    NodenameOrSerial(String),
     Addr(TargetAddr),
     OvernetId(u64),
 }
@@ -940,8 +982,30 @@ pub enum TargetQuery {
 impl TargetQuery {
     pub async fn matches(&self, t: &Target) -> bool {
         match self {
-            Self::Nodename(nodename) => {
-                t.inner.nodename.lock().await.as_ref().map(|x| *nodename == *x).unwrap_or(false)
+            // Simultaneously attempts to match either the nodename or the
+            // serial number.
+            Self::NodenameOrSerial(arg) => {
+                let (a, b) = futures::join!(
+                    async {
+                        t.inner
+                            .nodename
+                            .lock()
+                            .await
+                            .as_ref()
+                            .map(|nodename| (*nodename).contains(arg))
+                            .unwrap_or(false)
+                    },
+                    async {
+                        t.inner
+                            .serial
+                            .read()
+                            .await
+                            .as_ref()
+                            .map(|serial| (*serial).contains(arg))
+                            .unwrap_or(false)
+                    }
+                );
+                a || b
             }
             Self::Addr(addr) => {
                 let addrs = t.addrs().await;
@@ -978,10 +1042,12 @@ impl From<&str> for TargetQuery {
 }
 
 impl From<String> for TargetQuery {
+    /// If the string can be parsed as some kind of IP address, will attempt to
+    /// match based on that, else fall back to the nodename or serial matches.
     fn from(s: String) -> Self {
         match s.parse::<IpAddr>() {
             Ok(a) => Self::Addr((a, 0).into()),
-            Err(_) => Self::Nodename(s),
+            Err(_) => Self::NodenameOrSerial(s),
         }
     }
 }
@@ -1203,7 +1269,7 @@ impl TargetCollection {
         .await;
         let targets = targets
             .iter()
-            .filter_map(|(n, t, connected)| if *connected { Some((n, t)) } else { None })
+            .filter_map(|(_, t, connected)| if *connected { Some(t) } else { None })
             .collect::<Vec<_>>();
         match (targets.len(), n) {
             (0, None) => Err(DaemonError::TargetCacheEmpty),
@@ -1212,7 +1278,7 @@ impl TargetCollection {
                     .iter()
                     .next()
                     .ok_or(DaemonError::TargetCacheEmpty)
-                    .map(|(_, t)| (*t).clone())?;
+                    .map(|t| (*t).clone())?;
                 log::debug!(
                     "No default target selected, returning only target - {:?}",
                     res.nodename().await,
@@ -1224,22 +1290,16 @@ impl TargetCollection {
                 Err(DaemonError::TargetAmbiguous)
             }
             (_, Some(nodename)) => {
-                // TODO(fxb/66152) Use target query instead.
-                targets
-                    .iter()
-                    .find_map(|(target_nodename, target)| {
-                        if target_nodename.contains(&nodename) {
-                            Some((*target).clone())
-                        } else {
-                            None
-                        }
-                    })
-                    .ok_or(DaemonError::TargetNotFound)
+                targets.iter().match_target(nodename).await.ok_or(DaemonError::TargetNotFound)
             }
         }
     }
 
-    pub async fn get_connected(&self, t: TargetQuery) -> Option<Target> {
+    pub async fn get_connected<TQ>(&self, t: TQ) -> Option<Target>
+    where
+        TQ: Into<TargetQuery>,
+    {
+        let t: TargetQuery = t.into();
         let inner = self.inner.read().await;
         for target in inner.named.values().chain(inner.unnamed.iter()) {
             if target.inner.state.lock().await.connection_state.is_connected() {
@@ -1252,15 +1312,13 @@ impl TargetCollection {
         None
     }
 
-    pub async fn get(&self, t: TargetQuery) -> Option<Target> {
+    pub async fn get<TQ>(&self, t: TQ) -> Option<Target>
+    where
+        TQ: Into<TargetQuery>,
+    {
+        let t: TargetQuery = t.into();
         let inner = self.inner.read().await;
-        for target in inner.named.values().chain(inner.unnamed.iter()) {
-            if t.matches(target).await {
-                return Some(target.clone());
-            }
-        }
-
-        None
+        inner.named.values().chain(inner.unnamed.iter()).match_target(t).await
     }
 }
 
@@ -1321,9 +1379,9 @@ mod test {
         let nodename = String::from("what");
         let t = Target::new_with_time(ascendd, &nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
-        let other_target = &tc.get(nodename.clone().into()).await.unwrap();
+        let other_target = &tc.get(nodename.clone()).await.unwrap();
         assert_eq!(other_target, &t);
-        match tc.get_connected(nodename.clone().into()).await {
+        match tc.get_connected(nodename.clone()).await {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
         }
@@ -1339,7 +1397,7 @@ mod test {
             ConnectionState::Mdns(now)
         })
         .await;
-        assert_eq!(&tc.get_connected(nodename.clone().into()).await.unwrap(), &t);
+        assert_eq!(&tc.get_connected(nodename.clone()).await.unwrap(), &t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1349,8 +1407,8 @@ mod test {
         let nodename = String::from("what");
         let t = Target::new_with_time(ascendd, &nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(&tc.get(nodename.clone().into()).await.unwrap(), &t);
-        match tc.get("oihaoih".into()).await {
+        assert_eq!(&tc.get(nodename.clone()).await.unwrap(), &t);
+        match tc.get("oihaoih").await {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
         }
@@ -1371,7 +1429,7 @@ mod test {
         t2.addrs_insert((a2.clone(), 1).into()).await;
         tc.merge_insert(clone_target(&t2).await).await;
         tc.merge_insert(clone_target(&t1).await).await;
-        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        let merged_target = tc.get(nodename.clone()).await.unwrap();
         assert_ne!(&merged_target, &t1);
         assert_ne!(&merged_target, &t2);
         assert_eq!(merged_target.addrs().await.len(), 2);
@@ -1384,14 +1442,14 @@ mod test {
         let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
         t3.addrs_insert((a2.clone(), 0).into()).await;
         tc.merge_insert(clone_target(&t3).await).await;
-        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        let merged_target = tc.get(nodename.clone()).await.unwrap();
         assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 1).count(), 2);
 
         // Insert another instance of the a2 address, but with a new scope_id, and ensure that the new scope is used.
         let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
         t3.addrs_insert((a2.clone(), 3).into()).await;
         tc.merge_insert(clone_target(&t3).await).await;
-        let merged_target = tc.get(nodename.clone().into()).await.unwrap();
+        let merged_target = tc.get(nodename.clone()).await.unwrap();
         assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 3).count(), 1);
     }
 
@@ -1517,7 +1575,7 @@ mod test {
         let t = Target::from_rcs_connection(conn).await.unwrap();
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get(ID.into()).await.unwrap(), t);
+        assert_eq!(tc.get(ID).await.unwrap(), t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1528,18 +1586,18 @@ mod test {
         t.addrs_insert(addr.clone()).await;
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get(addr.into()).await.unwrap(), t);
-        assert_eq!(tc.get("192.168.0.1".into()).await.unwrap(), t);
-        assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
+        assert_eq!(tc.get(addr).await.unwrap(), t);
+        assert_eq!(tc.get("192.168.0.1").await.unwrap(), t);
+        assert!(tc.get("fe80::dead:beef:beef:beef").await.is_none());
 
         let addr: TargetAddr =
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
         let t = Target::new(ascendd.clone(), "fooberdoober");
         t.addrs_insert(addr.clone()).await;
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
-        assert_eq!(tc.get(addr.clone().into()).await.unwrap(), t);
-        assert_eq!(tc.get("fooberdoober".into()).await.unwrap(), t);
+        assert_eq!(tc.get("fe80::dead:beef:beef:beef").await.unwrap(), t);
+        assert_eq!(tc.get(addr.clone()).await.unwrap(), t);
+        assert_eq!(tc.get("fooberdoober").await.unwrap(), t);
     }
 
     // Most of this is now handled in `task.rs`
@@ -2148,5 +2206,21 @@ mod test {
         let target = targets.next().expect("Merging resulted in no targets.");
         assert!(targets.next().is_none());
         assert_eq!(target.nodename().await, None);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_match_serial() {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let t = Target::new_with_serial(
+            ascendd.clone(),
+            "turritopsis-dohrnii-is-an-immortal-jellyfish",
+            "florp",
+        );
+        let tc = TargetCollection::new();
+        tc.merge_insert(clone_target(&t).await).await;
+        assert_eq!(
+            t.nodename().await.unwrap(),
+            tc.get("flor").await.unwrap().nodename().await.unwrap()
+        );
     }
 }
