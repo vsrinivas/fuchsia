@@ -458,7 +458,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
       // think we might get crashes for any offset <= Fixed(-1).
       if (mixer.pos_filter_width().raw_value() == Mixer::FRAC_HALF &&
           ((static_cast<uint32_t>(raw_source_offset) == 0xffffb000) ||
-           frac_source_offset.Ceiling() <= Fixed(-1))) {
+           frac_source_offset <= Fixed(-1) || frac_source_offset > Fixed(50000))) {
         FX_LOGS_FIRST_N(WARNING, 10)
             << "Unexpectedly large source_offset:"
             << " format.channels = " << format().channels()
