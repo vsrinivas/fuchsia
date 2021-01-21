@@ -203,6 +203,12 @@ s! {
         pub ss_flags: ::c_int,
         pub ss_size: ::size_t
     }
+
+    pub struct ip_mreqn {
+        pub imr_multiaddr: ::in_addr,
+        pub imr_address: ::in_addr,
+        pub imr_ifindex: ::c_int,
+    }
 }
 
 pub const VEOF: usize = 4;
@@ -375,6 +381,25 @@ pub const SO_BPF_EXTENSIONS: ::c_int = 48;
 pub const SO_INCOMING_CPU: ::c_int = 49;
 pub const SO_ATTACH_BPF: ::c_int = 50;
 pub const SO_DETACH_BPF: ::c_int = SO_DETACH_FILTER;
+pub const SO_ATTACH_REUSEPORT_CBPF: ::c_int = 51;
+pub const SO_ATTACH_REUSEPORT_EBPF: ::c_int = 52;
+pub const SO_CNX_ADVICE: ::c_int = 53;
+pub const SCM_TIMESTAMPING_OPT_STATS: ::c_int = 54;
+pub const SO_MEMINFO: ::c_int = 55;
+pub const SO_INCOMING_NAPI_ID: ::c_int = 56;
+pub const SO_COOKIE: ::c_int = 57;
+pub const SCM_TIMESTAMPING_PKTINFO: ::c_int = 58;
+pub const SO_PEERGROUPS: ::c_int = 59;
+pub const SO_ZEROCOPY: ::c_int = 60;
+pub const SO_TXTIME: ::c_int = 61;
+pub const SCM_TXTIME: ::c_int = SO_TXTIME;
+pub const SO_BINDTOIFINDEX: ::c_int = 62;
+pub const SO_TIMESTAMP_NEW: ::c_int = 63;
+pub const SO_TIMESTAMPNS_NEW: ::c_int = 64;
+pub const SO_TIMESTAMPING_NEW: ::c_int = 65;
+pub const SO_RCVTIMEO_NEW: ::c_int = 66;
+pub const SO_SNDTIMEO_NEW: ::c_int = 67;
+pub const SO_DETACH_REUSEPORT_BPF: ::c_int = 68;
 
 pub const SOCK_STREAM: ::c_int = 1;
 pub const SOCK_DGRAM: ::c_int = 2;
@@ -987,6 +1012,8 @@ pub const SYS_pkey_mprotect: ::c_long = 288;
 pub const SYS_pkey_alloc: ::c_long = 289;
 pub const SYS_pkey_free: ::c_long = 290;
 pub const SYS_statx: ::c_long = 291;
+pub const SYS_pidfd_open: ::c_long = 434;
+pub const SYS_clone3: ::c_long = 435;
 
 #[link(name = "util")]
 extern "C" {

@@ -447,21 +447,6 @@ pub const NOTE_NSECONDS: u32 = 0x00000008;
 pub const MADV_PROTECT: ::c_int = 10;
 pub const RUSAGE_THREAD: ::c_int = 1;
 
-pub const CLOCK_REALTIME: ::clockid_t = 0;
-pub const CLOCK_VIRTUAL: ::clockid_t = 1;
-pub const CLOCK_PROF: ::clockid_t = 2;
-pub const CLOCK_MONOTONIC: ::clockid_t = 4;
-pub const CLOCK_UPTIME: ::clockid_t = 5;
-pub const CLOCK_UPTIME_PRECISE: ::clockid_t = 7;
-pub const CLOCK_UPTIME_FAST: ::clockid_t = 8;
-pub const CLOCK_REALTIME_PRECISE: ::clockid_t = 9;
-pub const CLOCK_REALTIME_FAST: ::clockid_t = 10;
-pub const CLOCK_MONOTONIC_PRECISE: ::clockid_t = 11;
-pub const CLOCK_MONOTONIC_FAST: ::clockid_t = 12;
-pub const CLOCK_SECOND: ::clockid_t = 13;
-pub const CLOCK_THREAD_CPUTIME_ID: ::clockid_t = 14;
-pub const CLOCK_PROCESS_CPUTIME_ID: ::clockid_t = 15;
-
 #[doc(hidden)]
 #[deprecated(
     since = "0.2.72",
@@ -999,6 +984,7 @@ pub const IP_RECVORIGDSTADDR: ::c_int = IP_ORIGDSTADDR;
 
 pub const IP_RECVTOS: ::c_int = 68;
 
+pub const IPV6_BINDANY: ::c_int = 64;
 pub const IPV6_ORIGDSTADDR: ::c_int = 72;
 pub const IPV6_RECVORIGDSTADDR: ::c_int = IPV6_ORIGDSTADDR;
 
@@ -1210,24 +1196,31 @@ f! {
         ::mem::size_of::<sockcred>() + ::mem::size_of::<::gid_t>() * ngrps
     }
 
-    pub fn WIFSIGNALED(status: ::c_int) -> bool {
-        (status & 0o177) != 0o177 && (status & 0o177) != 0 && status != 0x13
-    }
-
     pub fn uname(buf: *mut ::utsname) -> ::c_int {
         __xuname(256, buf as *mut ::c_void)
+    }
+}
+
+safe_f! {
+    pub {const} fn WIFSIGNALED(status: ::c_int) -> bool {
+        (status & 0o177) != 0o177 && (status & 0o177) != 0 && status != 0x13
     }
 }
 
 extern "C" {
     pub fn __error() -> *mut ::c_int;
 
-    pub fn clock_getres(clk_id: ::clockid_t, tp: *mut ::timespec) -> ::c_int;
-    pub fn clock_gettime(clk_id: ::clockid_t, tp: *mut ::timespec) -> ::c_int;
-    pub fn clock_settime(
-        clk_id: ::clockid_t,
-        tp: *const ::timespec,
+    pub fn aio_cancel(fd: ::c_int, aiocbp: *mut aiocb) -> ::c_int;
+    pub fn aio_error(aiocbp: *const aiocb) -> ::c_int;
+    pub fn aio_fsync(op: ::c_int, aiocbp: *mut aiocb) -> ::c_int;
+    pub fn aio_read(aiocbp: *mut aiocb) -> ::c_int;
+    pub fn aio_return(aiocbp: *mut aiocb) -> ::ssize_t;
+    pub fn aio_suspend(
+        aiocb_list: *const *const aiocb,
+        nitems: ::c_int,
+        timeout: *const ::timespec,
     ) -> ::c_int;
+    pub fn aio_write(aiocbp: *mut aiocb) -> ::c_int;
 
     pub fn extattr_delete_fd(
         fd: ::c_int,
@@ -1319,7 +1312,13 @@ extern "C" {
         flags: ::c_int,
     ) -> ::c_int;
 
-    pub fn fdatasync(fd: ::c_int) -> ::c_int;
+    pub fn lio_listio(
+        mode: ::c_int,
+        aiocb_list: *const *mut aiocb,
+        nitems: ::c_int,
+        sevp: *mut sigevent,
+    ) -> ::c_int;
+
     pub fn posix_fallocate(
         fd: ::c_int,
         offset: ::off_t,
@@ -1519,6 +1518,12 @@ extern "C" {
         needle: *const ::c_void,
         needlelen: ::size_t,
     ) -> *mut ::c_void;
+
+    pub fn nmount(
+        iov: *mut ::iovec,
+        niov: ::c_uint,
+        flags: ::c_int,
+    ) -> ::c_int;
 }
 
 #[link(name = "util")]

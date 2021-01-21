@@ -197,12 +197,18 @@ pub const F_SEAL_SHRINK: ::c_int = 0x0002;
 pub const F_SEAL_GROW: ::c_int = 0x0004;
 pub const F_SEAL_WRITE: ::c_int = 0x0008;
 
+pub const GRND_NONBLOCK: ::c_uint = 0x1;
+pub const GRND_RANDOM: ::c_uint = 0x2;
+
+pub const SO_DOMAIN: ::c_int = 0x1019;
+
 cfg_if! {
     if #[cfg(not(freebsd13))] {
         pub const ELAST: ::c_int = 96;
     } else {
         pub const EINTEGRITY: ::c_int = 97;
         pub const ELAST: ::c_int = 97;
+        pub const GRND_INSECURE: ::c_uint = 0x4;
     }
 }
 
@@ -220,6 +226,20 @@ extern "C" {
         msgsz: ::size_t,
         msgtyp: ::c_long,
         msgflg: ::c_int,
+    ) -> ::ssize_t;
+    pub fn clock_nanosleep(
+        clk_id: ::clockid_t,
+        flags: ::c_int,
+        rqtp: *const ::timespec,
+        rmtp: *mut ::timespec,
+    ) -> ::c_int;
+
+    pub fn fdatasync(fd: ::c_int) -> ::c_int;
+
+    pub fn getrandom(
+        buf: *mut ::c_void,
+        buflen: ::size_t,
+        flags: ::c_uint,
     ) -> ::ssize_t;
 }
 

@@ -36,6 +36,10 @@ pub type Elf64_Sxword = i64;
 pub type Elf32_Section = u16;
 pub type Elf64_Section = u16;
 
+// linux/can.h
+pub type canid_t = u32;
+pub type can_err_mask_t = u32;
+
 #[cfg_attr(feature = "extra_traits", derive(Debug))]
 pub enum fpos64_t {} // FIXME: fill this out with a struct
 impl ::Copy for fpos64_t {}
@@ -504,6 +508,23 @@ s! {
         pub ee_info: u32,
         pub ee_data: u32,
     }
+
+    // linux/can.h
+    pub struct __c_anonymous_sockaddr_can_tp {
+        pub rx_id: canid_t,
+        pub tx_id: canid_t,
+    }
+
+    pub struct __c_anonymous_sockaddr_can_j1939 {
+        pub name: u64,
+        pub pgn: u32,
+        pub addr: u8,
+    }
+
+    pub struct can_filter {
+        pub can_id: canid_t,
+        pub can_mask: canid_t,
+    }
 }
 
 s_no_extra_traits! {
@@ -538,6 +559,13 @@ s_no_extra_traits! {
         pub salg_name: [::c_uchar; 64],
     }
 
+    /// WARNING: The `PartialEq`, `Eq` and `Hash` implementations of this
+    /// type are unsound and will be removed in the future.
+    #[deprecated(
+        note = "this struct has unsafe trait implementations that will be \
+                removed in the future",
+        since = "0.2.80"
+    )]
     pub struct af_alg_iv {
         pub ivlen: u32,
         pub iv: [::c_uchar; 0],
@@ -567,6 +595,26 @@ s_no_extra_traits! {
         pub mq_curmsgs: ::c_long,
         #[cfg(not(all(target_arch = "x86_64", target_pointer_width = "32")))]
         pad: [::c_long; 4],
+    }
+}
+
+cfg_if! {
+    if #[cfg(libc_union)] {
+        s_no_extra_traits! {
+            // linux/can.h
+            #[allow(missing_debug_implementations)]
+            pub union __c_anonymous_sockaddr_can_can_addr {
+                pub tp: __c_anonymous_sockaddr_can_tp,
+                pub j1939: __c_anonymous_sockaddr_can_j1939,
+            }
+
+            #[allow(missing_debug_implementations)]
+            pub struct sockaddr_can {
+                pub can_family: ::sa_family_t,
+                pub can_ifindex: ::c_int,
+                pub can_addr: __c_anonymous_sockaddr_can_can_addr,
+            }
+        }
     }
 }
 
@@ -781,6 +829,7 @@ cfg_if! {
             }
         }
 
+        #[allow(deprecated)]
         impl af_alg_iv {
             fn as_slice(&self) -> &[u8] {
                 unsafe {
@@ -792,22 +841,26 @@ cfg_if! {
             }
         }
 
+        #[allow(deprecated)]
         impl PartialEq for af_alg_iv {
             fn eq(&self, other: &af_alg_iv) -> bool {
                 *self.as_slice() == *other.as_slice()
            }
         }
 
+        #[allow(deprecated)]
         impl Eq for af_alg_iv {}
 
+        #[allow(deprecated)]
         impl ::fmt::Debug for af_alg_iv {
             fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
                 f.debug_struct("af_alg_iv")
-                    .field("iv", &self.as_slice())
+                    .field("ivlen", &self.ivlen)
                     .finish()
             }
         }
 
+        #[allow(deprecated)]
         impl ::hash::Hash for af_alg_iv {
             fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
                 self.as_slice().hash(state);
@@ -1179,6 +1232,23 @@ pub const IFLA_PHYS_SWITCH_ID: ::c_ushort = 36;
 pub const IFLA_LINK_NETNSID: ::c_ushort = 37;
 pub const IFLA_PHYS_PORT_NAME: ::c_ushort = 38;
 pub const IFLA_PROTO_DOWN: ::c_ushort = 39;
+pub const IFLA_GSO_MAX_SEGS: ::c_ushort = 40;
+pub const IFLA_GSO_MAX_SIZE: ::c_ushort = 41;
+pub const IFLA_PAD: ::c_ushort = 42;
+pub const IFLA_XDP: ::c_ushort = 43;
+pub const IFLA_EVENT: ::c_ushort = 44;
+pub const IFLA_NEW_NETNSID: ::c_ushort = 45;
+pub const IFLA_IF_NETNSID: ::c_ushort = 46;
+pub const IFLA_TARGET_NETNSID: ::c_ushort = IFLA_IF_NETNSID;
+pub const IFLA_CARRIER_UP_COUNT: ::c_ushort = 47;
+pub const IFLA_CARRIER_DOWN_COUNT: ::c_ushort = 48;
+pub const IFLA_NEW_IFINDEX: ::c_ushort = 49;
+pub const IFLA_MIN_MTU: ::c_ushort = 50;
+pub const IFLA_MAX_MTU: ::c_ushort = 51;
+pub const IFLA_PROP_LIST: ::c_ushort = 52;
+pub const IFLA_ALT_IFNAME: ::c_ushort = 53;
+pub const IFLA_PERM_ADDRESS: ::c_ushort = 54;
+pub const IFLA_PROTO_DOWN_REASON: ::c_ushort = 55;
 
 pub const IFLA_INFO_UNSPEC: ::c_ushort = 0;
 pub const IFLA_INFO_KIND: ::c_ushort = 1;
@@ -1228,6 +1298,7 @@ pub const RTLD_NOW: ::c_int = 0x2;
 pub const AT_EACCESS: ::c_int = 0x200;
 
 pub const TCP_MD5SIG: ::c_int = 14;
+pub const TCP_ULP: ::c_int = 31;
 
 align_const! {
     pub const PTHREAD_MUTEX_INITIALIZER: pthread_mutex_t = pthread_mutex_t {
@@ -1263,71 +1334,15 @@ pub const SCHED_RESET_ON_FORK: ::c_int = 0x40000000;
 // netinet/in.h
 // NOTE: These are in addition to the constants defined in src/unix/mod.rs
 
-// IPPROTO_IP defined in src/unix/mod.rs
-/// Hop-by-hop option header
-pub const IPPROTO_HOPOPTS: ::c_int = 0;
-// IPPROTO_ICMP defined in src/unix/mod.rs
-/// group mgmt protocol
-pub const IPPROTO_IGMP: ::c_int = 2;
-/// for compatibility
-pub const IPPROTO_IPIP: ::c_int = 4;
-// IPPROTO_TCP defined in src/unix/mod.rs
-/// exterior gateway protocol
-pub const IPPROTO_EGP: ::c_int = 8;
-/// pup
-pub const IPPROTO_PUP: ::c_int = 12;
-// IPPROTO_UDP defined in src/unix/mod.rs
-/// xns idp
-pub const IPPROTO_IDP: ::c_int = 22;
-/// tp-4 w/ class negotiation
-pub const IPPROTO_TP: ::c_int = 29;
-/// DCCP
-pub const IPPROTO_DCCP: ::c_int = 33;
-// IPPROTO_IPV6 defined in src/unix/mod.rs
-/// IP6 routing header
-pub const IPPROTO_ROUTING: ::c_int = 43;
-/// IP6 fragmentation header
-pub const IPPROTO_FRAGMENT: ::c_int = 44;
-/// resource reservation
-pub const IPPROTO_RSVP: ::c_int = 46;
-/// General Routing Encap.
-pub const IPPROTO_GRE: ::c_int = 47;
-/// IP6 Encap Sec. Payload
-pub const IPPROTO_ESP: ::c_int = 50;
-/// IP6 Auth Header
-pub const IPPROTO_AH: ::c_int = 51;
-// IPPROTO_ICMPV6 defined in src/unix/mod.rs
-/// IP6 no next header
-pub const IPPROTO_NONE: ::c_int = 59;
-/// IP6 destination option
-pub const IPPROTO_DSTOPTS: ::c_int = 60;
-pub const IPPROTO_MTP: ::c_int = 92;
-pub const IPPROTO_BEETPH: ::c_int = 94;
-/// encapsulation header
-pub const IPPROTO_ENCAP: ::c_int = 98;
-/// Protocol indep. multicast
-pub const IPPROTO_PIM: ::c_int = 103;
-/// IP Payload Comp. Protocol
-pub const IPPROTO_COMP: ::c_int = 108;
-/// SCTP
-pub const IPPROTO_SCTP: ::c_int = 132;
-pub const IPPROTO_MH: ::c_int = 135;
-pub const IPPROTO_UDPLITE: ::c_int = 136;
-pub const IPPROTO_MPLS: ::c_int = 137;
-/// raw IP packet
-pub const IPPROTO_RAW: ::c_int = 255;
+/// Multipath TCP
+pub const IPPROTO_MPTCP: ::c_int = 262;
+#[deprecated(
+    since = "0.2.80",
+    note = "This value was increased in the newer kernel \
+            and we'll change this following upstream in the future release. \
+            See #1896 for more info."
+)]
 pub const IPPROTO_MAX: ::c_int = 256;
-
-pub const IP_MSFILTER: ::c_int = 41;
-pub const MCAST_JOIN_GROUP: ::c_int = 42;
-pub const MCAST_BLOCK_SOURCE: ::c_int = 43;
-pub const MCAST_UNBLOCK_SOURCE: ::c_int = 44;
-pub const MCAST_LEAVE_GROUP: ::c_int = 45;
-pub const MCAST_JOIN_SOURCE_GROUP: ::c_int = 46;
-pub const MCAST_LEAVE_SOURCE_GROUP: ::c_int = 47;
-pub const MCAST_MSFILTER: ::c_int = 48;
-pub const IP_MULTICAST_ALL: ::c_int = 49;
-pub const IP_UNICAST_IF: ::c_int = 50;
 
 pub const AF_IB: ::c_int = 27;
 pub const AF_MPLS: ::c_int = 28;
@@ -1591,15 +1606,21 @@ pub const FALLOC_FL_UNSHARE_RANGE: ::c_int = 0x40;
 pub const ENOATTR: ::c_int = ::ENODATA;
 
 pub const SO_ORIGINAL_DST: ::c_int = 80;
-pub const IP_ORIGDSTADDR: ::c_int = 20;
-pub const IP_RECVORIGDSTADDR: ::c_int = IP_ORIGDSTADDR;
+
+pub const IP_RECVFRAGSIZE: ::c_int = 25;
+
 pub const IPV6_FLOWINFO: ::c_int = 11;
-pub const IPV6_ORIGDSTADDR: ::c_int = 74;
-pub const IPV6_RECVORIGDSTADDR: ::c_int = IPV6_ORIGDSTADDR;
+pub const IPV6_MULTICAST_ALL: ::c_int = 29;
+pub const IPV6_ROUTER_ALERT_ISOLATE: ::c_int = 30;
 pub const IPV6_FLOWLABEL_MGR: ::c_int = 32;
 pub const IPV6_FLOWINFO_SEND: ::c_int = 33;
+pub const IPV6_RECVFRAGSIZE: ::c_int = 77;
+pub const IPV6_FREEBIND: ::c_int = 78;
 pub const IPV6_FLOWINFO_FLOWLABEL: ::c_int = 0x000fffff;
 pub const IPV6_FLOWINFO_PRIORITY: ::c_int = 0x0ff00000;
+
+pub const IPV6_RTHDR_LOOSE: ::c_int = 0;
+pub const IPV6_RTHDR_STRICT: ::c_int = 1;
 
 pub const IUTF8: ::tcflag_t = 0x00004000;
 pub const CMSPAR: ::tcflag_t = 0o10000000000;
@@ -2604,6 +2625,46 @@ pub const EDOM: ::c_int = 33;
 pub const ERANGE: ::c_int = 34;
 pub const EWOULDBLOCK: ::c_int = EAGAIN;
 
+// linux/can.h
+pub const CAN_EFF_FLAG: canid_t = 0x80000000;
+pub const CAN_RTR_FLAG: canid_t = 0x40000000;
+pub const CAN_ERR_FLAG: canid_t = 0x20000000;
+pub const CAN_SFF_MASK: canid_t = 0x000007FF;
+pub const CAN_EFF_MASK: canid_t = 0x1FFFFFFF;
+pub const CAN_ERR_MASK: canid_t = 0x1FFFFFFF;
+
+pub const CAN_SFF_ID_BITS: ::c_int = 11;
+pub const CAN_EFF_ID_BITS: ::c_int = 29;
+
+pub const CAN_MAX_DLC: ::c_int = 8;
+pub const CAN_MAX_DLEN: usize = 8;
+pub const CANFD_MAX_DLC: ::c_int = 15;
+pub const CANFD_MAX_DLEN: usize = 64;
+
+pub const CANFD_BRS: ::c_int = 0x01;
+pub const CANFD_ESI: ::c_int = 0x02;
+
+cfg_if! {
+    if #[cfg(libc_align)] {
+        pub const CAN_MTU: usize = ::mem::size_of::<can_frame>();
+        pub const CANFD_MTU: usize = ::mem::size_of::<canfd_frame>();
+    }
+}
+
+pub const CAN_RAW: ::c_int = 1;
+pub const CAN_BCM: ::c_int = 2;
+pub const CAN_TP16: ::c_int = 3;
+pub const CAN_TP20: ::c_int = 4;
+pub const CAN_MCNET: ::c_int = 5;
+pub const CAN_ISOTP: ::c_int = 6;
+pub const CAN_J1939: ::c_int = 7;
+pub const CAN_NPROTO: ::c_int = 8;
+
+pub const SOL_CAN_BASE: ::c_int = 100;
+
+pub const CAN_INV_FILTER: canid_t = 0x20000000;
+pub const CAN_RAW_FILTER_MAX: ::c_int = 512;
+
 f! {
     pub fn NLA_ALIGN(len: ::c_int) -> ::c_int {
         return ((len) + NLA_ALIGNTO - 1) & !(NLA_ALIGNTO - 1)
@@ -2759,11 +2820,6 @@ extern "C" {
         aiocb_list: *const *mut aiocb,
         nitems: ::c_int,
         sevp: *mut ::sigevent,
-    ) -> ::c_int;
-
-    pub fn clock_getcpuclockid(
-        pid: ::pid_t,
-        clk_id: *mut ::clockid_t,
     ) -> ::c_int;
 
     pub fn lutimes(file: *const ::c_char, times: *const ::timeval) -> ::c_int;
@@ -3039,6 +3095,12 @@ extern "C" {
     pub fn sigwaitinfo(set: *const sigset_t, info: *mut siginfo_t) -> ::c_int;
     pub fn nl_langinfo_l(item: ::nl_item, locale: ::locale_t)
         -> *mut ::c_char;
+    pub fn accept4(
+        fd: ::c_int,
+        addr: *mut ::sockaddr,
+        len: *mut ::socklen_t,
+        flg: ::c_int,
+    ) -> ::c_int;
     pub fn getnameinfo(
         sa: *const ::sockaddr,
         salen: ::socklen_t,
@@ -3282,6 +3344,12 @@ extern "C" {
         out_fd: ::c_int,
         in_fd: ::c_int,
         offset: *mut off_t,
+        count: ::size_t,
+    ) -> ::ssize_t;
+    pub fn sendfile64(
+        out_fd: ::c_int,
+        in_fd: ::c_int,
+        offset: *mut off64_t,
         count: ::size_t,
     ) -> ::ssize_t;
     pub fn sigsuspend(mask: *const ::sigset_t) -> ::c_int;
