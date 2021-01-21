@@ -474,8 +474,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::Privacy { user_data_sharing_consent } => {
             let privacy_service = connect_to_service::<fidl_fuchsia_settings::PrivacyMarker>()
                 .context("Failed to connect to privacy service")?;
-            let output = privacy::command(privacy_service, user_data_sharing_consent).await?;
-            println!("Privacy: {}", output);
+            utils::handle_mixed_result(
+                "Privacy",
+                privacy::command(privacy_service, user_data_sharing_consent).await,
+            )
+            .await?;
         }
         SettingClient::Audio { streams, input } => {
             let audio_service = connect_to_service::<fidl_fuchsia_settings::AudioMarker>()

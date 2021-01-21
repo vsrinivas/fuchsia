@@ -1241,7 +1241,13 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
         .connect_to_service::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
-    privacy::command(privacy_service, expected_user_data_sharing_consent).await?;
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) =
+        privacy::command(privacy_service, expected_user_data_sharing_consent).await?
+    {
+        stream.try_next().await?;
+    }
 
     Ok(())
 }
@@ -1265,18 +1271,21 @@ async fn validate_privacy_set_output(
         .connect_to_service::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
-    let output =
-        privacy::command(privacy_service, Some(expected_user_data_sharing_consent)).await?;
+    if let utils::Either::Set(output) =
+        privacy::command(privacy_service, Some(expected_user_data_sharing_consent)).await?
+    {
+        assert_eq!(
+            output,
+            format!(
+                "Successfully set user_data_sharing_consent to {}",
+                expected_user_data_sharing_consent
+            )
+        );
 
-    assert_eq!(
-        output,
-        format!(
-            "Successfully set user_data_sharing_consent to {}",
-            expected_user_data_sharing_consent
-        )
-    );
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect watch result for a set command.");
+    }
 }
 
 async fn validate_privacy_watch_output(
@@ -1299,20 +1308,24 @@ async fn validate_privacy_watch_output(
         .context("Failed to connect to privacy service")?;
 
     // Pass in None to call Watch() on the service.
-    let output = privacy::command(privacy_service, None).await?;
+    if let utils::Either::Watch(mut stream) = privacy::command(privacy_service, None).await? {
+        let output = stream.try_next().await?.expect("Watch should have a result");
 
-    assert_eq!(
-        output,
-        format!(
-            "{:?}",
-            PrivacySettings {
-                user_data_sharing_consent: expected_user_data_sharing_consent,
-                ..PrivacySettings::EMPTY
-            }
-        )
-    );
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                PrivacySettings {
+                    user_data_sharing_consent: expected_user_data_sharing_consent,
+                    ..PrivacySettings::EMPTY
+                }
+            )
+        );
 
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command.");
+    }
 }
 
 fn create_setup_setting(interfaces: ConfigurationInterfaces) -> SetupSettings {

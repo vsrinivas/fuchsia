@@ -3,28 +3,27 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{self, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{PrivacyProxy, PrivacySettings},
 };
 
 pub async fn command(
     proxy: PrivacyProxy,
     user_data_sharing_consent: Option<bool>,
-) -> Result<String, Error> {
-    if let Some(user_data_sharing_consent_value) = user_data_sharing_consent {
+) -> WatchOrSetResult {
+    Ok(if let Some(user_data_sharing_consent_value) = user_data_sharing_consent {
         let mut settings = PrivacySettings::EMPTY;
         settings.user_data_sharing_consent = Some(user_data_sharing_consent_value);
 
         let mutate_result = proxy.set(settings).await?;
-        match mutate_result {
-            Ok(_) => Ok(format!(
+        Either::Set(match mutate_result {
+            Ok(_) => format!(
                 "Successfully set user_data_sharing_consent to {}",
                 user_data_sharing_consent_value
-            )),
-            Err(err) => Ok(format!("{:?}", err)),
-        }
+            ),
+            Err(err) => format!("{:?}", err),
+        })
     } else {
-        let setting_value = proxy.watch().await?;
-        Ok(format!("{:?}", setting_value))
-    }
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
+    })
 }
