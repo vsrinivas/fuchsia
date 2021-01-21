@@ -357,6 +357,7 @@ It's possible to work around this limitation with an indirection through
 `fuchsia_test()`. In one `BUILD.gn` file, define:
 
 ```gn
+# Let this be //foo/BUILD.gn
 import("//src/sys/build/components.gni")
 
 executable("my_test") {
@@ -375,7 +376,7 @@ fuchsia_component("my-test-component") {
 }
 
 fuchsia_test("my-test-component-test") {
-  package = "//path/to:fuchsia_package"
+  package = "//bar:fuchsia_package"
   component = ":my-test-component"
 }
 
@@ -389,15 +390,18 @@ Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
 `fuchsia_package()` target.
 
 ```gn
+# Let this be //bar/BUILD.gn
 import("//src/sys/build/components.gni")
 
 fuchsia_package("my-test-package") {
   testonly = true
-  deps = [ "//other/path/to:my-test-component" ]
+  deps = [ "//foo:my-test-component" ]
 }
 ```
 
 This is slightly more verbose but achieves the same outcome.
+
+#### Dart and Flutter tests
 
 Dart and Flutter tests differ slightly in that they need to be built with a
 `flutter_test_component()` which collects all of the test mains into a single
