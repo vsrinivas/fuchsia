@@ -25,6 +25,7 @@
 #include <zircon/threads.h>
 
 #include <atomic>
+#include <random>
 #include <utility>
 
 #include <fbl/auto_lock.h>
@@ -293,8 +294,11 @@ class TestPagedVmo : public async_paged_vmo_t {
                                                 vmo_out->reset_and_get_address());
     this->pager = pager.get();
     this->vmo = vmo_out->get();
+    this->dispatcher_ = dispatcher;
     return status;
   }
+
+  zx_status_t Detach() { return async_detach_paged_vmo(dispatcher_, this); }
 
   bool IsCanceled() { return canceled_; }
 
@@ -306,6 +310,7 @@ class TestPagedVmo : public async_paged_vmo_t {
     }
   }
 
+  async_dispatcher_t* dispatcher_;
   bool canceled_ = false;
 };
 
@@ -911,7 +916,7 @@ TEST(Loop, ReceiverShutdown) {
   EXPECT_EQ(0u, receiver.run_count, "run count 1");
 }
 
-TEST(Loop, PageVmoShutdown) {
+TEST(Loop, PagedVmoShutdown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");
 
@@ -935,6 +940,124 @@ TEST(Loop, PageVmoShutdown) {
   // serves as a proxy for this, since we detach before the ZX_ERR_CANCELED status is sent to the
   // handler.
   EXPECT_TRUE(paged_vmo.IsCanceled(), "paged vmo cancel after shutdown");
+}
+
+TEST(Loop, PagedVmoMultithreaded) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");
+
+  zx::pager pager;
+  EXPECT_OK(zx::pager::create(0, &pager), "pager create");
+
+  EXPECT_OK(loop.StartThread("test-pager-thread"));
+
+  constexpr uint64_t kNumVmos = 20;
+  constexpr uint64_t kNumThreads = 5;
+  // Create a separate scratch space for each thread so that they don't require locked access to
+  // shared state. Locking will synchronize the underlying paged_vmo_list modifications too, which
+  // is what this test verifies. We need lockless multi-threaded access and also valid vmos for
+  // each thread to work with.
+  struct thread_state {
+    std::array<TestPagedVmo, kNumVmos> paged_vmos;
+    std::array<zx::vmo, kNumVmos> vmos;
+  };
+  std::array<struct thread_state, kNumThreads> state;
+
+  // This test verifies multithreaded access to paged_vmo_list in three different phases:
+  // 1. Create vmos from multiple threads in parallel.
+  // 2. Randomly detach a few vmos created in phase 1, while creating some more vmos.
+  // 3. Detach all remaining vmos while shutting down the async loop.
+
+  // Phase 1. Create a few paged vmos concurrently.
+  // Verifies concurrent additions to the paged_vmo_list.
+  std::array<std::thread, kNumThreads> threads1;
+  for (uint64_t i = 0; i < kNumThreads; i++) {
+    threads1[i] = std::thread([&state, &loop, &pager, index = i]() {
+      for (uint64_t x = 0; x < kNumVmos / 2; x++) {
+        EXPECT_OK(
+            state[index].paged_vmos[x].Create(loop.dispatcher(), pager, &state[index].vmos[x]),
+            "paged vmo create");
+        zx_info_vmo_t info;
+        EXPECT_OK(state[index].vmos[x].get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+                  "vmo get info");
+        EXPECT_EQ(ZX_INFO_VMO_PAGER_BACKED, info.flags & ZX_INFO_VMO_PAGER_BACKED,
+                  "vmo pager backed");
+      }
+    });
+  }
+
+  for (auto& thread : threads1) {
+    thread.join();
+  }
+
+  std::default_random_engine random(zxtest::Runner::GetInstance()->random_seed());
+
+  // Phase 2. Detach a few of the vmos created above, while concurrently creating some more vmos.
+  // Verifies concurrent additions and deletions from the paged_vmo_list.
+  std::array<std::thread, kNumThreads> threads2;
+  for (uint64_t i = 0; i < kNumThreads; i++) {
+    threads2[i] = std::thread([&state, &loop, &pager, &random, index = i]() {
+      // Generate some random vmo indices to operate on. Detach vmos with indices less than
+      // kNumVmos/2 (these were already created above), and create vmos for other indices.
+      std::array<uint64_t, kNumVmos / 2> indices;
+      std::uniform_int_distribution<uint64_t> distribution(0, kNumVmos - 1);
+      std::generate(indices.begin(), indices.end(), [&]() { return distribution(random); });
+
+      for (auto x : indices) {
+        if (x < kNumVmos / 2) {
+          // This vmo was created above in phase 1. Detach it.
+          if (state[index].vmos[x].is_valid()) {
+            EXPECT_OK(state[index].paged_vmos[x].Detach());
+            state[index].vmos[x].reset();
+          }
+        } else {
+          // Otherwise create a new vmo (if not already created).
+          if (!state[index].vmos[x].is_valid()) {
+            EXPECT_OK(
+                state[index].paged_vmos[x].Create(loop.dispatcher(), pager, &state[index].vmos[x]),
+                "paged vmo create");
+            zx_info_vmo_t info;
+            EXPECT_OK(
+                state[index].vmos[x].get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+                "vmo get info");
+            EXPECT_EQ(ZX_INFO_VMO_PAGER_BACKED, info.flags & ZX_INFO_VMO_PAGER_BACKED,
+                      "vmo pager backed");
+          }
+        }
+      }
+    });
+  }
+
+  for (auto& thread : threads2) {
+    thread.join();
+  }
+
+  // Phase 3. Detach any remaining vmos, while concurrently shutting down the async loop. Verifies
+  // the two deletion paths for elements in paged_vmo_list - loop shutdown and explicit detach.
+  std::array<std::thread, kNumThreads> threads3;
+
+  // Create a thread to shut down the loop in parallel, deleting vmos from the list.
+  auto shutdown_thread = std::thread([&loop]() { loop.Shutdown(); });
+
+  for (uint64_t i = 0; i < kNumThreads; i++) {
+    threads3[i] = std::thread([&state, index = i]() {
+      for (uint64_t x = 0; x < kNumVmos; x++) {
+        if (state[index].vmos[x].is_valid()) {
+          // Redundant detaches are fine - if a vmo is not found in the list, we'll simply return a
+          // ZX_ERR_NOT_FOUND. What we care about here is that there are no crashes while accessing
+          // list members, i.e. parallel detaches and shutdown do not cause the vmo from
+          // disappearing while being accessed.
+          zx_status_t status = state[index].paged_vmos[x].Detach();
+          EXPECT_TRUE(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
+        }
+      }
+    });
+  }
+
+  for (auto& thread : threads3) {
+    thread.join();
+  }
+  shutdown_thread.join();
 }
 
 class GetDefaultDispatcherTask : public QuitTask {

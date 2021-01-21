@@ -229,7 +229,14 @@ void async_loop_shutdown(async_loop_t* loop) {
     async_irq_t* task = node_to_irq(node);
     async_loop_dispatch_irq(loop, task, ZX_ERR_CANCELED, NULL);
   }
-  while ((node = list_remove_head(&loop->paged_vmo_list))) {
+  while (true) {
+    mtx_lock(&loop->lock);
+    node = list_remove_head(&loop->paged_vmo_list);
+    mtx_unlock(&loop->lock);
+    if (!node) {
+      break;
+    }
+
     async_paged_vmo_t* paged_vmo = node_to_paged_vmo(node);
     // The loop owns the association between the pager and the VMO so when the
     // loop is shutting down, it is responsible for breaking that association
@@ -651,24 +658,33 @@ static zx_status_t async_loop_create_paged_vmo(async_dispatcher_t* async,
     return status;
   }
 
+  mtx_lock(&loop->lock);
   list_add_head(&loop->paged_vmo_list, paged_vmo_to_node(paged_vmo));
+  mtx_unlock(&loop->lock);
   return ZX_OK;
 }
 
 static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* async,
                                                async_paged_vmo_t* paged_vmo) {
   list_node_t* node = paged_vmo_to_node(paged_vmo);
+
+  async_loop_t* loop = (async_loop_t*)async;
+  mtx_lock(&loop->lock);
+
   if (!list_in_list(node)) {
+    mtx_unlock(&loop->lock);
     return ZX_ERR_NOT_FOUND;
   }
 
   zx_status_t status = zx_pager_detach_vmo(paged_vmo->pager, paged_vmo->vmo);
   if (status != ZX_OK) {
+    mtx_unlock(&loop->lock);
     return status;
   }
 
   // NOTE: the client owns the VMO and is responsible for freeing it.
   list_delete(node);
+  mtx_unlock(&loop->lock);
   return status;
 }
 
