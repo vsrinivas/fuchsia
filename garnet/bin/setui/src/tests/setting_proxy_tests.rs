@@ -698,12 +698,12 @@ async fn test_retry() {
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Execute(request_id),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
         );
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Retry(request.clone()),
+            event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
         );
     }
 
@@ -711,7 +711,7 @@ async fn test_retry() {
     verify_handler_event(
         setting_type,
         event_receptor.next().await.expect("should be notified of external failure"),
-        event::handler::Event::AttemptsExceeded(request.clone()),
+        event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
     );
 
     // Regenerate setting handler
@@ -808,7 +808,7 @@ async fn test_early_exit() {
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Execute(request_id),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
         );
         verify_handler_event(
             setting_type,
@@ -818,7 +818,7 @@ async fn test_early_exit() {
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of external failure"),
-            event::handler::Event::Retry(request.clone()),
+            event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
         );
     }
 
@@ -826,7 +826,7 @@ async fn test_early_exit() {
     verify_handler_event(
         setting_type,
         event_receptor.next().await.expect("should be notified of external failure"),
-        event::handler::Event::AttemptsExceeded(request.clone()),
+        event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
     );
 }
 
@@ -892,17 +892,17 @@ fn test_timeout() {
             verify_handler_event(
                 setting_type,
                 event_receptor.next().await.expect("should be notified of execute"),
-                event::handler::Event::Execute(request_id),
+                event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
             );
             verify_handler_event(
                 setting_type,
                 event_receptor.next().await.expect("should be notified of timeout"),
-                event::handler::Event::Timeout(request.clone()),
+                event::handler::Event::Request(event::handler::Action::Timeout, request.clone()),
             );
             verify_handler_event(
                 setting_type,
                 event_receptor.next().await.expect("should be notified of reattempt"),
-                event::handler::Event::Retry(request.clone()),
+                event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
             );
         }
 
@@ -910,7 +910,10 @@ fn test_timeout() {
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of exceeded attempts"),
-            event::handler::Event::AttemptsExceeded(request.clone()),
+            event::handler::Event::Request(
+                event::handler::Action::AttemptsExceeded,
+                request.clone(),
+            ),
         );
     };
 
@@ -989,12 +992,12 @@ fn test_timeout_no_retry() {
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of execution"),
-            event::handler::Event::Execute(request_id),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
         );
         verify_handler_event(
             setting_type,
             event_receptor.next().await.expect("should be notified of timeout"),
-            event::handler::Event::Timeout(request),
+            event::handler::Event::Request(event::handler::Action::Timeout, request),
         );
     };
 

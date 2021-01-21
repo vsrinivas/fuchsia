@@ -420,7 +420,13 @@ impl SettingProxy {
             result = Err(ControllerError::IrrecoverableError);
             retry = true;
         } else if matches!(result, Err(ControllerError::TimeoutError)) {
-            publish!(self, event::handler::Event::Timeout(request.request.clone()));
+            publish!(
+                self,
+                event::handler::Event::Request(
+                    event::handler::Action::Timeout,
+                    request.request.clone()
+                )
+            );
             retry = self.retry_on_timeout;
         }
 
@@ -490,12 +496,18 @@ impl SettingProxy {
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
         if current_attempts > self.max_attempts {
-            publish!(self, event::handler::Event::AttemptsExceeded(request));
+            publish!(
+                self,
+                event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request)
+            );
             self.request(ActiveControllerRequest::RemoveActive(id));
             return;
         }
 
-        publish!(self, event::handler::Event::Execute(id));
+        publish!(
+            self,
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone())
+        );
 
         let mut receptor = self
             .controller_messenger_client
@@ -544,7 +556,8 @@ impl SettingProxy {
 
         publish!(
             self,
-            event::handler::Event::Retry(
+            event::handler::Event::Request(
+                event::handler::Action::Retry,
                 self.active_requests
                     .front()
                     .expect("active request should be present")

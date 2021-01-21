@@ -51,11 +51,17 @@ pub mod handler {
     #[derive(PartialEq, Clone, Debug)]
     pub enum Event {
         Exit(ExitResult),
-        Retry(Request),
-        Timeout(Request),
-        AttemptsExceeded(Request),
-        Execute(u64),
+        Request(Action, Request),
         Teardown,
+    }
+
+    /// Possible actions taken on a `Request` by a Setting Handler.
+    #[derive(PartialEq, Clone, Debug)]
+    pub enum Action {
+        Execute,
+        Retry,
+        Timeout,
+        AttemptsExceeded,
     }
 }
 
