@@ -828,7 +828,7 @@ static void i8042_stop(void* ctx) {
 }
 
 static zx_status_t i8042_get_descriptor(void* ctx, hid_description_type_t desc_type,
-                                        void* out_data_buffer, size_t data_size,
+                                        uint8_t* out_data_buffer, size_t data_size,
                                         size_t* out_data_actual) {
   if (out_data_buffer == NULL || out_data_actual == NULL) {
     return ZX_ERR_INVALID_ARGS;
@@ -860,13 +860,13 @@ static zx_status_t i8042_get_descriptor(void* ctx, hid_description_type_t desc_t
   return ZX_OK;
 }
 
-static zx_status_t i8042_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data,
+static zx_status_t i8042_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
                                     size_t len, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t i8042_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, const void* data,
-                                    size_t len) {
+static zx_status_t i8042_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
+                                    const uint8_t* data, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

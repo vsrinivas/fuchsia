@@ -88,8 +88,8 @@ zx_status_t TestI2cDevice::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t*
   }
 
   // Reverse the digits.
-  auto* src = static_cast<const uint32_t*>(op_list[0].data_buffer);
-  auto* dest = static_cast<uint32_t*>(op_list[1].data_buffer);
+  auto* src = reinterpret_cast<const uint32_t*>(op_list[0].data_buffer);
+  auto* dest = reinterpret_cast<uint32_t*>(op_list[1].data_buffer);
   size_t count = op_list[0].data_size / sizeof(uint32_t);
   for (size_t i = 0; i < count; i++) {
     dest[i] = src[count - i - 1];

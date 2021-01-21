@@ -126,7 +126,7 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
 
   std::unique_ptr<magma::PlatformMmio> CpuMapPciMmio(
       unsigned int pci_bar, magma::PlatformMmio::CachePolicy cache_policy) override {
-    void* addr;
+    uint8_t* addr;
     uint64_t size;
     zx_status_t status = ops()->map_pci_mmio(context(), pci_bar, &addr, &size);
     if (status != ZX_OK)

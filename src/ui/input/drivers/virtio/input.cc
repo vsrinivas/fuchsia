@@ -33,13 +33,13 @@ static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
   return false;
 }
 
-zx_status_t InputDevice::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t InputDevice::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, uint8_t* data,
                                          size_t len, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t InputDevice::HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
-                                         const void* data, size_t len) {
+                                         const uint8_t* data, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -199,7 +199,7 @@ zx_status_t InputDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t InputDevice::HidbusGetDescriptor(uint8_t desc_type, void* out_data_buffer,
+zx_status_t InputDevice::HidbusGetDescriptor(uint8_t desc_type, uint8_t* out_data_buffer,
                                              size_t data_size, size_t* out_data_actual) {
   return hid_device_->GetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
 }

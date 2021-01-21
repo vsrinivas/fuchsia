@@ -73,8 +73,7 @@ void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
     if (status == ZX_OK) {
       auto reads = std::make_unique<fidl::VectorView<uint8_t>[]>(op_count);
       for (size_t i = 0; i < op_count; ++i) {
-        reads[i].set_data(
-            fidl::unowned_ptr(static_cast<uint8_t*>(const_cast<void*>(op_list[i].data_buffer))));
+        reads[i].set_data(fidl::unowned_ptr(const_cast<uint8_t*>(op_list[i].data_buffer)));
         reads[i].set_count(op_list[i].data_size);
       }
       fidl::VectorView<fidl::VectorView<uint8_t>> all_reads(fidl::unowned_ptr(reads.get()),

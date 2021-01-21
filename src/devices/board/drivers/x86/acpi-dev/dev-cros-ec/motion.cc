@@ -201,7 +201,7 @@ void AcpiCrOsEcMotionDevice::HidbusStop() {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                                        void* out_data_buffer, size_t data_size,
+                                                        uint8_t* out_data_buffer, size_t data_size,
                                                         size_t* out_data_actual) {
   zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus get descriptor");
 
@@ -222,13 +222,13 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t d
   return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
                                                     size_t len, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id,
-                                                    const void* data, size_t len) {
+                                                    const uint8_t* data, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

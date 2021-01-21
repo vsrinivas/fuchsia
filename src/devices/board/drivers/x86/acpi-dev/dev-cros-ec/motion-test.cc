@@ -141,7 +141,8 @@ TEST(MotionSense, Lifecycle) {
   // Ensure devices were probed correctly.
   uint8_t buffer[1024];
   size_t report_size;
-  ASSERT_OK(device->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, &buffer, sizeof(buffer),
+  ASSERT_OK(device->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
+                                        reinterpret_cast<uint8_t*>(&buffer), sizeof(buffer),
                                         &report_size));
 
   // Ensure the report parses, and contains 1 sensor (as simulated by the FakeMotionSenseEC).

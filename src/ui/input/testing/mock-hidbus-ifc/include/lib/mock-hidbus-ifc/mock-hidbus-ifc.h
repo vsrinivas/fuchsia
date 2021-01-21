@@ -72,12 +72,12 @@ class MockHidbusIfc : public ddk::HidbusIfcProtocol<MockHidbusIfc<T>> {
     return reports_.size();
   }
 
-  void HidbusIfcIoQueue(const void* buffer, size_t buf_size, zx_time_t time) {
+  void HidbusIfcIoQueue(const uint8_t* buffer, size_t buf_size, zx_time_t time) {
     HidbusIfcIoQueueHelper(buffer, buf_size);
   }
 
  private:
-  void HidbusIfcIoQueueHelper(const void* buffer, size_t buf_size) {
+  void HidbusIfcIoQueueHelper(const uint8_t* buffer, size_t buf_size) {
     ASSERT_EQ(sizeof(T), buf_size);
 
     {

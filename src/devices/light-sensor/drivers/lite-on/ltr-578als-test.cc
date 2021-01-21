@@ -47,8 +47,8 @@ TEST(LightTest, InputReport) {
 
   ltr_578als_input_rpt_t report;
   size_t actual;
-  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, LTR_578ALS_RPT_ID_INPUT, &report,
-                                   sizeof(report), &actual));
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, LTR_578ALS_RPT_ID_INPUT,
+                                   reinterpret_cast<uint8_t*>(&report), sizeof(report), &actual));
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_INPUT, report.rpt_id);
@@ -75,8 +75,8 @@ TEST(LightTest, FeatureReport) {
   ltr_578als_feature_rpt_t report;
   size_t actual;
 
-  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE, &report,
-                                   sizeof(report), &actual));
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE,
+                                   reinterpret_cast<uint8_t*>(&report), sizeof(report), &actual));
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_FEATURE, report.rpt_id);
@@ -88,11 +88,11 @@ TEST(LightTest, FeatureReport) {
 
   report.interval_ms = 1000;
 
-  EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE, &report,
-                                   sizeof(report)));
+  EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE,
+                                   reinterpret_cast<uint8_t*>(&report), sizeof(report)));
 
-  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE, &report,
-                                   sizeof(report), &actual));
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE,
+                                   reinterpret_cast<uint8_t*>(&report), sizeof(report), &actual));
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_FEATURE, report.rpt_id);
@@ -123,8 +123,8 @@ TEST(LightTest, Polling) {
   Ltr578Als device(nullptr, std::move(i2c), std::move(port));
 
   ltr_578als_feature_rpt_t report = {LTR_578ALS_RPT_ID_FEATURE, 1000};
-  EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE, &report,
-                                   sizeof(report)));
+  EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, LTR_578ALS_RPT_ID_FEATURE,
+                                   reinterpret_cast<uint8_t*>(&report), sizeof(report)));
 
   mock_hidbus_ifc::MockHidbusIfc<ltr_578als_input_rpt_t> mock_ifc;
   EXPECT_OK(device.HidbusStart(mock_ifc.proto()));

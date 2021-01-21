@@ -54,5 +54,5 @@ protocol BtVendor {
     /// documented in `BtVendorCommand`.
     /// Returns an error status if the command is not supported or the paramaters are invalid.
     EncodeCommand(BtVendorCommand command, BtVendorParams params)
-        -> (zx.status status, vector<voidptr>:MAX_COMMAND_BUFFER_LEN encoded);
+        -> (zx.status status, [Buffer] vector<uint8>:MAX_COMMAND_BUFFER_LEN encoded);
 };

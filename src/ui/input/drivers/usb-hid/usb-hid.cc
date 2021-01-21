@@ -53,7 +53,8 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
       break;
     case ZX_OK:
       if (ifc_.is_valid()) {
-        ifc_.IoQueue(buffer, req->response.actual, zx_clock_get_monotonic());
+        ifc_.IoQueue(reinterpret_cast<uint8_t*>(buffer), req->response.actual,
+                     zx_clock_get_monotonic());
       }
       break;
     default:
@@ -140,8 +141,9 @@ zx_status_t UsbHidbus::UsbHidControlOut(uint8_t req_type, uint8_t request, uint1
   }
   return status;
 }
-zx_status_t UsbHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                           size_t data_size, size_t* out_data_actual) {
+zx_status_t UsbHidbus::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                           uint8_t* out_data_buffer, size_t data_size,
+                                           size_t* out_data_actual) {
   int desc_idx = -1;
   for (int i = 0; i < hid_desc_->bNumDescriptors; i++) {
     if (hid_desc_->descriptors[i].bDescriptorType == desc_type) {
@@ -168,7 +170,7 @@ zx_status_t UsbHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, voi
   return status;
 }
 
-zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
                                        size_t* out_len) {
   if (out_len == NULL) {
     return ZX_ERR_INVALID_ARGS;
@@ -178,7 +180,7 @@ zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
                          out_len);
 }
 
-zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
                                        size_t len) {
   if (has_endptout_) {
     sync_completion_reset(&set_report_complete_);

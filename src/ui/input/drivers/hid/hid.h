@@ -64,7 +64,7 @@ class HidDevice : public HidDeviceType,
   // |HidDeviceProtocol|
   void HidDeviceGetHidDeviceInfo(hid_device_info_t* out_info);
 
-  static void IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t time);
+  static void IoQueue(void* cookie, const uint8_t* buf, size_t len, zx_time_t time);
 
   size_t GetMaxInputReportSize();
   size_t GetReportSizeById(input_report_id_t id, ReportType type);

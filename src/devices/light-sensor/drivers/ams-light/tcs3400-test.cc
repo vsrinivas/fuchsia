@@ -111,8 +111,8 @@ TEST(Tcs3400Test, InputReport) {
 
   ambient_light_input_rpt_t report = {};
   size_t actual = 0;
-  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT, &report,
-                                   sizeof(report), &actual));
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT,
+                                   (uint8_t*)&report, sizeof(report), &actual));
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(AMBIENT_LIGHT_RPT_ID_INPUT, report.rpt_id);
@@ -183,8 +183,8 @@ TEST(Tcs3400Test, InputReportSaturated) {
 
   ambient_light_input_rpt_t report = {};
   size_t actual = 0;
-  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT, &report,
-                                   sizeof(report), &actual));
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT,
+                                   (uint8_t*)&report, sizeof(report), &actual));
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(AMBIENT_LIGHT_RPT_ID_INPUT, report.rpt_id);

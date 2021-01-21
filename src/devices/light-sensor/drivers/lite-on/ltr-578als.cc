@@ -149,8 +149,9 @@ zx_status_t Ltr578Als::HidbusQuery(uint32_t options, hid_info_t* out_info) {
   return ZX_OK;
 }
 
-zx_status_t Ltr578Als::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                           size_t data_size, size_t* out_data_actual) {
+zx_status_t Ltr578Als::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                           uint8_t* out_data_buffer, size_t data_size,
+                                           size_t* out_data_actual) {
   const uint8_t* desc;
   size_t desc_size = get_ltr_578als_report_desc(&desc);
 
@@ -164,7 +165,7 @@ zx_status_t Ltr578Als::HidbusGetDescriptor(hid_description_type_t desc_type, voi
 }
 
 zx_status_t Ltr578Als::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
-                                       void* out_data_buffer, size_t data_size,
+                                       uint8_t* out_data_buffer, size_t data_size,
                                        size_t* out_data_actual) {
   if (rpt_type == HID_REPORT_TYPE_INPUT && rpt_id == LTR_578ALS_RPT_ID_INPUT) {
     if (data_size < sizeof(ltr_578als_input_rpt_t)) {
@@ -195,7 +196,7 @@ zx_status_t Ltr578Als::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_i
 }
 
 zx_status_t Ltr578Als::HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
-                                       const void* data_buffer, size_t data_size) {
+                                       const uint8_t* data_buffer, size_t data_size) {
   if (rpt_type != HID_REPORT_TYPE_FEATURE || rpt_id != LTR_578ALS_RPT_ID_FEATURE) {
     return ZX_ERR_NOT_SUPPORTED;
   }

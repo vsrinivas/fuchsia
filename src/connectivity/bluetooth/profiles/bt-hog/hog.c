@@ -61,7 +61,7 @@ static void hogd_hid_stop(void* ctx) {
 }
 
 static zx_status_t hogd_hid_get_descriptor(void* ctx, hid_description_type_t desc_type,
-                                           void* out_data_buffer, size_t data_size,
+                                           uint8_t* out_data_buffer, size_t data_size,
                                            size_t* out_data_actual) {
   hogd_device_t* hogd_child = (hogd_device_t*)ctx;
   zxlogf(DEBUG, "bt_hog hogd_hid_get_descriptor, ctx: %p, desc_type: %u", ctx, desc_type);
@@ -101,7 +101,7 @@ static zx_status_t hogd_hid_get_descriptor(void* ctx, hid_description_type_t des
   return ZX_OK;
 }
 
-static zx_status_t hogd_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data,
+static zx_status_t hogd_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
                                        size_t len, size_t* out_len) {
   zxlogf(DEBUG, "bt_hog hogd_hid_get_report, ctx: %p, rpt_type: %u, rpt_id: %u\n", ctx, rpt_type,
          rpt_id);
@@ -109,7 +109,7 @@ static zx_status_t hogd_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_
 }
 
 static zx_status_t hogd_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                       const void* data, size_t len) {
+                                       const uint8_t* data, size_t len) {
   zxlogf(DEBUG, "bt_hog hogd_hid_set_report, ctx: %p, rpt_type: %u, rpt_id: %u\n", ctx, rpt_type,
          rpt_id);
   hogd_device_t* child = (hogd_device_t*)ctx;
@@ -232,7 +232,7 @@ static inline void hogd_log_blob(const char* name, const uint8_t* value, size_t 
   }
 }
 
-static void hogd_report_notification(void* ctx, bt_gatt_id_t id, const void* value, size_t len) {
+static void hogd_report_notification(void* ctx, bt_gatt_id_t id, const uint8_t* value, size_t len) {
   zxlogf(DEBUG, "bt_hog hogd_report_notification, ctx: %p, id: %lu", ctx, id);
   hogd_log_blob("bt_hog input event", value, len);
   hogd_device_t* child = (hogd_device_t*)ctx;
@@ -296,7 +296,7 @@ static zx_status_t hogd_initialize_boot_device(hogd_device_t* child, hogd_device
 }
 
 static void hogd_on_read_report_map(void* ctx, const bt_gatt_status_t* status, bt_gatt_id_t id,
-                                    const void* value, size_t len) {
+                                    const uint8_t* value, size_t len) {
   zxlogf(DEBUG, "bt_hog hogd_on_read_report_map, ctx: %p, id: %lu", ctx, id);
   hogd_t* hogd = (hogd_t*)ctx;
   if (!BT_HOG_STATUS_OK(status) || value == NULL || len == 0) {

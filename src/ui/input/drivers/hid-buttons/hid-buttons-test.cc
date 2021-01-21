@@ -242,7 +242,7 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
   device.DebounceWait();
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 0;  // Unpushed.
@@ -272,7 +272,7 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
   device.DebounceWait();
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 1;  // Pushed
@@ -394,7 +394,7 @@ TEST(HidButtonsTest, MatrixButtonPush) {
   device.DebounceWait();
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 1;
@@ -877,7 +877,7 @@ TEST(HidButtonsTest, DuplicateReports) {
   device.DebounceWait();
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t reports[2];
     reports[0] = {};
     reports[0].rpt_id = 1;
@@ -906,7 +906,7 @@ TEST(HidButtonsTest, CamMute) {
                             countof(buttons_multiple)));
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.camera_access_disabled = 1;
@@ -929,7 +929,7 @@ TEST(HidButtonsTest, CamMute) {
 
   device.HidbusStop();
 
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.camera_access_disabled = 0;
@@ -966,7 +966,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
 
   // Setup the check for the HID report.
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t expected_report = {};
     expected_report.rpt_id = BUTTONS_RPT_ID_INPUT;
     expected_report.mute = 1;

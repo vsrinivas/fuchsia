@@ -40,7 +40,7 @@ TEST(I2cChildTest, Write3BytesOnce) {
         callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
         return;
       }
-      auto p0 = static_cast<uint8_t*>(const_cast<void*>(op_list[0].data_buffer));
+      auto p0 = op_list[0].data_buffer;
       if (p0[0] != kTestWrite0 || p0[1] != kTestWrite1 || p0[2] != kTestWrite2 ||
           op_list[0].data_size != 3 || op_list[0].is_read != false || op_list[0].stop != true) {
         callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
@@ -137,7 +137,7 @@ TEST(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
         callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
         return;
       }
-      auto p0 = static_cast<uint8_t*>(const_cast<void*>(op_list[0].data_buffer));
+      auto p0 = op_list[0].data_buffer;
       if (p0[0] != kTestWrite0 || op_list[0].data_size != 1 || op_list[0].is_read != false ||
           op_list[0].stop != false || op_list[1].data_size != 1 || op_list[1].is_read != true ||
           op_list[1].stop != false || op_list[2].data_size != 1 || op_list[2].is_read != true ||

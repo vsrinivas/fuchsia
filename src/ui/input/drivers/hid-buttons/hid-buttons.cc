@@ -76,13 +76,13 @@ void HidButtonsDevice::Notify(uint32_t button_index) {
   buttons_input_rpt_t input_rpt;
   size_t out_len;
   zx_status_t status =
-      HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
+      HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, (uint8_t*)&input_rpt, sizeof(input_rpt), &out_len);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
   } else if (!input_reports_are_equal(last_report_, input_rpt)) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
-      client_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t), zx_clock_get_monotonic());
+      client_.IoQueue((uint8_t*)&input_rpt, sizeof(buttons_input_rpt_t), zx_clock_get_monotonic());
       last_report_ = input_rpt;
     }
   }
@@ -180,7 +180,7 @@ void HidButtonsDevice::HidbusStop() {
 }
 
 zx_status_t HidButtonsDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                                  void* out_data_buffer, size_t data_size,
+                                                  uint8_t* out_data_buffer, size_t data_size,
                                                   size_t* out_data_actual) {
   const uint8_t* desc;
   size_t desc_size = get_buttons_report_desc(&desc);
@@ -206,7 +206,7 @@ bool HidButtonsDevice::MatrixScan(uint32_t row, uint32_t col, zx_duration_t dela
   return static_cast<bool>(val);
 }
 
-zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
                                               size_t len, size_t* out_len) {
   if (!data || !out_len) {
     return ZX_ERR_INVALID_ARGS;
@@ -243,13 +243,13 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     zxlogf(DEBUG, "%s GPIO new value %u for button %lu", __FUNCTION__, new_value, i);
     fill_button_in_report(buttons_[i].id, new_value, &input_rpt);
   }
-  auto out = static_cast<buttons_input_rpt_t*>(data);
+  auto out = reinterpret_cast<buttons_input_rpt_t*>(data);
   *out = input_rpt;
 
   return ZX_OK;
 }
 
-zx_status_t HidButtonsDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t HidButtonsDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
                                               size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -400,7 +400,8 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   }
 
   size_t out_len = 0;
-  status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &last_report_, sizeof(last_report_), &out_len);
+  status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, (uint8_t*)&last_report_, sizeof(last_report_),
+                           &out_len);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
   }

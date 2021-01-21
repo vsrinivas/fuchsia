@@ -27,7 +27,7 @@ static inline void i2c_write_read(const i2c_protocol_t* i2c, const void* write_b
   i2c_op_t ops[2];
   size_t count = 0;
   if (write_length) {
-    ops[count].data_buffer = (void*)write_buf;
+    ops[count].data_buffer = (uint8_t*)write_buf;
     ops[count].data_size = (uint32_t)write_length;
     ops[count].is_read = false;
     ops[count].stop = !read_length;

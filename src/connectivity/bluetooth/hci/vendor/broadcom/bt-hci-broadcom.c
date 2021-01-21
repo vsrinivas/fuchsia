@@ -252,7 +252,8 @@ static zx_status_t encode_set_acl_priority_command(const bt_vendor_set_acl_prior
 }
 
 static zx_status_t vendor_encode_command(void* ctx, bt_vendor_command_t command,
-                                         const bt_vendor_params_t* params, void* out_encoded_buffer,
+                                         const bt_vendor_params_t* params,
+                                         uint8_t* out_encoded_buffer,
                                          size_t out_encoded_buffer_size,
                                          size_t* out_encoded_actual) {
   if (!params || !out_encoded_buffer || !out_encoded_actual) {

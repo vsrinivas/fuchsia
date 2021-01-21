@@ -115,7 +115,7 @@ class Controller : public DeviceType,
 
   // gpu core ops
   zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
-  zx_status_t MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out);
+  zx_status_t MapPciMmio(uint32_t pci_bar, uint8_t** addr_out, uint64_t* size_out);
   zx_status_t UnmapPciMmio(uint32_t pci_bar);
   zx_status_t GetPciBti(uint32_t index, zx_handle_t* bti_out);
   zx_status_t RegisterInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,

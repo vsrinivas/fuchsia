@@ -94,7 +94,7 @@ void I2cHidbus::WaitForReadyLocked() {
   }
 }
 
-zx_status_t I2cHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+zx_status_t I2cHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
                                        size_t* out_len) {
   uint16_t cmd_reg = letoh16(hiddesc_.wCommandRegister);
   uint16_t data_reg = letoh16(hiddesc_.wDataRegister);
@@ -132,7 +132,7 @@ zx_status_t I2cHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
   return ZX_OK;
 }
 
-zx_status_t I2cHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t I2cHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
                                        size_t len) {
   uint16_t cmd_reg = letoh16(hiddesc_.wCommandRegister);
   uint16_t data_reg = letoh16(hiddesc_.wDataRegister);
@@ -194,8 +194,9 @@ void I2cHidbus::HidbusStop() {
   ifc_.clear();
 }
 
-zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                           size_t data_size, size_t* out_data_actual) {
+zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                           uint8_t* out_data_buffer, size_t data_size,
+                                           size_t* out_data_actual) {
   if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
     return ZX_ERR_NOT_FOUND;
   }

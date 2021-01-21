@@ -88,7 +88,7 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
   void HidbusStop() { ifc_.ops = nullptr; }
 
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, uint8_t* out_data_buffer,
                                   size_t data_size, size_t* out_data_actual) {
     if (data_size < report_desc_.size()) {
       return ZX_ERR_BUFFER_TOO_SMALL;
@@ -104,7 +104,7 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
     report_desc_ = std::vector<uint8_t>(desc, desc + desc_len);
   }
 
-  zx_status_t HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* out_data_buffer,
+  zx_status_t HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, uint8_t* out_data_buffer,
                               size_t data_size, size_t* out_data_actual) {
     if (rpt_id != last_set_report_id_) {
       return ZX_ERR_INTERNAL;
@@ -119,8 +119,8 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
     return ZX_OK;
   }
 
-  zx_status_t HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id, const void* data_buffer,
-                              size_t data_size) {
+  zx_status_t HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                              const uint8_t* data_buffer, size_t data_size) {
     last_set_report_id_ = rpt_id;
     auto data_bytes = reinterpret_cast<const uint8_t*>(data_buffer);
     last_set_report_ = std::vector<uint8_t>(data_bytes, data_bytes + data_size);

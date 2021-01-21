@@ -86,7 +86,7 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
 
     // Return to caller.
     fbl::Vector<i2c_op_t> result_ops = {{
-        .data_buffer = &result,
+        .data_buffer = reinterpret_cast<uint8_t*>(&result),
         .data_size = sizeof(result),
         .is_read = false,
         .stop = true,

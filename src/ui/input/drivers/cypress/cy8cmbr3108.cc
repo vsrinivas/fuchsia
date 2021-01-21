@@ -77,14 +77,15 @@ int Cy8cmbr3108::Thread() {
 
     visalia_touch_buttons_input_rpt_t input_rpt;
     size_t out_len;
-    status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
+    status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, reinterpret_cast<uint8_t*>(&input_rpt),
+                             sizeof(input_rpt), &out_len);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
     } else {
       fbl::AutoLock lock(&client_lock_);
       if (client_.is_valid()) {
-        client_.IoQueue(&input_rpt, sizeof(visalia_touch_buttons_input_rpt_t),
-                        zx_clock_get_monotonic());
+        client_.IoQueue(reinterpret_cast<uint8_t*>(&input_rpt),
+                        sizeof(visalia_touch_buttons_input_rpt_t), zx_clock_get_monotonic());
         // If report could not be filled, we do not ioqueue.
       }
     }
@@ -149,7 +150,7 @@ void Cy8cmbr3108::HidbusStop() {
 }
 
 zx_status_t Cy8cmbr3108::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                             void* out_data_buffer, size_t data_size,
+                                             uint8_t* out_data_buffer, size_t data_size,
                                              size_t* out_data_actual) {
   const uint8_t* desc;
   size_t desc_size = get_visalia_touch_buttons_report_desc(&desc);
@@ -162,8 +163,8 @@ zx_status_t Cy8cmbr3108::HidbusGetDescriptor(hid_description_type_t desc_type,
   return ZX_OK;
 }
 
-zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
-                                         size_t* out_len) {
+zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
+                                         size_t len, size_t* out_len) {
   if (!data || !out_len) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -195,13 +196,13 @@ zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void*
     zxlogf(DEBUG, "%s new value %u for button %lu", __FUNCTION__, new_value, i);
     fill_visalia_touch_buttons_report(buttons_[i].id, new_value, &input_rpt);
   }
-  auto out = static_cast<visalia_touch_buttons_input_rpt_t*>(data);
+  auto out = reinterpret_cast<visalia_touch_buttons_input_rpt_t*>(data);
   *out = input_rpt;
 
   return ZX_OK;
 }
 
-zx_status_t Cy8cmbr3108::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t Cy8cmbr3108::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
                                          size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }

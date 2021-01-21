@@ -74,7 +74,8 @@ static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_
   return static_cast<i915::Controller*>(ctx)->ReadPciConfig16(addr, value_out);
 }
 
-static zx_status_t map_pci_mmio(void* ctx, uint32_t pci_bar, void** addr_out, uint64_t* size_out) {
+static zx_status_t map_pci_mmio(void* ctx, uint32_t pci_bar, uint8_t** addr_out,
+                                uint64_t* size_out) {
   return static_cast<i915::Controller*>(ctx)->MapPciMmio(pci_bar, addr_out, size_out);
 }
 
@@ -1825,7 +1826,7 @@ zx_status_t Controller::ReadPciConfig16(uint16_t addr, uint16_t* value_out) {
   return pci_config_read16(&pci_, addr, value_out);
 }
 
-zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out) {
+zx_status_t Controller::MapPciMmio(uint32_t pci_bar, uint8_t** addr_out, uint64_t* size_out) {
   if (pci_bar > PCI_MAX_BAR_COUNT) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1839,7 +1840,7 @@ zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* 
   }
 
   // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
-  *addr_out = (void*)mapped_bars_[pci_bar].mmio.vaddr;
+  *addr_out = (uint8_t*)mapped_bars_[pci_bar].mmio.vaddr;
   *size_out = mapped_bars_[pci_bar].mmio.size;
   mapped_bars_[pci_bar].count++;
   return ZX_OK;
@@ -2170,7 +2171,7 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
 
   zxlogf(TRACE, "Mapping registers");
   // map register window
-  void* regs;
+  uint8_t* regs;
   uint64_t size;
   status = MapPciMmio(0u, &regs, &size);
   if (status != ZX_OK) {

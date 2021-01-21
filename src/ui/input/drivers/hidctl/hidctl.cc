@@ -156,8 +156,9 @@ void HidDevice::HidbusStop() {
   client_.clear();
 }
 
-zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                           size_t data_size, size_t* out_data_actual) {
+zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                           uint8_t* out_data_buffer, size_t data_size,
+                                           size_t* out_data_actual) {
   zxlogf(DEBUG, "hidctl: get descriptor %u", desc_type);
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
@@ -176,7 +177,7 @@ zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, voi
   return ZX_OK;
 }
 
-zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
                                        size_t* out_len) {
   zxlogf(DEBUG, "hidctl: get report type=%u id=%u", rpt_type, rpt_id);
 
@@ -188,7 +189,7 @@ zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HidDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t HidDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
                                        size_t len) {
   zxlogf(DEBUG, "hidctl: set report type=%u id=%u", rpt_type, rpt_id);
 

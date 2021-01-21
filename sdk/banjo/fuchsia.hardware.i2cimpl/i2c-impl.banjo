@@ -9,7 +9,7 @@ using zx;
 /// See `Transact` below for usage.
 struct I2cImplOp {
     uint16 address;
-    [Mutable] vector<voidptr> data;
+    [Buffer, Mutable] vector<uint8> data;
     bool is_read;
     bool stop;
 };

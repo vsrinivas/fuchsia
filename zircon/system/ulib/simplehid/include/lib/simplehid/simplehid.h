@@ -122,7 +122,8 @@ class SimpleHid {
           if (get_input_report_(&report) == ZX_OK) {
             fbl::AutoLock lock(&client_lock_);
             if (client_.is_valid()) {
-              client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
+              client_.IoQueue(reinterpret_cast<uint8_t*>(&report), sizeof(report),
+                              zx_clock_get_monotonic());
             }
           }
 

@@ -64,11 +64,11 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
 
   // Hidbus required methods
   void HidbusStop();
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, uint8_t* out_data_buffer,
                                   size_t data_size, size_t* out_data_actual);
-  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
                               size_t* out_len);
-  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data, size_t len);
   zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
   zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
   zx_status_t HidbusGetProtocol(uint8_t* protocol);

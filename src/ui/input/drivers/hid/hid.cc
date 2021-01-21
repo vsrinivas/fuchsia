@@ -169,8 +169,7 @@ void HidDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t time) {
-  const uint8_t* buf = static_cast<const uint8_t*>(_buf);
+void HidDevice::IoQueue(void* cookie, const uint8_t* buf, size_t len, zx_time_t time) {
   HidDevice* hid = static_cast<HidDevice*>(cookie);
 
   TRACE_DURATION("input", "HID IO Queue");
