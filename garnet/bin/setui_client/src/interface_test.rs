@@ -756,23 +756,33 @@ async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
     let input_service =
         env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
 
-    let output = input::command(input_service, expected_mic_muted).await?;
+    let either = input::command(input_service, expected_mic_muted).await?;
     if expected_mic_muted.is_none() {
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                InputDeviceSettings {
-                    microphone: Some(Microphone { muted: expected_mic_muted, ..Microphone::EMPTY }),
-                    ..InputDeviceSettings::EMPTY
-                }
-            )
-        );
-    } else {
+        if let utils::Either::Watch(mut stream) = either {
+            let output = stream.try_next().await?.expect("Watch should have a result");
+            assert_eq!(
+                output,
+                format!(
+                    "{:#?}",
+                    InputDeviceSettings {
+                        microphone: Some(Microphone {
+                            muted: expected_mic_muted,
+                            ..Microphone::EMPTY
+                        }),
+                        ..InputDeviceSettings::EMPTY
+                    }
+                )
+            );
+        } else {
+            panic!("Did not expect set result for a watch command");
+        }
+    } else if let utils::Either::Set(output) = either {
         assert_eq!(
             output,
             format!("Successfully set mic mute to {}\n", expected_mic_muted.unwrap())
         );
+    } else {
+        panic!("Did not expect watch result for a set command");
     }
 
     Ok(())
@@ -802,14 +812,20 @@ async fn validate_input2_watch() -> Result<(), Error> {
     let input_service =
         env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
 
-    let output = input::command2(input_service, None, None, None).await?;
-    // Just check that the output contains some key strings that confirms the watch returned.
-    // The string representation may not necessarily be in the same order.
-    assert!(output.contains("Software"));
-    assert!(output.contains("source_states: Some"));
-    assert!(output.contains("toggle_flags: Some"));
-    assert!(output.contains("camera"));
-    assert!(output.contains("Available"));
+    if let utils::Either::Watch(mut stream) =
+        input::command2(input_service, None, None, None).await?
+    {
+        let output = stream.try_next().await?.expect("Watch should have a result");
+        // Just check that the output contains some key strings that confirms the watch returned.
+        // The string representation may not necessarily be in the same order.
+        assert!(output.contains("Software"));
+        assert!(output.contains("source_states: Some"));
+        assert!(output.contains("toggle_flags: Some"));
+        assert!(output.contains("camera"));
+        assert!(output.contains("Available"));
+    } else {
+        panic!("Did not expect set result for a watch command");
+    }
     Ok(())
 }
 
@@ -833,19 +849,22 @@ async fn validate_input2_set(
     let input_service =
         env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
 
-    let output = input::command2(
+    if let utils::Either::Set(output) = input::command2(
         input_service,
         Some(device_type),
         Some(device_name.to_string()),
         Some(u64_to_state(device_state)),
     )
-    .await?;
-
-    // Just check that the output contains some key strings that confirms the set returned.
-    // The string representation may not necessarily be in the same order.
-    assert!(output.contains(&format!("{:?}", device_type)));
-    assert!(output.contains(&format!("{:?}", device_name)));
-    assert!(output.contains(expected_state_string));
+    .await?
+    {
+        // Just check that the output contains some key strings that confirms the set returned.
+        // The string representation may not necessarily be in the same order.
+        assert!(output.contains(&format!("{:?}", device_type)));
+        assert!(output.contains(&format!("{:?}", device_name)));
+        assert!(output.contains(expected_state_string));
+    } else {
+        panic!("Did not expect watch result for a set command");
+    }
 
     Ok(())
 }

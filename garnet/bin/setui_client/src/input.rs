@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    crate::utils::{self, Either, WatchOrSetResult},
+    anyhow::format_err,
     fidl_fuchsia_settings::{
         DeviceState, DeviceType, InputDeviceSettings, InputProxy, InputState, Microphone,
     },
 };
 
 // TODO(fxbug.dev/65686): Remove when clients are ported to new interface.
-pub async fn command(proxy: InputProxy, mic_muted: Option<bool>) -> Result<String, Error> {
-    let mut output = String::new();
+pub async fn command(proxy: InputProxy, mic_muted: Option<bool>) -> WatchOrSetResult {
     let mut input_settings = InputDeviceSettings::EMPTY;
     let mut microphone = Microphone::EMPTY;
 
@@ -20,17 +20,17 @@ pub async fn command(proxy: InputProxy, mic_muted: Option<bool>) -> Result<Strin
         input_settings.microphone = Some(microphone);
     }
 
-    if input_settings == InputDeviceSettings::EMPTY {
-        let setting_value = proxy.watch().await?;
-        output.push_str(&format!("{:#?}", setting_value));
+    Ok(if input_settings == InputDeviceSettings::EMPTY {
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
     } else {
-        if let Err(err) = proxy.set(input_settings).await? {
-            output.push_str(&format!("{:?}", err));
+        Either::Set(if let Err(err) = proxy.set(input_settings).await? {
+            format!("{:?}", err)
         } else if let Some(muted) = mic_muted {
-            output.push_str(&format!("Successfully set mic mute to {:?}\n", muted));
-        }
-    }
-    Ok(output)
+            format!("Successfully set mic mute to {:?}\n", muted)
+        } else {
+            unreachable!()
+        })
+    })
 }
 
 // Used to interact with the new input interface.
@@ -40,7 +40,7 @@ pub async fn command2(
     device_type: Option<DeviceType>,
     device_name: Option<String>,
     device_state: Option<DeviceState>,
-) -> Result<String, Error> {
+) -> WatchOrSetResult {
     let mut input_states = Vec::new();
     let mut input_state = InputState::EMPTY;
 
@@ -54,9 +54,8 @@ pub async fn command2(
         input_state.state = Some(device_state);
     }
 
-    if input_state == InputState::EMPTY {
-        let setting_value = proxy.watch2().await?;
-        Ok(format!("{:#?}", setting_value))
+    Ok(if input_state == InputState::EMPTY {
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch2()))
     } else {
         if device_type.is_none() {
             return Err(format_err!("Device type required"));
@@ -73,10 +72,10 @@ pub async fn command2(
         }
         input_states.push(input_state);
         let mut states = input_states.iter().map(|state| state.clone());
-        if let Err(err) = proxy.set_states(&mut states).await? {
-            Ok(format!("{:?}", err))
+        Either::Set(if let Err(err) = proxy.set_states(&mut states).await? {
+            format!("{:?}", err)
         } else {
-            Ok(format!("Successfully set input states to {:#?}\n", input_states))
-        }
-    }
+            format!("Successfully set input states to {:#?}\n", input_states)
+        })
+    })
 }

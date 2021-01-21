@@ -486,8 +486,8 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::Input { mic_muted } => {
             let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input service")?;
-            let output = input::command(input_service, mic_muted).await?;
-            println!("Input: {}", output);
+            utils::handle_mixed_result("Input", input::command(input_service, mic_muted).await)
+                .await?;
         }
         SettingClient::Input2 { input_device } => {
             let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
@@ -495,9 +495,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let device_type = input_device.device_type;
             let device_name = input_device.device_name;
             let device_state = input_device.device_state;
-            let output =
-                input::command2(input_service, device_type, device_name, device_state).await?;
-            println!("Input2: {}", output);
+            utils::handle_mixed_result(
+                "Input2",
+                input::command2(input_service, device_type, device_name, device_state).await,
+            )
+            .await?;
         }
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()
