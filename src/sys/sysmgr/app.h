@@ -60,7 +60,7 @@ class App {
   async::Loop* loop_;
   std::shared_ptr<sys::ServiceDirectory> incoming_services_;
 
-  // Keep track of services provided by each cmoponent URL.
+  // Keep track of services provided by each component URL.
   std::map<std::string, std::shared_ptr<sys::ServiceDirectory>> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
