@@ -25,6 +25,7 @@ class ErmineStory {
   final ValueChanged<ErmineStory> onDelete;
   final ValueChanged<ErmineStory> onChange;
   final String id;
+  final String url;
 
   // An optional view controller which allows the story to communicate with the
   // process.
@@ -40,9 +41,10 @@ class ErmineStory {
   @visibleForTesting
   ErmineStory({
     this.id,
+    this.url,
     this.onDelete,
     this.onChange,
-    String title = '',
+    String title,
   })  : nameNotifier = ValueNotifier(title),
         childViewConnectionNotifier = ValueNotifier(null);
 
@@ -58,6 +60,7 @@ class ErmineStory {
     return ErmineStory(
       id: suggestion.id,
       title: suggestion.title,
+      url: suggestion.url,
       onDelete: onDelete,
       onChange: onChange,
     ).._elementController = elementController;
@@ -70,12 +73,16 @@ class ErmineStory {
   factory ErmineStory.fromExternalSource({
     ValueChanged<ErmineStory> onDelete,
     ValueChanged<ErmineStory> onChange,
+    String id,
+    String url,
+    String name,
   }) {
-    final id = Uuid().v4();
     return ErmineStory(
-      id: 'external:$id',
+      id: id ?? Uuid().v4(),
       onDelete: onDelete,
       onChange: onChange,
+      title: name ?? url?.split('/')?.last,
+      url: url,
     );
   }
 
@@ -131,6 +138,15 @@ class ErmineStory {
         key: ermineSuggestionIdKey,
         value: Value.withText(suggestion.id),
       ),
+      Annotation(
+        key: 'url',
+        value: Value.withText(suggestion.url),
+      ),
+      if (suggestion.title.isNotEmpty)
+        Annotation(
+          key: 'name',
+          value: Value.withText(suggestion.title),
+        ),
     ]);
 
     final spec =

@@ -43,6 +43,12 @@ abstract class ErmineShell {
     /// A string identifying the launched story. This id is only valid if the
     /// story was launched from ermine.
     String id,
+
+    /// The component url of the launched story. This could be null.
+    String url,
+
+    /// The name of the the launched story. This could be null.
+    String name,
   );
 
   /// Called when a story is dismissed by the session instead of the user.

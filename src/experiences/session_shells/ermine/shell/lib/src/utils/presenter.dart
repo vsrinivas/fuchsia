@@ -17,7 +17,7 @@ import 'suggestion.dart';
 /// requesting source did not provide a channel. The methods will still be safe
 /// to call even if it is not bound.
 typedef PresentViewCallback = void Function(
-    ChildViewConnection, ViewRef, ViewControllerImpl, String);
+    ChildViewConnection, ViewRef, ViewControllerImpl, String, String, String);
 
 /// A callback which is invoked when the element is dismissed by the session.
 ///
@@ -56,6 +56,10 @@ class PresenterService extends fidl.GraphicalPresenter {
     // Check to see if we have an id that we included in the annotation.
     final idAnnotation = viewSpec.annotations?.customAnnotations
         ?.firstWhere((a) => a.key == ermineSuggestionIdKey, orElse: () => null);
+    final urlAnnotation = viewSpec.annotations?.customAnnotations
+        ?.firstWhere((a) => a.key == 'url', orElse: () => null);
+    final nameAnnotation = viewSpec.annotations?.customAnnotations
+        ?.firstWhere((a) => a.key == 'name', orElse: () => null);
 
     final viewHolderToken = viewSpec.viewHolderToken;
     if (viewHolderToken != null) {
@@ -68,7 +72,9 @@ class PresenterService extends fidl.GraphicalPresenter {
         connection,
         viewSpec.viewRef,
         viewController,
-        idAnnotation?.value?.text ?? '',
+        idAnnotation?.value?.text,
+        urlAnnotation?.value?.text,
+        nameAnnotation?.value?.text,
       );
     } else {
       viewController.close(fidl.ViewControllerEpitaph.invalidViewSpec);

@@ -86,6 +86,8 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
     ViewRef viewRef,
     ViewControllerImpl viewController,
     String id,
+    String url,
+    String name,
   ) {
     // Check to see if a story already exists on screen.
     ErmineStory story = getStory(id);
@@ -96,6 +98,9 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
       story = ErmineStory.fromExternalSource(
         onDelete: storyDeleted,
         onChange: storyChanged,
+        id: id,
+        url: url,
+        name: name,
       );
       _addErmineStory(story);
     }
@@ -287,6 +292,9 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
           rect ??= Rect.zero;
           storyNode.stringProperty('viewport').setValue(
               '${rect.left},${rect.top},${rect.width},${rect.height}');
+          if (story.url != null) {
+            storyNode.stringProperty('url').setValue(story.url);
+          }
         }
       }
     } else {

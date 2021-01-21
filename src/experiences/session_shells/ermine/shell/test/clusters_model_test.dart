@@ -37,6 +37,8 @@ void main() {
       ViewRef(reference: eventPair),
       ViewControllerImpl((_) {}),
       'id',
+      'url',
+      'name',
     );
 
     expect(clustersModel.hasStories, true);
@@ -56,6 +58,8 @@ void main() {
       ViewRef(reference: eventPair),
       viewController,
       'id',
+      'url',
+      'name',
     );
 
     final story = clustersModel.focusedStory;
