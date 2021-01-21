@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::utils::{self, Either, WatchOrSetResult};
 use crate::{AccessibilityOptions, CaptionCommands};
-use anyhow::Error;
 use fidl_fuchsia_settings::{
     AccessibilityProxy, AccessibilitySettings, CaptionFontStyle, CaptionsSettings,
 };
 
-pub async fn command(
-    proxy: AccessibilityProxy,
-    options: AccessibilityOptions,
-) -> Result<String, Error> {
+pub async fn command(proxy: AccessibilityProxy, options: AccessibilityOptions) -> WatchOrSetResult {
     let mut settings = AccessibilitySettings::EMPTY;
     settings.audio_description = options.audio_description;
     settings.screen_reader = options.screen_reader;
@@ -39,15 +36,14 @@ pub async fn command(
         settings.captions_settings = Some(captions_settings);
     }
 
-    if settings == AccessibilitySettings::EMPTY {
-        // No values set, perform a get instead.
-        let setting_value = proxy.watch().await?;
-        Ok(format!("{:#?}", setting_value))
+    Ok(if settings == AccessibilitySettings::EMPTY {
+        // No values set, perform a watch loop instead.
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
     } else {
         let mutate_result = proxy.set(settings).await?;
-        match mutate_result {
-            Ok(_) => Ok(format!("Successfully set AccessibilitySettings")),
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
-    }
+        Either::Set(match mutate_result {
+            Ok(_) => format!("Successfully set AccessibilitySettings"),
+            Err(err) => format!("{:#?}", err),
+        })
+    })
 }

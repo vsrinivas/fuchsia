@@ -448,9 +448,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 connect_to_service::<fidl_fuchsia_settings::AccessibilityMarker>()
                     .context("Failed to connect to accessibility service")?;
 
-            let output =
-                accessibility::command(accessibility_service, accessibility_options).await?;
-            println!("Accessibility: {}", output);
+            utils::handle_mixed_result(
+                "Accessibility",
+                accessibility::command(accessibility_service, accessibility_options).await,
+            )
+            .await?;
         }
         SettingClient::Privacy { user_data_sharing_consent } => {
             let privacy_service = connect_to_service::<fidl_fuchsia_settings::PrivacyMarker>()

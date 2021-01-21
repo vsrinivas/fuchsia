@@ -625,9 +625,13 @@ async fn validate_accessibility_set() -> Result<(), Error> {
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    let output = accessibility::command(accessibility_service, expected_options).await?;
-
-    assert_eq!(output, "Successfully set AccessibilitySettings");
+    if let utils::Either::Set(output) =
+        accessibility::command(accessibility_service, expected_options).await?
+    {
+        assert_eq!(output, "Successfully set AccessibilitySettings");
+    } else {
+        panic!("Expected set result from accessibility set command");
+    }
 
     Ok(())
 }
@@ -644,10 +648,14 @@ async fn validate_accessibility_watch() -> Result<(), Error> {
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    let output =
-        accessibility::command(accessibility_service, AccessibilityOptions::default()).await?;
-
-    assert_eq!(output, format!("{:#?}", AccessibilitySettings::EMPTY));
+    if let utils::Either::Watch(mut stream) =
+        accessibility::command(accessibility_service, AccessibilityOptions::default()).await?
+    {
+        let output = stream.try_next().await?;
+        assert_eq!(output, Some(format!("{:#?}", AccessibilitySettings::EMPTY)));
+    } else {
+        panic!("Expected watch result from accessibility get command");
+    }
 
     Ok(())
 }
