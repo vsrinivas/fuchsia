@@ -1,8 +1,8 @@
-# `session_manager`
+# session_manager
 
-Reviewed on: 2020-02-04
+Reviewed on: 2021-01-21
 
-`session_manager` is the component which runs and manages sessions. <!-- More about what sessions are and what role they play in products built on Fuchsia is available [here](/docs/concepts/session/index.md). -->
+`session_manager` is the component that runs and manages sessions. For more information on what sessions are and what roles they play in products built on Fuchsia, see [Session Framework](/docs/concepts/session/introduction.md)
 
 ## Building
 
@@ -14,7 +14,7 @@ Product configurations built on Session Framework (such as `fx set workstation.x
 
 `session_manager` is launched in one of two ways: manually or automatically on system boot.
 
-In general, running on boot is desirable for production configuration, while running manually is useful during development.
+In general, running manually is useful during development, while running on boot is desirable for a production configuration.
 
 ### Running manually
 
@@ -27,7 +27,7 @@ $ fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_ma
 Use the [`session_control`](/src/session/tools/session_control/README.md) tool to run a specific session. For example:
 
 ```
-$ fx shell 'session_control launch "fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm"'
+$ fx shell session_control launch fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm
 ```
 
 ### Running on boot
