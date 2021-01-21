@@ -36,6 +36,45 @@ use {
     std::sync::Arc,
 };
 
+/// Validate that the results of the call are successful, and in the case of watch,
+/// that the first item can be retrieved, but do not analyze the result.
+macro_rules! assert_successful {
+    ($expr:expr) => {
+        // We only need an extra check on the watch so we can exercise it at least once.
+        // The sets already return a result.
+        if let ::setui_client_lib::utils::Either::Watch(mut stream) = $expr.await? {
+            stream.try_next().await?;
+        }
+    };
+}
+
+/// Validate that the results of the call are a successful set and return the result.
+macro_rules! assert_set {
+    ($expr:expr) => {
+        match $expr.await? {
+            ::setui_client_lib::utils::Either::Set(output) => output,
+            ::setui_client_lib::utils::Either::Watch(_) => {
+                panic!("Did not expect a watch result for a set call")
+            }
+        }
+    };
+}
+
+/// Validate that the results of the call are a successful watch and return the
+/// first result.
+macro_rules! assert_watch {
+    ($expr:expr) => {
+        match $expr.await? {
+            ::setui_client_lib::utils::Either::Watch(mut stream) => {
+                stream.try_next().await?.expect("Watch should have a result")
+            }
+            ::setui_client_lib::utils::Either::Set(_) => {
+                panic!("Did not expect a set result for a watch call")
+            }
+        }
+    };
+}
+
 enum Services {
     Accessibility(AccessibilityRequestStream),
     Audio(AudioRequestStream),
@@ -355,20 +394,15 @@ async fn validate_intl_set() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    if let utils::Either::Set(_) = intl::command(
+    assert_set!(intl::command(
         intl_service,
         Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
         Some(TEST_TEMPERATURE_UNIT),
         vec![LocaleId { id: TEST_LOCALE.into() }],
         Some(TEST_HOUR_CYCLE),
         false,
-    )
-    .await?
-    {
-        Ok(())
-    } else {
-        panic!("Did not expect watch result for a set command");
-    }
+    ));
+    Ok(())
 }
 
 async fn validate_intl_watch() -> Result<(), Error> {
@@ -392,27 +426,21 @@ async fn validate_intl_watch() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    if let utils::Either::Watch(mut stream) =
-        intl::command(intl_service, None, None, vec![], None, false).await?
-    {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                IntlSettings {
-                    locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
-                    temperature_unit: Some(TEST_TEMPERATURE_UNIT),
-                    time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
-                    hour_cycle: Some(TEST_HOUR_CYCLE),
-                    ..IntlSettings::EMPTY
-                }
-            )
-        );
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command");
-    }
+    let output = assert_watch!(intl::command(intl_service, None, None, vec![], None, false));
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            IntlSettings {
+                locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
+                temperature_unit: Some(TEST_TEMPERATURE_UNIT),
+                time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+                hour_cycle: Some(TEST_HOUR_CYCLE),
+                ..IntlSettings::EMPTY
+            }
+        )
+    );
+    Ok(())
 }
 
 async fn validate_device() -> Result<(), Error> {
@@ -488,9 +516,7 @@ async fn validate_display(
         .connect_to_service::<DisplayMarker>()
         .context("Failed to connect to display service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) = display::command(
+    assert_successful!(display::command(
         display_service,
         expected_brightness,
         expected_auto_brightness,
@@ -498,11 +524,7 @@ async fn validate_display(
         expected_low_light_mode,
         Some(Theme { theme_type: expected_theme_type, ..Theme::EMPTY }),
         expected_screen_enabled,
-    )
-    .await?
-    {
-        stream.try_next().await?;
-    }
+    ));
 
     Ok(())
 }
@@ -532,13 +554,10 @@ async fn validate_factory_reset(expected_local_reset_allowed: bool) -> Result<()
         .connect_to_service::<FactoryResetMarker>()
         .context("Failed to connect to factory reset service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) =
-        factory_reset::command(factory_reset_service, Some(expected_local_reset_allowed)).await?
-    {
-        stream.try_next().await?;
-    }
+    assert_successful!(factory_reset::command(
+        factory_reset_service,
+        Some(expected_local_reset_allowed)
+    ));
 
     Ok(())
 }
@@ -575,17 +594,9 @@ async fn validate_light_sensor() -> Result<(), Error> {
     })
     .detach();
 
-    if let utils::Either::Watch(mut stream) =
-        display::command(display_service, None, None, true, None, None, None).await?
-    {
-        stream.try_next().await?;
-
-        assert_eq!(*watch_called.read(), true);
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command");
-    }
+    assert_watch!(display::command(display_service, None, None, true, None, None, None));
+    assert_eq!(*watch_called.read(), true);
+    Ok(())
 }
 
 async fn validate_accessibility_set() -> Result<(), Error> {
@@ -651,14 +662,8 @@ async fn validate_accessibility_set() -> Result<(), Error> {
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    if let utils::Either::Set(output) =
-        accessibility::command(accessibility_service, expected_options).await?
-    {
-        assert_eq!(output, "Successfully set AccessibilitySettings");
-    } else {
-        panic!("Expected set result from accessibility set command");
-    }
-
+    let output = assert_set!(accessibility::command(accessibility_service, expected_options));
+    assert_eq!(output, "Successfully set AccessibilitySettings");
     Ok(())
 }
 
@@ -674,15 +679,11 @@ async fn validate_accessibility_watch() -> Result<(), Error> {
         .connect_to_service::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    if let utils::Either::Watch(mut stream) =
-        accessibility::command(accessibility_service, AccessibilityOptions::default()).await?
-    {
-        let output = stream.try_next().await?;
-        assert_eq!(output, Some(format!("{:#?}", AccessibilitySettings::EMPTY)));
-    } else {
-        panic!("Expected watch result from accessibility get command");
-    }
-
+    let output = assert_watch!(accessibility::command(
+        accessibility_service,
+        AccessibilityOptions::default()
+    ));
+    assert_eq!(output, format!("{:#?}", AccessibilitySettings::EMPTY));
     Ok(())
 }
 
@@ -724,20 +725,14 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
     let audio_service =
         env.connect_to_service::<AudioMarker>().context("Failed to connect to audio service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) = audio::command(
+    assert_successful!(audio::command(
         audio_service,
         expected.stream,
         expected.source,
         expected.level,
         expected.volume_muted,
         expected.input_muted,
-    )
-    .await?
-    {
-        stream.try_next().await?;
-    }
+    ));
     Ok(())
 }
 
@@ -819,20 +814,14 @@ async fn validate_input2_watch() -> Result<(), Error> {
     let input_service =
         env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
 
-    if let utils::Either::Watch(mut stream) =
-        input::command2(input_service, None, None, None).await?
-    {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-        // Just check that the output contains some key strings that confirms the watch returned.
-        // The string representation may not necessarily be in the same order.
-        assert!(output.contains("Software"));
-        assert!(output.contains("source_states: Some"));
-        assert!(output.contains("toggle_flags: Some"));
-        assert!(output.contains("camera"));
-        assert!(output.contains("Available"));
-    } else {
-        panic!("Did not expect set result for a watch command");
-    }
+    let output = assert_watch!(input::command2(input_service, None, None, None));
+    // Just check that the output contains some key strings that confirms the watch returned.
+    // The string representation may not necessarily be in the same order.
+    assert!(output.contains("Software"));
+    assert!(output.contains("source_states: Some"));
+    assert!(output.contains("toggle_flags: Some"));
+    assert!(output.contains("camera"));
+    assert!(output.contains("Available"));
     Ok(())
 }
 
@@ -856,23 +845,17 @@ async fn validate_input2_set(
     let input_service =
         env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
 
-    if let utils::Either::Set(output) = input::command2(
+    let output = assert_set!(input::command2(
         input_service,
         Some(device_type),
         Some(device_name.to_string()),
         Some(u64_to_state(device_state)),
-    )
-    .await?
-    {
-        // Just check that the output contains some key strings that confirms the set returned.
-        // The string representation may not necessarily be in the same order.
-        assert!(output.contains(&format!("{:?}", device_type)));
-        assert!(output.contains(&format!("{:?}", device_name)));
-        assert!(output.contains(expected_state_string));
-    } else {
-        panic!("Did not expect watch result for a set command");
-    }
-
+    ));
+    // Just check that the output contains some key strings that confirms the set returned.
+    // The string representation may not necessarily be in the same order.
+    assert!(output.contains(&format!("{:?}", device_type)));
+    assert!(output.contains(&format!("{:?}", device_name)));
+    assert!(output.contains(expected_state_string));
     Ok(())
 }
 
@@ -934,15 +917,11 @@ async fn validate_dnd(
         .connect_to_service::<DoNotDisturbMarker>()
         .context("Failed to connect to do not disturb service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) =
-        do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
-            .await?
-    {
-        stream.try_next().await?;
-    }
-
+    assert_successful!(do_not_disturb::command(
+        do_not_disturb_service,
+        expected_user_dnd,
+        expected_night_mode_dnd
+    ));
     Ok(())
 }
 
@@ -963,7 +942,7 @@ async fn validate_light_set() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    if let utils::Either::Set(_) = light::command(
+    assert_set!(light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: Some(TEST_NAME.to_string()),
@@ -971,13 +950,8 @@ async fn validate_light_set() -> Result<(), Error> {
             brightness: vec![LIGHT_VAL_1, LIGHT_VAL_2],
             rgb: vec![],
         },
-    )
-    .await?
-    {
-        Ok(())
-    } else {
-        panic!("Did not expect a watch result for set command");
-    }
+    ));
+    Ok(())
 }
 
 async fn validate_light_watch() -> Result<(), Error> {
@@ -1007,7 +981,7 @@ async fn validate_light_watch() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    if let utils::Either::Watch(mut stream) = light::command(
+    let output = assert_watch!(light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: None,
@@ -1015,36 +989,30 @@ async fn validate_light_watch() -> Result<(), Error> {
             brightness: vec![],
             rgb: vec![],
         },
-    )
-    .await?
-    {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                vec![LightGroup {
-                    name: Some(TEST_NAME.to_string()),
-                    enabled: Some(ENABLED),
-                    type_: Some(LIGHT_TYPE),
-                    lights: Some(vec![
-                        LightState {
-                            value: Some(LightValue::Brightness(LIGHT_VAL_1)),
-                            ..LightState::EMPTY
-                        },
-                        LightState {
-                            value: Some(LightValue::Brightness(LIGHT_VAL_2)),
-                            ..LightState::EMPTY
-                        }
-                    ]),
-                    ..LightGroup::EMPTY
-                }]
-            )
-        );
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command");
-    }
+    ));
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            vec![LightGroup {
+                name: Some(TEST_NAME.to_string()),
+                enabled: Some(ENABLED),
+                type_: Some(LIGHT_TYPE),
+                lights: Some(vec![
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                        ..LightState::EMPTY
+                    },
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                        ..LightState::EMPTY
+                    }
+                ]),
+                ..LightGroup::EMPTY
+            }]
+        )
+    );
+    Ok(())
 }
 
 async fn validate_light_watch_individual() -> Result<(), Error> {
@@ -1072,7 +1040,7 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    if let utils::Either::Watch(mut stream) = light::command(
+    let output = assert_watch!(light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: Some(TEST_NAME.to_string()),
@@ -1080,37 +1048,30 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
             brightness: vec![],
             rgb: vec![],
         },
-    )
-    .await?
-    {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                LightGroup {
-                    name: Some(TEST_NAME.to_string()),
-                    enabled: Some(ENABLED),
-                    type_: Some(LIGHT_TYPE),
-                    lights: Some(vec![
-                        LightState {
-                            value: Some(LightValue::Brightness(LIGHT_VAL_1)),
-                            ..LightState::EMPTY
-                        },
-                        LightState {
-                            value: Some(LightValue::Brightness(LIGHT_VAL_2)),
-                            ..LightState::EMPTY
-                        }
-                    ]),
-                    ..LightGroup::EMPTY
-                }
-            )
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command");
-    }
+    ));
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            LightGroup {
+                name: Some(TEST_NAME.to_string()),
+                enabled: Some(ENABLED),
+                type_: Some(LIGHT_TYPE),
+                lights: Some(vec![
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                        ..LightState::EMPTY
+                    },
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                        ..LightState::EMPTY
+                    }
+                ]),
+                ..LightGroup::EMPTY
+            }
+        )
+    );
+    Ok(())
 }
 
 async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Result<(), Error> {
@@ -1136,14 +1097,7 @@ async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Resul
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) =
-        night_mode::command(night_mode_service, expected_night_mode_enabled).await?
-    {
-        stream.try_next().await?;
-    }
-
+    assert_successful!(night_mode::command(night_mode_service, expected_night_mode_enabled));
     Ok(())
 }
 
@@ -1164,18 +1118,13 @@ async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Re
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    if let utils::Either::Set(output) =
-        night_mode::command(night_mode_service, Some(expected_night_mode_enabled)).await?
-    {
-        assert_eq!(
-            output,
-            format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect watch result for a set command.");
-    }
+    let output =
+        assert_set!(night_mode::command(night_mode_service, Some(expected_night_mode_enabled)));
+    assert_eq!(
+        output,
+        format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
+    );
+    Ok(())
 }
 
 async fn validate_night_mode_watch_output(
@@ -1197,25 +1146,18 @@ async fn validate_night_mode_watch_output(
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night_mode service")?;
 
-    // Pass in None to call Watch() on the service.
-    if let utils::Either::Watch(mut stream) = night_mode::command(night_mode_service, None).await? {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                NightModeSettings {
-                    night_mode_enabled: expected_night_mode_enabled,
-                    ..NightModeSettings::EMPTY
-                }
-            )
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command.");
-    }
+    let output = assert_watch!(night_mode::command(night_mode_service, None));
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            NightModeSettings {
+                night_mode_enabled: expected_night_mode_enabled,
+                ..NightModeSettings::EMPTY
+            }
+        )
+    );
+    Ok(())
 }
 
 async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> Result<(), Error> {
@@ -1241,14 +1183,7 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
         .connect_to_service::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
-    // We only need an extra check on the watch so we can exercise it at least once.
-    // The sets already return a result.
-    if let utils::Either::Watch(mut stream) =
-        privacy::command(privacy_service, expected_user_data_sharing_consent).await?
-    {
-        stream.try_next().await?;
-    }
-
+    assert_successful!(privacy::command(privacy_service, expected_user_data_sharing_consent));
     Ok(())
 }
 
@@ -1271,21 +1206,16 @@ async fn validate_privacy_set_output(
         .connect_to_service::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
-    if let utils::Either::Set(output) =
-        privacy::command(privacy_service, Some(expected_user_data_sharing_consent)).await?
-    {
-        assert_eq!(
-            output,
-            format!(
-                "Successfully set user_data_sharing_consent to {}",
-                expected_user_data_sharing_consent
-            )
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect watch result for a set command.");
-    }
+    let output =
+        assert_set!(privacy::command(privacy_service, Some(expected_user_data_sharing_consent)));
+    assert_eq!(
+        output,
+        format!(
+            "Successfully set user_data_sharing_consent to {}",
+            expected_user_data_sharing_consent
+        )
+    );
+    Ok(())
 }
 
 async fn validate_privacy_watch_output(
@@ -1307,25 +1237,18 @@ async fn validate_privacy_watch_output(
         .connect_to_service::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
-    // Pass in None to call Watch() on the service.
-    if let utils::Either::Watch(mut stream) = privacy::command(privacy_service, None).await? {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-
-        assert_eq!(
-            output,
-            format!(
-                "{:#?}",
-                PrivacySettings {
-                    user_data_sharing_consent: expected_user_data_sharing_consent,
-                    ..PrivacySettings::EMPTY
-                }
-            )
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command.");
-    }
+    let output = assert_watch!(privacy::command(privacy_service, None));
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            PrivacySettings {
+                user_data_sharing_consent: expected_user_data_sharing_consent,
+                ..PrivacySettings::EMPTY
+            }
+        )
+    );
+    Ok(())
 }
 
 fn create_setup_setting(interfaces: ConfigurationInterfaces) -> SetupSettings {
@@ -1356,25 +1279,13 @@ async fn validate_setup() -> Result<(), Error> {
     let setup_service =
         env.connect_to_service::<SetupMarker>().context("Failed to connect to setup service")?;
 
-    if let utils::Either::Set(_) =
-        setup::command(setup_service.clone(), Some(expected_set_interfaces)).await?
-    {
-        // no-op
-    } else {
-        panic!("Did not expect a watch result for a set command.");
-    }
-
-    if let utils::Either::Watch(mut stream) = setup::command(setup_service.clone(), None).await? {
-        let watch_result = stream.try_next().await?.expect("Watch should have a result");
-        assert_eq!(
-            watch_result,
-            setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
-        );
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command.");
-    }
+    assert_set!(setup::command(setup_service.clone(), Some(expected_set_interfaces)));
+    let output = assert_watch!(setup::command(setup_service.clone(), None));
+    assert_eq!(
+        output,
+        setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
+    );
+    Ok(())
 }
 
 // Verifies that invoking a volume policy command with no arguments fetches the policy properties.
@@ -1399,19 +1310,11 @@ async fn validate_volume_policy_get() -> Result<(), Error> {
         .connect_to_service::<VolumePolicyControllerMarker>()
         .context("Failed to connect to volume policy service")?;
 
-    // Invoke the volume policy command with no arguments to trigger a get call.
-    if let utils::Either::Watch(mut stream) =
-        volume_policy::command(volume_policy_service, None, None).await?
-    {
-        let output = stream.try_next().await?.expect("Watch should have a result");
-        // Spot-check that the output contains the available transform in the data returned from the
-        // fake service.
-        assert!(output.contains("Max"));
-
-        Ok(())
-    } else {
-        panic!("Did not expect a set result for a watch command.");
-    }
+    let output = assert_watch!(volume_policy::command(volume_policy_service, None, None));
+    // Spot-check that the output contains the available transform in the data returned from the
+    // fake service.
+    assert!(output.contains("Max"));
+    Ok(())
 }
 
 // Verifies that adding a new policy works and prints out the resulting policy ID.
@@ -1443,16 +1346,11 @@ async fn validate_volume_policy_add() -> Result<(), Error> {
         .context("Failed to connect to volume policy service")?;
 
     // Make the add call.
-    if let utils::Either::Set(output) =
-        volume_policy::command(volume_policy_service, Some(add_options), None).await?
-    {
-        // Verify that the output contains the policy ID returned from the fake service.
-        assert!(output.contains(expected_policy_id.to_string().as_str()));
-
-        Ok(())
-    } else {
-        panic!("Did not expect a watch result for a set command.");
-    }
+    let output =
+        assert_set!(volume_policy::command(volume_policy_service, Some(add_options), None));
+    // Verify that the output contains the policy ID returned from the fake service.
+    assert!(output.contains(expected_policy_id.to_string().as_str()));
+    Ok(())
 }
 
 // Verifies that removing a policy sends the proper call to the volume policy API.
@@ -1473,11 +1371,6 @@ async fn validate_volume_policy_remove() -> Result<(), Error> {
         .context("Failed to connect to volume policy service")?;
 
     // Attempt to remove the given policy ID.
-    if let utils::Either::Set(_output) =
-        volume_policy::command(volume_policy_service, None, Some(expected_policy_id)).await?
-    {
-        Ok(())
-    } else {
-        panic!("Did not expect a watch result for a set command.");
-    }
+    assert_set!(volume_policy::command(volume_policy_service, None, Some(expected_policy_id)));
+    Ok(())
 }
