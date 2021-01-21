@@ -1356,16 +1356,25 @@ async fn validate_setup() -> Result<(), Error> {
     let setup_service =
         env.connect_to_service::<SetupMarker>().context("Failed to connect to setup service")?;
 
-    setup::command(setup_service.clone(), Some(expected_set_interfaces)).await?;
+    if let utils::Either::Set(_) =
+        setup::command(setup_service.clone(), Some(expected_set_interfaces)).await?
+    {
+        // no-op
+    } else {
+        panic!("Did not expect a watch result for a set command.");
+    }
 
-    let watch_result = setup::command(setup_service.clone(), None).await?;
+    if let utils::Either::Watch(mut stream) = setup::command(setup_service.clone(), None).await? {
+        let watch_result = stream.try_next().await?.expect("Watch should have a result");
+        assert_eq!(
+            watch_result,
+            setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
+        );
 
-    assert_eq!(
-        watch_result,
-        setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
-    );
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command.");
+    }
 }
 
 // Verifies that invoking a volume policy command with no arguments fetches the policy properties.

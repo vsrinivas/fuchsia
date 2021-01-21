@@ -516,8 +516,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()
                 .context("Failed to connect to setup service")?;
-            let output = setup::command(setup_service, configuration_interfaces).await?;
-            println!("Setup: {}", output);
+            utils::handle_mixed_result(
+                "Setup",
+                setup::command(setup_service, configuration_interfaces).await,
+            )
+            .await?;
         }
         SettingClient::VolumePolicy { add, remove } => {
             let setup_service =

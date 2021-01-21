@@ -3,31 +3,31 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{self, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{ConfigurationInterfaces, SetupProxy, SetupSettings},
 };
 
 pub async fn command(
     proxy: SetupProxy,
     configuration_interfaces: Option<ConfigurationInterfaces>,
-) -> Result<String, Error> {
-    let mut output = String::new();
-
-    if let Some(configuration_interfaces) = configuration_interfaces {
+) -> WatchOrSetResult {
+    Ok(if let Some(configuration_interfaces) = configuration_interfaces {
         let mut settings = SetupSettings::EMPTY;
         settings.enabled_configuration_interfaces = Some(configuration_interfaces);
 
         let set_result = proxy.set(settings).await?;
 
-        match set_result {
-            Ok(_) => output.push_str(&format!("Successfully set configuration interfaces")),
-            Err(err) => output.push_str(&format!("{:?}", err)),
-        }
+        Either::Set(match set_result {
+            Ok(_) => format!("Successfully set configuration interfaces"),
+            Err(err) => format!("{:?}", err),
+        })
     } else {
-        output.push_str(&describe_setup_setting(&proxy.watch().await?));
-    }
-
-    Ok(output)
+        Either::Watch(utils::formatted_watch_to_stream(
+            proxy,
+            |p| p.watch(),
+            |s| describe_setup_setting(&s),
+        ))
+    })
 }
 
 pub fn describe_setup_setting(setup_settings: &SetupSettings) -> String {
