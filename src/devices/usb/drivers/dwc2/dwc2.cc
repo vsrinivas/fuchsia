@@ -20,6 +20,7 @@
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
+#include "src/devices/usb/drivers/dwc2/dwc2_bind.h"
 #include "usb_dwc_regs.h"
 
 namespace dwc2 {
@@ -1189,12 +1190,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace dwc2
 
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(dwc2, dwc2::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
-ZIRCON_DRIVER_END(dwc2)
-    // clang-format on
+ZIRCON_DRIVER(dwc2, dwc2::driver_ops, "zircon", "0.1");

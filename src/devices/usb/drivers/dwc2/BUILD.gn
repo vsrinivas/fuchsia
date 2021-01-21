@@ -2,9 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("dwc2_bind") {
+  rules = "dwc2.bind"
+  output = "dwc2_bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.designware.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("dwc2") {
   configs += [
@@ -14,6 +26,7 @@ driver_module("dwc2") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dwc2.cc" ]
   deps = [
+    ":dwc2_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -25,9 +38,6 @@ driver_module("dwc2") {
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -49,6 +59,7 @@ test("dwc2-test-bin") {
   ]
   output_name = "dwc2-test"
   deps = [
+    ":dwc2_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -61,9 +72,6 @@ test("dwc2-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -82,5 +90,8 @@ fuchsia_unittest_package("dwc2-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":dwc2-test" ]
+  deps = [
+    ":dwc2-test",
+    ":dwc2_bind_test",
+  ]
 }
