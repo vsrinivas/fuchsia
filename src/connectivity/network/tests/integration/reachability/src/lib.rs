@@ -124,44 +124,44 @@ fn reply_if_echo_request(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Bu
 fn extract_reachability_states(
     data: &diagnostics_hierarchy::DiagnosticsHierarchy,
 ) -> Result<(String, String)> {
-    let (v4, v6) = data
-        .children
-        .get(0)
-        .ok_or_else(|| anyhow!("failed to find \"system/root\" subtree in inspect data"))?
-        .children
-        .iter()
-        .fold((None, None), |(mut v4, mut v6), info| {
-            let get_latest_state = |states: &diagnostics_hierarchy::DiagnosticsHierarchy| {
-                states.children.iter().fold((-1, None), |(latest_seqnum, latest_state), state| {
+    let (v4, v6) = data.children.iter().fold((None, None), |(mut v4, mut v6), info| {
+        let get_latest_state = |states: &diagnostics_hierarchy::DiagnosticsHierarchy| {
+            // NB As inspect data node creation is currently not atomic, it's possible to observe a
+            // child with a sequence number, but no "state" property. This is why the initial value
+            // of the fold accumulator is the reachability state "None", (it's possible for the
+            // only child node to be missing a field) and it is only overwritten when the "state"
+            // property is present.
+            states.children.iter().fold(
+                (-1, Some("None".to_string())),
+                |(latest_seqnum, latest_state), state| {
                     let seqnum = state
                         .name
                         .parse::<i64>()
                         .expect("failed to parse reachability state sequence number as integer");
-                    if seqnum > latest_seqnum {
-                        (
-                            seqnum,
-                            state.properties.iter().find_map(|p| {
-                                if p.key() == "state" {
-                                    p.string().map(|s| s.to_owned())
-                                } else {
-                                    None
-                                }
-                            }),
-                        )
+                    let state = state.properties.iter().find_map(|p| {
+                        if p.key() == "state" {
+                            p.string().map(|s| s.to_string())
+                        } else {
+                            None
+                        }
+                    });
+                    if seqnum > latest_seqnum && state.is_some() {
+                        (seqnum, state)
                     } else {
                         (latest_seqnum, latest_state)
                     }
-                })
-            };
-            if info.name == "IPv4" {
-                let (_, v4_latest) = get_latest_state(info);
-                v4 = v4_latest;
-            } else if info.name == "IPv6" {
-                let (_, v6_latest) = get_latest_state(info);
-                v6 = v6_latest;
-            }
-            (v4, v6)
-        });
+                },
+            )
+        };
+        if info.name == "IPv4" {
+            let (_, v4_latest) = get_latest_state(info);
+            v4 = v4_latest;
+        } else if info.name == "IPv6" {
+            let (_, v6_latest) = get_latest_state(info);
+            v6 = v6_latest;
+        }
+        (v4, v6)
+    });
     let v4 = v4.ok_or_else(|| anyhow!("failed to find IPv4 reachability state in inspect data"))?;
     let v6 = v6.ok_or_else(|| anyhow!("failed to find IPv6 reachability state in inspect data"))?;
     Ok((v4, v6))
@@ -288,9 +288,20 @@ where
     let inspect_data_stream = futures::stream::try_unfold((), |()| {
         get_inspect_data(&env, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
             .and_then(|data| {
-                futures::future::ready(extract_reachability_states(&data).with_context(|| {
-                    format!("failed to extract reachability states from inspect data: {:#?}", data)
-                }))
+                futures::future::ready(
+                    data.children
+                        .get(0)
+                        .ok_or_else(|| {
+                            anyhow!("failed to find /system subtree under /root in inspect data")
+                        })
+                        .and_then(|data| extract_reachability_states(&data))
+                        .with_context(|| {
+                            format!(
+                                "failed to extract reachability states from inspect data: {:#?}",
+                                data
+                            )
+                        }),
+                )
             })
             .map_ok(|states| Some((states, ())))
     })
