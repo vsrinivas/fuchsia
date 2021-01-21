@@ -190,6 +190,11 @@ where
             MaybeParsed::Complete(v) => v.deref().len(),
         }
     }
+
+    /// Returns whether the contained data is empty - zero bytes long.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 #[cfg(test)]

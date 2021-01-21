@@ -1404,6 +1404,7 @@ pub trait Serializer: Sized {
     /// [`Buf<Vec<u8>>`]: crate::serialize::Buf
     /// [`serialize`]: crate::serialize::Serializer::serialize
     #[inline]
+    #[allow(clippy::type_complexity)]
     fn serialize_vec<PB: NestedPacketBuilder>(
         self,
         outer: PB,
@@ -1473,6 +1474,7 @@ pub trait Serializer: Sized {
     /// [`Buf<Vec<u8>>`]: crate::serialize::Buf
     /// [`serialize_vec`]: crate::serialize::Serializer::serialize_vec
     #[inline]
+    #[allow(clippy::type_complexity)]
     fn serialize_vec_outer(
         self,
     ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)>
@@ -1547,6 +1549,7 @@ impl<I: InnerPacketBuilder, B: GrowBuffer + ShrinkBuffer> Serializer for InnerSe
     type Buffer = B;
 
     #[inline]
+    #[allow(clippy::type_complexity)]
     fn serialize<BB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
         self,
         outer: PB,

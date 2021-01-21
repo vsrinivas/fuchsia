@@ -175,12 +175,12 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
             }
             other = &other[x.len()..];
         }
-        other.len() == 0
+        other.is_empty()
     }
 
     /// Gets an iterator over all the bytes in this `FragmentedByteSlice`.
     pub fn iter(&self) -> impl '_ + Iterator<Item = u8> {
-        self.0.iter().map(|x| x.iter()).flatten().map(|x| *x)
+        self.0.iter().map(|x| x.iter()).flatten().copied()
     }
 
     /// Gets an iterator over the fragments of this `FragmentedByteSlice`.
@@ -288,7 +288,7 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
     /// On success, the backing slice is mutated to contain a single, empty byte
     /// slice.
     pub fn try_into_contiguous(self) -> Result<B, Self> {
-        if self.0.len() == 0 {
+        if self.0.is_empty() {
             Ok(B::empty())
         } else if self.0.len() == 1 {
             Ok(std::mem::replace(&mut self.0[0], B::empty()))
@@ -302,8 +302,8 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
     /// Returns `Some` if this `FragmentedByteSlice` is a single contiguous part
     /// (or is empty). Returns `None` otherwise.
     pub fn try_get_contiguous(&self) -> Option<&[u8]> {
-        if self.0.len() == 0 {
-            Some(&mut [])
+        if self.0.is_empty() {
+            Some(&[])
         } else if self.0.len() == 1 {
             Some(self.0[0].as_ref())
         } else {
@@ -393,9 +393,9 @@ impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
             // p is the current fragment in self we're feeding bytes into.
             let mut p = part.as_mut();
             // iterate until this fragment is all consumed.
-            while p.len() != 0 {
+            while !p.is_empty() {
                 // skip any empty slices in other.
-                while op.unwrap().len() == 0 {
+                while op.unwrap().is_empty() {
                     op = oth.next();
                 }
                 // get the current fragment in other.
@@ -444,7 +444,7 @@ impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
         assert!(end >= start);
         let len = end - start;
         if start == dest || len == 0 {
-            return;
+            // no work to do
         } else if start > dest {
             // copy front to back
             let mut start = self.get_index(start);
@@ -472,7 +472,7 @@ impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
     /// Returns `Some` if this `FragmentedByteSlice` is a single contiguous part
     /// (or is empty). Returns `None` otherwise.
     pub fn try_get_contiguous_mut(&mut self) -> Option<&mut [u8]> {
-        if self.0.len() == 0 {
+        if self.0.is_empty() {
             Some(&mut [])
         } else if self.0.len() == 1 {
             Some(self.0[0].as_mut())

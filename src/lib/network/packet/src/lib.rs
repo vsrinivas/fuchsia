@@ -1651,6 +1651,7 @@ pub struct SerializeBuffer<'a> {
     footer: &'a mut [u8],
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl<'a> SerializeBuffer<'a> {
     /// Constructs a new `SerializeBuffer`.
     ///
@@ -1666,7 +1667,7 @@ impl<'a> SerializeBuffer<'a> {
 
     /// Gets the bytes of the header.
     pub fn header(&mut self) -> &mut [u8] {
-        self.header.as_mut()
+        self.header
     }
 
     /// Gets the bytes of the body.
@@ -1676,7 +1677,7 @@ impl<'a> SerializeBuffer<'a> {
 
     /// Gets the bytes of the footer.
     pub fn footer(&mut self) -> &mut [u8] {
-        self.footer.as_mut()
+        self.footer
     }
 
     /// Gets the bytes of the header, body, and footer.
@@ -1687,7 +1688,7 @@ impl<'a> SerializeBuffer<'a> {
     /// construct and operate on references to more than one section of the
     /// buffer at a time.
     pub fn parts(&mut self) -> (&mut [u8], &mut FragmentedBytesMut<'a>, &mut [u8]) {
-        (self.header.as_mut(), &mut self.body, self.footer.as_mut())
+        (self.header, &mut self.body, self.footer)
     }
 
     /// Gets the total length of this `SerializeBuffer`, equal to the sum of the
