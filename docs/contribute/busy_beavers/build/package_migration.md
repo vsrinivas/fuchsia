@@ -93,6 +93,7 @@ New volunteer? Please add yourself to the list!
 *   [464409: [time] Migrate all packages + tests to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464409)
 *   [464407: [build] Migrate tests in //src/sys/lib to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464407)
 *   [464410: [build] migrate packages in //src/sys to new build rules](https://fuchsia-review.googlesource.com/c/fuchsia/+/464410)
+*   [473597: [session] Migrate all packages and tests to new build rules] (https://fuchsia-review.googlesource.com/c/fuchsia/+/473597)
 
 ## Sponsors
 
