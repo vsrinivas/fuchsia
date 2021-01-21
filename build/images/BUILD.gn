@@ -1760,7 +1760,19 @@ generated_file("fastboot_manifest") {
   output_conversion = "json"
   data_keys = [ "flash_manifest" ]
   deps = [ ":flash_script" ]
+
+  metadata = {
+    images = [
+      {
+        name = "flash-manifest"
+        path = "flash.json"
+        type = "manifest"
+      },
+    ]
+  }
 }
+
+default_image_deps += [ ":fastboot_manifest" ]
 
 default_image_deps += [ recovery_label ]
 
