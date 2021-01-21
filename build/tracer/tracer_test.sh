@@ -5,3 +5,7 @@
 cat $1 > $2
 cat $1 > $3
 cat $1 > $4
+
+# Commenting out one of the above lines should induce an error:
+# Missing writes:
+#   ...

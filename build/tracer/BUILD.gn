@@ -26,6 +26,9 @@ python_host_test("action_tracer_test") {
 # 4. Build.
 # $ fx build obj/build/tracer/tracer_test_output_1.txt
 # You should see an error for the target below!
+#
+# You can also induce an error by commenting out one of the output-producing
+# lines in tracer_test.sh.
 action("tracer_test") {
   script = "tracer_test.sh"
 

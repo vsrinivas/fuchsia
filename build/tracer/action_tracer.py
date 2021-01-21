@@ -299,7 +299,7 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
 
 
-def main():
+def main_arg_parser():
     parser = argparse.ArgumentParser(
         description="Traces a GN action and enforces strict inputs/outputs",
         argument_default=[],
@@ -320,7 +320,36 @@ def main():
     parser.add_argument("--sources", nargs="*", help="action#sources")
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
+
+    # Want --foo (default:True) and --no-foo (False).
+    # This is ugly, trying to emulate argparse.BooleanOptionalAction,
+    # which isn't available until Python 3.9.
+    parser.add_argument(
+        "--check-access-permissions",
+        action="store_true",
+        default=True,
+        help="Check permissions on file reads and writes")
+    parser.add_argument(
+        "--no-check-access-permissions",
+        action="store_false",
+        dest="check_access_permissions")
+
+    parser.add_argument(
+        "--check-output-freshness",
+        action="store_true",
+        default=True,
+        help="Check timestamp freshness of declared outputs")
+    parser.add_argument(
+        "--no-check-output-freshness",
+        action="store_false",
+        dest="check_output_freshness")
+
     parser.add_argument("args", nargs="*", help="action#args")
+    return parser
+
+
+def main():
+    parser = main_arg_parser()
     args = parser.parse_args()
 
     # Ensure trace_output directory exists
@@ -412,24 +441,21 @@ def main():
         )
     ]
 
-    # Verify the filesystem access trace.
-    unexpected_accesses = check_access_permissions(
-        filtered_accesses,
-        allowed_reads=access_constraints.allowed_reads,
-        allowed_writes=access_constraints.allowed_writes)
-
-    # Verify that outputs are written as promised.
-    missing_writes = check_missing_writes(
-        filtered_accesses, access_constraints.required_writes)
-
     # Check for overall correctness, print diagnostics,
     # and exit with the right code.
     exit_code = 0
-    if unexpected_accesses:
-        accesses_formatted = "\n".join(
-            f"{access}" for access in unexpected_accesses)
-        print(
-            f"""
+    if args.check_access_permissions:
+        # Verify the filesystem access trace.
+        unexpected_accesses = check_access_permissions(
+            filtered_accesses,
+            allowed_reads=access_constraints.allowed_reads,
+            allowed_writes=access_constraints.allowed_writes)
+
+        if unexpected_accesses:
+            accesses_formatted = "\n".join(
+                f"{access}" for access in unexpected_accesses)
+            print(
+                f"""
 Unexpected file accesses building {args.label}, following the order they are accessed:
 {accesses_formatted}
 
@@ -439,16 +465,21 @@ Full access trace:
 See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 
 """,
-            file=sys.stderr,
-        )
-        exit_code = 1
+                file=sys.stderr,
+            )
+            exit_code = 1
 
-    if missing_writes:
-        required_writes_formatted = "\n".join(
-            access_constraints.required_writes)
-        missing_writes_formatted = "\n".join(missing_writes)
-        print(
-            f"""
+    if args.check_output_freshness:
+        # Verify that outputs are written as promised.
+        missing_writes = check_missing_writes(
+            filtered_accesses, access_constraints.required_writes)
+
+        if missing_writes:
+            required_writes_formatted = "\n".join(
+                access_constraints.required_writes)
+            missing_writes_formatted = "\n".join(missing_writes)
+            print(
+                f"""
 Not all outputs of {args.label} were written or touched, which can cause subsequent
 build invocations to re-execute actions due to a missing file or old timestamp.
 Writes to the following files are missing:
@@ -465,9 +496,9 @@ Full access trace:
 See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
 
 """,
-            file=sys.stderr,
-        )
-        exit_code = 1
+                file=sys.stderr,
+            )
+            exit_code = 1
 
     return exit_code
 

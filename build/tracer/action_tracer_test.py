@@ -447,5 +447,45 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_writes=abspaths({"foo.d", "foo.o", "foo.cc", "foo.h"})))
 
 
+class MainArgParserTests(unittest.TestCase):
+
+    # These args are required, and there's nothing interesting about them to test.
+    required_args = "--script s.sh --trace-output t.out --label //pkg:tgt "
+
+    def test_only_required_args(self):
+        parser = action_tracer.main_arg_parser()
+        args = parser.parse_args(self.required_args.split())
+        self.assertEqual(args.script, "s.sh")
+        self.assertEqual(args.trace_output, "t.out")
+        self.assertEqual(args.label, "//pkg:tgt")
+        # Make sure all checks are enabled by default
+        self.assertTrue(args.check_access_permissions)
+        self.assertTrue(args.check_output_freshness)
+
+    def test_check_access_permissions(self):
+        parser = action_tracer.main_arg_parser()
+        args = parser.parse_args(
+            (self.required_args + "--check-access-permissions").split())
+        self.assertTrue(args.check_access_permissions)
+
+    def test_no_check_access_permissions(self):
+        parser = action_tracer.main_arg_parser()
+        args = parser.parse_args(
+            (self.required_args + "--no-check-access-permissions").split())
+        self.assertFalse(args.check_access_permissions)
+
+    def test_check_output_freshness(self):
+        parser = action_tracer.main_arg_parser()
+        args = parser.parse_args(
+            (self.required_args + "--check-output-freshness").split())
+        self.assertTrue(args.check_output_freshness)
+
+    def test_no_check_output_freshness(self):
+        parser = action_tracer.main_arg_parser()
+        args = parser.parse_args(
+            (self.required_args + "--no-check-output-freshness").split())
+        self.assertFalse(args.check_output_freshness)
+
+
 if __name__ == '__main__':
     unittest.main()
