@@ -1,0 +1,48 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.topology.builder;
+
+using fuchsia.component.runner;
+using fuchsia.component.types;
+using fuchsia.io;
+using fuchsia.sys2;
+using zx;
+
+const uint32 MAX_MOCK_ID_LENGTH = 1000;
+
+/// The handles a mock component uses to consume capabilities from and provide
+/// capabilities to the framework.
+resource table MockComponentStartInfo {
+    1: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
+    2: request<fuchsia.io.Directory> outgoing_dir;
+};
+
+/// The protocol used to coordinate state between the topology builder library
+/// and the framework intermediary child component. This is necessary because
+/// the topology builder library is likely running in a component using a test
+/// runner, and thus the outgoing directory handle is unavailable and the
+/// library cannot expose the runner and resolver services itself. To work
+/// around this, a child component using the elf runner exposes these services
+/// and this protocol is used to interact with the child.
+[Discoverable]
+protocol FrameworkIntermediary {
+    /// Registers a new component declaration, and returns the URL at which the
+    /// framework intermediary will make this declaration available to the
+    /// framework.
+    RegisterDecl(fuchsia.sys2.ComponentDecl decl) -> (string:fuchsia.component.types.MAX_URL_LENGTH component_url) error zx.status;
+
+    /// Registers a new mock component. When a mock component with the returned
+    /// ID in its program.mock_id field is run, `OnMockRunRequest` is called
+    /// over the same channel that the mock was registered on.
+    RegisterMock() -> (string:MAX_MOCK_ID_LENGTH mock_id);
+
+    /// The component framework is requesting that a mock component start
+    /// running
+    -> OnMockRunRequest(string:MAX_MOCK_ID_LENGTH mock_id, MockComponentStartInfo start_info);
+
+    /// The component framework is requesting that a mock component stop
+    /// running
+    -> OnMockStopRequest(string:MAX_MOCK_ID_LENGTH mock_id);
+};

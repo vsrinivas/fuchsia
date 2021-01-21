@@ -1,0 +1,1523 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Construct component topologies by listing the components and the routes between them
+
+use {
+    crate::{error::*, mock, Moniker, Topology},
+    cm_rust, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    std::convert::TryInto,
+};
+
+/// A capability that is routed through the custom topology
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Capability {
+    Protocol(&'static str),
+    // Name, Path, rights
+    Directory(&'static str, &'static str, fio2::Operations),
+}
+
+/// The source or destination of a capability route.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum RouteEndpoint {
+    /// One end of this capability route is a component in our custom topology. The value of this
+    /// should be a moniker that was used in a prior [`TopologyBuilder::add_component`] call.
+    Component(&'static str),
+
+    /// One end of this capability route is above the root component in the generated topology
+    AboveRoot,
+}
+
+impl RouteEndpoint {
+    fn unwrap_component_moniker(&self) -> Moniker {
+        match self {
+            RouteEndpoint::Component(m) => (*m).into(),
+            _ => panic!("capability source is not a component"),
+        }
+    }
+}
+
+/// A capability route from one source component to one or more target components.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CapabilityRoute {
+    pub capability: Capability,
+    pub source: RouteEndpoint,
+    pub targets: Vec<RouteEndpoint>,
+}
+
+/// The source for a component in a topology.
+#[derive(Clone)]
+pub enum ComponentSource {
+    /// A component URL, such as `fuchsia-pkg://fuchsia.com/package-name#meta/manifest.cm`
+    Url(&'static str),
+
+    /// An in-process component mock
+    Mock(mock::Mock),
+}
+
+#[derive(Clone)]
+struct Component {
+    source: ComponentSource,
+    eager: bool,
+}
+
+/// `TopologyBuilder` takes as input a set of component definitions and routes between them and
+/// produces a `Topology` which can be run in a [component
+/// collection](https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms#collections).
+///
+/// The source for a developer-component may be either a URL or a local component mock. See
+/// [`Mock`] for more information on component mocks.
+///
+/// For an example of using a `TopologyBuilder`, imagine following topology:
+///
+/// ```
+///   a
+///  / \
+/// b   c
+///     |
+///     d
+/// ```
+///
+/// Where `d` is a URL component and `b` is a mock component, `d` accesses the `fuchsia.foobar`
+/// protocol from `b`, and the `artifacts` directory is exposed from `d` up through `a`. This
+/// topology can be built with the following:
+///
+/// ```
+/// let mut builder = TopologyBuilder::new().await?;
+/// builder.add_component("c/d", ComponentSource::Url("fuchsia-pkg://fuchsia.com/d#meta/d.cm"))?
+///        .add_component("b", ComponentSource::Mock(Mock::new(move |h: MockHandles| {
+///            Box::pin(implementation_for_b(h))
+///        })))?
+///        .add_route(CapabilityRoute {
+///            capability: Capability::Protocol("fuchsia.foobar"),
+///            source: RouteEndpoint::Component("b"),
+///            targets: vec![RouteEndpoint::Component("c/d")],
+///        })?
+///        .add_route(CapabilityRoute {
+///            capability: Capability::Directory(
+///                "artifacts",
+///                "/path-for-artifacts",
+///                fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap()
+///            ),
+///            source: RouteEndpoint::Component("c/d"),
+///            targets: vec![RouteEndpoint::AboveRoot],
+///        })?;
+/// let topology = builder.build().await?;
+/// ```
+///
+/// Note that the root component in our imagined topology is actually unnamed when working with the
+/// [`Topology`] and `TopologyBuilder`. The name is generated when the topology is created in a
+/// collection.
+///
+/// Due to the approach taken here of generating the non-executable components, only leaf nodes in
+/// the generated component tree may be developer-provided. This means, for example, that a mock
+/// component may not be a parent of another component, offering its capabilities to the child. The
+/// topology should instead have the mock component as a sibling, with the mock's generated
+/// non-executable parent offering the mock's capabilities to the child.
+pub struct TopologyBuilder {
+    topology: Topology,
+}
+
+impl TopologyBuilder {
+    pub async fn new() -> Result<Self, Error> {
+        Ok(Self { topology: Topology::new().await? })
+    }
+
+    pub fn build_on(topology: Topology) -> Self {
+        Self { topology }
+    }
+
+    /// Adds a new component to the topology. The `moniker` field should be one or more component
+    /// child names separated by `/`s.
+    ///
+    /// Any missing parent components will be automatically filled in with empty component
+    /// declarations, so when adding components to the builder parents should be added before
+    /// children. As an example, to add components "a" and "a/b", the calls must be made in this
+    /// order:
+    ///
+    /// ```
+    /// let mut builder = TopologyBuilder::new().await?;
+    /// builder.add_component("a", ComponentSource::Mock(...))?
+    ///        .add_component("a/b", ComponentSource::Mock(...))?
+    /// ```
+    ///
+    /// If the `add_component` calls were reversed the second one would cause a
+    /// `ComponentAlreadyExists` error, because an `a` component would be generated as part of the
+    /// call to add `a/b`.
+    pub async fn add_component<M>(
+        &mut self,
+        moniker: M,
+        source: ComponentSource,
+    ) -> Result<&mut Self, Error>
+    where
+        M: Into<Moniker>,
+    {
+        let moniker = moniker.into();
+        if self.topology.contains(&moniker) {
+            // TODO: differentiate errors between "this already exists" and "this is a leaf node"
+            return Err(BuilderError::ComponentAlreadyExists(moniker).into());
+        }
+
+        if moniker != Moniker::root() && !self.topology.contains(&Moniker::root()) {
+            self.topology.add_component(Moniker::root(), cm_rust::ComponentDecl::default())?;
+        }
+        let ancestry = moniker.ancestry();
+        // The ancestry is sorted from child to parent, but we need to add components to
+        // the tree in the other direction.
+        for ancestor in ancestry.into_iter().rev() {
+            if !self.topology.contains(&ancestor) {
+                self.topology.add_component(ancestor, cm_rust::ComponentDecl::default())?;
+            }
+        }
+
+        match source {
+            ComponentSource::Url(url) => {
+                if moniker.is_root() {
+                    return Err(BuilderError::RootComponentCantHaveUrl.into());
+                }
+                let parent_moniker = moniker.parent().unwrap();
+                let parent_decl = self.topology.get_decl_mut(&parent_moniker)?;
+                parent_decl.children.push(cm_rust::ChildDecl {
+                    name: moniker.child_name().unwrap().clone(),
+                    url: url.to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                });
+            }
+            ComponentSource::Mock(mock) => {
+                self.topology.add_mocked_component(moniker, mock).await?;
+            }
+        }
+        Ok(self)
+    }
+
+    /// Identical to add_component, but the child (and any ancestors it has) will be marked as
+    /// eager from the root component.
+    pub async fn add_eager_component<M>(
+        &mut self,
+        moniker: M,
+        source: ComponentSource,
+    ) -> Result<&mut Self, Error>
+    where
+        M: Into<Moniker>,
+    {
+        let moniker = moniker.into();
+        self.add_component(moniker.clone(), source).await?;
+        self.topology.mark_as_eager(&moniker)?;
+        for ancestor in moniker.ancestry() {
+            self.topology.mark_as_eager(&ancestor)?;
+        }
+        Ok(self)
+    }
+
+    /// Adds a capability route between two points in the topology. Does nothing if the route
+    /// already exists.
+    pub fn add_route(&mut self, route: CapabilityRoute) -> Result<&mut Self, Error> {
+        if let RouteEndpoint::Component(moniker) = &route.source {
+            let moniker = (*moniker).into();
+            if !self.topology.contains(&moniker) {
+                match moniker.parent().and_then(|p| Some(self.topology.get_decl_mut(&p))) {
+                    Some(Ok(decl))
+                        if decl.children.iter().any(|c| Some(&c.name) == moniker.child_name()) =>
+                    {
+                        ()
+                    }
+                    _ => return Err(BuilderError::MissingRouteSource(moniker).into()),
+                }
+            }
+        }
+        if route.targets.is_empty() {
+            return Err(BuilderError::EmptyRouteTargets.into());
+        }
+        for target in &route.targets {
+            if &route.source == target {
+                return Err(BuilderError::RouteSourceAndTargetMatch(route.clone()).into());
+            }
+            if let RouteEndpoint::Component(moniker) = target {
+                let moniker = (*moniker).into();
+                if !self.topology.contains(&moniker) {
+                    return Err(BuilderError::MissingRouteTarget(moniker).into());
+                }
+            }
+        }
+
+        for target in &route.targets {
+            if *target == RouteEndpoint::AboveRoot {
+                // We're routing a capability from component within our constructed topology to
+                // somewhere above it
+                let source_moniker = route.source.unwrap_component_moniker();
+
+                if let Ok(source_decl) = self.topology.get_decl_mut(&source_moniker) {
+                    Self::add_expose_for_capability(
+                        &mut source_decl.exposes,
+                        &route,
+                        None,
+                        &source_moniker,
+                    )?;
+                    // TODO: add_capability_decl
+                    source_decl.capabilities.push(Self::new_capability_decl(&route.capability));
+                }
+
+                let mut current_ancestor = source_moniker;
+                while !current_ancestor.is_root() {
+                    let child_name = current_ancestor.child_name().unwrap().clone();
+                    current_ancestor = current_ancestor.parent().unwrap();
+
+                    let decl = self.topology.get_decl_mut(&current_ancestor)?;
+                    Self::add_expose_for_capability(
+                        &mut decl.exposes,
+                        &route,
+                        Some(&child_name),
+                        &current_ancestor,
+                    )?;
+                }
+            } else if route.source == RouteEndpoint::AboveRoot {
+                // We're routing a capability from above our constructed topology to a component
+                // eithin it
+                let target_moniker = target.unwrap_component_moniker();
+
+                if let Ok(target_decl) = self.topology.get_decl_mut(&target_moniker) {
+                    target_decl.uses.push(Self::new_use_decl(&route.capability));
+                }
+
+                let mut current_ancestor = target_moniker;
+                while !current_ancestor.is_root() {
+                    let child_name = current_ancestor.child_name().unwrap().clone();
+                    current_ancestor = current_ancestor.parent().unwrap();
+
+                    let decl = self.topology.get_decl_mut(&current_ancestor)?;
+                    Self::add_offer_for_capability(
+                        &mut decl.offers,
+                        &route,
+                        OfferSource::Parent,
+                        &child_name,
+                        &current_ancestor,
+                    )?;
+                }
+            } else {
+                // We're routing a capability from one component within our constructed topology to
+                // another
+                let source_moniker = route.source.unwrap_component_moniker();
+                let target_moniker = target.unwrap_component_moniker();
+
+                if let Ok(target_decl) = self.topology.get_decl_mut(&target_moniker) {
+                    target_decl.uses.push(Self::new_use_decl(&route.capability));
+                }
+                if let Ok(source_decl) = self.topology.get_decl_mut(&source_moniker) {
+                    source_decl.capabilities.push(Self::new_capability_decl(&route.capability));
+                }
+
+                let mut offering_child_name = target_moniker.child_name().unwrap().clone();
+                let mut offering_ancestor = target_moniker.parent().unwrap();
+                while offering_ancestor != source_moniker
+                    && !offering_ancestor.is_ancestor_of(&source_moniker)
+                {
+                    let decl = self.topology.get_decl_mut(&offering_ancestor)?;
+                    Self::add_offer_for_capability(
+                        &mut decl.offers,
+                        &route,
+                        OfferSource::Parent,
+                        &offering_child_name,
+                        &offering_ancestor,
+                    )?;
+
+                    offering_child_name = offering_ancestor.child_name().unwrap().clone();
+                    offering_ancestor = offering_ancestor.parent().unwrap();
+                }
+
+                if offering_ancestor == source_moniker {
+                    // We don't need to add an expose chain, we reached the source moniker solely
+                    // by walking up the tree
+                    let decl = self.topology.get_decl_mut(&offering_ancestor)?;
+                    Self::add_offer_for_capability(
+                        &mut decl.offers,
+                        &route,
+                        OfferSource::Self_,
+                        &offering_child_name,
+                        &offering_ancestor,
+                    )?;
+                    return Ok(self);
+                }
+
+                // We need an expose chain to descend down the tree to our source.
+
+                if let Ok(source_decl) = self.topology.get_decl_mut(&source_moniker) {
+                    Self::add_expose_for_capability(
+                        &mut source_decl.exposes,
+                        &route,
+                        None,
+                        &source_moniker,
+                    )?;
+                }
+
+                let mut exposing_child_name = source_moniker.child_name().unwrap().clone();
+                let mut exposing_ancestor = source_moniker.parent().unwrap();
+                while exposing_ancestor != offering_ancestor {
+                    let decl = self.topology.get_decl_mut(&exposing_ancestor)?;
+                    Self::add_expose_for_capability(
+                        &mut decl.exposes,
+                        &route,
+                        Some(&exposing_child_name),
+                        &exposing_ancestor,
+                    )?;
+
+                    exposing_child_name = exposing_ancestor.child_name().unwrap().clone();
+                    exposing_ancestor = exposing_ancestor.parent().unwrap();
+                }
+
+                let decl = self.topology.get_decl_mut(&offering_ancestor)?;
+                Self::add_offer_for_capability(
+                    &mut decl.offers,
+                    &route,
+                    OfferSource::Child(exposing_child_name.clone()),
+                    &offering_child_name,
+                    &offering_ancestor,
+                )?;
+            }
+        }
+        Ok(self)
+    }
+
+    /// Builds a new [`Topology`] from this builder.
+    // TODO: rename? the building is done by this point
+    pub fn build(self) -> Topology {
+        self.topology
+    }
+
+    fn new_capability_decl(capability: &Capability) -> cm_rust::CapabilityDecl {
+        match capability {
+            Capability::Protocol(name) => {
+                cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+                    name: (*name).try_into().unwrap(),
+                    source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
+                })
+            }
+            Capability::Directory(name, path, rights) => {
+                cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+                    name: (*name).try_into().unwrap(),
+                    source_path: (*path).try_into().unwrap(),
+                    rights: rights.clone(),
+                })
+            }
+        }
+    }
+
+    fn new_use_decl(capability: &Capability) -> cm_rust::UseDecl {
+        match capability {
+            Capability::Protocol(name) => cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: (*name).try_into().unwrap(),
+                target_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
+            }),
+            Capability::Directory(name, path, rights) => {
+                cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
+                    source: cm_rust::UseSource::Parent,
+                    source_name: (*name).try_into().unwrap(),
+                    target_path: (*path).try_into().unwrap(),
+                    rights: rights.clone(),
+                    subdir: None,
+                })
+            }
+        }
+    }
+
+    fn add_offer_for_capability(
+        offers: &mut Vec<cm_rust::OfferDecl>,
+        route: &CapabilityRoute,
+        offer_source: OfferSource,
+        target_name: &str,
+        moniker: &Moniker,
+    ) -> Result<(), Error> {
+        let offer_target = cm_rust::OfferTarget::Child(target_name.to_string());
+        match &route.capability {
+            Capability::Protocol(name) => {
+                let offer_source = match offer_source {
+                    OfferSource::Parent => cm_rust::OfferServiceSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferServiceSource::Self_,
+                    OfferSource::Child(n) => cm_rust::OfferServiceSource::Child(n.to_string()),
+                };
+                for offer in offers.iter() {
+                    if let cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source,
+                        target_name,
+                        target,
+                        ..
+                    }) = offer
+                    {
+                        if name == &target_name.str() && *target == offer_target {
+                            if *source != offer_source {
+                                return Err(BuilderError::ConflictingOffers(
+                                    route.clone(),
+                                    moniker.clone(),
+                                    target.clone(),
+                                    format!("{:?}", source),
+                                )
+                                .into());
+                            } else {
+                                // The offer we want already exists
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+                offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                    source: offer_source,
+                    source_name: (*name).into(),
+                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target_name: (*name).into(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                }));
+            }
+            Capability::Directory(name, _, _) => {
+                let offer_source = match offer_source {
+                    OfferSource::Parent => cm_rust::OfferDirectorySource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferDirectorySource::Self_,
+                    OfferSource::Child(n) => cm_rust::OfferDirectorySource::Child(n.to_string()),
+                };
+                for offer in offers.iter() {
+                    if let cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                        source,
+                        target_name,
+                        target,
+                        ..
+                    }) = offer
+                    {
+                        if name == &target_name.str() && *target == offer_target {
+                            if *source != offer_source {
+                                return Err(BuilderError::ConflictingOffers(
+                                    route.clone(),
+                                    moniker.clone(),
+                                    target.clone(),
+                                    format!("{:?}", source),
+                                )
+                                .into());
+                            } else {
+                                // The offer we want already exists
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+                offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                    source: offer_source,
+                    source_name: (*name).into(),
+                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target_name: (*name).into(),
+                    rights: None,
+                    subdir: None,
+                    dependency_type: cm_rust::DependencyType::Strong,
+                }));
+            }
+        }
+        Ok(())
+    }
+
+    // Adds an expose decl for `route.capability` from `source` to `exposes`, checking first that
+    // there aren't any conflicting exposes.
+    fn add_expose_for_capability(
+        exposes: &mut Vec<cm_rust::ExposeDecl>,
+        route: &CapabilityRoute,
+        source: Option<&str>,
+        moniker: &Moniker,
+    ) -> Result<(), Error> {
+        let expose_source = source
+            .map(|s| cm_rust::ExposeSource::Child(s.to_string()))
+            .unwrap_or(cm_rust::ExposeSource::Self_);
+        let target = cm_rust::ExposeTarget::Parent;
+
+        // Check to see if this expose decl already exists. If it does, and it has the same source,
+        // we're good. If it does and it has a different source, then we have an error.
+        for expose in exposes.iter() {
+            match (&route.capability, expose) {
+                (
+                    Capability::Protocol(name),
+                    cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                        source_name,
+                        source,
+                        ..
+                    }),
+                ) if name == &source_name.str() && *source != expose_source => {
+                    return Err(BuilderError::ConflictingExposes(
+                        route.clone(),
+                        moniker.clone(),
+                        source.clone(),
+                    )
+                    .into())
+                }
+                (
+                    Capability::Directory(name, _, _),
+                    cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                        source_name,
+                        source,
+                        ..
+                    }),
+                ) if name == &source_name.str() && *source != expose_source => {
+                    return Err(BuilderError::ConflictingExposes(
+                        route.clone(),
+                        moniker.clone(),
+                        source.clone(),
+                    )
+                    .into())
+                }
+                _ => (),
+            }
+        }
+
+        match &route.capability {
+            Capability::Protocol(name) => {
+                exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                    source: expose_source,
+                    source_name: (*name).into(),
+                    target,
+                    target_name: (*name).into(),
+                }))
+            }
+            Capability::Directory(name, _, _) => {
+                exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                    source: expose_source,
+                    source_name: (*name).into(),
+                    target,
+                    target_name: (*name).into(),
+                    rights: None,
+                    subdir: None,
+                }))
+            }
+        }
+        Ok(())
+    }
+}
+
+// This is needed because there are different enums for offer source depending on capability
+enum OfferSource {
+    Parent,
+    Self_,
+    Child(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, crate::error, cm_rust::*, fidl::endpoints::create_proxy,
+        fidl_fuchsia_data as fdata, fidl_fuchsia_topology_builder as ftopologybuilder,
+        fuchsia_async as fasync, futures::TryStreamExt, matches::assert_matches,
+    };
+
+    fn topology_with_mock_framework_intermediary() -> (fasync::Task<()>, Topology) {
+        let (framework_intermediary_proxy, framework_intermediary_server_end) =
+            create_proxy::<ftopologybuilder::FrameworkIntermediaryMarker>().unwrap();
+
+        let framework_intermediary_task = fasync::Task::local(async move {
+            let mut framework_intermediary_stream =
+                framework_intermediary_server_end.into_stream().unwrap();
+            let mut mock_counter: u64 = 0;
+            while let Some(request) = framework_intermediary_stream.try_next().await.unwrap() {
+                match request {
+                    ftopologybuilder::FrameworkIntermediaryRequest::RegisterDecl {
+                        responder,
+                        ..
+                    } => responder.send(&mut Ok("some-fake-url://foobar".to_string())).unwrap(),
+                    ftopologybuilder::FrameworkIntermediaryRequest::RegisterMock { responder } => {
+                        responder.send(&format!("{}", mock_counter)).unwrap();
+                        mock_counter += 1;
+                    }
+                }
+            }
+        });
+        let topology_with_mock_framework_intermediary =
+            Topology::new_with_framework_intermediary_proxy(framework_intermediary_proxy).unwrap();
+
+        (framework_intermediary_task, topology_with_mock_framework_intermediary)
+    }
+
+    fn mocked_builder() -> (fasync::Task<()>, TopologyBuilder) {
+        let (task, topology) = topology_with_mock_framework_intermediary();
+        (task, TopologyBuilder::build_on(topology))
+    }
+
+    async fn build_and_check_results(
+        builder: TopologyBuilder,
+        expected_results: Vec<(&'static str, ComponentDecl)>,
+    ) {
+        assert!(!expected_results.is_empty(), "can't build an empty topology");
+
+        let mut built_topology = builder.build();
+
+        for (component, decl) in expected_results {
+            assert_eq!(
+                *built_topology
+                    .get_decl_mut(&component.into())
+                    .expect("component is missing from topology"),
+                decl,
+                "decl in topology doesn't match expectations for component  {:?}",
+                component
+            );
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn component_already_exists_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://b"))
+            .await;
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::ComponentAlreadyExists(m)))
+                if m == "a".into() =>
+            {
+                ()
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn added_non_leaf_nodes_error() {
+        {
+            let (_mocks_task, mut builder) = mocked_builder();
+
+            let res = builder
+                .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+                .await
+                .unwrap()
+                .add_component("a/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .await;
+
+            match res {
+                Ok(_) => panic!("builder commands should have errored"),
+                Err(error::Error::Topology(TopologyError::ComponentNotModifiable(m)))
+                    if m == "a".into() =>
+                {
+                    ()
+                }
+                Err(e) => panic!("unexpected error: {:?}", e),
+            }
+        }
+
+        {
+            let (_mocks_task, mut builder) = mocked_builder();
+
+            let res = builder
+                .add_component("a/b", ComponentSource::Url("fuchsia-pkg://a"))
+                .await
+                .unwrap()
+                .add_eager_component("a", ComponentSource::Url("fuchsia-pkg://b"))
+                .await;
+
+            match res {
+                Ok(_) => panic!("builder commands should have errored"),
+                Err(error::Error::Builder(BuilderError::ComponentAlreadyExists(m)))
+                    if m == "a".into() =>
+                {
+                    ()
+                }
+                Err(e) => panic!("unexpected error: {:?}", e),
+            }
+        }
+
+        {
+            let (_mocks_task, mut builder) = mocked_builder();
+
+            let res = builder
+                .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+                .await
+                .unwrap()
+                .add_eager_component(
+                    "",
+                    ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                        Box::pin(async move { Ok(()) })
+                    })),
+                )
+                .await;
+
+            match res {
+                Ok(_) => panic!("builder commands should have errored"),
+                Err(error::Error::Builder(BuilderError::ComponentAlreadyExists(m)))
+                    if m == "".into() =>
+                {
+                    ()
+                }
+                Err(e) => panic!("unexpected error: {:?}", e),
+            }
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn missing_route_source_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("b"),
+                targets: vec![RouteEndpoint::Component("a")],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::MissingRouteSource(m))) if m == "b".into() => {
+                ()
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn empty_route_targets() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(e) => assert_matches!(e, error::Error::Builder(BuilderError::EmptyRouteTargets)),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn same_capability_from_different_sources_in_same_node_error() {
+        {
+            let (_mocks_task, mut builder) = mocked_builder();
+
+            let res = builder
+                .add_component("1/a", ComponentSource::Url("fuchsia-pkg://a"))
+                .await
+                .unwrap()
+                .add_component("1/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .await
+                .unwrap()
+                .add_component("2/c", ComponentSource::Url("fuchsia-pkg://c"))
+                .await
+                .unwrap()
+                .add_component("2/d", ComponentSource::Url("fuchsia-pkg://d"))
+                .await
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::Component("1/a"),
+                    targets: vec![RouteEndpoint::Component("2/c")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::Component("1/b"),
+                    targets: vec![RouteEndpoint::Component("2/d")],
+                });
+
+            match res {
+                Err(error::Error::Builder(BuilderError::ConflictingExposes(
+                    route,
+                    moniker,
+                    source,
+                ))) => {
+                    assert_eq!(
+                        route,
+                        CapabilityRoute {
+                            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                            source: RouteEndpoint::Component("1/b"),
+                            targets: vec![RouteEndpoint::Component("2/d")],
+                        }
+                    );
+                    assert_eq!(moniker, "1".into());
+                    assert_eq!(source, cm_rust::ExposeSource::Child("a".to_string()));
+                }
+                Err(e) => panic!("unexpected error: {:?}", e),
+                Ok(_) => panic!("builder commands should have errored"),
+            }
+        }
+
+        {
+            let (_mocks_task, mut builder) = mocked_builder();
+
+            builder
+                .add_component("1/a", ComponentSource::Url("fuchsia-pkg://a"))
+                .await
+                .unwrap()
+                .add_component("1/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .await
+                .unwrap()
+                .add_component("2/c", ComponentSource::Url("fuchsia-pkg://c"))
+                .await
+                .unwrap()
+                .add_component("2/d", ComponentSource::Url("fuchsia-pkg://d"))
+                .await
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::Component("1/a"),
+                    targets: vec![RouteEndpoint::Component("1/b")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::Component("2/c"),
+                    targets: vec![RouteEndpoint::Component("2/d")],
+                })
+                .unwrap();
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn missing_route_target_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::MissingRouteTarget(m))) if m == "b".into() => {
+                ()
+            }
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn route_source_and_target_both_above_root_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder.add_route(CapabilityRoute {
+            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::AboveRoot],
+        });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(e) => assert_matches!(
+                e,
+                error::Error::Builder(BuilderError::RouteSourceAndTargetMatch(_))
+            ),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn two_sibling_topology_no_mocks() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_eager_component("b", ComponentSource::Url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![(
+                "",
+                ComponentDecl {
+                    offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferServiceSource::Child("a".to_string()),
+                        source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
+                        target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        dependency_type: DependencyType::Strong,
+                    })],
+                    children: vec![
+                        ChildDecl {
+                            name: "a".to_string(),
+                            url: "fuchsia-pkg://a".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                            environment: None,
+                        },
+                        ChildDecl {
+                            name: "b".to_string(),
+                            url: "fuchsia-pkg://b".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                            environment: None,
+                        },
+                    ],
+                    ..ComponentDecl::default()
+                },
+            )],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn two_sibling_topology_both_mocks() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component(
+                "a",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_eager_component(
+                "b",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                            source: OfferServiceSource::Child("a".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: OfferTarget::Child("b".to_string()),
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intemediary,
+                            // and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![UseDecl::Runner(UseRunnerDecl {
+                            source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                        })],
+                        capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
+                            name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
+                        exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: ExposeSource::Self_,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: ExposeTarget::Parent,
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "b",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("1".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Protocol(UseProtocolDecl {
+                                source: UseSource::Parent,
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target_path: "/svc/fidl.examples.routing.echo.Echo"
+                                    .try_into()
+                                    .unwrap(),
+                            }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn mock_with_child() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component(
+                "a",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_eager_component("a/b", ComponentSource::Url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("a/b")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intemediary,
+                            // and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![UseDecl::Runner(UseRunnerDecl {
+                            source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                        })],
+                        capabilities: vec![CapabilityDecl::Protocol(ProtocolDecl {
+                            name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
+                        offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                            source: OfferServiceSource::Self_,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: OfferTarget::Child("b".to_string()),
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                        })],
+                        children: vec![ChildDecl {
+                            name: "b".to_string(),
+                            url: "fuchsia-pkg://b".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                            environment: None,
+                        }],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn three_sibling_topology_one_mock() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component(
+                "b",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_eager_component("c", ComponentSource::Url("fuchsia-pkg://c"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Directory(
+                    "example-dir",
+                    "/example",
+                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                ),
+                source: RouteEndpoint::Component("b"),
+                targets: vec![RouteEndpoint::Component("c")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![
+                            OfferDecl::Protocol(OfferProtocolDecl {
+                                source: OfferServiceSource::Child("a".to_string()),
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target: OfferTarget::Child("b".to_string()),
+                                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                            }),
+                            OfferDecl::Directory(OfferDirectoryDecl {
+                                source: OfferDirectorySource::Child("b".to_string()),
+                                source_name: "example-dir".try_into().unwrap(),
+                                target: OfferTarget::Child("c".to_string()),
+                                target_name: "example-dir".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                                rights: None,
+                                subdir: None,
+                            }),
+                        ],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intemediary,
+                            // and that happens during Topology::create
+                            ChildDecl {
+                                name: "a".to_string(),
+                                url: "fuchsia-pkg://a".to_string(),
+                                startup: fsys::StartupMode::Lazy,
+                                environment: None,
+                            },
+                            ChildDecl {
+                                name: "c".to_string(),
+                                url: "fuchsia-pkg://c".to_string(),
+                                startup: fsys::StartupMode::Eager,
+                                environment: None,
+                            },
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "b",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Protocol(UseProtocolDecl {
+                                source: UseSource::Parent,
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target_path: "/svc/fidl.examples.routing.echo.Echo"
+                                    .try_into()
+                                    .unwrap(),
+                            }),
+                        ],
+                        capabilities: vec![CapabilityDecl::Directory(DirectoryDecl {
+                            name: "example-dir".try_into().unwrap(),
+                            source_path: "/example".try_into().unwrap(),
+                            rights: fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                        })],
+                        exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+                            source: ExposeSource::Self_,
+                            source_name: "example-dir".try_into().unwrap(),
+                            target: ExposeTarget::Parent,
+                            target_name: "example-dir".try_into().unwrap(),
+                            rights: None,
+                            subdir: None,
+                        })],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn three_siblings_two_targets() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_eager_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component("b", ComponentSource::Url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_eager_component("c", ComponentSource::Url("fuchsia-pkg://c"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("b"),
+                targets: vec![RouteEndpoint::Component("a"), RouteEndpoint::Component("c")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Directory(
+                    "example-dir",
+                    "/example",
+                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                ),
+                source: RouteEndpoint::Component("b"),
+                targets: vec![RouteEndpoint::Component("a"), RouteEndpoint::Component("c")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![(
+                "",
+                ComponentDecl {
+                    offers: vec![
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: OfferServiceSource::Child("b".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: OfferTarget::Child("a".to_string()),
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                        }),
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: OfferServiceSource::Child("b".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: OfferTarget::Child("c".to_string()),
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                        }),
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source: OfferDirectorySource::Child("b".to_string()),
+                            source_name: "example-dir".try_into().unwrap(),
+                            target: OfferTarget::Child("a".to_string()),
+                            target_name: "example-dir".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                            rights: None,
+                            subdir: None,
+                        }),
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source: OfferDirectorySource::Child("b".to_string()),
+                            source_name: "example-dir".try_into().unwrap(),
+                            target: OfferTarget::Child("c".to_string()),
+                            target_name: "example-dir".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
+                            rights: None,
+                            subdir: None,
+                        }),
+                    ],
+                    children: vec![
+                        ChildDecl {
+                            name: "a".to_string(),
+                            url: "fuchsia-pkg://a".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                            environment: None,
+                        },
+                        ChildDecl {
+                            name: "b".to_string(),
+                            url: "fuchsia-pkg://b".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                            environment: None,
+                        },
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "fuchsia-pkg://c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                            environment: None,
+                        },
+                    ],
+                    ..ComponentDecl::default()
+                },
+            )],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn two_cousins_topology_one_mock() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        builder
+            .add_component("a/b", ComponentSource::Url("fuchsia-pkg://a-b"))
+            .await
+            .unwrap()
+            .add_eager_component(
+                "c/d",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Directory(
+                    "example-dir",
+                    "/example",
+                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                ),
+                source: RouteEndpoint::Component("a/b"),
+                targets: vec![RouteEndpoint::Component("c/d")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::Component("a/b"),
+                targets: vec![RouteEndpoint::Component("c/d")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![
+                            OfferDecl::Directory(OfferDirectoryDecl {
+                                source: OfferDirectorySource::Child("a".to_string()),
+                                source_name: "example-dir".try_into().unwrap(),
+                                target: OfferTarget::Child("c".to_string()),
+                                target_name: "example-dir".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                                rights: None,
+                                subdir: None,
+                            }),
+                            OfferDecl::Protocol(OfferProtocolDecl {
+                                source: OfferServiceSource::Child("a".to_string()),
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target: OfferTarget::Child("c".to_string()),
+                                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                            }),
+                        ],
+                        children: vec![
+                            // Generated children aren't inserted into the decls at this point, as
+                            // their URLs are unknown until registration with the framework
+                            // intemediary, and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        exposes: vec![
+                            ExposeDecl::Directory(ExposeDirectoryDecl {
+                                source: ExposeSource::Child("b".to_string()),
+                                source_name: "example-dir".try_into().unwrap(),
+                                target: ExposeTarget::Parent,
+                                target_name: "example-dir".try_into().unwrap(),
+                                rights: None,
+                                subdir: None,
+                            }),
+                            ExposeDecl::Protocol(ExposeProtocolDecl {
+                                source: ExposeSource::Child("b".to_string()),
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target: ExposeTarget::Parent,
+                                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            }),
+                        ],
+                        children: vec![ChildDecl {
+                            name: "b".to_string(),
+                            url: "fuchsia-pkg://a-b".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                            environment: None,
+                        }],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "c",
+                    ComponentDecl {
+                        offers: vec![
+                            OfferDecl::Directory(OfferDirectoryDecl {
+                                source: OfferDirectorySource::Parent,
+                                source_name: "example-dir".try_into().unwrap(),
+                                target: OfferTarget::Child("d".to_string()),
+                                target_name: "example-dir".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                                rights: None,
+                                subdir: None,
+                            }),
+                            OfferDecl::Protocol(OfferProtocolDecl {
+                                source: OfferServiceSource::Parent,
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target: OfferTarget::Child("d".to_string()),
+                                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                dependency_type: DependencyType::Strong,
+                            }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "c/d",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Directory(UseDirectoryDecl {
+                                source: UseSource::Parent,
+                                source_name: "example-dir".try_into().unwrap(),
+                                target_path: "/example".try_into().unwrap(),
+                                rights: fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                                subdir: None,
+                            }),
+                            UseDecl::Protocol(UseProtocolDecl {
+                                source: UseSource::Parent,
+                                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                target_path: "/svc/fidl.examples.routing.echo.Echo"
+                                    .try_into()
+                                    .unwrap(),
+                            }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+}

@@ -7,9 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.component.types") {
   sdk_category = "internal"
 
-  sources = [
-    "constants.fidl",
-    "error.fidl",
-    "types.fidl",
-  ]
+  sources = [ "constants.fidl" ]
 }

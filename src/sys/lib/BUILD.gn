@@ -19,5 +19,6 @@ group("tests") {
     "library_loader:tests",
     "moniker:moniker-tests",
     "runner:tests",
+    "topology_builder:tests",
   ]
 }

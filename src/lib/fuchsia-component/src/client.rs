@@ -453,6 +453,11 @@ impl ScopedInstance {
         connect_to_protocol_at_dir_root::<S>(&self.exposed_dir)
     }
 
+    /// Returns a reference to the component's read-only exposed directory.
+    pub fn get_exposed_dir(&self) -> &DirectoryProxy {
+        &self.exposed_dir
+    }
+
     /// Returns a future which can be awaited on for destruction to complete after the
     /// `ScopedInstance` is dropped.
     pub fn take_destroy_waiter(&mut self) -> BoxFuture<'static, Option<Error>> {
