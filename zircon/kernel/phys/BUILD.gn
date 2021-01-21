@@ -125,6 +125,7 @@ if (toolchain.environment == "kernel.phys" ||
   # This is used implicitly by zbi_executable() targets.
   source_set("zbi_executable.deps") {
     sources = [
+      "decompress.cc",
       "memory.cc",
       "zbi-header.S",
       "zbi-main.cc",
