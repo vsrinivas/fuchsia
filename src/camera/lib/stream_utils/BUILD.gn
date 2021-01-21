@@ -10,7 +10,7 @@ group("stream_utils") {
 
 group("tests") {
   testonly = true
-  deps = [ ":camera_stream_utils_unittest" ]
+  deps = [ ":image_io_util_unittest" ]
 }
 
 source_set("lib") {
@@ -38,7 +38,7 @@ source_set("stream_configs") {
   ]
 }
 
-executable("image_io_util_test_bin") {
+executable("image_io_util_unittest_bin") {
   testonly = true
   sources = [ "image_io_util_unittest.cc" ]
   deps = [
@@ -50,7 +50,7 @@ executable("image_io_util_test_bin") {
   ]
 }
 
-fuchsia_unittest_package("camera_stream_utils_unittest") {
-  manifest = "meta/image_io_util_test.cmx"
-  deps = [ ":image_io_util_test_bin" ]
+fuchsia_unittest_package("image_io_util_unittest") {
+  manifest = "meta/image_io_util_unittest.cmx"
+  deps = [ ":image_io_util_unittest_bin" ]
 }

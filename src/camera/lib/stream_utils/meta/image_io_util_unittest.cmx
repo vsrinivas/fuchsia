@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/image_io_util_test_bin"
+        "binary": "bin/image_io_util_unittest_bin"
     },
     "sandbox": {
         "features": [
