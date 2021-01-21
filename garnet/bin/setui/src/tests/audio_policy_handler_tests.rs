@@ -10,6 +10,7 @@ use crate::audio::policy::{
 };
 use crate::audio::types::AudioStreamType;
 use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream};
+use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::Request as SettingRequest;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
@@ -21,7 +22,7 @@ use crate::internal::core::message::Receptor;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::{response::Payload, Request};
-use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler};
+use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
 use fuchsia_async::Task;
@@ -163,6 +164,64 @@ async fn set_media_volume_limit(
     } else {
         panic!("Policy ID not returned from set");
     }
+}
+
+/// Verifies that when the setting proxy returns the given internal volume level, that the setting
+/// handler modifies the volume level and returns a result with the given expected volume level.
+async fn get_and_verify_media_volume(
+    env: &mut TestEnvironment,
+    internal_volume_level: f32,
+    expected_volume_level: f32,
+) {
+    // Start task to provide audio info to the handler, which it requests when a get request is
+    // received.
+    let mut audio_info = default_audio_info();
+    audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: internal_volume_level,
+        user_volume_muted: false,
+    });
+    serve_audio_info(env.setting_proxy_receptor.clone(), audio_info.clone());
+
+    // Send the get request to the handler.
+    let request_transform = env.handler.handle_setting_request(SettingRequest::Get).await;
+
+    // Modify the audio info to contain the expected volume level.
+    audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: expected_volume_level,
+        user_volume_muted: false,
+    });
+    assert_eq!(
+        request_transform,
+        Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(audio_info)))))
+    );
+}
+
+/// Asks the handler in the environment to handle a set request and verifies that the transformed
+/// request matches the given volume level.
+async fn set_and_verify_media_volume(
+    env: &mut TestEnvironment,
+    volume_level: f32,
+    expected_volume_level: f32,
+) {
+    let mut stream = AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: volume_level,
+        user_volume_muted: false,
+    };
+
+    let request_transform =
+        env.handler.handle_setting_request(SettingRequest::SetVolume(vec![stream.clone()])).await;
+
+    stream.user_volume_level = expected_volume_level;
+    assert_eq!(
+        request_transform,
+        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![stream])))
+    );
 }
 
 /// Verifies that the setting proxy in the test environment received a set request for media volume.
@@ -400,7 +459,7 @@ async fn test_handler_add_policy_modifies_internal_volume_above_max() {
 
     let mut starting_audio_info = default_audio_info();
 
-    // Starting audio info has user volume at max volume.
+    // Starting audio info has media volume at max volume.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -424,7 +483,7 @@ async fn test_handler_add_policy_modifies_internal_volume_below_min() {
 
     let mut starting_audio_info = default_audio_info();
 
-    // Starting audio info has user volume at 0%.
+    // Starting audio info has media volume at 0%.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -447,7 +506,7 @@ async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits()
 
     let mut starting_audio_info = default_audio_info();
 
-    // Starting audio info has user volume at 50%.
+    // Starting audio info has media volume at 50%.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -479,7 +538,7 @@ async fn test_handler_remove_policy_notifies_switchboard() {
 
     let max_volume = 0.6;
 
-    // Starting audio info has user volume at 60% volume.
+    // Starting audio info has media volume at 60% volume.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -527,7 +586,7 @@ async fn test_handler_lowest_max_limit_applies_internally() {
 
     let mut starting_audio_info = default_audio_info();
 
-    // Starting audio info has user volume at max volume.
+    // Starting audio info has media volume at max volume.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -569,7 +628,7 @@ async fn test_handler_highest_min_limit_applies_internally() {
 
     let mut starting_audio_info = default_audio_info();
 
-    // Starting audio info has user volume at 0% volume.
+    // Starting audio info has media volume at 0% volume.
     starting_audio_info.replace_stream(AudioStream {
         stream_type: AudioStreamType::Media,
         source: AudioSettingSource::User,
@@ -606,4 +665,248 @@ async fn test_handler_highest_min_limit_applies_internally() {
 
     // Handler requests that the setting handler set the volume to 40% (the highest min).
     verify_media_volume_set(&mut env, higher_min_volume).await;
+}
+
+/// Verifies that when no policies are in place that external set requests are not modified.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_no_policy_external_sets_not_modified() {
+    let mut env = create_handler_test_environment().await;
+
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let external_volume_level = i as f32 / 10.0;
+
+        // Set requests have the same volume level before and after passing through the policy
+        // handler.
+        set_and_verify_media_volume(&mut env, external_volume_level, external_volume_level).await;
+    }
+}
+
+/// Verifies that adding a max volume policy scales external set requests to an appropriate internal
+/// volume level.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_max_volume_policy_scales_external_sets() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at max volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 1.0,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 60%.
+    let max_volume = 0.6;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+
+    // Test set requests with input volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let external_volume_level = i as f32 / 10.0;
+
+        // The volume in the set request will be a proportional percentage of the max volume. For
+        // example, 25% in the original set request would result in .60 * .25 = 15% internal volume.
+        let expected_volume_level = external_volume_level * max_volume;
+
+        // Set requests have the expected volume level after passing through the policy handler.
+        set_and_verify_media_volume(&mut env, external_volume_level, expected_volume_level).await;
+    }
+}
+
+/// Verifies that adding a min volume policy scales external set requests to an appropriate internal
+/// volume level.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_min_volume_policy_scales_external_sets() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at 0% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.0,
+        user_volume_muted: false,
+    });
+
+    // Set the min volume limit to 60%.
+    let min_volume = 0.2;
+    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+
+    // Test set requests with input volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let external_volume_level = i as f32 / 10.0;
+
+        // With only a min volume in place, the transformed internal volume will be the same as the
+        // external volume in the set request unless it's below the min volume.
+        let expected_volume_level = external_volume_level.max(min_volume);
+
+        // Set requests have the expected volume level after passing through the policy handler.
+        set_and_verify_media_volume(&mut env, external_volume_level, expected_volume_level).await;
+    }
+}
+
+/// Verifies that adding both a max and a min volume policy scales external set requests to an
+/// appropriate internal volume level.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_min_and_max_volume_policy_scales_external_volume() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at 50% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 80%.
+    let max_volume = 0.8;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+
+    // Set the min volume limit to 20%.
+    let min_volume = 0.2;
+    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+
+    // Test set requests with input volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let external_volume_level = i as f32 / 10.0;
+
+        // The volume in the set request will be a proportional percentage of the max volume, unless
+        // the result is below the min volume, in which case it is kept at the min volume. For
+        // example, 10% in the original set request would result in .80 * .10 = 8% internal volume.
+        // However, this is below the min of 20% so the resulting volume level is still 20%.
+        let expected_volume_level = (external_volume_level * max_volume).max(min_volume);
+
+        // Set requests have the expected volume level after passing through the policy handler.
+        set_and_verify_media_volume(&mut env, external_volume_level, expected_volume_level).await;
+    }
+}
+
+/// Verifies that when no policies are in place that external get requests return the same
+/// level as the internal volume levels.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_no_policy_gets_not_modified() {
+    let mut env = create_handler_test_environment().await;
+
+    // Test get requests with internal volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let internal_volume_level = i as f32 / 10.0;
+
+        // Get requests have the same volume level before and after passing through the policy
+        // handler.
+        get_and_verify_media_volume(&mut env, internal_volume_level, internal_volume_level).await;
+    }
+}
+
+/// Verifies that a max volume policy scales the result of get requests to the correct external
+/// volume level.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_max_volume_policy_scales_gets() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at 50% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 60%.
+    let max_volume = 0.6;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+
+    // Test get requests with internal volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let internal_volume_level = i as f32 / 10.0;
+
+        // Since the internal volume is already scaled by the max volume limit, the transformed
+        // output of the get request should undo this scaling. For example, 30% internal volume
+        // should result in 0.30 / 0.60 (max volume limit) = 50% external volume.
+        let expected_volume_level = round_volume_level(internal_volume_level / max_volume);
+
+        // Get requests have the expected volume level after passing through the policy handler.
+        get_and_verify_media_volume(&mut env, internal_volume_level, expected_volume_level).await;
+    }
+}
+
+/// Verifies that a min volume policy alone won't result in any scaling of the external volume
+/// levels.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_min_volume_policy_scales_gets() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at 50% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 60%.
+    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
+
+    for i in 2..=10 {
+        // 0.2 to 1 inclusive, with steps of 0.1. Starting at 20% since the min limit clamps the
+        // internal volume at 20%.
+        let internal_volume_level = i as f32 / 10.0;
+
+        // When only a min limit is present, the output volume does not need to be scaled.
+        get_and_verify_media_volume(&mut env, internal_volume_level, internal_volume_level).await;
+    }
+}
+
+/// Verifies that the external volume returned by a get request is properly scaled when both a min
+/// and a max volume policy are in place.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_min_and_max_volume_policy_scales_gets() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has media volume at 50% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 80%.
+    let max_volume = 0.8;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+
+    // Set the min volume limit to 20%.
+    // Since internal volumes shouldn't be below the min volume anyways, the min volume level has no
+    // effect here.
+    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
+
+    // Test get requests with internal volumes from 0.0 to 1.0.
+    for i in 0..=10 {
+        // 0 to 1 inclusive, with steps of 0.1.
+        let internal_volume_level = i as f32 / 10.0;
+
+        // Since the internal volume is already scaled by the max volume limit, the transformed
+        // output of the get request should undo this scaling. For example, 30% internal volume
+        // should result in 0.30 / 0.60 (max volume limit) = 50% external volume.
+        let expected_volume_level = round_volume_level(internal_volume_level / max_volume);
+
+        // Get requests have the expected volume level after passing through the policy handler.
+        get_and_verify_media_volume(&mut env, internal_volume_level, expected_volume_level).await;
+    }
 }

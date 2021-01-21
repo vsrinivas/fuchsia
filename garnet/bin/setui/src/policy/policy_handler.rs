@@ -60,8 +60,6 @@ pub trait PolicyHandler {
 /// [`PolicyHandler`]: trait.PolicyHandler.html
 /// [`PolicyProxy`]: ../policy_proxy/struct.PolicyProxy.html
 ///
-// TODO(fxbug.dev/60367): remove when used
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum RequestTransform {
     /// A new, modified request that should be forwarded to the setting handler for processing.

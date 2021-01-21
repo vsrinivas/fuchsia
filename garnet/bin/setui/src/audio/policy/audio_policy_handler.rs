@@ -74,6 +74,7 @@ use crate::policy::policy_handler::{
 use crate::switchboard::base::SettingEvent;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use fuchsia_syslog::fx_log_err;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that the policy ID was invalid.
@@ -133,10 +134,39 @@ impl PolicyHandler for AudioPolicyHandler {
 
     async fn handle_setting_request(
         &mut self,
-        _request: SettingRequest,
+        request: SettingRequest,
     ) -> Option<RequestTransform> {
-        // TODO(fxbug.dev/60367): implement policy transforms
-        return None;
+        match request {
+            SettingRequest::SetVolume(mut streams) => {
+                // When anyone attempts to set the volume level, scale it according to the policy
+                // limits and pass it along to the setting proxy.
+                for stream in streams.iter_mut() {
+                    stream.user_volume_level = self
+                        .calculate_internal_volume(stream.stream_type, stream.user_volume_level);
+                }
+
+                Some(RequestTransform::Request(SettingRequest::SetVolume(streams)))
+            }
+            SettingRequest::Get => {
+                // When the audio settings are read, scale the internal values to their external
+                // values and return this directly to the caller.
+                // TODO(fxbug.dev/67678): use policy proxy mechanism to subscribe to reply.
+                let audio_info = match self.fetch_audio_info().await {
+                    Ok(audio_info) => audio_info,
+                    // Failed to fetch audio info, don't attempt to serve the request.
+                    // TODO(fxbug.dev/67667): surface these errors higher in the policy design and
+                    // handle them.
+                    Err(_) => {
+                        fx_log_err!("Failed to fetch audio info");
+                        return None;
+                    }
+                };
+                Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(
+                    self.transform_internal_audio_info(audio_info),
+                )))))
+            }
+            _ => None,
+        }
     }
 
     async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
@@ -219,6 +249,15 @@ impl AudioPolicyHandler {
         let VolumeLimits { max_volume, .. } = self.determine_volume_limits(target);
 
         return round_volume_level(internal_volume / max_volume);
+    }
+
+    /// Scales an external volume from client input for the given audio stream to the limits set by
+    /// policies.
+    fn calculate_internal_volume(&mut self, target: PropertyTarget, external_volume: f32) -> f32 {
+        let VolumeLimits { max_volume, min_volume } = self.determine_volume_limits(target);
+
+        // We don't need to round this value as the audio setting internals will round it anyways.
+        return min_volume.max(external_volume * max_volume);
     }
 
     /// Clamps the volume of the given audio stream based on the limits set by policies.
