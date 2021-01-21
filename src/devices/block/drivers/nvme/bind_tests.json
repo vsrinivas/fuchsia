@@ -1,19 +1,19 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.massstorage.BIND_PCI_CLASS.MASS_STORAGE",
+            "fuchsia.BIND_PCI_INTERFACE": "2",
+            "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.massstorage.BIND_PCI_SUBCLASS.NVMEM",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Vendor"
     }
-  },
-  {
-    "name": "Vendor",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.mass_storage.BIND_PCI_CLASS.MASS_STORAGE",
-      "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.mass_storage.BIND_PCI_SUBCLASS.NVMEM",
-      "fuchsia.BIND_PCI_INTERFACE": "2"
-    }
-  }
 ]

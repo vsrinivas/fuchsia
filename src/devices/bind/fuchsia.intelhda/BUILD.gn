@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("fuchsia.intel_hda") {
-  source = "fuchsia.intel_hda.bind"
+bind_library("fuchsia.intelhda") {
+  source = "fuchsia.intelhda.bind"
 }

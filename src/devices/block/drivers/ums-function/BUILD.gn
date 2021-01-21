@@ -11,7 +11,7 @@ bind_rules("usb_ums_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
-    "//src/devices/bind/fuchsia.usb.mass_storage",
+    "//src/devices/bind/fuchsia.usb.massstorage",
   ]
 }
 

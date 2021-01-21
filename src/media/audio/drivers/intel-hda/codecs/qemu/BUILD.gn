@@ -8,7 +8,7 @@ import("//build/config/fuchsia/rules.gni")
 bind_rules("ihda_codecs_qemu_bind") {
   rules = "qemu_ihda_codec.bind"
   output = "qemu_ihda_codec-bind.h"
-  deps = [ "//src/devices/bind/fuchsia.intel_hda" ]
+  deps = [ "//src/devices/bind/fuchsia.intelhda" ]
   tests = "bind_test.json"
 }
 

@@ -1,19 +1,19 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.APPLICATION_SPECIFIC",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.applicationspecific.BIND_USB_PROTOCOL.DFU",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.applicationspecific.BIND_USB_SUBCLASS.DFU"
+        },
+        "expected": "match",
+        "name": "Vendor"
     }
-  },
-  {
-    "name": "Vendor",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.APPLICATION_SPECIFIC",
-      "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.application_specific.BIND_USB_SUBCLASS.DFU",
-      "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.application_specific.BIND_USB_PROTOCOL.DFU"
-    }
-  }
 ]

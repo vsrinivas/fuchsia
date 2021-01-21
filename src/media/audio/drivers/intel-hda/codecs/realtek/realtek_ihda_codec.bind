@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.intel_hda;
+using fuchsia.intelhda;
 
-fuchsia.BIND_PROTOCOL == fuchsia.intel_hda.BIND_PROTOCOL.IHDA_CODEC;
-fuchsia.BIND_IHDA_CODEC_VID == fuchsia.intel_hda.BIND_IHDA_CODEC_VID.REALTEK;
+fuchsia.BIND_PROTOCOL == fuchsia.intelhda.BIND_PROTOCOL.IHDA_CODEC;
+fuchsia.BIND_IHDA_CODEC_VID == fuchsia.intelhda.BIND_IHDA_CODEC_VID.REALTEK;
 
 accept fuchsia.BIND_IHDA_CODEC_DID {
   0x0235,  // ALC235

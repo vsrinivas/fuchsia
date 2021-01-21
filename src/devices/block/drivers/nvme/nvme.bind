@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 using fuchsia.pci;
-using fuchsia.pci.mass_storage;
+using fuchsia.pci.massstorage;
 
 fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.MASS_STORAGE;
-fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.mass_storage.BIND_PCI_SUBCLASS.NVMEM;
+fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.massstorage.BIND_PCI_SUBCLASS.NVMEM;
 fuchsia.BIND_PCI_INTERFACE == 2;

@@ -13,7 +13,7 @@ bind_rules("ahci_bind") {
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.pci",
-    "//src/devices/bind/fuchsia.pci.mass_storage",
+    "//src/devices/bind/fuchsia.pci.massstorage",
   ]
 }
 driver_module("ahci") {

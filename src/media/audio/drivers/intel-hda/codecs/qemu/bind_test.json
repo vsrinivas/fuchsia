@@ -1,20 +1,20 @@
 [
-  {
-    "name": "IHDA Qemu Codec Match",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.intel_hda.BIND_PROTOCOL.IHDA_CODEC",
-      "fuchsia.BIND_IHDA_CODEC_VID": "0x1af4",
-      "fuchsia.BIND_IHDA_CODEC_DID": "0x0022"
+    {
+        "device": {
+            "fuchsia.BIND_IHDA_CODEC_DID": "0x0022",
+            "fuchsia.BIND_IHDA_CODEC_VID": "0x1af4",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.intelhda.BIND_PROTOCOL.IHDA_CODEC"
+        },
+        "expected": "match",
+        "name": "IHDA Qemu Codec Match"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_IHDA_CODEC_DID": "0xffff",
+            "fuchsia.BIND_IHDA_CODEC_VID": "0xffff",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.intelhda.BIND_PROTOCOL.IHDA_CODEC"
+        },
+        "expected": "abort",
+        "name": "IHDA Qemu Codec Abort"
     }
-  },
-  {
-    "name": "IHDA Qemu Codec Abort",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.intel_hda.BIND_PROTOCOL.IHDA_CODEC",
-      "fuchsia.BIND_IHDA_CODEC_VID": "0xffff",
-      "fuchsia.BIND_IHDA_CODEC_DID": "0xffff"
-    }
-  }
 ]

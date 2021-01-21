@@ -1,19 +1,19 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.MASS_STORAGE",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.massstorage.BIND_USB_PROTOCOL.BULK_ONLY",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.massstorage.BIND_USB_SUBCLASS.SCSI"
+        },
+        "expected": "match",
+        "name": "Vendor"
     }
-  },
-  {
-    "name": "Vendor",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
-      "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.MASS_STORAGE",
-      "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.mass_storage.BIND_USB_SUBCLASS.SCSI",
-      "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.mass_storage.BIND_USB_PROTOCOL.BULK_ONLY"
-    }
-  }
 ]

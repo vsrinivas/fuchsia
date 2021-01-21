@@ -8,7 +8,7 @@ import("//build/config/fuchsia/rules.gni")
 bind_rules("ihda_codecs_realtek_bind") {
   rules = "realtek_ihda_codec.bind"
   output = "realtek_ihda_codec-bind.h"
-  deps = [ "//src/devices/bind/fuchsia.intel_hda" ]
+  deps = [ "//src/devices/bind/fuchsia.intelhda" ]
   tests = "bind_test.json"
 }
 

@@ -11,7 +11,7 @@ bind_rules("usb_dfu_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
-    "//src/devices/bind/fuchsia.usb.application_specific",
+    "//src/devices/bind/fuchsia.usb.applicationspecific",
   ]
 }
 

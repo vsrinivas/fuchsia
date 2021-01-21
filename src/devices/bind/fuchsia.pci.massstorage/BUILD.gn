@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("fuchsia.usb.application_specific") {
-  source = "fuchsia.usb.application_specific.bind"
+bind_library("fuchsia.pci.massstorage") {
+  source = "fuchsia.pci.massstorage.bind"
 }
