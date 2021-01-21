@@ -227,10 +227,10 @@ impl Controller {
         while let Some(req) = stream.try_next().await? {
             let peer = { peer.upgrade().ok_or(format_err!("Peer disconnected"))? };
             // Find the first discovered stream by the A2DP peer.
-            let infos = match peer.remote_endpoints() {
-                Some(endpoints) => endpoints,
-                None => {
-                    info!("No streams exist on the peer");
+            let infos = match peer.collect_capabilities().await {
+                Ok(endpoints) => endpoints,
+                Err(e) => {
+                    info!("Error collecting capabilities from peer: {:?}", e);
                     continue;
                 }
             };
@@ -492,14 +492,6 @@ mod tests {
 
         // Spawn task that acts as remote end and replies with simple responses.
         fasync::Task::spawn(listen_for_avdtp_requests(remote)).detach();
-
-        // Discover the streams of the remote peer.
-        {
-            let strong =
-                peer_map.get(&fake_peer_id).and_then(|p| p.upgrade()).expect("should be connected");
-            let cap_fut = strong.collect_capabilities();
-            assert!(cap_fut.await.is_ok());
-        }
 
         // Send client commands over the proxy, and make sure responses are expected.
         let res = client_proxy.set_configuration().await;
