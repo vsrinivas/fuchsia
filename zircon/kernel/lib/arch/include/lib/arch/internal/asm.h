@@ -77,7 +77,10 @@
 // Subroutines of _.entity selected by the \type argument.
 
 .macro _.entity.pushsection.function name
-  .pushsection .text.\name, "ax", %progbits
+  // The function goes into the .text section in its own section group.
+  // This lets any metadata associated with the function travel in its
+  // group by using `.pushsection .metadata-section, "...?", ...`.
+  .pushsection .text, "axG", %progbits, \name
 .endm
 
 .macro _.entity.pushsection.bss name
