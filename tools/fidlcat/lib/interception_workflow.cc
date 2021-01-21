@@ -254,12 +254,6 @@ void InterceptionWorkflow::Initialize(
     bool success = loop_->Init(&error_message);
     FX_CHECK(success) << error_message;
   }
-
-  // 4) Initialize the symbol servers.
-  if (!symbol_servers.empty()) {
-    session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolServers,
-                                          symbol_servers);
-  }
 }
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
