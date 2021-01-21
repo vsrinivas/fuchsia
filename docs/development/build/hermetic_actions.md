@@ -10,6 +10,16 @@ Continue reading this guide if you ran into an error that looks like this:
 ERROR: [label] read/wrote [path] but it is not a specified input/output!
 ```
 
+Or alternatively, if you're looking at an `action()` or `action_foreach()`
+target that looks like this:
+
+```gn
+action("foo") {
+  ...
+  hermetic_deps = false
+}
+```
+
 ## Build graph correctness
 
 The build is defined as a directed acyclic graph such that actions have their
@@ -134,8 +144,7 @@ are for.
 
 You can find an example for fixing a build action to generate a depfile here:
 
-472565: [build] Generate depfile in generate_fidl_json.py |
-https://fuchsia-review.googlesource.com/c/fuchsia/+/472565
+*   [472565: [build] Generate depfile in generate_fidl_json.py](https://fuchsia-review.googlesource.com/c/fuchsia/+/472565)
 
 ### Expanding arguments from a file
 
