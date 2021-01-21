@@ -439,12 +439,11 @@ pub fn event_stream_from_state(
 mod tests {
     use super::*;
     use fidl_fuchsia_net as fnet;
-    use fuchsia_async as fasync;
+    use futures::{task::Poll, FutureExt as _};
     use matches::assert_matches;
     use net_declare::fidl_subnet;
-    use std::convert::TryInto as _;
-
-    type Result<T = ()> = std::result::Result<T, anyhow::Error>;
+    use std::{cell::RefCell, convert::TryInto as _, pin::Pin, rc::Rc};
+    use test_case::test_case;
 
     fn fidl_properties(id: u64) -> fnet_interfaces::Properties {
         fnet_interfaces::Properties {
@@ -454,275 +453,254 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![]),
+            addresses: Some(vec![fidl_address(ADDR)]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
 
-    fn properties(id: u64) -> Properties {
+    fn validated_properties(id: u64) -> Properties {
         fidl_properties(id).try_into().expect("failed to validate FIDL Properties")
+    }
+
+    fn properties_delta(id: u64) -> fnet_interfaces::Properties {
+        fnet_interfaces::Properties {
+            id: Some(id),
+            name: None,
+            device_class: None,
+            online: Some(true),
+            has_default_ipv4_route: Some(true),
+            has_default_ipv6_route: Some(true),
+            addresses: Some(vec![fidl_address(ADDR2)]),
+            ..fnet_interfaces::Properties::EMPTY
+        }
+    }
+
+    fn fidl_properties_after_change(id: u64) -> fnet_interfaces::Properties {
+        fnet_interfaces::Properties {
+            id: Some(id),
+            name: Some("test1".to_string()),
+            device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
+            online: Some(true),
+            has_default_ipv4_route: Some(true),
+            has_default_ipv6_route: Some(true),
+            addresses: Some(vec![fidl_address(ADDR2)]),
+            ..fnet_interfaces::Properties::EMPTY
+        }
+    }
+
+    fn validated_properties_after_change(id: u64) -> Properties {
+        fidl_properties_after_change(id).try_into().expect("failed to validate FIDL Properties")
     }
 
     fn fidl_address(addr: fnet::Subnet) -> fnet_interfaces::Address {
         fnet_interfaces::Address { addr: Some(addr), ..fnet_interfaces::Address::EMPTY }
     }
 
-    fn address(addr: fnet::Subnet) -> Address {
-        fidl_address(addr).try_into().expect("failed to validate FIDL Address")
-    }
-
     const ID: u64 = 1;
-    const ADDR: fnet::Subnet = fidl_subnet!("1.2.3.4/5");
+    const ID2: u64 = 2;
+    const ADDR: fnet::Subnet = fidl_subnet!("1.2.3.4/24");
+    const ADDR2: fnet::Subnet = fidl_subnet!("5.6.7.8/24");
 
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_duplicate_added_error() {
+    #[test_case(
+        &mut std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>();
+        "hashmap"
+    )]
+    #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
+    #[test_case(&mut validated_properties(ID); "properties")]
+    fn test_duplicate_error(state: &mut impl Update) {
         assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Added(fidl_properties(ID))),
+            state.update(fnet_interfaces::Event::Added(fidl_properties(ID))),
             Err(UpdateError::DuplicateAdded(added)) if added == fidl_properties(ID)
         );
         assert_matches!(
-            std::iter::once((ID, properties(ID)))
-                .collect::<HashMap<_, _>>()
-                .update(fnet_interfaces::Event::Added(fidl_properties(ID))),
-            Err(UpdateError::DuplicateAdded(added)) if added == fidl_properties(ID)
-        );
-    }
-
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_duplicate_existing_error() {
-        assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
-            Err(UpdateError::DuplicateExisting(existing)) if existing == fidl_properties(ID)
-        );
-        assert_matches!(
-            std::iter::once((ID, properties(ID)))
-                .collect::<HashMap<_, _>>()
-                .update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
+            state.update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
             Err(UpdateError::DuplicateExisting(existing)) if existing == fidl_properties(ID)
         );
     }
 
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_unknown_changed_error() {
-        let unknown_changed = || fnet_interfaces::Properties {
+    #[test_case(&mut HashMap::new(); "hashmap")]
+    #[test_case(&mut InterfaceState::Unknown(ID); "interface_state_unknown")]
+    fn test_unknown_error(state: &mut impl Update) {
+        let unknown = fnet_interfaces::Properties {
             id: Some(ID),
             online: Some(true),
             ..fnet_interfaces::Properties::EMPTY
         };
         assert_matches!(
-            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Changed(unknown_changed())),
-            Err(UpdateError::UnknownChanged(changed)) if changed == unknown_changed()
+            state.update(fnet_interfaces::Event::Changed(unknown.clone())),
+            Err(UpdateError::UnknownChanged(changed)) if changed == unknown
         );
         assert_matches!(
-            HashMap::new().update(fnet_interfaces::Event::Changed(unknown_changed())),
-            Err(UpdateError::UnknownChanged(changed)) if changed == unknown_changed()
-        );
-    }
-
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_unknown_removed_error() {
-        assert_matches!(
-            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Removed(ID)),
-            Err(UpdateError::UnknownRemoved(id)) if id == ID
-        );
-        assert_matches!(
-            HashMap::new().update(fnet_interfaces::Event::Removed(ID)),
+            state.update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::UnknownRemoved(id)) if id == ID
         );
     }
 
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_removed_error() {
+    #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
+    #[test_case(&mut validated_properties(ID); "properties")]
+    fn test_removed_error(state: &mut impl Update) {
         assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Removed(ID)),
+            state.update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::Removed)
         );
     }
 
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_missing_id_error() {
-        let missing_id = || fnet_interfaces::Properties {
+    #[test_case(&mut HashMap::new(); "hashmap")]
+    #[test_case(&mut InterfaceState::Unknown(ID); "interface_state_unknown")]
+    #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
+    #[test_case(&mut validated_properties(ID); "properties")]
+    fn test_missing_id_error(state: &mut impl Update) {
+        let missing_id = fnet_interfaces::Properties {
             online: Some(true),
             ..fnet_interfaces::Properties::EMPTY
         };
         assert_matches!(
-            HashMap::new().update(fnet_interfaces::Event::Changed(missing_id())),
-            Err(UpdateError::MissingId(properties)) if properties == missing_id()
-        );
-        assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Changed(missing_id())),
-            Err(UpdateError::MissingId(properties)) if properties == missing_id()
-        );
-        assert_matches!(
-            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Changed(missing_id())),
-            Err(UpdateError::MissingId(properties)) if properties == missing_id()
+            state.update(fnet_interfaces::Event::Changed(missing_id.clone())),
+            Err(UpdateError::MissingId(properties)) if properties == missing_id
         );
     }
 
-    // TODO(fxbug.dev/66928) Make this test less repetitive.
-    #[test]
-    fn test_empty_change_error() {
+    #[test_case(
+        &mut std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>();
+        "hashmap"
+    )]
+    #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
+    #[test_case(&mut validated_properties(ID); "properties")]
+    fn test_empty_change_error(state: &mut impl Update) {
         let empty_change =
             fnet_interfaces::Properties { id: Some(ID), ..fnet_interfaces::Properties::EMPTY };
         let net_zero_change =
             fnet_interfaces::Properties { name: None, device_class: None, ..fidl_properties(ID) };
         assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Changed(empty_change.clone())),
+            state.update(fnet_interfaces::Event::Changed(empty_change.clone())),
             Err(UpdateError::EmptyChange(properties)) if properties == empty_change
         );
         assert_matches!(
-            properties(ID).update(fnet_interfaces::Event::Changed(net_zero_change.clone())),
+            state.update(fnet_interfaces::Event::Changed(net_zero_change.clone())),
             Err(UpdateError::EmptyChange(properties)) if properties == net_zero_change
         );
     }
 
-    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
-    // they end up calling into `Properties`'s implementation.
+    #[test_case(
+        &mut std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>();
+        "hashmap"
+    )]
+    #[test_case(&mut InterfaceState::Known(validated_properties(ID)); "interface_state_known")]
+    #[test_case(&mut validated_properties(ID); "properties")]
+    fn test_update_changed_result(state: &mut impl Update) {
+        let want_previous = fnet_interfaces::Properties {
+            online: Some(false),
+            has_default_ipv4_route: Some(false),
+            has_default_ipv6_route: Some(false),
+            addresses: Some(vec![fidl_address(ADDR)]),
+            ..fnet_interfaces::Properties::EMPTY
+        };
+        assert_matches!(
+            state.update(fnet_interfaces::Event::Changed(properties_delta(ID).clone())),
+            Ok(UpdateResult::Changed { previous, current })
+                if previous == want_previous && *current == validated_properties_after_change(ID)
+        );
+    }
+
+    #[derive(Clone)]
+    struct EventStream(Rc<RefCell<Vec<fnet_interfaces::Event>>>);
+
+    impl Stream for EventStream {
+        type Item = Result<fnet_interfaces::Event, fidl::Error>;
+
+        fn poll_next(
+            self: Pin<&mut Self>,
+            _cx: &mut futures::task::Context<'_>,
+        ) -> Poll<Option<Self::Item>> {
+            let EventStream(events_vec) = &*self;
+            if events_vec.borrow().is_empty() {
+                Poll::Ready(None)
+            } else {
+                Poll::Ready(Some(Ok(events_vec.borrow_mut().remove(0))))
+            }
+        }
+    }
+
+    fn test_event_stream() -> EventStream {
+        EventStream(Rc::new(RefCell::new(vec![
+            fnet_interfaces::Event::Existing(fidl_properties(ID)),
+            fnet_interfaces::Event::Added(fidl_properties(ID2)),
+            fnet_interfaces::Event::Changed(properties_delta(ID)),
+            fnet_interfaces::Event::Changed(properties_delta(ID2)),
+            fnet_interfaces::Event::Removed(ID),
+            fnet_interfaces::Event::Removed(ID2),
+        ])))
+    }
+
     #[test]
-    fn test_update_changed_result() {
-        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
-        for (change, want_prev, want_current) in &[
-            (
-                fnet_interfaces::Properties {
-                    id: Some(ID),
-                    online: Some(true),
-                    ..fnet_interfaces::Properties::EMPTY
-                },
-                fnet_interfaces::Properties {
-                    online: Some(false),
-                    ..fnet_interfaces::Properties::EMPTY
-                },
-                Properties { online: true, ..properties(ID) },
-            ),
-            (
-                fnet_interfaces::Properties {
-                    id: Some(ID),
-                    addresses: Some(vec![fidl_address(ADDR)]),
-                    ..fnet_interfaces::Properties::EMPTY
-                },
-                fnet_interfaces::Properties {
-                    addresses: Some(vec![]),
-                    ..fnet_interfaces::Properties::EMPTY
-                },
-                Properties { addresses: vec![address(ADDR)], ..properties(ID) },
-            ),
-        ] {
-            let mut properties = properties(ID);
-            assert_matches!(
-                properties.update(fnet_interfaces::Event::Changed(change.clone())),
-                Ok(UpdateResult::Changed { ref previous, current }) if previous == want_prev && current == want_current
-            );
-            assert_eq!(properties, *want_current);
-        }
-    }
-
-    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
-    // they end up calling into `Properties`'s implementation.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_wait_one_interface() -> Result {
+    fn test_wait_one_interface() {
+        let event_stream = test_event_stream();
         let mut state = InterfaceState::Unknown(ID);
-        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
-        for (event, want) in vec![
-            (fnet_interfaces::Event::Existing(fidl_properties(ID)), properties(ID)),
-            (
-                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
-                    id: Some(ID),
-                    online: Some(true),
-                    ..fnet_interfaces::Properties::EMPTY
-                }),
-                Properties::try_from(fnet_interfaces::Properties {
-                    online: Some(true),
-                    ..fidl_properties(ID)
-                })?,
-            ),
-            (
-                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
-                    id: Some(ID),
-                    addresses: Some(vec![fnet_interfaces::Address {
-                        addr: Some(ADDR),
-                        ..fnet_interfaces::Address::EMPTY
-                    }]),
-                    ..fnet_interfaces::Properties::EMPTY
-                }),
-                Properties::try_from(fnet_interfaces::Properties {
-                    online: Some(true),
-                    addresses: Some(vec![fnet_interfaces::Address {
-                        addr: Some(ADDR),
-                        ..fnet_interfaces::Address::EMPTY
-                    }]),
-                    ..fidl_properties(ID)
-                })?,
-            ),
-        ] {
-            let () = wait_interface_with_id(
-                futures::stream::once(futures::future::ok(event)),
-                &mut state,
-                |got| {
-                    assert_eq!(*got, want);
-                    Some(())
-                },
-            )
-            .await?;
-            assert_eq!(state, InterfaceState::Known(want));
+        for want in &[validated_properties(ID), validated_properties_after_change(ID)] {
+            let () = wait_interface_with_id(event_stream.clone(), &mut state, |got| {
+                assert_eq!(got, want);
+                Some(())
+            })
+            .now_or_never()
+            .expect("wait_interface_with_id did not complete immediately")
+            .expect("wait_interface_with_id error");
+            assert_matches!(state, InterfaceState::Known(ref got) if got == want);
         }
-        Ok(())
     }
 
-    // TODO(fxbug.dev/66928) Test this against the other types that implement `Update` even if
-    // they end up calling into `Properties`'s implementation.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_wait_all_interfaces() -> Result {
-        const ID2: u64 = 2;
-        let mut properties_map = HashMap::new();
-        // TODO Use an array after https://github.com/rust-lang/rust/issues/25725.
-        for (event, want) in vec![
-            (
-                fnet_interfaces::Event::Existing(fidl_properties(ID)),
-                vec![(ID, properties(ID))].into_iter().collect(),
-            ),
-            (
-                fnet_interfaces::Event::Added(fidl_properties(ID2)),
-                vec![(ID, properties(ID)), (ID2, properties(ID2))].into_iter().collect(),
-            ),
-            (
-                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
-                    id: Some(ID),
-                    online: Some(true),
-                    ..fnet_interfaces::Properties::EMPTY
-                }),
-                vec![
-                    (
-                        ID,
-                        fnet_interfaces::Properties { online: Some(true), ..fidl_properties(ID) }
-                            .try_into()?,
-                    ),
-                    (ID2, properties(ID2)),
-                ]
-                .into_iter()
-                .collect(),
-            ),
-            (
-                fnet_interfaces::Event::Removed(ID),
-                vec![(ID2, properties(ID2))].into_iter().collect(),
-            ),
-        ] {
-            let () = wait_interface(
-                futures::stream::once(futures::future::ok(event)),
-                &mut properties_map,
-                |got| {
-                    assert_eq!(*got, want);
-                    Some(())
-                },
-            )
-            .await?;
-            assert_eq!(properties_map, want);
+    fn test_wait_interface<'a, B>(state: &mut B, want_states: impl IntoIterator<Item = &'a B>)
+    where
+        B: 'a + Update + Clone + std::fmt::Debug + std::cmp::PartialEq,
+    {
+        let event_stream = test_event_stream();
+        for want in want_states.into_iter() {
+            let () = wait_interface(event_stream.clone(), state, |got| {
+                assert_eq!(got, want);
+                Some(())
+            })
+            .now_or_never()
+            .expect("wait_interface did not complete immediately")
+            .expect("wait_interface error");
+            assert_eq!(state, want);
         }
-        Ok(())
+    }
+
+    #[test]
+    fn test_wait_interface_hashmap() {
+        test_wait_interface(
+            &mut HashMap::new(),
+            &[
+                std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>(),
+                [(ID, validated_properties(ID)), (ID2, validated_properties(ID2))]
+                    .iter()
+                    .cloned()
+                    .collect::<HashMap<_, _>>(),
+                [(ID, validated_properties_after_change(ID)), (ID2, validated_properties(ID2))]
+                    .iter()
+                    .cloned()
+                    .collect::<HashMap<_, _>>(),
+                [
+                    (ID, validated_properties_after_change(ID)),
+                    (ID2, validated_properties_after_change(ID2)),
+                ]
+                .iter()
+                .cloned()
+                .collect::<HashMap<_, _>>(),
+                std::iter::once((ID2, validated_properties_after_change(ID2)))
+                    .collect::<HashMap<_, _>>(),
+                HashMap::new(),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_wait_interface_interface_state() {
+        test_wait_interface(
+            &mut InterfaceState::Unknown(ID),
+            &[
+                InterfaceState::Known(validated_properties(ID)),
+                InterfaceState::Known(validated_properties_after_change(ID)),
+            ],
+        );
     }
 }
