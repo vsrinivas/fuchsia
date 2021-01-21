@@ -481,7 +481,9 @@ async fn validate_display(
         .connect_to_service::<DisplayMarker>()
         .context("Failed to connect to display service")?;
 
-    display::command(
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) = display::command(
         display_service,
         expected_brightness,
         expected_auto_brightness,
@@ -490,7 +492,10 @@ async fn validate_display(
         Some(Theme { theme_type: expected_theme_type, ..Theme::EMPTY }),
         expected_screen_enabled,
     )
-    .await?;
+    .await?
+    {
+        stream.try_next().await?;
+    }
 
     Ok(())
 }
@@ -555,11 +560,17 @@ async fn validate_light_sensor() -> Result<(), Error> {
     })
     .detach();
 
-    display::command(display_service, None, None, true, None, None, None).await?;
+    if let utils::Either::Watch(mut stream) =
+        display::command(display_service, None, None, true, None, None, None).await?
+    {
+        stream.try_next().await?;
 
-    assert_eq!(*watch_called.read(), true);
+        assert_eq!(*watch_called.read(), true);
 
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command");
+    }
 }
 
 async fn validate_accessibility_set() -> Result<(), Error> {

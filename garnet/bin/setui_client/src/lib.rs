@@ -391,17 +391,20 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
-            let output = display::command(
-                display_service,
-                brightness,
-                auto_brightness,
-                light_sensor,
-                low_light_mode,
-                theme,
-                screen_enabled,
+            utils::handle_mixed_result(
+                "Display",
+                display::command(
+                    display_service,
+                    brightness,
+                    auto_brightness,
+                    light_sensor,
+                    low_light_mode,
+                    theme,
+                    screen_enabled,
+                )
+                .await,
             )
             .await?;
-            println!("Display: {}", output);
         }
         SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
             let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()

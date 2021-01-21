@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{self, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{DisplayProxy, DisplaySettings, LowLightMode, Theme},
 };
 
@@ -15,7 +15,7 @@ pub async fn command(
     low_light_mode: Option<LowLightMode>,
     theme: Option<Theme>,
     screen_enabled: Option<bool>,
-) -> Result<String, Error> {
+) -> WatchOrSetResult {
     let mut output = String::new();
 
     if let Some(auto_brightness_value) = auto_brightness {
@@ -42,8 +42,7 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if light_sensor {
-        let data = proxy.watch_light_sensor2(0.0).await?;
-        output.push_str(&format!("{:?}", data));
+        return Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch_light_sensor2(0.0))));
     } else if let Some(mode) = low_light_mode {
         let mut settings = DisplaySettings::EMPTY;
         settings.low_light_mode = Some(mode);
@@ -74,9 +73,8 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else {
-        let setting_value = proxy.watch().await?;
-        output.push_str(&format!("{:?}", setting_value));
+        return Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch())));
     }
 
-    Ok(output)
+    Ok(Either::Set(output))
 }
