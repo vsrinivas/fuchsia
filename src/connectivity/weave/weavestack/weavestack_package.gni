@@ -40,7 +40,7 @@ template("_weavestack_package") {
   fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
-                             "effects",
+                             "applets",
                              "package_name",
                              "testonly",
                              "visibility",
