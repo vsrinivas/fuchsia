@@ -27,7 +27,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -38,6 +37,7 @@
 #include <hw/pci.h>
 
 #include "binding.h"
+#include "src/devices/i2c/drivers/intel-i2c/intel_i2c_bind.h"
 
 namespace intel_i2c {
 
@@ -845,13 +845,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace intel_i2c
 
-ZIRCON_DRIVER_BEGIN(intel_i2c, intel_i2c::driver_ops, "zircon", "0.1", 9)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI), BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID),
-    ZIRCON_DRIVER_END(intel_i2c)
+ZIRCON_DRIVER(intel_i2c, intel_i2c::driver_ops, "zircon", "0.1");

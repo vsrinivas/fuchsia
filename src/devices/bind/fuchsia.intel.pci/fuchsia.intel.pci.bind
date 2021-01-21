@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.intel.pci;
+
+extend uint fuchsia.BIND_PCI_DID {
+  WILDCAT_POINT_SERIALIO_DMA = 0x9ce0,
+  WILDCAT_POINT_SERIALIO_I2C0 = 0x9ce1,
+  WILDCAT_POINT_SERIALIO_I2C1 = 0x9ce2,
+  WILDCAT_POINT_SERIALIO_SDIO = 0x9cb5,
+  WILDCAT_POINT_SERIALIO_SPI0 = 0x9ce5,
+  WILDCAT_POINT_SERIALIO_SPI1 = 0x9ce6,
+  WILDCAT_POINT_SERIALIO_UART0 = 0x9ce3,
+  WILDCAT_POINT_SERIALIO_UART1 = 0x9ce4,
+
+  SUNRISE_POINT_SERIALIO_I2C0 = 0x9d60,
+  SUNRISE_POINT_SERIALIO_I2C1 = 0x9d61,
+  SUNRISE_POINT_SERIALIO_I2C2 = 0x9d62,
+  SUNRISE_POINT_SERIALIO_I2C3 = 0x9d63,
+  SUNRISE_POINT_SERIALIO_I2C4 = 0x9d64,
+};

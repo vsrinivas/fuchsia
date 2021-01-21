@@ -9,6 +9,7 @@ group("tests") {
     "aml-i2c:tests",
     "dw-i2c:tests",
     "i2c:tests",
+    "intel-i2c:tests",
     "mt8167-i2c:tests",
   ]
 }
