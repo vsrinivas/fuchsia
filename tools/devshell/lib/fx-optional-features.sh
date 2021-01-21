@@ -15,6 +15,7 @@ function is_feature_enabled_by_default {
   case "$1" in
   "incremental") return 1 ;;
   "ffx_discovery") return 0 ;;
+  "legacy_fastboot") return 0 ;;
   esac
 
   # global default is enabled
@@ -34,6 +35,11 @@ function help_optional_feature {
   "ffx_discovery")
     h=(
       "Device discovery based on ffx instead of device-finder."
+      )
+    ;;
+  "legacy_fastboot")
+    h=(
+      "Device provisioning based on legacy fastboot instead of ffx."
       )
     ;;
   esac

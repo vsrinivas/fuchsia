@@ -11,6 +11,7 @@ function fx-flash {
   local enable_ipv4="${FX_ENABLE_IPV4:-false}"
   local serial="$1"
   local device="$2"
+
   # Process devices in gigaboot.
   gb_device_ip=
   num_gb_devices=0
@@ -66,9 +67,19 @@ function fx-flash {
     fi
 
     if is_feature_enabled "legacy_fastboot"; then
+      fx-warn "Using legacy flash method via 'fastboot'"
+      fx-warn "Use 'fx --disable=legacy_fastboot flash' to use the new method"
+
       "./flash.sh" "${flash_args[@]}" "${fastboot_args[@]}"
-    else 
-      fx-command-run host-tool --check-firewall ffx "${ffx_args[@]}" target flash ./flash.json "${ffx_flash_args[@]}"
+    else
+      flash_manifest="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --expect-one --name flash-manifest images)"
+      if [[ ! -f "${flash_manifest}" ]]; then
+        fx-error "Flash manifest: '${flash_manifest}' not found"
+        return 1
+      fi
+
+      fx-info "Running fx ffx ${ffx_args[@]} target flash ${flash_manifest} ${ffx_flash_args[@]}"
+      fx-command-run host-tool --check-firewall ffx "${ffx_args[@]}" target flash "${flash_manifest}" "${ffx_flash_args[@]}"
     fi
   fi
 }
