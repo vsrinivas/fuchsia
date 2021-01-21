@@ -184,13 +184,7 @@ fi
 
 paths+=($(fx-command-run jq --raw-output "${jq_filter}" "${FUCHSIA_BUILD_DIR}/${manifest}"))
 if $build && [[ ${#paths[@]} -ne 0 ]] ; then
-  # For efficiency's sake, we avoid having to build zircon when building
-  # host-side artifacts.
-  if [[ ! -z "${os}" && "$os" != fuchsia ]]; then
-    fx-command-run build "${paths[@]}" >&2
-  else
-    fx-command-run build "${paths[@]}" >&2
-  fi
+  fx-command-run build "${paths[@]}" >&2
 fi
 
 if [[ ${#paths[@]} -eq 0 ]] && (! $allow_empty || $expect_one) ; then
