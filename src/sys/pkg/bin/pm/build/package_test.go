@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
 func TestInit(t *testing.T) {

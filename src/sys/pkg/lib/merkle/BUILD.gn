@@ -4,8 +4,7 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 go_library("merkle") {
   sources = [
@@ -15,17 +14,16 @@ go_library("merkle") {
 }
 
 go_test("go_merkle_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/merkle" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle" ]
 
   deps = [ ":merkle" ]
 }
 
-unittest_package("go_merkle_tests") {
+fuchsia_unittest_package("go_merkle_tests") {
   deps = [ ":go_merkle_test" ]
+}
 
-  tests = [
-    {
-      name = "go_merkle_test"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":go_merkle_tests" ]
 }

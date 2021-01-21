@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 
 	tuf "github.com/flynn/go-tuf"
 	tufData "github.com/flynn/go-tuf/data"

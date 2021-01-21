@@ -13,12 +13,12 @@ go_library("pmd") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/..."
 
   deps = [
-    "//garnet/go/src/merkle",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
     "//src/lib/thinfs:thinfs_lib",
     "//src/sys/pkg/bin/pm:pm_lib",
     "//src/sys/pkg/lib/far/go:far",
+    "//src/sys/pkg/lib/merkle",
   ]
 
   sources = [

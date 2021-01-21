@@ -20,10 +20,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
 const metaFar = "meta.far"
