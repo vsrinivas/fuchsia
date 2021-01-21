@@ -12,7 +12,7 @@ zx_library("user_copy") {
   deps = [ ":tests" ]
   public_deps = [
     # <lib/user_copy/user_ptr.h> has #include <ktl/type_traits.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
   ]
 }
 
@@ -23,6 +23,6 @@ source_set("tests") {
 
   deps = [
     ":headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/unittest",
   ]
 }

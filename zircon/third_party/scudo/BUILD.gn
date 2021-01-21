@@ -82,11 +82,11 @@ group("common") {
 
   public_configs = [ ":common.config" ]
   public_deps = [
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/sync",
+    "//zircon/system/ulib/runtime",
+    "//zircon/system/ulib/sync",
   ]
   if (zircon_toolchain != false) {
-    public_deps += [ "$zx/system/ulib/zircon" ]
+    public_deps += [ "//zircon/system/ulib/zircon" ]
   } else {
     public_deps += [ "//src/zircon/lib/zircon" ]
   }
@@ -113,7 +113,7 @@ group("libc") {
 
     # The local headers introduced by libc.config (below) use libc internals,
     # so they need access to the internal headers.
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
 }
 
@@ -138,7 +138,7 @@ group("testonly") {
 
   public_deps = [
     ":common",
-    "$zx/system/ulib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   public_configs = [ ":testonly.config" ]
 }
@@ -206,7 +206,7 @@ source_set("gwp_asan.testonly") {
 source_set("unittests") {
   visibility = [
     ":*",
-    "$zx/system/ulib/c/*",
+    "//zircon/system/ulib/c/*",
   ]
   testonly = true
 
@@ -267,7 +267,7 @@ source_set("wrapper-tests") {
 
   deps = [
     ":common",
-    "$zx/system/ulib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

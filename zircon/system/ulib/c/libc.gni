@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 # Source directory for Fucshia libc.
-libc = "$zx/system/ulib/c"
+libc = "//zircon/system/ulib/c"
 
 # Root source directory for llvm-libc.
-llvm_libc = "$zx/third_party/llvm-libc"
+llvm_libc = "//zircon/third_party/llvm-libc"
 
 libc_configs = [
   # These configs are needed for the expectations of the source code,
@@ -182,6 +182,6 @@ template("libc_test") {
       configs += invoker.configs
     }
 
-    deps += [ "$zx/system/ulib/zxtest" ]
+    deps += [ "//zircon/system/ulib/zxtest" ]
   }
 }

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/variants.gni")
+import("//zircon/public/gn/config/standard.gni")
+import("//zircon/public/gn/toolchain/variants.gni")
 
 # Redirect dependents to dependencies in another environment (toolchain).
 #

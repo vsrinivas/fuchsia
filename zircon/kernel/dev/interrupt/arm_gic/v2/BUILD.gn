@@ -16,17 +16,17 @@ zx_library("v2") {
   ]
   deps = [
     ":test",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/interrupt/arm_gic/common",
-    "$zx/kernel/dev/pcie",
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/dev/pdev/interrupt",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/pow2_range_allocator",
-    "$zx/kernel/lib/root_resource_filter",
-    "$zx/kernel/lib/topology",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/interrupt/arm_gic/common",
+    "//zircon/kernel/dev/pcie",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/pdev/interrupt",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/pow2_range_allocator",
+    "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/kernel/lib/topology",
   ]
 }
 
@@ -35,7 +35,7 @@ source_set("test") {
   sources = [ "arm_gicv2_test.cc" ]
   include_dirs = [ "include" ]
   deps = [
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/unittest",
   ]
 }

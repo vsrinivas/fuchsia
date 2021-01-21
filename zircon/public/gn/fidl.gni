@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl/fidlc.gni")
+import("//zircon/public/gn/fidl/fidlc.gni")
 
 # List of FIDL support modules.  Each of these defines its own version of
 # $fidl_support_fidlc and $fidl_support_templates.
@@ -87,10 +87,10 @@ import("$zx/public/gn/fidl/fidlc.gni")
 # a different petal, add a build argument to contribute to this list via
 # default_overrides.
 fidl_support = [
-  "$zx/public/gn/fidl/c.gni",
-  "$zx/public/gn/fidl/json.gni",
-  "$zx/public/gn/fidl/llcpp.gni",
-  "$zx/public/gn/fidl/tables.gni",
+  "//zircon/public/gn/fidl/c.gni",
+  "//zircon/public/gn/fidl/json.gni",
+  "//zircon/public/gn/fidl/llcpp.gni",
+  "//zircon/public/gn/fidl/tables.gni",
 ]
 
 # Each support module defines $fidl_support_fidlc and

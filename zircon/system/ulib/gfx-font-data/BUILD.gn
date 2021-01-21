@@ -12,7 +12,7 @@ zx_library("gfx-font-data") {
   sdk_headers = [ "lib/gfx-font-data/gfx-font-data.h" ]
   sdk_migrated = true
 
-  public_deps = [ "$zx/system/ulib/gfx:headers" ]
+  public_deps = [ "//zircon/system/ulib/gfx:headers" ]
   sources = [
     "18x32.c",
     "9x16.c",

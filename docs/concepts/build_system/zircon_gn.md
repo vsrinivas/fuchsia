@@ -7,12 +7,12 @@ GN uses a templating structure to abstract many of the build details away from
 the end user.  Below are a subset of the templates the Zircon GN defines,
 focusing on the ones with which Zircon hackers are most likely to interact.
 
-## `$zx/` prefix
+## `//zircon/` prefix
 
 As discussed in [the introduction](intro.md), GN uses "source-absolute" paths
 that look like `//a/b/c`.  In the Zircon GN files, we **never** use `//`.
-Instead, use `$zx/foo` to refer to `//zircon/foo`,
-e.g. `"$zx/system/ulib/zircon"`.
+Instead, use `//zircon/foo` to refer to `//zircon/foo`,
+e.g. `"//zircon/system/ulib/zircon"`.
 
 ## `executable()` and `test()`
 
@@ -86,21 +86,21 @@ library("foo") {
     "foobar_subsystem",  # Defined in foobar_subsystem/BUILD.gn relative to here.
 
     # Explicitly link in static libbar.a even if libbar.so is available.
-    "$zx/system/ulib/bar:static",
+    "//zircon/system/ulib/bar:static",
 
     # Be explicit about getting libbaz.so as a shared library.
-    "$zx/system/ulib/baz:shared",
+    "//zircon/system/ulib/baz:shared",
 
     # Compile with -Isystem/ulib/bozo/include, but don't link anything in.
     # This should usually not be used in `deps`, but only in `public_deps`.
     # See below.
-    "$zx/system/ulib/bozo:headers",
+    "//zircon/system/ulib/bozo:headers",
 
     # Let system/ulib/quux/BUILD.gn decide whether static or shared is the
     # norm for that library.  (So far the defining `library()` will always
     # prefer the shared library if it's enabled; it would be easy to add the
     # option to build shared but default to static if that's ever useful.)
-    "$zx/system/ulib/quux",
+    "//zircon/system/ulib/quux",
 
     # `library("quextras")` appears in system/ulib/quux/BUILD.gn because quux
     # and quextras want to share some private source code or for whatever
@@ -109,13 +109,13 @@ library("foo") {
     # the `:name` syntax selects the specific target within that BUILD.gn file.
     # For the derived target names, we use `.` before the suffix.
     # In fact, "quux:headers" is just an alias for "quux:quux.headers", etc.
-    "$zx/system/ulib/quux:quextras",
-    "$zx/system/ulib/quux:quextras_more.static",
-    "$zx/system/ulib/quux:quextras_way_more.shared",
+    "//zircon/system/ulib/quux:quextras",
+    "//zircon/system/ulib/quux:quextras_more.static",
+    "//zircon/system/ulib/quux:quextras_way_more.shared",
 
     # This is a `library()` that will set `static=false shared=true`
     # so `zircon:static` here wouldn't work but `zircon:shared` would work.
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/zircon",
   ]
 
   # Per-module compilation flags are always optional.
@@ -132,7 +132,7 @@ library("foo") {
 A heavily abridged real-world example of a kernel module:
 
 ```gn
-# deps = [ "$zx/kernel/object" ] gets -Ikernel/object/include
+# deps = [ "//zircon/kernel/object" ] gets -Ikernel/object/include
 library("object") {
   kernel = true
   sources = [
@@ -140,8 +140,8 @@ library("object") {
     "process_dispatcher.cpp",
   ]
   deps = [
-    "$zx/kernel/dev/interrupt",
-    "$zx/system/ulib/fbl",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/system/ulib/fbl",
   ]
 }
 ```
@@ -182,9 +182,9 @@ Libraries define a standard set of targets (if relevant):
  * `$target_name.shared`
    is provided if `shared = true`
 
-If the library is the main target in the file (e.g. `$zx/foo:foo`)--the common
+If the library is the main target in the file (e.g. `//zircon/foo:foo`)--the common
 case--the `static`, `shared`, and `headers` sub-targets are aliased into
-`$zx/foo:static`, `$zx/foo:shared`, and `$zx/foo:headers`.
+`//zircon/foo:static`, `//zircon/foo:shared`, and `//zircon/foo:headers`.
 
 ### `public_deps` for header dependencies
 
@@ -198,7 +198,7 @@ For example, `library("async-loop")` contains this:
 ```gn
   public_deps = [
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
-    "$zx/system/ulib/async:headers",
+    "//zircon/system/ulib/async:headers",
   ]
 ```
 
@@ -264,9 +264,9 @@ driver("fvm") {
     "fvm.cpp",
   ]
   deps = [
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/zircon",
   ]
 }
 ```
@@ -281,7 +281,7 @@ why its syntax is exactly the way it is.  `outputs` is single-element list
 containing a path in the BOOTFS.
 
 ```gn
-import("$zx/public/gn/resource.gni")
+import("//zircon/public/gn/resource.gni")
 
 resource("tables") {
   sources = [
@@ -339,15 +339,15 @@ generate bindings for all supported languages.
 Note: To use this template, you must import the `fidl.gni` file scope.
 
 ```gn
-import("$zx/public/gn/fidl.gni")
+import("//zircon/public/gn/fidl.gni")
 
-# Defined in $zx/system/fidl/fuchsia-io/BUILD.gn
+# Defined in //zircon/system/fidl/fuchsia-io/BUILD.gn
 fidl_library("fuchsia-io") {
   sources = [
     "io.fidl",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 ```
@@ -359,11 +359,11 @@ common for FIDL (and Banjo) libraries, we don't require comments on every case
 when it follows this simple pattern.
 
 Depending on which bindings are defined, the above example will generate a set
-of targets of the form `$zx/system/fidl/fuchsia-io:fuchsia-io.<language>`, or,
+of targets of the form `//zircon/system/fidl/fuchsia-io:fuchsia-io.<language>`, or,
 in the case where the target name is the same as the directory name as above,
-`$zx/system/fidl/fuchsia-io:<language>`.
+`//zircon/system/fidl/fuchsia-io:<language>`.
 
-The common case today is `"$zx/system/fidl/fuchsia-io:c"`.
+The common case today is `"//zircon/system/fidl/fuchsia-io:c"`.
 
 ## `banjo_library()`
 
@@ -372,7 +372,7 @@ The definition of Banjo libraries is similar to that of FIDL libraries.  A
 though the set of supported languages will be different from that of FIDL.
 
 ```gn
-import("$zx/public/gn/banjo.gni")
+import("//zircon/public/gn/banjo.gni")
 
 banjo_library("ddk-driver") {
   sources = [

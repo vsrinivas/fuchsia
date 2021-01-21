@@ -6,10 +6,10 @@ import("//build/zircon/migrated_targets.gni")
 
 source_set("sanitizers") {
   deps = [
-    "$zx/system/fidl:fuchsia-debugdata.c_header",
-    "$zx/system/fidl:fuchsia-io.c_header",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/system/fidl:fuchsia-debugdata.c_header",
+    "//zircon/system/fidl:fuchsia-io.c_header",
+    "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [
     "__asan_early_init.c",

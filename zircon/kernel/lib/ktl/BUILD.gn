@@ -14,7 +14,7 @@ zx_library("ktl") {
 
   public_configs = [ ":ktl.config" ]
 
-  deps = [ "$zx/kernel/lib/libc" ]
+  deps = [ "//zircon/kernel/lib/libc" ]
 }
 
 config("ktl.config") {
@@ -22,13 +22,13 @@ config("ktl.config") {
     ":*",
 
     # TODO(fxbug.dev/44971): Referenced in environment configs.
-    "$zx/kernel/*",
-    "$zx/public/gn/*",
-    "$zx/system/ulib/*",
-    "$zx/third_party/lib/*",
-    "$zx/third_party/ulib/*",
     "//build/config/fuchsia:*",
     "//build/config/sanitizers:*",
+    "//zircon/kernel/*",
+    "//zircon/public/gn/*",
+    "//zircon/system/ulib/*",
+    "//zircon/third_party/lib/*",
+    "//zircon/third_party/ulib/*",
   ]
 
   defines = [

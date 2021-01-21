@@ -13,13 +13,13 @@ source_set("entropy") {
     "quality_test.cc",
   ]
   deps = [
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/crypto:headers",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/unittest",
-    "$zx/third_party/lib/jitterentropy",
+    "//zircon/kernel/dev/hw_rng",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/crypto:headers",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/third_party/lib/jitterentropy",
   ]
 }

@@ -24,7 +24,7 @@ zx_library("cksum") {
   if (is_kernel && toolchain.environment != "efi") {
     # TODO(55514): Excluding kernel libc for efi bootloader until standard library dependency
     # of bootloader is sorted out.
-    deps = [ "$zx/kernel/lib/libc" ]
+    deps = [ "//zircon/kernel/lib/libc" ]
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

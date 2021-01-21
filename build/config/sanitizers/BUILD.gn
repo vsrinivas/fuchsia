@@ -151,7 +151,7 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
     # TODO(fxbug.dev/59214): allow only necessary third-party or TODO(bug-filed) cases
 
     # TODO(fxbug.dev/59214): These are constrained indirectly via the target of the same
-    # name in $zx/public/gn/config/instrumentation.
+    # name in //zircon/public/gn/config/instrumentation.
     "//zircon/public/lib/*",
 
     # TODO(fxbug.dev/62979): fix input_unit_tests

@@ -7,8 +7,8 @@
 source_set("amlogic_s912") {
   sources = [ "hdcp.cc" ]
   deps = [
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/cbuf",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/cbuf",
   ]
 }

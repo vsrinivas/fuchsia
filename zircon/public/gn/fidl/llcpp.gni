@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/host_tool_action.gni")
-import("$zx/public/gn/subtarget_aliases.gni")
+import("//zircon/public/gn/host_tool_action.gni")
+import("//zircon/public/gn/subtarget_aliases.gni")
 
 # This is the $fidl_support module for "low-level" C++ bindings.
 # See fidl_library() for details.  This file should not normally be
@@ -12,7 +12,7 @@ import("$zx/public/gn/subtarget_aliases.gni")
 # This tells fidl_library() to invoke fidl_llcpp_library().
 fidl_support_templates = [
   {
-    import = "$zx/public/gn/fidl/llcpp.gni"
+    import = "//zircon/public/gn/fidl/llcpp.gni"
     target = "fidl_llcpp_library"
     fidlc = "json"
   },
@@ -46,7 +46,7 @@ template("fidl_llcpp_library") {
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
 
-      tool = "$zx/tools/fidl:fidlgen_llcpp"
+      tool = "//zircon/tools/fidl:fidlgen_llcpp"
 
       deps = invoker.fidlc_deps
 
@@ -108,13 +108,13 @@ template("fidl_llcpp_library") {
 
       # The generated code uses these.
       public_deps += [
-        "$zx/system/ulib/fidl:fidl-llcpp.headers",
-        "$zx/system/ulib/fit:fit.headers",
+        "//zircon/system/ulib/fidl:fidl-llcpp.headers",
+        "//zircon/system/ulib/fit:fit.headers",
       ]
       deps += [
         ":$fidl_target.tables",
-        "$zx/system/ulib/fidl:fidl-llcpp",
-        "$zx/system/ulib/fit",
+        "//zircon/system/ulib/fidl:fidl-llcpp",
+        "//zircon/system/ulib/fit",
       ]
     }
 

@@ -14,11 +14,11 @@ zx_library("counters") {
   ]
   sdk_migrated = true
   visibility = [
-    "$zx/kernel/*",
-    "$zx/system/ulib/*",
-    "$zx/system/ulib/kcounter/*",
     "//src/zircon/bin/kcounter:*",
     "//src/zircon/tests/kcounter:*",
+    "//zircon/kernel/*",
+    "//zircon/system/ulib/*",
+    "//zircon/system/ulib/kcounter/*",
   ]
   kernel = true
   static = true
@@ -26,12 +26,12 @@ zx_library("counters") {
   if (is_kernel) {
     sources += [ "counters.cc" ]
     deps = [
-      "$zx/kernel/lib/init",
-      "$zx/kernel/lib/special-sections",
+      "//zircon/kernel/lib/init",
+      "//zircon/kernel/lib/special-sections",
     ]
     public_deps = [
       # <lib/counters.h> has #include <lib/special-sections/special-sections.h>.
-      "$zx/kernel/lib/special-sections:headers",
+      "//zircon/kernel/lib/special-sections:headers",
     ]
   }
 }

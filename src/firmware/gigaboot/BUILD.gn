@@ -50,7 +50,7 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
       "//build/config/zircon:standalone",
       "//build/config/zircon:no_sanitizers",
 
-      # TODO: "$zx/kernel:warnings",
+      # TODO: "//zircon/kernel:warnings",
     ]
     include_dirs = [ "include" ]
     cflags = [

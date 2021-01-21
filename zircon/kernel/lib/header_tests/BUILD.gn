@@ -6,5 +6,5 @@
 
 source_set("header_tests") {
   sources = [ "pow2_tests.cc" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
 }

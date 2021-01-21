@@ -12,7 +12,7 @@ zx_library("region-alloc") {
   static = true
   sources = [ "region-alloc.cc" ]
   if (!is_kernel) {
-    deps = [ "$zx/system/ulib/fbl" ]
+    deps = [ "//zircon/system/ulib/fbl" ]
   }
 }
 

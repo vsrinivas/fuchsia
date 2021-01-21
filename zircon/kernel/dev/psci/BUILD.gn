@@ -10,7 +10,7 @@ zx_library("psci") {
   kernel = true
   sources = [ "psci.cc" ]
   deps = [
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/console",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/console",
   ]
 }

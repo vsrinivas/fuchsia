@@ -8,7 +8,7 @@ source_set("test") {
   # TODO: testonly = true
   sources = [ "crashlog-tests.cc" ]
   deps = [
-    "$zx/kernel/lib/crashlog:headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/crashlog:headers",
+    "//zircon/kernel/lib/unittest",
   ]
 }

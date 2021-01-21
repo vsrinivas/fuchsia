@@ -6,8 +6,8 @@ import("//build/unification/global_variables.gni")
 
 config("headers") {
   visibility = [
-    "$zx/system/ulib/c:*",
     "./*",
+    "//zircon/system/ulib/c:*",
   ]
   cflags = [
     "-idirafter",
@@ -18,15 +18,15 @@ config("headers") {
 
 group("musl_internal") {
   visibility = [
-    "$zx/system/ulib/c/*",
-    "$zx/third_party/scudo/*",
     "./*",
+    "//zircon/system/ulib/c/*",
+    "//zircon/third_party/scudo/*",
   ]
   public_deps = [
-    "$zx/system/ulib/processargs",
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/system/ulib/processargs",
+    "//zircon/system/ulib/runtime",
+    "//zircon/system/ulib/zircon",
+    "//zircon/system/ulib/zircon-internal",
   ]
   public_configs = [
     ":headers",
@@ -37,9 +37,9 @@ group("musl_internal") {
 group("musl_internal_testing") {
   testonly = true
   visibility = [
-    "$zx/system/ulib/c/*",
-    "$zx/system/utest/libc:*",
     "./*",
+    "//zircon/system/ulib/c/*",
+    "//zircon/system/utest/libc:*",
   ]
   public_deps = [ ":musl_internal" ]
 }
@@ -75,7 +75,7 @@ config("musl_internal.config") {
 
 if (toolchain_variant.base == "//zircon/system/ulib/c:user.libc_$target_cpu") {
   group("musl") {
-    visibility = [ "$zx/system/ulib/c:*" ]
+    visibility = [ "//zircon/system/ulib/c:*" ]
     deps = [
       "ldso",
       "pthread",

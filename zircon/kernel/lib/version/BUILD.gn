@@ -17,7 +17,7 @@ declare_args() {
 
   # By default the kernel version string is generated based on the full git
   # revision found by `git rev-parse HEAD` in this checkout directory.
-  kernel_version_git_checkout = "$zx/.."
+  kernel_version_git_checkout = "//zircon/.."
 
   # If this is true, then the kernel version string generated based on
   # `kernel_version_git_checkout` also adds a "-dirty" suffix if any files in
@@ -35,7 +35,7 @@ if (current_toolchain == default_toolchain) {
     generated_file("version-string.bin") {
       visibility = [
         ":*",
-        "$zx/kernel:*",
+        "//zircon/kernel:*",
       ]
       outputs = [ kernel_version_string_file ]
       contents = kernel_version_string  # Not a list so no newline added.
@@ -44,7 +44,7 @@ if (current_toolchain == default_toolchain) {
     action("version-string.bin") {
       visibility = [
         ":*",
-        "$zx/kernel:*",
+        "//zircon/kernel:*",
       ]
       hermetic_deps = false
       script = "git-version-string.sh"
@@ -77,8 +77,8 @@ if (current_toolchain == default_toolchain) {
     public_deps = [ ":version-string.h($default_toolchain)" ]
     public_configs = [ ":gen.config" ]
     deps = [
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/init",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/init",
     ]
   }
 

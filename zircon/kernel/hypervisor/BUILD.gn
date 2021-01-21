@@ -16,24 +16,24 @@ zx_library("hypervisor") {
     "trap_map.cc",
   ]
   deps = [
-    "$zx/kernel/arch/$zircon_cpu/hypervisor",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/bitmap",
+    "//zircon/kernel/arch/$zircon_cpu/hypervisor",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/bitmap",
   ]
   public_deps = [
     # <hypervisor/trap_map.h> has #include <object/port_dispatcher.h>.
-    "$zx/kernel/object:headers",
+    "//zircon/kernel/object:headers",
 
     # <hypervisor/id_allocator.h> has #include <bitmap/raw-bitmap.h>.
-    "$zx/system/ulib/bitmap:headers",
+    "//zircon/system/ulib/bitmap:headers",
 
     # <hypervisor/guest_physical_address_space.h> has #include <vm/vm_aspace.h>.
-    "$zx/kernel/vm:headers",
+    "//zircon/kernel/vm:headers",
 
     # <hypervisor/interrupt_tracker.h> has #include <lib/ktrace.h>.
-    "$zx/kernel/lib/ktrace:headers",
+    "//zircon/kernel/lib/ktrace:headers",
   ]
 }

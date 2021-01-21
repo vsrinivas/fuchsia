@@ -30,52 +30,52 @@ if (current_toolchain == default_toolchain) {
       ]
 
       prefix_configs = [
-        "$zx/kernel:headers",
+        "//zircon/kernel:headers",
 
         # TODO(fxbug.dev/44971): Many include/ headers use <ktl/*.h> headers.
-        "$zx/kernel/lib/ktl:headers.config",
-        "$zx/kernel/lib/ktl:ktl.config",
+        "//zircon/kernel/lib/ktl:headers.config",
+        "//zircon/kernel/lib/ktl:ktl.config",
 
         # <stdio.h> has #include <lib/io.h>.
-        "$zx/kernel/lib/io:headers.config",
+        "//zircon/kernel/lib/io:headers.config",
 
         # <stdlib.h> has #include <lib/heap.h>.
-        "$zx/kernel/lib/heap:headers.config",
+        "//zircon/kernel/lib/heap:headers.config",
 
         # <lib/lockup_detector.h> is included by some "low-level" headers.
-        "$zx/kernel/lib/lockup_detector:headers.config",
+        "//zircon/kernel/lib/lockup_detector:headers.config",
 
         # <kernel/percpu.h> has #include <lib/lazy_init/lazy_init.h>.
-        "$zx/system/ulib/lazy_init:headers.config",
+        "//zircon/system/ulib/lazy_init:headers.config",
 
         # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
-        "$zx/system/ulib/lockdep:headers.config",
+        "//zircon/system/ulib/lockdep:headers.config",
 
         # <kernel/{scheduler.h,scheduler_state.h> has #include <ffl/fixed.h>.
-        "$zx/system/ulib/ffl:headers.config",
+        "//zircon/system/ulib/ffl:headers.config",
 
         # <kernel/thread.h> has #include <vm/kstack.h>.
-        "$zx/kernel/vm:headers.config",
+        "//zircon/kernel/vm:headers.config",
 
         # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
-        "$zx/kernel/lib/user_copy:headers.config",
+        "//zircon/kernel/lib/user_copy:headers.config",
 
         # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
-        "$zx/system/ulib/zircon-internal:headers.config",
+        "//zircon/system/ulib/zircon-internal:headers.config",
 
         # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
-        "$zx/kernel/lib/ktrace:headers.config",
-        "$zx/kernel/lib/ktrace:suppress-warning.config",
+        "//zircon/kernel/lib/ktrace:headers.config",
+        "//zircon/kernel/lib/ktrace:suppress-warning.config",
 
         # <kernel/thread.h> has #include <fbl/macros.h>
-        "$zx/system/ulib/fbl:headers.config",
+        "//zircon/system/ulib/fbl:headers.config",
 
         # <dev/iommu.h> has #include <fbl/name.h>
         # <mexec.h> has #include <fbl/span.h>
-        "$zx/kernel/lib/fbl:headers.config",
+        "//zircon/kernel/lib/fbl:headers.config",
 
         # Everywhere has #include <zx/status.h>
-        "$zx/system/ulib/zxc:headers.config",
+        "//zircon/system/ulib/zxc:headers.config",
       ]
 
       configs = [ "//zircon/kernel:kernel_config" ]
@@ -303,7 +303,7 @@ if (is_kernel) {
   executable("zircon") {
     visibility = [ ":*" ]
 
-    # $zx/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
+    # //zircon/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
     output_extension = "elf"
 
     ldflags = [
@@ -450,7 +450,7 @@ if (is_kernel) {
       ":raw",
       ":zircon",
       ":zircon.elf.rsp",
-      "$zx/kernel/lib/version:headers",
+      "//zircon/kernel/lib/version:headers",
     ]
     sources = [ "arch/$zircon_cpu/image.S" ]
 

@@ -37,29 +37,29 @@ zx_library("zxtest") {
   ]
   public_deps = [
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/fit:headers",
-    "$zx/system/ulib/zircon:headers",
+    "//zircon/system/ulib/fbl:headers",
+    "//zircon/system/ulib/fit:headers",
+    "//zircon/system/ulib/zircon:headers",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fit",
   ]
   if (is_fuchsia) {
     sources += [ "death-statement.cc" ]
 
     public_deps += [
       # Needed for <zircon/status.h>
-      "$zx/system/ulib/zircon:headers",
+      "//zircon/system/ulib/zircon:headers",
 
       # Needed for <lib/zx/*>, death-statements.h
-      "$zx/system/ulib/fit:headers",
-      "$zx/system/ulib/zx:headers",
+      "//zircon/system/ulib/fit:headers",
+      "//zircon/system/ulib/zx:headers",
     ]
 
     deps += [
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/system/ulib/zircon",
+      "//zircon/system/ulib/zx",
     ]
   }
   metadata = {

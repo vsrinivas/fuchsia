@@ -27,7 +27,7 @@ group("tests") {
 fidl("componentmanager.test") {
   testonly = true
   sources = [ "componentmanager.test.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 rustc_binary("maintainer_bin") {

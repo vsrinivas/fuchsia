@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/host_tool_action.gni")
-import("$zx/public/gn/manifest.gni")
-import("$zx/public/gn/resource.gni")
+import("//zircon/public/gn/host_tool_action.gni")
+import("//zircon/public/gn/manifest.gni")
+import("//zircon/public/gn/resource.gni")
 
 declare_args() {
   # This can be "zstd", optionally followed by ".LEVEL" where `LEVEL` can be an
@@ -24,7 +24,7 @@ zbi_compression_algorithm = get_path_info(zbi_compression, "name")
 if (get_path_info(zbi_compression, "extension") == "" &&
     zbi_compression_algorithm != "none" &&
     zbi_compression_algorithm != "zstd") {
-  # This must match what $zx/tools/zbi/zbi.cc uses by default.
+  # This must match what //zircon/tools/zbi/zbi.cc uses by default.
   zbi_compression_algorithm = "zstd"
 }
 
@@ -340,7 +340,7 @@ template("zbi") {
     depfile = "${output_file}.d"
     sources = [ rspfile ]
 
-    tool = "$zx/tools/zbi"
+    tool = "//zircon/tools/zbi"
     args = [
       "--output=" + rebase_path(output_file, root_build_dir),
       "--json-output=" + rebase_path(json_output_file, root_build_dir),

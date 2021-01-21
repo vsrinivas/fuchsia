@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/prebuilt/config.gni")
+import("//zircon/prebuilt/config.gni")
 import("resource.gni")
 
-# This is the directory populated by $zx/scripts/download-prebuilt.
+# This is the directory populated by //zircon/scripts/download-prebuilt.
 # Currently all firmware blobs are stored there.
-firmware_dir = "$zx/prebuilt/downloads/firmware"
+firmware_dir = "//zircon/prebuilt/downloads/firmware"
 
 # This is the same as resource(), but $outputs strings give exactly the
 # strings passed to the `load_firmware()` function by the driver code.

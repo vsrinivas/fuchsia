@@ -7,8 +7,8 @@
 source_set("intel_rng") {
   sources = [ "intel-rng.cc" ]
   deps = [
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/init",
+    "//zircon/kernel/dev/hw_rng",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/init",
   ]
 }

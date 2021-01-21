@@ -7,15 +7,15 @@
 source_set("lockdep") {
   sources = [ "lock_dep.cc" ]
   deps = [
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
   ]
   public_deps = [
     # The kernel lockdep library is just a slight augmentation of the
     # userland lockdep library, which supplies all the API headers.  So
     # kernel/lib/lockdep is used as if it were a library() itself and acts
     # as the kernel's drop-in replacement for system/ulib/lockdep.
-    "$zx/system/ulib/lockdep",
+    "//zircon/system/ulib/lockdep",
   ]
 }

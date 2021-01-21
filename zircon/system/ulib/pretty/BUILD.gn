@@ -18,9 +18,9 @@ zx_library("pretty") {
     "hexdump.cc",
     "sizes.cc",
   ]
-  public_deps = [ "$zx/system/ulib/zircon-internal:headers" ]
+  public_deps = [ "//zircon/system/ulib/zircon-internal:headers" ]
   if (is_kernel && toolchain.environment != "kernel") {
-    deps = [ "$zx/kernel/lib/libc" ]
+    deps = [ "//zircon/kernel/lib/libc" ]
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

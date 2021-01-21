@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/prebuilt.gni")
-import("$zx/public/gn/toolchain/clang.gni")
+import("//zircon/public/gn/prebuilt.gni")
+import("//zircon/public/gn/toolchain/clang.gni")
 
 # All the $current_cpu values that `current_os == "fuchsia"` supports.
 standard_fuchsia_cpus = [
@@ -119,7 +119,7 @@ standard_environments = [
     }
 
     # Ensure that host binaries have __zx_panic.
-    implicit_deps = [ "$zx/system/ulib/zx-panic-libc" ]
+    implicit_deps = [ "//zircon/system/ulib/zx-panic-libc" ]
     strip = true
   },
   {
@@ -149,7 +149,7 @@ standard_environments = [
       },
     ]
     implicit_deps = [
-      "$zx/system/ulib/c",
+      "//zircon/system/ulib/c",
       {
         types = [
           "executable",
@@ -157,7 +157,7 @@ standard_environments = [
           "test",
         ]
         add = [
-          "$zx/system/ulib/c:crt1",
+          "//zircon/system/ulib/c:crt1",
           "//build/config/zircon:maybe_scudo_default_options",
         ]
       },
@@ -168,7 +168,7 @@ standard_environments = [
 ]
 
 # These `standard*variants` lists have the same structure as $variants (see
-# $zx/public/gn/toolchain/environment.gni) but it just supply definitions
+# //zircon/public/gn/toolchain/environment.gni) but it just supply definitions
 # of variants with standard names.  The $variants list can refer to
 # variants defined here by name, but these are not otherwise involved in
 # variant selection.
@@ -221,7 +221,7 @@ standard_sanitizer_variants = [
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
         "//build/config/zircon:frame_pointers",
-        "$zx/public/gn/config/instrumentation:asan",
+        "//zircon/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
         # This is the key for toolchain_runtime_deps() to find the right
@@ -243,7 +243,9 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+          add = [
+            "//zircon/public/gn/config/instrumentation:asan_default_options",
+          ]
         },
       ]
       tags = [
@@ -261,7 +263,7 @@ standard_sanitizer_variants = [
       name = "ubsan"
       configs = [
         {
-          add = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+          add = [ "//zircon/public/gn/config/instrumentation:ubsan" ]
 
           # The vptr instrumentation requires RTTI.  If -fno-rtti is passed
           # then this checking is implicitly disabled.  However, another
@@ -274,7 +276,7 @@ standard_sanitizer_variants = [
           # requiring RTTI uses its own RTTI-enabled vtables rather than other
           # non-RTTI vtables.  So just let RTTI be enabled everywhere, and then
           # get the vptr checking everywhere too.
-          remove = [ "$zx/public/gn/config:no_rtti" ]
+          remove = [ "//zircon/public/gn/config:no_rtti" ]
         },
       ]
       toolchain_vars = {
@@ -298,11 +300,13 @@ standard_sanitizer_variants = [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:ubsan_default_options" ]
+          add = [
+            "//zircon/public/gn/config/instrumentation:ubsan_default_options",
+          ]
 
           # The asan runtime trumps the standalone ubsan runtime and the
           # `__ubsan_default_options()` would go unused.
-          unless_configs = [ "$zx/public/gn/config/instrumentation:asan" ]
+          unless_configs = [ "//zircon/public/gn/config/instrumentation:asan" ]
         },
       ]
       tags = [
@@ -360,7 +364,7 @@ standard_variants += [
         # consistent no_safestack setting.
         "//build/config/zircon:no_safestack",
 
-        "$zx/public/gn/config/instrumentation:asan",
+        "//zircon/public/gn/config/instrumentation:asan",
       ]
       toolchain_vars = {
         # This is the key for toolchain_runtime_deps() to find the right
@@ -376,7 +380,9 @@ standard_variants += [
             "host_tool",
             "test",
           ]
-          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+          add = [
+            "//zircon/public/gn/config/instrumentation:asan_default_options",
+          ]
         },
       ]
       tags = [
@@ -400,22 +406,23 @@ standard_variants += [
   {
     variant = {
       name = "lto"
-      configs = [ "$zx/public/gn/config/lto" ]
+      configs = [ "//zircon/public/gn/config/lto" ]
       tags = [ "lto" ]
     }
   },
   {
     variant = {
       name = "thinlto"
-      configs = [ "$zx/public/gn/config/lto:thinlto" ]
+      configs = [ "//zircon/public/gn/config/lto:thinlto" ]
       tags = [ "lto" ]
     }
   },
   {
     variant = {
       name = "profile"
-      configs = [ "$zx/public/gn/config/instrumentation:profile" ]
-      implicit_deps = [ "$zx/public/gn/config/instrumentation:profile_deps" ]
+      configs = [ "//zircon/public/gn/config/instrumentation:profile" ]
+      implicit_deps =
+          [ "//zircon/public/gn/config/instrumentation:profile_deps" ]
       tags = [
         "instrumented",
 
@@ -431,9 +438,9 @@ standard_variants += [
   {
     variant = {
       name = "sancov"
-      configs = [ "$zx/public/gn/config/instrumentation:sancov" ]
+      configs = [ "//zircon/public/gn/config/instrumentation:sancov" ]
 
-      # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
+      # The "sancov" tag is important: see //zircon/system/ulib/c/sanitizers.
       tags = [
         "instrumentation-runtime",
         "instrumented",
@@ -463,7 +470,7 @@ standard_variants += [
         "ubsan",
         "sancov",
       ]
-      configs = [ "$zx/public/gn/config/instrumentation:sancov-full" ]
+      configs = [ "//zircon/public/gn/config/instrumentation:sancov-full" ]
 
       # The kernel provides runtime for sancov but not for sancov-full.
       tags = [ "useronly" ]

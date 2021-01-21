@@ -32,8 +32,8 @@ source_set("string") {
     "strxfrm.c",
   ]
   deps = [
-    "$zx/kernel/lib/libc:ctype",
-    "$zx/kernel/lib/libc:headers",
     "arch/$zircon_cpu",
+    "//zircon/kernel/lib/libc:ctype",
+    "//zircon/kernel/lib/libc:headers",
   ]
 }

@@ -11,7 +11,7 @@ zx_library("smbios") {
   kernel = true
   static = true
   sources = [ "smbios.cc" ]
-  deps = [ "$zx/system/ulib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 group("tests") {

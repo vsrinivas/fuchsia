@@ -9,7 +9,7 @@ zx_library("processargs") {
   sdk_headers = [ "lib/processargs/processargs.h" ]
   sources = [ "processargs.c" ]
 
-  deps = [ "$zx/system/ulib/zircon" ]
+  deps = [ "//zircon/system/ulib/zircon" ]
 
   configs += [
     # This code is used in early startup, where safe-stack is not ready yet.

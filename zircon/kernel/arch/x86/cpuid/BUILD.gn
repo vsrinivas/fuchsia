@@ -12,18 +12,18 @@ zx_library("cpuid") {
 
   public_deps = [
     # <arch/x86/cpuid.h> has #include <ktl/optional.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
   ]
 
   deps = [
     ":test",
-    "$zx/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
 source_set("test") {
   # TODO(fxbug.dev/67010): testonly = true
   sources = [ "cpuid_test.cc" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
   public_deps = [ ":headers" ]
 }

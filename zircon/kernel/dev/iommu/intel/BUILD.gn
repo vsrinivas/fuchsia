@@ -18,20 +18,20 @@ zx_library("intel") {
     "second_level_pt.cc",
   ]
   deps = [
-    "$zx/kernel/arch/x86/page_tables",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/pcie",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/root_resource_filter",
-    "$zx/kernel/lib/user_copy",
-    "$zx/kernel/vm:headers",
-    "$zx/system/ulib/bitmap",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/region-alloc",
+    "//zircon/kernel/arch/x86/page_tables",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pcie",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/kernel/lib/user_copy",
+    "//zircon/kernel/vm:headers",
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/region-alloc",
   ]
   public_deps = [
     # dev/iommu/intel.h has #include <fbl/ref_ptr.h>.
-    "$zx/kernel/lib/fbl:headers",
+    "//zircon/kernel/lib/fbl:headers",
   ]
 }

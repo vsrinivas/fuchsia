@@ -3,24 +3,13 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # *These must never be set as a build argument*.
-
-  # "$zx/" is the prefix for GN "source-absolute" paths in the Zircon
-  # build.  When Zircon is built standalone, the Zircon repository is the
-  # root of the build (where `.gn` is found) so "$zx/" becomes "//".  When
-  # Zircon is part of a larger unified build, there is a higher-level `.gn`
-  # file that uses `default_args` to set "$zx/" to "//zircon/".
-  zx = "/"
-}
-
-declare_args() {
   # *This must never be set as a build argument.*
   # It exists only to be set via c_toolchain().
   # See environment() for more information.
   toolchain = {
     configs = []
     environment = "stub"
-    label = "$zx/public/gn/toolchain:stub"
+    label = "//zircon/public/gn/toolchain:stub"
     globals = {
     }
   }
@@ -215,7 +204,7 @@ template("shared_library") {
         link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
         if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
-          # For build_api_module("binaries") in $zx/BUILD.gn.
+          # For build_api_module("binaries") in //zircon/BUILD.gn.
           binaries += [
             {
               type = "shared_library"
@@ -445,7 +434,7 @@ template("library") {
             get_path_info(get_label_info(label, "name"), "extension") ==
             "headers" ||
             get_path_info(get_label_info(label, "dir"), "dir") ==
-            "$zx/system/fidl") {
+            "//zircon/system/fidl") {
           sdk_deps += [ label ]
         }
       }
@@ -493,7 +482,7 @@ template("library") {
     local_include_dirs = []
     if (defined(invoker.include_dirs)) {
       foreach(dir, invoker.include_dirs) {
-        local_include_dirs += [ "//zircon/" + rebase_path(dir, "$zx/") ]
+        local_include_dirs += [ "//zircon/" + rebase_path(dir, "//zircon/") ]
       }
     }
 
@@ -524,7 +513,7 @@ template("library") {
           target_type = "zircon_library"
           target_name = "$sdk_name"
           dir = "//zircon/" + rebase_path(".", "//")
-          include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
+          include_dirs = [ "//zircon/" + rebase_path("include", "//zircon/") ]
           compilation_include_dirs = local_include_dirs
           compilation_defines = local_defines
           disable_ubsan = ubsan_disabled
@@ -532,9 +521,9 @@ template("library") {
           headers = sdk_headers
           publishable = sdk_publishable
           if (sdk == "source") {
-            source_dir = "//zircon/" + rebase_path(".", "$zx/")
+            source_dir = "//zircon/" + rebase_path(".", "//zircon/")
             sources = []
-            foreach(file, rebase_path(invoker.sources, "$zx/")) {
+            foreach(file, rebase_path(invoker.sources, "//zircon/")) {
               sources += [ "//zircon/$file" ]
             }
           } else {
@@ -545,22 +534,22 @@ template("library") {
           foreach(dep, sdk_deps) {
             if (get_label_info(dep, "name") == "c") {
               dep = get_label_info(dep, "dir")
-              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              assert(get_path_info(dep, "dir") == "//zircon/system/fidl")
               dep = get_label_info(dep, "name")
               deps += [ "//zircon/system/fidl/${dep}:${dep}_c" ]
             } else if (get_label_info(dep, "name") == "c.headers") {
               dep = get_label_info(dep, "dir")
-              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              assert(get_path_info(dep, "dir") == "//zircon/system/fidl")
               dep = get_label_info(dep, "name")
               public_deps += [ "//zircon/system/fidl/${dep}:${dep}_c" ]
             } else if (get_label_info(dep, "name") == "llcpp") {
               dep = get_label_info(dep, "dir")
-              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              assert(get_path_info(dep, "dir") == "//zircon/system/fidl")
               dep = get_label_info(dep, "name")
               deps += [ "//zircon/system/fidl/${dep}:${dep}_llcpp" ]
             } else if (get_label_info(dep, "name") == "llcpp.headers") {
               dep = get_label_info(dep, "dir")
-              assert(get_path_info(dep, "dir") == "$zx/system/fidl")
+              assert(get_path_info(dep, "dir") == "//zircon/system/fidl")
               dep = get_label_info(dep, "name")
               public_deps += [ "//zircon/system/fidl/${dep}:${dep}_llcpp" ]
             } else if (get_label_info(dep, "name") == "headers") {
@@ -666,7 +655,8 @@ template("library") {
               import = "//build/zircon/zircon_header_library.gni"
               target_type = "zircon_header_library"
               target_name = "$sdk_name"
-              include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
+              include_dirs =
+                  [ "//zircon/" + rebase_path("include", "//zircon/") ]
             },
           ]
         }
@@ -872,7 +862,7 @@ template("library") {
       public_deps = [ ":${_library_name}.headers" ]
     }
 
-    # This is really only used in the $zx/kernel:kernel environment().
+    # This is really only used in the //zircon/kernel:kernel environment().
     config("headers.config") {
       include_dirs = [ "include" ]
     }
@@ -1390,7 +1380,7 @@ template("_basic_executable") {
 
       link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
-      # For build_api_module("binaries") in $zx/BUILD.gn.
+      # For build_api_module("binaries") in //zircon/BUILD.gn.
       if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
         binaries += [
           {
@@ -1596,7 +1586,7 @@ template("test") {
 # Build a C/C++ executable for a "host-style" command-line tool.
 #
 # A host_tool() target can be the $tool parameter to host_tool_action().
-# If it's a dependency of $zx/tools:tools then it will be included
+# If it's a dependency of //zircon/tools:tools then it will be included
 # in SDK builds.
 #
 # A host_tool() target might also be built for the Fuchsia target system,
@@ -1773,7 +1763,7 @@ template("_loadable_module") {
       link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
       if (!defined(invoker.sdk_migrated) || !invoker.sdk_migrated) {
-        # For build_api_module("binaries") in $zx/BUILD.gn.
+        # For build_api_module("binaries") in //zircon/BUILD.gn.
         binaries += [
           {
             type = "loadable_module"
@@ -1901,7 +1891,7 @@ template("driver") {
                            ])
 
     # All drivers implicitly get the driver ABI.
-    deps += [ "$zx/system/ulib/driver" ]
+    deps += [ "//zircon/system/ulib/driver" ]
 
     # Elaborate the defaults to compute the output file name.
     if (!defined(output_name)) {
@@ -1955,17 +1945,17 @@ template("driver") {
   # Maybe set `output_conversion="empty"` in generated_file().
   action(check_target) {
     # For prebuilt_dir:
-    import("$zx/public/gn/prebuilt.gni")
+    import("//zircon/public/gn/prebuilt.gni")
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":${driver_target}._build($current_toolchain)" ]
-    script = "$zx/public/gn/driver-denylist-check.sh"
+    script = "//zircon/public/gn/driver-denylist-check.sh"
     deps = [ ":$denylist_target" ]
     sources = [ denylist_file ]
     outputs = [ "${denylist_file}.stamp" ]
     args = [ driver_label ] +
            rebase_path(sources + outputs + [
                              "$prebuilt_dir/third_party/gn/$host_platform/gn",
-                             "$zx/",
+                             "//zircon/",
                            ],
                        root_build_dir)
   }
@@ -2032,7 +2022,7 @@ template("test_driver") {
 # .gni files explicitly referenced with import().  So because of this
 # constraint in GN, the rule is that target types that pre-set $configs are
 # defined in BUILDCONFIG.gn while other templates are defined in their own
-# $zx/public/gn/${target_type}.gni file.
+# //zircon/public/gn/${target_type}.gni file.
 _compile_target_types = [
   "executable",
   "host_tool",
@@ -2113,7 +2103,7 @@ foreach(target_type, _compile_target_types) {
 }
 
 # For prebuilt_dir:
-import("$zx/public/gn/prebuilt.gni")
+import("//zircon/public/gn/prebuilt.gni")
 # Variables used to refer to the in-tree python interpreter.
 python_version = "3.8"
 python_exe_src = "$prebuilt_dir/third_party/python3/${host_platform}/bin/python${python_version}"

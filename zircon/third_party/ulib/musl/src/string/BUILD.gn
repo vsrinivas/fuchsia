@@ -18,10 +18,10 @@ group("string") {
 
 # These are the functions the compiler produces implicit calls to.
 source_set("compiler") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources = [
       "aarch64/memcpy.S",
       "aarch64/memset.S",
@@ -44,12 +44,12 @@ source_set("compiler") {
 source_set("stdmem") {
   deps = [
     ":compiler",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [ "memrchr.c" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources += [
       "aarch64/memchr.S",
       "aarch64/memcmp.S",
@@ -71,7 +71,7 @@ source_set("stdmem") {
 }
 
 source_set("extmem") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "memccpy.c",
     "memmem.c",
@@ -87,10 +87,10 @@ source_set("extmem") {
 }
 
 source_set("minimal_str") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources = [
       "aarch64/strlen.S",
       "aarch64/strncmp.S",
@@ -108,7 +108,7 @@ source_set("minimal_str") {
 source_set("stdstr") {
   deps = [
     ":minimal_str",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [
     "strcat.c",
@@ -126,7 +126,7 @@ source_set("stdstr") {
   ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources += [
       "aarch64/strchr.S",
       "aarch64/strcmp.S",
@@ -144,7 +144,7 @@ source_set("stdstr") {
 }
 
 source_set("extstr") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "stpcpy.c",
     "stpncpy.c",
@@ -160,9 +160,9 @@ source_set("extstr") {
   ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources += [
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strnlen.S",
+      "//zircon/third_party/lib/cortex-strings/src/aarch64/strnlen.S",
       "aarch64/strchrnul.S",
     ]
   } else {
@@ -176,7 +176,7 @@ source_set("extstr") {
 }
 
 source_set("bsd") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "bcmp.c",
     "bcopy.c",
@@ -190,7 +190,7 @@ source_set("bsd") {
 }
 
 source_set("wcs") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "wcpcpy.c",
     "wcpncpy.c",
@@ -219,7 +219,7 @@ source_set("wcs") {
 }
 
 source_set("wmem") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "wmemchr.c",
     "wmemcmp.c",

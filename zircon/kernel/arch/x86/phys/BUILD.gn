@@ -7,7 +7,7 @@
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
-import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
+import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {
   zircon_toolchain_suite("kernel.phys32") {
@@ -39,8 +39,8 @@ if (current_toolchain == default_toolchain) {
 
     source_set("phys") {
       sources = [ "start.S" ]
-      include_dirs = [ "$zx/.." ]
-      deps = [ "$zx/kernel/lib/arch" ]
+      include_dirs = [ "//zircon/.." ]
+      deps = [ "//zircon/kernel/lib/arch" ]
     }
 
     config("zbi_executable.config") {
@@ -51,10 +51,10 @@ if (current_toolchain == default_toolchain) {
 
     config("phys32_config") {
       configs = [
-        "$zx/kernel:standalone",
-        "$zx/kernel:warnings",
-        "$zx/kernel/arch/x86:abi",
-        "$zx/kernel/phys:defines",
+        "//zircon/kernel:standalone",
+        "//zircon/kernel:warnings",
+        "//zircon/kernel/arch/x86:abi",
+        "//zircon/kernel/phys:defines",
 
         # Don't emit extra code making static initializers thread-safe (we don't
         # have threads or any of the corresponding library support.)
@@ -116,11 +116,11 @@ if (current_toolchain == default_toolchain) {
         "gdt32.cc",
         "start32.S",
       ]
-      include_dirs = [ "$zx/.." ]
+      include_dirs = [ "//zircon/.." ]
       deps = [
         ":phys32-header",
-        "$zx/kernel/lib/arch",
-        "$zx/kernel/lib/ktl",
+        "//zircon/kernel/lib/arch",
+        "//zircon/kernel/lib/ktl",
       ]
 
       # Links use -nostdlib to avoid getting -lc et al.  But the "builtins"
@@ -164,7 +164,7 @@ if (current_toolchain == default_toolchain) {
       ]
       deps = [
         ":phys32",
-        "$zx/kernel/lib/arch",
+        "//zircon/kernel/lib/arch",
       ]
 
       public_configs = [ ":load-1mb" ]
@@ -186,5 +186,5 @@ hwreg_asm_header("phys32-header") {
   output_name = "phys32.h"
   sources = [ "gdt32.cc" ]
   defines = [ "GENERATE" ]
-  deps = [ "$zx/kernel/lib/arch" ]
+  deps = [ "//zircon/kernel/lib/arch" ]
 }

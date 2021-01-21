@@ -14,7 +14,7 @@ fidl("fuchsia.device.manager") {
     "system-state-transition.fidl",
   ]
   public_deps = [
-    "$zx/vdso/zx",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//zircon/vdso/zx",
   ]
 }

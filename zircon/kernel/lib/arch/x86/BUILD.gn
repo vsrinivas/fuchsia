@@ -5,13 +5,13 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/zircon/migrated_targets.gni")
-import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
+import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 # In the Zircon build, default_toolchain is used for the hwreg_asm_header()
 # generation action, but it cannot instantiate a compiling target like this.
 # So only define the library target in a non-default toolchain, or in the other
 # build where everything is different.
-if ("$zx/" != "//" || current_toolchain != default_toolchain) {
+if ("//zircon/" != "//" || current_toolchain != default_toolchain) {
   zx_library("x86") {
     kernel = true
     host = true
@@ -20,9 +20,9 @@ if ("$zx/" != "//" || current_toolchain != default_toolchain) {
     sources = []
     public_deps = [
       # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
-      "$zx/system/ulib/hwreg:headers",
+      "//zircon/system/ulib/hwreg:headers",
     ]
-    deps = [ "$zx/system/ulib/hwreg" ]
+    deps = [ "//zircon/system/ulib/hwreg" ]
 
     include_dirs = [ "../include" ]
 

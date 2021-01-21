@@ -14,8 +14,8 @@ zx_library("runtime") {
   sdk_migrated = true
 
   deps = [
-    "$zx/system/ulib/elf-psabi",
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/elf-psabi",
+    "//zircon/system/ulib/zircon",
   ]
 
   configs += [

@@ -23,30 +23,30 @@ zx_library("zbitl") {
   ]
   deps = [
     ":internal.decompress-zstd",
-    "$zx/kernel/lib/efi",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxc",
-    "$zx/third_party/ulib/cksum",
+    "//zircon/kernel/lib/efi",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon",
+    "//zircon/system/ulib/zxc",
+    "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [
     # <lib/zbitl/view.h> has #include <lib/cksum.h>.
-    "$zx/third_party/ulib/cksum:headers",
+    "//zircon/third_party/ulib/cksum:headers",
 
     # <lib/zbitl/items/mem_config.h> has #include <fbl/span.h>.
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/system/ulib/fbl:headers",
 
     # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
-    "$zx/system/ulib/zxc:headers",
+    "//zircon/system/ulib/zxc:headers",
   ]
 
   if (is_kernel) {
     # The zbitl headers use various ktl-approved standard C++ headers.
     deps += [
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
-    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
   } else {
     sources += [
       "fd.cc",
@@ -60,12 +60,12 @@ zx_library("zbitl") {
         "vmo.cc",
       ]
       deps += [
-        "$zx/system/ulib/zircon-internal",
-        "$zx/system/ulib/zx",
+        "//zircon/system/ulib/zircon-internal",
+        "//zircon/system/ulib/zx",
       ]
       public_deps += [
         # <lib/zbitl/vmo.h> has #include <lib/zx/vmo.h>.
-        "$zx/system/ulib/zx:headers",
+        "//zircon/system/ulib/zx:headers",
       ]
     }
   }
@@ -77,20 +77,20 @@ source_set("internal.decompress-zstd") {
     "zstd.cc",
   ]
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
-  deps = [ "$zx/third_party/ulib/zstd:zstd-decompress-standalone" ]
+  deps = [ "//zircon/third_party/ulib/zstd:zstd-decompress-standalone" ]
   public_deps = [
     # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
-    "$zx/system/ulib/zxc",
+    "//zircon/system/ulib/zxc",
 
     # <lib/zbitl/decompress.h> has #include <fbl/span.h>.
-    "$zx/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   include_dirs = [ "include" ]
 
   if (is_kernel) {
     deps += [
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
   } else {
     sources += [ "default-allocator.cc" ]

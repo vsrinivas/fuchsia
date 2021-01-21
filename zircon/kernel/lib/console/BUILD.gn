@@ -10,11 +10,11 @@ zx_library("console") {
   kernel = true
   sources = [ "console.cc" ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/init",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/init",
   ]
   public_deps = [
     # <lib/console.h> has #include <lib/special-sections/special-sections.h>.
-    "$zx/kernel/lib/special-sections:headers",
+    "//zircon/kernel/lib/special-sections:headers",
   ]
 }

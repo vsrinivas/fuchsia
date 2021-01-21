@@ -8,8 +8,8 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("syscalls") {
   visibility = [
-    "$zx/kernel/*",
-    "$zx/system/ulib/zircon:*",
+    "//zircon/kernel/*",
+    "//zircon/system/ulib/zircon:*",
   ]
 
   # This can be used for headers only by the vDSO and test code.
@@ -18,11 +18,11 @@ zx_library("syscalls") {
   sources = []
 
   # Depend on the files generated from the syscall IDL.
-  public_deps = [ "$zx/vdso:private($default_toolchain)" ]
+  public_deps = [ "//zircon/vdso:private($default_toolchain)" ]
 
   # The line above does not work in the Fuchsia build because its default
   # toolchain does not propagate configs (see `gn help toolchain` for details).
-  public_configs = [ "$zx/vdso:private.config($default_toolchain)" ]
+  public_configs = [ "//zircon/vdso:private.config($default_toolchain)" ]
 
   if (is_kernel) {
     deps = [ ":impl" ]
@@ -65,27 +65,27 @@ if (is_kernel) {
     deps = [
       ":dispatch",
       ":headers",
-      "$zx/kernel/dev/udisplay",
-      "$zx/kernel/lib/cmdline",
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/counters",
-      "$zx/kernel/lib/crashlog",
-      "$zx/kernel/lib/crypto",
-      "$zx/kernel/lib/fbl",
-      "$zx/kernel/lib/gfxconsole",
-      "$zx/kernel/lib/kpci",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/ktrace",
-      "$zx/kernel/lib/mtrace",
-      "$zx/kernel/lib/user_copy",
-      "$zx/kernel/lib/userabi:headers",
-      "$zx/kernel/object",
-      "$zx/system/ulib/explicit-memory",
-      "$zx/system/ulib/region-alloc",
-      "$zx/system/ulib/zbitl",
+      "//zircon/kernel/dev/udisplay",
+      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/counters",
+      "//zircon/kernel/lib/crashlog",
+      "//zircon/kernel/lib/crypto",
+      "//zircon/kernel/lib/fbl",
+      "//zircon/kernel/lib/gfxconsole",
+      "//zircon/kernel/lib/kpci",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/ktrace",
+      "//zircon/kernel/lib/mtrace",
+      "//zircon/kernel/lib/user_copy",
+      "//zircon/kernel/lib/userabi:headers",
+      "//zircon/kernel/object",
+      "//zircon/system/ulib/explicit-memory",
+      "//zircon/system/ulib/region-alloc",
+      "//zircon/system/ulib/zbitl",
     ]
     if (current_cpu == "x64") {
-      deps += [ "$zx/kernel/platform/pc" ]
+      deps += [ "//zircon/kernel/platform/pc" ]
     }
   }
 
@@ -94,7 +94,7 @@ if (is_kernel) {
     sources = [ "syscalls.cc" ]
     deps = [
       ":headers",
-      "$zx/kernel/lib/userabi:headers",
+      "//zircon/kernel/lib/userabi:headers",
     ]
   }
 }

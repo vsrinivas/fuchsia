@@ -342,7 +342,7 @@ such as `executable()`, `test()`, or `library()` (with `shared = true`), uses
 this line to request the hermetic C++ standard library:
 
 ```gn
-    configs += [ "$zx/public/gn/config:static-libc++" ]
+    configs += [ "//zircon/public/gn/config:static-libc++" ]
 ```
 
 This is **required** in each `library()` that is exported to the public IDK

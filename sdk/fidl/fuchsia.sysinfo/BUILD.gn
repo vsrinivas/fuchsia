@@ -8,5 +8,5 @@ fidl("fuchsia.sysinfo") {
   sdk_category = "partner"
   api = "fuchsia.sysinfo.api"
   sources = [ "sysinfo.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

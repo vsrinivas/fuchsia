@@ -10,11 +10,11 @@ zx_library("lockup_detector") {
   kernel = true
   sources = [ "lockup_detector.cc" ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/system/ulib/affine",
     "tests",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/system/ulib/affine",
   ]
-  public_deps = [ "$zx/kernel/lib/ktl:headers" ]
+  public_deps = [ "//zircon/kernel/lib/ktl:headers" ]
 }

@@ -10,7 +10,7 @@ zx_library("zxc") {
   kernel = true
   sources = []
   deps = [ ":tests" ]
-  public_deps = [ "$zx/system/ulib/zxc" ]
+  public_deps = [ "//zircon/system/ulib/zxc" ]
 }
 
 source_set("tests") {
@@ -19,7 +19,7 @@ source_set("tests") {
   sources = [ "result_tests.cc" ]
   deps = [
     ":headers",
-    "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/lib/unittest",
   ]
 }

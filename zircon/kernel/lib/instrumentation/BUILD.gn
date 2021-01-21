@@ -9,29 +9,29 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("instrumentation") {
   kernel = true
   sources = []
-  public_deps = [ "$zx/system/ulib/fbl:headers" ]
+  public_deps = [ "//zircon/system/ulib/fbl:headers" ]
   if (is_kernel) {
     sources += [ "vmo.cc" ]
     deps = [
       ":profile",
       ":sancov",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/version",
-      "$zx/kernel/object",
-      "$zx/system/ulib/fbl",
       "asan",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/version",
+      "//zircon/kernel/object",
+      "//zircon/system/ulib/fbl",
     ]
     public_deps += [
       # <lib/instrumentation/asan/asan-init-x64.cc> has #include <lib/counters.h>
       # TODO(fxbug.dev/51163): Move this to deps when possible.
-      "$zx/kernel/lib/counters",
+      "//zircon/kernel/lib/counters",
 
       # <lib/instrumentation/vmo.h> has #include <ktl/array.h>.
-      "$zx/kernel/lib/ktl:headers",
+      "//zircon/kernel/lib/ktl:headers",
 
       # TODO(fxbug.dev/51163): Move this to deps when possible.
       # <lib/instrumentation/asan/asan-init.cc> has #include <vm/vm_aspace.h>.
-      "$zx/kernel/vm:headers",
+      "//zircon/kernel/vm:headers",
     ]
   }
 }

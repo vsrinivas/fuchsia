@@ -12,7 +12,7 @@ config("asan") {
   cflags = compiler_flags
   ldflags = compiler_flags
   if (is_kernel) {
-    configs = [ "$zx/kernel/lib/instrumentation/asan:kasan" ]
+    configs = [ "//zircon/kernel/lib/instrumentation/asan:kasan" ]
   }
 }
 
@@ -93,7 +93,7 @@ config("ubsan-trap") {
 }
 
 # NOTE: Every variant that includes any sancov configs must have "sancov"
-# in tags.  See $zx/system/ulib/c/sanitizers.  To make it harder to fail
+# in tags.  See //zircon/system/ulib/c/sanitizers.  To make it harder to fail
 # to do this, only define the configs in toolchains with the tag.
 if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
   config("sancov") {
@@ -125,8 +125,8 @@ if (toolchain.tags + [ "sancov" ] - [ "sancov" ] != toolchain.tags) {
       # The statically-linked libFuzzer runtime depends on libfdio and
       # libzircon.
       deps = [
-        "$zx/system/ulib/fdio",
-        "$zx/system/ulib/zircon",
+        "//zircon/system/ulib/fdio",
+        "//zircon/system/ulib/zircon",
       ]
     }
   }
@@ -146,6 +146,6 @@ config("profile") {
 group("profile_deps") {
   if (is_fuchsia && !is_kernel) {
     # The statically-linked profiling runtime depends on libzircon.
-    deps = [ "$zx/system/ulib/zircon" ]
+    deps = [ "//zircon/system/ulib/zircon" ]
   }
 }

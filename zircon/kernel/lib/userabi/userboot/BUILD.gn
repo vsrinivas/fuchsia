@@ -9,7 +9,7 @@ import("//build/testing/zbi_test_success.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 
-import("$zx/public/gn/toolchain/c_utils.gni")
+import("//zircon/public/gn/toolchain/c_utils.gni")
 
 # userboot gets its own toolchain for its special build requirements.
 if (current_toolchain == default_toolchain) {
@@ -68,7 +68,7 @@ if (toolchain.environment == "userboot") {
       # Everything is statically linked together with no PLT or GOT.
       # No $inputs needed here since the depfile will list it.
       "-include",
-      rebase_path("$zx/kernel/include/hidden.h", root_build_dir),
+      rebase_path("//zircon/kernel/include/hidden.h", root_build_dir),
     ]
     defines = [ "HIDDEN" ]
   }
@@ -96,19 +96,19 @@ if (toolchain.environment == "userboot") {
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",
-      "$zx/kernel/lib/userabi:headers",
-      "$zx/system/ulib/elf-psabi",
-      "$zx/system/ulib/elfload",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/ldmsg",
-      "$zx/system/ulib/processargs",
-      "$zx/system/ulib/zbitl",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zircon-internal",
-      "$zx/system/ulib/zx",
-      "$zx/third_party/ulib/musl/src/exit:abort",
-      "$zx/third_party/ulib/musl/src/string:minimal_str",
-      "$zx/third_party/ulib/musl/src/string:stdmem",
+      "//zircon/kernel/lib/userabi:headers",
+      "//zircon/system/ulib/elf-psabi",
+      "//zircon/system/ulib/elfload",
+      "//zircon/system/ulib/fidl",
+      "//zircon/system/ulib/ldmsg",
+      "//zircon/system/ulib/processargs",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zircon",
+      "//zircon/system/ulib/zircon-internal",
+      "//zircon/system/ulib/zx",
+      "//zircon/third_party/ulib/musl/src/exit:abort",
+      "//zircon/third_party/ulib/musl/src/string:minimal_str",
+      "//zircon/third_party/ulib/musl/src/string:stdmem",
     ]
   }
 
@@ -119,14 +119,14 @@ if (toolchain.environment == "userboot") {
 
     # Use the same link_output_rspfile() that lib/userabi uses to embed it,
     # so we're sure to be getting the exact same binary.
-    deps = [ "$zx/kernel/lib/userabi:vdso.rsp" ]
+    deps = [ "//zircon/kernel/lib/userabi:vdso.rsp" ]
     vdso_gen_dir = get_label_info(deps[0], "target_gen_dir")
     sources = [ "$vdso_gen_dir/vdso.rsp" ]
 
     outputs = [ "$target_gen_dir/vdso-syms.h" ]
     depfile = "${outputs[0]}.d"
     utils = [ "nm" ]
-    script = "$zx/scripts/shlib-symbols"
+    script = "//zircon/scripts/shlib-symbols"
     args = [
       "-a",
       "@" + rebase_path(sources[0], root_build_dir),

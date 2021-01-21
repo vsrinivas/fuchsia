@@ -96,19 +96,19 @@ config("kernel") {
   # build, only use configs to add the include paths.
   include_dirs += [
     # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>
-    "$zx/system/ulib/bitmap/include",
+    "//zircon/system/ulib/bitmap/include",
 
     # <arch/aspace.h> has #include <arch/x86/page_tables/constants.h>.
     "page_tables/include",
 
     # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
-    "$zx/system/ulib/hwreg/include",
+    "//zircon/system/ulib/hwreg/include",
 
     # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-    "$zx/kernel/lib/ktl/include",
+    "//zircon/kernel/lib/ktl/include",
 
     # <arch/x86.h> has #include <lib/arch/intrin.h>.
-    "$zx/kernel/lib/arch/x86/include",
+    "//zircon/kernel/lib/arch/x86/include",
   ]
 }
 
@@ -161,71 +161,71 @@ zx_library("x86") {
   deps = [
     ":syscall",
     ":tests",
-    "$zx/kernel/arch/x86/cpuid",
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/dev/iommu/dummy",
-    "$zx/kernel/dev/iommu/intel",
-    "$zx/kernel/lib/acpi_lite",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/code_patching",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/debuglog",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/instrumentation",
-    "$zx/kernel/lib/kpci",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/perfmon",
-    "$zx/kernel/lib/root_resource_filter",
-    "$zx/kernel/lib/topology",
-    "$zx/kernel/lib/version",
-    "$zx/kernel/object",
-    "$zx/kernel/platform/pc",
-    "$zx/system/ulib/bitmap",
-    "$zx/system/ulib/pretty",
     "cpuid",
+    "//zircon/kernel/arch/x86/cpuid",
+    "//zircon/kernel/dev/hw_rng",
+    "//zircon/kernel/dev/iommu/dummy",
+    "//zircon/kernel/dev/iommu/intel",
+    "//zircon/kernel/lib/acpi_lite",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/code_patching",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/debuglog",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/instrumentation",
+    "//zircon/kernel/lib/kpci",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/perfmon",
+    "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/kernel/lib/topology",
+    "//zircon/kernel/lib/version",
+    "//zircon/kernel/object",
+    "//zircon/kernel/platform/pc",
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/pretty",
   ]
   public_deps = [
     # arch/x86/system_topology.h has #include <arch/x86/cpuid.h>.
-    "$zx/kernel/arch/x86/cpuid:headers",
+    "//zircon/kernel/arch/x86/cpuid:headers",
 
     # arch/x86/apic.h has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+    "//zircon/kernel/dev/interrupt:headers",
 
     # arch/x86/hypervisor.h has #include <hypervisor/guest_physical_address_space.h>.
-    "$zx/kernel/hypervisor:headers",
+    "//zircon/kernel/hypervisor:headers",
 
     # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.
-    "$zx/system/ulib/bitmap:headers",
+    "//zircon/system/ulib/bitmap:headers",
 
     # <arch/aspace.h> uses various fbl things
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/system/ulib/fbl:headers",
 
     # <arch/x86/ioport.h> has #include <bitmap/rle-bitmap.h>.
-    "$zx/system/ulib/bitmap:headers",
+    "//zircon/system/ulib/bitmap:headers",
 
     # <arch/x86/apic.h> has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+    "//zircon/kernel/dev/interrupt:headers",
 
     # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
 
     # <arch/x86.h> has #include <lib/arch/intrin.h>.
-    "$zx/kernel/lib/arch:headers",
+    "//zircon/kernel/lib/arch:headers",
 
     # <arch/x86/system_topology.h> has #include <lib/acpi_lite.h>.
-    "$zx/kernel/lib/acpi_lite:headers",
+    "//zircon/kernel/lib/acpi_lite:headers",
   ]
 }
 
 source_set("syscall") {
   sources = [ "syscall.S" ]
   deps = [
-    "$zx/kernel/lib/code_patching",
-    "$zx/kernel/lib/syscalls",
+    "//zircon/kernel/lib/code_patching",
+    "//zircon/kernel/lib/syscalls",
   ]
 }
 
@@ -239,9 +239,9 @@ source_set("tests") {
   ]
   deps = [
     ":headers",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console:headers",
-    "$zx/kernel/lib/topology:headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console:headers",
+    "//zircon/kernel/lib/topology:headers",
+    "//zircon/kernel/lib/unittest",
   ]
 }

@@ -14,9 +14,9 @@ if (is_kernel) {
     sources = [ "kernel-tests.cc" ]
 
     deps = [
-      "$zx/kernel/lib/boot-options",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/unittest",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/unittest",
     ]
   }
 }

@@ -7,12 +7,12 @@ import("//build/zircon/migrated_targets.gni")
 zx_host_tool("zbi") {
   sources = [ "zbi.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zbitl",
-    "$zx/third_party/rapidjson",
-    "$zx/third_party/ulib/cksum",
-    "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/zstd",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/third_party/rapidjson",
+    "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/lz4",
+    "//zircon/third_party/ulib/zstd",
   ]
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
   sdk_migrated = true

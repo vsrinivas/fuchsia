@@ -9,7 +9,7 @@ fidl("fuchsia.logger") {
   api = "fuchsia.logger.api"
   sources = [ "logger.fidl" ]
   public_deps = [
-    "$zx/vdso/zx",
     "//sdk/fidl/fuchsia.diagnostics",
+    "//zircon/vdso/zx",
   ]
 }

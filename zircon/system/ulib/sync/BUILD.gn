@@ -20,8 +20,8 @@ zx_library("sync") {
     "mutex.c",
   ]
   deps = [
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zircon",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   if (toolchain.base_environment == "user") {

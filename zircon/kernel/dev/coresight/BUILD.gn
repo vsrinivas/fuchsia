@@ -13,10 +13,10 @@ zx_library("coresight") {
   deps = []
   public_deps = [
     # <hwreg/bitfields.h> and <hwreg/mmio.h>.
-    "$zx/system/ulib/hwreg:headers",
+    "//zircon/system/ulib/hwreg:headers",
 
     # <lib/fitx/result.h>.
-    "$zx/system/ulib/zxc:headers",
+    "//zircon/system/ulib/zxc:headers",
   ]
   include_dirs = [ "include/dev/coresight" ]
 

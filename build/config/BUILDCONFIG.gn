@@ -12,7 +12,8 @@ cobalt_root = "//third_party/cobalt"
 
 # Variable used in Zircon build files to declare absolute labels representing
 # buildable artifacts.
-# TODO(fxbug.dev/3367): remove when the build is unified.
+# TODO(fxbug.dev/3367): remove when the build is unified and //third_party/...
+# and //vendor/... repositories have been updated.
 zx = "//zircon"
 
 declare_args() {

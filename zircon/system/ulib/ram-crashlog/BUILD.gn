@@ -9,7 +9,7 @@ zx_library("ram-crashlog") {
   sdk_headers = [ "ram-crashlog/ram-crashlog.h" ]
   sdk_migrated = true
   sources = [ "ram-crashlog.cc" ]
-  deps = [ "$zx/third_party/ulib/cksum" ]
+  deps = [ "//zircon/third_party/ulib/cksum" ]
   host = true
   kernel = true
   static = true

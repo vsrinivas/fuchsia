@@ -534,9 +534,9 @@ This is what a stand-alone `rules.mk` would look like, assuming the "`.fidl`" fi
 `demo_number.fidl`:
 
 ```gn
-import("$zx/public/gn/fidl.gni")
+import("//zircon/public/gn/fidl.gni")
 
-// Defined in $zx/system/fidl/fuchsia-io/BUILD.gn
+// Defined in //zircon/system/fidl/fuchsia-io/BUILD.gn
 fidl_library("zircon.sample.number") {
   sources = [
     "demo_number.fidl",

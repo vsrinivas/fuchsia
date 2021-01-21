@@ -23,7 +23,7 @@ namespace hwreg {
 //       .Main(argc, argv);
 // }
 // ```
-// See $zx/system/ulib/hwreg/hwreg_asm_header.gni to easily plug such a
+// See //zircon/system/ulib/hwreg/hwreg_asm_header.gni to easily plug such a
 // header generator program into the build.
 
 class AsmHeader {

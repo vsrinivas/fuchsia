@@ -12,6 +12,6 @@ zx_library("explicit-memory") {
   static = true
   sources = [ "bytes.c" ]
   if (!is_kernel) {
-    deps = [ "$zx/system/ulib/fbl" ]
+    deps = [ "//zircon/system/ulib/fbl" ]
   }
 }

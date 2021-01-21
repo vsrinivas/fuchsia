@@ -17,7 +17,7 @@ zx_host_tool_action("zx") {
     ":*",
     "//src/lib/zircon/rust:*",
   ]
-  tool = "$zx/tools/fidl:fidlc"
+  tool = "//zircon/tools/fidl:fidlc"
   outputs = [ "$target_gen_dir/$target_name.fidl.json" ]
   inputs = []
   args = [
@@ -38,16 +38,16 @@ zx_host_tool_action("zx") {
 }
 
 # The generated stuff is identical regardless of how it gets compiled.
-# Dependents must use "$zx/vdso:public($default_toolchain)" or
-# "$zx/vdso:private($default_toolchain)".
+# Dependents must use "//zircon/vdso:public($default_toolchain)" or
+# "//zircon/vdso:private($default_toolchain)".
 assert(current_toolchain == default_toolchain)
 
 # This provides the public headers that go with the vDSO API, which are
 # seen as <zircon/...>.
 group("public") {
   visibility = [
-    "$zx/public/sysroot/*",
-    "$zx/system/ulib/zircon/*",
+    "//zircon/public/sysroot/*",
+    "//zircon/system/ulib/zircon/*",
   ]
   public_configs = [ ":public.config" ]
   public_deps = [ ":generate" ]
@@ -63,9 +63,9 @@ config("public.config") {
 # implementation, which are seen as <lib/syscalls/...>.
 group("private") {
   visibility = [
-    "$zx/kernel/lib/syscalls/*",
-    "$zx/system/ulib/syscalls-headers/*",
-    "$zx/system/ulib/zircon/*",
+    "//zircon/kernel/lib/syscalls/*",
+    "//zircon/system/ulib/syscalls-headers/*",
+    "//zircon/system/ulib/zircon/*",
   ]
   public_configs = [ ":private.config" ]
   public_deps = [ ":generate" ]
@@ -137,7 +137,7 @@ zx_host_tool_action("generate") {
     ":public",
   ]
 
-  tool = "$zx/tools/kazoo"
+  tool = "//zircon/tools/kazoo"
 
   args = []
   if (exclude_testonly_syscalls) {

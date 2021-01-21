@@ -12,14 +12,14 @@ zx_library("ngunwind") {
   # statically links it into its shared library.
   visibility = [
     ":*",
-    "$zx/system/ulib/inspector/*",
     "//src/developer/debug/debug_agent:lib",
+    "//zircon/system/ulib/inspector/*",
   ]
 
   # Unfortunately ngunwind is used directly by
   # //src/developer/debug/debug_agent.
   # TODO(mcgrathr): Give inspector an API debug_agent can use instead.
-  visibility += [ "$zx/third_party/ulib" ]
+  visibility += [ "//zircon/third_party/ulib" ]
   sdk = "static"
   sdk_headers = [
     "ngunwind/private/compiler.h",
@@ -49,7 +49,7 @@ zx_library("ngunwind") {
   sdk_migrated = true
 
   configs += [ ":private_config" ]
-  deps = [ "$zx/system/ulib/zircon" ]
+  deps = [ "//zircon/system/ulib/zircon" ]
   sources = [
     "src/dwarf/Gexpr.c",
     "src/dwarf/Gfde.c",

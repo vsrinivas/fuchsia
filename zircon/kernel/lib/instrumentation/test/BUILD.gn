@@ -8,8 +8,8 @@ source_set("tests") {
   # TODO: testonly = true
   sources = [ "asan_tests.cc" ]
   deps = [
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/instrumentation",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/instrumentation",
+    "//zircon/kernel/lib/unittest",
   ]
 }

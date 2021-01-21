@@ -164,5 +164,5 @@ fidl("fidl.test.coding.fuchsia") {
     "llcpp.test.fidl",
     "messages.test.fidl",
   ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

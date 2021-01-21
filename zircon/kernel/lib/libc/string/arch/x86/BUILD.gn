@@ -11,12 +11,12 @@ source_set("x86") {
     "memcpy.S",
     "memset.S",
   ]
-  deps = [ "$zx/kernel/lib/code_patching:headers" ]
+  deps = [ "//zircon/kernel/lib/code_patching:headers" ]
   if (toolchain.environment == "kernel") {
     sources += [ "selector.cc" ]
     deps += [
       ":tests",
-      "$zx/kernel/lib/code_patching",
+      "//zircon/kernel/lib/code_patching",
     ]
   } else {
     # TODO(mcgrathr): Make the assembly compatible with phys.
@@ -24,10 +24,10 @@ source_set("x86") {
     sources = []
     deps = []
     sources = [
-      "$zx/kernel/lib/libc/string/memcpy.c",
-      "$zx/kernel/lib/libc/string/memset.c",
+      "//zircon/kernel/lib/libc/string/memcpy.c",
+      "//zircon/kernel/lib/libc/string/memset.c",
     ]
-    deps = [ "$zx/kernel/lib/libc:headers" ]
+    deps = [ "//zircon/kernel/lib/libc:headers" ]
   }
 }
 
@@ -35,5 +35,5 @@ source_set("tests") {
   # TODO(mcgrathr): Make this optional somehow and enable testonly taint.
   # testonly = true
   sources = [ "tests.cc" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
 }

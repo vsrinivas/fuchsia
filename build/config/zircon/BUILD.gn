@@ -496,9 +496,9 @@ config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
 
   visibility = [
-    "$zx/third_party/ulib/musl/ldso",
-    "$zx/third_party/ulib/musl/src/network",
-    "$zx/third_party/ulib/musl/src/time",
+    "//zircon/third_party/ulib/musl/ldso",
+    "//zircon/third_party/ulib/musl/src/network",
+    "//zircon/third_party/ulib/musl/src/time",
   ]
 }
 
@@ -509,39 +509,39 @@ config("Wno-conversion") {
   cflags_cc = [ "-Wno-conversion" ]
   cflags_c = cflags_cc
   visibility = [
-    "$zx/kernel/arch/x86/*",
-    "$zx/kernel/arch/x86/cpuid/*",
-    "$zx/kernel/debugcommands/*",
-    "$zx/kernel/dev/iommu/dummy/*",
-    "$zx/kernel/dev/pcie/*",
-    "$zx/kernel/lib/cmdline/*",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/heap/cmpctmalloc/*",
-    "$zx/kernel/object/*",
-    "$zx/kernel/phys/*",
-    "$zx/kernel/platform/*",
-    "$zx/kernel/tests/*",
-    "$zx/kernel/vm/*",
-    "$zx/system/ulib/cmdline/*",
-    "$zx/system/ulib/elf-psabi/*",
-    "$zx/system/ulib/elfload/*",
-    "$zx/system/ulib/fidl/*",
-    "$zx/system/ulib/fit/*",
-    "$zx/system/ulib/gfx/*",
-    "$zx/system/ulib/hwreg/*",
-    "$zx/system/ulib/ldmsg/*",
-    "$zx/system/ulib/pretty/*",
-    "$zx/system/ulib/tftp/*",
-    "$zx/system/ulib/zbi/*",
-    "$zx/system/ulib/zxc/*",
-    "$zx/system/ulib/zxtest/*",
-    "$zx/third_party/*",
-    "$zx/third_party/lz4/*",
-    "$zx/third_party/ulib/cksum/*",
-    "$zx/third_party/ulib/usbhost/*",
-    "$zx/tools/fidl/*",
-    "$zx/tools/kazoo/*",
-    "$zx/tools/zbi/*",
+    "//zircon/kernel/arch/x86/*",
+    "//zircon/kernel/arch/x86/cpuid/*",
+    "//zircon/kernel/debugcommands/*",
+    "//zircon/kernel/dev/iommu/dummy/*",
+    "//zircon/kernel/dev/pcie/*",
+    "//zircon/kernel/lib/cmdline/*",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/heap/cmpctmalloc/*",
+    "//zircon/kernel/object/*",
+    "//zircon/kernel/phys/*",
+    "//zircon/kernel/platform/*",
+    "//zircon/kernel/tests/*",
+    "//zircon/kernel/vm/*",
+    "//zircon/system/ulib/cmdline/*",
+    "//zircon/system/ulib/elf-psabi/*",
+    "//zircon/system/ulib/elfload/*",
+    "//zircon/system/ulib/fidl/*",
+    "//zircon/system/ulib/fit/*",
+    "//zircon/system/ulib/gfx/*",
+    "//zircon/system/ulib/hwreg/*",
+    "//zircon/system/ulib/ldmsg/*",
+    "//zircon/system/ulib/pretty/*",
+    "//zircon/system/ulib/tftp/*",
+    "//zircon/system/ulib/zbi/*",
+    "//zircon/system/ulib/zxc/*",
+    "//zircon/system/ulib/zxtest/*",
+    "//zircon/third_party/*",
+    "//zircon/third_party/lz4/*",
+    "//zircon/third_party/ulib/cksum/*",
+    "//zircon/third_party/ulib/usbhost/*",
+    "//zircon/tools/fidl/*",
+    "//zircon/tools/kazoo/*",
+    "//zircon/tools/zbi/*",
   ]
 }
 
@@ -809,7 +809,7 @@ config("temporarily_disable_ubsan_do_not_use") {
   visibility = [
     # TODO(fxbug.dev/41888): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/system/ulib/affine:*",
+    "//zircon/system/ulib/affine:*",
     "//zircon/system/ulib/affine/test:*",
 
     # TODO(fxbug.dev/41892): UBSan has found an instance of undefined behavior in this target.
@@ -842,7 +842,7 @@ config("temporarily_disable_ubsan_do_not_use") {
 
     # TODO(fxbug.dev/41894): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/system/ulib/zxtest:*",
+    "//zircon/system/ulib/zxtest:*",
 
     # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
@@ -854,19 +854,19 @@ config("temporarily_disable_ubsan_do_not_use") {
 
     # TODO(fxbug.dev/41766): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/third_party/ulib/lz4:*",
+    "//zircon/third_party/ulib/lz4:*",
 
     # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/third_party/ulib/musl/ldso:*",
+    "//zircon/third_party/ulib/musl/ldso:*",
 
     # TODO(fxbug.dev/42500): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/third_party/ulib/musl/src/stdio:*",
+    "//zircon/third_party/ulib/musl/src/stdio:*",
 
     # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/third_party/ulib/boringssl:*",
+    "//zircon/third_party/ulib/boringssl:*",
   ]
 
   if (!is_gcc) {

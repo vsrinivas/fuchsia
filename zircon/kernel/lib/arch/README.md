@@ -161,7 +161,7 @@ and `<lib/arch/x86/intrin.h>` names to `#include`.
 There is a source subdirectory for each machine, named by the kernel's name for
 the CPU (`$zircon_cpu` in GN, i.e. `arm64` or not `x86`).  Each is actually a
 `library()` target of its own, but users of `lib/arch` don't know the
-sub-library exists, they just use `deps = [ "$zx/kernel/lib/arch" ]`.  The
+sub-library exists, they just use `deps = [ "//zircon/kernel/lib/arch" ]`.  The
 machine-specific subdirectory provides `include/lib/arch/...` files for the
 machine-dependent header files with machine-independent file names.
 

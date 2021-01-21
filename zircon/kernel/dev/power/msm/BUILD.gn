@@ -7,8 +7,8 @@
 source_set("msm") {
   sources = [ "power.cc" ]
   deps = [
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/dev/pdev/power",
-    "$zx/kernel/dev/psci",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/pdev/power",
+    "//zircon/kernel/dev/psci",
   ]
 }

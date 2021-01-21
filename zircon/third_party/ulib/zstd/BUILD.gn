@@ -6,7 +6,7 @@ import("//build/config/zircon/levels.gni")
 import("//build/zircon/migrated_targets.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
-zstd = "$zx/third_party/zstd"
+zstd = "//zircon/third_party/zstd"
 
 config("zstd-config") {
   visibility = [ ":*" ]
@@ -154,7 +154,7 @@ zx_library("zstd-decompress-standalone") {
   configs -= warn_implicit_fallthrough_configs
 
   if (is_kernel) {
-    deps = [ "$zx/kernel/lib/libc" ]
+    deps = [ "//zircon/kernel/lib/libc" ]
   }
 }
 

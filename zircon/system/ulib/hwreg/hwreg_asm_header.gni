@@ -42,7 +42,7 @@ template("hwreg_asm_header") {
                                "visibility",
                              ])
       forward_variables_from(invoker, [ "testonly" ])
-      deps += [ "$zx/system/ulib/hwreg" ]
+      deps += [ "//zircon/system/ulib/hwreg" ]
       sdk_migrated = true
     }
   } else {

@@ -62,48 +62,48 @@ zx_library("object") {
   ]
   deps = [
     ":tests",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/iommu/dummy",
-    "$zx/kernel/dev/pcie",
-    "$zx/kernel/hypervisor",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/root_resource_filter",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/zxc",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/iommu/dummy",
+    "//zircon/kernel/dev/pcie",
+    "//zircon/kernel/hypervisor",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zxc",
   ]
   if (current_cpu == "x64") {
-    deps += [ "$zx/kernel/dev/iommu/intel" ]
+    deps += [ "//zircon/kernel/dev/iommu/intel" ]
   }
   public_deps = [
     # <object/buffer_chain.h> has #include <ktl/move.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
 
     # <object/pci_device_dispatcher.h> has #include <dev/pci_common.h>
-    "$zx/kernel/dev/pcie:headers",
+    "//zircon/kernel/dev/pcie:headers",
 
     # <object/log_dispatcher.h> has #include <lib/debuglog.h>.
-    "$zx/kernel/lib/debuglog:headers",
+    "//zircon/kernel/lib/debuglog:headers",
 
     # <object/resource_dispatcher.h> has #include <region-alloc/region-alloc.h>.
-    "$zx/system/ulib/region-alloc:headers",
+    "//zircon/system/ulib/region-alloc:headers",
 
     # <object/vcpu_dispatcher.h> has #include <hypervisor/interrupt_tracker.h>.
-    #"$zx/kernel/hypervisor:headers",
+    #"//zircon/kernel/hypervisor:headers",
 
     # <object/process_dispatcher.h> has #include <vm/vm_aspace.h>.
-    "$zx/kernel/vm:headers",
+    "//zircon/kernel/vm:headers",
 
     # <object/clock_dispatcher.h> has #include <lib/affine/transform.h>.
-    "$zx/system/ulib/affine",
+    "//zircon/system/ulib/affine",
   ]
 }
 
@@ -125,8 +125,8 @@ source_set("tests") {
   ]
   deps = [
     ":headers",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/unittest",
   ]
 }

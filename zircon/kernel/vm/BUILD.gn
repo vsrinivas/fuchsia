@@ -35,35 +35,35 @@ zx_library("vm") {
     "vmm.cc",
   ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/user_copy",
-    "$zx/kernel/lib/userabi",
-    "$zx/system/ulib/pretty",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/user_copy",
+    "//zircon/kernel/lib/userabi",
+    "//zircon/system/ulib/pretty",
 
     # TODO: testonly
     ":tests",
   ]
   public_deps = [
     # <vm/vm_page_list.h> has #include <ktl/unique_ptr.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
 
     # <vm/vm_object.h> has #include <fbl/name.h>.
-    "$zx/kernel/lib/fbl:headers",
+    "//zircon/kernel/lib/fbl:headers",
 
     # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
-    "$zx/kernel/lib/user_copy:headers",
+    "//zircon/kernel/lib/user_copy:headers",
 
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
-    "$zx/kernel/lib/crypto:headers",
+    "//zircon/kernel/lib/crypto:headers",
 
     # "pmm_arena.h" has #include <lib/zx/status.h>.
-    "$zx/system/ulib/zxc:headers",
+    "//zircon/system/ulib/zxc:headers",
   ]
 }
 
@@ -75,5 +75,5 @@ source_set("tests") {
     "unittests/vmo_unittest.cc",
     "unittests/vmpl_unittest.cc",
   ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
 }

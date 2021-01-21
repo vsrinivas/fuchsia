@@ -11,12 +11,12 @@ zx_library("debuglog") {
   sources = [ "debuglog.cc" ]
   deps = [
     ":tests",
-    "$zx/kernel/dev/udisplay:headers",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/version",
+    "//zircon/kernel/dev/udisplay:headers",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/version",
   ]
 }
 
@@ -27,6 +27,6 @@ source_set("tests") {
 
   deps = [
     ":headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/unittest",
   ]
 }

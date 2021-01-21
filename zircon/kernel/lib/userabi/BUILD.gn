@@ -5,20 +5,20 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/zircon/migrated_targets.gni")
-import("$zx/public/gn/toolchain/c_utils.gni")
+import("//zircon/public/gn/toolchain/c_utils.gni")
 
 zx_library("userabi") {
   kernel = true
   sources = []
   public_deps = [
     # <lib/userabi/userboot.h> has #include <lib/instrumentation/vmo.h>.
-    "$zx/kernel/lib/instrumentation:headers",
+    "//zircon/kernel/lib/instrumentation:headers",
   ]
   if (is_kernel) {
     deps = [
       ":userboot",
       ":vdso",
-      "$zx/kernel/lib/instrumentation",
+      "//zircon/kernel/lib/instrumentation",
     ]
     public_configs = [ ":vdso-valid-sysret" ]
     public_deps += [
@@ -27,13 +27,13 @@ zx_library("userabi") {
       ":gen-vdso-valid-sysret",
 
       # <lib/userabi/rodso.h> has #include <object/handle.h>.
-      "$zx/kernel/object",
+      "//zircon/kernel/object",
     ]
   } else {
     # Our own embedded "user" code needs some shared headers.
     visibility = [
-      "$zx/system/ulib/zircon/*",
       "./*",
+      "//zircon/system/ulib/zircon/*",
     ]
   }
 }
@@ -164,7 +164,7 @@ template("rodso") {
 
 group("userland-vdso") {
   visibility = [ ":*" ]
-  public_deps = [ "$zx/system/ulib/zircon($default_toolchain)" ]
+  public_deps = [ "//zircon/system/ulib/zircon($default_toolchain)" ]
 }
 
 rodso("vdso") {
@@ -180,7 +180,7 @@ if (is_kernel) {
     sources = [ "rodso.cc" ]
     deps = [
       ":headers",
-      "$zx/kernel/vm:headers",
+      "//zircon/kernel/vm:headers",
     ]
   }
 
@@ -193,12 +193,12 @@ if (is_kernel) {
       ":rodso",
       ":vdso-code.h",
       ":vdso.image",
-      "$zx/kernel/lib/cmdline",
-      "$zx/kernel/lib/syscalls",
-      "$zx/kernel/lib/version",
-      "$zx/kernel/vm:headers",
-      "$zx/system/ulib/affine",
-      "$zx/system/ulib/fbl",
+      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/syscalls",
+      "//zircon/kernel/lib/version",
+      "//zircon/kernel/vm:headers",
+      "//zircon/system/ulib/affine",
+      "//zircon/system/ulib/fbl",
     ]
   }
 
@@ -236,13 +236,13 @@ if (is_kernel) {
       ":rodso",
       ":userboot-code.h",
       ":userboot.image",
-      "$zx/kernel/lib/cmdline",
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/counters",
-      "$zx/kernel/lib/crashlog",
-      "$zx/kernel/lib/init",
-      "$zx/system/ulib/elf-psabi",
-      "$zx/system/ulib/zircon-internal",
+      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/counters",
+      "//zircon/kernel/lib/crashlog",
+      "//zircon/kernel/lib/init",
+      "//zircon/system/ulib/elf-psabi",
+      "//zircon/system/ulib/zircon-internal",
     ]
   }
 

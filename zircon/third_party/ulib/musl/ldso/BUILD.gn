@@ -7,17 +7,17 @@ import("//build/zircon/migrated_targets.gni")
 source_set("ldso") {
   deps = [
     ":dlstart",
-    "$zx/system/ulib/ldmsg",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/system/ulib/ldmsg",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [
-    "$zx/third_party/ulib/musl/arch/${toolchain.cpu}/dl-entry.S",
+    "//zircon/third_party/ulib/musl/arch/${toolchain.cpu}/dl-entry.S",
     "dynlink-sancov.S",
     "dynlink.c",
   ]
 
   # This is needed by dynlink-sancov.S and dynlink.c for "sancov-stubs.h".
-  include_dirs = [ "$zx/system/ulib/c/sanitizers" ]
+  include_dirs = [ "//zircon/system/ulib/c/sanitizers" ]
 
   if (toolchain.libprefix != "") {
     # The libprefix always ends with a / but that's not part of the
@@ -39,7 +39,7 @@ source_set("ldso") {
 
 source_set("dlstart") {
   visibility = [ ":*" ]
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [ "dlstart.c" ]
   configs += [ "//build/config/zircon:no_sanitizers" ]
 }

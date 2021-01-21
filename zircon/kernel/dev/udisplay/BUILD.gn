@@ -10,12 +10,12 @@ zx_library("udisplay") {
   kernel = true
   sources = [ "udisplay.cc" ]
   deps = [
-    "$zx/kernel/lib/crashlog",
-    "$zx/kernel/lib/debuglog",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/gfx",
-    "$zx/kernel/lib/gfxconsole",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/vm:headers",
+    "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/debuglog",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/gfx",
+    "//zircon/kernel/lib/gfxconsole",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/vm:headers",
   ]
 }

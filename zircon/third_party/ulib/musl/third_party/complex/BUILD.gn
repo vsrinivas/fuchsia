@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 source_set("complex") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
-  include_dirs = [ "$zx/third_party/ulib/musl/third_party/include" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
+  include_dirs = [ "//zircon/third_party/ulib/musl/third_party/include" ]
   sources = [
     "__cexp.c",
     "__cexpf.c",

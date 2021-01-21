@@ -30,8 +30,8 @@ if (current_toolchain == default_toolchain) {
     script = "check-markdown.sh"
     deps = [ ":markdown" ]
     outputs = [ "$target_out_dir/$target_name.txt" ]
-    sources =
-        get_target_outputs(":markdown") + [ "$zx/../docs/gen/boot-options.md" ]
+    sources = get_target_outputs(":markdown") +
+              [ "//zircon/../docs/gen/boot-options.md" ]
     args = rebase_path(sources + outputs)
   }
 }
@@ -52,7 +52,7 @@ zx_library("boot-options") {
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
-    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
   }
 
   # TODO: revisit the following three specifications after the zircon-to-fuchsia

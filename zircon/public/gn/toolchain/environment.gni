@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/standard.gni")
+import("//zircon/public/gn/config/standard.gni")
 import("c_toolchain.gni")
 import("environment_redirect.gni")
 import("variants.gni")
@@ -726,7 +726,7 @@ template("environment") {
     foreach(tc, toolchains) {
       # Canonicalize the ${toolchain.configs} list.
       #
-      # This is used by $zx/public/gn/BUILDCONFIG.gn for set_defaults().
+      # This is used by //zircon/public/gn/BUILDCONFIG.gn for set_defaults().
       # The labels must be absolute since they will be used all over in
       # the new toolchain, not just where the environment() is.
       #

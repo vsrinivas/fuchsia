@@ -30,15 +30,15 @@ source_set("phys") {
   ]
   deps = [
     ":zbitl",
-    "$zx/kernel/lib/boot-options/tests:kernel-tests",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/fbl",
+    "//zircon/kernel/lib/boot-options/tests:kernel-tests",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (toolchain.environment == "kernel") {
-    deps += [ "$zx/kernel/lib/console" ]
+    deps += [ "//zircon/kernel/lib/console" ]
   }
 }
 
@@ -48,14 +48,14 @@ source_set("zbitl") {
   sources = [ "zbitl_tests.cc" ]
 
   deps = [
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/zbitl",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/zbitl",
   ]
 
   if (toolchain.environment == "kernel") {
-    deps += [ "$zx/kernel/lib/console" ]
+    deps += [ "//zircon/kernel/lib/console" ]
   }
 }
 
@@ -100,21 +100,21 @@ if (toolchain.environment == "kernel") {
       "variant_tests.cc",
     ]
     deps = [
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/crypto",
-      "$zx/kernel/lib/debuglog",
-      "$zx/kernel/lib/fbl",
-      "$zx/kernel/lib/instrumentation/test:tests",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/root_resource_filter",
-      "$zx/kernel/lib/unittest",
-      "$zx/kernel/lib/userabi",
-      "$zx/kernel/lib/zxc",
-      "$zx/kernel/object",
-      "$zx/system/ulib/affine",
-      "$zx/system/ulib/pretty",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/crypto",
+      "//zircon/kernel/lib/debuglog",
+      "//zircon/kernel/lib/fbl",
+      "//zircon/kernel/lib/instrumentation/test:tests",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/root_resource_filter",
+      "//zircon/kernel/lib/unittest",
+      "//zircon/kernel/lib/userabi",
+      "//zircon/kernel/lib/zxc",
+      "//zircon/kernel/object",
+      "//zircon/system/ulib/affine",
+      "//zircon/system/ulib/pretty",
     ]
-    public_deps = [ "$zx/system/ulib/zx:headers" ]
+    public_deps = [ "//zircon/system/ulib/zx:headers" ]
   }
 }

@@ -28,11 +28,11 @@ zx_library("libc") {
   ]
   public_deps = [
     # <stdio.h> has #include <ktl/string_view.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
   ]
 
   if (toolchain.environment == "kernel") {
-    deps += [ "$zx/kernel/lib/heap" ]
+    deps += [ "//zircon/kernel/lib/heap" ]
   }
   public_configs = [ ":limits-dummy" ]
 }
@@ -40,7 +40,7 @@ zx_library("libc") {
 config("limits-dummy") {
   visibility = [
     ":*",
-    "$zx/kernel:headers",
+    "//zircon/kernel:headers",
   ]
 
   # libc/include is before toolchain headers because it needs to be able to
@@ -66,8 +66,8 @@ source_set("tests") {
   if (toolchain.environment == "kernel") {
     sources = [ "atomic_tests.cc" ]
     deps = [
-      "$zx/kernel/lib/ktl:headers",
-      "$zx/kernel/lib/unittest",
+      "//zircon/kernel/lib/ktl:headers",
+      "//zircon/kernel/lib/unittest",
     ]
   }
 }

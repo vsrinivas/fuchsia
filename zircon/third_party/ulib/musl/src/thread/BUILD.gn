@@ -4,8 +4,8 @@
 
 source_set("thread") {
   deps = [
-    "$zx/system/ulib/sync",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/system/ulib/sync",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [
     "__timedwait.c",

@@ -13,10 +13,10 @@ zx_library("heap") {
     "heap_wrapper.cc",
   ]
   deps = [
-    "$zx/kernel/lib/console",
     "cmpctmalloc",
+    "//zircon/kernel/lib/console",
 
     # TODO(fxbug.dev/51163): Remove headers when possible.
-    "$zx/kernel/lib/instrumentation:headers",
+    "//zircon/kernel/lib/instrumentation:headers",
   ]
 }

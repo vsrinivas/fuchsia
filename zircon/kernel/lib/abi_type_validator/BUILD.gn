@@ -12,12 +12,12 @@ zx_library("abi_type_validator") {
   sdk = "source"
   sdk_headers = []
   visibility = [
-    "$zx/kernel/*",
-    "$zx/system/utest/abi-type-validator/*",
+    "//zircon/kernel/*",
+    "//zircon/system/utest/abi-type-validator/*",
   ]
   sources = [ "abi_type_validator.cc" ]
   public_deps = [
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zircon",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }

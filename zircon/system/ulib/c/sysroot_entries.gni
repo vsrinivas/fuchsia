@@ -360,7 +360,8 @@ foreach(lib,
   sysroot_uninstrumented_libc_entries += [
     {
       sdk = {
-        source = rebase_path("$zx/third_party/ulib/musl/lib.ld", root_build_dir)
+        source =
+            rebase_path("//zircon/third_party/ulib/musl/lib.ld", root_build_dir)
         link = "lib/$lib"
       }
     },

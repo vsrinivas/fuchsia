@@ -24,16 +24,16 @@ zx_library("uart") {
   sources = [ "parse.cc" ]
   public_deps = [
     # <lib/uart/uart.h> has #include <lib/arch/intrin.h>.
-    "$zx/kernel/lib/arch:headers",
+    "//zircon/kernel/lib/arch:headers",
 
     # <lib/uart/uart.h> has #include <lib/zircon-internal/thread_annotations.h>.
-    "$zx/system/ulib/zircon-internal:headers",
+    "//zircon/system/ulib/zircon-internal:headers",
 
     # <lib/uart/uart.h> has #include <hwreg/mmio.h>.
-    "$zx/system/ulib/hwreg:headers",
+    "//zircon/system/ulib/hwreg:headers",
   ]
   if (is_kernel) {
-    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
   }
 }
 
@@ -50,13 +50,13 @@ zx_library("uart-mock") {
     ":headers",
 
     # <lib/uart/mock.h> has #include <lib/mock-function/mock-function.h>.
-    "$zx/system/ulib/mock-function:headers",
+    "//zircon/system/ulib/mock-function:headers",
 
     # <lib/uart/mock.h> has #include <hwreg/mock.h>
-    "$zx/system/ulib/hwreg:hwreg-mock.headers",
+    "//zircon/system/ulib/hwreg:hwreg-mock.headers",
   ]
   if (is_kernel) {
-    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
   }
 }
 

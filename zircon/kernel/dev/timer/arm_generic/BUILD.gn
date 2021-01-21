@@ -10,15 +10,15 @@ zx_library("arm_generic") {
   kernel = true
   sources = [ "arm_generic_timer.cc" ]
   deps = [
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/fixed_point",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/affine",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/fixed_point",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/affine",
   ]
 }

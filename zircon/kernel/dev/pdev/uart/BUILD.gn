@@ -7,7 +7,7 @@
 source_set("uart") {
   sources = [ "uart.cc" ]
   deps = [
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/arch",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/arch",
   ]
 }

@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# See $zx/kernel/phys/BUILD.gn:kernel.phys.
+# See //zircon/kernel/phys/BUILD.gn:kernel.phys.
 
 phys_configs = []
 phys_tags = []

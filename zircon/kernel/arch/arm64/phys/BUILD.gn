@@ -10,10 +10,10 @@ config("strict-align") {
 
 source_set("phys") {
   sources = [ "start.S" ]
-  include_dirs = [ "$zx/.." ]
+  include_dirs = [ "//zircon/.." ]
   deps = [
-    "$zx/kernel/lib/arch",
-    "$zx/system/ulib/static-pie",
+    "//zircon/kernel/lib/arch",
+    "//zircon/system/ulib/static-pie",
   ]
 }
 

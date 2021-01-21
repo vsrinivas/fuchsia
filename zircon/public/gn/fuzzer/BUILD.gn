@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/environment.gni")
+import("//zircon/public/gn/toolchain/environment.gni")
 
 # Fuzzer environments: These add libFuzzer instrumentation and hooks. These
 # hooks will be undefined in shared libraries, and provided by the compiler
@@ -11,7 +11,7 @@ standard_environments(".fuzzer") {
   # Everything is compiled with the fuzzer instrumentation.
   # Each variant can add additional bug-detection instrumentation.
   configs = [
-    "$zx/public/gn/config/instrumentation:fuzzer",
+    "//zircon/public/gn/config/instrumentation:fuzzer",
     {
       # libFuzzer can only be statically linked into each executable.
       # Instrumented shared library code has dangling references to runtime
@@ -27,11 +27,11 @@ standard_environments(".fuzzer") {
   implicit_deps = [
     {
       types = [ "executable" ]
-      add = [ "$zx/public/gn/config/instrumentation:fuzzer_deps" ]
+      add = [ "//zircon/public/gn/config/instrumentation:fuzzer_deps" ]
     },
   ]
 
-  # Required by the above. See $zx/public/gn/config/instrumentation:fuzzer.
+  # Required by the above. See //zircon/public/gn/config/instrumentation:fuzzer.
   tags = [ "sancov" ]
 
   toolchain_vars = {

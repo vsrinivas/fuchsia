@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/subtarget_aliases.gni")
+import("//zircon/public/gn/subtarget_aliases.gni")
 
 # This is the $fidl_support module for C bindings.  See fidl_library() for
 # details.  This file should not normally be imported by other code.
@@ -10,7 +10,7 @@ import("$zx/public/gn/subtarget_aliases.gni")
 # This tells fidl_library() to invoke fidl_c_library().
 fidl_support_templates = [
   {
-    import = "$zx/public/gn/fidl/c.gni"
+    import = "//zircon/public/gn/fidl/c.gni"
     target = "fidl_c_library"
     fidlc = "c"
   },
@@ -93,8 +93,8 @@ template("fidl_c_library") {
       # The generated code uses these.
       deps += [
         ":$fidl_target.tables",
-        "$zx/system/ulib/fidl",
-        "$zx/system/ulib/zircon",
+        "//zircon/system/ulib/fidl",
+        "//zircon/system/ulib/zircon",
       ]
     }
 

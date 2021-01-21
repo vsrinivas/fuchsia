@@ -9,15 +9,15 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("pdev") {
   kernel = true
   sources = [ "pdev.cc" ]
-  deps = [ "$zx/kernel/lib/init" ]
+  deps = [ "//zircon/kernel/lib/init" ]
   public_deps = [
     # <pdev/driver.h> has #include <lib/special-sections/special-sections.h>.
-    "$zx/kernel/lib/special-sections:headers",
+    "//zircon/kernel/lib/special-sections:headers",
 
     # <pdev/driver.h> has #include <lk/init.h>.
-    "$zx/kernel/lib/init",
+    "//zircon/kernel/lib/init",
 
     # <pdev/interrupt.h> has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+    "//zircon/kernel/dev/interrupt:headers",
   ]
 }

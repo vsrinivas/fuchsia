@@ -6,7 +6,7 @@
 
 group("pc") {
   deps = [
-    "$zx/kernel/dev/hw_rng/intel_rng",
-    "$zx/kernel/platform/pc",
+    "//zircon/kernel/dev/hw_rng/intel_rng",
+    "//zircon/kernel/platform/pc",
   ]
 }

@@ -11,15 +11,15 @@ import("//build/unification/global_variables.gni")
 if (current_cpu == "x64") {
   # Environment for building raw QEMU kernels.
   # x86-64 QEMU loads 32-bit (i686) binaries (Multiboot or Linux zero page).
-  qemu_environment = "$zx/kernel/arch/x86/phys:kernel.phys32"
+  qemu_environment = "//zircon/kernel/arch/x86/phys:kernel.phys32"
 } else {
   # Environment for building raw QEMU kernels (64-bit physical memory).
-  qemu_environment = "$zx/kernel/phys:kernel.phys_$current_cpu"
+  qemu_environment = "//zircon/kernel/phys:kernel.phys_$current_cpu"
 }
 
 if (toolchain.environment == "kernel.phys") {
   # What to link into a raw QEMU kernel executable (direct physical memory).
-  qemu_deps = [ "$zx/kernel/phys:qemu-header" ]
+  qemu_deps = [ "//zircon/kernel/phys:qemu-header" ]
 } else {
   assert(current_cpu == "x64")
   assert(toolchain.environment == get_label_info(qemu_environment, "name"),
@@ -27,7 +27,7 @@ if (toolchain.environment == "kernel.phys") {
              get_label_info(qemu_environment, "name"))
 
   # What to link into a raw QEMU kernel executable (x86-32 Multiboot).
-  qemu_deps = [ "$zx/kernel/arch/x86/phys:multiboot" ]
+  qemu_deps = [ "//zircon/kernel/arch/x86/phys:multiboot" ]
 }
 
 # zbi_test() $timeout value for short-running tests launched via QEMU.

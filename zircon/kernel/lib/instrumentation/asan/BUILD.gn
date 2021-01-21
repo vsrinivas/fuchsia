@@ -80,8 +80,8 @@ if (is_asan) {
     ]
     sources += [ "asan-init-$zircon_cpu.cc" ]
     deps = [
-      "$zx/kernel/lib/init",
       "..:headers",
+      "//zircon/kernel/lib/init",
     ]
   }
 }

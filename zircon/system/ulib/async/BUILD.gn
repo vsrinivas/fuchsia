@@ -21,12 +21,12 @@ zx_library("async") {
   host = true
   public_deps = [
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
-    "$zx/system/ulib/fit:headers",
+    "//zircon/system/ulib/fit:headers",
   ]
   sources = [ "ops.c" ]
   deps = [
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/zircon",
   ]
 }
 
@@ -47,11 +47,11 @@ zx_library("async-cpp") {
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/zx/time.h>.
     # <lib/async/cpp/task.h> has #include <lib/zx/time.h>.
-    "$zx/system/ulib/zx:headers",
+    "//zircon/system/ulib/zx:headers",
 
     # <lib/async/cpp/executor.h> has many lib/fit includes.
     # <lib/async/cpp/task.h> has #include <lib/fit/function.h>.
-    "$zx/system/ulib/fit:headers",
+    "//zircon/system/ulib/fit:headers",
   ]
   sources = [
     "executor.cc",
@@ -64,8 +64,8 @@ zx_library("async-cpp") {
   ]
   deps = [
     ":async",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/system/ulib/zircon",
+    "//zircon/system/ulib/zx",
   ]
 }
 

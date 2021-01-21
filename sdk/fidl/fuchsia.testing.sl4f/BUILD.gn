@@ -6,5 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.testing.sl4f") {
   sources = [ "sl4f.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

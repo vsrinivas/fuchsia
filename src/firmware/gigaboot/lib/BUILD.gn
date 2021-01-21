@@ -21,9 +21,9 @@ source_set("lib") {
     "xefi.c",
   ]
   deps = [
-    "$zx/kernel/lib/efi",
+    "//zircon/kernel/lib/efi",
 
     # This only actually adds anything to the profile build.
-    "$zx/kernel/lib/instrumentation:profile",
+    "//zircon/kernel/lib/instrumentation:profile",
   ]
 }

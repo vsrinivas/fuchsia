@@ -19,7 +19,7 @@ zx_library("tftp") {
   }
   if (!is_kernel && is_fuchsia) {
     defines = [ "TFTP_USERLIB" ]
-    deps = [ "$zx/system/ulib/zircon" ]
+    deps = [ "//zircon/system/ulib/zircon" ]
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

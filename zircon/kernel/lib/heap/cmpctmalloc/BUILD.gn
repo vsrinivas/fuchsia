@@ -12,8 +12,8 @@ zx_library("cmpctmalloc") {
 
   sources = [ "cmpctmalloc.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/pretty",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
   ]
   include_dirs = [ "include/lib" ]
 
@@ -25,13 +25,13 @@ zx_library("cmpctmalloc") {
     sdk = "source"
     sdk_headers = []
 
-    public_deps = [ "$zx/system/ulib/zircon-internal:headers" ]
+    public_deps = [ "//zircon/system/ulib/zircon-internal:headers" ]
     include_dirs += [
       "include",
-      "$zx/kernel/lib/heap/include",
+      "//zircon/kernel/lib/heap/include",
     ]
   } else if (is_kernel) {
     # TODO(fxbug.dev/51163): Remove headers when possible.
-    deps += [ "$zx/kernel/lib/instrumentation:headers" ]
+    deps += [ "//zircon/kernel/lib/instrumentation:headers" ]
   }
 }

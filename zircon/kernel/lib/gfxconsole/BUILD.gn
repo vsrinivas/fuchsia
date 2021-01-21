@@ -10,11 +10,11 @@ zx_library("gfxconsole") {
   kernel = true
   sources = [ "gfxconsole.cc" ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/gfx",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/gfx",
   ]
   public_deps = [
     # <lib/gfxconsole.h> has #include <lib/gfx.h>.
-    "$zx/kernel/lib/gfx",
+    "//zircon/kernel/lib/gfx",
   ]
 }

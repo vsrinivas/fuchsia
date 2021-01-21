@@ -4,7 +4,7 @@
 
 # Defines the configuration of Goma.
 
-import("$zx/public/gn/prebuilt.gni")
+import("//zircon/public/gn/prebuilt.gni")
 
 prebuilt_goma_dir = "//prebuilt/third_party/goma/$host_platform"
 

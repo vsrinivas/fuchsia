@@ -12,14 +12,14 @@ source_set("arm64") {
     # This environment can't handled unaligned accesses, which the
     # optimized assembly routines do.
     sources = [
-      "$zx/kernel/lib/libc/string/memcpy.c",
-      "$zx/kernel/lib/libc/string/memset.c",
+      "//zircon/kernel/lib/libc/string/memcpy.c",
+      "//zircon/kernel/lib/libc/string/memset.c",
     ]
-    deps = [ "$zx/kernel/lib/libc:headers" ]
+    deps = [ "//zircon/kernel/lib/libc:headers" ]
   } else {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     # and '#include "third_party/lib/cortex-strings/no-neon/src/aarch64/..."'.
-    include_dirs = [ "$zx/" ]
+    include_dirs = [ "//zircon/" ]
     sources = [
       "memcpy.S",
       "memset.S",

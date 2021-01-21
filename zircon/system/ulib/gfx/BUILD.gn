@@ -11,7 +11,7 @@ zx_library("gfx") {
   sdk_migrated = true
   if (toolchain.environment != "efi") {
     sources = [ "gfx.c" ]
-    deps = [ "$zx/system/ulib/zircon" ]
+    deps = [ "//zircon/system/ulib/zircon" ]
   } else {
     sources = []
   }

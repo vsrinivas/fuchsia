@@ -10,7 +10,7 @@ import("//build/unification/global_variables.gni")
 
 if (current_toolchain == default_toolchain) {
   # Default toolchain (current_cpu == "") just defines the phys environment.
-  # Note: see $zx/kernel/arch/x86/phys:kernel.phys32 too.
+  # Note: see //zircon/kernel/arch/x86/phys:kernel.phys32 too.
   foreach(cpu, standard_fuchsia_cpus) {
     kernel_cpu = cpu
     if (kernel_cpu == "x64") {
@@ -41,7 +41,7 @@ if (current_toolchain == default_toolchain) {
 
       # Append the arch-specific lists.  The phys/phys.gni file in each
       # arch subdirectory defines phys_* lists to append to the parameters.
-      import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
+      import("//zircon/kernel/arch/$kernel_cpu/phys/phys.gni")
       toolchain_tags += phys_tags
       exclude_variant_tags += phys_exclude_variant_tags
     }
@@ -54,9 +54,9 @@ if (current_toolchain == default_toolchain) {
 
   config("phys_config") {
     configs = [
-      "$zx/kernel:standalone",
-      "$zx/kernel:warnings",
-      "$zx/kernel/arch/$kernel_cpu:abi",
+      "//zircon/kernel:standalone",
+      "//zircon/kernel:warnings",
+      "//zircon/kernel/arch/$kernel_cpu:abi",
       ":defines",
 
       # Don't emit extra code making static initializers thread-safe (we don't
@@ -76,7 +76,7 @@ if (current_toolchain == default_toolchain) {
     # in the zircon_toolchain_suite() call is because every config listed
     # in toolchain_variant_args.configs 'foo' needs to have a corresponding
     # 'foo_deps' group.
-    import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
+    import("//zircon/kernel/arch/$kernel_cpu/phys/phys.gni")
     configs += phys_configs
   }
 
@@ -116,9 +116,9 @@ if (toolchain.environment == "kernel.phys" ||
     deps = [
       ":main",
       ":phys_executable.headers",
-      "$zx/kernel/arch/$zircon_cpu/phys",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
+      "//zircon/kernel/arch/$zircon_cpu/phys",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
   }
 
@@ -132,14 +132,14 @@ if (toolchain.environment == "kernel.phys" ||
     ]
     deps = [
       ":main",
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/boot-options",
-      "$zx/kernel/phys/lib/memalloc",
-      "$zx/system/ulib/uart",
-      "$zx/system/ulib/zbitl",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/uart",
+      "//zircon/system/ulib/zbitl",
     ]
     public_configs =
-        [ "$zx/kernel/arch/$zircon_cpu/phys:zbi_executable.config" ]
+        [ "//zircon/kernel/arch/$zircon_cpu/phys:zbi_executable.config" ]
   }
 
   # Things in other directories include main.h by source-absolute path.
@@ -148,14 +148,14 @@ if (toolchain.environment == "kernel.phys" ||
     sources = [ "main.h" ]
     public_deps = [
       # "main.h" has #include <lib/arch/ticks.h>.
-      "$zx/kernel/lib/arch",
+      "//zircon/kernel/lib/arch",
     ]
 
     # If the toolchain is compiling a PIE executable, include required libraries.
     if (toolchain.tags + [ "static-pie" ] - [ "static-pie" ] !=
         toolchain.tags) {
       # "main.h" has #include <lib/static-pie/static-pie.h>
-      public_deps += [ "$zx/system/ulib/static-pie" ]
+      public_deps += [ "//zircon/system/ulib/static-pie" ]
     }
   }
 
@@ -163,7 +163,7 @@ if (toolchain.environment == "kernel.phys" ||
   # are run directly as QEMU kernels.
   source_set("qemu-header") {
     sources = [ "qemu-header.S" ]
-    public_configs = [ "$zx/kernel/arch/$zircon_cpu/phys:qemu.config" ]
+    public_configs = [ "//zircon/kernel/arch/$zircon_cpu/phys:qemu.config" ]
   }
 }
 

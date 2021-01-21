@@ -13,10 +13,10 @@ source_set("testing") {
 
   public_deps = [
     # <lib/arch/x86/testing/fake-cpuid.h> includes <lib/arch/x86/cpuid.h>
-    "$zx/kernel/lib/arch",
+    "//zircon/kernel/lib/arch",
 
     # <lib/arch/x86/testing/fake-cpuid.h> includes <fbl/intrusive_hash_table.h>
-    "$zx/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":include" ]

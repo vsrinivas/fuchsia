@@ -5,7 +5,7 @@
 import("//build/zircon/migrated_targets.gni")
 
 source_set("fenv") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "${toolchain.cpu}/fenv.c",
     "__flt_rounds.c",

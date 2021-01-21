@@ -60,7 +60,7 @@ template("copied_files_dir") {
                              "visibility",
                            ])
     deps = [ ":$rspfile_target" ]
-    script = "$zx/public/gn/copied_files_dir.sh"
+    script = "//zircon/public/gn/copied_files_dir.sh"
     depfile = "$target_out_dir/$target_name.d"
     outputs = [ depfile ]
     sources = [ rspfile ]

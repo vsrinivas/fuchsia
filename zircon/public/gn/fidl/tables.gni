@@ -9,7 +9,7 @@
 # This tells fidl_library() to invoke fidl_tables().
 fidl_support_templates = [
   {
-    import = "$zx/public/gn/fidl/tables.gni"
+    import = "//zircon/public/gn/fidl/tables.gni"
     target = "fidl_tables"
     fidlc = "tables"
   },
@@ -54,7 +54,7 @@ template("fidl_tables") {
       sources = invoker.fidlc_outputs
 
       # The generated code uses this.
-      deps += [ "$zx/system/ulib/fidl" ]
+      deps += [ "//zircon/system/ulib/fidl" ]
     }
   }
 }

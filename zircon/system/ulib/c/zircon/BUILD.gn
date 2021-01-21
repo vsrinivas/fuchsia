@@ -11,7 +11,7 @@ source_set("zircon") {
     "utc.cc",
   ]
   deps = [
-    "$zx/system/ulib/runtime",
-    "$zx/third_party/ulib/musl:musl_internal",
+    "//zircon/system/ulib/runtime",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
 }

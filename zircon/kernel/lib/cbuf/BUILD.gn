@@ -11,7 +11,7 @@ zx_library("cbuf") {
   sources = [ "cbuf.cc" ]
   deps = [
     ":tests",
-    "$zx/kernel/lib/zxc",
+    "//zircon/kernel/lib/zxc",
   ]
 }
 
@@ -19,5 +19,5 @@ source_set("tests") {
   # TODO: testonly = true
   sources = [ "cbuf_tests.cc" ]
   include_dirs = [ "include" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
 }

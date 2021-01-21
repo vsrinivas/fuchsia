@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx/vdso/vdso.gni")
+import("//zircon/public/gn/toolchain/c_utils.gni")
+import("//zircon/vdso/vdso.gni")
 
 import("//build/zircon/migrated_targets.gni")
 
@@ -45,9 +45,9 @@ zx_library("kazoo_lib") {
     "writer.h",
   ]
 
-  deps = [ "$zx/system/public" ]
+  deps = [ "//zircon/system/public" ]
 
-  public_deps = [ "$zx/third_party/rapidjson" ]
+  public_deps = [ "//zircon/third_party/rapidjson" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-conversion" ]
@@ -60,7 +60,7 @@ zx_host_tool("kazoo") {
   sources = [ "main.cc" ]
 
   deps = [ ":kazoo_lib" ]
-  deps += [ "$zx/system/ulib/cmdline" ]
+  deps += [ "//zircon/system/ulib/cmdline" ]
 }
 
 group("tests") {
@@ -108,20 +108,20 @@ test("kazoo-unittests") {
 }
 
 zx_host_tool_action_foreach("test_files_fidl_to_json") {
-  tool = "$zx/tools/fidl:fidlc"
+  tool = "//zircon/tools/fidl:fidlc"
 
   args = [
     "--json",
     rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
     "--files",
     "{{source}}",
-    rebase_path("$zx/vdso/zx_common.fidl"),
-    rebase_path("$zx/vdso/zx_syscall.fidl"),
+    rebase_path("//zircon/vdso/zx_common.fidl"),
+    rebase_path("//zircon/vdso/zx_syscall.fidl"),
   ]
 
   inputs = [
-    "$zx/vdso/zx_common.fidl",
-    "$zx/vdso/zx_syscall.fidl",
+    "//zircon/vdso/zx_common.fidl",
+    "//zircon/vdso/zx_syscall.fidl",
   ]
 
   outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]
@@ -148,7 +148,7 @@ zx_host_tool_action_foreach("test_files_fidl_to_json") {
 }
 
 zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
-  tool = "$zx/tools/fidl:fidlc"
+  tool = "//zircon/tools/fidl:fidlc"
 
   args = [
     "--json",
@@ -195,7 +195,7 @@ fidlc_rspfile = "$target_gen_dir/fidlc.rspfile"
 link_output_rspfile("fidlc.rspfile") {
   visibility = [ ":*" ]
   outputs = [ fidlc_rspfile ]
-  deps = [ "$zx/tools/fidl:fidlc" ]
+  deps = [ "//zircon/tools/fidl:fidlc" ]
 }
 
 kazoo_rspfile = "$target_gen_dir/kazoo.rspfile"

@@ -16,11 +16,11 @@ zx_library("mtrace") {
     "mtrace.cc",
   ]
   deps = [
-    "$zx/kernel/lib/perfmon:headers",
-    "$zx/kernel/object",
+    "//zircon/kernel/lib/perfmon:headers",
+    "//zircon/kernel/object",
   ]
   public_deps = [
     # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
-    "$zx/kernel/lib/user_copy:headers",
+    "//zircon/kernel/lib/user_copy:headers",
   ]
 }

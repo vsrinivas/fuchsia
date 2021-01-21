@@ -5,7 +5,7 @@
 import("//build/zircon/migrated_targets.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
-bssl_dir = "$zx/../third_party/boringssl"
+bssl_dir = "//zircon/../third_party/boringssl"
 
 import("$bssl_dir/zircon.gni")
 
@@ -52,7 +52,7 @@ zx_library("boringssl") {
     include_dirs = rebase_path(boringssl_zircon_include_dirs, ".", bssl_dir)
 
     # Avoid circularity.
-    configs -= [ "$zx/kernel/vm:headers.config" ]
+    configs -= [ "//zircon/kernel/vm:headers.config" ]
 
     defines = [
       # The assembly code uses vector registers, which is not allowed in
@@ -86,7 +86,7 @@ zx_library("boringssl") {
                    [ "$bssl_dir/src" ]
 
     if (is_fuchsia) {
-      deps = [ "$zx/system/ulib/zircon" ]
+      deps = [ "//zircon/system/ulib/zircon" ]
     } else {
       defines = [
         # Required for `pthread_rwlock_t`.

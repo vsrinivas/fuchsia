@@ -13,9 +13,9 @@ zx_library("hw_watchdog") {
     "hw_watchdog.cc",
   ]
   deps = [
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/debuglog",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/debuglog",
   ]
 }

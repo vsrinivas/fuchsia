@@ -9,8 +9,8 @@ source_set("relocation_h") {
   visibility = [ ":*" ]
   public = [ "relocation.h" ]
   public_deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
 }
 
@@ -32,8 +32,8 @@ zx_library("static-pie") {
   deps = [ ":relocation_h" ]
   if (is_kernel) {
     deps += [
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
   }
 }

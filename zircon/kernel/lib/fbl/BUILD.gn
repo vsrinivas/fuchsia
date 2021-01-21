@@ -11,14 +11,14 @@ zx_library("fbl") {
   sources = [ "arena.cc" ]
   deps = [
     ":tests",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/vm:headers",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/vm:headers",
   ]
   public_deps = [
-    "$zx/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <include/fbl/arena.h> has #include <ktl/forward.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
   ]
 }
 
@@ -34,6 +34,6 @@ source_set("tests") {
 
   deps = [
     ":headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/unittest",
   ]
 }

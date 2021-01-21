@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/subtarget_aliases.gni")
+import("//zircon/public/gn/subtarget_aliases.gni")
 
 # This tells fidl_library() to invoke fidl_json_rspfile().
 fidl_support_templates = [
   {
-    import = "$zx/public/gn/fidl/json.gni"
+    import = "//zircon/public/gn/fidl/json.gni"
     target = "fidl_json_rspfile"
     fidlc = "json"
   },

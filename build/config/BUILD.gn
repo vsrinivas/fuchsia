@@ -224,8 +224,8 @@ config("relative_paths") {
       # debug-prefix-map, even though more would be ideal.
 
       # Map "/some/dir/fuchsia" to "../..".
-      cflags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-                 rebase_path("$zx/..", root_build_dir) ]
+      cflags = [ "-fdebug-prefix-map=" + rebase_path("//") + "=" +
+                 rebase_path("//", root_build_dir) ]
     } else {
       cflags = [
         # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
@@ -235,8 +235,8 @@ config("relative_paths") {
         "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
 
         # Map "/some/dir/fuchsia" to "../..".
-        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-            rebase_path("$zx/..", root_build_dir),
+        "-fdebug-prefix-map=" + rebase_path("//") + "=" +
+            rebase_path("//", root_build_dir),
       ]
     }
   } else {

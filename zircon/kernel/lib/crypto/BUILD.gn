@@ -15,23 +15,23 @@ zx_library("crypto") {
     "prng_unittest.cc",
   ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/explicit-memory",
-    "$zx/third_party/ulib/boringssl",
     "entropy",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/third_party/ulib/boringssl",
   ]
   public_deps = [
     # <lib/crypto/prng.h> has #include <ktl/atomic.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
 
     # lib/crypto/prng.h has #include <openssl/sha.h>.
-    "$zx/third_party/ulib/boringssl:headers",
+    "//zircon/third_party/ulib/boringssl:headers",
 
     # <lib/crypto/entropy/jitterentropy_collector.h> has #include <lib/jitterentropy/jitterentropy.h>.
-    "$zx/third_party/lib/jitterentropy:headers",
+    "//zircon/third_party/lib/jitterentropy:headers",
   ]
 }

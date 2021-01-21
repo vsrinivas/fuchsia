@@ -12,7 +12,7 @@ fidl("fuchsia.hardware.block") {
     "ftl.fidl",
   ]
   public_deps = [
-    "$zx/vdso/zx",
     "//sdk/fidl/fuchsia.storage.metrics",
+    "//zircon/vdso/zx",
   ]
 }

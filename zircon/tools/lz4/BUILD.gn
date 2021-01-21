@@ -4,8 +4,8 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-lz4_lib = "$zx/third_party/lz4/lib"
-lz4_programs = "$zx/third_party/lz4/programs"
+lz4_lib = "//zircon/third_party/lz4/lib"
+lz4_programs = "//zircon/third_party/lz4/programs"
 
 zx_host_tool("lz4") {
   sources = [
@@ -15,7 +15,7 @@ zx_host_tool("lz4") {
     "$lz4_programs/lz4io.c",
   ]
   sdk_migrated = true
-  deps = [ "$zx/third_party/ulib/lz4" ]
+  deps = [ "//zircon/third_party/ulib/lz4" ]
 
   # The zircon toolchains in the Fuchsia build add
   # warn-implicit-fallthrough as a default config.

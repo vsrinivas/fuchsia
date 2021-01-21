@@ -7,8 +7,8 @@
 source_set("amlogic_rng") {
   sources = [ "amlogic-rng.cc" ]
   deps = [
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/dev/pdev",
-    "$zx/system/ulib/explicit-memory",
+    "//zircon/kernel/dev/hw_rng",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/system/ulib/explicit-memory",
   ]
 }

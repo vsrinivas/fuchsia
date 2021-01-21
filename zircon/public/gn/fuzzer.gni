@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/toolchain/environment.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("//zircon/public/gn/config/standard.gni")
+import("//zircon/public/gn/toolchain/environment.gni")
+import("//zircon/public/gn/toolchain/environment_redirect.gni")
 
 # Lists the names of the default set of sanitized variants used to build fuzzer
 # binaries. Named lists of useful variant subsets are defined in standard.gni,
@@ -63,7 +63,7 @@ template("_zx_fuzzer_cmx") {
 #
 # In order to be properly picked up by the //garnet/tests/zircon:zircon_fuzzers
 # package, it is required that Zircon fuzzer names end in "-fuzzer", e.g. a
-# fuzzer in $zx/system/ulib/foo might be named "foo-fuzzer".
+# fuzzer in //zircon/system/ulib/foo might be named "foo-fuzzer".
 #
 # Parameters
 #
@@ -121,7 +121,7 @@ template("zx_fuzzer") {
       testonly = true
       forward_variables_from(invoker, [ "visibility" ])
       environment_label =
-          "$zx/public/gn/fuzzer:${toolchain.base_environment}.fuzzer"
+          "//zircon/public/gn/fuzzer:${toolchain.base_environment}.fuzzer"
       direct = true
       deps = []
       foreach(sanitizer, sanitizer_names) {

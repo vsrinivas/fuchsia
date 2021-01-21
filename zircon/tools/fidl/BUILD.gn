@@ -55,14 +55,14 @@ zx_library("fidl") {
     "lib/virtual_source_file.cc",
   ]
   public_deps = [
-    "$zx/system/ulib/cmdline:headers",
-    "$zx/system/ulib/fit:headers",
-    "$zx/third_party/ulib/safemath",
+    "//zircon/system/ulib/cmdline:headers",
+    "//zircon/system/ulib/fit:headers",
+    "//zircon/third_party/ulib/safemath",
   ]
   deps = [
     ":json_schema",
-    "$zx/system/ulib/cmdline",
-    "$zx/system/ulib/fit",
+    "//zircon/system/ulib/cmdline",
+    "//zircon/system/ulib/fit",
   ]
   deps += [ "//third_party/boringssl" ]
 
@@ -132,10 +132,10 @@ if (current_os != "fuchsia") {
     output_path = "${target_gen_dir}/${output_name}"
     depfile_path = "${output_path}.d"
 
-    go_root = "$zx/../prebuilt/third_party/go/${host_platform}"
+    go_root = "//zircon/../prebuilt/third_party/go/${host_platform}"
     go_executable = "${go_root}/bin/go"
     godepfile_executable =
-        "$zx/../prebuilt/tools/godepfile/${host_platform}/godepfile"
+        "//zircon/../prebuilt/tools/godepfile/${host_platform}/godepfile"
 
     go_cache = "${root_build_dir}/gocache"
 
@@ -186,7 +186,7 @@ if (current_os != "fuchsia") {
   }
 
   fidlgen_executable("fidlgen_llcpp") {
-    go_path = "$zx/../tools/fidl/fidlgen_llcpp"
+    go_path = "//zircon/../tools/fidl/fidlgen_llcpp"
     go_package = "fidl/compiler/llcpp_backend"
   }
 }

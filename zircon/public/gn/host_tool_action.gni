@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("//zircon/public/gn/toolchain/environment_redirect.gni")
 
 # Depend on a build host tool.
 #
@@ -23,7 +23,7 @@ template("host_tool_redirect") {
                              "testonly",
                              "visibility",
                            ])
-    environment_label = "$zx/public/gn/toolchain:host"
+    environment_label = "//zircon/public/gn/toolchain:host"
     cpu = host_cpu
     os = host_os
     direct = true
@@ -99,7 +99,7 @@ template("_host_tool_action_target") {
       orig_depfile = "-"
     }
 
-    script = "$zx/public/gn/host_tool_action.sh"
+    script = "//zircon/public/gn/host_tool_action.sh"
     args = rebase_path([
                          rspfile,
                          outputs[0],

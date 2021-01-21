@@ -122,7 +122,7 @@ template("toolchain_utils_action") {
       if (script == true) {
         assert(!defined(depfile),
                "script=true is incompatible with setting depfile")
-        script = "$zx/public/gn/toolchain/toolchain_utils_action.sh"
+        script = "//zircon/public/gn/toolchain/toolchain_utils_action.sh"
         depfile = "$target_out_dir/_host_tool_action.$target_name.d"
         args = [
           rebase_path(outputs[0], root_build_dir),
@@ -250,7 +250,7 @@ template("image_binary") {
       deps = [ ":$rspfile_target" ]
       sources = [ rspfile ]
       outputs = [ "$target_out_dir/$image_target.pure-stamp" ]
-      script = "$zx/kernel/gen-kaslr-fixups.sh"
+      script = "//zircon/kernel/gen-kaslr-fixups.sh"
       utils = [
         "readelf",
         "objdump",

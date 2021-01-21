@@ -6,7 +6,7 @@ import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
-import("$zx/vdso/vdso.gni")
+import("//zircon/vdso/vdso.gni")
 import("libc.gni")
 
 assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
@@ -16,7 +16,7 @@ assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
 # main target is a source_set() for libc proper and the "unittests" target is a
 # libc_test() suitable for inclusion in libc-unittests and Zircon's core-tests.
 libc_components = [
-  "$zx/third_party/scudo",
+  "//zircon/third_party/scudo",
   "ctype",
 ]
 
@@ -37,7 +37,7 @@ group("unittests") {
 
 config("internal.config") {
   visibility = [ "./*" ]
-  configs = [ "$zx/third_party/ulib/musl:headers" ]
+  configs = [ "//zircon/third_party/ulib/musl:headers" ]
   include_dirs = [ llvm_libc ]
 }
 
@@ -105,7 +105,7 @@ if (zircon_toolchain == false) {
   group("headers") {
     public_configs = [
       ":headers.config",
-      "$zx/third_party/ulib/musl:headers",
+      "//zircon/third_party/ulib/musl:headers",
     ]
   }
 
@@ -148,7 +148,7 @@ if (zircon_toolchain == false) {
             rebase_path("$root_out_dir/libc.so", root_build_dir) ]
     }
 
-    public_configs = [ "$zx/third_party/ulib/musl:headers" ]
+    public_configs = [ "//zircon/third_party/ulib/musl:headers" ]
 
     # The code comes from musl, where a source_set is defined.
     sources = []
@@ -156,12 +156,12 @@ if (zircon_toolchain == false) {
     deps = [
       ":components",
       ":exit",
-      "$zx/system/ulib/zx-panic-libc:as_source",
-      "$zx/third_party/ulib/musl",
       "sanitizers",
       "setjmp",
       "stubs",
       "zircon",
+      "//zircon/system/ulib/zx-panic-libc:as_source",
+      "//zircon/third_party/ulib/musl",
     ]
 
     # Don't link against the shared libc++.
@@ -171,7 +171,7 @@ if (zircon_toolchain == false) {
 
 source_set("exit") {
   sources = [ "_Exit.cc" ]
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
 }
 
 if (zircon_toolchain == false) {

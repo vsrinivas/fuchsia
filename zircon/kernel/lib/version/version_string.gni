@@ -9,4 +9,4 @@ kernel_version_string_file = "$root_build_dir/kernel-version-string.bin"
 
 # This is the target that produces that file.
 kernel_version_string_deps =
-    [ "$zx/kernel/lib/version:version-string.bin($default_toolchain)" ]
+    [ "//zircon/kernel/lib/version:version-string.bin($default_toolchain)" ]

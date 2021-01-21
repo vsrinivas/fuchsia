@@ -11,6 +11,6 @@ zx_library("init") {
   sources = []
   public_deps = [
     # <lk/init.h> has #include <lib/special-sections/special-sections.h>.
-    "$zx/kernel/lib/special-sections:headers",
+    "//zircon/kernel/lib/special-sections:headers",
   ]
 }

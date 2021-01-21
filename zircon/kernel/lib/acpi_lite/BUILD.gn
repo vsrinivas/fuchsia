@@ -29,11 +29,11 @@ zx_library("acpi_lite") {
     "structures.cc",
   ]
 
-  deps = [ "$zx/system/ulib/pretty" ]
+  deps = [ "//zircon/system/ulib/pretty" ]
 
   public_deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zxc",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 
   # Zircon-specific parts of acpi_lite.
@@ -46,7 +46,7 @@ zx_library("acpi_lite") {
       "test_data.cc",
       "zircon_test.cc",
     ]
-    deps += [ "$zx/kernel/lib/unittest" ]
+    deps += [ "//zircon/kernel/lib/unittest" ]
   }
 }
 

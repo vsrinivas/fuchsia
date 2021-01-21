@@ -8,5 +8,5 @@ fidl("fuchsia.ldsvc") {
   sdk_category = "partner"
   api = "fuchsia.ldsvc.api"
   sources = [ "ldsvc.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

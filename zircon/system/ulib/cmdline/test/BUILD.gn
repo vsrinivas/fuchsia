@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+import("//zircon/public/gn/fuzzer.gni")
 
 group("test") {
   testonly = true
@@ -11,5 +11,5 @@ group("test") {
 
 zx_fuzzer("cmdline-fuzzer") {
   sources = [ "cmdline_fuzzer.cc" ]
-  deps = [ "$zx/system/ulib/cmdline" ]
+  deps = [ "//zircon/system/ulib/cmdline" ]
 }

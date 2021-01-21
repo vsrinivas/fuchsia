@@ -6,7 +6,7 @@
 
 import("//build/images/args.gni")
 import("//build/zircon/migrated_targets.gni")
-import("$zx/public/gn/toolchain/c_utils.gni")
+import("//zircon/public/gn/toolchain/c_utils.gni")
 
 # The boot shims need to be compiled in the special environment for running
 # in physical memory with the MMU disabled.
@@ -19,7 +19,7 @@ if (toolchain.environment == "physmem") {
       "devicetree.c",
       "util.c",
     ]
-    deps = [ "$zx/kernel/lib/libc/string" ]
+    deps = [ "//zircon/kernel/lib/libc/string" ]
   }
 
   config("boot_shim_config") {
@@ -46,8 +46,8 @@ template("boot_shim") {
       configs += [ ":boot_shim_config" ]
       deps = [
         ":common",
-        "$zx/system/ulib/ddk-platform-defs:headers",
-        "$zx/system/ulib/zbi",
+        "//zircon/system/ulib/ddk-platform-defs:headers",
+        "//zircon/system/ulib/zbi",
       ]
       sources = [
         "${board}-uart.c",
@@ -55,7 +55,7 @@ template("boot_shim") {
       ]
 
       # TODO(mcgrathr): Move these to ./$board-config.h and use a -D.
-      include_dirs = [ "$zx/kernel/target/arm64/board/$board" ]
+      include_dirs = [ "//zircon/kernel/target/arm64/board/$board" ]
     }
 
     shim_rspfile = "$target_gen_dir/$shim_name.elf.rsp"
@@ -114,7 +114,7 @@ template("boot_shim") {
     }
   } else {
     group(board) {
-      public_deps = [ ":$board($zx/kernel/arch/arm64:physmem_arm64)" ]
+      public_deps = [ ":$board(//zircon/kernel/arch/arm64:physmem_arm64)" ]
     }
     not_needed(invoker, "*")
   }

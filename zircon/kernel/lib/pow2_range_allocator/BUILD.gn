@@ -16,6 +16,6 @@ source_set("tests") {
   sources = [ "pow2_range_allocator_tests.cc" ]
   deps = [
     ":headers",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/unittest",
   ]
 }

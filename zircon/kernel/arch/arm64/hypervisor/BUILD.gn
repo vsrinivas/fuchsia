@@ -16,14 +16,14 @@ source_set("hypervisor") {
     "vmexit.cc",
   ]
   deps = [
-    "$zx/kernel/dev/interrupt/arm_gic/common",
-    "$zx/kernel/dev/interrupt/arm_gic/v2",
-    "$zx/kernel/dev/interrupt/arm_gic/v3",
-    "$zx/kernel/dev/psci",
-    "$zx/kernel/dev/timer/arm_generic",
-    "$zx/kernel/hypervisor:headers",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/system/ulib/affine",
+    "//zircon/kernel/dev/interrupt/arm_gic/common",
+    "//zircon/kernel/dev/interrupt/arm_gic/v2",
+    "//zircon/kernel/dev/interrupt/arm_gic/v3",
+    "//zircon/kernel/dev/psci",
+    "//zircon/kernel/dev/timer/arm_generic",
+    "//zircon/kernel/hypervisor:headers",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/system/ulib/affine",
   ]
 }

@@ -136,7 +136,7 @@ tree.  Source-absolute paths begin with `//` in GN.
 probably change soon:_** Generically, an absolute path will look like
 `//path/to/dir`.  However, in order to maintain both the standalone Zircon
 build and the integrated Fuchsia build, *all absolute paths in Zircon will look
-like `$zx/path/to/dir`*.  This allows us to use expand `$zx` to `//` in the
+like `//zircon/path/to/dir`*.  This allows us to use expand `$zx` to `//` in the
 case of the standalone build and `//zircon/` in the case of the integrated
 build.
 

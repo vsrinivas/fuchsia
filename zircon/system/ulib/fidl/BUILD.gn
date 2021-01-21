@@ -45,8 +45,8 @@ zx_library("fidl_base") {
     "walker.cc",
   ]
   deps = [
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/zircon",
   ]
 
   all_dependent_configs = [ ":fidl-tracing-config" ]
@@ -63,7 +63,7 @@ zx_library("fidl") {
   ]
   deps = [
     ":fidl_base",
-    "$zx/system/ulib/zircon",
+    "//zircon/system/ulib/zircon",
   ]
   public_deps = [ ":fidl_base" ]
 }
@@ -123,32 +123,32 @@ if (is_fuchsia) {
       ":headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
-      "$zx/system/ulib/async:headers",
+      "//zircon/system/ulib/async:headers",
 
       # <lib/fidl/llcpp/client_base.h> has #include <fbl/intrusive_wavl_tree.h>
-      "$zx/system/ulib/fbl:headers",
+      "//zircon/system/ulib/fbl:headers",
 
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
       # <lib/fidl/llcpp/types.h> has #include <lib/fit/function.h>
-      "$zx/system/ulib/fit:headers",
+      "//zircon/system/ulib/fit:headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>
-      "$zx/system/ulib/sync:headers",
+      "//zircon/system/ulib/sync:headers",
 
       # <lib/fidl/llcpp/traits.h> has #include <lib/zx/object.h>.
-      "$zx/system/ulib/zx:headers",
+      "//zircon/system/ulib/zx:headers",
 
       # <lib/fidl/llcpp/connect_service.h> has #include <lib/zx/status.h>.
-      "$zx/system/ulib/zxc:headers",
+      "//zircon/system/ulib/zxc:headers",
     ]
     deps = [
       ":fidl",
-      "$zx/system/ulib/async",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zxc",
+      "//zircon/system/ulib/async",
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/fit",
+      "//zircon/system/ulib/sync",
+      "//zircon/system/ulib/zircon",
+      "//zircon/system/ulib/zxc",
     ]
   }
 } else {
@@ -181,15 +181,15 @@ if (is_fuchsia) {
       "llcpp_message.cc",
     ]
     public_deps = [
-      "$zx/system/ulib/zircon:headers",
-      "$zx/system/ulib/zxc:headers",
+      "//zircon/system/ulib/zircon:headers",
+      "//zircon/system/ulib/zxc:headers",
     ]
     deps = [
       ":fidl_base",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zxc",
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/fit",
+      "//zircon/system/ulib/zircon",
+      "//zircon/system/ulib/zxc",
     ]
   }
 }

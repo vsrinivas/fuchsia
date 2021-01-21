@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/host_tool_action.gni")
+import("//zircon/public/gn/host_tool_action.gni")
 
 # Run the FIDL compiler for a fidl_library().
 #
 # This is not really meant for general use.  It's used by FIDL support
-# modules (see $zx/public/gn/fidl.gni for details).
+# modules (see //zircon/public/gn/fidl.gni for details).
 #
 # Parameters
 #
@@ -26,7 +26,7 @@ import("$zx/public/gn/host_tool_action.gni")
 #   tool
 #     Optional: Label of the host_tool() to run.
 #     Type: label_no_toolchain
-#     Default: "$zx/tools/fidl:fidlc"
+#     Default: "//zircon/tools/fidl:fidlc"
 #
 template("fidlc") {
   if (current_toolchain == default_toolchain) {
@@ -64,7 +64,7 @@ template("fidlc") {
         fidlc_rspfile,
         fidlc_depfile,
       ]
-      script = "$zx/public/gn/fidl/gen-fidlc-rsp.sh"
+      script = "//zircon/public/gn/fidl/gen-fidlc-rsp.sh"
       args = rebase_path(outputs + [ fidlc_outputs[0] ] + sources,
                          root_build_dir) +
              [
@@ -82,7 +82,7 @@ template("fidlc") {
       if (defined(invoker.tool)) {
         tool = invoker.tool
       } else {
-        tool = "$zx/tools/fidl:fidlc"
+        tool = "//zircon/tools/fidl:fidlc"
       }
       outputs = fidlc_outputs
       deps = [ ":_fidlc.rsp.$target_name" ]

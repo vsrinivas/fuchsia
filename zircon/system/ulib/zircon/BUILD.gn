@@ -73,7 +73,7 @@ if (toolchain.environment != "user.vdso") {
     }
   } else {
     # References from other environments only get the headers.  This
-    # makes it easy to have "$zx/system/ulib/zircon" deps in common
+    # makes it easy to have "//zircon/system/ulib/zircon" deps in common
     # libraries that need to link against it in userland but that in
     # other contexts like kernel or userboot are just using the headers.
     group("zircon") {
@@ -120,16 +120,16 @@ if (toolchain.environment != "user.vdso") {
 
     deps = [
       ":syscall-asm",
-      "$zx/kernel/lib/syscalls:headers",
-      "$zx/kernel/lib/userabi:headers",
-      "$zx/system/ulib/affine",
+      "//zircon/kernel/lib/syscalls:headers",
+      "//zircon/kernel/lib/userabi:headers",
+      "//zircon/system/ulib/affine",
     ]
-    public_deps = [ "$zx/vdso:public($default_toolchain)" ]
+    public_deps = [ "//zircon/vdso:public($default_toolchain)" ]
 
     # The line above doesn't work in the Fuchsia build because its
     # default toolchain does not propagate configs. Adding the config
     # manually works-around the issue.
-    public_configs = [ "$zx/vdso:public.config($default_toolchain)" ]
+    public_configs = [ "//zircon/vdso:public.config($default_toolchain)" ]
 
     # Instruct the linker to preserve the hidden alternate entry points.
     # Note, "./" makes GN realize this is a file rather than a -l switch.
@@ -159,7 +159,7 @@ if (toolchain.environment != "user.vdso") {
     ]
     deps = [
       ":headers",
-      "$zx/kernel/lib/syscalls",
+      "//zircon/kernel/lib/syscalls",
     ]
     if (toolchain.base_environment == "user") {
       configs -= [ "//build/config/zircon:user" ]

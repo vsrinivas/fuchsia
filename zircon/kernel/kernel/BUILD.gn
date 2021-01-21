@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx/kernel/params.gni")
+import("//zircon/kernel/params.gni")
 
 source_set("kernel") {
   sources = [
@@ -28,28 +28,28 @@ source_set("kernel") {
 
   deps = [
     ":tests",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/pdev/hw_watchdog",
-    "$zx/kernel/lib/abi_type_validator",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/heap",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/topology",
-    "$zx/kernel/lib/version",
-    "$zx/kernel/object",
-    "$zx/kernel/vm",
-    "$zx/system/ulib/affine",
-    "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxc",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pdev/hw_watchdog",
+    "//zircon/kernel/lib/abi_type_validator",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/heap",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/lib/topology",
+    "//zircon/kernel/lib/version",
+    "//zircon/kernel/object",
+    "//zircon/kernel/vm",
+    "//zircon/system/ulib/affine",
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -62,7 +62,7 @@ source_set("tests") {
     "thread_test.cc",
   ]
   deps = [
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/unittest",
   ]
 }

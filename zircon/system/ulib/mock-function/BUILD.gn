@@ -10,7 +10,7 @@ zx_library("mock-function") {
   sdk_headers = [ "lib/mock-function/mock-function.h" ]
   sdk_migrated = true
   sources = []
-  public_deps = [ "$zx/system/ulib/zxtest:headers" ]
+  public_deps = [ "//zircon/system/ulib/zxtest:headers" ]
 }
 
 group("tests") {

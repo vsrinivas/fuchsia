@@ -7,5 +7,5 @@
 source_set("tests") {
   # TODO: testonly = true
   sources = [ "lockup_detector_tests.cc" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  deps = [ "//zircon/kernel/lib/unittest" ]
 }

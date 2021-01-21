@@ -7,9 +7,9 @@
 if (current_toolchain != default_toolchain) {
   import("//build/dist/generated_resource.gni")
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-  import("$zx/kernel/phys/phys_executable.gni")
-  import("$zx/kernel/phys/qemu.gni")
-  import("$zx/kernel/phys/zbi_executable.gni")
+  import("//zircon/kernel/phys/phys_executable.gni")
+  import("//zircon/kernel/phys/qemu.gni")
+  import("//zircon/kernel/phys/zbi_executable.gni")
 
   assert(toolchain.environment == "kernel.phys" ||
          toolchain_variant.base == qemu_environment)
@@ -20,9 +20,9 @@ if (current_toolchain != default_toolchain) {
     sources = [ "qemu-test-main.cc" ]
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     deps = [
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/libc",
-      "$zx/system/ulib/uart",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/uart",
     ]
     public_deps = [
       # This is public to propagate its public_deps so dependents
@@ -36,16 +36,16 @@ if (current_toolchain != default_toolchain) {
     sources = [ "zbi-test-main.cc" ]
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     public_deps = [ ":test-main" ]
-    deps = [ "$zx/kernel/lib/libc" ]
+    deps = [ "//zircon/kernel/lib/libc" ]
   }
 
   source_set("test-main") {
     testonly = true
     sources = [ "test-main.h" ]
     public_deps = [
-      "$zx/kernel/lib/arch:headers",
       "..:main",
       "..:phys_executable.headers",
+      "//zircon/kernel/lib/arch:headers",
     ]
   }
 
@@ -172,8 +172,8 @@ if (current_toolchain != default_toolchain) {
     sources = [ "hello-world-test.cc" ]
     deps = [
       ":test-main",
-      "$zx/kernel/lib/libc",
       "..:phys_executable.headers",
+      "//zircon/kernel/lib/libc",
     ]
   }
 
@@ -181,9 +181,9 @@ if (current_toolchain != default_toolchain) {
     sources = [ "backtrace-test.cc" ]
     deps = [
       ":test-main",
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/libc",
       "..:phys_executable.headers",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/libc",
     ]
   }
 
@@ -200,9 +200,9 @@ if (current_toolchain != default_toolchain) {
     ]
     deps = [
       ":test-main",
-      "$zx/kernel/lib/libc",
-      "$zx/kernel/lib/unittest",
-      "$zx/kernel/tests",
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/lib/unittest",
+      "//zircon/kernel/tests",
     ]
   }
 
@@ -210,10 +210,10 @@ if (current_toolchain != default_toolchain) {
     sources = [ "phys-memory-test.cc" ]
     deps = [
       ":test-main",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
-      "$zx/kernel/phys/lib/memalloc",
-      "$zx/system/ulib/zbitl",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -233,10 +233,10 @@ if (current_toolchain != default_toolchain) {
     sources = [ "decompress-test.cc" ]
     deps = [
       ":test-main",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
-      "$zx/system/ulib/zbitl",
-      "$zx/system/ulib/zxc",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zxc",
     ]
     data_deps = [ ":decompress-test-data" ]
   }

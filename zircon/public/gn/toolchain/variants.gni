@@ -133,7 +133,7 @@ declare_args() {
   #     to all GN code in the toolchain.  For example, the standard "gcc"
   #     variant sets `is_gcc = true` in $globals.  This should be used
   #     sparingly and is safest when restricted to variables that
-  #     $zx/public/gn/BUILDCONFIG.gn sets defaults for.
+  #     //zircon/public/gn/BUILDCONFIG.gn sets defaults for.
   #     - Type: scope
   #
   #   * toolchain_args

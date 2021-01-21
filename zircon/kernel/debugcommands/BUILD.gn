@@ -7,8 +7,8 @@
 source_set("debugcommands") {
   sources = [ "debugcommands.cc" ]
   deps = [
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/unittest",
   ]
 }

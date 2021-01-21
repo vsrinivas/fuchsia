@@ -8,5 +8,5 @@ fidl("fuchsia.tracing.provider") {
   sdk_category = "partner"
   api = "fuchsia.tracing.provider.api"
   sources = [ "provider.fidl" ]
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -7,8 +7,8 @@
 source_set("interrupt") {
   sources = [ "interrupt.cc" ]
   deps = [
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/init",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/init",
   ]
 }

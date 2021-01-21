@@ -27,41 +27,41 @@ zx_library("pc") {
   ]
   deps = [
     ":tests",
-    "$zx/kernel/arch/x86:headers",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/dev/pcie",
-    "$zx/kernel/lib/acpi_lite",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/cbuf",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/debuglog",
-    "$zx/kernel/lib/efi",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/fixed_point",
-    "$zx/kernel/lib/gfxconsole",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/lockdep",
-    "$zx/kernel/lib/memory_limit",
-    "$zx/kernel/lib/pow2_range_allocator",
-    "$zx/kernel/lib/topology",
-    "$zx/kernel/lib/unittest",
-    "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/smbios",
-    "$zx/system/ulib/zbitl",
-    "$zx/third_party/ulib/cksum",
+    "//zircon/kernel/arch/x86:headers",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/dev/pcie",
+    "//zircon/kernel/lib/acpi_lite",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/cbuf",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/debuglog",
+    "//zircon/kernel/lib/efi",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/fixed_point",
+    "//zircon/kernel/lib/gfxconsole",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/lockdep",
+    "//zircon/kernel/lib/memory_limit",
+    "//zircon/kernel/lib/pow2_range_allocator",
+    "//zircon/kernel/lib/topology",
+    "//zircon/kernel/lib/unittest",
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/smbios",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [
     # <platform/pc/smbios.h> has #include <lib/smbios/smbios.h>.
-    "$zx/system/ulib/smbios:headers",
+    "//zircon/system/ulib/smbios:headers",
   ]
 
   if (toolchain.environment == "kernel") {
     public_deps += [
       # <platform/pc/timer.h> has #include <lib/affine/ratio.h>.
-      "$zx/system/ulib/affine",
+      "//zircon/system/ulib/affine",
     ]
   }
 }
@@ -74,9 +74,9 @@ source_set("tests") {
   ]
   deps = [
     ":headers",
-    "$zx/kernel/dev/interrupt",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/pow2_range_allocator",
-    "$zx/kernel/lib/unittest",
+    "//zircon/kernel/dev/interrupt",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/pow2_range_allocator",
+    "//zircon/kernel/lib/unittest",
   ]
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("complex") {
-  include_dirs = [ "$zx/third_party/ulib/musl/third_party/include" ]
+  include_dirs = [ "//zircon/third_party/ulib/musl/third_party/include" ]
   sources = [
     "cabs.c",
     "cabsf.c",
@@ -60,8 +60,8 @@ source_set("complex") {
     "ctanl.c",
   ]
   deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-    "$zx/third_party/ulib/musl/third_party/complex",
+    "//zircon/third_party/ulib/musl:musl_internal",
+    "//zircon/third_party/ulib/musl/third_party/complex",
   ]
 
   configs -= [ "//build/config/zircon:visibility_hidden" ]

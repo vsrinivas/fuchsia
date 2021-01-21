@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.minfs") {
   sources = [ "minfs.fidl" ]
   public_deps = [
-    "$zx/vdso/zx",
     "//sdk/fidl/fuchsia.storage.metrics",
+    "//zircon/vdso/zx",
   ]
 }

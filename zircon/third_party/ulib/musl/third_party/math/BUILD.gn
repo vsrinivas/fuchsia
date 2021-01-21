@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 source_set("math") {
-  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
-  include_dirs = [ "$zx/third_party/ulib/musl/third_party/include" ]
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
+  include_dirs = [ "//zircon/third_party/ulib/musl/third_party/include" ]
   sources = [
     "__cos.c",
     "__cosdf.c",
@@ -76,7 +76,7 @@ source_set("math") {
     "tgammal.c",
   ]
   if (current_cpu != "x64") {
-    # $zx/third_party/ulib/musl/src/math/x86_64 provides these in assembly.
+    # //zircon/third_party/ulib/musl/src/math/x86_64 provides these in assembly.
     sources += [
       "acosl.c",
       "asinl.c",

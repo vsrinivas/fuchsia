@@ -9,6 +9,6 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("gfx") {
   kernel = true
   sources = [ "gfx.cc" ]
-  deps = [ "$zx/kernel/lib/console" ]
-  public_deps = [ "$zx/system/ulib/gfx-font-data" ]
+  deps = [ "//zircon/kernel/lib/console" ]
+  public_deps = [ "//zircon/system/ulib/gfx-font-data" ]
 }

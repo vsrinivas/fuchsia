@@ -23,13 +23,13 @@ zx_library("hwreg") {
     # TODO(mcgrathr): remove old multiboot environment
     if (toolchain.environment != "multiboot") {
       public_deps = [
-        "$zx/kernel/lib/ktl",
-        "$zx/kernel/lib/libc",
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/lib/libc",
       ]
     }
   } else {
     sources += [ "asm.cc" ]
-    deps = [ "$zx/system/ulib/fit" ]
+    deps = [ "//zircon/system/ulib/fit" ]
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -54,10 +54,10 @@ zx_library("hwreg-mock") {
   static = true
   host = true
   sources = []
-  deps = [ "$zx/system/ulib/mock-function" ]
+  deps = [ "//zircon/system/ulib/mock-function" ]
   public_deps = [
     # <hwreg/mock.h> has #include <lib/mock-function/mock-function.h>.
-    "$zx/system/ulib/mock-function:headers",
+    "//zircon/system/ulib/mock-function:headers",
   ]
 }
 

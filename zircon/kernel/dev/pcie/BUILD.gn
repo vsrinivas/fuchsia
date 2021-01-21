@@ -25,27 +25,27 @@ zx_library("pcie") {
     "pcie_upstream_node.cc",
   ]
   deps = [
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/kpci",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/vm:headers",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/region-alloc",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/kpci",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/vm:headers",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/region-alloc",
   ]
   public_deps = [
     # <dev/address_provider/ecam_region.h> has #include <ktl/unique_ptr.h>.
-    "$zx/kernel/lib/ktl:headers",
+    "//zircon/kernel/lib/ktl:headers",
 
     # <dev/pcie_platform.h> has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+    "//zircon/kernel/dev/interrupt:headers",
 
     # <dev/pcie_bus_driver.h> has #include <region-alloc/region-alloc.h>.
-    "$zx/system/ulib/region-alloc:headers",
+    "//zircon/system/ulib/region-alloc:headers",
 
     # <dev/pcie_bus_driver.h> has #include <arch/ops.h>.
-    "$zx/kernel/lib/arch:headers",
+    "//zircon/kernel/lib/arch:headers",
   ]
 
   # TODO(mcgrathr): Say why this is needed.

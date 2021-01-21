@@ -17,16 +17,16 @@ zx_library("bitmap") {
   host = true
   static = true
   sources = [ "raw-bitmap.cc" ]
-  public_deps = [ "$zx/system/ulib/fbl:headers" ]
+  public_deps = [ "//zircon/system/ulib/fbl:headers" ]
   if (!is_kernel && !is_host) {
     public_deps += [
       # <bitmap/storage.h> has #include <lib/zx/vmo.h>.
-      "$zx/system/ulib/zx:headers",
+      "//zircon/system/ulib/zx:headers",
     ]
     deps = [
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zircon",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

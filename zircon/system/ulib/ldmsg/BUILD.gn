@@ -9,10 +9,10 @@ zx_library("ldmsg") {
   sdk_headers = [ "ldmsg/ldmsg.h" ]
   sdk_migrated = true
   sources = [ "ldmsg.c" ]
-  deps = [ "$zx/system/ulib/zircon" ]
+  deps = [ "//zircon/system/ulib/zircon" ]
 
   # It uses <string.h> for memcpy.
-  deps += [ "$zx/system/ulib/c:headers" ]
+  deps += [ "//zircon/system/ulib/c:headers" ]
 
   # This code is called by the dynamic linker in early startup before
   # fancy stacks have been set up.  So it can't rely on safe-stack or

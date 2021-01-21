@@ -10,9 +10,9 @@ zx_library("devicetree") {
   kernel = true
   host = true
   sources = [ "devicetree.cc" ]
-  deps = [ "$zx/system/ulib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 
-  public_deps = [ "$zx/system/ulib/zircon-internal:headers" ]
+  public_deps = [ "//zircon/system/ulib/zircon-internal:headers" ]
 
   # TODO: revisit the following three specifications after the zircon-to-fuchsia
   # build migration. They seem currently required in order to export the host

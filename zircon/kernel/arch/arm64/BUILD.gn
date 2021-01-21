@@ -28,9 +28,9 @@ if (toolchain.environment == "physmem") {
   # This is the top config for the physmem environment.
   config("physmem_config") {
     configs = [
-      "$zx/kernel:headers",
-      "$zx/kernel:standalone",
-      "$zx/kernel:warnings",
+      "//zircon/kernel:headers",
+      "//zircon/kernel:standalone",
+      "//zircon/kernel:warnings",
       "//build/config/zircon:no_sanitizers",
     ]
 
@@ -94,7 +94,7 @@ if (toolchain.environment == "physmem" ||
 
     configs = [
       # <arch/current_thread.h> has #include <lib/arch/intrin.h>.
-      "$zx/kernel/lib/arch/arm64:headers.config",
+      "//zircon/kernel/lib/arch/arm64:headers.config",
     ]
 
     # Align the kernel's segments to 64k so it can use "combined pages" to
@@ -132,23 +132,23 @@ if (toolchain.environment == "physmem" ||
     ]
     deps = [
       ":boot-mmu",
-      "$zx/kernel/dev/coresight",
-      "$zx/kernel/dev/interrupt/arm_gic/common",
-      "$zx/kernel/dev/iommu/dummy",
-      "$zx/kernel/dev/psci",
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/cmdline",
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/counters",
-      "$zx/kernel/lib/crashlog",
-      "$zx/kernel/lib/init",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/perfmon",
-      "$zx/kernel/lib/syscalls",
-      "$zx/kernel/object",
-      "$zx/kernel/vm",
-      "$zx/system/ulib/bitmap",
-      "$zx/system/ulib/pretty",
+      "//zircon/kernel/dev/coresight",
+      "//zircon/kernel/dev/interrupt/arm_gic/common",
+      "//zircon/kernel/dev/iommu/dummy",
+      "//zircon/kernel/dev/psci",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/counters",
+      "//zircon/kernel/lib/crashlog",
+      "//zircon/kernel/lib/init",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/perfmon",
+      "//zircon/kernel/lib/syscalls",
+      "//zircon/kernel/object",
+      "//zircon/kernel/vm",
+      "//zircon/system/ulib/bitmap",
+      "//zircon/system/ulib/pretty",
     ]
   }
 
@@ -156,7 +156,7 @@ if (toolchain.environment == "physmem" ||
     visibility = [ ":*" ]
 
     sources = [ "boot-mmu.cc" ]
-    deps = [ "$zx/kernel/vm" ]
+    deps = [ "//zircon/kernel/vm" ]
 
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.

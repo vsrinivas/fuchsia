@@ -4,9 +4,9 @@
 
 import("//build/config/zircon/instrumentation/sanitizer_default_options.gni")
 import("//build/config/zircon/standard.gni")
-import("$zx/public/gn/toolchain/clang.gni")
-import("$zx/public/gn/toolchain/goma.gni")
-import("$zx/public/gn/toolchain/rustc.gni")
+import("//zircon/public/gn/toolchain/clang.gni")
+import("//zircon/public/gn/toolchain/goma.gni")
+import("//zircon/public/gn/toolchain/rustc.gni")
 import("experimental_cxx_version.gni")
 import("levels.gni")
 
@@ -280,8 +280,8 @@ config("relative_paths") {
       # debug-prefix-map, even though more would be ideal.
 
       # Map "/some/dir/fuchsia" to "../..".
-      compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-                         rebase_path("$zx/..", root_build_dir) ]
+      compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("//zircon/..") +
+                         "=" + rebase_path("//zircon/..", root_build_dir) ]
     } else {
       compiler_flags = [
         # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
@@ -291,8 +291,8 @@ config("relative_paths") {
         "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
 
         # Map "/some/dir/fuchsia" to "../..".
-        "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
-            rebase_path("$zx/..", root_build_dir),
+        "-fdebug-prefix-map=" + rebase_path("//zircon/..") + "=" +
+            rebase_path("//zircon/..", root_build_dir),
       ]
     }
   } else {
@@ -645,9 +645,9 @@ config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
 
   visibility = [
-    "$zx/third_party/ulib/musl/ldso",
-    "$zx/third_party/ulib/musl/src/network",
-    "$zx/third_party/ulib/musl/src/time",
+    "//zircon/third_party/ulib/musl/ldso",
+    "//zircon/third_party/ulib/musl/src/network",
+    "//zircon/third_party/ulib/musl/src/time",
   ]
 }
 
@@ -655,39 +655,39 @@ config("Wno-unused-function") {
 config("Wno-conversion") {
   cflags_cc = [ "-Wno-conversion" ]
   visibility = [
-    "$zx/kernel/arch/x86/*",
-    "$zx/kernel/arch/x86/cpuid/*",
-    "$zx/kernel/debugcommands/*",
-    "$zx/kernel/dev/iommu/dummy/*",
-    "$zx/kernel/dev/pcie/*",
-    "$zx/kernel/lib/cmdline/*",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/heap/cmpctmalloc/*",
-    "$zx/kernel/object/*",
-    "$zx/kernel/phys/*",
-    "$zx/kernel/platform/*",
-    "$zx/kernel/tests/*",
-    "$zx/kernel/vm/*",
-    "$zx/system/ulib/cmdline/*",
-    "$zx/system/ulib/elf-psabi/*",
-    "$zx/system/ulib/elfload/*",
-    "$zx/system/ulib/fidl/*",
-    "$zx/system/ulib/fit/*",
-    "$zx/system/ulib/gfx/*",
-    "$zx/system/ulib/hwreg/*",
-    "$zx/system/ulib/ldmsg/*",
-    "$zx/system/ulib/pretty/*",
-    "$zx/system/ulib/tftp/*",
-    "$zx/system/ulib/zbi/*",
-    "$zx/system/ulib/zxc/*",
-    "$zx/system/ulib/zxtest/*",
-    "$zx/third_party/*",
-    "$zx/third_party/lz4/*",
-    "$zx/third_party/ulib/cksum/*",
-    "$zx/third_party/ulib/usbhost/*",
-    "$zx/tools/fidl/*",
-    "$zx/tools/kazoo/*",
-    "$zx/tools/zbi/*",
+    "//zircon/kernel/arch/x86/*",
+    "//zircon/kernel/arch/x86/cpuid/*",
+    "//zircon/kernel/debugcommands/*",
+    "//zircon/kernel/dev/iommu/dummy/*",
+    "//zircon/kernel/dev/pcie/*",
+    "//zircon/kernel/lib/cmdline/*",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/heap/cmpctmalloc/*",
+    "//zircon/kernel/object/*",
+    "//zircon/kernel/phys/*",
+    "//zircon/kernel/platform/*",
+    "//zircon/kernel/tests/*",
+    "//zircon/kernel/vm/*",
+    "//zircon/system/ulib/cmdline/*",
+    "//zircon/system/ulib/elf-psabi/*",
+    "//zircon/system/ulib/elfload/*",
+    "//zircon/system/ulib/fidl/*",
+    "//zircon/system/ulib/fit/*",
+    "//zircon/system/ulib/gfx/*",
+    "//zircon/system/ulib/hwreg/*",
+    "//zircon/system/ulib/ldmsg/*",
+    "//zircon/system/ulib/pretty/*",
+    "//zircon/system/ulib/tftp/*",
+    "//zircon/system/ulib/zbi/*",
+    "//zircon/system/ulib/zxc/*",
+    "//zircon/system/ulib/zxtest/*",
+    "//zircon/third_party/*",
+    "//zircon/third_party/lz4/*",
+    "//zircon/third_party/ulib/cksum/*",
+    "//zircon/third_party/ulib/usbhost/*",
+    "//zircon/tools/fidl/*",
+    "//zircon/tools/kazoo/*",
+    "//zircon/tools/zbi/*",
   ]
 }
 
@@ -739,7 +739,7 @@ config("no_threadsafe_statics") {
 }
 
 config("default_include_dirs") {
-  include_dirs = [ "$zx/system/public" ]
+  include_dirs = [ "//zircon/system/public" ]
 }
 
 config("default_frame_pointers") {
@@ -854,7 +854,7 @@ config("user") {
   defines = [ "_ALL_SOURCE" ]
   configs = [
     ":nolibc",
-    "$zx/third_party/ulib/musl:headers",
+    "//zircon/third_party/ulib/musl:headers",
   ]
 }
 
