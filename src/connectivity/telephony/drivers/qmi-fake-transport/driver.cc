@@ -10,12 +10,12 @@
 #include <memory>
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 
 #include "fake-device.h"
+#include "src/connectivity/telephony/drivers/qmi-fake-transport/qmi_fake_bind.h"
 
 zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
   auto dev = std::make_unique<qmi_fake::QmiDevice>(device);
@@ -37,9 +37,4 @@ static constexpr zx_driver_ops_t qmi_fake_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(qmi_fake, qmi_fake_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_TEL_TEST),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_QMI_MODEM),
-ZIRCON_DRIVER_END(qmi_fake)
+ZIRCON_DRIVER(qmi_fake, qmi_fake_driver_ops, "zircon", "0.1");
