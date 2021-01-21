@@ -335,6 +335,8 @@ blob_size_list = "$root_build_dir/blobs.json"
 
 # Pack up all the blobs!
 compiled_action("blob.blk") {
+  hermetic_deps = false
+
   visibility = [ ":*" ]
   testonly = true
   deps = [ ":blob.manifest" ]
@@ -666,6 +668,8 @@ fuchsia_zbi_json = "$target_out_dir/fuchsia.zbi.json"
 fuchsia_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
 
 zx_host_tool_action("extract_bootfs") {
+  hermetic_deps = false
+
   visibility = [ ":elf_sizes.json" ]
   testonly = true
   tool = "//zircon/tools/zbi"
@@ -2492,6 +2496,8 @@ group("archive-extras") {
 # GCE, a consumer of this image, requires it to be named disk.raw
 uefi_disk_path = "$target_out_dir/disk.raw"
 compiled_action("uefi-disk") {
+  hermetic_deps = false
+
   deps = uefi_disk_deps
   testonly = true
   tool = "//tools/make-fuchsia-vol"

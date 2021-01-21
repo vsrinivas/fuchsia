@@ -489,6 +489,155 @@ set_defaults("rustc_staticlib") {
   configs = default_common_binary_configs
 }
 
+declare_args() {
+  # If enabled, all filesystem activity by actions will be traced and checked
+  # against their declared inputs and outputs and depfiles (if present).
+  # An action that accesses undeclared inputs or outputs will fail the build.
+  build_should_trace_actions = false
+}
+
+# NOTE: This template needs to be defined before some of the templates below so
+# that it takes effect when these templates directly or indirectly expand
+# action() or action_foreach().
+foreach(_target_type,
+        [
+          "action",
+          "action_foreach",
+        ]) {
+  template(_target_type) {
+    target(_target_type, target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "args",
+                               "script",
+                               "testonly",
+                               "visibility",
+                               "metadata",
+                             ])
+
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      if (!defined(inputs)) {
+        inputs = []
+      }
+
+      # This wraps the built-in action template to enforce best practices.
+      # In particular:
+      # * If the script is Python, use the in-tree interpreter.
+      #   This prevents the script from relying on the Python that happens to
+      #   be in the PATH, making the build more hermetic.
+      if (get_path_info(invoker.script, "extension") == "py") {
+        _invoker_script = python_exe_src
+        _invoker_args = [
+          # Speed up startup by not looking for site packages.
+          "-S",
+          rebase_path(invoker.script, root_build_dir),
+        ]
+        if (defined(invoker.args)) {
+          _invoker_args += invoker.args
+        }
+        inputs += [ invoker.script ]
+      } else {
+        _invoker_script = invoker.script
+        _invoker_args = []
+        if (defined(invoker.args)) {
+          _invoker_args = invoker.args
+        }
+      }
+
+      # If the action has inputs/outputs that are not explicitly stated then it will
+      # fail verification against the trace.
+      # Actions that are known non-hermetic should set `hermetic_deps = false`.
+      # TODO(rudymathu): At some point, we may want to restrict usage of
+      # non-hermetic actions, which we can do by depending on a target with
+      # explicit visibility.
+      hermetic_deps = true
+      if (defined(invoker.hermetic_deps)) {
+        hermetic_deps = invoker.hermetic_deps
+      }
+
+      # TODO(shayba): fix response file issue (see below)
+      should_trace = hermetic_deps && build_should_trace_actions &&
+                     !defined(response_file_contents)
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+        if (should_trace) {
+          traceable_action =
+              [ get_label_info(":$target_name", "label_no_toolchain") ]
+        }
+      }
+
+      if (!should_trace) {
+        script = _invoker_script
+        args = _invoker_args
+      } else {
+        script = python_exe_src
+
+        inputs += [
+          "//build/tracer/action_tracer.py",
+          _invoker_script,
+        ]
+
+        args = [
+          # Speed up startup by not looking for site packages.
+          "-S",
+
+          # This wraps actions with a filesystem activity tracer.
+          rebase_path("//build/tracer/action_tracer.py", root_build_dir),
+          "--label",
+          get_label_info(":$target_name", "label_with_toolchain"),
+          "--script",
+          rebase_path(_invoker_script, root_build_dir),
+          "--trace-output",
+        ]
+        if (_target_type == "action") {
+          args += [ rebase_path("${target_gen_dir}/${target_name}_trace.txt",
+                                root_build_dir) ]
+        } else if (_target_type == "action_foreach") {
+          args += [ rebase_path(
+                  "${target_gen_dir}/${target_name}_{{source_name_part}}_trace.txt",
+                  root_build_dir) ]
+        }
+
+        if (defined(sources)) {
+          args += [ "--sources" ] + rebase_path(sources, root_build_dir)
+        }
+
+        if (defined(inputs)) {
+          args += [ "--inputs" ] + rebase_path(inputs, root_build_dir)
+        }
+
+        if (defined(outputs)) {
+          args += [ "--outputs" ] + rebase_path(outputs, root_build_dir)
+        }
+
+        if (defined(depfile)) {
+          args += [
+            "--depfile",
+            rebase_path(depfile, root_build_dir),
+          ]
+        }
+
+        if (defined(response_file_contents) && response_file_contents != []) {
+          args += [
+            "--response-file-name",
+            "{{response_file_name}}",
+          ]
+        }
+
+        args += [ "--" ] + _invoker_args
+      }
+    }
+  }
+}
+
 # This wraps the GN built-in shared_library() target and adds a few more features:
 #
 # - Redirecting from the current toolchain to its shared-library-compatible
@@ -2168,152 +2317,6 @@ template("component") {
 
 set_defaults("component") {
   configs = default_common_binary_configs
-}
-
-declare_args() {
-  # If enabled, all filesystem activity by actions will be traced and checked
-  # against their declared inputs and outputs and depfiles (if present).
-  # An action that accesses undeclared inputs or outputs will fail the build.
-  build_should_trace_actions = false
-}
-
-foreach(_target_type,
-        [
-          "action",
-          "action_foreach",
-        ]) {
-  template(_target_type) {
-    target(_target_type, target_name) {
-      forward_variables_from(invoker,
-                             "*",
-                             [
-                               "args",
-                               "script",
-                               "testonly",
-                               "visibility",
-                               "metadata",
-                             ])
-
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-
-      if (!defined(inputs)) {
-        inputs = []
-      }
-
-      # This wraps the built-in action template to enforce best practices.
-      # In particular:
-      # * If the script is Python, use the in-tree interpreter.
-      #   This prevents the script from relying on the Python that happens to
-      #   be in the PATH, making the build more hermetic.
-      if (get_path_info(invoker.script, "extension") == "py") {
-        _invoker_script = python_exe_src
-        _invoker_args = [
-          # Speed up startup by not looking for site packages.
-          "-S",
-          rebase_path(invoker.script, root_build_dir),
-        ]
-        if (defined(invoker.args)) {
-          _invoker_args += invoker.args
-        }
-        inputs += [ invoker.script ]
-      } else {
-        _invoker_script = invoker.script
-        _invoker_args = []
-        if (defined(invoker.args)) {
-          _invoker_args = invoker.args
-        }
-      }
-
-      # If the action has inputs/outputs that are not explicitly stated then it will
-      # fail verification against the trace.
-      # Actions that are known non-hermetic should set `hermetic_deps = false`.
-      # TODO(rudymathu): At some point, we may want to restrict usage of
-      # non-hermetic actions, which we can do by depending on a target with
-      # explicit visibility.
-      hermetic_deps = true
-      if (defined(invoker.hermetic_deps)) {
-        hermetic_deps = invoker.hermetic_deps
-      }
-
-      # TODO(shayba): fix response file issue (see below)
-      should_trace = hermetic_deps && build_should_trace_actions &&
-                     !defined(response_file_contents)
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*")
-        }
-        if (should_trace) {
-          traceable_action =
-              [ get_label_info(":$target_name", "label_no_toolchain") ]
-        }
-      }
-
-      if (!should_trace) {
-        script = _invoker_script
-        args = _invoker_args
-      } else {
-        script = python_exe_src
-
-        inputs += [
-          "//build/tracer/action_tracer.py",
-          _invoker_script,
-        ]
-
-        args = [
-          # Speed up startup by not looking for site packages.
-          "-S",
-
-          # This wraps actions with a filesystem activity tracer.
-          rebase_path("//build/tracer/action_tracer.py", root_build_dir),
-          "--label",
-          get_label_info(":$target_name", "label_with_toolchain"),
-          "--script",
-          rebase_path(_invoker_script, root_build_dir),
-          "--trace-output",
-        ]
-        if (_target_type == "action") {
-          args += [ rebase_path("${target_gen_dir}/${target_name}_trace.txt",
-                                root_build_dir) ]
-        } else if (_target_type == "action_foreach") {
-          args += [ rebase_path(
-                  "${target_gen_dir}/${target_name}_{{source_name_part}}_trace.txt",
-                  root_build_dir) ]
-        }
-
-        if (defined(sources)) {
-          args += [ "--sources" ] + rebase_path(sources, root_build_dir)
-        }
-
-        if (defined(inputs)) {
-          args += [ "--inputs" ] + rebase_path(inputs, root_build_dir)
-        }
-
-        if (defined(outputs)) {
-          args += [ "--outputs" ] + rebase_path(outputs, root_build_dir)
-        }
-
-        if (defined(depfile)) {
-          args += [
-            "--depfile",
-            rebase_path(depfile, root_build_dir),
-          ]
-        }
-
-        if (defined(response_file_contents) && response_file_contents != []) {
-          args += [
-            "--response-file-name",
-            "{{response_file_name}}",
-          ]
-        }
-
-        args += [ "--" ] + _invoker_args
-      }
-    }
-  }
 }
 
 # When generating Fuchsia user binaries, ensure the right sysroot-related
