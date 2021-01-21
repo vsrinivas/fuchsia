@@ -104,6 +104,10 @@ your build's output cache first:
 rm -rf $(fx get-build-dir)
 ```
 
+You can also reproduce this in Gerrit with an optional tryjob.
+In the Gerrit UI, click "choose tryjobs" and select `fuchsia-x64-debug-traced`.
+In the near future this check will be performed on all changes in CQ.
+
 ## Suppressing hermetic action checks
 
 Actions that are currently not hermetic have the following parameter set:
