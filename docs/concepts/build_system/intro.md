@@ -1,8 +1,8 @@
 # Introduction to GN
 
 This is an introduction to GN's terms and way of thinking. This should be
-sufficient background to get your bearings in GN and how it's used in Zircon.
-GN (and the Zircon build) are more complicated than the below will discuss, but
+sufficient background to get your bearings in GN and how it's used in Fuchsia.
+GN (and the Fuchsia build) are more complicated than the below will discuss, but
 the average developer will not need to understand most of it on a deeper level.
 
 The GN documentation pages [QuickStart] and [Language] give more detailed
@@ -10,8 +10,8 @@ background on GN, and [Reference] has the full language documentation.  Use
 the `gn help` command to print out the reference interactively for individual
 topics.  [Ninja] has its own documentation as well.
 
-In the Zircon checkout after running `scripts/download-prebuilt`,
-`scripts/gn` and `scripts/ninja` provide access to the prebuilt binaries.
+In the Fuchsia checkout after running `jiri update`, the commands
+`fx gn` and `fx ninja` provide access to the prebuilt binaries.
 
 [Ninja]: https://ninja-build.org/manual.html
 [QuickStart]: https://gn.googlesource.com/gn/+/HEAD/docs/quick_start.md
@@ -34,7 +34,7 @@ tools that corresponds to a separation of running the build into two steps:
 1. `ninja` runs the commands to compile and link, etc.  It handles incremental
    builds and parallelism.  This is the step you do every time you've changed
    a source file, like running `make`.  GN automatically emits rules to
-   re-generate the Ninja files by running gn gen again when a relevant
+   re-generate the Ninja files by running `gn gen` again when a relevant
    `BUILD.gn` file (or some other relevant files) has changed, so for most
    changes after the first time you've built, `ninja` does it all.
 
@@ -76,8 +76,7 @@ the compiler will have a whole lot of `../` in them if you put your build
 directory elsewhere; but it should work.  It's long been common practice in
 Chromium (predating GN itself) to use `out/_something_` in the source
 directory, and Fuchsia inherited that default.  But nothing cares what build
-directory names you choose, though the `build-*` subdirectory name pattern is
-in the `.gitignore` for Zircon and the `out` subdirectory is in the top-level
+directory names you choose, though the `out` subdirectory is in the top-level
 `.gitignore` file for Fuchsia.
 
 The basic command is `gn gen build-dir`.  This creates `build-dir/` if needed,
@@ -93,20 +92,14 @@ your $EDITOR on the `args.gn` file, and upon exiting the editor the command
 will re-run `gn gen` for you with the new arguments.  You can also just edit
 `args.gn` any time, and the next Ninja run will re-generate the build files.
 
-Args can also be set using the `fx set` command which invokes `gn gen`. Note
-that Zircon args are set differently than args for the rest of Fuchsia. For
-example, to set `foxtrot` in Fuchsia and `zulu` in Zircon both to `true` via
-`fx set`:
+Args can also be set using the `fx set` command which invokes `gn gen`. For
+example to set `foxtrot` to ' `true` via `fx set`:
 
 ```sh
-$ fx set <your configuration> --args 'foxtrot = true' \
-    --args 'zircon_extra_args = { zulu = true }'
+$ fx set <your configuration> --args 'foxtrot = true'
 ```
 
-See [GN Build Arguments](/docs/gen/build_arguments.md), particularly
-[zircon_args](/docs/gen/build_arguments.md#zircon_args) and
-[zircon_extra_args](/docs/gen/build_arguments.md#zircon_extra_args), for
-details.
+See [GN Build Arguments](/docs/gen/build_arguments.md), for details.
 
 ## GN syntax and formatting
 
@@ -132,14 +125,6 @@ to the directory containing the `BUILD.gn` file where the path string appears.
 They can also be "source-absolute", meaning relative to the root of the source
 tree.  Source-absolute paths begin with `//` in GN.
 
-**TODO(fxbug.dev/3156): _This is a hold-over from the "layer cake" design and will
-probably change soon:_** Generically, an absolute path will look like
-`//path/to/dir`.  However, in order to maintain both the standalone Zircon
-build and the integrated Fuchsia build, *all absolute paths in Zircon will look
-like `//zircon/path/to/dir`*.  This allows us to use expand `$zx` to `//` in the
-case of the standalone build and `//zircon/` in the case of the integrated
-build.
-
 When source paths are eventually used in commands, they are translated into
 OS-appropriate paths that are either absolute or relative to the build
 directory (where commands run).
@@ -150,11 +135,9 @@ build directory:
  - `$root_build_dir` is the build directory itself
  - `$root_out_dir` is the subdirectory for the current toolchain (see below)
    - This is where all "top-level" targets go.  In many GN builds, all
-     executables and libraries go here.  But it is not used directly very
-     often in the Zircon build.
+     executables and libraries go here.
  - `$target_out_dir` is the subdirectory of `$root_out_dir` for files built by
    targets in the current `BUILD.gn` file.  This is where the object files go.
-   In the Zircon build, this is where executables and libraries go as well.
  - `$target_gen_dir` is a corresponding place recommended to put generated code
  - `$root_gen_dir` is a place for generated code needed outside this
    subdirectory
@@ -186,15 +169,15 @@ binaries in a use case, etc.
 
 When some code uses something at runtime (a data file, another executable,
 etc.)  but doesn't use it as a direct input at build time, that file belongs in
-the `data_deps` list of target that uses it.  In the Zircon build, that will be
-enough to get the thing into the BOOTFS image at its appointed place.
+the `data_deps` list of target that uses it.  That will also be enough to get
+the thing into the BOOTFS image at its appointed place.
 
 Targets can also be labeled with `testonly = true` to indicate that the target
 contains tests. GN prevents targets that are not `testonly` from depending on
 targets that are, allowing for some level of control over where test binaries
 end up.
 
-The whole Zircon build is driven from one or more `zbi()` targets.  This will
+Building image files is driven from one or more `zbi()` targets.  This will
 make a ZBI by building and using the ZBI host tool. Targets can be placed in
 this image by existing within its dependency graph, and so you can give it
 dependencies on the kernel and any drivers or executables you want in the
@@ -280,12 +263,12 @@ This always defines `foo.x` but only sometimes defines `foo.y`.
 ### GN toolchains
 
 GN has a concept called a "toolchain".  This will all be happening behind the
-scenes and Zircon hackers shouldn't need to deal with it directly, but it helps
+scenes and developers shouldn't need to deal with it directly, but it helps
 to understand the mechanism.
 
 This is what encapsulates the compilers and default compilation switches.  It's
 also the only real way to get the same things compiled twice in different
-ways. In Zircon there will be several toolchains:
+ways. In Fuchsia there will be several toolchains:
 
  - Host
  - Vanilla userland (compiled with default `-fPIE`)
