@@ -27,14 +27,12 @@ using testing::UnorderedElementsAreArray;
 
 class DataRegisterTest : public UnitTestFixture {
  public:
-  DataRegisterTest()
-      : datastore_(dispatcher(), services(), "unused"),
-        data_register_(&datastore_, RegisterJsonPath()) {}
+  DataRegisterTest() : datastore_(dispatcher(), services(), "unused") { MakeNewDataRegister(); }
 
  protected:
   void Upsert(ComponentData data) {
     bool called_back = false;
-    data_register_.Upsert(std::move(data), [&called_back]() { called_back = true; });
+    data_register_->Upsert(std::move(data), [&called_back]() { called_back = true; });
     RunLoopUntilIdle();
     FX_CHECK(called_back);
   }
@@ -48,12 +46,12 @@ class DataRegisterTest : public UnitTestFixture {
   }
 
   void MakeNewDataRegister() {
-    new (&data_register_) DataRegister(&datastore_, RegisterJsonPath());
+    data_register_ = std::make_unique<DataRegister>(&datastore_, RegisterJsonPath());
   }
 
   files::ScopedTempDir tmp_dir_;
   Datastore datastore_;
-  DataRegister data_register_;
+  std::unique_ptr<DataRegister> data_register_;
 };
 
 TEST_F(DataRegisterTest, Upsert_Basic) {
@@ -65,7 +63,7 @@ TEST_F(DataRegisterTest, Upsert_Basic) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -89,7 +87,7 @@ TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("misc", UnorderedElementsAreArray({
                                    Pair("k", AnnotationOr("v")),
@@ -110,7 +108,7 @@ TEST_F(DataRegisterTest, Upsert_NoInsertionsOnEmptyAnnotations) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(), testing::IsEmpty());
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(), testing::IsEmpty());
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), testing::IsEmpty());
   EXPECT_TRUE(ReadRegisterJson().empty());
 }
@@ -124,7 +122,7 @@ TEST_F(DataRegisterTest, Upsert_NoInsertionsOnReservedNamespace) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(), testing::IsEmpty());
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(), testing::IsEmpty());
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), testing::IsEmpty());
   EXPECT_TRUE(ReadRegisterJson().empty());
 }
@@ -138,7 +136,7 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -160,7 +158,7 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
 
   // We check that the DataRegister's namespaced annotations and Datastore's non-platform
   // annotations are still the same.
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -185,7 +183,7 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -209,7 +207,7 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
 
   Upsert(std::move(data2));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -241,7 +239,7 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -260,7 +258,7 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
 
   Upsert(std::move(data2));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -288,7 +286,7 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
 
   Upsert(std::move(data));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
@@ -312,7 +310,7 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
 
   Upsert(std::move(data2));
 
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v2")),
@@ -348,7 +346,7 @@ TEST_F(DataRegisterTest, ReinitializesFromJson) {
   Upsert(std::move(data2));
 
   MakeNewDataRegister();
-  EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
+  EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace1", UnorderedElementsAreArray({
                                          Pair("k1", AnnotationOr("v1")),
