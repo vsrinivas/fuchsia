@@ -64,7 +64,7 @@ do
     with_cpp=false
   fi
 
-  if [ "$filename" = "references" ]; then
+  if [ "$filename" = "references" ] || [ "$filename" = "buffer" ]; then
     with_rust=false
   fi
 

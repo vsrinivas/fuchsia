@@ -204,8 +204,8 @@ fn get_in_params(
                     let ptr = if inner_ty.is_reference() { "*" } else { "" };
                     Ok(format!(
                         "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
-                        buffer = name_buffer(&ty),
-                        size = name_size(&ty),
+                        buffer = name_buffer(&ty, &attrs),
+                        size = name_size(&ty, &attrs),
                         ptr = ptr,
                         ty = ty,
                         name = to_c_name(name)
@@ -242,7 +242,7 @@ fn get_out_params(
     let (skip, return_param) = get_first_param(ast, m)?;
     let skip_amt = if skip { 1 } else { 0 };
 
-    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, _)| {
+    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, attrs)| {
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
@@ -268,15 +268,15 @@ fn get_out_params(
                 let ptr = if inner_ty.is_reference() { "*" } else { "" };
                 if ty.is_reference() {
                     format!("{ty}{ptr}** out_{name}_{buffer}, size_t* {name}_{size}",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             ty = ty_name,
                             ptr = ptr,
                             name = to_c_name(name))
                 } else {
                     format!("{ty}{ptr}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             ty = ty_name,
                             ptr = ptr,
                             name = to_c_name(name))
@@ -291,13 +291,13 @@ fn get_out_params(
 fn get_in_args(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     Ok(m.in_params
         .iter()
-        .map(|(name, ty, _)| match ty {
+        .map(|(name, ty, attrs)| match ty {
             ast::Ty::Vector { .. } => {
                 let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
                 format!(
                     "{name}_{buffer}, {name}_{size}",
-                    buffer = name_buffer(&ty),
-                    size = name_size(&ty),
+                    buffer = name_buffer(&ty, &attrs),
+                    size = name_size(&ty, &attrs),
                     name = to_c_name(name)
                 )
             }
@@ -328,7 +328,7 @@ fn get_out_args(
         m.out_params
             .iter()
             .skip(skip_amt)
-            .map(|(name, ty, _)| match ty {
+            .map(|(name, ty, attrs)| match ty {
                 ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Str { .. } => {
                     format!("out_{name}, {name}_capacity", name = to_c_name(name))
@@ -338,15 +338,15 @@ fn get_out_args(
                     if ty.is_reference() {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             name = to_c_name(name)
                         )
                     } else {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}, out_{name}_actual",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             name = to_c_name(name)
                         )
                     }
@@ -1058,7 +1058,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                             "        *out_{name}_actual = std::min<size_t>(\
                              std::get<{index}>(ret).size(), {name}_{size});\n",
                             name = to_c_name(&m.out_params[i].0),
-                            size = name_size(&ty_name),
+                            size = name_size(&ty_name, &m.out_params[i].2),
                             index = i,
                         )
                         .as_str(),
@@ -1069,7 +1069,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                              std::get<{index}>(ret).begin() + *out_{name}_actual, \
                              out_{name}_{buffer});\n",
                             name = to_c_name(&m.out_params[i].0),
-                            buffer = name_buffer(&ty_name),
+                            buffer = name_buffer(&ty_name, &m.out_params[i].2),
                             index = i,
                         )
                         .as_str(),
@@ -1160,7 +1160,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let in_args = m
                     .in_params
                     .iter()
-                    .map(|(name, ty, _)| match ty {
+                    .map(|(name, ty, attrs)| match ty {
                         ast::Ty::Handle { .. } => format!("std::move({})", to_c_name(name)),
                         ast::Ty::Str { .. } => format!("std::string({})", to_c_name(name)),
                         ast::Ty::Vector { ref ty, .. } => {
@@ -1170,8 +1170,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                  {name}_{buffer} + {name}_{size})",
                                 ty = ty_name,
                                 name = to_c_name(name),
-                                buffer = name_buffer(&ty_name),
-                                size = name_size(&ty_name),
+                                buffer = name_buffer(&ty_name, &attrs),
+                                size = name_size(&ty_name, &attrs),
                             )
                         }
                         ast::Ty::Identifier { id, .. } => {

@@ -143,16 +143,16 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
     }
 }
 
-pub fn name_buffer(ty: &str) -> &'static str {
-    if ty == "void" {
+pub fn name_buffer(ty: &str, attrs: &ast::Attrs) -> &'static str {
+    if attrs.has_attribute("Buffer") || ty == "void" {
         "buffer"
     } else {
         "list"
     }
 }
 
-pub fn name_size(ty: &str) -> &'static str {
-    if ty == "void" {
+pub fn name_size(ty: &str, attrs: &ast::Attrs) -> &'static str {
+    if attrs.has_attribute("Buffer") || ty == "void" {
         "size"
     } else {
         "count"
@@ -193,8 +193,8 @@ fn field_to_c_str(
                     "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
                      {indent}size_t {c_name}_{size};",
                     indent = indent,
-                    buffer = name_buffer(&ty_name),
-                    size = name_size(&ty_name),
+                    buffer = name_buffer(&ty_name, &attrs),
+                    size = name_size(&ty_name, &attrs),
                     c_name = c_name,
                     prefix = prefix,
                     ty = ty_name,
@@ -335,8 +335,8 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                     let ptr = if inner_ty.is_reference() { "*" } else { "" };
                     Ok(format!(
                         "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
-                        buffer = name_buffer(&ty),
-                        size = name_size(&ty),
+                        buffer = name_buffer(&ty, &attrs),
+                        size = name_size(&ty, &attrs),
                         ty = ty,
                         ptr = ptr,
                         name = to_c_name(name)
@@ -370,7 +370,7 @@ fn get_out_params(
     let (skip, return_param) = get_first_param(ast, m)?;
     let skip_amt = if skip { 1 } else { 0 };
 
-    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, _)| {
+    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty, attrs)| {
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
@@ -390,15 +390,15 @@ fn get_out_params(
                 let ptr = if inner_ty.is_reference() { "*" } else { "" };
                 if ty.is_reference() {
                     format!("{ty}{ptr}** out_{name}_{buffer}, size_t* {name}_{size}",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             ty = ty_name,
                             ptr = ptr,
                             name = to_c_name(name))
                 } else {
                     format!("{ty}{ptr}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             ty = ty_name,
                             ptr = ptr,
                             name = to_c_name(name))
@@ -417,13 +417,13 @@ fn get_out_params(
 fn get_in_args(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     Ok(m.in_params
         .iter()
-        .map(|(name, ty, _)| match ty {
+        .map(|(name, ty, attrs)| match ty {
             ast::Ty::Vector { .. } => {
                 let ty = ty_to_c_str(ast, ty).unwrap();
                 format!(
                     "{name}_{buffer}, {name}_{size}",
-                    buffer = name_buffer(&ty),
-                    size = name_size(&ty),
+                    buffer = name_buffer(&ty, &attrs),
+                    size = name_size(&ty, &attrs),
                     name = to_c_name(name)
                 )
             }
@@ -443,22 +443,22 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
         m.out_params
             .iter()
             .skip(skip_amt)
-            .map(|(name, ty, _)| match ty {
+            .map(|(name, ty, attrs)| match ty {
                 ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_c_str(ast, ty).unwrap();
                     if ty.is_reference() {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             name = to_c_name(name)
                         )
                     } else {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}, out_{name}_actual",
-                            buffer = name_buffer(&ty_name),
-                            size = name_size(&ty_name),
+                            buffer = name_buffer(&ty_name, &attrs),
+                            size = name_size(&ty_name, &attrs),
                             name = to_c_name(name)
                         )
                     }

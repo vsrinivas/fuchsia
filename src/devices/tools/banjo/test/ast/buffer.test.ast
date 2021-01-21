@@ -1,0 +1,113 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.buffer",
+    namespaces: {
+        "banjo.examples.buffer": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.buffer",
+                    ),
+                    name: "SomeData",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Buffer",
+                                    val: None,
+                                },
+                            ],
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "one",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Vector {
+                            ty: Voidptr,
+                            size: None,
+                            nullable: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "two",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Protocol {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.buffer",
+                    ),
+                    name: "SomeMethods",
+                },
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomething",
+                        in_params: [
+                            (
+                                "input",
+                                Vector {
+                                    ty: UInt8,
+                                    size: None,
+                                    nullable: false,
+                                },
+                                Attrs(
+                                    [
+                                        Attr {
+                                            key: "Buffer",
+                                            val: None,
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomethingToo",
+                        in_params: [
+                            (
+                                "input_again",
+                                Vector {
+                                    ty: Voidptr,
+                                    size: None,
+                                    nullable: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                ],
+            },
+        ],
+    },
+}

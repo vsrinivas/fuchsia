@@ -180,6 +180,10 @@ if (host_toolchain == current_toolchain) {
     inputs = [
       "test/banjo/binary.test.banjo",
       "test/c/binary.h",
+      "test/banjo/buffer.test.banjo",
+      "test/c/buffer.h",
+      "test/cpp/buffer-internal.h",
+      "test/cpp/buffer.h",
       "test/ast/fidl_handle.test.ast",
       "test/banjo/fidl_handle.test.banjo",
       "test/banjo/library_part_one.test.banjo",
