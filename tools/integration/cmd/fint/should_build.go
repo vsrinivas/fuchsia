@@ -85,6 +85,7 @@ func shouldBuild(
 	if err := jsonutil.WriteToFile(inputPath, input); err != nil {
 		return false, err
 	}
+	logger.Debugf(ctx, "gn analyze input: %+v", input)
 
 	outputPath := filepath.Join(analyzeDir, "output.json")
 

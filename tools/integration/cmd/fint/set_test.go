@@ -92,7 +92,6 @@ func TestRunSteps(t *testing.T) {
 
 func TestRunGen(t *testing.T) {
 	ctx := context.Background()
-	const gnTracePath = "/tmp/gn_trace.json"
 
 	contextSpec := fintpb.Context{
 		CheckoutDir: "/path/to/checkout",
@@ -102,13 +101,13 @@ func TestRunGen(t *testing.T) {
 	testCases := []struct {
 		name            string
 		staticSpec      *fintpb.Static
+		gnTracePath     string
 		expectedOptions []string
 	}{
 		{
-			name: "default",
-			expectedOptions: []string{
-				fmt.Sprintf("--tracelog=%s", gnTracePath),
-			},
+			name:            "gn trace",
+			gnTracePath:     "/tmp/gn_trace.json",
+			expectedOptions: []string{"--tracelog=/tmp/gn_trace.json"},
 		},
 		{
 			name: "generate compdb",
@@ -140,7 +139,7 @@ func TestRunGen(t *testing.T) {
 			}
 
 			gnPath := "/bin/gn"
-			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, gnPath, gnTracePath, []string{"arg1", "arg2"})
+			failureSummary, err := runGen(ctx, runner, tc.staticSpec, &contextSpec, gnPath, tc.gnTracePath, []string{"arg1", "arg2"})
 			if err != nil {
 				t.Fatalf("Unexpected error from runGen: %v", err)
 			}
