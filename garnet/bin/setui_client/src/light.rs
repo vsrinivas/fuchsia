@@ -2,26 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use crate::LightGroup;
+use crate::utils::{self, Either, WatchOrSetResult};
+use anyhow::format_err;
 use fidl_fuchsia_settings::{LightProxy, LightState};
 
-use crate::LightGroup;
-
-pub async fn command(proxy: LightProxy, light_group: LightGroup) -> Result<String, Error> {
+pub async fn command(
+    proxy: LightProxy,
+    light_group: LightGroup,
+) -> WatchOrSetResult {
     let has_name = light_group.name.is_some();
     let has_values =
         light_group.simple.len() + light_group.brightness.len() + light_group.rgb.len() > 0;
 
     if !has_name && !has_values {
         // No values set, perform a watch instead.
-        let setting_value = proxy.watch_light_groups().await?;
-        return Ok(format!("{:#?}", setting_value));
+        return Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch_light_groups())));
     }
 
     if !has_values {
         // Only name specified, perform watch on individual light group.
-        let setting_value = proxy.watch_light_group(light_group.name.unwrap().as_str()).await?;
-        return Ok(format!("{:#?}", setting_value));
+        return Ok(Either::Watch(utils::watch_to_stream(proxy, move |p: &LightProxy| {
+            p.watch_light_group(light_group.name.clone().unwrap().as_str())
+        })));
     }
 
     if !has_name {
@@ -37,12 +40,12 @@ pub async fn command(proxy: LightProxy, light_group: LightGroup) -> Result<Strin
             &mut light_states.into_iter(),
         )
         .await?;
-    return match result {
-        Ok(_) => Ok(format!(
+    Ok(Either::Set(match result {
+        Ok(_) => format!(
             "Successfully set light group {} with values {:?}",
             light_group.name.unwrap(),
             light_state_str
-        )),
-        Err(err) => Ok(format!("{:#?}", err)),
-    };
+        ),
+        Err(err) => format!("{:#?}", err),
+    }))
 }

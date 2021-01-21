@@ -963,7 +963,7 @@ async fn validate_light_set() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    light::command(
+    if let utils::Either::Set(_) = light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: Some(TEST_NAME.to_string()),
@@ -972,9 +972,12 @@ async fn validate_light_set() -> Result<(), Error> {
             rgb: vec![],
         },
     )
-    .await?;
-
-    Ok(())
+    .await?
+    {
+        Ok(())
+    } else {
+        panic!("Did not expect a watch result for set command");
+    }
 }
 
 async fn validate_light_watch() -> Result<(), Error> {
@@ -1004,7 +1007,7 @@ async fn validate_light_watch() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    let output = light::command(
+    if let utils::Either::Watch(mut stream) = light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: None,
@@ -1013,32 +1016,35 @@ async fn validate_light_watch() -> Result<(), Error> {
             rgb: vec![],
         },
     )
-    .await?;
-
-    assert_eq!(
-        output,
-        format!(
-            "{:#?}",
-            vec![LightGroup {
-                name: Some(TEST_NAME.to_string()),
-                enabled: Some(ENABLED),
-                type_: Some(LIGHT_TYPE),
-                lights: Some(vec![
-                    LightState {
-                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
-                        ..LightState::EMPTY
-                    },
-                    LightState {
-                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
-                        ..LightState::EMPTY
-                    }
-                ]),
-                ..LightGroup::EMPTY
-            }]
-        )
-    );
-
-    Ok(())
+    .await?
+    {
+        let output = stream.try_next().await?.expect("Watch should have a result");
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                vec![LightGroup {
+                    name: Some(TEST_NAME.to_string()),
+                    enabled: Some(ENABLED),
+                    type_: Some(LIGHT_TYPE),
+                    lights: Some(vec![
+                        LightState {
+                            value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                            ..LightState::EMPTY
+                        },
+                        LightState {
+                            value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                            ..LightState::EMPTY
+                        }
+                    ]),
+                    ..LightGroup::EMPTY
+                }]
+            )
+        );
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command");
+    }
 }
 
 async fn validate_light_watch_individual() -> Result<(), Error> {
@@ -1066,7 +1072,7 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
     let light_service =
         env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
 
-    let output = light::command(
+    if let utils::Either::Watch(mut stream) = light::command(
         light_service,
         setui_client_lib::LightGroup {
             name: Some(TEST_NAME.to_string()),
@@ -1075,32 +1081,36 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
             rgb: vec![],
         },
     )
-    .await?;
+    .await?
+    {
+        let output = stream.try_next().await?.expect("Watch should have a result");
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                LightGroup {
+                    name: Some(TEST_NAME.to_string()),
+                    enabled: Some(ENABLED),
+                    type_: Some(LIGHT_TYPE),
+                    lights: Some(vec![
+                        LightState {
+                            value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                            ..LightState::EMPTY
+                        },
+                        LightState {
+                            value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                            ..LightState::EMPTY
+                        }
+                    ]),
+                    ..LightGroup::EMPTY
+                }
+            )
+        );
 
-    assert_eq!(
-        output,
-        format!(
-            "{:#?}",
-            LightGroup {
-                name: Some(TEST_NAME.to_string()),
-                enabled: Some(ENABLED),
-                type_: Some(LIGHT_TYPE),
-                lights: Some(vec![
-                    LightState {
-                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
-                        ..LightState::EMPTY
-                    },
-                    LightState {
-                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
-                        ..LightState::EMPTY
-                    }
-                ]),
-                ..LightGroup::EMPTY
-            }
-        )
-    );
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command");
+    }
 }
 
 async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Result<(), Error> {

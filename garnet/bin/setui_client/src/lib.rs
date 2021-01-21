@@ -445,8 +445,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::Light { light_group } => {
             let light_mode_service = connect_to_service::<fidl_fuchsia_settings::LightMarker>()
                 .context("Failed to connect to light service")?;
-            let output = light::command(light_mode_service, light_group).await?;
-            println!("Light: {}", output);
+            utils::handle_mixed_result(
+                "Light",
+                light::command(light_mode_service, light_group).await,
+            )
+            .await?;
         }
         SettingClient::NightMode { night_mode_enabled } => {
             let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
