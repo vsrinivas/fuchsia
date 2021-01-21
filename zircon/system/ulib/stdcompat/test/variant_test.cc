@@ -484,10 +484,10 @@ TEST(VariantTest, CopyMoveAssignWithLiteral) { copy_move_assign<literal_traits>(
 TEST(VariantTest, CopyMoveAssignWithComplex) { copy_move_assign<complex_traits>(); }
 TEST(VariantTest, SwappingWithLiteral) { swapping<literal_traits>(); }
 TEST(VariantTest, SwappingWithComplex) { swapping<complex_traits>(); }
-TEST(VariantTest, GetWrongTypeAborts_Literal) { get_wrong_type<literal_traits>(); }
-TEST(VariantTest, GetWrongTypeAborts_Complex) { get_wrong_type<complex_traits>(); }
-TEST(VariantTest, GetWrongIndexAborts_Literal) { get_wrong_index<literal_traits>(); }
-TEST(VariantTest, GetWrongIndexAborts_Complex) { get_wrong_index<complex_traits>(); }
+TEST(VariantTest, GetWrongTypeAbortsLiteral) { get_wrong_type<literal_traits>(); }
+TEST(VariantTest, GetWrongTypeAbortsComplex) { get_wrong_type<complex_traits>(); }
+TEST(VariantTest, GetWrongIndexAbortsLiteral) { get_wrong_index<literal_traits>(); }
+TEST(VariantTest, GetWrongIndexAbortsComplex) { get_wrong_index<complex_traits>(); }
 
 #if __cpp_lib_variant >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
