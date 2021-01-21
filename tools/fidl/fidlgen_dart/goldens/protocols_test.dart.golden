@@ -25,106 +25,159 @@ class WithAndWithoutRequestResponse$TestBase
     extends WithAndWithoutRequestResponse {
   @override
   $async.Future<void> noRequestNoResponse() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'noRequestNoResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> noRequestEmptyResponse() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'noRequestEmptyResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<String> noRequestWithResponse() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'noRequestWithResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> withRequestNoResponse(String arg) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'withRequestNoResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> withRequestEmptyResponse(String arg) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'withRequestEmptyResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<String> withRequestWithResponse(String arg) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'withRequestWithResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Stream<void> get onEmptyResponse {
-    return $async.Stream.fromFuture(
-        $async.Future.error(UnimplementedError(), StackTrace.current));
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'onEmptyResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current));
   }
 
   @override
   $async.Stream<String> get onWithResponse {
-    return $async.Stream.fromFuture(
-        $async.Future.error(UnimplementedError(), StackTrace.current));
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'onWithResponse not implemented on WithAndWithoutRequestResponse test base. Please implement.'),
+        StackTrace.current));
   }
 }
 
 class WithErrorSyntax$TestBase extends WithErrorSyntax {
   @override
   $async.Future<WithErrorSyntax$ResponseAsStruct$Response> responseAsStruct() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'responseAsStruct not implemented on WithErrorSyntax test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> errorAsPrimitive() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'errorAsPrimitive not implemented on WithErrorSyntax test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> errorAsEnum() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'errorAsEnum not implemented on WithErrorSyntax test base. Please implement.'),
+        StackTrace.current);
   }
 }
 
 class ChannelProtocol$TestBase extends ChannelProtocol {
   @override
   $async.Future<void> methodA(int a, int b) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'methodA not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Stream<ChannelProtocol$EventA$Response> get eventA {
-    return $async.Stream.fromFuture(
-        $async.Future.error(UnimplementedError(), StackTrace.current));
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'eventA not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current));
   }
 
   @override
   $async.Future<int> methodB(int a, int b) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'methodB not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> takeHandle($zircon.Handle h) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'takeHandle not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'mutateSocket not implemented on ChannelProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 }
 
 class Transitional$TestBase extends Transitional {
   @override
   $async.Future<int> request(int x) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'request not implemented on Transitional test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> oneWay(int x) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'oneWay not implemented on Transitional test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Stream<int> get event {
-    return $async.Stream.fromFuture(
-        $async.Future.error(UnimplementedError(), StackTrace.current));
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'event not implemented on Transitional test base. Please implement.'),
+        StackTrace.current));
   }
 }

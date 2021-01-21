@@ -25,12 +25,18 @@ class TestProtocol$TestBase extends TestProtocol {
   @override
   $async.Future<StrictBoundedXUnion>
       strictXUnionHenceResponseMayBeStackAllocated() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictXUnionHenceResponseMayBeStackAllocated not implemented on TestProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<OlderSimpleUnion>
       flexibleXUnionHenceResponseMustBeHeapAllocated() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleXUnionHenceResponseMustBeHeapAllocated not implemented on TestProtocol test base. Please implement.'),
+        StackTrace.current);
   }
 }

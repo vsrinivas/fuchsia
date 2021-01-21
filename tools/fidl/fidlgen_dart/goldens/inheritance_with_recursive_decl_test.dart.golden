@@ -24,18 +24,27 @@ import './fidl_async.dart';
 class Parent$TestBase extends Parent {
   @override
   $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'first not implemented on Parent test base. Please implement.'),
+        StackTrace.current);
   }
 }
 
 class Child$TestBase extends Child {
   @override
   $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'first not implemented on Child test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> second($fidl.InterfaceRequest<Parent> request) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'second not implemented on Child test base. Please implement.'),
+        StackTrace.current);
   }
 }

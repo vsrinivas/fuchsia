@@ -472,15 +472,17 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
 {{- define "InterfaceTestDeclaration" -}}
 
 class {{ .Name }}$TestBase extends {{ .Name }} {
+  {{- $protocolName := .Name }}
   {{- range .Methods }}
+  {{- $exceptionMessage := printf "r'%s not implemented on %s test base. Please implement.'"  .Name  $protocolName }}
   @override
   {{- if .HasRequest }}
   {{ template "AsyncReturn" . }} {{ .Name }}({{ template "AsyncParams" .Request }}) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(UnimplementedError({{ $exceptionMessage }}), StackTrace.current);
   }
   {{- else }}
-  $async.Stream<{{ .AsyncResponseType}}> get {{ .Name }} {
-    return $async.Stream.fromFuture($async.Future.error(UnimplementedError(), StackTrace.current));
+  $async.Stream<{{ .AsyncResponseType }}> get {{ .Name }} {
+    return $async.Stream.fromFuture($async.Future.error(UnimplementedError({{ $exceptionMessage }}), StackTrace.current));
   }
   {{- end }}
 {{- end }}

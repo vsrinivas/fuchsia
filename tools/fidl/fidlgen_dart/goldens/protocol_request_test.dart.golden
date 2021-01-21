@@ -26,21 +26,33 @@ class Child$TestBase extends Child {}
 class Parent$TestBase extends Parent {
   @override
   $async.Future<$fidl.InterfaceHandle<Child>> getChild() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'getChild not implemented on Parent test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<$fidl.InterfaceRequest<Child>> getChildRequest() {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'getChildRequest not implemented on Parent test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> takeChild($fidl.InterfaceHandle<Child> c) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'takeChild not implemented on Parent test base. Please implement.'),
+        StackTrace.current);
   }
 
   @override
   $async.Future<void> takeChildRequest($fidl.InterfaceRequest<Child> r) {
-    return $async.Future.error(UnimplementedError(), StackTrace.current);
+    return $async.Future.error(
+        UnimplementedError(
+            r'takeChildRequest not implemented on Parent test base. Please implement.'),
+        StackTrace.current);
   }
 }
