@@ -43,6 +43,8 @@ driver_module("spi") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-utils",
   ]
 }
@@ -68,6 +70,9 @@ test("spi-test-bin") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
   ]

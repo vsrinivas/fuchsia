@@ -7,6 +7,8 @@
 #include <ddktl/fidl.h>
 #include <fbl/vector.h>
 
+#include "spi.h"
+
 namespace spi {
 
 void SpiChild::Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync& completer) {
@@ -35,28 +37,29 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
 }
 
 void SpiChild::RegisterVmo(uint32_t vmo_id, ::zx::vmo vmo, uint64_t offset, uint64_t size,
-                 RegisterVmoCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+                           RegisterVmoCompleter::Sync& completer) {
+  completer.Reply(spi_.RegisterVmo(cs_, vmo_id, std::move(vmo), offset, size));
 }
 
 void SpiChild::UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::vmo());
+  zx::vmo out_vmo;
+  completer.Reply(spi_.UnregisterVmo(cs_, vmo_id, &out_vmo), std::move(out_vmo));
 }
 
 void SpiChild::TransmitVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
                            TransmitVmoCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(spi_.TransmitVmo(cs_, vmo_id, offset, size));
 }
 
 void SpiChild::ReceiveVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
                           ReceiveVmoCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(spi_.RecieveVmo(cs_, vmo_id, offset, size));
 }
 
 void SpiChild::ExchangeVmo(uint32_t tx_vmo_id, uint64_t tx_offset, uint32_t rx_vmo_id,
                            uint64_t rx_offset, uint64_t size,
                            ExchangeVmoCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(spi_.ExchangeVmo(cs_, tx_vmo_id, tx_offset, rx_vmo_id, rx_offset, size));
 }
 
 zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -83,8 +86,9 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   return ZX_OK;
 }
 
-// TODO(67570)
-void SpiChild::SpiConnectServer(zx::channel server) {}
+void SpiChild::SpiConnectServer(zx::channel server) {
+  spi_parent_.ConnectServer(std::move(server), this);
+}
 
 void SpiChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 

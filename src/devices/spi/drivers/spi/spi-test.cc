@@ -5,8 +5,13 @@
 #include "spi.h"
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/spi/spi.h>
+
+#include <map>
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
@@ -140,28 +145,97 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return ZX_OK;
   }
 
-  zx_status_t SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                 uint64_t size) {
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
+                                 uint64_t offset, uint64_t size) {
+    if (chip_select > 1) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    std::map<uint32_t, zx::vmo>& map = chip_select == 0 ? cs0_vmos : cs1_vmos;
+    if (map.find(vmo_id) != map.end()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    map[vmo_id] = std::move(vmo);
+    return ZX_OK;
   }
 
-  zx_status_t SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo) {
+    if (chip_select > 1) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    std::map<uint32_t, zx::vmo>& map = chip_select == 0 ? cs0_vmos : cs1_vmos;
+    auto it = map.find(vmo_id);
+    if (it == map.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    if (out_vmo) {
+      out_vmo->reset(std::get<1>(*it).release());
+    }
+
+    map.erase(it);
+    return ZX_OK;
   }
 
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (chip_select > 1) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    std::map<uint32_t, zx::vmo>& map = chip_select == 0 ? cs0_vmos : cs1_vmos;
+    auto it = map.find(vmo_id);
+    if (it == map.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    uint8_t buf[sizeof(kTestData)];
+    zx_status_t status = std::get<1>(*it).read(buf, offset, std::max(size, sizeof(buf)));
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    return memcmp(buf, kTestData, std::max(size, sizeof(buf))) == 0 ? ZX_OK : ZX_ERR_IO;
   }
 
   zx_status_t SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                 uint64_t size) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (chip_select > 1) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    std::map<uint32_t, zx::vmo>& map = chip_select == 0 ? cs0_vmos : cs1_vmos;
+    auto it = map.find(vmo_id);
+    if (it == map.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    return std::get<1>(*it).write(kTestData, offset, std::max(size, sizeof(kTestData)));
   }
 
-  zx_status_t SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+  zx_status_t SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id, uint64_t tx_offset,
                                  uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (chip_select > 1) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    std::map<uint32_t, zx::vmo>& map = chip_select == 0 ? cs0_vmos : cs1_vmos;
+    auto tx_it = map.find(tx_vmo_id);
+    auto rx_it = map.find(rx_vmo_id);
+
+    if (tx_it == map.end() || rx_it == map.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    uint8_t buf[8];
+    zx_status_t status = std::get<1>(*tx_it).read(buf, tx_offset, std::max(size, sizeof(buf)));
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    return std::get<1>(*rx_it).write(buf, rx_offset, std::max(size, sizeof(buf)));
   }
 
   SpiDevice* bus_device_;
@@ -179,6 +253,12 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
   static constexpr spi_channel_t spi_channels_[] = {
       {.bus_id = 0, .cs = 0, .vid = 0, .pid = 0, .did = 0},
       {.bus_id = 0, .cs = 1, .vid = 0, .pid = 0, .did = 0}};
+
+  std::map<uint32_t, zx::vmo> cs0_vmos;
+  std::map<uint32_t, zx::vmo> cs1_vmos;
+
+ private:
+  static constexpr uint8_t kTestData[] = {1, 2, 3, 4, 5, 6, 7};
 };
 
 TEST(SpiDevice, SpiTest) {
@@ -214,6 +294,89 @@ TEST(SpiDevice, SpiTest) {
   ddk.bus_device_->DdkUnbind(ddk::UnbindTxn(zxdev));
   EXPECT_EQ(ddk.children_.size(), 0, "");
   EXPECT_EQ(ddk.bus_device_, nullptr, "");
+}
+
+TEST(SpiDevice, SpiFidlTest) {
+  constexpr uint8_t kTestData[] = {1, 2, 3, 4, 5, 6, 7};
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("spi-test-thread"));
+
+  FakeDdkSpiImpl ddk;
+
+  fidl::Client<::llcpp::fuchsia::hardware::spi::Device> cs0_client, cs1_client;
+
+  SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
+  EXPECT_EQ(ddk.children_.size(), countof(ddk.spi_channels_));
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[0]->SpiConnectServer(std::move(server));
+    ASSERT_OK(cs0_client.Bind(std::move(client), loop.dispatcher()));
+  }
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[1]->SpiConnectServer(std::move(server));
+    ASSERT_OK(cs1_client.Bind(std::move(client), loop.dispatcher()));
+  }
+
+  zx::vmo cs0_vmo, cs1_vmo;
+  ASSERT_OK(zx::vmo::create(4096, 0, &cs0_vmo));
+  ASSERT_OK(zx::vmo::create(4096, 0, &cs1_vmo));
+
+  {
+    zx::vmo vmo;
+    ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo), 0, 4096);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  {
+    zx::vmo vmo;
+    ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo), 0, 4096);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  ASSERT_OK(cs0_vmo.write(kTestData, 1024, sizeof(kTestData)));
+  {
+    auto result = cs0_client->ExchangeVmo_Sync(1, 1024, 1, 2048, sizeof(kTestData));
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+
+    uint8_t buf[sizeof(kTestData)];
+    ASSERT_OK(cs0_vmo.read(buf, 2048, sizeof(buf)));
+    EXPECT_BYTES_EQ(buf, kTestData, sizeof(buf));
+  }
+
+  ASSERT_OK(cs1_vmo.write(kTestData, 1024, sizeof(kTestData)));
+  {
+    auto result = cs1_client->TransmitVmo_Sync(2, 1024, sizeof(kTestData));
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  {
+    auto result = cs0_client->UnregisterVmo_Sync(1);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  {
+    auto result = cs1_client->UnregisterVmo_Sync(2);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+
+  zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);
+  ddk.bus_device_->DdkUnbind(ddk::UnbindTxn(zxdev));
+  EXPECT_EQ(ddk.children_.size(), 0);
+  EXPECT_EQ(ddk.bus_device_, nullptr);
 }
 
 }  // namespace spi

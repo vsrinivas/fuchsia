@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
-#include <lib/fidl-utils/bind.h>
 
 #include <ddk/metadata/spi.h>
 #include <ddktl/device.h>
@@ -16,6 +15,8 @@
 #include <fbl/ref_ptr.h>
 
 namespace spi {
+
+class SpiDevice;
 
 class SpiChild;
 using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
@@ -25,8 +26,9 @@ class SpiChild : public SpiChildType,
                  public llcpp::fuchsia::hardware::spi::Device::Interface,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
  public:
-  SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel)
-      : SpiChildType(parent), spi_(spi), cs_(channel->cs) {}
+  SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel,
+           SpiDevice* spi_parent)
+      : SpiChildType(parent), spi_(spi), cs_(channel->cs), spi_parent_(*spi_parent) {}
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -55,6 +57,7 @@ class SpiChild : public SpiChildType,
  private:
   const ddk::SpiImplProtocolClient spi_;
   const uint32_t cs_;
+  SpiDevice& spi_parent_;
 };
 
 }  // namespace spi

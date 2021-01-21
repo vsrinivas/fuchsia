@@ -89,7 +89,7 @@ void SpiDevice::AddChildren() {
     const auto did = channel.did;
 
     fbl::AllocChecker ac;
-    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, &channel);
+    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, &channel, this);
     if (!ac.check()) {
       zxlogf(ERROR, "%s: out of memory", __func__);
       return;
@@ -126,6 +126,20 @@ void SpiDevice::AddChildren() {
 
     // save a reference for cleanup
     children_.push_back(dev);
+  }
+}
+
+void SpiDevice::ConnectServer(zx::channel server, SpiChild* const child) {
+  if (!loop_started_.exchange(true)) {
+    zx_status_t status;
+    if ((status = loop_.StartThread("spi-child-thread")) != ZX_OK) {
+      zxlogf(ERROR, "Failed to start async loop: %d", status);
+    }
+  }
+
+  fit::result status = fidl::BindServer(loop_.dispatcher(), std::move(server), child);
+  if (status.is_error()) {
+    zxlogf(ERROR, "Failed to bind server: %d", status.error());
   }
 }
 
