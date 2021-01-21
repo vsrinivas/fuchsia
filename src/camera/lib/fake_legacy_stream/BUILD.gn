@@ -2,32 +2,50 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
 group("fake_legacy_stream") {
   testonly = true
-
-  public_deps = [ ":fake_legacy_stream_lib" ]
+  public_deps = [ ":lib" ]
 }
 
-source_set("fake_legacy_stream_lib") {
+group("tests") {
   testonly = true
+  public_deps = [ ":fake_legacy_stream_unittest" ]
+}
 
+source_set("lib") {
+  testonly = true
   visibility = [ ":*" ]
-
   public = [ "fake_legacy_stream.h" ]
-
   sources = [
     "fake_legacy_stream.cc",
     "fake_legacy_stream.h",
   ]
-
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async",
   ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//zircon/public/lib/fit",
   ]
+}
+
+executable("fake_legacy_stream_unittest_bin") {
+  testonly = true
+  sources = [ "fake_legacy_stream_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("fake_legacy_stream_unittest") {
+  manifest = "meta/fake_legacy_stream_unittest.cmx"
+  deps = [ ":fake_legacy_stream_unittest_bin" ]
 }

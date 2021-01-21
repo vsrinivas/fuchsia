@@ -3,14 +3,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
+
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
-
-#include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 class FakeLegacyStreamTest : public gtest::TestLoopFixture {
  protected:

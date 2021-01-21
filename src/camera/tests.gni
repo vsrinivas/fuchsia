@@ -18,7 +18,6 @@ camera_tests = {
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/lib/fake_camera/test",
-    "//src/camera/lib/fake_legacy_stream/test",
   ]
 
   tests = [
@@ -60,12 +59,6 @@ camera_tests = {
     {
       name = "test_utils_test"
       manifest = "//src/camera/drivers/test_utils/test/meta/test_utils_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "fake_legacy_stream_test"
-      manifest =
-          "//src/camera/lib/fake_legacy_stream/test/fake_legacy_stream_test.cmx"
       environments = basic_envs
     },
     {
