@@ -4,20 +4,17 @@
 
 use crate::Error;
 
-use {
-    super::Algorithm,
-    crypto::{rc4, symmetriccipher::SynchronousStreamCipher},
-};
+use {super::Algorithm, mundane::insecure::InsecureRc4Key};
 
 #[allow(unused, dead_code)]
 pub struct Rc4;
 
 impl Rc4 {
-    fn process_with_skip(key: &[u8], data: &[u8], skip: usize) -> Vec<u8> {
-        let mut rc4 = rc4::Rc4::new(&key[..]);
+    fn xor_stream_with_skip(key: &[u8], data: &[u8], skip: usize) -> Vec<u8> {
+        let mut rc4 = InsecureRc4Key::insecure_new(&key[..]);
         let mut out = vec![0u8; data.len()];
-        rc4.process(&vec![0u8; skip][..], &mut vec![0u8; skip][..]);
-        rc4.process(data, &mut out);
+        rc4.insecure_xor_stream(&vec![0u8; skip][..], &mut vec![0u8; skip][..]);
+        rc4.insecure_xor_stream(data, &mut out);
         out
     }
 }
@@ -31,7 +28,7 @@ impl Algorithm for Rc4 {
         // RC4 uses IV || KEY for the seed.
         let seed = [iv, kek].concat();
         // RC4 advances the stream cipher before beginning encryption.
-        Ok(Self::process_with_skip(&seed[..], data, STREAM_SKIP))
+        Ok(Self::xor_stream_with_skip(&seed[..], data, STREAM_SKIP))
     }
 
     fn unwrap_key(&self, kek: &[u8], iv: &[u8; 16], data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -62,7 +59,7 @@ mod tests {
     fn test_stream<T: AsRef<[u8]>>(key_hex: T, expected_stream: T, skip: usize) {
         let key = Vec::from_hex(key_hex).unwrap();
         let expected = Vec::from_hex(expected_stream).unwrap();
-        let actual = Rc4::process_with_skip(&key[..], &vec![0u8; expected.len()][..], skip);
+        let actual = Rc4::xor_stream_with_skip(&key[..], &vec![0u8; expected.len()][..], skip);
         assert_eq!(expected, actual);
     }
 

@@ -6,14 +6,15 @@ pub mod exchange;
 pub mod gtk;
 pub mod igtk;
 pub mod ptk;
-use crypto::util::fixed_time_eq;
+
+use mundane::bytes;
 
 pub trait Tk {
     fn tk(&self) -> &[u8];
 
     fn eq_tk(&self, other: &impl Tk) -> bool {
-        // Use fixed_time_eq to protect keyframe replays from timing attacks.
-        fixed_time_eq(self.tk(), other.tk())
+        // Constant-time equivalence is used to prevent timing attacks.
+        bytes::constant_time_eq(self.tk(), other.tk())
     }
 }
 

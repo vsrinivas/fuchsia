@@ -4,9 +4,9 @@
 
 use super::Algorithm;
 use crate::Error;
-use crypto::hmac::Hmac;
-use crypto::mac::{Mac, MacResult};
-use crypto::sha1::Sha1;
+
+use mundane::hash::Digest;
+use mundane::insecure::InsecureHmacSha1;
 
 pub struct HmacSha1;
 
@@ -17,22 +17,10 @@ impl HmacSha1 {
 }
 
 impl Algorithm for HmacSha1 {
-    fn verify(&self, key: &[u8], data: &[u8], expected: &[u8]) -> bool {
-        match self.compute(key, data) {
-            Ok(mut code) => {
-                code.resize(expected.len(), 0);
-                MacResult::new_from_owned(code) == MacResult::new(expected)
-            }
-            _ => false,
-        }
-    }
-
     fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut hmac = Hmac::new(Sha1::new(), key);
-        let mut out = vec![0u8; hmac.output_bytes()];
-        hmac.input(data);
-        hmac.raw_result(&mut out);
-        Ok(out)
+        let mut hmac = InsecureHmacSha1::insecure_new(key);
+        hmac.insecure_update(data);
+        Ok(hmac.insecure_finish().bytes().into())
     }
 }
 

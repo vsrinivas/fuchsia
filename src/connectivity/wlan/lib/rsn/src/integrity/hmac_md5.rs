@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::Algorithm,
-    crate::Error,
-    crypto::{
-        hmac::Hmac,
-        mac::{Mac, MacResult},
-        md5::Md5,
-    },
+    crate::{integrity::Algorithm, Error},
+    mundane::{hash::Digest, insecure::InsecureHmacMd5},
 };
 
 pub struct HmacMd5;
@@ -21,22 +16,10 @@ impl HmacMd5 {
 }
 
 impl Algorithm for HmacMd5 {
-    fn verify(&self, key: &[u8], data: &[u8], expected: &[u8]) -> bool {
-        match self.compute(key, data) {
-            Ok(mut code) => {
-                code.resize(expected.len(), 0);
-                MacResult::new_from_owned(code) == MacResult::new(expected)
-            }
-            _ => false,
-        }
-    }
-
     fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut hmac = Hmac::new(Md5::new(), key);
-        let mut out = vec![0u8; hmac.output_bytes()];
-        hmac.input(data);
-        hmac.raw_result(&mut out);
-        Ok(out)
+        let mut hmac = InsecureHmacMd5::insecure_new(key);
+        hmac.insecure_update(data);
+        Ok(hmac.insecure_finish().bytes().into())
     }
 }
 

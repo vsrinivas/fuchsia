@@ -26,7 +26,7 @@ const BLOCK_SIZE: usize = 16;
 impl Algorithm for CmacAes128 {
     fn verify(&self, key: &[u8], data: &[u8], expected: &[u8]) -> bool {
         match self.compute(key, data) {
-            Ok(res) => res == expected,
+            Ok(output) => output == expected,
             Err(e) => {
                 error!("Error verifying message integrity: {:?}", e);
                 false
