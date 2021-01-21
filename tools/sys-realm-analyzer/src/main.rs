@@ -120,7 +120,7 @@ fn main() -> Result<(), u8> {
         let out_str = String::from_utf8_lossy(&scrutiny_result.stdout);
         let component_list = serde_json::from_str::<'_, Vec<ComponentManifest>>(&out_str).unwrap();
         let mut index = group_by_feature(&component_list);
-        output_result(&mut index, io::stdout());
+        output_result(&component_list, &mut index, io::stdout());
     }
 
     Ok(())
@@ -155,9 +155,21 @@ fn group_by_feature<'a>(
 }
 
 fn output_result<T: Write>(
+    list: &Vec<ComponentManifest>,
     index: &mut HashMap<Option<String>, Vec<&ComponentManifest>>,
     mut stdout: T,
 ) {
+    stdout
+        .write(format!("{} components in the sys realm with these URLs:\n", list.len()).as_bytes())
+        .unwrap();
+    let mut urls = list.iter().map(|manifest| manifest.url.clone()).collect::<Vec<String>>();
+    urls.sort();
+    for url in urls {
+        stdout.write(format!("  {}\n", url).as_bytes()).unwrap();
+    }
+
+    stdout.write("\n\n".as_bytes()).unwrap();
+
     let mut keys: Vec<Option<String>> = index.keys().map(|k| k.clone()).collect();
     keys.sort();
 
