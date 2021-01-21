@@ -1,0 +1,27 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Incorrect_Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_PID.MEDIATEK_8167S_REF",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+        },
+        "expected": "match",
+        "name": "Mediatek"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.CLEO",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+        },
+        "expected": "match",
+        "name": "Google"
+    }
+]

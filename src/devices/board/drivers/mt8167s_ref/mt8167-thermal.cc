@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -12,6 +11,7 @@
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
+#include "src/devices/board/drivers/mt8167s_ref/mt8167_bind.h"
 
 namespace {
 

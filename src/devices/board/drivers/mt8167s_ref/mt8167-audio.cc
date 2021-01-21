@@ -7,7 +7,6 @@
 #include <lib/mmio/mmio.h>
 #include <limits.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -20,6 +19,7 @@
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
+#include "src/devices/board/drivers/mt8167s_ref/mt8167_bind.h"
 
 namespace board_mt8167 {
 

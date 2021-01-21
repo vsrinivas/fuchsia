@@ -5,7 +5,6 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/focaltech/focaltech.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -15,6 +14,7 @@
 #include <soc/mt8167/mt8167-power.h>
 
 #include "mt8167.h"
+#include "src/devices/board/drivers/mt8167s_ref/mt8167_bind.h"
 
 namespace board_mt8167 {
 

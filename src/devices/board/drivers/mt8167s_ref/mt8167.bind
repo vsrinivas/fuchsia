@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.google.platform;
+using fuchsia.mediatek.platform;
+using fuchsia.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
+
+if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK {
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_PID.MEDIATEK_8167S_REF;
+} else {
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.CLEO;
+}

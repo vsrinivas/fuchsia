@@ -12,13 +12,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/board/drivers/mt8167s_ref/mt8167_bind.h"
 
 namespace board_mt8167 {
 
@@ -164,9 +165,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace board_mt8167
 
-ZIRCON_DRIVER_BEGIN(mt8167, board_mt8167::driver_ops, "zircon", "0.1", 6)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK, 0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF), BI_LABEL(0),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_CLEO), ZIRCON_DRIVER_END(mt8167)
+ZIRCON_DRIVER(mt8167, board_mt8167::driver_ops, "zircon", "0.1");
