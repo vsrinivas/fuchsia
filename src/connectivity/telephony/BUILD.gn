@@ -34,5 +34,6 @@ group("tests") {
     "//src/connectivity/telephony/telephony:tests",
     "//src/connectivity/telephony/telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",
+    "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:tests",
   ]
 }
