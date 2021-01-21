@@ -96,6 +96,18 @@ impl Color {
             self.a as f32 * 255.0f32.recip(),
         ]
     }
+
+    pub fn to_srgb_premult_rgba(&self) -> [f32; 4] {
+        let recip = 255.0f32.recip();
+        let alpha = self.a as f32 * recip;
+
+        [
+            self.r as f32 * recip * alpha,
+            self.g as f32 * recip * alpha,
+            self.b as f32 * recip * alpha,
+            alpha,
+        ]
+    }
 }
 
 impl Default for Color {

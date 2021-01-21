@@ -849,6 +849,19 @@ impl Context<Spinel> for SpinelContext {
         let image =
             self.images.get(image.0 as usize).expect(&format!("invalid image {:?}", image_id));
 
+        // After rendering, the output image must contain sRGB pixels.  Vulkan will automatically
+        // convert from linear to sRGB when the output image has a sRGB format, but when the image
+        // has a linear format this must be done explicitly in a shader.  When using Spinel, we
+        // accomplish this by adding an extra styling opcode, and modifying the background clear
+        // color for contentless tiles.
+        let needs_linear_to_srgb_conversion = match image.format() {
+            vk::FORMAT_R8G8B8_SRGB => false,
+            vk::FORMAT_B8G8R8_SRGB => false,
+            vk::FORMAT_R8G8B8A8_SRGB => false,
+            vk::FORMAT_B8G8R8A8_SRGB => false,
+            _ => true,
+        };
+
         let mut rs_image_pre_barrier = SpnVkRenderSubmitExtImagePreBarrier {
             ext: ptr::null_mut(),
             type_: SpnVkRenderSubmitExtType::SpnVkRenderSubmitExtTypeImagePreBarrier,
@@ -917,7 +930,14 @@ impl Context<Spinel> for SpinelContext {
         }
 
         if let Some(PreClear { color }) = ext.pre_clear {
-            rs_clear_color.float32 = color.to_linear_premult_rgba();
+            // The linear-to-srgb opcode will only affect tiles that are actually rendered.
+            // Tiles which are omitted because they have no content to fill must be handled
+            // by adjusting the background fill color appropriately.
+            rs_clear_color.float32 = if needs_linear_to_srgb_conversion {
+                color.to_srgb_premult_rgba()
+            } else {
+                color.to_linear_premult_rgba()
+            };
             rs_image_clear.ext = rs_image_ext;
             rs_image_ext = &mut rs_image_clear as *mut _ as *mut c_void;
         }
@@ -1208,7 +1228,7 @@ impl Context<Spinel> for SpinelContext {
             clip,
         );
         let spn_styling = composition
-            .spn_styling(&*self.inner.borrow())
+            .spn_styling(&*self.inner.borrow(), needs_linear_to_srgb_conversion)
             .expect("SpinelComposition::spn_styling called from outside SpinelContext::render");
 
         let rs = SpnRenderSubmit {

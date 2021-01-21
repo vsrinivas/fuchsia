@@ -213,6 +213,7 @@ pub(crate) struct VulkanImage {
     view: vk::ImageView,
     memory: vk::DeviceMemory,
     vk: Pin<Box<PinnedVk>>,
+    format: vk::Format,
     width: u32,
     height: u32,
     layout: Cell<vk::ImageLayout>,
@@ -289,6 +290,7 @@ impl VulkanImage {
             view,
             memory,
             vk: PinnedVk::new(vk),
+            format,
             width,
             height,
             layout: Cell::new(vk::IMAGE_LAYOUT_UNDEFINED),
@@ -415,6 +417,7 @@ impl VulkanImage {
             view,
             memory,
             vk: PinnedVk::new(vk),
+            format,
             width,
             height,
             layout: Cell::new(vk::IMAGE_LAYOUT_UNDEFINED),
@@ -529,6 +532,7 @@ impl VulkanImage {
             view,
             memory,
             vk: PinnedVk::new(vk),
+            format,
             width,
             height,
             layout: Cell::new(vk::IMAGE_LAYOUT_UNDEFINED),
@@ -552,6 +556,10 @@ impl VulkanImage {
 
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    pub fn format(&self) -> vk::Format {
+        self.format
     }
 
     pub fn layout(&self) -> vk::ImageLayout {

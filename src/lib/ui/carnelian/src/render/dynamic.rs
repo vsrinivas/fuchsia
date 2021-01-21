@@ -285,6 +285,10 @@ impl Context {
                                 Layers::Empty => vec![],
                                 _ => panic!("mismatched backends"),
                             },
+                            // All Spinel rendering is performed in a linear color space, and is
+                            // transformed to sRGB as it is written to the output image (possibly
+                            // via an additional styling opcode).  Therefore, we provide a linear
+                            // background color.
                             background_color: composition.background_color.to_linear_premult_rgba(),
                         };
                         context.render_with_clip(&composition, clip, image, &ext);

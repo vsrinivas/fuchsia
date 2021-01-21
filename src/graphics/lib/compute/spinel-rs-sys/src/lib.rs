@@ -330,6 +330,7 @@ pub enum SpnCommand {
     SpnStylingOpcodeCoverWipMoveToMask,
     SpnStylingOpcodeCoverAccMoveToMask,
     SpnStylingOpcodeColorAccOverBackground,
+    SpnStylingOpcodeColorAccLinearToSrgb,
     SpnStylingOpcodeColorAccStoreToSurface,
     SpnStylingOpcodeColorAccTestOpacity,
     SpnStylingOpcodeColorIllZero,

@@ -164,15 +164,19 @@ impl SpinelComposition {
         }
     }
 
-    pub(crate) fn spn_styling(&self, context: &InnerContext) -> Option<SpnStyling> {
+    pub(crate) fn spn_styling(
+        &self,
+        context: &InnerContext,
+        needs_linear_to_srgb_opcode: bool,
+    ) -> Option<SpnStyling> {
         const PARENTS: u32 = 0; // spn_styling_group_parents
         const ENTER_CMDS: u32 = 1; // spn_styling_group_enter
-        const LEAVE_CMDS: u32 = 4; // spn_styling_group_leave
         const GROUP_SIZE: u32 = 6; // spn_styling_group_alloc
         const MAX_LAYER_CMDS: u32 = 6; // spn_styling_group_layer
+        let leave_cmds: u32 = if needs_linear_to_srgb_opcode { 5 } else { 4 }; // spn_styling_group_leave
 
         let len = self.layers.len() as u32;
-        let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + LEAVE_CMDS + GROUP_SIZE;
+        let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + leave_cmds + GROUP_SIZE;
         let spn_styling = context.get_checked().map(|context| unsafe {
             init(|ptr| spn!(spn_styling_create(context, ptr, len, styling_len)))
         })?;
@@ -196,15 +200,18 @@ impl SpinelComposition {
 
         let cmds_leave = unsafe {
             let data =
-                init(|ptr| spn!(spn_styling_group_leave(spn_styling, top_group, LEAVE_CMDS, ptr)));
-            slice::from_raw_parts_mut(data, 4)
+                init(|ptr| spn!(spn_styling_group_leave(spn_styling, top_group, leave_cmds, ptr)));
+            slice::from_raw_parts_mut(data, leave_cmds as usize)
         };
         unsafe {
             spn_styling_background_over_encoder(&mut cmds_leave[0], self.background_color.as_ptr());
         }
-        // TODO: Use sRGB opcoode when surface has UNORM format.
-        // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=49033
-        cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
+        if needs_linear_to_srgb_opcode {
+            cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccLinearToSrgb;
+            cmds_leave[4] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
+        } else {
+            cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
+        }
 
         group_layers(spn_styling, top_group, &self.layers, 0);
 
