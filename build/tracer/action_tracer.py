@@ -327,9 +327,8 @@ def main():
     trace_output_dir = os.path.dirname(args.trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
 
-    # TODO(shayba): make this work without assuming `fsatrace` in path
     retval = subprocess.call(
-        ["fsatrace", "rwmdt", args.trace_output, "--", args.script] + args.args)
+        ["../../prebuilt/fsatrace/fsatrace", "rwmdt", args.trace_output, "--", args.script] + args.args)
 
     # If inner action failed that's a build error, don't bother with the trace.
     if retval != 0:
