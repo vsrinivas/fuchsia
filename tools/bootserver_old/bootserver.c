@@ -927,24 +927,6 @@ int main(int argc, char** argv) {
           status = -1;
         } else {
           status = xfer(&ra, firmware_images[i].image, filename);
-
-          // In order to keep updates as stable as possible in the near future,
-          // keep going even if we fail to flash the firmware. It's OK to have
-          // older bootloaders on a newer OS, and this will allow paving to
-          // succeed even if the device netsvc doesn't yet know how to handle
-          // firmware files.
-          //
-          // TODO(fxbug.dev/45606): once we bump the version past "0.7.22" and force a
-          // hard-transition anyway we can remove this workaround.
-          if (status != 0) {
-            fprintf(
-                stderr,
-                "Failed to transfer firmware type '%s' (err=%d), skipping and continuing.\n"
-                "This is expected until zedboot has been updated to the newest version.\n"
-                "If you continue to see this after updating zedboot, please file a Firmware bug.\n",
-                firmware_images[i].type, status);
-            status = 0;
-          }
         }
       }
     }
