@@ -1400,13 +1400,18 @@ async fn validate_volume_policy_get() -> Result<(), Error> {
         .context("Failed to connect to volume policy service")?;
 
     // Invoke the volume policy command with no arguments to trigger a get call.
-    let output = volume_policy::command(volume_policy_service, None, None).await?;
+    if let utils::Either::Watch(mut stream) =
+        volume_policy::command(volume_policy_service, None, None).await?
+    {
+        let output = stream.try_next().await?.expect("Watch should have a result");
+        // Spot-check that the output contains the available transform in the data returned from the
+        // fake service.
+        assert!(output.contains("Max"));
 
-    // Spot-check that the output contains the available transform in the data returned from the
-    // fake service.
-    assert!(output.contains("Max"));
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command.");
+    }
 }
 
 // Verifies that adding a new policy works and prints out the resulting policy ID.
@@ -1438,12 +1443,16 @@ async fn validate_volume_policy_add() -> Result<(), Error> {
         .context("Failed to connect to volume policy service")?;
 
     // Make the add call.
-    let output = volume_policy::command(volume_policy_service, Some(add_options), None).await?;
+    if let utils::Either::Set(output) =
+        volume_policy::command(volume_policy_service, Some(add_options), None).await?
+    {
+        // Verify that the output contains the policy ID returned from the fake service.
+        assert!(output.contains(expected_policy_id.to_string().as_str()));
 
-    // Verify that the output contains the policy ID returned from the fake service.
-    assert!(output.contains(expected_policy_id.to_string().as_str()));
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a watch result for a set command.");
+    }
 }
 
 // Verifies that removing a policy sends the proper call to the volume policy API.
@@ -1464,7 +1473,11 @@ async fn validate_volume_policy_remove() -> Result<(), Error> {
         .context("Failed to connect to volume policy service")?;
 
     // Attempt to remove the given policy ID.
-    volume_policy::command(volume_policy_service, None, Some(expected_policy_id)).await?;
-
-    Ok(())
+    if let utils::Either::Set(_output) =
+        volume_policy::command(volume_policy_service, None, Some(expected_policy_id)).await?
+    {
+        Ok(())
+    } else {
+        panic!("Did not expect a watch result for a set command.");
+    }
 }

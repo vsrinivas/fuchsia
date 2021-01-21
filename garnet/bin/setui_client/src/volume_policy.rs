@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::utils::{self, Either, WatchOrSetResult};
 use crate::VolumePolicyCommands;
-use anyhow::{format_err, Error};
+use anyhow::format_err;
 use fidl_fuchsia_settings_policy::{
     Disable, Mute, PolicyParameters, Target, Volume, VolumePolicyControllerProxy,
 };
@@ -12,7 +13,7 @@ pub async fn command(
     proxy: VolumePolicyControllerProxy,
     add: Option<VolumePolicyCommands>,
     remove: Option<u32>,
-) -> Result<String, Error> {
+) -> WatchOrSetResult {
     if let Some(VolumePolicyCommands::AddPolicy(add_options)) = add {
         let mut add_results = Vec::new();
         if let Some(min_volume) = add_options.min {
@@ -58,18 +59,17 @@ pub async fn command(
         if add_results.is_empty() {
             Err(format_err!("No policies specified"))
         } else {
-            Ok(add_results.join("\n"))
+            Ok(Either::Set(add_results.join("\n")))
         }
     } else if let Some(policy_id) = remove {
         let remove_result = proxy.remove_policy(policy_id).await?;
-        match remove_result {
-            Ok(_) => Ok(format!("Successfully removed {:?}", policy_id)),
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
+        Ok(Either::Set(match remove_result {
+            Ok(_) => format!("Successfully removed {:?}", policy_id),
+            Err(err) => format!("{:#?}", err),
+        }))
     } else {
         // No values set, perform a get instead.
-        let setting_value = proxy.get_properties().await?;
-        Ok(format!("{:#?}", setting_value))
+        Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.get_properties())))
     }
 }
 

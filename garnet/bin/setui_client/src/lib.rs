@@ -526,8 +526,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let setup_service =
                 connect_to_service::<fidl_fuchsia_settings_policy::VolumePolicyControllerMarker>()
                     .context("Failed to connect to volume policy service")?;
-            let output = volume_policy::command(setup_service, add, remove).await?;
-            println!("Volume policy: {}", output);
+            utils::handle_mixed_result(
+                "Volume policy",
+                volume_policy::command(setup_service, add, remove).await,
+            )
+            .await?;
         }
     }
     Ok(())
