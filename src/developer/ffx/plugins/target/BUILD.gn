@@ -15,6 +15,7 @@ ffx_plugin("ffx_target") {
     "list:ffx_list",
     "off:ffx_off",
     "reboot:ffx_reboot",
+    "remove:ffx_target_remove",
     "status:ffx_target_status",
     "update:ffx_update",
   ]
