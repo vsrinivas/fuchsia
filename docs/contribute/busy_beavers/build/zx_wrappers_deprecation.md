@@ -62,6 +62,9 @@ Replace `zx_library` with one of the following:
 *   `shared_library`
 *   `sdk_shared_library`
 
+Most commonly, `zx_library` can be replaced with `source_set` or
+`static_library`, especially for code that won't be linked into the kernel.
+
 Replace `zx_host_tool` with the built-in `executable` rule and using the host
 toolchain as needed. If the tool is used in the SDK, then you may also need to
 define an `sdk_atom` target. There is a convenience wrapper at
