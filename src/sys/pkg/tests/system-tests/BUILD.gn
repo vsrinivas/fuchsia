@@ -132,7 +132,7 @@ if (is_linux || is_mac) {
         dimensions = {
           device_type = "Intel NUC Kit NUC7i5DNHE"
         }
-        tags = [ "reboot-longevity" ]
+        tags = [ "e2e-isolated-longevity" ]
       },
     ]
     timeout = "4h"
@@ -166,7 +166,7 @@ if (is_linux || is_mac) {
         dimensions = {
           device_type = "Intel NUC Kit NUC7i5DNHE"
         }
-        tags = [ "e2e-isolated" ]
+        tags = [ "e2e-isolated-longevity" ]
       },
     ]
     timeout = "4h"
