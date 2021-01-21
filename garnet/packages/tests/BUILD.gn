@@ -53,8 +53,6 @@ group("all") {
     "//garnet/bin/wayland:wayland_tests",
     "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom:tests",
-    "//garnet/go/src/go-tuf:go_tuf_host_tests($host_toolchain)",
-    "//garnet/go/src/go-tuf:go_tuf_tests",
     "//garnet/go/src/merkle:go_merkle_tests",
     "//garnet/lib/perfmon:tests",
     "//garnet/lib/process:process_unittests",

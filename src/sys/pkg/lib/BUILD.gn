@@ -46,6 +46,7 @@ group("tests") {
     "fuchsia-merkle:tests",
     "fuchsia-pkg:tests",
     "fuchsia-pkg-testing:tests",
+    "go-tuf:tests",
     "isolated-swd:tests",
     "omaha-client:tests",
     "pkgfs:tests",
