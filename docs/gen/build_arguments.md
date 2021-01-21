@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1251
+From //build/config/BUILDCONFIG.gn:1242
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -569,7 +569,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2185
+From //build/config/BUILDCONFIG.gn:2176
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -725,13 +725,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2d2e46b2ac3449737665554cfe703653a50f8c37/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2a777a4d4fb0d2c9e4c1f9fbf139ebcb545081ed/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2d2e46b2ac3449737665554cfe703653a50f8c37/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2a777a4d4fb0d2c9e4c1f9fbf139ebcb545081ed/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -913,7 +913,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:58
+From //zircon/kernel/params.gni:52
 
 ### enable_api_diff
 Detect dart API changes
@@ -960,7 +960,7 @@ Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:34
+From //zircon/kernel/params.gni:28
 
 ### enable_lock_dep_tests
 Enable kernel lock dependency tracking tests.  By default this is
@@ -970,7 +970,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:85
+From //zircon/kernel/params.gni:79
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1061,7 +1061,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1030
+From //build/config/BUILDCONFIG.gn:1021
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1523,7 +1523,7 @@ and the analysis overhead turned off by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:32
+From //build/config/BUILDCONFIG.gn:23
 
 ### is_debug
 Debug build.
@@ -1534,7 +1534,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:35
+From //build/config/BUILDCONFIG.gn:26
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1542,13 +1542,13 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:35
+From //build/config/BUILDCONFIG.gn:26
 
 ### kernel_base
 
 **Current value (from the default):** `"0xffffffff00000000"`
 
-From //zircon/kernel/params.gni:28
+From //zircon/kernel/params.gni:22
 
 ### kernel_debug_level
 Enables various kernel debugging and diagnostic features.  Valid
@@ -1560,7 +1560,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:70
+From //zircon/kernel/params.gni:64
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -1571,7 +1571,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:77
+From //zircon/kernel/params.gni:71
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -1579,7 +1579,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:62
+From //zircon/kernel/params.gni:56
 
 ### kernel_version_git_checkout
 By default the kernel version string is generated based on the full git
@@ -1751,7 +1751,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:898
+From //build/config/BUILDCONFIG.gn:889
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2089,13 +2089,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2d2e46b2ac3449737665554cfe703653a50f8c37/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2a777a4d4fb0d2c9e4c1f9fbf139ebcb545081ed/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2d2e46b2ac3449737665554cfe703653a50f8c37/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2a777a4d4fb0d2c9e4c1f9fbf139ebcb545081ed/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2594,14 +2594,14 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:38
+From //build/config/BUILDCONFIG.gn:29
 
 ### output_gsym
 Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:41
+From //build/config/BUILDCONFIG.gn:32
 
 ### override_recovery_label
 TODO(comfoltey) remove obsolete label override_recovery_label
@@ -2848,7 +2848,7 @@ analysis.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:47
+From //zircon/kernel/params.gni:41
 
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
@@ -2861,7 +2861,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:43
+From //zircon/kernel/params.gni:37
 
 ### scudo_default_options
 Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
@@ -2970,7 +2970,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1241
+From //build/config/BUILDCONFIG.gn:1232
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2979,7 +2979,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1246
+From //build/config/BUILDCONFIG.gn:1237
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3011,7 +3011,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1076
+From //build/config/BUILDCONFIG.gn:1067
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3090,7 +3090,7 @@ From //tools/size_checker/cmd/BUILD.gn:52
 
 **Current value (from the default):** `16`
 
-From //zircon/kernel/params.gni:20
+From //zircon/kernel/params.gni:14
 
 ### spinel_platform_header
 Platform portability header for spinel.
@@ -3250,7 +3250,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:140
+From //build/config/BUILDCONFIG.gn:131
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3281,7 +3281,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1060
+From //build/config/BUILDCONFIG.gn:1051
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3517,7 +3517,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:54
+From //zircon/kernel/params.gni:48
 
 ### vulkan_host_runtime_dir
 
@@ -3653,7 +3653,27 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //build/zircon/build_args.gni:33
+From //build/zircon/build_args.gni:21
+
+### zircon_extra_args
+This variable is no longer used, bur some of our infra build scripts still
+set it to an empty scope for historical reasons.
+
+**Current value for `target_cpu = "arm64"`:** `{ }`
+
+From //out/not-default/args.gn:4
+
+**Overridden from the default:** `{ }`
+
+From //build/zircon/build_args.gni:8
+
+**Current value for `target_cpu = "x64"`:** `{ }`
+
+From //out/not-default/args.gn:4
+
+**Overridden from the default:** `{ }`
+
+From //build/zircon/build_args.gni:8
 
 ### zircon_kernel_disable_asserts
 Forcibly disable all assertions for the Zircon kernel. If this is set, the
@@ -3662,7 +3682,7 @@ building the kernel.
 
 **Current value (from the default):** `false`
 
-From //build/zircon/build_args.gni:26
+From //build/zircon/build_args.gni:14
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -3696,7 +3716,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:157
+From //build/config/BUILDCONFIG.gn:148
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -3704,7 +3724,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //build/zircon/build_args.gni:30
+From //build/zircon/build_args.gni:18
 
 ### zvb_partition_name
 Partition name from where image will be verified
