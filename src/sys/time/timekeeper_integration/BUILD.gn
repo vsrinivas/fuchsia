@@ -84,4 +84,8 @@ fuchsia_test_package("timekeeper-integration") {
     ":timekeeper_for_integration",
     "dev_time_source",
   ]
+
+  test_specs = {
+    environments = [ nuc_env ]
+  }
 }
